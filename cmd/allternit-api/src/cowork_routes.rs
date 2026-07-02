@@ -1,6 +1,6 @@
 use axum::extract::Extension;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -30,7 +30,7 @@ pub fn cowork_router() -> Router<Arc<AppState>> {
         .route("/cowork/projects", get(list_projects).post(create_project))
         .route("/cowork/projects/:id", get(get_project).put(update_project).patch(update_project).delete(delete_project))
         .route("/cowork/memory", get(get_memory).post(store_memory))
-        .route("/cowork/memory/search", post(search_memory))
+        .route("/cowork/memory/search", get(search_memory_get).post(search_memory))
         .route("/cowork/memory/health", get(memory_health))
         .route("/cowork/connectors", get(list_connectors))
         .route("/cowork/approvals", get(list_approvals))
@@ -999,6 +999,23 @@ async fn search_memory(
             (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
         }
     }
+}
+
+#[derive(Deserialize)]
+struct SearchMemoryQuery {
+    query: Option<String>,
+    #[allow(dead_code)]
+    limit: Option<i64>,
+}
+
+async fn search_memory_get(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Query(params): Query<SearchMemoryQuery>,
+) -> impl IntoResponse {
+    let query = params.query.unwrap_or_default();
+    let body = SearchMemoryBody { query };
+    search_memory(State(state), Extension(user), HeaderMap::new(), Json(body)).await
 }
 
 async fn memory_health(

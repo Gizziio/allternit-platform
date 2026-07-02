@@ -14,6 +14,8 @@ use axum::{
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::io::Write;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::warn;
 
@@ -29,6 +31,7 @@ pub fn agent_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/agents", get(list_agents).post(create_agent))
         .route("/agents/:id", get(get_agent).put(update_agent).delete(delete_agent))
+        .route("/agents/:id/workspace/initialize", post(initialize_agent_workspace))
         .route("/agents/identity", get(get_agent_identity).post(set_agent_identity))
         .route("/agents/metrics", get(list_agent_metrics))
         .route("/agents/suites", get(list_test_suites).post(create_test_suite))
@@ -48,19 +51,33 @@ struct AgentRow {
     parent_agent_id: Option<String>,
     model: String,
     provider: String,
-    capabilities: Option<String>,
+    capabilities: Option<serde_json::Value>,
     system_prompt: Option<String>,
-    tools: Option<String>,
+    tools: Option<serde_json::Value>,
     max_iterations: i64,
     temperature: f64,
-    config: Option<String>,
+    config: Option<serde_json::Value>,
     status: String,
     workspace_id: Option<String>,
     avatar: Option<String>,
     identity_key: Option<String>,
+    trust_tier: String,
+    harness_config: Option<serde_json::Value>,
+    enabled_modes: serde_json::Value,
+    character_json: Option<serde_json::Value>,
+    allowed_skills: Option<serde_json::Value>,
+    allowed_tools: Option<serde_json::Value>,
+    category: Option<String>,
+    tags: Option<serde_json::Value>,
+    data_classification: Option<String>,
+    write_scope: Option<String>,
     created_at: String,
     updated_at: String,
     last_run_at: Option<String>,
+}
+
+fn parse_json_column(value: Option<String>) -> Option<serde_json::Value> {
+    value.and_then(|s| serde_json::from_str(&s).ok())
 }
 
 #[derive(Deserialize)]
@@ -87,7 +104,9 @@ async fn list_agents(
         let mut sql = String::from(
             "SELECT id, user_id, name, description, type, parent_agent_id, model, provider,
                     capabilities, system_prompt, tools, max_iterations, temperature, config,
-                    status, workspace_id, avatar, identity_key, created_at, updated_at, last_run_at
+                    status, workspace_id, avatar, identity_key, trust_tier, harness_config,
+                    enabled_modes, character_json, allowed_skills, allowed_tools, category, tags,
+                    data_classification, write_scope, created_at, updated_at, last_run_at
              FROM agents WHERE user_id = ?1"
         );
         let mut params_vec: Vec<String> = vec![user_id];
@@ -118,19 +137,29 @@ async fn list_agents(
                 parent_agent_id: row.get(5)?,
                 model: row.get(6)?,
                 provider: row.get(7)?,
-                capabilities: row.get(8)?,
+                capabilities: parse_json_column(row.get(8)?),
                 system_prompt: row.get(9)?,
-                tools: row.get(10)?,
+                tools: parse_json_column(row.get(10)?),
                 max_iterations: row.get(11)?,
                 temperature: row.get(12)?,
-                config: row.get(13)?,
+                config: parse_json_column(row.get(13)?),
                 status: row.get(14)?,
                 workspace_id: row.get(15)?,
                 avatar: row.get(16)?,
                 identity_key: row.get(17)?,
-                created_at: row.get(18)?,
-                updated_at: row.get(19)?,
-                last_run_at: row.get(20)?,
+                trust_tier: row.get(18)?,
+                harness_config: parse_json_column(row.get(19)?),
+                enabled_modes: parse_json_column(row.get(20)?).unwrap_or(serde_json::Value::String("[\"chat\"]".to_string())),
+                character_json: parse_json_column(row.get(21)?),
+                allowed_skills: parse_json_column(row.get(22)?),
+                allowed_tools: parse_json_column(row.get(23)?),
+                category: row.get(24)?,
+                tags: parse_json_column(row.get(25)?),
+                data_classification: row.get(26)?,
+                write_scope: row.get(27)?,
+                created_at: row.get(28)?,
+                updated_at: row.get(29)?,
+                last_run_at: row.get(30)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -163,16 +192,30 @@ struct CreateAgentBody {
     parent_agent_id: Option<String>,
     model: String,
     provider: String,
-    capabilities: Option<String>,
+    capabilities: Option<serde_json::Value>,
     system_prompt: Option<String>,
-    tools: Option<String>,
+    tools: Option<serde_json::Value>,
     max_iterations: Option<i64>,
     temperature: Option<f64>,
-    config: Option<String>,
+    config: Option<serde_json::Value>,
     status: Option<String>,
     workspace_id: Option<String>,
     avatar: Option<String>,
     identity_key: Option<String>,
+    trust_tier: Option<String>,
+    harness_config: Option<serde_json::Value>,
+    enabled_modes: Option<serde_json::Value>,
+    character_json: Option<serde_json::Value>,
+    allowed_skills: Option<serde_json::Value>,
+    allowed_tools: Option<serde_json::Value>,
+    category: Option<String>,
+    tags: Option<serde_json::Value>,
+    data_classification: Option<String>,
+    write_scope: Option<String>,
+}
+
+fn json_to_string(value: Option<serde_json::Value>) -> Option<String> {
+    value.map(|v| v.to_string())
 }
 
 async fn create_agent(
@@ -185,33 +228,55 @@ async fn create_agent(
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
+    let user_id_for_db = user_id.clone();
+
+    // Capture clones for ledger event after the DB task consumes body
+    let ledger_name = body.name.clone();
+    let ledger_agent_type = body.agent_type.clone();
+    let ledger_model = body.model.clone();
+    let ledger_provider = body.provider.clone();
+    let ledger_workspace_id = body.workspace_id.clone();
+    let ledger_trust_tier = body.trust_tier.clone();
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         conn.execute(
             "INSERT INTO agents (id, user_id, name, description, type, parent_agent_id, model, provider,
                                 capabilities, system_prompt, tools, max_iterations, temperature, config,
-                                status, workspace_id, avatar, identity_key)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+                                status, workspace_id, avatar, identity_key, trust_tier, harness_config,
+                                enabled_modes, character_json, allowed_skills, allowed_tools, category,
+                                tags, data_classification, write_scope)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
+                     ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28)",
             params![
                 id2,
-                user_id,
+                user_id_for_db,
                 body.name,
                 body.description,
                 body.agent_type.unwrap_or_else(|| "worker".to_string()),
                 body.parent_agent_id,
                 body.model,
                 body.provider,
-                body.capabilities,
+                json_to_string(body.capabilities),
                 body.system_prompt,
-                body.tools,
+                json_to_string(body.tools),
                 body.max_iterations.unwrap_or(10),
                 body.temperature.unwrap_or(0.7),
-                body.config,
+                json_to_string(body.config),
                 body.status.unwrap_or_else(|| "idle".to_string()),
                 body.workspace_id,
                 body.avatar,
                 body.identity_key,
+                body.trust_tier.unwrap_or_else(|| "standard".to_string()),
+                json_to_string(body.harness_config),
+                json_to_string(body.enabled_modes).unwrap_or_else(|| "[\"chat\"]".to_string()),
+                json_to_string(body.character_json),
+                json_to_string(body.allowed_skills),
+                json_to_string(body.allowed_tools),
+                body.category,
+                json_to_string(body.tags),
+                body.data_classification,
+                body.write_scope,
             ],
         )?;
         Ok::<_, rusqlite::Error>(())
@@ -219,7 +284,41 @@ async fn create_agent(
     .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({ "agent": { "id": id } }))).into_response(),
+        Ok(Ok(())) => {
+            // Append agent creation event to Rails ledger for audit/traceability
+            let ledger_event = allternit_agent_system_rails::AllternitEvent {
+                event_id: String::new(),
+                ts: String::new(),
+                actor: allternit_agent_system_rails::Actor {
+                    r#type: allternit_agent_system_rails::ActorType::User,
+                    id: user_id.clone(),
+                },
+                scope: Some(allternit_agent_system_rails::EventScope {
+                    project_id: None,
+                    dag_id: None,
+                    node_id: None,
+                    wih_id: None,
+                    run_id: None,
+                    team_workspace_id: ledger_workspace_id,
+                    team_name: None,
+                }),
+                r#type: "agent.created".to_string(),
+                payload: json!({
+                    "agent_id": id,
+                    "name": ledger_name,
+                    "agent_type": ledger_agent_type.unwrap_or_else(|| "worker".to_string()),
+                    "model": ledger_model,
+                    "provider": ledger_provider,
+                    "trust_tier": ledger_trust_tier.unwrap_or_else(|| "standard".to_string()),
+                }),
+                provenance: None,
+            };
+            if let Err(e) = state.rails.ledger.append(ledger_event).await {
+                warn!("Failed to append agent.created ledger event: {}", e);
+            }
+
+            (StatusCode::CREATED, Json(json!({ "agent": { "id": id } }))).into_response()
+        }
         Ok(Err(e)) => {
             warn!("DB error creating agent: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
@@ -247,7 +346,9 @@ async fn get_agent(
         let mut stmt = conn.prepare(
             "SELECT id, user_id, name, description, type, parent_agent_id, model, provider,
                     capabilities, system_prompt, tools, max_iterations, temperature, config,
-                    status, workspace_id, avatar, identity_key, created_at, updated_at, last_run_at
+                    status, workspace_id, avatar, identity_key, trust_tier, harness_config,
+                    enabled_modes, character_json, allowed_skills, allowed_tools, category, tags,
+                    data_classification, write_scope, created_at, updated_at, last_run_at
              FROM agents WHERE id = ?1 AND user_id = ?2"
         )?;
         let row = stmt.query_row(params![id, user_id], |row| {
@@ -260,19 +361,29 @@ async fn get_agent(
                 parent_agent_id: row.get(5)?,
                 model: row.get(6)?,
                 provider: row.get(7)?,
-                capabilities: row.get(8)?,
+                capabilities: parse_json_column(row.get(8)?),
                 system_prompt: row.get(9)?,
-                tools: row.get(10)?,
+                tools: parse_json_column(row.get(10)?),
                 max_iterations: row.get(11)?,
                 temperature: row.get(12)?,
-                config: row.get(13)?,
+                config: parse_json_column(row.get(13)?),
                 status: row.get(14)?,
                 workspace_id: row.get(15)?,
                 avatar: row.get(16)?,
                 identity_key: row.get(17)?,
-                created_at: row.get(18)?,
-                updated_at: row.get(19)?,
-                last_run_at: row.get(20)?,
+                trust_tier: row.get(18)?,
+                harness_config: parse_json_column(row.get(19)?),
+                enabled_modes: parse_json_column(row.get(20)?).unwrap_or(serde_json::Value::String("[\"chat\"]".to_string())),
+                character_json: parse_json_column(row.get(21)?),
+                allowed_skills: parse_json_column(row.get(22)?),
+                allowed_tools: parse_json_column(row.get(23)?),
+                category: row.get(24)?,
+                tags: parse_json_column(row.get(25)?),
+                data_classification: row.get(26)?,
+                write_scope: row.get(27)?,
+                created_at: row.get(28)?,
+                updated_at: row.get(29)?,
+                last_run_at: row.get(30)?,
             })
         })?;
         Ok::<_, rusqlite::Error>(row)
@@ -306,16 +417,26 @@ struct UpdateAgentBody {
     parent_agent_id: Option<String>,
     model: Option<String>,
     provider: Option<String>,
-    capabilities: Option<String>,
+    capabilities: Option<serde_json::Value>,
     system_prompt: Option<String>,
-    tools: Option<String>,
+    tools: Option<serde_json::Value>,
     max_iterations: Option<i64>,
     temperature: Option<f64>,
-    config: Option<String>,
+    config: Option<serde_json::Value>,
     status: Option<String>,
     workspace_id: Option<String>,
     avatar: Option<String>,
     identity_key: Option<String>,
+    trust_tier: Option<String>,
+    harness_config: Option<serde_json::Value>,
+    enabled_modes: Option<serde_json::Value>,
+    character_json: Option<serde_json::Value>,
+    allowed_skills: Option<serde_json::Value>,
+    allowed_tools: Option<serde_json::Value>,
+    category: Option<String>,
+    tags: Option<serde_json::Value>,
+    data_classification: Option<String>,
+    write_scope: Option<String>,
 }
 
 async fn update_agent(
@@ -348,8 +469,18 @@ async fn update_agent(
                 workspace_id = COALESCE(?14, workspace_id),
                 avatar = COALESCE(?15, avatar),
                 identity_key = COALESCE(?16, identity_key),
+                trust_tier = COALESCE(?17, trust_tier),
+                harness_config = COALESCE(?18, harness_config),
+                enabled_modes = COALESCE(?19, enabled_modes),
+                character_json = COALESCE(?20, character_json),
+                allowed_skills = COALESCE(?21, allowed_skills),
+                allowed_tools = COALESCE(?22, allowed_tools),
+                category = COALESCE(?23, category),
+                tags = COALESCE(?24, tags),
+                data_classification = COALESCE(?25, data_classification),
+                write_scope = COALESCE(?26, write_scope),
                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?17 AND user_id = ?18",
+             WHERE id = ?27 AND user_id = ?28",
             params![
                 body.name,
                 body.description,
@@ -357,16 +488,26 @@ async fn update_agent(
                 body.parent_agent_id,
                 body.model,
                 body.provider,
-                body.capabilities,
+                json_to_string(body.capabilities),
                 body.system_prompt,
-                body.tools,
+                json_to_string(body.tools),
                 body.max_iterations,
                 body.temperature,
-                body.config,
+                json_to_string(body.config),
                 body.status,
                 body.workspace_id,
                 body.avatar,
                 body.identity_key,
+                body.trust_tier,
+                json_to_string(body.harness_config),
+                json_to_string(body.enabled_modes),
+                json_to_string(body.character_json),
+                json_to_string(body.allowed_skills),
+                json_to_string(body.allowed_tools),
+                body.category,
+                json_to_string(body.tags),
+                body.data_classification,
+                body.write_scope,
                 id,
                 user_id,
             ],
@@ -417,6 +558,98 @@ async fn delete_agent(
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+// ─── Agent Workspace Initialization ───────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct WorkspaceDocument {
+    path: String,
+    content: String,
+}
+
+#[derive(Deserialize)]
+struct InitializeWorkspaceBody {
+    documents: Vec<WorkspaceDocument>,
+}
+
+#[derive(Serialize)]
+struct InitializeWorkspaceResponse {
+    success: bool,
+    workspace_path: String,
+    written_files: Vec<String>,
+}
+
+async fn initialize_agent_workspace(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<InitializeWorkspaceBody>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let agent_id = id.clone();
+
+    // Verify the agent exists and belongs to the user
+    let authorized = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM agents WHERE id = ?1 AND user_id = ?2",
+            params![agent_id, user_id],
+            |row| row.get(0),
+        )?;
+        Ok::<_, rusqlite::Error>(count > 0)
+    })
+    .await;
+
+    match authorized {
+        Ok(Ok(false)) | Ok(Err(_)) => {
+            return (StatusCode::NOT_FOUND, Json(json!({"error": "Agent not found"}))).into_response();
+        }
+        Err(_) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response();
+        }
+        _ => {}
+    }
+
+    let data_dir = dirs::data_dir()
+        .map(|d| d.join("allternit"))
+        .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"));
+    let workspace_dir = data_dir.join("agent-workspaces").join(&id);
+    let workspace_dir_for_task = workspace_dir.clone();
+
+    let write_result = tokio::task::spawn_blocking(move || {
+        std::fs::create_dir_all(&workspace_dir_for_task)?;
+        let mut written = Vec::new();
+        for doc in body.documents {
+            let file_path = workspace_dir_for_task.join(&doc.path);
+            if let Some(parent) = file_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut file = std::fs::File::create(&file_path)?;
+            file.write_all(doc.content.as_bytes())?;
+            written.push(doc.path);
+        }
+        Ok::<_, std::io::Error>(written)
+    })
+    .await;
+
+    match write_result {
+        Ok(Ok(written)) => Json(InitializeWorkspaceResponse {
+            success: true,
+            workspace_path: workspace_dir.to_string_lossy().to_string(),
+            written_files: written,
+        }).into_response(),
+        Ok(Err(e)) => {
+            warn!("Workspace initialization failed: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("Workspace task panicked: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
         }
     }

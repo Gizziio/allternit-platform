@@ -4,7 +4,7 @@ use axum::{
     extract::{Extension, Json, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::{get, post, put},
+    routing::{get, post},
     Router,
 };
 use rusqlite::params;

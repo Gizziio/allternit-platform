@@ -69,7 +69,7 @@ async fn probe_service(name: &str, slug: &str, url: &str) -> ServiceResult {
     let (status, latency_ms) = match client.get(url).send().await {
         Ok(res) => {
             let latency = start.elapsed().as_millis() as u64;
-            if res.status().is_success() {
+            if res.status().is_success() || res.status() == reqwest::StatusCode::UNAUTHORIZED {
                 if latency > 800 {
                     ("degraded".to_string(), Some(latency))
                 } else {

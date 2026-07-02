@@ -1,6 +1,6 @@
 //! Integration tests for visualization routes
 
-use api::viz_routes::{RenderChartRequest, ChartDataPoint, render_to_png, render_to_pdf};
+use allternit_api::viz_routes::{RenderChartRequest, ChartDataPoint, render_to_png, render_to_pdf};
 
 /// PNG signature bytes
 const PNG_SIGNATURE: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];

@@ -296,3 +296,196 @@ pub fn create_rails_client(
 ) -> Arc<dyn allternit_cowork_runtime::RailsClient> {
     Arc::new(RailsHttpClient::new(base_url, workspace_id))
 }
+
+// ─── Local Rails client (uses in-process Rails state) ─────────────────────────
+
+use crate::rails::RailsState;
+
+/// In-process Rails client backed by the API's own Rails service state.
+///
+/// This wires the cowork runtime directly to the local Ledger/Gate/Leases
+/// subsystem instead of requiring a separate Rails HTTP service.
+pub struct LocalRailsClient {
+    rails: RailsState,
+    workspace_id: String,
+}
+
+impl LocalRailsClient {
+    /// Create a new local Rails client
+    pub fn new(rails: RailsState, workspace_id: impl Into<String>) -> Self {
+        Self {
+            rails,
+            workspace_id: workspace_id.into(),
+        }
+    }
+
+    fn root_node_id(&self, dag_id: &str) -> String {
+        format!("{}-root", dag_id)
+    }
+}
+
+#[async_trait]
+impl allternit_cowork_runtime::RailsClient for LocalRailsClient {
+    async fn create_dag(&self, run_id: RunId, spec: &CreateRunSpec) -> anyhow::Result<String> {
+        let dag_id = uuid::Uuid::new_v4().to_string();
+        let mutation = allternit_agent_system_rails::DagMutation::CreateNode {
+            node_id: self.root_node_id(&dag_id),
+            node_kind: "task".to_string(),
+            title: format!("cowork-run-{}", run_id),
+            parent_node_id: None,
+            execution_mode: "shared".to_string(),
+        };
+
+        self.rails
+            .gate
+            .mutate_with_decision(
+                &dag_id,
+                "Creating cowork DAG",
+                Some(spec.entrypoint.clone()),
+                vec![mutation],
+            )
+            .await?;
+
+        Ok(dag_id)
+    }
+
+    async fn create_node(
+        &self,
+        dag_id: &str,
+        job_id: JobId,
+        spec: &CreateJobSpec,
+    ) -> anyhow::Result<String> {
+        let node_id = format!("{}-job-{}", dag_id, job_id);
+        let mutation = allternit_agent_system_rails::DagMutation::CreateNode {
+            node_id: node_id.clone(),
+            node_kind: spec.job_type.clone(),
+            title: format!("Job {}", job_id),
+            parent_node_id: Some(self.root_node_id(dag_id)),
+            execution_mode: "shared".to_string(),
+        };
+
+        self.rails
+            .gate
+            .mutate_with_decision(dag_id, "Creating cowork DAG node", None, vec![mutation])
+            .await?;
+
+        Ok(node_id)
+    }
+
+    async fn update_run_state(&self, dag_id: &str, state: RunState) -> anyhow::Result<()> {
+        let mutation = allternit_agent_system_rails::DagMutation::SetState {
+            node_id: self.root_node_id(dag_id),
+            dimension: "status".to_string(),
+            value: state.to_string().to_uppercase(),
+            reason: Some("Run state transition".to_string()),
+        };
+
+        self.rails
+            .gate
+            .mutate_with_decision(dag_id, "Updating cowork run state", None, vec![mutation])
+            .await?;
+
+        Ok(())
+    }
+
+    async fn update_job_state(&self, node_id: &str, state: JobState) -> anyhow::Result<()> {
+        // Node IDs are generated as `{dag_id}-job-{job_id}`.
+        let parts: Vec<&str> = node_id.rsplitn(3, '-').collect();
+        if parts.len() != 3 {
+            return Err(anyhow::anyhow!("Invalid node id format: {}", node_id));
+        }
+        let dag_id = parts[2];
+
+        let mutation = allternit_agent_system_rails::DagMutation::SetState {
+            node_id: node_id.to_string(),
+            dimension: "status".to_string(),
+            value: state.to_string().to_uppercase(),
+            reason: Some("Job state transition".to_string()),
+        };
+
+        self.rails
+            .gate
+            .mutate_with_decision(dag_id, "Updating cowork job state", None, vec![mutation])
+            .await?;
+
+        Ok(())
+    }
+
+    async fn request_lease(&self, resource_id: &str, owner_id: &str) -> anyhow::Result<bool> {
+        let lease_id = uuid::Uuid::new_v4().to_string();
+        let lease_req = allternit_agent_system_rails::LeaseRequest {
+            lease_id,
+            wih_id: resource_id.to_string(),
+            agent_id: owner_id.to_string(),
+            paths: vec![],
+            requested_at: chrono::Utc::now().to_rfc3339(),
+            ttl_seconds: Some(60),
+        };
+
+        match self.rails.leases.request(lease_req).await {
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
+        }
+    }
+
+    async fn release_lease(&self, resource_id: &str, _owner_id: &str) -> anyhow::Result<()> {
+        self.rails.leases.release_for_wih(resource_id).await?;
+        Ok(())
+    }
+
+    async fn append_event(&self, event: &CoworkEvent) -> anyhow::Result<()> {
+        let run_id = match event {
+            CoworkEvent::RunCreated { run_id, .. } => run_id.to_string(),
+            CoworkEvent::RunStateChanged { run_id, .. } => run_id.to_string(),
+            CoworkEvent::RunCompleted { run_id, .. } => run_id.to_string(),
+            CoworkEvent::JobCreated { run_id, .. } => run_id.to_string(),
+            CoworkEvent::JobStateChanged { run_id, .. } => run_id.to_string(),
+            CoworkEvent::CheckpointCreated { run_id, .. } => run_id.to_string(),
+            CoworkEvent::Attached { run_id, .. } => run_id.to_string(),
+            CoworkEvent::Detached { run_id, .. } => run_id.to_string(),
+        };
+
+        let event_type = match event {
+            CoworkEvent::RunCreated { .. } => "cowork.run.created",
+            CoworkEvent::RunStateChanged { .. } => "cowork.run.state_changed",
+            CoworkEvent::RunCompleted { .. } => "cowork.run.completed",
+            CoworkEvent::JobCreated { .. } => "cowork.job.created",
+            CoworkEvent::JobStateChanged { .. } => "cowork.job.state_changed",
+            CoworkEvent::CheckpointCreated { .. } => "cowork.checkpoint.created",
+            CoworkEvent::Attached { .. } => "cowork.attachment.attached",
+            CoworkEvent::Detached { .. } => "cowork.attachment.detached",
+        };
+
+        let allternit_event = allternit_agent_system_rails::AllternitEvent {
+            event_id: uuid::Uuid::new_v4().to_string(),
+            ts: chrono::Utc::now().to_rfc3339(),
+            actor: allternit_agent_system_rails::Actor {
+                r#type: allternit_agent_system_rails::ActorType::Agent,
+                id: "cowork-runtime".to_string(),
+            },
+            scope: Some(allternit_agent_system_rails::EventScope {
+                project_id: None,
+                dag_id: None,
+                node_id: None,
+                wih_id: None,
+                run_id: Some(run_id),
+                team_workspace_id: Some(self.workspace_id.clone()),
+                team_name: None,
+            }),
+            r#type: event_type.to_string(),
+            payload: serde_json::to_value(event)?,
+            provenance: None,
+        };
+
+        self.rails.ledger.append(allternit_event).await?;
+        Ok(())
+    }
+}
+
+/// Create a local Rails client backed by the API's own Rails state.
+pub fn create_local_rails_client(
+    rails: RailsState,
+    workspace_id: impl Into<String>,
+) -> Arc<dyn allternit_cowork_runtime::RailsClient> {
+    Arc::new(LocalRailsClient::new(rails, workspace_id))
+}

@@ -8,7 +8,7 @@
 
 use axum::{
     extract::{Request, State},
-    http::StatusCode,
+    http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
     Json,
@@ -24,6 +24,11 @@ use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 
 use crate::db::DbHandle;
+
+const DESKTOP_ACCESS_TOKEN_HEADER: &str = "x-allternit-desktop-access-token";
+const USER_ID_HEADER: &str = "x-allternit-user-id";
+const USER_EMAIL_HEADER: &str = "x-allternit-user-email";
+const USER_NAME_HEADER: &str = "x-allternit-user-name";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -340,10 +345,47 @@ pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<(), AuthError
 // ─── Axum Middleware ────────────────────────────────────────────────────────
 
 /// Extract Bearer token from Authorization header
-fn extract_bearer_token(headers: &axum::http::HeaderMap) -> Option<String> {
+fn extract_bearer_token(headers: &HeaderMap) -> Option<String> {
     let auth_header = headers.get(axum::http::header::AUTHORIZATION)?;
     let auth_str = auth_header.to_str().ok()?;
     auth_str.strip_prefix("Bearer ").map(|s| s.to_string())
+}
+
+fn extract_header_string(headers: &HeaderMap, name: &'static str) -> Option<String> {
+    headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.to_string())
+}
+
+fn insert_user_headers(headers: &mut HeaderMap, user: &AuthUser) {
+    headers.insert(
+        HeaderName::from_static(USER_ID_HEADER),
+        HeaderValue::from_str(&user.user_id).unwrap(),
+    );
+    if let Some(ref email) = user.email {
+        if let Ok(value) = HeaderValue::from_str(email) {
+            headers.insert(HeaderName::from_static(USER_EMAIL_HEADER), value);
+        }
+    }
+    if let Some(ref name) = user.name {
+        if let Ok(value) = HeaderValue::from_str(name) {
+            headers.insert(HeaderName::from_static(USER_NAME_HEADER), value);
+        }
+    }
+}
+
+fn extract_desktop_bootstrap_user(headers: &HeaderMap) -> Option<AuthUser> {
+    let user_id = extract_header_string(headers, USER_ID_HEADER)?;
+    let _desktop_token = extract_header_string(headers, DESKTOP_ACCESS_TOKEN_HEADER)?;
+    let email = extract_header_string(headers, USER_EMAIL_HEADER);
+    let name = extract_header_string(headers, USER_NAME_HEADER);
+    Some(AuthUser {
+        user_id,
+        email,
+        name,
+        avatar_url: None,
+    })
 }
 
 /// Auth middleware — verifies Clerk JWT and adds user context to request headers.
@@ -353,27 +395,14 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
-    // Dev bypass: skip auth entirely when ALLTERNIT_DEV_AUTH_BYPASS is set
-    if std::env::var("ALLTERNIT_DEV_AUTH_BYPASS").ok().filter(|s| !s.is_empty()).is_some() {
-        let user = AuthUser {
-            user_id: "dev-user-001".to_string(),
-            email: Some("dev@allternit.local".to_string()),
-            name: Some("Dev User".to_string()),
-            avatar_url: None,
-        };
+
+    if let Some(user) = extract_desktop_bootstrap_user(request.headers()) {
+        if let Err(e) = ensure_user_in_db(&state.db, &user) {
+            return e.into_response();
+        }
+
         let headers = request.headers_mut();
-        headers.insert(
-            axum::http::HeaderName::from_static("x-allternit-user-id"),
-            axum::http::HeaderValue::from_str(&user.user_id).unwrap(),
-        );
-        headers.insert(
-            axum::http::HeaderName::from_static("x-allternit-user-email"),
-            axum::http::HeaderValue::from_str("dev@allternit.local").unwrap(),
-        );
-        headers.insert(
-            axum::http::HeaderName::from_static("x-allternit-user-name"),
-            axum::http::HeaderValue::from_str("Dev User").unwrap(),
-        );
+        insert_user_headers(headers, &user);
         request.extensions_mut().insert(user);
         return next.run(request).await;
     }
@@ -390,59 +419,13 @@ pub async fn auth_middleware(
                 // Add user context as headers for backward compatibility
                 // (handlers should prefer Extension<AuthUser> over header extraction)
                 let headers = request.headers_mut();
-                headers.insert(
-                    axum::http::HeaderName::from_static("x-allternit-user-id"),
-                    axum::http::HeaderValue::from_str(&user.user_id).unwrap(),
-                );
-                if let Some(ref email) = user.email {
-                    if let Ok(val) = axum::http::HeaderValue::from_str(email) {
-                        headers.insert(
-                            axum::http::HeaderName::from_static("x-allternit-user-email"),
-                            val,
-                        );
-                    }
-                }
-                if let Some(ref name) = user.name {
-                    if let Ok(val) = axum::http::HeaderValue::from_str(name) {
-                        headers.insert(
-                            axum::http::HeaderName::from_static("x-allternit-user-name"),
-                            val,
-                        );
-                    }
-                }
+                insert_user_headers(headers, &user);
 
                 // Also attach to extensions for any middleware that needs it
                 request.extensions_mut().insert(user);
                 return next.run(request).await;
             }
             Err(e) => return e.into_response(),
-        }
-    }
-
-    // Dev fallback: accept x-allternit-user-id header directly for local testing
-    // ONLY when ALLTERNIT_DEV_AUTH_BYPASS is set — disabled in production
-    let dev_bypass = std::env::var("ALLTERNIT_DEV_AUTH_BYPASS").ok().filter(|s| !s.is_empty()).is_some();
-    if dev_bypass {
-        let headers = request.headers();
-        let user_id = headers.get("x-allternit-user-id").and_then(|v| v.to_str().ok()).map(|s| s.to_string());
-        let email = headers.get("x-allternit-user-email").and_then(|v| v.to_str().ok()).map(|s| s.to_string());
-        let name = headers.get("x-allternit-user-name").and_then(|v| v.to_str().ok()).map(|s| s.to_string());
-        if let Some(user_id) = user_id {
-            let user = AuthUser {
-                user_id,
-                email,
-                name,
-                avatar_url: None,
-            };
-
-            if let Err(e) = ensure_user_in_db(&state.db, &user) {
-                return e.into_response();
-            }
-
-            let user_id_log = user.user_id.clone();
-            request.extensions_mut().insert(user);
-            info!("Auth bypass: accepting x-allternit-user-id for local dev (user_id={})", user_id_log);
-            return next.run(request).await;
         }
     }
 
@@ -466,8 +449,6 @@ pub async fn optional_auth_middleware(
 }
 
 // ─── Header-based auth extraction (works around multiple axum versions) ─────
-
-use axum::http::HeaderMap;
 
 /// Extract AuthUser from request headers set by auth_middleware.
 /// 

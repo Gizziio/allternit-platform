@@ -387,19 +387,39 @@ impl CoworkBackgroundService {
 
     async fn collect_evidence(&self, api_url: &str) -> String {
         let client = reqwest::Client::new();
+        let mut parts = Vec::new();
+
         // Read from gizzi agent-sessions filtered by cowork surface
-        let url = format!("{api_url}/api/v1/agent-sessions?surface=cowork&limit=10");
-        match client.get(&url).send().await {
+        let sessions_url = format!("{api_url}/api/v1/agent-sessions?surface=cowork&limit=10");
+        match client.get(&sessions_url).send().await {
             Ok(res) if res.status().is_success() => {
                 if let Ok(body) = res.text().await {
                     if body.len() > 20 {
-                        return format!("Recent cowork sessions: {}", &body[..body.len().min(500)]);
+                        parts.push(format!("Recent cowork sessions: {}", &body[..body.len().min(500)]));
                     }
                 }
             }
             _ => {}
         }
-        String::new()
+
+        // Read from cowork runs to incorporate DAG/WIH lifecycle state
+        let runs_url = format!("{api_url}/api/v1/runs?limit=10");
+        match client.get(&runs_url).send().await {
+            Ok(res) if res.status().is_success() => {
+                if let Ok(body) = res.text().await {
+                    if body.len() > 20 {
+                        parts.push(format!("Recent cowork runs: {}", &body[..body.len().min(500)]));
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        if parts.is_empty() {
+            String::new()
+        } else {
+            parts.join("\n")
+        }
     }
 
     async fn call_run_agent(&self, api_url: &str, agent_id: &str, role: &str, prompt: &str) -> Option<String> {

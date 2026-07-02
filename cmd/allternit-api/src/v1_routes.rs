@@ -1,14 +1,18 @@
 use axum::{
     body::Body,
-    extract::Request,
     http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse, Response,
+    },
     routing::{any, get, post},
     Json, Router,
 };
+use futures::StreamExt;
 use serde_json::json;
-use std::sync::Arc;
+use std::{convert::Infallible, sync::Arc};
 use tracing::{info, warn};
+use uuid::Uuid;
 
 use crate::AppState;
 
@@ -19,113 +23,206 @@ fn gizzi_base() -> String {
         .to_string()
 }
 
-
 pub fn v1_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/ai/chat", post(agent_chat_proxy))
+        .route("/ai/chat", post(agent_chat_bridge))
         .route("/health", get(health))
 }
 
 pub fn agent_chat_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/agent-chat", any(agent_chat_proxy))
-}
-
-
-async fn agent_chat_proxy(headers: HeaderMap, req: Request) -> impl IntoResponse {
-    let gizzi = gizzi_base();
-    let user_id = headers.get("x-allternit-user-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("anonymous");
-    forward_to_gizzi(req, &gizzi, None, user_id).await
+        .route("/agent-chat", any(agent_chat_bridge))
 }
 
 async fn health() -> impl IntoResponse {
     Json(json!({ "status": "ok" }))
 }
 
-async fn forward_to_gizzi(req: Request, gizzi_base: &str, override_path: Option<&str>, user_id: &str) -> Response {
-    let client = reqwest::Client::new();
-    let (parts, body) = req.into_parts();
-
-    let path_and_query = override_path
-        .map(|p| p.to_string())
-        .unwrap_or_else(|| parts.uri.path_and_query().map(|p| p.as_str().to_string()).unwrap_or_default());
-
-    let target_url = format!("{}{}", gizzi_base.trim_end_matches('/'), path_and_query);
-    info!("Gizzi proxy -> {}", target_url);
-
+/// Bridge /api/agent-chat → gizzi session/event architecture.
+///
+/// 1. Parse chatId and message from the request body.
+/// 2. Subscribe to gizzi's SSE event stream.
+/// 3. POST the message to gizzi /v1/session/:id/message.
+/// 4. Filter message.part.delta events for this session and convert to
+///    the content_block_delta SSE format the frontend expects.
+/// 5. Close the stream when session.status becomes idle.
+async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     let body_bytes = match body_to_bytes(body).await {
         Ok(b) => b,
-        Err(e) => {
-            warn!("Failed to read request body: {}", e);
-            return (StatusCode::BAD_REQUEST, "Failed to read request body").into_response();
+        Err(_) => {
+            return (StatusCode::BAD_REQUEST, Json(json!({"error": "bad request body"}))).into_response();
         }
     };
 
-    let method_str = parts.method.as_str();
-    let reqwest_method = reqwest::Method::from_bytes(method_str.as_bytes()).unwrap_or(reqwest::Method::GET);
-    let mut req_builder = client.request(reqwest_method, &target_url);
+    let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap_or(serde_json::Value::Null);
 
-    for (name, value) in parts.headers.iter() {
-        let name_str = name.as_str();
-        if name_str.eq_ignore_ascii_case("host")
-            || name_str.eq_ignore_ascii_case("connection")
-            || name_str.eq_ignore_ascii_case("transfer-encoding")
-        {
-            continue;
-        }
-        if let Ok(value_str) = value.to_str() {
-            req_builder = req_builder.header(name_str, value_str);
-        }
-    }
+    let chat_id = body_json.get("chatId").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let message = body_json.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-    // Ensure user_id header is forwarded
-    req_builder = req_builder.header("x-allternit-user-id", user_id);
+    // Parse model from runtimeModelId or modelId — strip provider prefix if present
+    let raw_model = body_json.get("runtimeModelId")
+        .or_else(|| body_json.get("modelId"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("claude-cli/claude-sonnet-4-6")
+        .to_string();
 
-    if !body_bytes.is_empty() {
-        req_builder = req_builder.body(body_bytes.to_vec());
-    }
-
-    let upstream = match req_builder.send().await {
-        Ok(r) => r,
-        Err(e) => {
-            warn!("Gizzi proxy error: {}", e);
-            return (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": format!("Gizzi proxy failed: {}", e) })),
-            ).into_response();
-        }
+    let (provider_id, model_id) = if let Some((p, m)) = raw_model.split_once('/') {
+        (p.to_string(), m.to_string())
+    } else {
+        ("claude-cli".to_string(), raw_model.clone())
     };
 
-    let status = StatusCode::from_u16(upstream.status().as_u16())
-        .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-    let mut response = Response::builder().status(status);
+    if chat_id.is_empty() || message.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "chatId and message are required"})),
+        ).into_response();
+    }
 
-    for (name, value) in upstream.headers().iter() {
-        let name_str = name.as_str();
-        if name_str.eq_ignore_ascii_case("connection")
-            || name_str.eq_ignore_ascii_case("transfer-encoding")
+    let gizzi = gizzi_base();
+    let assistant_message_id = format!("msg_{}", Uuid::new_v4().simple());
+    let model_label = format!("{}/{}", provider_id, model_id);
+
+    info!(session_id = %chat_id, model = %model_label, "agent-chat bridge → gizzi");
+
+    let stream = async_stream::stream! {
+        let msg_id = assistant_message_id.clone();
+        let session_id = chat_id.clone();
+
+        yield Ok::<Event, Infallible>(Event::default().data(
+            json!({
+                "type": "message_start",
+                "messageId": msg_id,
+                "modelId": model_label,
+                "runtimeModelId": model_label,
+            }).to_string()
+        ));
+
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(120))
+            .build()
+            .unwrap_or_default();
+
+        // Subscribe to the gizzi event stream BEFORE sending the message so we
+        // don't miss any events that fire immediately after the POST.
+        let event_resp = match client
+            .get(format!("{}/v1/event", gizzi))
+            .header("Accept", "text/event-stream")
+            .send()
+            .await
         {
-            continue;
-        }
-        if let Ok(value_str) = value.to_str() {
-            response = response.header(name_str, value_str);
-        }
-    }
+            Ok(r) => r,
+            Err(e) => {
+                warn!("Failed to connect to gizzi event stream: {}", e);
+                yield Ok(Event::default().data(json!({
+                    "type": "finish",
+                    "messageId": msg_id,
+                    "status": "error",
+                    "metadata": { "status": "error", "error": format!("gizzi event stream unavailable: {}", e) },
+                }).to_string()));
+                return;
+            }
+        };
 
-    response = response.header("access-control-allow-origin", "*");
-    response = response.header("access-control-allow-headers", "*");
-    response = response.header("access-control-allow-methods", "*");
+        // POST message to gizzi
+        let gizzi_payload = json!({
+            "parts": [{ "type": "text", "text": message }],
+            "model": { "providerID": provider_id, "modelID": model_id },
+        });
 
-    let body_bytes = upstream.bytes().await.unwrap_or_default();
-    match response.body(Body::from(body_bytes)) {
-        Ok(r) => r,
-        Err(e) => {
-            warn!("Failed to build response: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to build response").into_response()
+        if let Err(e) = client
+            .post(format!("{}/v1/session/{}/message", gizzi, session_id))
+            .json(&gizzi_payload)
+            .send()
+            .await
+        {
+            warn!("Failed to send message to gizzi session: {}", e);
+            yield Ok(Event::default().data(json!({
+                "type": "finish",
+                "messageId": msg_id,
+                "status": "error",
+                "metadata": { "status": "error", "error": format!("gizzi unavailable: {}", e) },
+            }).to_string()));
+            return;
         }
-    }
+
+        // Stream events from gizzi, forwarding text deltas for our session
+        let mut buf = String::new();
+        let mut byte_stream = event_resp.bytes_stream();
+        let mut was_busy = false;
+
+        'event_loop: while let Some(chunk_result) = byte_stream.next().await {
+            let chunk = match chunk_result {
+                Ok(b) => b,
+                Err(e) => { warn!("Gizzi stream read error: {}", e); break; }
+            };
+
+            buf.push_str(&String::from_utf8_lossy(&chunk));
+
+            // SSE blocks are separated by double newlines
+            loop {
+                let Some(block_end) = buf.find("\n\n") else { break };
+                let block = buf[..block_end].to_string();
+                buf = buf[block_end + 2..].to_string();
+
+                // Extract the data line from the SSE block
+                let data = block.lines()
+                    .find(|l| l.starts_with("data:"))
+                    .and_then(|l| l.strip_prefix("data:"))
+                    .map(str::trim)
+                    .unwrap_or("");
+
+                if data.is_empty() { continue; }
+
+                let Ok(event) = serde_json::from_str::<serde_json::Value>(data) else { continue };
+                let event_type = event.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                let props = &event["properties"];
+
+                let evt_session = props.get("sessionID").and_then(|v| v.as_str()).unwrap_or("");
+                if !evt_session.is_empty() && evt_session != session_id {
+                    continue; // different session — ignore
+                }
+
+                match event_type {
+                    "message.part.delta" => {
+                        let delta_text = props.get("delta").and_then(|v| v.as_str()).unwrap_or("");
+                        let part_id = props.get("partID").and_then(|v| v.as_str()).unwrap_or("text-1");
+
+                        yield Ok(Event::default().data(json!({
+                            "type": "content_block_delta",
+                            "messageId": msg_id,
+                            "partId": part_id,
+                            "delta": { "type": "text_delta", "text": delta_text },
+                        }).to_string()));
+                    }
+                    "session.status" => {
+                        let status_type = props.get("status")
+                            .and_then(|s| s.get("type"))
+                            .and_then(|t| t.as_str())
+                            .unwrap_or("");
+
+                        if status_type == "busy" {
+                            was_busy = true;
+                        } else if status_type == "idle" && was_busy {
+                            break 'event_loop;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        yield Ok(Event::default().data(json!({
+            "type": "finish",
+            "messageId": msg_id,
+            "status": "complete",
+            "metadata": { "status": "complete" },
+        }).to_string()));
+    };
+
+    Sse::new(stream)
+        .keep_alive(KeepAlive::default())
+        .into_response()
 }
 
 async fn body_to_bytes(body: Body) -> Result<axum::body::Bytes, Box<dyn std::error::Error + Send + Sync>> {

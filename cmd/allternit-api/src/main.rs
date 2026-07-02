@@ -26,6 +26,7 @@ use allternit_api::auth::auth_middleware;
 use allternit_api::db::DbHandle;
 use allternit_api::aci_routes::aci_router;
 use allternit_api::agent_routes::agent_router;
+use allternit_api::automation_routes::automation_router;
 use allternit_api::agent_runtime_routes::agent_runtime_router;
 use allternit_api::agent_session_routes::agent_session_router;
 use allternit_api::agents_v1_routes::agents_v1_router;
@@ -42,6 +43,8 @@ use allternit_api::design_connector_routes::design_connector_router;
 use allternit_api::cowork::background_service::CoworkBackgroundService;
 use allternit_api::cowork::routes::{background_router, CoworkBgState};
 use allternit_api::cowork_routes::cowork_router;
+use allternit_api::rails_client_impl::create_local_rails_client;
+use allternit_cowork_runtime::{JobId, Run as CoworkRun, RunId, RunManager, RunManagerConfig, RunMode, RunState};
 use allternit_api::cowork_team_routes::cowork_team_router;
 use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
@@ -131,6 +134,12 @@ async fn main() {
     // Initialize cowork background service
     let (cowork_background, bg_state) = initialize_cowork_background(&data_dir).await;
 
+    // Initialize cowork runtime run manager (Rails-backed DAG/WIH lifecycle)
+    let cowork_run_manager = initialize_cowork_run_manager(&data_dir, rails.clone()).await;
+    if let Some(ref manager) = cowork_run_manager {
+        load_persisted_cowork_runs(&db, manager).await;
+    }
+
     // Initialize office runtime state (load from disk or start empty)
     let office_runtime = Arc::new(tokio::sync::RwLock::new(
         allternit_api::office_routes::load_runtime_file()
@@ -145,6 +154,7 @@ async fn main() {
         vm_sessions: new_vm_session_store(),
         cowork_scheduler,
         cowork_background,
+        cowork_run_manager,
         webhook_secret,
         office_runtime,
     });
@@ -161,10 +171,12 @@ async fn main() {
         .merge(swarm_router())
         .merge(board_router())
         .merge(cowork_router())
+        .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(agent_router())
         .merge(agent_session_router())
         .merge(v1_router())
         .merge(task_routes::task_router())
+        .merge(allternit_api::queue_routes::queue_router())
         .merge(audit_log_router())
         .merge(ssh_key_router())
         .merge(team_skill_router())
@@ -179,7 +191,8 @@ async fn main() {
         .merge(artifact_router())
         .merge(conversation_router())
         .merge(office_router())
-        .merge(alabs_router());
+        .merge(alabs_router())
+        .merge(automation_router());
 
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()
@@ -311,6 +324,131 @@ async fn initialize_cowork_background(
     }
 }
 
+/// Initialize the cowork runtime run manager backed by Rails DAGs/WIHs.
+async fn initialize_cowork_run_manager(
+    data_dir: &std::path::Path,
+    rails: allternit_api::rails::RailsState,
+) -> Option<Arc<RunManager>> {
+    let runtime_dir = data_dir.join("cowork-runtime");
+    if let Err(e) = std::fs::create_dir_all(&runtime_dir) {
+        warn!("Failed to create cowork-runtime directory: {e}");
+        return None;
+    }
+    let rails_url = std::env::var("ALLTERNIT_RAILS_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:3021".to_string());
+    let workspace_id = std::env::var("ALLTERNIT_RAILS_WORKSPACE_ID")
+        .unwrap_or_else(|_| "default".to_string());
+
+    let config = RunManagerConfig {
+        data_dir: runtime_dir,
+        rails_base_url: rails_url,
+        attachment_timeout_secs: 300,
+        lease_duration_secs: 60,
+        max_checkpoint_age_hours: 24,
+    };
+
+    let rails_client = create_local_rails_client(rails, workspace_id);
+
+    match RunManager::new(config, rails_client).await {
+        Ok((manager, _event_tx)) => {
+            info!("Cowork run manager initialized");
+            Some(Arc::new(manager))
+        }
+        Err(e) => {
+            warn!("Cowork run manager init failed: {e}");
+            None
+        }
+    }
+}
+
+/// Load previously persisted cowork runs from SQLite into the runtime manager.
+async fn load_persisted_cowork_runs(db: &allternit_api::db::DbHandle, manager: &Arc<RunManager>) {
+    let conn = match db.connect() {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to connect to DB to load cowork runs: {e}");
+            return;
+        }
+    };
+
+    let mut stmt = match conn.prepare(
+        "SELECT id, tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id,
+                current_job_id, current_checkpoint_id, policy_profile, created_at, updated_at, completed_at
+         FROM cowork_runs"
+    ) {
+        Ok(s) => s,
+        Err(e) => {
+            warn!("Failed to prepare cowork runs load query: {e}");
+            return;
+        }
+    };
+
+    let rows = match stmt.query_map([], |row| {
+        Ok((
+            row.get::<_, String>(0)?,
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, String>(3)?,
+            row.get::<_, String>(4)?,
+            row.get::<_, String>(5)?,
+            row.get::<_, String>(6)?,
+            row.get::<_, String>(7)?,
+            row.get::<_, Option<String>>(8)?,
+            row.get::<_, Option<String>>(9)?,
+            row.get::<_, String>(10)?,
+            row.get::<_, String>(11)?,
+            row.get::<_, String>(12)?,
+            row.get::<_, Option<String>>(13)?,
+        ))
+    }) {
+        Ok(iter) => iter.filter_map(|r| r.ok()).collect::<Vec<_>>(),
+        Err(e) => {
+            warn!("Failed to load persisted cowork runs: {e}");
+            return;
+        }
+    };
+
+    for (id, tenant_id, workspace_id, initiator, mode_str, state_str, entrypoint, dag_id, current_job_id, current_checkpoint_id, policy_profile, created_at, updated_at, completed_at) in rows {
+        let run_id = match uuid::Uuid::parse_str(&id) {
+            Ok(u) => RunId(u),
+            Err(_) => continue,
+        };
+        let mode = mode_str.parse::<RunMode>().unwrap_or(RunMode::Cowork);
+        let state = state_str.parse::<RunState>().unwrap_or(RunState::Created);
+        let current_job_id = current_job_id.and_then(|s| uuid::Uuid::parse_str(&s).ok().map(JobId));
+        let created_at = chrono::DateTime::parse_from_rfc3339(&created_at)
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+            .unwrap_or_else(|_| chrono::Utc::now());
+        let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at)
+            .map(|dt| dt.with_timezone(&chrono::Utc))
+            .unwrap_or_else(|_| chrono::Utc::now());
+        let completed_at = completed_at.and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&chrono::Utc)).ok());
+
+        let run = CoworkRun {
+            id: run_id,
+            tenant_id,
+            workspace_id,
+            initiator,
+            mode,
+            state,
+            entrypoint,
+            dag_id,
+            current_job_id,
+            current_checkpoint_id,
+            policy_profile,
+            created_at,
+            updated_at,
+            completed_at,
+        };
+
+        if let Err(e) = manager.load_run(run).await {
+            warn!("Failed to load run {id} into run manager: {e}");
+        }
+    }
+
+    info!("Loaded persisted cowork runs into run manager");
+}
+
 /// Initialize the cowork task scheduler backed by SQLite.
 async fn initialize_cowork_scheduler(data_dir: &std::path::Path) -> Option<Arc<RwLock<Scheduler>>> {
     let db_path = data_dir.join("cowork-schedules.db");
@@ -362,16 +500,17 @@ async fn initialize_vm_driver() -> Option<Box<dyn allternit_driver_interface::Ex
         
         // Use packaged VM directory if available
         if let Some(dir) = vm_dir {
-            config.vm_root_dir = std::path::PathBuf::from(dir);
+            config.images_dir = std::path::PathBuf::from(dir);
         }
 
-        match FirecrackerDriver::with_config(config).await {
+        match FirecrackerDriver::new(config).await {
             Ok(driver) => {
                 info!("Firecracker driver initialized");
                 return Some(Box::new(driver));
             }
             Err(e) => {
-                warn!("Failed to initialize Firecracker driver: {} — running without VM execution", e);
+                warn!("Failed to initialize Firecracker driver: {}", e);
+                info!("Running without VM execution (visualization only)");
                 return None;
             }
         }

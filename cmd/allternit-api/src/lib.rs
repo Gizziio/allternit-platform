@@ -7,6 +7,7 @@ pub mod agent_runtime_routes;
 pub mod agent_session_routes;
 pub mod agents_v1_routes;
 pub mod alabs_routes;
+pub mod automation_routes;
 pub mod artifact_routes;
 pub mod audit_log_routes;
 pub mod auth;
@@ -23,6 +24,7 @@ pub mod error;
 pub mod fallback_routes;
 pub mod h5i_routes;
 pub mod oauth_routes;
+pub mod office_routes;
 pub mod onboarding_routes;
 pub mod aci_routes;
 pub mod analytics_routes;
@@ -49,6 +51,7 @@ pub mod status_routes;
 pub mod stream;
 pub mod swarm_routes;
 pub mod task_routes;
+pub mod queue_routes;
 pub mod team_skill_routes;
 pub mod terminal_routes;
 pub mod tool_routes;
@@ -56,6 +59,7 @@ pub mod v1_routes;
 pub mod viz_routes;
 pub mod vm_session_routes;
 pub mod webhook_routes;
+pub mod web_proxy_routes;
 pub mod workflow_routes;
 pub mod workspace_routes;
 
@@ -65,8 +69,12 @@ use rails::RailsState;
 use vm_session_routes::VmSessionStore;
 use cowork::background_service::BackgroundServiceHandle;
 use allternit_cowork_scheduler::Scheduler;
+use allternit_cowork_runtime::RunManager;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+/// Office runtime state (bindings + sessions) — kept in memory for concurrency safety
+pub type OfficeRuntimeState = Arc<RwLock<crate::office_routes::OfficeRuntimeFile>>;
 
 /// Application state shared across all route handlers
 pub struct AppState {
@@ -85,6 +93,10 @@ pub struct AppState {
     pub cowork_scheduler: Option<Arc<RwLock<Scheduler>>>,
     /// Cowork background service — periodic autonomous loop for proactive suggestions.
     pub cowork_background: Option<BackgroundServiceHandle>,
+    /// Cowork runtime run manager — persistent, detachable run lifecycle.
+    pub cowork_run_manager: Option<Arc<RunManager>>,
     /// Webhook secret for verifying incoming webhooks
     pub webhook_secret: Option<String>,
+    /// Office add-in runtime bindings and sessions
+    pub office_runtime: OfficeRuntimeState,
 }

@@ -33,6 +33,7 @@ async fn audit_log_status() -> impl IntoResponse {
 
 #[derive(Deserialize)]
 struct ListAuditLogsQuery {
+    #[serde(alias = "taskId")]
     task_id: Option<String>,
     page: Option<u32>,
     limit: Option<u32>,
@@ -224,6 +225,7 @@ async fn create_audit_log(
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct AuditLogRow {
     id: String,
     task_id: String,

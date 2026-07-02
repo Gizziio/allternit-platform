@@ -81,6 +81,14 @@ struct SendMessageBody {
     metadata: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Serialize)]
+struct GizziModelRef<'a> {
+    #[serde(rename = "providerID")]
+    provider_id: &'a str,
+    #[serde(rename = "modelID")]
+    model_id: &'a str,
+}
+
 #[derive(Debug, Deserialize)]
 struct GizziSessionInfo {
     id: String,
@@ -289,6 +297,40 @@ fn transform_message(message: GizziMessage) -> serde_json::Value {
     })
 }
 
+fn select_model(metadata: Option<&serde_json::Value>) -> serde_json::Value {
+    if let Some(model) = metadata
+        .and_then(|value| value.get("model"))
+        .and_then(|value| value.as_object())
+    {
+        if let (Some(provider_id), Some(model_id)) = (
+            model.get("providerID").and_then(|value| value.as_str()),
+            model.get("modelID").and_then(|value| value.as_str()),
+        ) {
+            return json!(GizziModelRef {
+                provider_id,
+                model_id,
+            });
+        }
+    }
+
+    if let Some((provider_id, model_id)) = metadata.and_then(|value| {
+        Some((
+            value.get("providerID")?.as_str()?,
+            value.get("modelID")?.as_str()?,
+        ))
+    }) {
+        return json!(GizziModelRef {
+            provider_id,
+            model_id,
+        });
+    }
+
+    json!(GizziModelRef {
+        provider_id: "claude-cli",
+        model_id: "claude-sonnet-4-6",
+    })
+}
+
 async fn gizzi_json<T: serde::de::DeserializeOwned>(
     client: &Client,
     method: reqwest::Method,
@@ -374,16 +416,20 @@ async fn list_sessions(
     };
 
     let surface_filter = query.get("surface").cloned();
-    let filtered = sessions
-        .into_iter()
-        .filter(|session| {
-            surface_filter
-                .as_ref()
-                .map(|surface| session.surface.as_deref() == Some(surface.as_str()))
-                .unwrap_or(true)
-        })
-        .map(transform_session)
-        .collect::<Vec<_>>();
+    let mut filtered = Vec::new();
+    for session in sessions {
+        let transformed = transform_session(session);
+        let should_include = surface_filter.as_ref().map_or(true, |sf| {
+            transformed
+                .get("metadata")
+                .and_then(|m| m.get("originSurface"))
+                .and_then(|v| v.as_str())
+                == Some(sf.as_str())
+        });
+        if should_include {
+            filtered.push(transformed);
+        }
+    }
 
     Json(json!({
         "sessions": filtered,
@@ -402,14 +448,15 @@ async fn create_session(headers: HeaderMap, Json(body): Json<CreateSessionBody>)
     if let Some(agent_id) = body.agent_id {
         payload.insert("agentID".to_string(), json!(agent_id));
     }
-    if let Some(surface) = body.origin_surface.or_else(|| {
+    let surface = body.origin_surface.or_else(|| {
         body.metadata
             .as_ref()
             .and_then(|m| m.get("surface"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
-    }) {
-        payload.insert("surface".to_string(), json!(surface));
+    });
+    if let Some(ref s) = surface {
+        payload.insert("surface".to_string(), json!(s));
     }
     let session = match gizzi_json::<GizziSessionInfo>(
         &client,
@@ -442,14 +489,28 @@ async fn update_session(
 ) -> impl IntoResponse {
     let client = gizzi_client(&headers);
     let path = format!("/v1/session/{}", urlencoding::encode(&session_id));
-    let payload = json!({
-        "title": body.name,
-        "archived": body.active.map(|active| !active),
-        "permission": body.metadata.as_ref().and_then(|m| m.get("permission")).cloned(),
-        "surface": body.origin_surface.or_else(|| body.metadata.as_ref().and_then(|m| m.get("surface").and_then(|v| v.as_str()).map(|s| s.to_string()))),
+    let surface = body.origin_surface.or_else(|| {
+        body.metadata
+            .as_ref()
+            .and_then(|m| m.get("surface"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
     });
+    let mut payload = serde_json::Map::new();
+    if let Some(name) = body.name {
+        payload.insert("title".to_string(), json!(name));
+    }
+    if let Some(active) = body.active {
+        payload.insert("archived".to_string(), json!(!active));
+    }
+    if let Some(ref permission) = body.metadata.as_ref().and_then(|m| m.get("permission")).cloned() {
+        payload.insert("permission".to_string(), permission.clone());
+    }
+    if let Some(ref s) = surface {
+        payload.insert("surface".to_string(), json!(s));
+    }
 
-    match gizzi_json::<GizziSessionInfo>(&client, reqwest::Method::PATCH, &path, Some(payload)).await
+    match gizzi_json::<GizziSessionInfo>(&client, reqwest::Method::PATCH, &path, Some(serde_json::Value::Object(payload))).await
     {
         Ok(session) => Json(transform_session(session)).into_response(),
         Err(response) => response,
@@ -495,13 +556,13 @@ async fn send_message(
     let client = gizzi_client(&headers);
     let path = format!("/v1/session/{}/message", urlencoding::encode(&session_id));
     let payload = json!({
-        "noReply": true,
         "parts": [
             {
                 "type": "text",
                 "text": body.text,
             }
         ],
+        "model": select_model(body.metadata.as_ref()),
     });
 
     match gizzi_json::<GizziMessage>(&client, reqwest::Method::POST, &path, Some(payload)).await {
