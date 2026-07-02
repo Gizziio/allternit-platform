@@ -5,7 +5,7 @@ edition = "2021"
 description = "Allternit IO Service - The ONLY permitted side-effect path with sandboxed execution and policy enforcement"
 
 [[bin]]
-name = "allternit-io-service"
+name = "allternit-tools-gateway"
 path = "src/main.rs"
 
 [dependencies]

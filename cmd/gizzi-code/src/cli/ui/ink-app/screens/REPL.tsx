@@ -3398,6 +3398,20 @@ export function REPL({
       proactiveModule?.resumeProactive();
     }
 
+    // Handle natural language swarm commands
+    const lowerInput = input.trim().toLowerCase();
+    if (!speculationAccept && !input.trim().startsWith('/') && !input.trim().startsWith('!') && 
+        (lowerInput.includes('run swarm') || lowerInput.includes('start swarm') || 
+         lowerInput.includes('execute swarm') || lowerInput.includes('agent swarm') || 
+         lowerInput.includes('spawn swarm') || lowerInput.includes('launch swarm'))) {
+      
+      setInputValue('');
+      helpers.clearBuffer();
+      setPastedContents({});
+      void onSubmit('/swarm', helpers);
+      return;
+    }
+
     // Handle immediate shell execution commands using '!' prefix
     if (!speculationAccept && input.trim().startsWith('!')) {
       const command = input.trim().slice(1).trim();

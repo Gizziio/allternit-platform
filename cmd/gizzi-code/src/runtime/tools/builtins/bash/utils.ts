@@ -5,9 +5,9 @@ import type {
   ToolResultBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import { readFile, stat } from 'fs/promises'
-import { getOriginalCwd } from 'src/bootstrap/state.js'
+import { getOriginalCwd } from '@/bootstrap/state.js'
 import { logEvent } from '@/runtime/services/analytics/index.js'
-import type { ToolPermissionContext } from 'src/Tool.js'
+import type { ToolPermissionContext } from '@/Tool.js'
 import { getCwd } from '@/shared/utils/cwd.js'
 import { pathInAllowedWorkingPath } from '@/shared/utils/permissions/filesystem.js'
 import { setCwd } from '@/shared/utils/Shell.js'

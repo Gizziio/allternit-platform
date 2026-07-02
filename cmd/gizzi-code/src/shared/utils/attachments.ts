@@ -80,7 +80,7 @@ import {
   getDefaultOpusModel,
 } from './model/model.js'
 import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
-import { getSkillToolCommands, getMcpSkillCommands } from '../../cli/commands.js'
+import { getSkillToolCommands, getMcpSkillCommands } from '../../cli/ui/ink-app/commands.js'
 import type { Command } from '@/types/command.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { getProjectRoot } from '@/bootstrap/state.js'

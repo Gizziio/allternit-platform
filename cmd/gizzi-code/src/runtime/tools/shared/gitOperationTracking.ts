@@ -1,2 +1,4 @@
 // Auto-generated shim to satisfy TypeScript imports
-export {}
+export function trackGitOperations() {}
+export function detectGitOperation() { return {} }
+export function parseGitCommitId() {}

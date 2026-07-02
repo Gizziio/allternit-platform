@@ -42,16 +42,22 @@ jobs:
         with:
           fetch-depth: 0  # Needed for changed files detection
       
-      # Setup Node.js
+      # Setup pnpm and Node.js
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-      
+          node-version: '20'
+          cache: 'pnpm'
+
       # Install dependencies
       - name: Install Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       
       # Detect changed files
       - name: Detect Changed Files
@@ -187,21 +193,28 @@ jobs:
         with:
           path: pr
       
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      
+          node-version: '20'
+          cache: 'pnpm'
+
       - name: Install Playwright
         run: |
-          npm install -g @playwright/test
-          npx playwright install chromium
+          pnpm add -g @playwright/test
+          pnpm exec playwright install chromium
       
       - name: Capture Base Screenshots
         working-directory: base
         run: |
-          npm ci
-          npm run build
+          pnpm install --frozen-lockfile
+          pnpm run build
           npx playwright screenshot --browser=chromium --viewport-size=1280,720 http://localhost:3000 ../base-screenshot.png &
           npm run preview &
           npx wait-on http://localhost:3000 --timeout 60000
@@ -210,8 +223,8 @@ jobs:
       - name: Capture PR Screenshots
         working-directory: pr
         run: |
-          npm ci
-          npm run build
+          pnpm install --frozen-lockfile
+          pnpm run build
           npx playwright screenshot --browser=chromium --viewport-size=1280,720 http://localhost:3000 ../pr-screenshot.png &
           npm run preview &
           npx wait-on http://localhost:3000 --timeout 60000

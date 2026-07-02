@@ -14,7 +14,9 @@
       ],
       "@modelcontextprotocol/sdk/*": [
         "./vendor/@modelcontextprotocol/sdk/dist/esm/*"
-      ]
+      ],
+      "@allternit/sdk": ["../../../../packages/sdk/src"],
+      "@allternit/sdk/*": ["../../../../packages/sdk/src/*"]
     }
   },
   "include": [

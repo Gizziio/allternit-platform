@@ -8,10 +8,6 @@ const repoRoot = path.resolve(__dirname, '..');
 export default defineConfig({
   resolve: {
     alias: {
-      '@allternit/runtime': path.resolve(repoRoot, '3-adapters/runtime-adapters/allternit-runtime/dist/index.js'),
-      '@allternit/governor': path.resolve(repoRoot, '2-governance/governance-workflows/allternit-governor/dist/index.js'),
-      '@allternit/lawlayer': path.resolve(repoRoot, '2-governance/legal-compliance/allternit-lawlayer/dist/index.js'),
-      '@allternit/shell': path.resolve(repoRoot, '7-apps/_legacy/shell/src/index.ts'),
       '@': path.resolve(repoRoot, 'surfaces/ai.allternit.com/src'),
     },
   },
