@@ -103,6 +103,8 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .route("/api/v1/approvals/:id/cancel", post(routes::approvals::cancel_request))
         // Task endpoints
         .merge(routes::tasks::task_routes())
+        // Mirror session endpoints (merged from api/cloud/allternit-cloud-api)
+        .merge(routes::mirror::create_mirror_routes())
         // WebSocket endpoint for run events
         .route("/ws/runs/:id", get(websocket::run_ws_handler))
         // Deployment endpoints (existing)
@@ -179,7 +181,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
     } else {
         // Production: Restrictive CORS
         let allowed_origins: Vec<_> = std::env::var("CORS_ALLOWED_ORIGINS")
-            .unwrap_or_else(|_| "http://localhost:3000,https://app.allternit.io".to_string())
+            .unwrap_or_else(|_| "http://localhost:3000,https://app.allternit.io,https://addin.allternit.io".to_string())
             .split(',')
             .filter_map(|s| s.trim().parse::<axum::http::HeaderValue>().ok())
             .collect();

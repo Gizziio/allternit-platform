@@ -14,9 +14,8 @@ use axum::{
 use axum::extract::ws::{Message, WebSocket};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::broadcast;
 use futures_util::{SinkExt, StreamExt};
-use tracing::{info, warn, error};
+use tracing::{info, error};
 
 use crate::ApiState;
 
@@ -245,7 +244,7 @@ async fn handle_client_message(
 /// Convert deployment event to WebSocket message
 fn event_to_ws_message(
     event: &crate::websocket::DeploymentEvent,
-    session_id: &str,
+    _session_id: &str,
 ) -> Option<WsServerMessage> {
     // Map deployment events to WebSocket messages
     match event.event_type.as_str() {

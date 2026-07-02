@@ -39,7 +39,7 @@ The Multica+Taskdog absorption successfully **ported UI concepts, a scheduling a
 
 | Feature | Status | Evidence |
 |---------|--------|----------|
-| Run event WebSocket | ✅ Exists | `api/cloud/allternit-cloud-api/src/websocket/run_ws.rs` |
+| Run event WebSocket | ✅ Exists | `cmd/allternit-cloud-api/src/websocket/run_ws.rs` |
 | Generic pub/sub broker (Redis/NATS) | ❌ Missing | In-memory `tokio::sync::broadcast` only |
 | Task-level live updates | ❌ Missing | No WS channel for task CRUD |
 | Presence / "who's online" | ❌ Missing | No presence system |

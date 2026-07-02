@@ -7,6 +7,8 @@ pub mod deployments;
 pub mod health;
 pub mod instances;
 pub mod jobs;
+pub mod mirror;
+pub mod mirror_ws;
 pub mod providers;
 pub mod regions;
 pub mod runs;
