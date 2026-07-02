@@ -5,10 +5,10 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
-axum = { version = "0.7", features = ["ws", "macros"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-tower-http = { version = "0.5", features = ["cors"] }
+axum = { workspace = true, features = ["ws", "macros"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tower-http = { workspace = true, features = ["cors"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 anyhow = "1.0"
@@ -19,7 +19,7 @@ tempfile = "3.10"
 reqwest = { workspace = true, features = ["json", "rustls-tls", "stream"] }
 base64 = "0.22"
 lazy_static = "1.4"
-sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite"] }
+sqlx = { workspace = true }
 allternit-tools = { path = "../../../1-kernel/support/allternit-kernel-tools-components" }
 allternit-providers = { workspace = true }
 allternit-kernel-contracts = { workspace = true }

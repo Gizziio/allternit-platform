@@ -21,5 +21,5 @@ hex = "0.4"
 allternit-substrate = { version = "0.1.0", path = "../../../../platform/types/allternit-substrate" }
 
 [dev-dependencies]
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+sqlx = { workspace = true, features = ['chrono', 'uuid'] }
 tempfile = "3.0"

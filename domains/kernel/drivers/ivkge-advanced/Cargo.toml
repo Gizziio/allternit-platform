@@ -13,7 +13,7 @@ uuid = { version = "1", features = ["v4"] }
 tracing = "0.1"
 thiserror = "1"
 image = "0.24"
-base64 = "0.21"
+base64 = "0.22"
 
 [dev-dependencies]
 tokio-test = "0.4"

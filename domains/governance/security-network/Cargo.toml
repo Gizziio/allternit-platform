@@ -23,7 +23,7 @@ rand = "0.8"
 sha2 = "0.10"
 hex = "0.4"
 base64 = "0.22"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono", "uuid"] }
+sqlx = { workspace = true, features = ['chrono', 'uuid'] }
 allternit-policy = { workspace = true }
 allternit-history = { workspace = true }
 allternit-messaging = { workspace = true }

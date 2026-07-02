@@ -17,8 +17,8 @@ allternit-sdk-core = { workspace = true }
 allternit-sdk-functions = { workspace = true }
 allternit-sdk-policy = { workspace = true }
 allternit-sdk-transport = { workspace = true }
-axum = { version = "0.7", features = ["macros"] }
-tower = { version = "0.5", features = ["util"] }
+axum = { workspace = true, features = ["macros"] }
+tower = { workspace = true, features = ["util"] }
 tower-http = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
 sqlx = { workspace = true }

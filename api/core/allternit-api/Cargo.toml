@@ -13,14 +13,14 @@ vm-driver = []
 
 [dependencies]
 # Web framework
-axum = { version = "0.7", features = ["ws"] }
+axum = { version = "0.7", features = ["ws", "http1", "http2"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = "0.3"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "fs", "redirect"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["cors", "fs", "redirect"] }
 
 # Internal crates - Rails & Cowork
 allternit-agent-system-rails = { path = "../../rails" }
@@ -46,7 +46,7 @@ hmac = "0.12"
 sha2 = "0.10"
 base64 = "0.22"
 async-trait = "0.1"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 
 # PNG Rendering dependencies
 resvg = "0.41"

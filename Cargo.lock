@@ -4339,7 +4339,7 @@ dependencies = [
  "allternit-sdk-core",
  "allternit-sdk-policy",
  "async-trait",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bytes 1.12.0",
  "chrono",
  "futures 0.3.32",

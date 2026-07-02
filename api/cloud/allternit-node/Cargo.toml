@@ -72,9 +72,9 @@ url = "2.5"
 backoff = { version = "0.4", features = ["tokio"] }
 
 # HTTP client/server
-reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
-axum = { version = "0.7", features = ["ws"] }
-tower = { version = "0.5" }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+axum = { workspace = true, features = ["ws"] }
+tower = { workspace = true }
 gethostname = "1.1.0"
 semver = "1.0.27"
 mime_guess = "2.0"

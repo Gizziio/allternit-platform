@@ -19,6 +19,6 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
-tower = { version = "0.5", features = ["util"] }
+tower = { workspace = true, features = ["util"] }
 
 allternit-policy = { workspace = true }
