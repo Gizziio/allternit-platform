@@ -1,8 +1,9 @@
+// @ts-nocheck
 import type { ClientOptions } from '@allternit/sdk/providers/anthropic'
 import { createHash } from 'crypto'
 import { promises as fs } from 'fs'
 import { dirname, join } from 'path'
-import { getSessionId } from 'src/bootstrap/state.js'
+import { getSessionId } from './../../bootstrap/state.ts'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 

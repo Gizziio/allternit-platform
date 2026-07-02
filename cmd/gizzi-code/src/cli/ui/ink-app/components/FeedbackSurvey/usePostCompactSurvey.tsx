@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isFeedbackSurveyDisabled } from 'src/services/analytics/config';
-import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
+import { isFeedbackSurveyDisabled } from './../../services/analytics/config.ts';
+import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from './../../services/analytics/growthbook.ts';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../services/analytics/index.ts';
 import { shouldUseSessionMemoryCompaction } from '../../services/compact/sessionMemoryCompact';
 import type { Message } from '../../types/message';
 import { isEnvTruthy } from '../../utils/envUtils';

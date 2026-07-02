@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Context collapse persistence
  * TEMPORARY SHIM

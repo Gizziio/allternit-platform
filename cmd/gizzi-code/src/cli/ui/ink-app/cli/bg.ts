@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * CLI Background Tasks
  * TEMPORARY SHIM

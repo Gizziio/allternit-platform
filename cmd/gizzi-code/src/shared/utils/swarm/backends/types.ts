@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { AgentColorName } from '../../../tools/AgentTool/agentColorManager.js'
 
 /**

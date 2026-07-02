@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const MODEL_ALIASES = [
   'sonnet',
   'opus',

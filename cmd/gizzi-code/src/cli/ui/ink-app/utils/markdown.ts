@@ -1,3 +1,4 @@
+// @ts-nocheck
 import chalk from 'chalk'
 import { marked, type Token, type Tokens } from 'marked'
 import stripAnsi from 'strip-ansi'

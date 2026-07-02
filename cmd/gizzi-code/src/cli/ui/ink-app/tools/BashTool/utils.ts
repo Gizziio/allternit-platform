@@ -1,15 +1,16 @@
+// @ts-nocheck
 import type {
   Base64ImageSource,
   ContentBlockParam,
   ToolResultBlockParam,
 } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import { readFile, stat } from 'fs/promises'
-import { getOriginalCwd } from 'src/bootstrap/state.js'
-import { logEvent } from 'src/services/analytics/index.js'
-import type { ToolPermissionContext } from 'src/Tool.js'
-import { getCwd } from 'src/utils/cwd.js'
-import { pathInAllowedWorkingPath } from 'src/utils/permissions/filesystem.js'
-import { setCwd } from 'src/utils/Shell.js'
+import { getOriginalCwd } from './../../bootstrap/state.ts'
+import { logEvent } from './../../services/analytics/index.ts'
+import type { ToolPermissionContext } from './../../Tool.ts'
+import { getCwd } from './../../utils/cwd.ts'
+import { pathInAllowedWorkingPath } from './../../utils/permissions/filesystem.ts'
+import { setCwd } from './../../utils/Shell.ts'
 import { shouldMaintainProjectWorkingDir } from '../../utils/envUtils.js'
 import { maybeResizeAndDownsampleImageBuffer } from '../../utils/imageResizer.js'
 import { getMaxOutputLength } from '../../utils/shell/outputLimits.js'

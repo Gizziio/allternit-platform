@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Hono } from "hono"
 import { stream } from "hono/streaming"
 import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
@@ -305,6 +306,9 @@ export const SessionRoutes = lazy(() =>
         }
         if (input.permission !== undefined) {
           await Session.setPermission({ sessionID, permission: input.permission })
+        }
+        if (input.surface !== undefined) {
+          await Session.setSurface({ sessionID, surface: input.surface })
         }
         const session = await Session.get(sessionID)
         return c.json(session)

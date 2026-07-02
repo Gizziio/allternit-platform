@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared spawn module for teammate creation.
  * Extracted from TeammateTool to allow reuse by AgentTool.

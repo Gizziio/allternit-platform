@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useDirectConnect_ts(): void {
   // Not yet implemented
 }

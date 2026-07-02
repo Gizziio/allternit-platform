@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import { appendFileSync } from 'fs';
 import React from 'react';

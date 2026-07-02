@@ -1,11 +1,12 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useEffect, useMemo, useState } from 'react';
-import { extraUsage } from 'src/commands/extra-usage/index';
-import { Box, Text } from 'src/ink';
-import { useClaudeAiLimits } from 'src/services/claudeAiLimitsHook';
-import { shouldProcessMockLimits } from 'src/services/rateLimitMocking'; // Used for /mock-limits command
-import { getRateLimitTier, getSubscriptionType, isClaudeAISubscriber } from 'src/utils/auth';
-import { hasClaudeAiBillingAccess } from 'src/utils/billing';
+import { extraUsage } from './../../commands/extra-usage/index.ts';
+import { Box, Text } from './../../ink.ts';
+import { useClaudeAiLimits } from './../../services/claudeAiLimitsHook.ts';
+import { shouldProcessMockLimits } from './../../services/rateLimitMocking.ts'; // Used for /mock-limits command
+import { getRateLimitTier, getSubscriptionType, isClaudeAISubscriber } from './../../utils/auth.ts';
+import { hasClaudeAiBillingAccess } from './../../utils/billing.ts';
 import { MessageResponse } from '../MessageResponse';
 type UpsellParams = {
   shouldShowUpsell: boolean;

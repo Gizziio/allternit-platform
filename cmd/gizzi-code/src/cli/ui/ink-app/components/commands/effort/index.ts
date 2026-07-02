@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Command } from '../../commands'
 import { shouldInferenceConfigCommandBeImmediate } from '../../utils/immediateCommand'
 

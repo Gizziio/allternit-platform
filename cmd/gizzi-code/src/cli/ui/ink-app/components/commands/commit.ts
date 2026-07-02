@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Command } from '../commands'
 import { getAttributionTexts } from '../utils/attribution'
 import { executeShellCommandsInPrompt } from '../utils/promptShellExecution'

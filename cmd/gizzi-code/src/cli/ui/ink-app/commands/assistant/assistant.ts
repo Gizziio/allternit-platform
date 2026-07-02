@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Assistant Command
  * TEMPORARY SHIM

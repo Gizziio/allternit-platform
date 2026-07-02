@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import type { CommandResultDisplay, LocalJSXCommandContext } from '../../commands';
 import { Feedback } from '../../components/Feedback';

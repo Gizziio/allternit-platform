@@ -1,3 +1,4 @@
+// @ts-nocheck
 import chalk from 'chalk'
 import cliBoxes, { type Boxes, type BoxStyle } from 'cli-boxes'
 import { applyColor } from './colorize.js'

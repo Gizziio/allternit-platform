@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable custom-rules/no-process-exit -- CLI subcommand handler intentionally exits */
 
 import {

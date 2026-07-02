@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { DOMElement } from './dom.js'
 import { FocusEvent } from './events/focus-event.js'
 

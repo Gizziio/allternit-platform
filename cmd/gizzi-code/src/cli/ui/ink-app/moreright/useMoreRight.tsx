@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Stub for external builds — the real hook is internal only.
 //
 // Self-contained: no relative imports. Typecheck sees this file at

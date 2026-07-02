@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import z from "zod/v4"
@@ -14,10 +15,19 @@ import type ParcelWatcher from "@parcel/watcher"
 import { $ } from "bun"
 import { Flag } from "@/runtime/context/flag/flag"
 import { readdir } from "fs/promises"
+import chokidar from "chokidar"
 
 const SUBSCRIBE_TIMEOUT_MS = 10_000
 
 declare const GIZZI_LIBC: string | undefined
+
+type WatcherAdapter = {
+  subscribe: (
+    dir: string,
+    callback: ParcelWatcher.SubscribeCallback,
+    options: { ignore?: string[]; backend?: string },
+  ) => Promise<ParcelWatcher.AsyncSubscription>
+}
 
 export namespace FileWatcher {
   const log = Log.create({ service: "file.watcher" })
@@ -32,15 +42,41 @@ export namespace FileWatcher {
     ),
   }
 
-  const watcher = lazy((): typeof import("@parcel/watcher") | undefined => {
+  function createChokidarFallback(): WatcherAdapter {
+    return {
+      async subscribe(dir, callback, options) {
+        const instance = chokidar.watch(dir, {
+          ignored: options.ignore,
+          ignoreInitial: true,
+          awaitWriteFinish: {
+            stabilityThreshold: 100,
+            pollInterval: 25,
+          },
+        })
+
+        instance.on("add", (file) => callback(null, [{ path: file, type: "create" }]))
+        instance.on("change", (file) => callback(null, [{ path: file, type: "update" }]))
+        instance.on("unlink", (file) => callback(null, [{ path: file, type: "delete" }]))
+        instance.on("error", (error) => callback(error, []))
+
+        return {
+          unsubscribe: async () => {
+            await instance.close()
+          },
+        } as ParcelWatcher.AsyncSubscription
+      },
+    }
+  }
+
+  const watcher = lazy((): WatcherAdapter | undefined => {
     try {
       const binding = require(
         `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${GIZZI_LIBC || "glibc"}` : ""}`,
       )
-      return createWrapper(binding) as typeof import("@parcel/watcher")
+      return createWrapper(binding) as unknown as WatcherAdapter
     } catch (error) {
-      log.error("failed to load watcher binding", { error })
-      return
+      log.warn("parcel watcher binding unavailable, falling back to chokidar", { error })
+      return createChokidarFallback()
     }
   })
 

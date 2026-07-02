@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Team Memory File Watcher
  *

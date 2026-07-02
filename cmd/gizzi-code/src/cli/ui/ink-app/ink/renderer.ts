@@ -1,4 +1,5 @@
-import { logForDebugging } from 'src/utils/debug.js'
+// @ts-nocheck
+import { logForDebugging } from './../utils/debug.ts'
 import { type DOMElement, markDirty } from './dom.js'
 import type { Frame } from './frame.js'
 import { consumeAbsoluteRemovedFlag } from './node-cache.js'

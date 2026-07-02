@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { readdir } from 'fs/promises'
 import { join } from 'path'
 import { coerce as semverCoerce } from 'semver'

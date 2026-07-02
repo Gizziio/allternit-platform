@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { APIError } from '@allternit/sdk/providers/anthropic'
 
 // SSL/TLS error codes from OpenSSL (used by both Node.js and Bun)

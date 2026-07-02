@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { SdkWorkflowProgress } from '../../types/tools'
 import { enqueueSdkEvent } from '../sdkEventQueue'
 

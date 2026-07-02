@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const PRODUCT_URL = 'https://claude.com/claude-code'
 
 // Claude Code Remote session URLs

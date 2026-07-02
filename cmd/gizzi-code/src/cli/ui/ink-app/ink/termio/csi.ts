@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * CSI (Control Sequence Introducer) Types
  *

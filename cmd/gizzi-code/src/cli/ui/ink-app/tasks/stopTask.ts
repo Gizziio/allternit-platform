@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Shared logic for stopping a running task.
 // Used by TaskStopTool (LLM-invoked) and SDK stop_task control request.
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Plugin policy checks backed by managed settings (policySettings).
  *

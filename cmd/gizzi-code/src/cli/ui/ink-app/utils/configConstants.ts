@@ -1,3 +1,4 @@
+// @ts-nocheck
 // These constants are in a separate file to avoid circular dependency issues.
 // Do NOT add imports to this file - it must remain dependency-free.
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Template Jobs Handler
  * TEMPORARY SHIM

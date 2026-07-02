@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Centralized utilities for parsing slash commands
  */

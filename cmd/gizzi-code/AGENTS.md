@@ -1,5 +1,9 @@
 # gizzi-code Agent Guide
 
+## Agent creation checklist
+
+When spinning up a new agent or agent type in the Allternit platform, follow the canonical checklist at [`../AGENT_CREATION_CHECKLIST.md`](../AGENT_CREATION_CHECKLIST.md). It covers schema, registry contract, harness config, workspace artifacts, mode surface wiring, routines/loops/goals, and verification.
+
 ## Database
 
 - **Schema**: Drizzle schema lives in `src/**/*.sql.ts`.

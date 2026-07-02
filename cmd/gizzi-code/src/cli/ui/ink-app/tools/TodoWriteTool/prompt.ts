@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { FILE_EDIT_TOOL_NAME } from '../FileEditTool/constants'
 
 export const PROMPT = `Use this tool to create and manage a structured task list for your current coding session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.

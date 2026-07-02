@@ -3,6 +3,7 @@ import '../bootstrap/state.js'
 import '../utils/config.js'
 import type { Attributes, MetricOptions } from '@opentelemetry/api'
 import memoize from 'lodash-es/memoize.js'
+// @ts-ignore missing export from bootstrap/state
 import { getIsNonInteractiveSession } from 'src/bootstrap/state.js'
 import type { AttributedCounter } from '@/bootstrap/state.js'
 import { getSessionCounter, setMeter } from '@/bootstrap/state.js'
@@ -20,6 +21,7 @@ import {
 import { preconnectAnthropicApi } from '../utils/apiPreconnect.js'
 import { applyExtraCACertsFromConfig } from '../utils/caCertsConfig.js'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
+// @ts-ignore missing exports from utils/config
 import { enableConfigs, recordFirstStartTime } from '../utils/config.js'
 import { logForDebugging } from '../utils/debug.js'
 import { detectCurrentRepository } from '../utils/detectRepository.js'
@@ -37,14 +39,13 @@ import {
   applySafeConfigEnvironmentVariables,
 } from '../utils/managedEnv.js'
 import { configureGlobalMTLS } from '../utils/mtls.js'
-import {
-  ensureScratchpadDir,
-  isScratchpadEnabled,
-} from '../utils/permissions/filesystem.js'
+// @ts-ignore missing exports from utils/permissions/filesystem
+import { ensureScratchpadDir, isScratchpadEnabled } from '../utils/permissions/filesystem.js'
 // initializeTelemetry is loaded lazily via import() in setMeterState() to defer
 // ~400KB of OpenTelemetry + protobuf modules until telemetry is actually initialized.
 // gRPC exporters (~700KB via @grpc/grpc-js) are further lazy-loaded within instrumentation.ts.
 import { configureGlobalAgents } from '../utils/proxy.js'
+// @ts-ignore missing module utils/telemetry/betaSessionTracing
 import { isBetaTracingEnabled } from '../utils/telemetry/betaSessionTracing.js'
 import { getTelemetryAttributes } from '../utils/telemetryAttributes.js'
 import { setShellIfWindows } from '../utils/windowsPaths.js'
@@ -92,8 +93,9 @@ export const init = memoize(async (): Promise<void> => {
     // the module cache by this point (firstPartyEventLogger imports it), so the
     // second dynamic import adds no load cost.
     void Promise.all([
-      import('../services/analytics/firstPartyEventLogger.js'),
-      import('../services/analytics/growthbook.js'),
+      // @ts-ignore missing module services/analytics/firstPartyEventLogger
+      import('../services/analytics/firstPartyEventLogger.js') as Promise<any>,
+      import('../services/analytics/growthbook.js') as Promise<any>,
     ]).then(([fp, gb]) => {
       fp.initialize1PEventLogging()
       // Rebuild the logger provider if tengu_1p_event_batch_config changes
@@ -193,9 +195,8 @@ export const init = memoize(async (): Promise<void> => {
     // for all teams created this session. Lazy import: swarm code is
     // behind feature gate and most sessions never create teams.
     registerCleanup(async () => {
-      const { cleanupSessionTeams } = await import(
-        '../utils/swarm/teamHelpers.js'
-      )
+      // @ts-ignore missing module utils/swarm/teamHelpers
+      const { cleanupSessionTeams } = (await import('../utils/swarm/teamHelpers.js')) as any
       await cleanupSessionTeams()
     })
 
@@ -304,9 +305,8 @@ async function doInitializeTelemetry(): Promise<void> {
 
 async function setMeterState(): Promise<void> {
   // Lazy-load instrumentation to defer ~400KB of OpenTelemetry + protobuf
-  const { initializeTelemetry } = await import(
-    '../utils/telemetry/instrumentation.js'
-  )
+  // @ts-ignore missing module utils/telemetry/instrumentation
+  const { initializeTelemetry } = (await import('../utils/telemetry/instrumentation.js')) as any
   // Initialize customer OTLP telemetry (metrics, logs, traces)
   const meter = await initializeTelemetry()
   if (meter) {

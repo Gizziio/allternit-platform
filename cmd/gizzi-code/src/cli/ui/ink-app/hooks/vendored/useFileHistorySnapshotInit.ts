@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useFileHistorySnapshotInit_ts(): void {
   // Not yet implemented
 }

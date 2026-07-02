@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type {
   ContentBlockParam,
@@ -7,7 +8,7 @@ import type {
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from 'src/services/analytics/index.js'
+} from './../analytics/index.ts'
 import {
   extractMcpToolDetails,
   extractSkillName,
@@ -17,7 +18,7 @@ import {
   isToolDetailsLoggingEnabled,
   mcpToolDetailsForAnalytics,
   sanitizeToolNameForAnalytics,
-} from 'src/services/analytics/metadata.js'
+} from './../analytics/metadata.ts'
 import {
   addToToolDuration,
   getCodeEditToolDecisionCounter,

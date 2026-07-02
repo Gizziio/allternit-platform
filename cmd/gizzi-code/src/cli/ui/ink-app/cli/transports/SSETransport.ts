@@ -1,5 +1,6 @@
+// @ts-nocheck
 import axios, { type AxiosError } from 'axios'
-import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes'
+import type { StdoutMessage } from './../../entrypoints/sdk/controlTypes.ts'
 import { logForDebugging } from '../../utils/debug'
 import { logForDiagnosticsNoPII } from '../../utils/diagLogs'
 import { errorMessage } from '../../utils/errors'

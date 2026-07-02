@@ -144,13 +144,14 @@ const tokenize = (input) => {
         case 'separator':
             tokens = tokens.slice(0, tokens.length - 1);
             return strip(tokens);
-            break;
-        case 'number':
+        case 'number': {
             let lastCharacterOfLastToken = lastToken.value[lastToken.value.length - 1];
             if (lastCharacterOfLastToken === '.' || lastCharacterOfLastToken === '-') {
                 tokens = tokens.slice(0, tokens.length - 1);
                 return strip(tokens);
             }
+            break;
+        }
         case 'string':
             let tokenBeforeTheLastToken = tokens[tokens.length - 2];
             if (tokenBeforeTheLastToken?.type === 'delimiter') {

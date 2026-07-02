@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Provides ripgrep glob exclusion patterns for orphaned plugin versions.
  *

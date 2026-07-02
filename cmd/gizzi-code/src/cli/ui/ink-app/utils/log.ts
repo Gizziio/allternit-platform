@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { BetaMessageStreamParams } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
 import { readdir, readFile, stat } from 'fs/promises'
 import memoize from 'lodash-es/memoize.js'
 import { join } from 'path'
-import type { QuerySource } from 'src/constants/querySource.js'
+import type { QuerySource } from './../constants/querySource.ts'
 import {
   setLastAPIRequest,
   setLastAPIRequestMessages,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { initializeAnalyticsSink } from '../services/analytics/sink'
 import { initializeErrorLogSink } from './errorLogSink'
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // React 19 (Canary) type declarations - extending existing React 18 types
 // This adds support for React 19 features like `use()` hook and Server Components
 

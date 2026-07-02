@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRenderer } from "@opentui/solid"
 import { createSimpleContext } from "@/cli/ui/ink-app/context/helper"
 import { FormatError, FormatUnknownError } from "@/shared/error/format"

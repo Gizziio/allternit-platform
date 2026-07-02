@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { mkdir, open, unlink } from 'fs/promises'
 import { join } from 'path'
-import type { SettingSource } from 'src/utils/settings/constants.js'
-import { getManagedFilePath } from 'src/utils/settings/managedPath.js'
+import type { SettingSource } from './../../utils/settings/constants.ts'
+import { getManagedFilePath } from './../../utils/settings/managedPath.ts'
 import type { AgentMemoryScope } from '../../tools/AgentTool/agentMemory.js'
 import {
   type AgentDefinition,

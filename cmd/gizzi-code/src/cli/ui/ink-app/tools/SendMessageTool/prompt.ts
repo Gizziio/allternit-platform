@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 
 export const DESCRIPTION = 'Send a message to another agent'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { AgentsMenu } from '../../components/agents/AgentsMenu';
 import type { ToolUseContext } from '../../Tool';

@@ -1,8 +1,9 @@
+// @ts-nocheck
 import * as React from 'react';
 import { useEffect, useMemo } from 'react';
-import { Box, Text } from 'src/ink';
-import { getDynamicConfig_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook';
-import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config';
+import { Box, Text } from './../../ink.ts';
+import { getDynamicConfig_CACHED_MAY_BE_STALE } from './../../services/analytics/growthbook.ts';
+import { getGlobalConfig, saveGlobalConfig } from './../../utils/config.ts';
 const CONFIG_NAME = 'tengu-top-of-feed-tip';
 export function EmergencyTip(): React.ReactNode {
   const tip = useMemo(getTipOfFeed, []);

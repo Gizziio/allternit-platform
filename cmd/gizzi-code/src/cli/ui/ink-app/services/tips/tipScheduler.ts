@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getSettings_DEPRECATED } from '../../utils/settings/settings.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

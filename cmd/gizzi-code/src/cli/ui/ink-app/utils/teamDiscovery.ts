@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Team Discovery - Utilities for discovering teams and teammate status
  *

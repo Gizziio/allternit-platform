@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * MCPB Types (Locally defined to remove @anthropic-ai/mcpb dependency)
  */

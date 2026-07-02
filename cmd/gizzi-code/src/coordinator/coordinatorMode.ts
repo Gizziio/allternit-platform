@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { ASYNC_AGENT_ALLOWED_TOOLS } from '@/constants/tools.js'
 import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'

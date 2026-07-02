@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SDK Tool Types
  */

@@ -1,6 +1,7 @@
+/// <reference path="./generated-module-types.d.ts" />
 /**
  * @allternit/sdk - Allternit AI SDK
- * 
+ *
  * Unified SDK for AI interactions with 15+ providers and harness modes.
  * Includes official ACP (Agent Capability Protocol) support.
  * 
@@ -136,7 +137,6 @@ export type {
   // Core ACP types
   AgentCapabilities,
   ClientCapabilities,
-  Session,
   SessionId,
   ToolCall,
   ToolCallContent,
@@ -206,8 +206,9 @@ export {
   isSessionId,
   isContent,
   isToolCall,
-  type ValidationResult,
 } from './acp/validator.js';
+
+export type { ValidationResult } from './acp/types.js';
 
 // Re-export the official ACP SDK for advanced usage
 export * as ACP from '@agentclientprotocol/sdk';
@@ -220,6 +221,8 @@ export * as ACP from '@agentclientprotocol/sdk';
 // need for session management, globalEvents, prompt(), etc.
 export { createAllternitClient, AllternitClient } from '../dist/gen/allternit-client.js';
 export type { Event } from '../dist/gen/entity-types.js';
+export * from '../dist/gen/entity-types.js';
+export * from '../dist/gen/types.gen.js';
 
 // ============================================================================
 // Version

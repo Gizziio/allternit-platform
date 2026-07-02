@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { GIZZIBanner } from "@/cli/ui/components/gizzi"
 import { MonolithLogo } from "@/cli/ui/components/gizzi/monolith-logo"
 

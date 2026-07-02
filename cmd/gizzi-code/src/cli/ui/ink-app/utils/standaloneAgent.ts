@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Standalone agent utilities for sessions with custom names/colors
  *

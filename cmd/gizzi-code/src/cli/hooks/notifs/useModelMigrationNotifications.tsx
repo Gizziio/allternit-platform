@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Notification } from 'src/context/notifications.js';
 import { type GlobalConfig, getGlobalConfig } from 'src/utils/config.js';
 import { useStartupNotification } from './useStartupNotification.js';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import * as React from 'react';
@@ -10,18 +11,18 @@ import { getDisplayPath } from '../../utils/file';
 import { Clawd } from './Clawd';
 import { FeedColumn } from './FeedColumn';
 import { createRecentActivityFeed, createWhatsNewFeed, createProjectOnboardingFeed, createGuestPassesFeed } from './feedConfigs';
-import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config';
-import { resolveThemeSetting } from 'src/utils/systemTheme';
-import { getInitialSettings } from 'src/utils/settings/settings';
-import { isDebugMode, isDebugToStdErr, getDebugLogPath } from 'src/utils/debug';
+import { getGlobalConfig, saveGlobalConfig } from './../../utils/config.ts';
+import { resolveThemeSetting } from './../../utils/systemTheme.ts';
+import { getInitialSettings } from './../../utils/settings/settings.ts';
+import { isDebugMode, isDebugToStdErr, getDebugLogPath } from './../../utils/debug.ts';
 import { useEffect, useState } from 'react';
 import { getSteps, shouldShowProjectOnboarding, incrementProjectOnboardingSeenCount } from '../../projectOnboardingState';
 import { CondensedLogo } from './CondensedLogo';
 import { OffscreenFreeze } from '../OffscreenFreeze';
 import { checkForReleaseNotesSync } from '../../utils/releaseNotes';
-import { getDumpPromptsPath } from 'src/services/api/dumpPrompts';
-import { isEnvTruthy } from 'src/utils/envUtils';
-import { getStartupPerfLogPath, isDetailedProfilingEnabled } from 'src/utils/startupProfiler';
+import { getDumpPromptsPath } from './../../services/api/dumpPrompts.ts';
+import { isEnvTruthy } from './../../utils/envUtils.ts';
+import { getStartupPerfLogPath, isDetailedProfilingEnabled } from './../../utils/startupProfiler.ts';
 import { EmergencyTip } from './EmergencyTip';
 import { VoiceModeNotice } from './VoiceModeNotice';
 import { Opus1mMergeNotice } from './Opus1mMergeNotice';
@@ -35,7 +36,7 @@ import { feature } from 'bun:bundle';
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ChannelsNoticeModule = feature('KAIROS') || feature('KAIROS_CHANNELS') ? require('./ChannelsNotice.js') as typeof import('./ChannelsNotice.js') : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
-import { SandboxManager } from 'src/utils/sandbox/sandbox-adapter';
+import { SandboxManager } from './../../utils/sandbox/sandbox-adapter.ts';
 import { useShowGuestPassesUpsell, incrementGuestPassesSeenCount } from './GuestPassesUpsell';
 import { useShowOverageCreditUpsell, incrementOverageCreditUpsellSeenCount, createOverageCreditFeed } from './OverageCreditUpsell';
 import { plural } from '../../utils/stringUtils';

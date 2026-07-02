@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Query profiling utility for measuring and reporting time spent in the query
  * pipeline from user input to first token arrival. Enable by setting CLAUDE_CODE_PROFILE_QUERY=1

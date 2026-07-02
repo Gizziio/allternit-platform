@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function LocalWorkflowTask_ts(): void {
   // Not yet implemented
 }

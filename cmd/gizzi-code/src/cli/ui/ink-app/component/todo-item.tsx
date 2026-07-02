@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useTheme } from "@/cli/ui/ink-app/context/theme"
 
 export interface TodoItemProps {

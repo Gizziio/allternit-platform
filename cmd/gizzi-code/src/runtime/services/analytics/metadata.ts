@@ -1,3 +1,4 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 /**
  * Shared event metadata enrichment for analytics systems
@@ -11,7 +12,7 @@ import memoize from 'lodash-es/memoize.js'
 import { env, getHostPlatformForAnalytics } from '../../../shared/utils/env.js'
 import { envDynamic } from '../../../shared/utils/envDynamic.js'
 import { getModelBetas } from '../../../shared/utils/betas.js'
-import { getMainLoopModel } from '@/types/model.js'
+import { getMainLoopModel } from '../../types/model.js'
 import {
   getSessionId,
   getIsInteractive,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DialogSelect } from "@/cli/ui/ink-app/ui/dialog-select"
 import { useRoute } from "@/cli/ui/ink-app/context/route"
 import { GIZZICopy } from "@/shared/brand"

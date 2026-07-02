@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * MACRO constants
  * TEMPORARY SHIM - Used in bridge files

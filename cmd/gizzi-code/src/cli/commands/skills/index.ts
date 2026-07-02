@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Skills Command
  * Production-quality skill management

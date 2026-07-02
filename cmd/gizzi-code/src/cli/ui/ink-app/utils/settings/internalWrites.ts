@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Tracks timestamps of in-process settings-file writes so the chokidar watcher
  * in changeDetector.ts can ignore its own echoes.

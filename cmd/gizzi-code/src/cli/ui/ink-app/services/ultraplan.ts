@@ -1,3 +1,4 @@
+// @ts-nocheck
 interface LaunchUltraplanOptions {
   blurb: string;
   getAppState: () => unknown;

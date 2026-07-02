@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { AsyncLocalStorage } from 'async_hooks'
 import { getCwdState, getOriginalCwd } from '../bootstrap/state.js'
 

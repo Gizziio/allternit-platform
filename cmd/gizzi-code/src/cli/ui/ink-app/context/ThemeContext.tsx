@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 export interface Theme {

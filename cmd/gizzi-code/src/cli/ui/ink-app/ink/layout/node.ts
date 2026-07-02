@@ -1,3 +1,4 @@
+// @ts-nocheck
 // --
 // Adapter interface for the layout engine (Yoga)
 

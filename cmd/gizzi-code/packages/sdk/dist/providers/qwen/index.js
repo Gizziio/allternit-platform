@@ -5,7 +5,8 @@
  * API: https://dashscope.aliyuncs.com/api/v1
  * Docs: https://help.aliyun.com/zh/dashscope/
  */
-import { HarnessError } from '../../harness/types.js';
+import { HarnessError } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 export const QWEN_MODELS = {
     QWEN_MAX: 'qwen-max',
     QWEN_PLUS: 'qwen-plus',

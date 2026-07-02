@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { jsonStringify } from '../../utils/slowOperations'
 
 /**

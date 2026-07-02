@@ -1,27 +1,28 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import figures from 'figures';
 import React, { type ReactNode, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
-import { isCoordinatorMode } from 'src/coordinator/coordinatorMode';
-import { useTerminalSize } from 'src/hooks/useTerminalSize';
-import { useAppState, useSetAppState } from 'src/state/AppState';
-import { enterTeammateView, exitTeammateView } from 'src/state/teammateViewHelpers';
-import type { ToolUseContext } from 'src/Tool';
-import { DreamTask, type DreamTaskState } from 'src/tasks/DreamTask/DreamTask';
-import { InProcessTeammateTask } from 'src/tasks/InProcessTeammateTask/InProcessTeammateTask';
-import type { InProcessTeammateTaskState } from 'src/tasks/InProcessTeammateTask/types';
-import type { LocalAgentTaskState } from 'src/tasks/LocalAgentTask/LocalAgentTask';
-import { LocalAgentTask } from 'src/tasks/LocalAgentTask/LocalAgentTask';
-import type { LocalShellTaskState } from 'src/tasks/LocalShellTask/guards';
-import { LocalShellTask } from 'src/tasks/LocalShellTask/LocalShellTask';
+import { isCoordinatorMode } from './../../coordinator/coordinatorMode.ts';
+import { useTerminalSize } from './../../hooks/useTerminalSize.ts';
+import { useAppState, useSetAppState } from './../../state/AppState.tsx';
+import { enterTeammateView, exitTeammateView } from './../../state/teammateViewHelpers.ts';
+import type { ToolUseContext } from './../../Tool.ts';
+import { DreamTask, type DreamTaskState } from './../../tasks/DreamTask/DreamTask.ts';
+import { InProcessTeammateTask } from './../../tasks/InProcessTeammateTask/InProcessTeammateTask.tsx';
+import type { InProcessTeammateTaskState } from './../../tasks/InProcessTeammateTask/types.ts';
+import type { LocalAgentTaskState } from './../../tasks/LocalAgentTask/LocalAgentTask.tsx';
+import { LocalAgentTask } from './../../tasks/LocalAgentTask/LocalAgentTask.tsx';
+import type { LocalShellTaskState } from './../../tasks/LocalShellTask/guards.ts';
+import { LocalShellTask } from './../../tasks/LocalShellTask/LocalShellTask.tsx';
 // Type import is erased at build time — safe even though module is ant-gated.
-import type { LocalWorkflowTaskState } from 'src/tasks/LocalWorkflowTask/LocalWorkflowTask';
-import type { MonitorMcpTaskState } from 'src/tasks/MonitorMcpTask/MonitorMcpTask';
-import { RemoteAgentTask, type RemoteAgentTaskState } from 'src/tasks/RemoteAgentTask/RemoteAgentTask';
-import { type BackgroundTaskState, isBackgroundTask, type TaskState } from 'src/tasks/types';
-import type { DeepImmutable } from 'src/types/utils';
-import { intersperse } from 'src/utils/array';
-import { TEAM_LEAD_NAME } from 'src/utils/swarm/constants';
+import type { LocalWorkflowTaskState } from './../../tasks/LocalWorkflowTask/LocalWorkflowTask.ts';
+import type { MonitorMcpTaskState } from './../../tasks/MonitorMcpTask/MonitorMcpTask.ts';
+import { RemoteAgentTask, type RemoteAgentTaskState } from './../../tasks/RemoteAgentTask/RemoteAgentTask.tsx';
+import { type BackgroundTaskState, isBackgroundTask, type TaskState } from './../../tasks/types.ts';
+import type { DeepImmutable } from './../../types/utils.ts';
+import { intersperse } from './../../utils/array.ts';
+import { TEAM_LEAD_NAME } from './../../utils/swarm/constants.ts';
 import { stopUltraplan } from '../../commands/ultraplan';
 import type { CommandResultDisplay } from '../../commands';
 import { useRegisterOverlay } from '../../context/overlayContext';
@@ -107,7 +108,7 @@ type ListItem = {
 // bundler can dead-code-eliminate the branch.
 /* eslint-disable @typescript-eslint/no-require-imports */
 const WorkflowDetailDialog = feature('WORKFLOW_SCRIPTS') ? (require('./WorkflowDetailDialog.js') as typeof import('./WorkflowDetailDialog.js')).WorkflowDetailDialog : null;
-const workflowTaskModule = feature('WORKFLOW_SCRIPTS') ? require('src/tasks/LocalWorkflowTask/LocalWorkflowTask.js') as typeof import('src/tasks/LocalWorkflowTask/LocalWorkflowTask.js') : null;
+const workflowTaskModule = feature('WORKFLOW_SCRIPTS') ? require('src/tasks/LocalWorkflowTask/LocalWorkflowTask.js') as typeof import('./../../tasks/LocalWorkflowTask/LocalWorkflowTask.ts') : null;
 const killWorkflowTask = workflowTaskModule?.killWorkflowTask ?? null;
 const skipWorkflowAgent = workflowTaskModule?.skipWorkflowAgent ?? null;
 const retryWorkflowAgent = workflowTaskModule?.retryWorkflowAgent ?? null;

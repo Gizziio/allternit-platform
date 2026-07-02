@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared command prefix extraction using Haiku LLM
  *

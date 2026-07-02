@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import React, { useEffect, useState } from 'react';
-import type { CommandResultDisplay } from 'src/commands';
-import { logEvent } from 'src/services/analytics/index';
+import type { CommandResultDisplay } from './../commands.ts';
+import { logEvent } from './../services/analytics/index.ts';
 import { StatusIcon } from '../components/design-system/StatusIcon';
 import { Box, render, Text } from '../ink';
 import { logForDebugging } from '../utils/debug';

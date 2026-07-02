@@ -39,9 +39,9 @@ export declare const ACPContentPartSchema: z.ZodUnion<readonly [z.ZodObject<{
 export declare const ACPMessageSchema: z.ZodObject<{
     id: z.ZodString;
     role: z.ZodEnum<{
-        assistant: "assistant";
         system: "system";
         user: "user";
+        assistant: "assistant";
         tool: "tool";
     }>;
     content: z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
@@ -59,17 +59,25 @@ export declare const ACPMessageSchema: z.ZodObject<{
         mimeType: z.ZodString;
         size: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>]>>]>;
-    metadata: z.ZodOptional<z.ZodRecord<z.core.$ZodRecordKey, z.core.SomeType>>;
+    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     timestamp: z.ZodString;
     parentId: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
-export declare const ACPToolParameterSchema: any;
+export interface ACPToolParameter {
+    type: string;
+    description?: string;
+    enum?: string[];
+    properties?: Record<string, ACPToolParameter>;
+    required?: string[];
+    items?: ACPToolParameter;
+}
+export declare const ACPToolParameterSchema: z.ZodType<ACPToolParameter>;
 export declare const ACPToolSchema: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
     parameters: z.ZodObject<{
         type: z.ZodLiteral<"object">;
-        properties: z.ZodRecord<any, z.core.SomeType>;
+        properties: z.ZodRecord<z.ZodString, z.ZodType<ACPToolParameter, unknown, z.core.$ZodTypeInternals<ACPToolParameter, unknown>>>;
         required: z.ZodOptional<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>;
 }, z.core.$strip>;
@@ -107,9 +115,9 @@ export declare const ACPSessionSchema: z.ZodObject<{
     messages: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         role: z.ZodEnum<{
-            assistant: "assistant";
             system: "system";
             user: "user";
+            assistant: "assistant";
             tool: "tool";
         }>;
         content: z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
@@ -127,7 +135,7 @@ export declare const ACPSessionSchema: z.ZodObject<{
             mimeType: z.ZodString;
             size: z.ZodOptional<z.ZodNumber>;
         }, z.core.$strip>]>>]>;
-        metadata: z.ZodOptional<z.ZodRecord<z.core.$ZodRecordKey, z.core.SomeType>>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         timestamp: z.ZodString;
         parentId: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
@@ -136,7 +144,7 @@ export declare const ACPSessionSchema: z.ZodObject<{
         description: z.ZodString;
         parameters: z.ZodObject<{
             type: z.ZodLiteral<"object">;
-            properties: z.ZodRecord<any, z.core.SomeType>;
+            properties: z.ZodRecord<z.ZodString, z.ZodType<ACPToolParameter, unknown, z.core.$ZodTypeInternals<ACPToolParameter, unknown>>>;
             required: z.ZodOptional<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>;
     }, z.core.$strip>>>;
@@ -150,7 +158,7 @@ export declare const ACPSessionSchema: z.ZodObject<{
         topP: z.ZodOptional<z.ZodNumber>;
         systemPrompt: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>;
-    metadata: z.ZodOptional<z.ZodRecord<z.core.$ZodRecordKey, z.core.SomeType>>;
+    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, z.core.$strip>;
@@ -230,7 +238,7 @@ export declare const ACPRegistryEntrySchema: z.ZodObject<{
             output: z.ZodOptional<z.ZodNumber>;
         }, z.core.$strip>>;
     }, z.core.$strip>>;
-    metadata: z.ZodOptional<z.ZodRecord<z.core.$ZodRecordKey, z.core.SomeType>>;
+    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, z.core.$strip>;
 export declare const ACPChatRequestSchema: z.ZodObject<{
     sessionId: z.ZodString;
@@ -250,11 +258,11 @@ export declare const ACPChatRequestSchema: z.ZodObject<{
             mimeType: z.ZodString;
             size: z.ZodOptional<z.ZodNumber>;
         }, z.core.$strip>]>>]>;
-        metadata: z.ZodOptional<z.ZodRecord<z.core.$ZodRecordKey, z.core.SomeType>>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         role: z.ZodEnum<{
-            assistant: "assistant";
             system: "system";
             user: "user";
+            assistant: "assistant";
             tool: "tool";
         }>;
         parentId: z.ZodOptional<z.ZodString>;
@@ -265,7 +273,7 @@ export declare const ACPChatRequestSchema: z.ZodObject<{
         description: z.ZodString;
         parameters: z.ZodObject<{
             type: z.ZodLiteral<"object">;
-            properties: z.ZodRecord<any, z.core.SomeType>;
+            properties: z.ZodRecord<z.ZodString, z.ZodType<ACPToolParameter, unknown, z.core.$ZodTypeInternals<ACPToolParameter, unknown>>>;
             required: z.ZodOptional<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>;
     }, z.core.$strip>>>;
@@ -274,9 +282,9 @@ export declare const ACPChatResponseSchema: z.ZodObject<{
     message: z.ZodObject<{
         id: z.ZodString;
         role: z.ZodEnum<{
-            assistant: "assistant";
             system: "system";
             user: "user";
+            assistant: "assistant";
             tool: "tool";
         }>;
         content: z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodUnion<readonly [z.ZodObject<{
@@ -294,7 +302,7 @@ export declare const ACPChatResponseSchema: z.ZodObject<{
             mimeType: z.ZodString;
             size: z.ZodOptional<z.ZodNumber>;
         }, z.core.$strip>]>>]>;
-        metadata: z.ZodOptional<z.ZodRecord<z.core.$ZodRecordKey, z.core.SomeType>>;
+        metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         timestamp: z.ZodString;
         parentId: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>;
@@ -315,7 +323,6 @@ export type ACPImageContent = z.infer<typeof ACPImageContentSchema>;
 export type ACPFileContent = z.infer<typeof ACPFileContentSchema>;
 export type ACPContentPart = z.infer<typeof ACPContentPartSchema>;
 export type ACPMessage = z.infer<typeof ACPMessageSchema>;
-export type ACPToolParameter = z.infer<typeof ACPToolParameterSchema>;
 export type ACPTool = z.infer<typeof ACPToolSchema>;
 export type ACPToolCall = z.infer<typeof ACPToolCallSchema>;
 export type ACPToolResult = z.infer<typeof ACPToolResultSchema>;

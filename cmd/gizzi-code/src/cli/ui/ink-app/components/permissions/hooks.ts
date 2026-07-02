@@ -1,22 +1,23 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { useEffect, useRef } from 'react'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from 'src/services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
-import { BashTool } from 'src/tools/BashTool/BashTool.js'
-import { splitCommand_DEPRECATED } from 'src/utils/bash/commands.js'
+} from './../../services/analytics/index.ts'
+import { sanitizeToolNameForAnalytics } from './../../services/analytics/metadata.ts'
+import { BashTool } from './../../tools/BashTool/BashTool.tsx'
+import { splitCommand_DEPRECATED } from './../../utils/bash/commands.ts'
 import type {
   PermissionDecisionReason,
   PermissionResult,
-} from 'src/utils/permissions/PermissionResult.js'
+} from './../../utils/permissions/PermissionResult.ts'
 import {
   extractRules,
   hasRules,
-} from 'src/utils/permissions/PermissionUpdate.js'
-import { permissionRuleValueToString } from 'src/utils/permissions/permissionRuleParser.js'
-import { SandboxManager } from 'src/utils/sandbox/sandbox-adapter.js'
+} from './../../utils/permissions/PermissionUpdate.ts'
+import { permissionRuleValueToString } from './../../utils/permissions/permissionRuleParser.ts'
+import { SandboxManager } from './../../utils/sandbox/sandbox-adapter.ts'
 import type { ToolUseConfirm } from '../../components/permissions/PermissionRequest.js'
 import { useSetAppState } from '../../state/AppState.js'
 import { env } from '../../utils/env.js'

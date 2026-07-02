@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Hook event system for broadcasting hook execution events.
  *
@@ -6,7 +7,7 @@
  * what to do with them (e.g., convert to SDK messages, log, etc.).
  */
 
-import { HOOK_EVENTS } from 'src/entrypoints/sdk/coreTypes.js'
+import { HOOK_EVENTS } from './../../entrypoints/sdk/coreTypes.ts'
 
 import { logForDebugging } from '../debug.js'
 

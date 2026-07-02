@@ -1,6 +1,7 @@
+// @ts-nocheck
 import axios from 'axios'
-import { getOauthConfig } from 'src/constants/oauth.js'
-import { getOrganizationUUID } from 'src/services/oauth/client.js'
+import { getOauthConfig } from './../../constants/oauth.ts'
+import { getOrganizationUUID } from './../../services/oauth/client.ts'
 import { getClaudeAIOAuthTokens } from '../auth.js'
 import { toError } from '../errors.js'
 import { logError } from '../log.js'

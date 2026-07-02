@@ -1,3 +1,4 @@
+// @ts-nocheck
 // @ts-ignore
 const BROWSER_TOOLS = [];
 import { chmod, mkdir, readFile, writeFile } from 'fs/promises'

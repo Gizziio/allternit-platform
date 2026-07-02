@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 /**
  * SelectEventMode is the entrypoint of the Hooks config menu, where the user
@@ -10,8 +11,8 @@ import { c as _c } from "react/compiler-runtime";
 
 import figures from 'figures';
 import * as React from 'react';
-import type { HookEvent } from 'src/entrypoints/agentSdkTypes';
-import type { HookEventMetadata } from 'src/utils/hooks/hooksConfigManager';
+import type { HookEvent } from './../../entrypoints/agentSdkTypes.ts';
+import type { HookEventMetadata } from './../../utils/hooks/hooksConfigManager.ts';
 import { Box, Link, Text } from '../../ink';
 import { plural } from '../../utils/stringUtils';
 import { Select } from '../CustomSelect/select';

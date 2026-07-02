@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { Text } from '../../ink';
 import type { Tools } from '../../Tool';

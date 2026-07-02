@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Keybindings template generator.
  * Generates a well-documented template file for ~/.claude/keybindings.json

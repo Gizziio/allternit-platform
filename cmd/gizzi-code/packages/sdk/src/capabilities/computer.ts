@@ -1,5 +1,5 @@
 import type { Tool } from '../harness/types.js';
-import { AllternitClient } from '../dist/gen/allternit-client.js';
+import { AllternitClient } from '../../dist/gen/allternit-client.js';
 
 export const COMPUTER_TOOL: Tool = {
   name: 'computer',

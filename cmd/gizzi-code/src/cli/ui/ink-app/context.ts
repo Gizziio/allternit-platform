@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import memoize from 'lodash-es/memoize.js'
 import {

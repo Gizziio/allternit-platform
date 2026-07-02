@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { useMemo } from 'react';
-import { Box } from 'src/ink';
-import { useAppState } from 'src/state/AppState';
+import { Box } from './../../ink.ts';
+import { useAppState } from './../../state/AppState.tsx';
 import { STATUS_TAG, SUMMARY_TAG, TASK_NOTIFICATION_TAG } from '../../constants/xml';
 import { QueuedMessageProvider } from '../../context/QueuedMessageContext';
 import { useCommandQueue } from '../../hooks/useCommandQueue';

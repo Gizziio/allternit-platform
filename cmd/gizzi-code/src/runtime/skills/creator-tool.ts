@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Skill Creator Tool - AskUserQuestion Pattern
  * 

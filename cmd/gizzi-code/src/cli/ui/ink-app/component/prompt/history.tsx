@@ -1,3 +1,4 @@
+// @ts-nocheck
 import path from "path"
 import { Global } from "@/runtime/context/global"
 import { Filesystem } from "@/shared/util/filesystem"

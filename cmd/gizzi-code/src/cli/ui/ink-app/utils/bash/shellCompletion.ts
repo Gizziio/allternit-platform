@@ -1,4 +1,5 @@
-import type { SuggestionItem } from 'src/components/PromptInput/PromptInputFooterSuggestions.js'
+// @ts-nocheck
+import type { SuggestionItem } from './../../components/PromptInput/PromptInputFooterSuggestions.tsx'
 import {
   type ParseEntry,
   quote,

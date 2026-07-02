@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isEnvTruthy } from '../utils/envUtils'
 
 // Lazy read so ENABLE_GROWTHBOOK_DEV from globalSettings.env (applied after

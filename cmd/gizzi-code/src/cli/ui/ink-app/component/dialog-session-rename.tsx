@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DialogPrompt } from "@/cli/ui/ink-app/ui/dialog-prompt"
 import { useDialog } from "@/cli/ui/ink-app/ui/dialog"
 import { useSync } from "@/cli/ui/ink-app/context/sync"

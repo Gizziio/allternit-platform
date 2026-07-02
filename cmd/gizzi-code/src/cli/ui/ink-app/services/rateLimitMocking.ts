@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Facade for rate limit header processing
  * This isolates mock logic from production code

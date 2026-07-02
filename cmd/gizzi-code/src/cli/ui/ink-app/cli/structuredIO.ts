@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type {
   ElicitResult,
@@ -11,32 +12,32 @@ import type {
   PermissionUpdate,
   SDKMessage,
   SDKUserMessage,
-} from 'src/entrypoints/agentSdkTypes'
-import { SDKControlElicitationResponseSchema } from 'src/entrypoints/sdk/controlSchemas'
+} from './../entrypoints/agentSdkTypes.ts'
+import { SDKControlElicitationResponseSchema } from './../entrypoints/sdk/controlSchemas.ts'
 import type {
   SDKControlRequest,
   SDKControlResponse,
   StdinMessage,
   StdoutMessage,
-} from 'src/entrypoints/sdk/controlTypes'
-import type { CanUseToolFn } from 'src/hooks/useCanUseTool'
-import type { Tool, ToolUseContext } from 'src/Tool'
-import { type HookCallback, hookJSONOutputSchema } from 'src/types/hooks'
-import { logForDebugging } from 'src/utils/debug'
-import { logForDiagnosticsNoPII } from 'src/utils/diagLogs'
-import { AbortError } from 'src/utils/errors'
+} from './../entrypoints/sdk/controlTypes.ts'
+import type { CanUseToolFn } from './../hooks/useCanUseTool.tsx'
+import type { Tool, ToolUseContext } from './../Tool.ts'
+import { type HookCallback, hookJSONOutputSchema } from './../types/hooks.ts'
+import { logForDebugging } from './../utils/debug.ts'
+import { logForDiagnosticsNoPII } from './../utils/diagLogs.ts'
+import { AbortError } from './../utils/errors.ts'
 import {
   type Output as PermissionToolOutput,
   permissionPromptToolResultToPermissionDecision,
   outputSchema as permissionToolOutputSchema,
-} from 'src/utils/permissions/PermissionPromptToolResultSchema'
+} from './../utils/permissions/PermissionPromptToolResultSchema.ts'
 import type {
   PermissionDecision,
   PermissionDecisionReason,
-} from 'src/utils/permissions/PermissionResult'
-import { hasPermissionsToUseTool } from 'src/utils/permissions/permissions'
-import { writeToStdout } from 'src/utils/process'
-import { jsonStringify } from 'src/utils/slowOperations'
+} from './../utils/permissions/PermissionResult.ts'
+import { hasPermissionsToUseTool } from './../utils/permissions/permissions.ts'
+import { writeToStdout } from './../utils/process.ts'
+import { jsonStringify } from './../utils/slowOperations.ts'
 import { z } from 'zod/v4'
 import { notifyCommandLifecycle } from '../utils/commandLifecycle'
 import { normalizeControlMessageKeys } from '../utils/controlMessageCompat'

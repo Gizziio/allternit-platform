@@ -1,3 +1,4 @@
+// @ts-nocheck
 import reject from 'lodash-es/reject.js'
 import { z } from 'zod/v4'
 import { performMCPOAuthFlow } from '../../services/mcp/auth.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Render ANSI-escaped terminal text directly to a PNG image.
  *

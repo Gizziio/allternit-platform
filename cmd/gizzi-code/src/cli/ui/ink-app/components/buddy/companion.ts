@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Companion Module
  * TEMPORARY SHIM

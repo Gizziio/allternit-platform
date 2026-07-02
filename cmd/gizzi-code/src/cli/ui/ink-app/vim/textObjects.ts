@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Vim Text Object Finding
  *

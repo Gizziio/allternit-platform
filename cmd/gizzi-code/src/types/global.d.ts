@@ -497,6 +497,66 @@ declare module 'lodash-es/last.js' {
   export default function last<T>(array: T[]): T | undefined
 }
 
+declare module 'lodash-es/memoize.js' {
+  export default function memoize<T extends (...args: any[]) => any>(fn: T, resolver?: (...args: any[]) => any): T
+}
+
+declare module 'lodash-es/sample.js' {
+  export default function sample<T>(collection: T[] | Record<string, T>): T | undefined
+}
+
+declare module 'lodash-es/isEqual.js' {
+  export default function isEqual(a: any, b: any): boolean
+}
+
+declare module 'lodash-es/capitalize.js' {
+  export default function capitalize(str: string): string
+}
+
+declare module 'lodash-es/reject.js' {
+  export default function reject<T>(collection: T[], predicate: ((item: T) => boolean) | Record<string, any>): T[]
+}
+
+declare module 'lodash-es/partition.js' {
+  export default function partition<T>(collection: T[], predicate: ((item: T) => boolean) | Record<string, any>): [T[], T[]]
+}
+
+declare module 'lodash-es/omit.js' {
+  export default function omit<T extends Record<string, any>>(obj: T, keys: string | string[]): Partial<T>
+}
+
+declare module 'lodash-es/noop.js' {
+  export default function noop(...args: any[]): void
+}
+
+declare module 'lodash-es/zipObject.js' {
+  export default function zipObject(keys: string[], values: any[]): Record<string, any>
+}
+
+declare module 'lodash-es/mergeWith.js' {
+  export default function mergeWith<T>(object: T, ...sources: any[]): T
+}
+
+declare module 'lodash-es/isPlainObject.js' {
+  export default function isPlainObject(value: any): boolean
+}
+
+declare module 'lodash-es/isObject.js' {
+  export default function isObject(value: any): boolean
+}
+
+declare module 'lodash-es/cloneDeep.js' {
+  export default function cloneDeep<T>(value: T): T
+}
+
+declare module 'lodash-es/throttle.js' {
+  export default function throttle<T extends (...args: any[]) => any>(fn: T, wait?: number, options?: { leading?: boolean; trailing?: boolean }): T
+}
+
+declare module 'lodash-es/setWith.js' {
+  export default function setWith<T extends Record<string, any>>(object: T, path: string | string[], value: any, customizer?: (value: any) => any): T
+}
+
 // Global MACRO constant - moved inside declare global below
 declare module 'figures' {
   function figures(figure: string): string

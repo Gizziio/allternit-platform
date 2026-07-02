@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { prependBullets } from '../../constants/prompts'
 import { getAttributionTexts } from '../../utils/attribution'

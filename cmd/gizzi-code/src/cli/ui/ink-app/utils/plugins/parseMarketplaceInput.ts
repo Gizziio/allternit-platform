@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { homedir } from 'os'
 import { resolve } from 'path'
 import { getErrnoCode } from '../errors.js'

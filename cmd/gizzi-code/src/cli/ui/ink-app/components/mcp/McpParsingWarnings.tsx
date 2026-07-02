@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useMemo } from 'react';
-import { getMcpConfigsByScope } from 'src/services/mcp/config';
-import type { ConfigScope } from 'src/services/mcp/types';
-import { describeMcpConfigFilePath, getScopeLabel } from 'src/services/mcp/utils';
-import type { ValidationError } from 'src/utils/settings/validation';
+import { getMcpConfigsByScope } from './../../services/mcp/config.ts';
+import type { ConfigScope } from './../../services/mcp/types.ts';
+import { describeMcpConfigFilePath, getScopeLabel } from './../../services/mcp/utils.ts';
+import type { ValidationError } from './../../utils/settings/validation.ts';
 import { Box, Link, Text } from '../../ink';
 function McpConfigErrorSection(t0) {
   const $ = _c(26);

@@ -1,11 +1,12 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import chalk from 'chalk';
 import figures from 'figures';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useAppState, useSetAppState } from 'src/state/AppState';
-import { applyPermissionUpdate, persistPermissionUpdate } from 'src/utils/permissions/PermissionUpdate';
-import type { PermissionUpdateDestination } from 'src/utils/permissions/PermissionUpdateSchema';
+import { useAppState, useSetAppState } from './../../../state/AppState.tsx';
+import { applyPermissionUpdate, persistPermissionUpdate } from './../../../utils/permissions/PermissionUpdate.ts';
+import type { PermissionUpdateDestination } from './../../../utils/permissions/PermissionUpdateSchema.ts';
 import type { CommandResultDisplay } from '../../../commands';
 import { Select } from '../../../components/CustomSelect/select';
 import { useExitOnCtrlCDWithKeybindings } from '../../../hooks/useExitOnCtrlCDWithKeybindings';

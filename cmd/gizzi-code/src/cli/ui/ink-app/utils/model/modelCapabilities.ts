@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { readFileSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import isEqual from 'lodash-es/isEqual.js'

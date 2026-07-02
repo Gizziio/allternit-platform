@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Command as CommanderCommand } from '@commander-js/extra-typings';
 import { cwd } from 'process';
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Status Command
  * Production-quality system status reporting

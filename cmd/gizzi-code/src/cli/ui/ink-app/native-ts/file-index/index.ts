@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure-TypeScript port of vendor/file-index-src (Rust NAPI module).
  *

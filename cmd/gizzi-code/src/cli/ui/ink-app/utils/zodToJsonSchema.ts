@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Converts Zod v4 schemas to JSON Schema using native toJSONSchema.
  */

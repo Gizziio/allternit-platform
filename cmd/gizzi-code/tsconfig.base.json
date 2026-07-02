@@ -12,6 +12,7 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "moduleResolution": "bundler",
     "noUncheckedIndexedAccess": false,
+    "verbatimModuleSyntax": false,
     "customConditions": ["browser"],
     "paths": {
       "@/*": ["./src/*"],

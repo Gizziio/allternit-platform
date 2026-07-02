@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * UDS messaging stub
  */

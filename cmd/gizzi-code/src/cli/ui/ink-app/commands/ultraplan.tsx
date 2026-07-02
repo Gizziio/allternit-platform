@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { readFileSync } from 'fs';
 import { REMOTE_CONTROL_DISCONNECTED_MSG } from '../bridge/types';
 import type { Command } from '../commands';

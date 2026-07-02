@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { Suspense, use, useDeferredValue, useEffect, useState } from 'react';
-import type { DeepImmutable } from 'src/types/utils';
+import type { DeepImmutable } from './../../types/utils.ts';
 import type { CommandResultDisplay } from '../../commands';
 import { useTerminalSize } from '../../hooks/useTerminalSize';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event';

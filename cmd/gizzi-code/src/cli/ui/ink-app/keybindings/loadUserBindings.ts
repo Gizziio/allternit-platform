@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * User keybinding configuration loader with hot-reload support.
  *

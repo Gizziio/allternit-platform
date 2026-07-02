@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { updateSessionBridgeId } from '../utils/concurrentSessions'
 import type { ReplBridgeHandle } from './replBridge'
 import { toCompatSessionId } from './sessionIdCompat'

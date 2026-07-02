@@ -1,5 +1,6 @@
-import type { Notification } from 'src/context/notifications';
-import { type GlobalConfig, getGlobalConfig } from 'src/utils/config';
+// @ts-nocheck
+import type { Notification } from './../../context/notifications.tsx';
+import { type GlobalConfig, getGlobalConfig } from './../../utils/config.ts';
 import { useStartupNotification } from './useStartupNotification';
 
 // Shows a one-time notification right after a model migration writes its

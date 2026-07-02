@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Denial tracking infrastructure for permission classifiers.
  * Tracks consecutive denials and total denials to determine

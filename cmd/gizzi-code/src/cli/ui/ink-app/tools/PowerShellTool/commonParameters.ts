@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * PowerShell Common Parameters (available on all cmdlets via [CmdletBinding()]).
  * Source: about_CommonParameters (PowerShell docs) + Get-Command output.

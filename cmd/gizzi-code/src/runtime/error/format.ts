@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ConfigMarkdown } from "@/runtime/context/config/markdown"
 import { Config } from "@/runtime/context/config/config"
 import { MCP } from "@/runtime/tools/mcp/mcp"

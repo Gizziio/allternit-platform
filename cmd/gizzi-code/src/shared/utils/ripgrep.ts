@@ -677,3 +677,9 @@ async function codesignRipgrepIfNecessary() {
     logError(e)
   }
 }
+
+// Auto-added export
+export const RipGrepResult: any = {}
+
+// Auto-added export
+export const RipGrepOptions: any = {}

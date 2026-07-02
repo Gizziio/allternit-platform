@@ -1,5 +1,25 @@
 import type { Tool } from '../harness/types.js';
-import { AllternitClient } from '../dist/gen/allternit-client.js';
+import { AllternitClient } from '../../dist/gen/allternit-client.js';
+
+interface MemoryQueryResponse {
+  data?: Array<{
+    chunk_type?: string;
+    content?: string;
+    source?: string;
+  }>;
+}
+
+interface AllternitClientWithMemory {
+  memory: {
+    query(params: {
+      query: {
+        query: string;
+        chunk_type?: string;
+        limit?: number;
+      };
+    }): Promise<MemoryQueryResponse>;
+  };
+}
 
 export const BRAIN_TOOL: Tool = {
   name: 'query_brain',
@@ -31,21 +51,22 @@ export class BrainCapability {
    */
   public async execute(args: { query: string; type?: string; limit?: number }): Promise<string> {
     try {
-      const response = await this.client.memory.query({
-        query: { 
-          query: args.query, 
-          chunk_type: args.type as any,
-          limit: args.limit 
-        }
+      const memoryClient = this.client as unknown as AllternitClientWithMemory;
+      const response = await memoryClient.memory.query({
+        query: {
+          query: args.query,
+          chunk_type: args.type,
+          limit: args.limit,
+        },
       });
 
       if (!response.data || response.data.length === 0) {
         return "No relevant memories found in your brain.";
       }
 
-      const memories = response.data.map((m: any) => 
-        `- [${m.chunk_type}] ${m.content} (Source: ${m.source})`
-      ).join('\n');
+      const memories = response.data
+        .map((m) => `- [${m.chunk_type ?? 'unknown'}] ${m.content ?? ''} (Source: ${m.source ?? 'unknown'})`)
+        .join('\n');
 
       return `Found the following in your brain:\n${memories}`;
     } catch (error) {

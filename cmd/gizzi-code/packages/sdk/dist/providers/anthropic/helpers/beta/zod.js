@@ -1,4 +1,4 @@
-import { transformJSONSchema } from '../..//lib/transform-json-schema';
+import { transformJSONSchema } from '../../lib/transform-json-schema';
 import * as z from 'zod/v4';
 import { AllternitError } from '../../core/error';
 /**

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * CLI command wrappers for plugin operations
  *

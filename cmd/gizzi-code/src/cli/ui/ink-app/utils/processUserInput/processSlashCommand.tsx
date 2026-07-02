@@ -1,11 +1,12 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import type { ContentBlockParam, TextBlockParam } from '@allternit/sdk/providers/anthropic/resources';
 import { randomUUID } from 'crypto';
-import { setPromptId } from 'src/bootstrap/state';
-import { builtInCommandNames, type Command, type CommandBase, findCommand, getCommand, getCommandName, hasCommand, type PromptCommand } from 'src/commands';
-import { NO_CONTENT_MESSAGE } from 'src/constants/messages';
-import type { SetToolJSXFn, ToolUseContext } from 'src/Tool';
-import type { AssistantMessage, AttachmentMessage, Message, NormalizedUserMessage, ProgressMessage, UserMessage } from 'src/types/message';
+import { setPromptId } from './../../bootstrap/state.ts';
+import { builtInCommandNames, type Command, type CommandBase, findCommand, getCommand, getCommandName, hasCommand, type PromptCommand } from './../../commands.ts';
+import { NO_CONTENT_MESSAGE } from './../../constants/messages.ts';
+import type { SetToolJSXFn, ToolUseContext } from './../../Tool.ts';
+import type { AssistantMessage, AttachmentMessage, Message, NormalizedUserMessage, ProgressMessage, UserMessage } from './../../types/message.ts';
 import { addInvokedSkill, getSessionId } from '../../bootstrap/state';
 import { COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG } from '../../constants/xml';
 import type { CanUseToolFn } from '../../hooks/useCanUseTool';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LRUCache } from 'lru-cache'
 import { basename, dirname, join, sep } from 'path'
 import type { SuggestionItem } from 'src/components/PromptInput/PromptInputFooterSuggestions.js'

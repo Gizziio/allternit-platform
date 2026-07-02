@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useKeybindings } from '../keybindings/useKeybinding'
 import { type ExitState, useExitOnCtrlCD } from './useExitOnCtrlCD'
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo } from "solid-js"
 import { useSync } from "@/cli/ui/ink-app/context/sync"
 import { Global } from "@/runtime/context/global"

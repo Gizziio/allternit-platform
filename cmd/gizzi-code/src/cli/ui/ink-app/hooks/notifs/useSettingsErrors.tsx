@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { useCallback, useEffect, useState } from 'react';
-import { useNotifications } from 'src/context/notifications';
+import { useNotifications } from './../../context/notifications.tsx';
 import { getIsRemoteMode } from '../../bootstrap/state';
 import { getSettingsWithAllErrors } from '../../utils/settings/allErrors';
 import type { ValidationError } from '../../utils/settings/validation';

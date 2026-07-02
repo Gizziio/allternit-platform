@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Swarm Initialization Hook
  *

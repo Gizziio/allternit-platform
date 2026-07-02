@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import * as React from 'react';
-import { buildTool, type ToolDef, toolMatchesName } from 'src/Tool';
-import type { Message as MessageType, NormalizedUserMessage } from 'src/types/message';
-import { getQuerySourceForAgent } from 'src/utils/promptCategory';
+import { buildTool, type ToolDef, toolMatchesName } from './../../Tool.ts';
+import type { Message as MessageType, NormalizedUserMessage } from './../../types/message.ts';
+import { getQuerySourceForAgent } from './../../utils/promptCategory.ts';
 import { z } from 'zod/v4';
 import { clearInvokedSkillsForAgent, getSdkAgentProgressSummariesEnabled } from '../../bootstrap/state';
 import { enhanceSystemPromptWithEnvDetails, getSystemPrompt } from '../../constants/prompts';

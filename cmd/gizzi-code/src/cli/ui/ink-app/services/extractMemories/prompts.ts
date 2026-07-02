@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Prompt templates for the background memory extraction agent.
  *

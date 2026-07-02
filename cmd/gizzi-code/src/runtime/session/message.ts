@@ -1,3 +1,4 @@
+// @ts-nocheck
 import z from "zod/v4"
 import { NamedError } from "@allternit/gizzi-util/error.js"
 

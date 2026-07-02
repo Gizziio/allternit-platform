@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SDK Control Protocol Types
  * Complete implementation for Gizzi SDK

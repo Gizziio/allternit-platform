@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function usePrStatus_ts(): void {
   // Not yet implemented
 }

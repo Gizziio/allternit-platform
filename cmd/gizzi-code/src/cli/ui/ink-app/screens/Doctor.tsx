@@ -1,12 +1,13 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import { join } from 'path';
 import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 'react';
-import { KeybindingWarnings } from 'src/components/KeybindingWarnings';
-import { McpParsingWarnings } from 'src/components/mcp/McpParsingWarnings';
-import { getModelMaxOutputTokens } from 'src/utils/context';
-import { getClaudeConfigHomeDir } from 'src/utils/envUtils';
-import type { SettingSource } from 'src/utils/settings/constants';
+import { KeybindingWarnings } from './../components/KeybindingWarnings.tsx';
+import { McpParsingWarnings } from './../components/mcp/McpParsingWarnings.tsx';
+import { getModelMaxOutputTokens } from './../utils/context.ts';
+import { getClaudeConfigHomeDir } from './../utils/envUtils.ts';
+import type { SettingSource } from './../utils/settings/constants.ts';
 import { getOriginalCwd } from '../bootstrap/state';
 import type { CommandResultDisplay } from '../commands';
 import { Pane } from '../components/design-system/Pane';

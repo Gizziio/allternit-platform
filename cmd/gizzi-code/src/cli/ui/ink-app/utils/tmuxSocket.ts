@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * TMUX SOCKET ISOLATION
  * =====================

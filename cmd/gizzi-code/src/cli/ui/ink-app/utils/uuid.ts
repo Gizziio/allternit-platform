@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { randomBytes, type UUID } from 'crypto'
-import type { AgentId } from 'src/types/ids.js'
+import type { AgentId } from './../types/ids.ts'
 
 const uuidRegex =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

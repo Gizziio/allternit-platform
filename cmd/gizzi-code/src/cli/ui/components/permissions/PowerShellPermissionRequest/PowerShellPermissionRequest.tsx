@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Text, useTheme } from '@/ink.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';

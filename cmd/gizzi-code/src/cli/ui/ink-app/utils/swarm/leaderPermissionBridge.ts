@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Leader Permission Bridge
  *

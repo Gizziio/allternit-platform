@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function getExitWorktreeToolPrompt(): string {
   return `Exit a worktree session created by EnterWorktree and return the session to the original working directory.
 

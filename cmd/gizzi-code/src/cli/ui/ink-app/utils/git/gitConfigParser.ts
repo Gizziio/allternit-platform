@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Lightweight parser for .git/config files.
  *

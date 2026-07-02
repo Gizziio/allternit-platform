@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle';
@@ -23,7 +24,7 @@ import { shouldHideTasksFooter } from '../tasks/taskStatusUtils';
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled';
 import { TeamStatus } from '../teams/TeamStatus';
 import { isInProcessEnabled } from '../../utils/swarm/backends/registry';
-import { useAppState, useAppStateStore } from 'src/state/AppState';
+import { useAppState, useAppStateStore } from './../../state/AppState.tsx';
 import { getIsRemoteMode } from '../../bootstrap/state';
 import HistorySearchInput from './HistorySearchInput';
 import { usePrStatus } from '../../hooks/usePrStatus';

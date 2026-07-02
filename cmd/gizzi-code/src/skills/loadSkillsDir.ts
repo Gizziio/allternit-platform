@@ -5,8 +5,15 @@
 
 import { readdir, readFile, access, constants, stat } from 'fs/promises'
 import { join, extname, basename } from 'path'
-import { log } from '../utils/log.js'
+import logger from '../utils/log.js'
 import { glob } from '../runtime/util/filesystem.js'
+
+const log = logger.log
+
+export {
+  createSkillCommand,
+  parseSkillFrontmatterFields,
+} from '../cli/ui/ink-app/skills/loadSkillsDir.js'
 
 export interface Skill {
   name: string

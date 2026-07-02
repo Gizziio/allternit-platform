@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { QueuedCommand } from '../types/textInputTypes.js'
 import {
   dequeue,

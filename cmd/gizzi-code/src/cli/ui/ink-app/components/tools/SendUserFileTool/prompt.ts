@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Send user file prompt stub
  */

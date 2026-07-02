@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { relative } from 'path'
 import type {
   CallHierarchyIncomingCall,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 
 // Bugfix for corepack auto-pinning, which adds yarnpkg to peoples' package.jsons

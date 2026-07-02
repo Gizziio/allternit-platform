@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useEffect } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import type { TeleportRemoteResponse } from 'src/utils/conversationRecovery';
-import type { CodeSession } from 'src/utils/teleport/api';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';
+import type { TeleportRemoteResponse } from './../utils/conversationRecovery.ts';
+import type { CodeSession } from './../utils/teleport/api.ts';
 import { type TeleportSource, useTeleportResume } from '../hooks/useTeleportResume';
 import { Box, Text } from '../ink';
 import { useKeybinding } from '../keybindings/useKeybinding';

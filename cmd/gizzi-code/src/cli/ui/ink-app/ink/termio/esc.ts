@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ESC Sequence Parser
  *

@@ -1,8 +1,10 @@
+export { HarnessError } from './errors.js';
 /**
  * Allternit Harness - Main Entry Point
  * Unified AI interface for BYOK, Cloud, Local, and Subprocess modes
  */
 import { AllternitError } from '../providers/anthropic/core/error';
+import { buildTierMap, scoreMessages } from './router.js';
 import { streamFromBYOK, streamFromCloud, streamFromLocal, streamFromSubprocess, completeViaCloud, completeViaLocal, executeSubprocess, listCloudModels, listLocalModels, } from './modes';
 export * from './types';
 export * from './modes';
@@ -12,6 +14,7 @@ export * from './modes';
  */
 export class AllternitHarness {
     config;
+    tierMap = null;
     constructor(config) {
         this.validateConfig(config);
         this.config = config;
@@ -55,9 +58,27 @@ export class AllternitHarness {
      * Main streaming interface
      * Routes to the appropriate mode handler
      */
+    /**
+     * Resolve auto-routing: score messages and pick provider+model from tier map.
+     * Built lazily on first use; cached for the lifetime of this harness instance.
+     */
+    resolveRoute(request) {
+        const isAuto = !request.provider || request.provider === 'auto';
+        if (!isAuto)
+            return request;
+        if (this.config.mode !== 'byok' || !this.config.byok) {
+            throw new AllternitError('Auto-routing requires BYOK mode with at least one API key');
+        }
+        if (!this.tierMap) {
+            this.tierMap = buildTierMap(this.config.byok.keys);
+        }
+        const tier = scoreMessages(request.messages, request.tools);
+        const { provider, model } = this.tierMap[tier];
+        return { ...request, provider, model };
+    }
     async *stream(request) {
-        // Inject system prompt if needed
-        const enrichedRequest = this.enrichRequest(request);
+        const routed = this.resolveRoute(request);
+        const enrichedRequest = this.enrichRequest(routed);
         switch (this.config.mode) {
             case 'byok':
                 if (!this.config.byok) {
@@ -91,7 +112,11 @@ export class AllternitHarness {
      * Non-streaming completion
      */
     async complete(request) {
-        const enrichedRequest = this.enrichRequest(request);
+        if (!request.model) {
+            throw new AllternitError('StreamRequest.model is required for non-streaming completion');
+        }
+        const routed = this.resolveRoute(request);
+        const enrichedRequest = this.enrichRequest(routed);
         switch (this.config.mode) {
             case 'cloud': {
                 if (!this.config.cloud) {

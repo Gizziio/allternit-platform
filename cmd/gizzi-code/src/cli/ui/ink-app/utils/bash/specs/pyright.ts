@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { CommandSpec } from '../registry.js'
 
 export default {

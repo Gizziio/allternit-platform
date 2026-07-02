@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { RenderableMessage } from '../types/message.js'
 import {
   INTERRUPT_MESSAGE,

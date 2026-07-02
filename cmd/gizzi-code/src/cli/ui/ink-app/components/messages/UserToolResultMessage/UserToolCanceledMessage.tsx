@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { InterruptedByUser } from 'src/components/InterruptedByUser';
-import { MessageResponse } from 'src/components/MessageResponse';
+import { InterruptedByUser } from './../../InterruptedByUser.tsx';
+import { MessageResponse } from './../../MessageResponse.tsx';
 export function UserToolCanceledMessage() {
   const $ = _c(1);
   let t0;

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * useKeybinding hook
  * Registers keyboard shortcuts

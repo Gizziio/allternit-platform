@@ -1,3 +1,4 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { Box, Text } from '@/ink.js';
 import * as React from 'react';

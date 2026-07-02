@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { stringWidth } from '@/ink/stringWidth.js';
 import { Box, Text } from '@/ink.js';

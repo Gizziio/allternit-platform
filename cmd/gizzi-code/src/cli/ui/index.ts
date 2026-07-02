@@ -7,16 +7,19 @@ export namespace UI {
   export const CancelledError = NamedError.create("UICancelledError", z.void())
 
   export const Style = {
+    RESET: "\x1b[0m",
     TEXT_HIGHLIGHT: "\x1b[96m",
     TEXT_HIGHLIGHT_BOLD: "\x1b[96m\x1b[1m",
     TEXT_DIM: "\x1b[90m",
     TEXT_DIM_BOLD: "\x1b[90m\x1b[1m",
     TEXT_NORMAL: "\x1b[0m",
     TEXT_NORMAL_BOLD: "\x1b[1m",
+    TEXT_BOLD: "\x1b[1m",
     TEXT_WARNING: "\x1b[93m",
     TEXT_WARNING_BOLD: "\x1b[93m\x1b[1m",
     TEXT_DANGER: "\x1b[91m",
     TEXT_DANGER_BOLD: "\x1b[91m\x1b[1m",
+    TEXT_ERROR: "\x1b[91m",
     TEXT_SUCCESS: "\x1b[92m",
     TEXT_SUCCESS_BOLD: "\x1b[92m\x1b[1m",
     TEXT_INFO: "\x1b[94m",

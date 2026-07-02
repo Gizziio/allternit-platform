@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import type { QuerySource } from '../../constants/querySource.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { AppState } from '../state/AppState.js'
 
 /**

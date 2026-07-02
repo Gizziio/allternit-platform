@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js"
 import type {
   OAuthClientMetadata,

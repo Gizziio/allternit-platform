@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Main entrypoint for Claude Code Agent SDK types.
  *

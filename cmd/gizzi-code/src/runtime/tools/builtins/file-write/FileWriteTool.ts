@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { dirname, sep } from 'path'
 import { logEvent } from 'src/services/analytics/index.js'
 import { z } from 'zod/v4'

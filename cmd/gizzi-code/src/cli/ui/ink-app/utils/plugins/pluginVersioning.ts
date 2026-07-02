@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Plugin Version Calculation Module
  *

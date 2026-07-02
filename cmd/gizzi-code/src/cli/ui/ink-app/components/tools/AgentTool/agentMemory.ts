@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { join, normalize, sep } from 'path'
 import { getProjectRoot } from '../../bootstrap/state'
 import {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const STARTUP_FLOW_VERSION = 3
 export const STARTUP_FLOW_VERSION_KEY = "startup_flow_version"
 

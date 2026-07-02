@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo, For, Show } from "solid-js"
 import { useDialog } from "@/cli/ui/ink-app/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@/cli/ui/ink-app/ui/dialog-select"

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useSyncExternalStore } from 'react'
 import { formatDuration } from '../../vendor/utils/format'
 

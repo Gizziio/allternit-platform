@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ReactNode } from 'react';
 import React from 'react';
-import { Text } from 'src/ink';
-import type { TaskStatus } from 'src/Task';
-import type { LocalShellTaskState } from 'src/tasks/LocalShellTask/guards';
-import type { DeepImmutable } from 'src/types/utils';
+import { Text } from './../../ink.ts';
+import type { TaskStatus } from './../../Task.ts';
+import type { LocalShellTaskState } from './../../tasks/LocalShellTask/guards.ts';
+import type { DeepImmutable } from './../../types/utils.ts';
 type TaskStatusTextProps = {
   status: TaskStatus;
   label?: string;

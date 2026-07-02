@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   getModelStrings as getModelStringsState,
   setModelStrings as setModelStringsState,

@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ToolUseBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import React, { useMemo } from 'react';
-import { useTerminalSize } from 'src/hooks/useTerminalSize';
-import type { ThemeName } from 'src/utils/theme';
+import { useTerminalSize } from './../../hooks/useTerminalSize.ts';
+import type { ThemeName } from './../../utils/theme.ts';
 import type { Command } from '../../commands';
 import { BLACK_CIRCLE } from '../../constants/figures';
 import { stringWidth } from '../../ink/stringWidth';

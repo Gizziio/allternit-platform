@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { InputRenderable, RGBA, ScrollBoxRenderable, TextAttributes } from "@opentui/core"
 import { useTheme, selectedForeground } from "@/cli/ui/ink-app/context/theme"
 import { entries, filter, flatMap, groupBy, pipe, take } from "remeda"

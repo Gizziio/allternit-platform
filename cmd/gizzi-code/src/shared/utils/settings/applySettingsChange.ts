@@ -1,6 +1,6 @@
 import type { AppState } from '@/state/AppState.js'
 import { logForDebugging } from '../debug.js'
-import { updateHooksConfigSnapshot } from '@/hooks/hooksConfigSnapshot.js'
+import { updateHooksConfigSnapshot } from '../../../runtime/utils/hooks/hooksConfigSnapshot.js'
 import {
   createDisabledBypassPermissionsContext,
   findOverlyBroadBashPermissions,

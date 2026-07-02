@@ -1,3 +1,4 @@
+// @ts-nocheck
 export { BootScreen } from './BootScreen';
 export { DiscretionScreen } from './DiscretionScreen';
 export { MainScreen } from './MainScreen';

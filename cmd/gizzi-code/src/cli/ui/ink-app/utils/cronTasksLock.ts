@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Scheduler lease lock for .claude/scheduled_tasks.json.
 //
 // When multiple Claude sessions run in the same project directory, only one

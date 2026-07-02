@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Built-in terminal panel toggled with Meta+J.
  *

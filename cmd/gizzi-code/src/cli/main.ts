@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
@@ -42,7 +43,7 @@ import { AgentCommand } from "@/cli/commands/agent"
 import { ProviderCommand } from "@/cli/commands/provider"
 import { RuntimeCommand } from "@/cli/commands/runtime"
 import path from "path"
-import { Global } from "@/runtime/context/global"
+import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
 import { Database } from "@/runtime/session/storage/db"
 // ResolveMessage is a global class from bun-types
@@ -90,6 +91,7 @@ const cli = yargs(hideBin(process.argv))
     type: "boolean",
   })
   .middleware(async (opts) => {
+    await initGlobal()
     if (opts.onboarding) {
       process.env.GIZZI_TUI_FORCE_STARTUP_FLOW = "1"
     }

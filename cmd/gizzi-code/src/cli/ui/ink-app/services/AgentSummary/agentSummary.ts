@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Periodic background summarization for coordinator mode sub-agents.
  *

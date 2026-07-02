@@ -16,6 +16,16 @@ import type {
   Message,
 } from '../types';
 
+/** Minimal Bun runtime global used when the SDK is executed by Bun. */
+declare const Bun: {
+  spawn: (...args: unknown[]) => {
+    stdin?: { write: (data: string) => Promise<void>; end: () => Promise<void> };
+    stdout?: { getReader: () => ReadableStreamDefaultReader<Uint8Array> };
+    stderr?: { getReader: () => ReadableStreamDefaultReader<Uint8Array> };
+    exited: Promise<number>;
+  };
+} | undefined;
+
 /**
  * Default timeout for subprocess execution (60 seconds)
  */
@@ -49,7 +59,7 @@ export async function* streamFromSubprocess(
     // Build prompt from messages
     const prompt = buildPrompt(request.messages);
 
-    // Spawn subprocess using Bun.spawn if available, otherwise use Node child_process
+    // Spawn subprocess using Bun!.spawn if available, otherwise use Node child_process
     yield* spawnAndStream(cmd, cmdArgs, prompt, config, timeout, signal);
   } catch (error) {
     // Handle cancellation
@@ -83,8 +93,8 @@ async function* spawnAndStream(
   timeout: number,
   signal?: AbortSignal
 ): AsyncGenerator<HarnessStreamChunk> {
-  // Check if Bun.spawn is available
-  if (typeof Bun !== 'undefined' && Bun.spawn) {
+  // Check if Bun!.spawn is available
+  if (typeof Bun !== 'undefined') {
     yield* spawnWithBun(cmd, args, prompt, config, timeout, signal);
   } else {
     yield* spawnWithNode(cmd, args, prompt, config, timeout, signal);
@@ -92,7 +102,7 @@ async function* spawnAndStream(
 }
 
 /**
- * Spawn subprocess using Bun.spawn
+ * Spawn subprocess using Bun!.spawn
  */
 async function* spawnWithBun(
   cmd: string,
@@ -112,7 +122,7 @@ async function* spawnWithBun(
   }
 
   try {
-    const proc = Bun.spawn([cmd, ...args], {
+    const proc = Bun!.spawn([cmd, ...args], {
       cwd: config.cwd,
       env: { ...process.env, ...config.env },
       stdin: 'pipe',
@@ -311,8 +321,8 @@ export async function executeSubprocess(
 
   const [cmd, ...cmdArgs] = args;
 
-  // Use Bun.spawn if available
-  if (typeof Bun !== 'undefined' && Bun.spawn) {
+  // Use Bun!.spawn if available
+  if (typeof Bun !== 'undefined') {
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => abortController.abort(), timeout);
 
@@ -321,7 +331,7 @@ export async function executeSubprocess(
     }
 
     try {
-      const proc = Bun.spawn([cmd, ...cmdArgs], {
+      const proc = Bun!.spawn([cmd, ...cmdArgs], {
         cwd: config.cwd,
         env: { ...process.env, ...config.env },
         stdin: 'pipe',

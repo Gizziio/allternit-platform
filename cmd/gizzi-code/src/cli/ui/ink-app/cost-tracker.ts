@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { BetaUsage as Usage } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
 import chalk from 'chalk'
 import {

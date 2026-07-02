@@ -1,9 +1,6 @@
 /**
- * Tool - re-export from runtime tools
- * Top-level entry point for all tool types and utilities
+ * Tool - central re-export entry point for tool types and utilities.
  */
-
-// Re-export from runtime/tools/Tool.ts
 export {
   ToolUseContext,
   ToolPermissionContext,
@@ -14,13 +11,26 @@ export {
   type Tools,
 } from './runtime/tools/Tool.js'
 
-// Re-export the Tool interface/type
 export type { Tool } from './runtime/tools/Tool.js'
 
-// Re-export from runtime tools builtins
-export {
-  type ToolUse,
-  type ToolResult,
-  type ToolCall,
-  type ToolInvocation,
-} from './runtime/tools/builtins/Tool.js'
+// Legacy Anthropic-style tool shapes
+export type { ToolUse, ToolResult } from './types/tools.js'
+
+// V2 message-based tool call/result shapes
+import { Message } from './runtime/session/message.js'
+export type ToolCall = Message.ToolCall
+export type ToolInvocation = Message.ToolInvocation
+
+// Types referenced by consumers but not yet extracted to a dedicated module.
+export type AnyObject = Record<string, any>
+export type ValidationResult = { ok: true } | { ok: false; error: string }
+export type SetToolJSXFn = (
+  toolUseId: string,
+  jsx: any,
+  options?: { height?: number; shouldAutoClose?: boolean },
+) => void
+export type Progress<T = any> = {
+  status: 'pending' | 'running' | 'completed' | 'error'
+  data?: T
+  message?: string
+}

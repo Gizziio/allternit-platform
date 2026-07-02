@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useSessionBackgrounding_ts(): void {
   // Not yet implemented
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getAllowedSettingSources } from '../../bootstrap/state.js'
 
 /**

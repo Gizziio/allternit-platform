@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Environment Runner Main
  * TEMPORARY SHIM

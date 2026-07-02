@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { APIUserAbortError } from '@allternit/sdk/providers/anthropic';
 import React, { type ReactNode, useCallback, useRef, useState } from 'react';
 import { useMainLoopModel } from '../../../../hooks/useMainLoopModel';

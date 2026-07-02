@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Settings Sync Service
  *

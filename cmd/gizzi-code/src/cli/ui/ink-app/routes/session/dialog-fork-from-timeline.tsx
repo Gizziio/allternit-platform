@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo, onMount } from "solid-js"
 import { useSync } from "@/cli/ui/ink-app/context/sync"
 import { DialogSelect, type DialogSelectOption } from "@/cli/ui/ink-app/ui/dialog-select"

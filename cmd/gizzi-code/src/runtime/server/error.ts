@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { NotFoundError } from "@/runtime/session/storage/db"

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isCompactLinePrefixEnabled } from '../../utils/file'
 import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt'
 

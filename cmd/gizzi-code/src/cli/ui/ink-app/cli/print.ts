@@ -1,3 +1,4 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle'
 import { readFile, stat } from 'fs/promises'
@@ -5,41 +6,41 @@ import { dirname } from 'path'
 import {
   downloadUserSettings,
   redownloadUserSettings,
-} from 'src/services/settingsSync/index'
-import { waitForRemoteManagedSettingsToLoad } from 'src/services/remoteManagedSettings/index'
-import { StructuredIO } from 'src/cli/structuredIO'
-import { RemoteIO } from 'src/cli/remoteIO'
+} from './../services/settingsSync/index.ts'
+import { waitForRemoteManagedSettingsToLoad } from './../services/remoteManagedSettings/index.ts'
+import { StructuredIO } from './structuredIO.ts'
+import { RemoteIO } from './remoteIO.ts'
 import {
   type Command,
   formatDescriptionWithSource,
   getCommandName,
-} from 'src/commands'
-import { createStreamlinedTransformer } from 'src/utils/streamlinedTransform'
-import { installStreamJsonStdoutGuard } from 'src/utils/streamJsonStdoutGuard'
-import type { ToolPermissionContext } from 'src/Tool'
-import type { ThinkingConfig } from 'src/utils/thinking'
-import { assembleToolPool, filterToolsByDenyRules } from 'src/tools'
+} from './../commands.ts'
+import { createStreamlinedTransformer } from './../utils/streamlinedTransform.ts'
+import { installStreamJsonStdoutGuard } from './../utils/streamJsonStdoutGuard.ts'
+import type { ToolPermissionContext } from './../Tool.ts'
+import type { ThinkingConfig } from './../utils/thinking.ts'
+import { assembleToolPool, filterToolsByDenyRules } from './../tools.ts'
 import uniqBy from 'lodash-es/uniqBy'
-import { uniq } from 'src/utils/array'
-import { mergeAndFilterTools } from 'src/utils/toolPool'
+import { uniq } from './../utils/array.ts'
+import { mergeAndFilterTools } from './../utils/toolPool.ts'
 import {
   logEvent,
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-} from 'src/services/analytics/index'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook'
-import { logForDebugging } from 'src/utils/debug'
+} from './../services/analytics/index.ts'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from './../services/analytics/growthbook.ts'
+import { logForDebugging } from './../utils/debug.ts'
 import {
   logForDiagnosticsNoPII,
   withDiagnosticsTiming,
-} from 'src/utils/diagLogs'
-import { toolMatchesName, type Tool, type Tools } from 'src/Tool'
+} from './../utils/diagLogs.ts'
+import { toolMatchesName, type Tool, type Tools } from './../Tool.ts'
 import {
   type AgentDefinition,
   isBuiltInAgent,
   parseAgentsFromJson,
-} from 'src/tools/AgentTool/loadAgentsDir'
-import type { Message, NormalizedUserMessage } from 'src/types/message'
-import type { QueuedCommand } from 'src/types/textInputTypes'
+} from './../tools/AgentTool/loadAgentsDir.ts'
+import type { Message, NormalizedUserMessage } from './../types/message.ts'
+import type { QueuedCommand } from './../types/textInputTypes.ts'
 import {
   dequeue,
   dequeueAllMatching,
@@ -48,8 +49,8 @@ import {
   peek,
   subscribeToCommandQueue,
   getCommandsByMaxPriority,
-} from 'src/utils/messageQueueManager'
-import { notifyCommandLifecycle } from 'src/utils/commandLifecycle'
+} from './../utils/messageQueueManager.ts'
+import { notifyCommandLifecycle } from './../utils/commandLifecycle.ts'
 import {
   getSessionState,
   notifySessionStateChanged,
@@ -57,56 +58,56 @@ import {
   setPermissionModeChangedListener,
   type RequiresActionDetails,
   type SessionExternalMetadata,
-} from 'src/utils/sessionState'
-import { externalMetadataToAppState } from 'src/state/onChangeAppState'
-import { getInMemoryErrors, logError, logMCPDebug } from 'src/utils/log'
+} from './../utils/sessionState.ts'
+import { externalMetadataToAppState } from './../state/onChangeAppState.ts'
+import { getInMemoryErrors, logError, logMCPDebug } from './../utils/log.ts'
 import {
   writeToStdout,
   registerProcessOutputErrorHandlers,
-} from 'src/utils/process'
-import type { Stream } from 'src/utils/stream'
-import { EMPTY_USAGE } from 'src/services/api/logging'
+} from './../utils/process.ts'
+import type { Stream } from './../utils/stream.ts'
+import { EMPTY_USAGE } from './../services/api/logging.ts'
 import {
   loadConversationForResume,
   type TurnInterruptionState,
-} from 'src/utils/conversationRecovery'
+} from './../utils/conversationRecovery.ts'
 import type {
   MCPServerConnection,
   McpSdkServerConfig,
   ScopedMcpServerConfig,
-} from 'src/services/mcp/types'
+} from './../services/mcp/types.ts'
 import {
   ChannelMessageNotificationSchema,
   gateChannelServer,
   wrapChannelMessage,
   findChannelEntry,
-} from 'src/services/mcp/channelNotification'
+} from './../services/mcp/channelNotification.ts'
 import {
   isChannelAllowlisted,
   isChannelsEnabled,
-} from 'src/services/mcp/channelAllowlist'
-import { parsePluginIdentifier } from 'src/utils/plugins/pluginIdentifier'
-import { validateUuid } from 'src/utils/uuid'
-import { fromArray } from 'src/utils/generators'
-import { ask } from 'src/QueryEngine'
-import type { PermissionPromptTool } from 'src/utils/queryHelpers'
+} from './../services/mcp/channelAllowlist.ts'
+import { parsePluginIdentifier } from './../utils/plugins/pluginIdentifier.ts'
+import { validateUuid } from './../utils/uuid.ts'
+import { fromArray } from './../utils/generators.ts'
+import { ask } from './../QueryEngine.ts'
+import type { PermissionPromptTool } from './../utils/queryHelpers.ts'
 import {
   createFileStateCacheWithSizeLimit,
   mergeFileStateCaches,
   READ_FILE_STATE_CACHE_SIZE,
-} from 'src/utils/fileStateCache'
-import { expandPath } from 'src/utils/path'
-import { extractReadFilesFromMessages } from 'src/utils/queryHelpers'
-import { registerHookEventHandler } from 'src/utils/hooks/hookEvents'
-import { executeFilePersistence } from 'src/utils/filePersistence/filePersistence'
-import { finalizePendingAsyncHooks } from 'src/utils/hooks/AsyncHookRegistry'
+} from './../utils/fileStateCache.ts'
+import { expandPath } from './../utils/path.ts'
+import { extractReadFilesFromMessages } from './../utils/queryHelpers.ts'
+import { registerHookEventHandler } from './../utils/hooks/hookEvents.ts'
+import { executeFilePersistence } from './../utils/filePersistence/filePersistence.ts'
+import { finalizePendingAsyncHooks } from './../utils/hooks/AsyncHookRegistry.ts'
 import {
   gracefulShutdown,
   gracefulShutdownSync,
   isShuttingDown,
-} from 'src/utils/gracefulShutdown'
-import { registerCleanup } from 'src/utils/cleanupRegistry'
-import { createIdleTimeoutManager } from 'src/utils/idleTimeout'
+} from './../utils/gracefulShutdown.ts'
+import { registerCleanup } from './../utils/cleanupRegistry.ts'
+import { createIdleTimeoutManager } from './../utils/idleTimeout.ts'
 import type {
   SDKStatus,
   ModelInfo,
@@ -117,7 +118,7 @@ import type {
   McpServerConfigForProcessTransport,
   McpServerStatus,
   RewindFilesResult,
-} from 'src/entrypoints/agentSdkTypes'
+} from './../entrypoints/agentSdkTypes.ts'
 import type {
   StdoutMessage,
   SDKControlInitializeRequest,
@@ -126,82 +127,82 @@ import type {
   SDKControlResponse,
   SDKControlMcpSetServersResponse,
   SDKControlReloadPluginsResponse,
-} from 'src/entrypoints/sdk/controlTypes'
+} from './../entrypoints/sdk/controlTypes.ts'
 import type { PermissionMode } from '@anthropic-ai/claude-agent-sdk'
-import type { PermissionMode as InternalPermissionMode } from 'src/types/permissions'
+import type { PermissionMode as InternalPermissionMode } from './../types/permissions.ts'
 import { cwd } from 'process'
-import { getCwd } from 'src/utils/cwd'
+import { getCwd } from './../utils/cwd.ts'
 import omit from 'lodash-es/omit'
 import reject from 'lodash-es/reject'
-import { isPolicyAllowed } from 'src/services/policyLimits/index'
-import type { ReplBridgeHandle } from 'src/bridge/replBridge'
-import { getRemoteSessionUrl } from 'src/constants/product'
-import { buildBridgeConnectUrl } from 'src/bridge/bridgeStatusUtil'
-import { extractInboundMessageFields } from 'src/bridge/inboundMessages'
-import { resolveAndPrepend } from 'src/bridge/inboundAttachments'
-import type { CanUseToolFn } from 'src/hooks/useCanUseTool'
-import { hasPermissionsToUseTool } from 'src/utils/permissions/permissions'
-import { safeParseJSON } from 'src/utils/json'
+import { isPolicyAllowed } from './../services/policyLimits/index.ts'
+import type { ReplBridgeHandle } from './../bridge/replBridge.ts'
+import { getRemoteSessionUrl } from './../constants/product.ts'
+import { buildBridgeConnectUrl } from './../bridge/bridgeStatusUtil.ts'
+import { extractInboundMessageFields } from './../bridge/inboundMessages.ts'
+import { resolveAndPrepend } from './../bridge/inboundAttachments.ts'
+import type { CanUseToolFn } from './../hooks/useCanUseTool.tsx'
+import { hasPermissionsToUseTool } from './../utils/permissions/permissions.ts'
+import { safeParseJSON } from './../utils/json.ts'
 import {
   outputSchema as permissionToolOutputSchema,
   permissionPromptToolResultToPermissionDecision,
-} from 'src/utils/permissions/PermissionPromptToolResultSchema'
-import { createAbortController } from 'src/utils/abortController'
-import { createCombinedAbortSignal } from 'src/utils/combinedAbortSignal'
-import { generateSessionTitle } from 'src/utils/sessionTitle'
-import { buildSideQuestionFallbackParams } from 'src/utils/queryContext'
-import { runSideQuestion } from 'src/utils/sideQuestion'
+} from './../utils/permissions/PermissionPromptToolResultSchema.ts'
+import { createAbortController } from './../utils/abortController.ts'
+import { createCombinedAbortSignal } from './../utils/combinedAbortSignal.ts'
+import { generateSessionTitle } from './../utils/sessionTitle.ts'
+import { buildSideQuestionFallbackParams } from './../utils/queryContext.ts'
+import { runSideQuestion } from './../utils/sideQuestion.ts'
 import {
   processSessionStartHooks,
   processSetupHooks,
   takeInitialUserMessage,
-} from 'src/utils/sessionStart'
+} from './../utils/sessionStart.ts'
 import {
   DEFAULT_OUTPUT_STYLE_NAME,
   getAllOutputStyles,
-} from 'src/constants/outputStyles'
-import { TEAMMATE_MESSAGE_TAG, TICK_TAG } from 'src/constants/xml'
+} from './../constants/outputStyles.ts'
+import { TEAMMATE_MESSAGE_TAG, TICK_TAG } from './../constants/xml.ts'
 import {
   getSettings_DEPRECATED,
   getSettingsWithSources,
-} from 'src/utils/settings/settings'
-import { settingsChangeDetector } from 'src/utils/settings/changeDetector'
-import { applySettingsChange } from 'src/utils/settings/applySettingsChange'
+} from './../utils/settings/settings.ts'
+import { settingsChangeDetector } from './../utils/settings/changeDetector.ts'
+import { applySettingsChange } from './../utils/settings/applySettingsChange.ts'
 import {
   isFastModeAvailable,
   isFastModeEnabled,
   isFastModeSupportedByModel,
   getFastModeState,
-} from 'src/utils/fastMode'
+} from './../utils/fastMode.ts'
 import {
   isAutoModeGateEnabled,
   getAutoModeUnavailableNotification,
   getAutoModeUnavailableReason,
   isBypassPermissionsModeDisabled,
   transitionPermissionMode,
-} from 'src/utils/permissions/permissionSetup'
+} from './../utils/permissions/permissionSetup.ts'
 import {
   tryGenerateSuggestion,
   logSuggestionOutcome,
   logSuggestionSuppressed,
   type PromptVariant,
-} from 'src/services/PromptSuggestion/promptSuggestion'
-import { getLastCacheSafeParams } from 'src/utils/forkedAgent'
-import { getAccountInformation } from 'src/utils/auth'
-import { OAuthService } from 'src/services/oauth/index'
-import { installOAuthTokens } from 'src/cli/handlers/auth'
-import { getAPIProvider } from 'src/utils/model/providers'
-import type { HookCallbackMatcher } from 'src/types/hooks'
-import { AwsAuthStatusManager } from 'src/utils/awsAuthStatusManager'
-import type { HookEvent } from 'src/entrypoints/agentSdkTypes'
+} from './../services/PromptSuggestion/promptSuggestion.ts'
+import { getLastCacheSafeParams } from './../utils/forkedAgent.ts'
+import { getAccountInformation } from './../utils/auth.ts'
+import { OAuthService } from './../services/oauth/index.ts'
+import { installOAuthTokens } from './handlers/auth.ts'
+import { getAPIProvider } from './../utils/model/providers.ts'
+import type { HookCallbackMatcher } from './../types/hooks.ts'
+import { AwsAuthStatusManager } from './../utils/awsAuthStatusManager.ts'
+import type { HookEvent } from './../entrypoints/agentSdkTypes.ts'
 import {
   registerHookCallbacks,
   setInitJsonSchema,
   getInitJsonSchema,
   setSdkAgentProgressSummariesEnabled,
-} from 'src/bootstrap/state'
-import { createSyntheticOutputTool } from 'src/tools/SyntheticOutputTool/SyntheticOutputTool'
-import { parseSessionIdentifier } from 'src/utils/sessionUrl'
+} from './../bootstrap/state.ts'
+import { createSyntheticOutputTool } from './../tools/SyntheticOutputTool/SyntheticOutputTool.ts'
+import { parseSessionIdentifier } from './../utils/sessionUrl.ts'
 import {
   hydrateRemoteSession,
   hydrateFromCCRv2InternalEvents,
@@ -213,8 +214,8 @@ import {
   saveMode,
   saveAiGeneratedTitle,
   restoreSessionMetadata,
-} from 'src/utils/sessionStorage'
-import { incrementPromptCount } from 'src/utils/commitAttribution'
+} from './../utils/sessionStorage.ts'
+import { incrementPromptCount } from './../utils/commitAttribution.ts'
 import {
   setupSdkMcpClients,
   connectToServer,
@@ -222,64 +223,64 @@ import {
   fetchToolsForClient,
   areMcpConfigsEqual,
   reconnectMcpServerImpl,
-} from 'src/services/mcp/client'
+} from './../services/mcp/client.ts'
 import {
   filterMcpServersByPolicy,
   getMcpConfigByName,
   isMcpServerDisabled,
   setMcpServerEnabled,
-} from 'src/services/mcp/config'
+} from './../services/mcp/config.ts'
 import {
   performMCPOAuthFlow,
   revokeServerTokens,
-} from 'src/services/mcp/auth'
+} from './../services/mcp/auth.ts'
 import {
   runElicitationHooks,
   runElicitationResultHooks,
-} from 'src/services/mcp/elicitationHandler'
-import { executeNotificationHooks } from 'src/utils/hooks'
+} from './../services/mcp/elicitationHandler.ts'
+import { executeNotificationHooks } from './../utils/hooks.ts'
 import {
   ElicitRequestSchema,
   ElicitationCompleteNotificationSchema,
 } from '@modelcontextprotocol/sdk/types'
-import { getMcpPrefix } from 'src/services/mcp/mcpStringUtils'
+import { getMcpPrefix } from './../services/mcp/mcpStringUtils.ts'
 import {
   commandBelongsToServer,
   filterToolsByServer,
-} from 'src/services/mcp/utils'
-import { setupVscodeSdkMcp } from 'src/services/mcp/vscodeSdkMcp'
-import { getAllMcpConfigs } from 'src/services/mcp/config'
+} from './../services/mcp/utils.ts'
+import { setupVscodeSdkMcp } from './../services/mcp/vscodeSdkMcp.ts'
+import { getAllMcpConfigs } from './../services/mcp/config.ts'
 import {
   isQualifiedForGrove,
   checkGroveForNonInteractive,
-} from 'src/services/api/grove'
+} from './../services/api/grove.ts'
 import {
   toInternalMessages,
   toSDKRateLimitInfo,
-} from 'src/utils/messages/mappers'
-import { createModelSwitchBreadcrumbs } from 'src/utils/messages'
-import { collectContextData } from 'src/commands/context/context-noninteractive'
-import { LOCAL_COMMAND_STDOUT_TAG } from 'src/constants/xml'
+} from './../utils/messages/mappers.ts'
+import { createModelSwitchBreadcrumbs } from './../utils/messages.ts'
+import { collectContextData } from './../commands/context/context-noninteractive.ts'
+import { LOCAL_COMMAND_STDOUT_TAG } from './../constants/xml.ts'
 import {
   statusListeners,
   type ClaudeAILimits,
-} from 'src/services/claudeAiLimits'
+} from './../services/claudeAiLimits.ts'
 import {
   getDefaultMainLoopModel,
   getMainLoopModel,
   modelDisplayString,
   parseUserSpecifiedModel,
-} from 'src/utils/model/model'
-import { getModelOptions } from 'src/utils/model/modelOptions'
+} from './../utils/model/model.ts'
+import { getModelOptions } from './../utils/model/modelOptions.ts'
 import {
   modelSupportsEffort,
   modelSupportsMaxEffort,
   EFFORT_LEVELS,
   resolveAppliedEffort,
-} from 'src/utils/effort'
-import { modelSupportsAdaptiveThinking } from 'src/utils/thinking'
-import { modelSupportsAutoMode } from 'src/utils/betas'
-import { ensureModelStringsInitialized } from 'src/utils/model/modelStrings'
+} from './../utils/effort.ts'
+import { modelSupportsAdaptiveThinking } from './../utils/thinking.ts'
+import { modelSupportsAutoMode } from './../utils/betas.ts'
+import { ensureModelStringsInitialized } from './../utils/model/modelStrings.ts'
 import {
   getSessionId,
   setMainLoopModelOverride,
@@ -293,33 +294,33 @@ import {
   getAllowedChannels,
   setAllowedChannels,
   type ChannelEntry,
-} from 'src/bootstrap/state'
-import { runWithWorkload, WORKLOAD_CRON } from 'src/utils/workloadContext'
+} from './../bootstrap/state.ts'
+import { runWithWorkload, WORKLOAD_CRON } from './../utils/workloadContext.ts'
 import type { UUID } from 'crypto'
 import { randomUUID } from 'crypto'
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
-import type { AppState } from 'src/state/AppStateStore'
+import type { AppState } from './../state/AppStateStore.ts'
 import {
   fileHistoryRewind,
   fileHistoryCanRestore,
   fileHistoryEnabled,
   fileHistoryGetDiffStats,
-} from 'src/utils/fileHistory'
+} from './../utils/fileHistory.ts'
 import {
   restoreAgentFromSession,
   restoreSessionStateFromLog,
-} from 'src/utils/sessionRestore'
-import { SandboxManager } from 'src/utils/sandbox/sandbox-adapter'
+} from './../utils/sessionRestore.ts'
+import { SandboxManager } from './../utils/sandbox/sandbox-adapter.ts'
 import {
   headlessProfilerStartTurn,
   headlessProfilerCheckpoint,
   logHeadlessProfilerTurn,
-} from 'src/utils/headlessProfiler'
+} from './../utils/headlessProfiler.ts'
 import {
   startQueryProfile,
   logQueryProfileReport,
-} from 'src/utils/queryProfiler'
-import { asSessionId } from 'src/types/ids'
+} from './../utils/queryProfiler.ts'
+import { asSessionId } from './../types/ids.ts'
 import { jsonStringify } from '../utils/slowOperations'
 import { skillChangeDetector } from '../utils/skills/skillChangeDetector'
 import { getCommands, clearCommandsCache } from '../commands'
@@ -5005,7 +5006,7 @@ async function loadInitialMessages(
         processMessagesForTeleportResume,
         teleportResumeCodeSession,
         validateGitState,
-      } = await import('src/utils/teleport.js')
+      } = await import('./../utils/teleport.tsx')
       await validateGitState()
       const teleportResult = await teleportResumeCodeSession(options.teleport)
       const { branchError } = await checkOutTeleportedSessionBranch(

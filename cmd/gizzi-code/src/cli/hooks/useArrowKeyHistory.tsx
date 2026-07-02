@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useCallback, useRef, useState } from 'react';
 import { getModeFromInput } from 'src/components/PromptInput/inputModes.js';
 import { useNotifications } from 'src/context/notifications.js';

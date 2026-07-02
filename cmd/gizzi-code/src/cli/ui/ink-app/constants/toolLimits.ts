@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Constants related to tool result size limits
  */

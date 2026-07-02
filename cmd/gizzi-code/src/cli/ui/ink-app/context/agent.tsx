@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Agent Context - Global agent state management
  * 

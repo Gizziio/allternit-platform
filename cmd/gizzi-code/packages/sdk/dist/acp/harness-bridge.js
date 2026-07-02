@@ -42,15 +42,17 @@ export class ACPHarnessBridge {
                 switch (chunk.type) {
                     case 'text': {
                         const content = {
-                            type: 'text',
-                            text: chunk.text,
+                            content: {
+                                type: 'text',
+                                text: chunk.text,
+                            },
                         };
                         yield { type: 'content', content };
                         break;
                     }
                     case 'tool_call': {
                         const toolCall = {
-                            toolCallId: chunk.callID || crypto.randomUUID(),
+                            toolCallId: chunk.id || crypto.randomUUID(),
                             title: chunk.name,
                             status: 'in_progress',
                         };

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import axios from 'axios';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';

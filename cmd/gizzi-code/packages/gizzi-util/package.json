@@ -1,5 +1,12 @@
 {
   "name": "@allternit/gizzi-util",
   "version": "1.0.0",
-  "type": "module"
+  "type": "module",
+  "exports": {
+    "./error.js": "./dist/error.js",
+    "./binary.js": "./dist/binary.js",
+    "./lazy.js": "./dist/lazy.js",
+    "./slug.js": "./dist/slug.js",
+    "./*": "./dist/*"
+  }
 }

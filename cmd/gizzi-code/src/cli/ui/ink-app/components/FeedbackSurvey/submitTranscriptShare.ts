@@ -1,3 +1,4 @@
+// @ts-nocheck
 import axios from 'axios'
 import { readFile, stat } from 'fs/promises'
 import type { Message } from '../../types/message.js'

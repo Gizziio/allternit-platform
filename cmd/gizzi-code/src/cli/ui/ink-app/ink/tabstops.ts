@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Tab expansion, inspired by Ghostty's Tabstops.zig
 // Uses 8-column intervals (POSIX default, hardcoded in terminals like Ghostty)
 

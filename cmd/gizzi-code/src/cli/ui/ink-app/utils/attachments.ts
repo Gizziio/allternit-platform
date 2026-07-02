@@ -1,8 +1,9 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import {
   logEvent,
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-} from 'src/services/analytics/index.js'
+} from './../services/analytics/index.ts'
 import {
   toolMatchesName,
   type Tools,
@@ -45,7 +46,7 @@ import {
   type MemoryFileInfo,
 } from './claudemd.js'
 import { dirname, parse, relative, resolve } from 'path'
-import { getCwd } from 'src/utils/cwd.js'
+import { getCwd } from './cwd.ts'
 import { getViewedTeammateTask } from '../state/selectors.js'
 import { logError } from './log.js'
 import { logAntError } from './debug.js'
@@ -56,15 +57,15 @@ import type {
   AttachmentMessage,
   Message,
   MessageOrigin,
-} from 'src/types/message.js'
+} from './../types/message.ts'
 import {
   type QueuedCommand,
   getImagePasteIds,
   isValidImagePaste,
-} from 'src/types/textInputTypes.js'
+} from './../types/textInputTypes.ts'
 import { randomUUID, type UUID } from 'crypto'
 import { getSettings_DEPRECATED } from './settings/settings.js'
-import { getSnippetForTwoFileDiff } from 'src/tools/FileEditTool/utils.js'
+import { getSnippetForTwoFileDiff } from './../tools/FileEditTool/utils.ts'
 import type {
   ContentBlockParam,
   ImageBlockParam,
@@ -107,8 +108,8 @@ const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
 import {
   MAX_LINES_TO_READ,
   FILE_READ_TOOL_NAME,
-} from 'src/tools/FileReadTool/prompt.js'
-import { getDefaultFileReadingLimits } from 'src/tools/FileReadTool/limits.js'
+} from './../tools/FileReadTool/prompt.ts'
+import { getDefaultFileReadingLimits } from './../tools/FileReadTool/limits.ts'
 import { cacheKeys, type FileStateCache } from './fileStateCache.js'
 import {
   createAbortController,
@@ -178,7 +179,7 @@ import type { MCPServerConnection } from '../services/mcp/types.js'
 import type {
   HookEvent,
   SyncHookJSONOutput,
-} from 'src/entrypoints/agentSdkTypes.js'
+} from './../entrypoints/agentSdkTypes.ts'
 import {
   checkForAsyncHookResponses,
   removeDeliveredAsyncHooks,

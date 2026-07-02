@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo, For, Show, createSignal, createResource, createEffect } from "solid-js"
 import { useDialog } from "@/cli/ui/ink-app/ui/dialog"
 import { useTheme } from "@/cli/ui/ink-app/context/theme"

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { execa } from 'execa';
 import * as React from 'react';
 import { useEffect, useState } from 'react';

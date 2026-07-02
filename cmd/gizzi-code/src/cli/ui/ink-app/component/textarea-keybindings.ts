@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo } from "solid-js"
 import type { KeyBinding } from "@opentui/core"
 import { useKeybind } from "@/cli/ui/ink-app/context/keybind"

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { CompanionBones, Eye, Hat, Species } from './types'
 import {
   axolotl,

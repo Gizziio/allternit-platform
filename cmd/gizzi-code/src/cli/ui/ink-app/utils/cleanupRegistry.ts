@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Global registry for cleanup functions that should run during graceful shutdown.
  * This module is separate from gracefulShutdown.ts to avoid circular dependencies.

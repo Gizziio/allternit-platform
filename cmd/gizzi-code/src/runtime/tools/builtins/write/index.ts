@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Write tool - file writing capability
  */

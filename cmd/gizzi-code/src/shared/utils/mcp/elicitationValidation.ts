@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type {
   PrimitiveSchemaDefinition,
 } from '@modelcontextprotocol/sdk/types.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt'
 
 export const FILE_WRITE_TOOL_NAME = 'Write'

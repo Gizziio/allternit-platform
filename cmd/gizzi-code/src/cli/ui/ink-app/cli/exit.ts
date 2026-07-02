@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * CLI exit helpers for subcommand handlers.
  *

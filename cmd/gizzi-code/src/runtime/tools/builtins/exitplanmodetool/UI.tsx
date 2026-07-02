@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { Markdown } from '../../../components/Markdown.js';
 import { MessageResponse } from '../../../components/MessageResponse.js';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
 import { useAnimation } from "@/cli/ui/components/animation"

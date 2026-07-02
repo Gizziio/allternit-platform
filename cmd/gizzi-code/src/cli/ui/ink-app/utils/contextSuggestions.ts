@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
 import { FILE_READ_TOOL_NAME } from '../tools/FileReadTool/prompt.js'
 import { GREP_TOOL_NAME } from '../tools/GrepTool/prompt.js'

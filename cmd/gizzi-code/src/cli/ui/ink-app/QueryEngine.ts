@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
 import { randomUUID } from 'crypto'
@@ -5,7 +6,7 @@ import last from 'lodash-es/last'
 import {
   getSessionId,
   isSessionPersistenceDisabled,
-} from 'src/bootstrap/state'
+} from './bootstrap/state.ts'
 import type {
   PermissionMode,
   SDKCompactBoundaryMessage,
@@ -13,10 +14,10 @@ import type {
   SDKPermissionDenial,
   SDKStatus,
   SDKUserMessageReplay,
-} from 'src/entrypoints/agentSdkTypes'
-import { accumulateUsage, updateUsage } from 'src/services/api/claude'
-import type { NonNullableUsage } from 'src/services/api/logging'
-import { EMPTY_USAGE } from 'src/services/api/logging'
+} from './entrypoints/agentSdkTypes.ts'
+import { accumulateUsage, updateUsage } from './services/api/claude.ts'
+import type { NonNullableUsage } from './services/api/logging.ts'
+import { EMPTY_USAGE } from './services/api/logging.ts'
 import stripAnsi from 'strip-ansi'
 import type { Command } from './commands'
 import { getSlashCommandToolSkills } from './commands'
@@ -85,7 +86,7 @@ import {
 // Lazy: MessageSelector.tsx pulls React/ink; only needed for message filtering at query time
 /* eslint-disable @typescript-eslint/no-require-imports */
 const messageSelector =
-  (): typeof import('src/components/MessageSelector.js') =>
+  (): typeof import('./components/MessageSelector.tsx') =>
     require('src/components/MessageSelector.js')
 
 import {

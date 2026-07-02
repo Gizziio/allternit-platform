@@ -11,6 +11,10 @@ import { AllternitError } from '../../providers/anthropic/core/error';
 export async function* streamFromCloud(config, request) {
     const signal = request.signal;
     const baseURL = config.baseURL || 'https://api.allternit.com';
+    const provider = request.provider;
+    if (!provider) {
+        throw new AllternitError('provider is required for cloud streaming');
+    }
     try {
         // Check for cancellation before starting
         if (signal?.aborted) {
@@ -23,7 +27,7 @@ export async function* streamFromCloud(config, request) {
                 'Authorization': `Bearer ${config.accessToken}`,
                 'Content-Type': 'application/json',
                 'Accept': 'text/event-stream',
-                'X-Allternit-Provider': request.provider,
+                'X-Allternit-Provider': provider,
             },
             body: JSON.stringify({
                 provider: request.provider,
@@ -106,9 +110,10 @@ async function* processCloudStream(response) {
                 }
                 // Parse SSE field
                 if (line.startsWith('event: ')) {
+                    const existingData = currentEvent?.data ?? '';
                     currentEvent = {
                         event: line.slice(7).trim(),
-                        data: currentEvent?.data || '',
+                        data: existingData,
                     };
                 }
                 else if (line.startsWith('data: ')) {
@@ -212,12 +217,16 @@ async function* parseCloudEvent(sse) {
  */
 export async function completeViaCloud(config, request) {
     const baseURL = config.baseURL || 'https://api.allternit.com';
+    const provider = request.provider;
+    if (!provider) {
+        throw new AllternitError('provider is required for cloud completion');
+    }
     const response = await fetch(`${baseURL}/v1/ai/complete`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${config.accessToken}`,
             'Content-Type': 'application/json',
-            'X-Allternit-Provider': request.provider,
+            'X-Allternit-Provider': provider,
         },
         body: JSON.stringify({
             provider: request.provider,

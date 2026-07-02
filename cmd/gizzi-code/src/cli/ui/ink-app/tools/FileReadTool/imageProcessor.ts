@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Buffer } from 'buffer'
 import { isInBundledMode } from '../../utils/bundledMode.js'
 

@@ -1,5 +1,5 @@
 import path from "path"
-import { Global } from "@/runtime/context/global"
+import { GlobalPaths } from "@/runtime/context/global/paths"
 import z from "zod/v4"
 import { Filesystem } from "@/shared/util/filesystem"
 import { xdgData } from "xdg-basedir"
@@ -36,8 +36,8 @@ export namespace Auth {
   export const Info = z.discriminatedUnion("type", [Oauth, Api, WellKnown])
   export type Info = z.infer<typeof Info>
 
-  const filepath = path.join(Global.Path.data, "auth.json")
-  const legacyFilepath = path.join(xdgData ?? path.join(Global.Path.home, ".local/share"), "gizzi", "auth.json")
+  const filepath = path.join(GlobalPaths.data, "auth.json")
+  const legacyFilepath = path.join(xdgData ?? path.join(GlobalPaths.home, ".local/share"), "gizzi", "auth.json")
 
   export async function get(providerID: string) {
     const auth = await all()

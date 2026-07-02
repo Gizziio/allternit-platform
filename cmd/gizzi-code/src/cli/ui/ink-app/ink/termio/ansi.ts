@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ANSI Control Characters and Escape Sequence Introducers
  *

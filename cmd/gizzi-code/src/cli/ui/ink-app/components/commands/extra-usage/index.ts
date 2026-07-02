@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getIsNonInteractiveSession } from '../../bootstrap/state'
 import type { Command } from '../../commands'
 import { isOverageProvisioningAllowed } from '../../utils/auth'

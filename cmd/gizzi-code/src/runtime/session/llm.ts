@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Installation } from "@/shared/installation"
 import { Provider } from "@/runtime/providers/provider"
 import { Log } from "@/shared/util/log"

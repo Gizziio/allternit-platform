@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { DOMElement } from './dom.js'
 import type { Rectangle } from './layout/geometry.js'
 

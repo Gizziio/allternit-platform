@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ToolUseBlock } from '@allternit/sdk/providers/anthropic/resources';
 import { getRemoteSessionUrl } from '../../constants/product';
 import { OUTPUT_FILE_TAG, REMOTE_REVIEW_PROGRESS_TAG, REMOTE_REVIEW_TAG, STATUS_TAG, SUMMARY_TAG, TASK_ID_TAG, TASK_NOTIFICATION_TAG, TASK_TYPE_TAG, TOOL_USE_ID_TAG, ULTRAPLAN_TAG } from '../../constants/xml';

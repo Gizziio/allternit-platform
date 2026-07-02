@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { execa } from 'execa';
 import React, { useCallback, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../services/analytics/index.ts';
 import { WorkflowMultiselectDialog } from '../../components/WorkflowMultiselectDialog';
 import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings';

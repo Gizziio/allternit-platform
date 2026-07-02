@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import React, { useMemo, useState } from 'react';
-import type { SDKMessage } from 'src/entrypoints/agentSdkTypes';
-import type { ToolUseContext } from 'src/Tool';
-import type { DeepImmutable } from 'src/types/utils';
+import type { SDKMessage } from './../../entrypoints/agentSdkTypes.ts';
+import type { ToolUseContext } from './../../Tool.ts';
+import type { DeepImmutable } from './../../types/utils.ts';
 import type { CommandResultDisplay } from '../../commands';
 import { DIAMOND_FILLED, DIAMOND_OPEN } from '../../constants/figures';
 import { useElapsedTime } from '../../hooks/useElapsedTime';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';

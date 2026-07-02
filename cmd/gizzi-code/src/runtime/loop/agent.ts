@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Config } from "@/runtime/context/config/config"
 import z from "zod/v4"
 import { Provider } from "@/runtime/providers/provider"
@@ -19,6 +20,51 @@ import { Global } from "@/runtime/context/global"
 import path from "path"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { Skill } from "@/runtime/skills/skill"
+
+const HarnessConfigSchema = z.object({
+  mode: z.enum(["byok", "cloud", "local", "subprocess"]),
+  byok: z
+    .object({
+      anthropic: z
+        .object({
+          apiKey: z.string(),
+          baseURL: z.string().optional(),
+        })
+        .optional(),
+      openai: z
+        .object({
+          apiKey: z.string(),
+          baseURL: z.string().optional(),
+        })
+        .optional(),
+      google: z
+        .object({
+          apiKey: z.string(),
+          baseURL: z.string().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  cloud: z
+    .object({
+      baseURL: z.string(),
+      accessToken: z.string(),
+      refreshToken: z.string().optional(),
+    })
+    .optional(),
+  local: z
+    .object({
+      baseURL: z.string(),
+    })
+    .optional(),
+  subprocess: z
+    .object({
+      command: z.string(),
+      cwd: z.string().optional(),
+      env: z.record(z.string(), z.string()).optional(),
+    })
+    .optional(),
+})
 
 export namespace Agent {
   export const Info = z
@@ -42,6 +88,7 @@ export namespace Agent {
       prompt: z.string().optional(),
       options: z.record(z.string(), z.any()),
       steps: z.number().int().positive().optional(),
+      harness: HarnessConfigSchema.optional(),
     })
     
   export type Info = z.infer<typeof Info>
@@ -225,6 +272,7 @@ export namespace Agent {
       item.hidden = value.hidden ?? item.hidden
       item.name = value.name ?? item.name
       item.steps = value.steps ?? item.steps
+      item.harness = value.harness ?? item.harness
       item.options = mergeDeep(item.options, value.options ?? {})
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))
     }

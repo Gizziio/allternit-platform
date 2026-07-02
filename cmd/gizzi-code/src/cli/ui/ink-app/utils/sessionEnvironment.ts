@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { getSessionId } from '../bootstrap/state.js'

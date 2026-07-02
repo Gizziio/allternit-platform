@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { anthropicOAuth } from "./anthropic"
 import { githubCopilotOAuth } from "./github-copilot"
 import { openaiOAuth } from "./openai"

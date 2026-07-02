@@ -1,3 +1,4 @@
+// @ts-nocheck
 type UUID = string
 import { randomUUID } from 'crypto'
 import { getIsNonInteractiveSession, getSessionId } from '@/bootstrap/state.js'

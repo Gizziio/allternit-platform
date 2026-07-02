@@ -6,7 +6,7 @@
  */
 
 import { HarnessError } from '../../harness/errors.js';
-import type { HarnessErrorCode } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 
 export interface AllternitTogetherOptions {
   apiKey: string;

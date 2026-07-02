@@ -5,7 +5,7 @@
  * API: https://api.moonshot.cn/v1
  */
 
-import { HarnessError } from '../../harness/errors.js';
+import { HarnessError, HarnessErrorCode } from '../../harness/errors.js';
 
 export interface AllternitKimiOptions {
   apiKey: string;
@@ -48,7 +48,7 @@ export class AllternitKimi {
     if (!response.ok) {
       throw new HarnessError(
         `Kimi API error: ${response.status} ${response.statusText}`,
-        'PROVIDER_NOT_FOUND'
+        HarnessErrorCode.PROVIDER_NOT_FOUND
       );
     }
 
@@ -68,12 +68,12 @@ export class AllternitKimi {
     if (!response.ok) {
       throw new HarnessError(
         `Kimi API error: ${response.status} ${response.statusText}`,
-        'PROVIDER_NOT_FOUND'
+        HarnessErrorCode.PROVIDER_NOT_FOUND
       );
     }
 
     const reader = response.body?.getReader();
-    if (!reader) throw new HarnessError('No response body', 'STREAM_ERROR');
+    if (!reader) throw new HarnessError('No response body', HarnessErrorCode.STREAM_ERROR);
 
     const decoder = new TextDecoder();
     let buffer = '';

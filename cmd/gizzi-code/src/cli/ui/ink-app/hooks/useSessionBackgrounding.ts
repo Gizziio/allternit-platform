@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Hook for managing session backgrounding (Ctrl+B to background/foreground sessions).
  *

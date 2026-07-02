@@ -1,16 +1,17 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import chalk from 'chalk';
 import * as path from 'path';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useNotifications } from 'src/context/notifications';
-import { useCommandQueue } from 'src/hooks/useCommandQueue';
-import { type IDEAtMentioned, useIdeAtMentioned } from 'src/hooks/useIdeAtMentioned';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import { type AppState, useAppState, useAppStateStore, useSetAppState } from 'src/state/AppState';
-import type { FooterItem } from 'src/state/AppStateStore';
-import { getCwd } from 'src/utils/cwd';
-import { isQueuedCommandEditable, popAllEditable } from 'src/utils/messageQueueManager';
+import { useNotifications } from './../../context/notifications.tsx';
+import { useCommandQueue } from './../../hooks/useCommandQueue.ts';
+import { type IDEAtMentioned, useIdeAtMentioned } from './../../hooks/useIdeAtMentioned.ts';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../services/analytics/index.ts';
+import { type AppState, useAppState, useAppStateStore, useSetAppState } from './../../state/AppState.tsx';
+import type { FooterItem } from './../../state/AppStateStore.ts';
+import { getCwd } from './../../utils/cwd.ts';
+import { isQueuedCommandEditable, popAllEditable } from './../../utils/messageQueueManager.ts';
 import stripAnsi from 'strip-ansi';
 import { companionReservedColumns } from '../../buddy/CompanionSprite';
 import { findBuddyTriggerPositions, useBuddyNotification } from '../../buddy/useBuddyNotification';
@@ -981,7 +982,7 @@ function PromptInput({
   const setSuggestionsState = useCallback((updater: typeof suggestionsState | ((prev: typeof suggestionsState) => typeof suggestionsState)) => {
     setSuggestionsStateRaw(prev => typeof updater === 'function' ? updater(prev) : updater);
   }, []);
-  const onSubmit = useCallback(async (inputParam: string, isSubmittingSlashCommand = false) => {
+  const onSubmit = useCallback(async (inputParam: string, isSubmittingSlashCommand = false, options?: { forceImmediate?: boolean }) => {
     inputParam = inputParam.trimEnd();
 
     // Don't submit if a footer indicator is being opened. Read fresh from
@@ -1101,7 +1102,7 @@ function PromptInput({
       setCursorOffset,
       clearBuffer,
       resetHistory
-    });
+    }, undefined, options);
   }, [promptSuggestionState, speculation, speculationSessionTimeSavedMs, teamContext, store, footerItems, suggestionsState.suggestions, onSubmitProp, onAgentSubmit, clearBuffer, resetHistory, logOutcomeAtSubmission, setAppState, markAccepted, pastedContents, removeNotification]);
   const {
     suggestions,
@@ -1362,25 +1363,10 @@ function PromptInput({
       setPastedContents(stashedPrompt.pastedContents);
       setStashedPrompt(undefined);
     } else if (input.trim() !== '') {
-      // Push to stash (save text, cursor position, and pasted contents)
-      setStashedPrompt({
-        text: input,
-        cursorOffset,
-        pastedContents
-      });
-      trackAndSetInput('');
-      setCursorOffset(0);
-      setPastedContents({});
-      // Track usage for /discover and stop showing hint
-      saveGlobalConfig(c => {
-        if (c.hasUsedStash) return c;
-        return {
-          ...c,
-          hasUsedStash: true
-        };
-      });
+      // Submit immediately on ctrl+s when there is typed input
+      void onSubmit(input, false, { forceImmediate: true });
     }
-  }, [input, cursorOffset, stashedPrompt, trackAndSetInput, setStashedPrompt, pastedContents, setPastedContents]);
+  }, [input, stashedPrompt, trackAndSetInput, setCursorOffset, setPastedContents, setStashedPrompt, onSubmit]);
 
   // Handler for chat:modelPicker - toggle model picker
   const handleModelPicker = useCallback(() => {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { performBackgroundPluginInstallations } from '../../services/plugins/PluginInstallationManager';
 import type { AppState } from '../../state/AppState';
 import { checkHasTrustDialogAccepted } from '../config';

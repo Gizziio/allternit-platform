@@ -1,5 +1,7 @@
 import { BROWSER_TOOLS } from '@allternit/extension'
+// @ts-ignore missing export from utils/claudeInChrome/prompt
 import { BASE_CHROME_PROMPT } from '../../utils/claudeInChrome/prompt.js'
+// @ts-ignore missing module utils/claudeInChrome/setup
 import { shouldAutoEnableClaudeInChrome } from '../../utils/claudeInChrome/setup.js'
 import { registerBundledSkill } from '../bundledSkills.js'
 

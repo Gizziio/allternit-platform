@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * This testing-only tool will always pop up a permission dialog when called by
  * the model.

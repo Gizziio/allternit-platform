@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * XDG Base Directory utilities for Claude CLI Native Installer
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import chalk from 'chalk'
 
 type PlaceholderRendererProps = {

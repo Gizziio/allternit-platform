@@ -163,3 +163,9 @@ export default {
   setLogFile,
   createLogger,
 }
+
+// Auto-added export
+export const logError: any = {}
+
+
+

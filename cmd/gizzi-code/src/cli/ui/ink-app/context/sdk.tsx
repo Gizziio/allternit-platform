@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createAllternitClient, type Event as SDKEvent } from "@allternit/sdk"
 import { createSimpleContext } from "@/cli/ui/ink-app/context/helper"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"

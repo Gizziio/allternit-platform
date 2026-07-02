@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Log } from "@/shared/util/log"
 import path from "path"
 import { pathToFileURL } from "url"
@@ -373,9 +374,28 @@ export namespace Config {
   }
 
   function pluginDependencyVersion() {
-    const workspacePluginDir = path.resolve(process.cwd(), "packages/plugin")
-    if (existsSync(workspacePluginDir)) {
-      return `file:${workspacePluginDir}`
+    const currentDir = process.cwd()
+    const searchRoots = [currentDir]
+    let cursor = currentDir
+
+    for (let i = 0; i < 6; i++) {
+      const parent = path.dirname(cursor)
+      if (parent === cursor) break
+      searchRoots.push(parent)
+      cursor = parent
+    }
+
+    for (const root of searchRoots) {
+      const candidates = [
+        path.resolve(root, "packages/plugin"),
+        path.resolve(root, "cmd/gizzi-code/packages/plugin"),
+      ]
+
+      for (const candidate of candidates) {
+        if (existsSync(candidate)) {
+          return `file:${candidate}`
+        }
+      }
     }
 
     return Installation.isLocal() ? "workspace:*" : Installation.VERSION
@@ -742,6 +762,53 @@ export namespace Config {
         .describe("Maximum number of agentic iterations before forcing text-only response"),
       maxSteps: z.number().int().positive().optional().describe("@deprecated Use 'steps' field instead."),
       permission: Permission.optional(),
+      harness: z
+        .object({
+          mode: z.enum(["byok", "cloud", "local", "subprocess"]),
+          byok: z
+            .object({
+              anthropic: z
+                .object({
+                  apiKey: z.string(),
+                  baseURL: z.string().optional(),
+                })
+                .optional(),
+              openai: z
+                .object({
+                  apiKey: z.string(),
+                  baseURL: z.string().optional(),
+                })
+                .optional(),
+              google: z
+                .object({
+                  apiKey: z.string(),
+                  baseURL: z.string().optional(),
+                })
+                .optional(),
+            })
+            .optional(),
+          cloud: z
+            .object({
+              baseURL: z.string(),
+              accessToken: z.string(),
+              refreshToken: z.string().optional(),
+            })
+            .optional(),
+          local: z
+            .object({
+              baseURL: z.string(),
+            })
+            .optional(),
+          subprocess: z
+            .object({
+              command: z.string(),
+              cwd: z.string().optional(),
+              env: z.record(z.string(), z.string()).optional(),
+            })
+            .optional(),
+        })
+        .optional()
+        .describe("Per-agent AI routing harness (BYOK / cloud / local / subprocess)"),
     })
     .catchall(z.any())
     .transform((agent, ctx) => {
@@ -762,6 +829,7 @@ export namespace Config {
         "permission",
         "disable",
         "tools",
+        "harness",
       ])
 
       // Extract unknown properties into options

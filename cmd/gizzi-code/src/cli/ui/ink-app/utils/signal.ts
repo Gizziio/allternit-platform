@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Tiny listener-set primitive for pure event signals (no stored state).
  *

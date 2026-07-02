@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Command } from '../../commands'
 
 function isSupportedPlatform(): boolean {

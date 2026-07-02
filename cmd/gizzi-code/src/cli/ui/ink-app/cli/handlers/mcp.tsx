@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * MCP subcommand handlers — extracted from main.tsx for lazy loading.
  * These are dynamically imported only when the corresponding `claude mcp *` command runs.

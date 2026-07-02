@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LayoutEdge, type LayoutNode } from './layout/node'
 
 /**

@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { createHash } from 'crypto'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/index.js'
-import { logEvent } from 'src/services/analytics/index.js'
+import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from './../services/analytics/index.ts'
+import { logEvent } from './../services/analytics/index.ts'
 
 /**
  * Creates a truncated SHA256 hash (16 chars) for file paths

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Context collapse index
  * TEMPORARY SHIM

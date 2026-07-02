@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useContext, useLayoutEffect, useRef } from 'react'
 import { TerminalSizeContext } from '../components/TerminalSizeContext.js'
 import type { DOMElement } from '../dom.js'

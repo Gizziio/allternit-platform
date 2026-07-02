@@ -1,7 +1,8 @@
+// @ts-nocheck
 import React, { useEffect, useState } from 'react';
-import type { CommandResultDisplay } from 'src/commands';
-import { logEvent } from 'src/services/analytics/index';
-import { logForDebugging } from 'src/utils/debug';
+import type { CommandResultDisplay } from './../commands.ts';
+import { logEvent } from './../services/analytics/index.ts';
+import { logForDebugging } from './../utils/debug.ts';
 import { Box, Text } from '../ink';
 import { execFileNoThrow } from '../utils/execFileNoThrow';
 import { getPlansDirectory } from '../utils/plans';

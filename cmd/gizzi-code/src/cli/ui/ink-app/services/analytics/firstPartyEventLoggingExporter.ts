@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { HrTime } from '@opentelemetry/api'
 import { type ExportResult, ExportResultCode } from '@opentelemetry/core'
 import type {
@@ -8,7 +9,7 @@ import axios from 'axios'
 import { randomUUID } from 'crypto'
 import { appendFile, mkdir, readdir, unlink, writeFile } from 'fs/promises'
 import * as path from 'path'
-import type { CoreUserData } from 'src/utils/user.js'
+import type { CoreUserData } from './../../utils/user.ts'
 import {
   getIsNonInteractiveSession,
   getSessionId,

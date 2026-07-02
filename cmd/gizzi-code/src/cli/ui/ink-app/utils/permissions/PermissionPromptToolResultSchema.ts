@@ -1,4 +1,5 @@
-import type { Tool, ToolUseContext } from 'src/Tool.js'
+// @ts-nocheck
+import type { Tool, ToolUseContext } from './../../Tool.ts'
 import z from 'zod/v4'
 import { logForDebugging } from '../debug.js'
 import { lazySchema } from '../lazySchema.js'

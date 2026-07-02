@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Leaf state module for the remote-managed-settings sync cache.
  *

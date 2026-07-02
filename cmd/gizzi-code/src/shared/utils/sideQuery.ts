@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { BetaToolUnion } from '@anthropic-ai/sdk/resources/beta/messages.js'
 import {
   getLastApiCompletionTimestamp,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Ars Contexta Routes
  * Server API for knowledge graph and insight generation

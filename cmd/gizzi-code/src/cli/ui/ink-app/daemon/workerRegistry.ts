@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Daemon Worker Registry
  * TEMPORARY SHIM

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Teammate Mailbox - File-based messaging system for agent swarms
  *

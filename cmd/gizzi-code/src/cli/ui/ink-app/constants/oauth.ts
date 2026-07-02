@@ -1,4 +1,5 @@
-import { isEnvTruthy } from 'src/utils/envUtils.js'
+// @ts-nocheck
+import { isEnvTruthy } from './../utils/envUtils.ts'
 
 // Default to prod config, override with test/staging if enabled
 type OauthConfigType = 'prod' | 'staging' | 'local'

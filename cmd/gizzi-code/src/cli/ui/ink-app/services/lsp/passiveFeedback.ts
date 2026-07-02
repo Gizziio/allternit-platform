@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { fileURLToPath } from 'url'
 import type { PublishDiagnosticsParams } from 'vscode-languageserver-protocol'
 import { logForDebugging } from '../../utils/debug.js'

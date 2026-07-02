@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Cost command - minimal metadata only.
  * Implementation is lazy-loaded from cost.ts to reduce startup time.

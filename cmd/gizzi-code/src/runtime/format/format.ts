@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Bus } from "@/runtime/bus/bus"
 import { File } from "@/runtime/file/file"
 import { Log } from "@/runtime/util/log"

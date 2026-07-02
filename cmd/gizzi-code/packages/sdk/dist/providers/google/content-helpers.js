@@ -206,10 +206,10 @@ export function isValidResponse(response) {
         return false;
     }
     for (const part of content.parts) {
-        if (part === undefined || Object.keys(part).length === 0) {
+        if (part == null || Object.keys(part).length === 0) {
             return false;
         }
-        if (part.text !== undefined && part.text === "") {
+        if (typeof part === 'object' && 'text' in part && part.text === '') {
             return false;
         }
     }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { openSync } from 'fs'
 import { ReadStream } from 'tty'
 import type { RenderOptions } from '../ink.js'

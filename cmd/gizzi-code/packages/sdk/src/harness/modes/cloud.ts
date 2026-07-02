@@ -26,6 +26,11 @@ export async function* streamFromCloud(
 ): AsyncGenerator<HarnessStreamChunk> {
   const signal = request.signal;
   const baseURL = config.baseURL || 'https://api.allternit.com';
+  const provider = request.provider;
+
+  if (!provider) {
+    throw new AllternitError('provider is required for cloud streaming');
+  }
 
   try {
     // Check for cancellation before starting
@@ -40,7 +45,7 @@ export async function* streamFromCloud(
         'Authorization': `Bearer ${config.accessToken}`,
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
-        'X-Allternit-Provider': request.provider,
+        'X-Allternit-Provider': provider,
       },
       body: JSON.stringify({
         provider: request.provider,
@@ -141,9 +146,10 @@ async function* processCloudStream(
 
         // Parse SSE field
         if (line.startsWith('event: ')) {
+          const existingData: string = currentEvent?.data ?? '';
           currentEvent = {
             event: line.slice(7).trim(),
-            data: currentEvent?.data || '',
+            data: existingData,
           };
         } else if (line.startsWith('data: ')) {
           if (!currentEvent) {
@@ -216,7 +222,7 @@ async function* parseCloudEvent(
         yield {
           type: 'tool_call',
           id: chunk.id || `tool_${Date.now()}`,
-          name: chunk.name,
+          name: chunk.name!,
           arguments: chunk.arguments || {},
         };
         break;
@@ -224,8 +230,8 @@ async function* parseCloudEvent(
       case 'tool_result':
         yield {
           type: 'tool_result',
-          tool_use_id: chunk.tool_use_id,
-          content: chunk.content,
+          tool_use_id: chunk.tool_use_id!,
+          content: chunk.content!,
         };
         break;
 
@@ -285,13 +291,18 @@ export async function completeViaCloud(
   usage: { input_tokens: number; output_tokens: number };
 }> {
   const baseURL = config.baseURL || 'https://api.allternit.com';
+  const provider = request.provider;
+
+  if (!provider) {
+    throw new AllternitError('provider is required for cloud completion');
+  }
 
   const response = await fetch(`${baseURL}/v1/ai/complete`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${config.accessToken}`,
       'Content-Type': 'application/json',
-      'X-Allternit-Provider': request.provider,
+      'X-Allternit-Provider': provider,
     },
     body: JSON.stringify({
       provider: request.provider,

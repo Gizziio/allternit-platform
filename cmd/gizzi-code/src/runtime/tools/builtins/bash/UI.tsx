@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import * as React from 'react';
 import { KeyboardShortcutHint } from '@/cli/components/design-system/KeyboardShortcutHint.js';
-import { FallbackToolUseErrorMessage } from '@/cli/components/FallbackToolUseErrorMessage.js';
+import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js';
 import { MessageResponse } from '@/cli/components/MessageResponse.js';
 import { ShellProgressMessage } from '@/cli/components/shell/ShellProgressMessage.js';
 import { Box, Text } from '@/cli/ink.js';

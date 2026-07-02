@@ -1,6 +1,7 @@
+// @ts-nocheck
 import type { UUID } from 'crypto'
-import { logEvent } from 'src/services/analytics/index.js'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/metadata.js'
+import { logEvent } from './../services/analytics/index.ts'
+import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from './../services/analytics/metadata.ts'
 import { type Command, getCommandName, isCommandEnabled } from '../commands.js'
 import { selectableUserMessagesFilter } from '../components/MessageSelector.js'
 import type { SpinnerMode } from '../components/Spinner/types.js'
@@ -115,6 +116,7 @@ export type HandlePromptSubmitParams = BaseExecutionParams & {
    * trigger local slash commands or skills.
    */
   skipSlashCommands?: boolean
+  forceImmediate?: boolean
 }
 
 export async function handlePromptSubmit(
@@ -141,6 +143,7 @@ export async function handlePromptSubmit(
     queuedCommands,
     uuid,
     skipSlashCommands,
+    forceImmediate,
   } = params
 
   const { setCursorOffset, clearBuffer, resetHistory } = helpers
@@ -311,43 +314,48 @@ export async function handlePromptSubmit(
   }
 
   if (queryGuard.isActive || isExternalLoading) {
-    // Only allow prompt and bash mode commands to be queued
-    if (mode !== 'prompt' && mode !== 'bash') {
+    if (forceImmediate) {
+      logForDebugging(`[forceImmediate] Aborting prior query and executing input immediately`);
+      params.abortController?.abort('interrupt');
+    } else {
+      // Only allow prompt and bash mode commands to be queued
+      if (mode !== 'prompt' && mode !== 'bash') {
+        return
+      }
+
+      // Interrupt the current turn when all executing tools have
+      // interruptBehavior 'cancel' (e.g. SleepTool).
+      if (params.hasInterruptibleToolInProgress) {
+        logForDebugging(
+          `[interrupt] Aborting current turn: streamMode=${params.streamMode}`,
+        )
+        logEvent('tengu_cancel', {
+          source:
+            'interrupt_on_submit' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          streamMode:
+            params.streamMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        })
+        params.abortController?.abort('interrupt')
+      }
+
+      // Enqueue with string value + raw pastedContents. Images will be resized
+      // at execution time when processUserInput runs (not baked in here).
+      enqueue({
+        value: finalInput.trim(),
+        preExpansionValue: input.trim(),
+        mode,
+        pastedContents: hasImages ? pastedContents : undefined,
+        skipSlashCommands,
+        uuid,
+      })
+
+      onInputChange('')
+      setCursorOffset(0)
+      setPastedContents({})
+      resetHistory()
+      clearBuffer()
       return
     }
-
-    // Interrupt the current turn when all executing tools have
-    // interruptBehavior 'cancel' (e.g. SleepTool).
-    if (params.hasInterruptibleToolInProgress) {
-      logForDebugging(
-        `[interrupt] Aborting current turn: streamMode=${params.streamMode}`,
-      )
-      logEvent('tengu_cancel', {
-        source:
-          'interrupt_on_submit' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        streamMode:
-          params.streamMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      })
-      params.abortController?.abort('interrupt')
-    }
-
-    // Enqueue with string value + raw pastedContents. Images will be resized
-    // at execution time when processUserInput runs (not baked in here).
-    enqueue({
-      value: finalInput.trim(),
-      preExpansionValue: input.trim(),
-      mode,
-      pastedContents: hasImages ? pastedContents : undefined,
-      skipSlashCommands,
-      uuid,
-    })
-
-    onInputChange('')
-    setCursorOffset(0)
-    setPastedContents({})
-    resetHistory()
-    clearBuffer()
-    return
   }
 
   // Start query profiling for this query

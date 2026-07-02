@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
 import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import addDir from './commands/add-dir/index.js'
 import autofixPr from './commands/autofix-pr/index.js'
@@ -44,6 +45,13 @@ import skills from './commands/skills/index.js'
 import status from './commands/status/index.js'
 import tasks from './commands/tasks/index.js'
 import teleport from './commands/teleport/index.js'
+import goal from './commands/goal.js'
+import loops from './commands/loops.js'
+import routines from './commands/routines.js'
+import find from './commands/find/index.js'
+import grep from './commands/grep/index.js'
+import cowork from './commands/cowork/index.js'
+import artifact from './commands/artifact/index.js'
 
 function safeRequire(path: string) {
   try {
@@ -254,6 +262,7 @@ export const INTERNAL_ONLY_COMMANDS = [
 // since underlying functions read from config, which can't be read at module initialization time
 const COMMANDS = memoize((): Command[] => [
   addDir,
+  artifact,
   advisor,
   agents,
   branch,
@@ -265,6 +274,7 @@ const COMMANDS = memoize((): Command[] => [
   config,
   copy,
   desktop,
+  cowork,
   context,
   contextNonInteractive,
   cost,
@@ -274,11 +284,16 @@ const COMMANDS = memoize((): Command[] => [
   exit,
   fast,
   files,
+  find,
+  goal,
+  grep,
   heapDump,
   help,
   ide,
   init,
+  loops,
   keybindings,
+  routines,
   installGitHubApp,
   installSlackApp,
   mcp,

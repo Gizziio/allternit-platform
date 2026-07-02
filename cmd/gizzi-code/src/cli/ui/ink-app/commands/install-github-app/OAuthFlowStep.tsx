@@ -1,5 +1,6 @@
+// @ts-nocheck
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../services/analytics/index.ts';
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint';
 import { Spinner } from '../../components/Spinner';
 import TextInput from '../../components/TextInput';

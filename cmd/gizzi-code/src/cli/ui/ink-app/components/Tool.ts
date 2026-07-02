@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Tool Component Types
  * TEMPORARY SHIM

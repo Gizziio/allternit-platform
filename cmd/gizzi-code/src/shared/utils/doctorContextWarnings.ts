@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { roughTokenCountEstimation } from '../../runtime/services/tokenEstimation.js'
 import type { Tool, ToolPermissionContext } from '../../runtime/tools/Tool.js'
 import type { AgentDefinitionsResult } from '../../runtime/tools/AgentTool/loadAgentsDir.js'

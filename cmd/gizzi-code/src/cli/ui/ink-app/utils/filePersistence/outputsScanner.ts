@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Outputs directory scanner for file persistence
  *

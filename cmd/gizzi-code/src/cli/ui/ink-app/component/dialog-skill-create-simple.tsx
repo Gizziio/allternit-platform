@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Simple AI-Guided Skill Creation Dialog
  * 

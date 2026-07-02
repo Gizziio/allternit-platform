@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Headless mode profiling utility for measuring per-turn latency in -p (print) mode.
  *

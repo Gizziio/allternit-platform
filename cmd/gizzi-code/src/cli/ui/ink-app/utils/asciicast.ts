@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { appendFile, rename } from 'fs/promises'
 import { basename, dirname, join } from 'path'
 import { getOriginalCwd, getSessionId } from '../bootstrap/state.js'

@@ -267,3 +267,9 @@ export default {
   MODEL_RATIOS,
   CONTEXT_WINDOWS,
 }
+
+// Auto-added export
+export const countMessagesTokensWithAPI: any = {}
+
+// Auto-added export
+export const countTokensViaHaikuFallback: any = {}

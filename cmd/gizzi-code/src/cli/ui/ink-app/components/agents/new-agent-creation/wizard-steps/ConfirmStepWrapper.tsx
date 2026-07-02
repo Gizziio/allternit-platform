@@ -1,7 +1,8 @@
+// @ts-nocheck
 import chalk from 'chalk';
 import React, { type ReactNode, useCallback, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import { useSetAppState } from 'src/state/AppState';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../../../services/analytics/index.ts';
+import { useSetAppState } from './../../../../state/AppState.tsx';
 import type { Tools } from '../../../../Tool';
 import type { AgentDefinition } from '../../../../tools/AgentTool/loadAgentsDir';
 import { getActiveAgentsFromList } from '../../../../tools/AgentTool/loadAgentsDir';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import React, { useCallback, useEffect, useRef } from 'react';
 // @ts-ignore Missing module

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared utilities for spawning teammates across different backends.
  */

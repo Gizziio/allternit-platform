@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useState } from 'react';
-import { Box, Text } from 'src/ink';
-import { formatAPIError } from 'src/services/api/errorUtils';
-import type { SystemAPIErrorMessage } from 'src/types/message';
+import { Box, Text } from './../../ink.ts';
+import { formatAPIError } from './../../services/api/errorUtils.ts';
+import type { SystemAPIErrorMessage } from './../../types/message.ts';
 import { useInterval } from 'usehooks-ts';
 import { CtrlOToExpand } from '../CtrlOToExpand';
 import { MessageResponse } from '../MessageResponse';

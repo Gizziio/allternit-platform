@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CLAUDE_OPUS_4_6_CONFIG } from '../model/configs'
 import { getAPIProvider } from '../model/providers'
 

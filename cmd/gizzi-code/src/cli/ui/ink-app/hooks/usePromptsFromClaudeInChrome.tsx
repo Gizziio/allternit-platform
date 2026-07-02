@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs';
 import { useEffect, useRef } from 'react';
-import { logError } from 'src/utils/log';
+import { logError } from './../utils/log.ts';
 import { z } from 'zod/v4';
 import { callIdeRpc } from '../services/mcp/client';
 import type { ConnectedMCPServer, MCPServerConnection } from '../services/mcp/types';

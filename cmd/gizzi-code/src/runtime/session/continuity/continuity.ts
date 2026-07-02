@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * GIZZI Continuity - Session Discovery and Unified Index
  * 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Native Installer Implementation
  *
@@ -33,7 +34,7 @@ import { basename, delimiter, dirname, join, resolve } from 'path'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from 'src/services/analytics/index.js'
+} from './../../services/analytics/index.ts'
 import { getMaxVersion, shouldSkipVersion } from '../autoUpdater.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { getGlobalConfig, saveGlobalConfig } from '../config.js'

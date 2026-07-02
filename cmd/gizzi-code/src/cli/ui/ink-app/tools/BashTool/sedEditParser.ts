@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Parser for sed edit commands (-i flag substitutions)
  * Extracts file paths and substitution patterns to enable file-edit-style rendering

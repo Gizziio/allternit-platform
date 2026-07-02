@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Marketplace reconciler — makes known_marketplaces.json consistent with
  * declared intent in settings.

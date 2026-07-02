@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type DOMElement, useAnimationFrame, useTerminalFocus } from '../ink'
 
 const BLINK_INTERVAL_MS = 600

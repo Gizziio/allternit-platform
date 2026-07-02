@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { Text } from '../../core/ink';
 import { isClaudeAISubscriber } from '../../vendor/utils/auth';

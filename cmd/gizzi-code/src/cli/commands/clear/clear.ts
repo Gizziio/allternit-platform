@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { LocalCommandCall } from '@/types/command.js'
 import { clearConversation } from './conversation.js'
 

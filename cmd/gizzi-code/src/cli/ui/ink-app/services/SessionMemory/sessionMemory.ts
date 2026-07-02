@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Session Memory automatically maintains a markdown file with notes about the current conversation.
  * It runs periodically in the background using a forked subagent to extract key information

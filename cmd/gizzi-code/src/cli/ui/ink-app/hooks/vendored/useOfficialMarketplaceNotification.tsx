@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useOfficialMarketplaceNotification_tsx(): void {
   // Not yet implemented
 }

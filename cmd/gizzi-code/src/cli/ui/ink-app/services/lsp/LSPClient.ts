@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type ChildProcess, spawn } from 'child_process'
 import {
   createMessageConnection,

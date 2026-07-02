@@ -66,22 +66,32 @@ interface IntelliTaskScreenProps {
   onSelect?: (taskId: string) => void;
   onQuit?: () => void;
   onStatusChange?: (taskId: string, status: string) => void;
-  onAssign?: (taskId: string) => void;
+  onAssign?: (taskId: string, currentAssigneeId?: string) => Promise<{ assignee_id: string | null, assignee_name: string | null } | null | void>;
+  onAddComment?: (taskId: string, body: string) => Promise<CommentItem[] | null | void>;
 }
 
-export function IntelliTaskScreen({ tasks, comments, onSelect, onQuit, onStatusChange, onAssign }: IntelliTaskScreenProps) {
+export function IntelliTaskScreen({ tasks, comments, onSelect, onQuit, onStatusChange, onAssign, onAddComment }: IntelliTaskScreenProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [orderedTaskIds, setOrderedTaskIds] = useState<string[]>([]);
   const [scheduleMap, setScheduleMap] = useState<Map<string, { startTime: number; endTime: number; risk: 'low' | 'medium' | 'high' }>>(new Map());
   const [showHelp, setShowHelp] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [commentingTaskId, setCommentingTaskId] = useState<string | null>(null);
+  const [commentValue, setCommentValue] = useState('');
+  const [commentMap, setCommentMap] = useState<Record<string, CommentItem[]>>(comments || {});
   const [taskList, setTaskList] = useState<TaskItem[]>(tasks);
   const [activeStrategy, setActiveStrategy] = useState('greedy');
   const [timers, setTimers] = useState<Record<string, number>>({});
   const [showNotes, setShowNotes] = useState(false);
   const [showDeps, setShowDeps] = useState(false);
   const [showWorkload, setShowWorkload] = useState(false);
+
+  useEffect(() => {
+    if (comments) {
+      setCommentMap(comments);
+    }
+  }, [comments]);
 
   const engine = useMemo(() => new IntelliScheduleEngine(), []);
   const taskListRef = useRef(taskList);
@@ -92,7 +102,10 @@ export function IntelliTaskScreen({ tasks, comments, onSelect, onQuit, onStatusC
   const runOptimization = useCallback(() => {
     if (editingRef.current) return;
     const input = {
-      tasks: taskListRef.current,
+      tasks: taskListRef.current.map(t => ({
+        ...t,
+        estimatedMinutes: t.estimatedMinutes ?? 60,
+      })),
       constraints: {
         availableHoursPerDay: 8,
         startTime: Date.now(),
@@ -124,6 +137,30 @@ export function IntelliTaskScreen({ tasks, comments, onSelect, onQuit, onStatusC
   }, [editingTaskId, runOptimization]);
 
   useInput((input, key) => {
+    if (commentingTaskId) {
+      if (key.return) {
+        const taskId = commentingTaskId;
+        const body = commentValue.trim();
+        if (body && onAddComment) {
+          onAddComment(taskId, body).then(updated => {
+            if (updated) {
+              setCommentMap(prev => ({ ...prev, [taskId]: updated }));
+            }
+          });
+        }
+        setCommentingTaskId(null);
+        setCommentValue('');
+      } else if (key.escape) {
+        setCommentingTaskId(null);
+        setCommentValue('');
+      } else if (key.delete || key.backspace) {
+        setCommentValue(prev => prev.slice(0, -1));
+      } else if (input && input.length === 1) {
+        setCommentValue(prev => prev + input);
+      }
+      return;
+    }
+
     if (editingTaskId) {
       if (key.return) {
         const minutes = parseInt(editValue, 10);
@@ -195,10 +232,27 @@ export function IntelliTaskScreen({ tasks, comments, onSelect, onQuit, onStatusC
           onStatusChange(taskId, newStatus);
         }
       }
+    } else if (input === 'c') {
+      const taskId = orderedTaskIds[selectedIndex];
+      if (taskId) {
+        setCommentingTaskId(taskId);
+        setCommentValue('');
+      }
     } else if (input === 'a') {
       const taskId = orderedTaskIds[selectedIndex];
       if (taskId && onAssign) {
-        onAssign(taskId);
+        const task = taskList.find(t => t.id === taskId);
+        onAssign(taskId, task?.assignee_id)
+          .then((res: any) => {
+            if (res) {
+              setTaskList(prev => prev.map(t => t.id === taskId ? { 
+                ...t, 
+                assignee_id: res.assignee_id || undefined, 
+                assignee_name: res.assignee_name || undefined 
+              } : t));
+            }
+          })
+          .catch(() => {});
       }
     } else if (key.return) {
       const taskId = orderedTaskIds[selectedIndex];
@@ -219,7 +273,7 @@ export function IntelliTaskScreen({ tasks, comments, onSelect, onQuit, onStatusC
   }, [orderedTaskIds, taskList]);
 
   const selectedTaskId = orderedTaskIds[selectedIndex];
-  const selectedTaskComments = selectedTaskId ? (comments?.[selectedTaskId] || []) : [];
+  const selectedTaskComments = selectedTaskId ? (commentMap[selectedTaskId] || []) : [];
 
   return (
     <Box flexDirection="column">
@@ -271,6 +325,12 @@ export function IntelliTaskScreen({ tasks, comments, onSelect, onQuit, onStatusC
         </Box>
       )}
 
+      {commentingTaskId && (
+        <Box marginTop={1}>
+          <Text color="yellow">Add comment: {commentValue}</Text>
+        </Box>
+      )}
+
       {showHelp && (
         <Box flexDirection="column" marginTop={1} borderStyle="single" paddingLeft={1} paddingRight={1}>
           <Text bold>Keybindings</Text>
@@ -281,6 +341,7 @@ export function IntelliTaskScreen({ tasks, comments, onSelect, onQuit, onStatusC
           <Text>e      edit selected task estimate</Text>
           <Text>m      move selected task to next status</Text>
           <Text>a      assign selected task to agent</Text>
+          <Text>c      add comment to selected task</Text>
           <Text>t      start/stop time tracker</Text>
           <Text>n      toggle notes view</Text>
           <Text>d      toggle dependency graph</Text>

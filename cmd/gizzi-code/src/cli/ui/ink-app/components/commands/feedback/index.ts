@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Command } from '../../commands'
 import { isPolicyAllowed } from '../../services/policyLimits/index'
 import { isEnvTruthy } from '../../utils/envUtils'

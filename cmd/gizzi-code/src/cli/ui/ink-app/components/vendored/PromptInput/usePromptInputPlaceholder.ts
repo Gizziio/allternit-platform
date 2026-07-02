@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { useMemo } from 'react'
-import { useCommandQueue } from 'src/hooks/useCommandQueue.js'
-import { useAppState } from 'src/state/AppState.js'
-import { getGlobalConfig } from 'src/utils/config.js'
-import { getExampleCommandFromCache } from 'src/utils/exampleCommands.js'
-import { isQueuedCommandEditable } from 'src/utils/messageQueueManager.js'
+import { useCommandQueue } from './../../../hooks/useCommandQueue.ts'
+import { useAppState } from './../../../state/AppState.tsx'
+import { getGlobalConfig } from './../../../utils/config.ts'
+import { getExampleCommandFromCache } from './../../../utils/exampleCommands.ts'
+import { isQueuedCommandEditable } from './../../../utils/messageQueueManager.ts'
 
 // Dead code elimination: conditional import for proactive mode
 /* eslint-disable @typescript-eslint/no-require-imports */

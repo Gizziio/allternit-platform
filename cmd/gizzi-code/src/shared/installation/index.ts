@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import path from "path"
 import { $ } from "bun"

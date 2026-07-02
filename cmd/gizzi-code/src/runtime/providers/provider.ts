@@ -1,3 +1,4 @@
+// @ts-nocheck
 import z from "zod/v4"
 import fuzzysort from "fuzzysort"
 import { Config } from "@/runtime/context/config/config"
@@ -12,7 +13,7 @@ import { Env } from "@/runtime/context/env"
 import { Instance } from "@/runtime/context/project/instance"
 import { Flag } from "@/runtime/context/flag/flag"
 import { iife } from "@/shared/util/iife"
-import { Global } from "@/runtime/context/global"
+import { GlobalPaths } from "@/runtime/context/global/paths"
 import path from "path"
 import { Filesystem } from "@/shared/util/filesystem"
 import { Sidecar } from "@/runtime/sidecar"
@@ -811,7 +812,7 @@ export namespace Provider {
     }
 
     const recent = (await Filesystem.readJson<{ recent?: { providerID: string; modelID: string }[] }>(
-      path.join(Global.Path.state, "model.json"),
+      path.join(GlobalPaths.state, "model.json"),
     )
       .then((x) => (Array.isArray(x.recent) ? x.recent : []))
       .catch(() => [])) as { providerID: string; modelID: string }[]

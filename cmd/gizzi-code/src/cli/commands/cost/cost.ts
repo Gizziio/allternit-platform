@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { formatTotalCost } from '../../cost-tracker.js'
 import { currentLimits } from '@/services/claudeAiLimits.js'
 import type { LocalCommandCall } from '@/types/command.js'

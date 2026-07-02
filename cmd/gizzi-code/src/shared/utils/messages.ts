@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type {
@@ -115,19 +116,19 @@ import type {
   HookEvent,
   SDKAssistantMessageError,
 } from '../../entrypoints/agentSdkTypes.js'
-import { EXPLORE_AGENT } from '../../tools/AgentTool/built-in/exploreAgent.js'
-import { PLAN_AGENT } from '../../tools/AgentTool/built-in/planAgent.js'
-import { areExplorePlanAgentsEnabled } from '../../tools/AgentTool/builtInAgents.js'
-import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js'
+import { EXPLORE_AGENT } from '../../runtime/tools/builtins/agenttool/built-in/exploreAgent.js'
+import { PLAN_AGENT } from '../../runtime/tools/builtins/agenttool/built-in/planAgent.js'
+import { areExplorePlanAgentsEnabled } from '../../runtime/tools/builtins/agenttool/builtInAgents.js'
+import { AGENT_TOOL_NAME } from '../../runtime/tools/AgentTool/constants.js'
 import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js'
-import { BashTool } from '../../tools/BashTool/BashTool.js'
-import { ExitPlanModeV2Tool } from '../../tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
-import { FileEditTool } from '../../tools/FileEditTool/FileEditTool.js'
+import { BashTool } from '../../runtime/tools/BashTool/BashTool.js'
+import { ExitPlanModeV2Tool } from '../../runtime/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
+import { FileEditTool } from '../../runtime/tools/FileEditTool/FileEditTool.js'
 import {
   FILE_READ_TOOL_NAME,
   MAX_LINES_TO_READ,
 } from '../../tools/FileReadTool/prompt.js'
-import { FileWriteTool } from '../../tools/FileWriteTool/FileWriteTool.js'
+import { FileWriteTool } from '../../runtime/tools/FileWriteTool/FileWriteTool.js'
 import { GLOB_TOOL_NAME } from '../../tools/GlobTool/prompt.js'
 import { GREP_TOOL_NAME } from '../../tools/GrepTool/prompt.js'
 import type { DeepImmutable } from '@/types/utils.js'

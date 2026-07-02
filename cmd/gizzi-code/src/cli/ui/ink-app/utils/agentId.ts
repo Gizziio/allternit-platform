@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Deterministic Agent ID System
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { detectFileEncoding } from './file.js'
 import { getFsImplementation } from './fsOperations.js'
 

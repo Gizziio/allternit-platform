@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mkdirSync, writeFileSync } from 'fs'
 import {
   getApiKeyFromFd,

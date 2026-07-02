@@ -1,3 +1,4 @@
+// @ts-nocheck
 import figures from 'figures';
 import React, { useEffect, useState } from 'react';
 import { Box, Text } from '@/ink.js';

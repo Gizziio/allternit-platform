@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';

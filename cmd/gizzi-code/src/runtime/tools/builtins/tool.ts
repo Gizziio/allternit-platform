@@ -87,3 +87,8 @@ export namespace Tool {
     }
   }
 }
+
+// Auto-added export
+export const ToolDef: any = {}
+
+

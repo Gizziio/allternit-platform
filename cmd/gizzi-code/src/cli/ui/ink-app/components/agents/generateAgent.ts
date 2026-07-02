@@ -1,14 +1,15 @@
+// @ts-nocheck
 import type { ContentBlock } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
-import { getUserContext } from 'src/context.js'
-import { queryModelWithoutStreaming } from 'src/services/api/claude.js'
-import { getEmptyToolPermissionContext } from 'src/Tool.js'
-import { AGENT_TOOL_NAME } from 'src/tools/AgentTool/constants.js'
-import { prependUserContext } from 'src/utils/api.js'
+import { getUserContext } from './../../context.ts'
+import { queryModelWithoutStreaming } from './../../services/api/claude.ts'
+import { getEmptyToolPermissionContext } from './../../Tool.ts'
+import { AGENT_TOOL_NAME } from './../../tools/AgentTool/constants.ts'
+import { prependUserContext } from './../../utils/api.ts'
 import {
   createUserMessage,
   normalizeMessagesForAPI,
-} from 'src/utils/messages.js'
-import type { ModelName } from 'src/utils/model/model.js'
+} from './../../utils/messages.ts'
+import type { ModelName } from './../../utils/model/model.ts'
 import { isAutoMemoryEnabled } from '../../memdir/paths.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

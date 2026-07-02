@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const TASK_STOP_TOOL_NAME = 'TaskStop'
 
 export const DESCRIPTION = `

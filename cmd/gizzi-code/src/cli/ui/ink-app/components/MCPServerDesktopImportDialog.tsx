@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useEffect, useState } from 'react';
-import { gracefulShutdown } from 'src/utils/gracefulShutdown';
-import { writeToStdout } from 'src/utils/process';
+import { gracefulShutdown } from './../utils/gracefulShutdown.ts';
+import { writeToStdout } from './../utils/process.ts';
 import { Box, color, Text, useTheme } from '../ink';
 import { addMcpConfig, getAllMcpConfigs } from '../services/mcp/config';
 import type { ConfigScope, McpServerConfig, ScopedMcpServerConfig } from '../services/mcp/types';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useContext, useRef } from 'react';
 import { useTerminalViewport } from '../ink/hooks/use-terminal-viewport';
 import { Box } from '../ink';

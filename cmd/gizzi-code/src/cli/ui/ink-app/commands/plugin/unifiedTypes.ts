@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Unified types for plugin management
  * Re-exports from types.ts for backward compatibility

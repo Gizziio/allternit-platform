@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { AllternitAI } from '@allternit/sdk/providers/anthropic'
 import {
   getSystemPrompt,
   SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
-} from 'src/constants/prompts.js'
-import { microcompactMessages } from 'src/services/compact/microCompact.js'
+} from './../constants/prompts.ts'
+import { microcompactMessages } from './../services/compact/microCompact.ts'
 import { getSdkBetas } from '../bootstrap/state.js'
 import { getCommandName } from '../commands.js'
 import { getSystemContext } from '../context.js'

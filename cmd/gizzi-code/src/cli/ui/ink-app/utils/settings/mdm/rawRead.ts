@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Minimal module for firing MDM subprocess reads without blocking the event loop.
  * Has minimal imports — only child_process, fs, and mdmConstants (which only imports os).

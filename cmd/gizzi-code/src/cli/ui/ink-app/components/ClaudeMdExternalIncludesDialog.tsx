@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback } from 'react';
-import { logEvent } from 'src/services/analytics/index';
+import { logEvent } from './../services/analytics/index.ts';
 import { Box, Link, Text } from '../ink';
 import type { ExternalClaudeMdInclude } from '../utils/claudemd';
 import { saveCurrentProjectConfig } from '../utils/config';

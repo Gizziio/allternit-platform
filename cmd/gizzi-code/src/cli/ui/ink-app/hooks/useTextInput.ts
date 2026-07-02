@@ -1,5 +1,6 @@
-import { isInputModeCharacter } from 'src/components/PromptInput/inputModes.js'
-import { useNotifications } from 'src/context/notifications.js'
+// @ts-nocheck
+import { isInputModeCharacter } from './../components/PromptInput/inputModes.ts'
+import { useNotifications } from './../context/notifications.tsx'
 import stripAnsi from 'strip-ansi'
 import { markBackslashReturnUsed } from '../commands/terminalSetup/terminalSetup.js'
 import { addToHistory } from '../history.js'

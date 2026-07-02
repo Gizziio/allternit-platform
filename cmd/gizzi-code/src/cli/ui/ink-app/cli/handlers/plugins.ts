@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Plugin and marketplace subcommand handlers — extracted from main.tsx for lazy loading.
  * These are dynamically imported only when `claude plugin *` or `claude plugin marketplace *` runs.

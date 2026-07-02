@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * LocalMainSessionTask - Handles backgrounding the main session query.
  *

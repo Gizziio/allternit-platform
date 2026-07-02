@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MessageV2 } from "@/runtime/session/message-v2"
 import { Log } from "@/shared/util/log"
 import { Identifier } from "@/shared/id/id"

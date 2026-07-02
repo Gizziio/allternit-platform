@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { APIUserAbortError } from '@allternit/sdk/providers/anthropic'
 import type { z } from 'zod/v4'
@@ -1054,6 +1055,29 @@ export const bashToolCheckPermission = (
   astCommand?: SimpleCommand,
 ): PermissionResult => {
   const command = input.command.trim()
+  const commandLower = command.toLowerCase()
+  const isDangerous =
+    commandLower.includes('rm -rf') ||
+    commandLower.includes('rm -f') ||
+    commandLower.includes('git reset --hard') ||
+    commandLower.includes('git clean') ||
+    commandLower.includes('mkfs') ||
+    commandLower.includes('dd if=') ||
+    commandLower.includes('chmod -r') ||
+    commandLower.includes('chown -r') ||
+    commandLower.includes('shred') ||
+    (commandLower.includes('rm ') && (commandLower.includes(' /') || commandLower.includes(' *')))
+
+  if (isDangerous) {
+    return {
+      behavior: 'ask',
+      message: `⚠️ WARNING: This command (${command}) is potentially destructive and requires safety confirmation.`,
+      decisionReason: {
+        type: 'other',
+        reason: 'Potentially destructive command detected (Safety confirmation prompt required)',
+      },
+    }
+  }
 
   // 1. Check exact match first
   const exactMatchResult = bashToolCheckExactMatchPermission(

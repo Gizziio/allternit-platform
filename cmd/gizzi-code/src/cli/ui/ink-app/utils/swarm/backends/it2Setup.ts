@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { homedir } from 'os'
 import { getGlobalConfig, saveGlobalConfig } from '../../../utils/config.js'
 import { logForDebugging } from '../../../utils/debug.js'

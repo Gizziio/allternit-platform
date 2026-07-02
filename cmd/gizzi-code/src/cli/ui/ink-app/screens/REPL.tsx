@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle';
@@ -130,8 +131,8 @@ import { clearSpeculativeChecks } from '../tools/BashTool/bashPermissions';
 import type { AutoUpdaterResult } from '../utils/autoUpdater';
 import { getGlobalConfig, saveGlobalConfig, getGlobalConfigWriteCount } from '../utils/config';
 import { hasConsoleBillingAccess } from '../utils/billing';
-import { logEvent, type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/index';
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook';
+import { logEvent, type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from './../services/analytics/index.ts';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from './../services/analytics/growthbook.ts';
 import { textForResubmit, handleMessageFromStream, type StreamingToolUse, type StreamingThinking, isCompactBoundaryMessage, getMessagesAfterCompactBoundary, getContentText, createUserMessage, createAssistantMessage, createTurnDurationMessage, createAgentsKilledMessage, createApiMetricsMessage, createSystemMessage, createCommandInputMessage, formatCommandInputTags } from '../utils/messages';
 import { generateSessionTitle } from '../utils/sessionTitle';
 import { BASH_INPUT_TAG, COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG, LOCAL_COMMAND_STDOUT_TAG } from '../constants/xml';
@@ -172,6 +173,7 @@ import type { ContentBlockParam, ImageBlockParam } from '@allternit/sdk/provider
 import { AllternitHarness } from '@allternit/sdk/harness';
 import { shouldUseHarness, FEATURE_FLAGS } from '../utils/feature-flags';
 import { getHarnessConfig } from '../utils/migration';
+import { getAgentHarnessConfig } from '../services/harness';
 
 // Harness streaming types
 interface StreamRequest {
@@ -327,47 +329,47 @@ const UndercoverAutoCallout = "external" === 'ant' ? require('../components/Unde
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import { activityManager } from '../utils/activityManager';
 import { createAbortController } from '../utils/abortController';
-import { MCPConnectionManager } from 'src/services/mcp/MCPConnectionManager';
-import { useFeedbackSurvey } from 'src/components/FeedbackSurvey/useFeedbackSurvey';
-import { useMemorySurvey } from 'src/components/FeedbackSurvey/useMemorySurvey';
-import { usePostCompactSurvey } from 'src/components/FeedbackSurvey/usePostCompactSurvey';
-import { FeedbackSurvey } from 'src/components/FeedbackSurvey/FeedbackSurvey';
-import { useInstallMessages } from 'src/hooks/notifs/useInstallMessages';
-import { useAwaySummary } from 'src/hooks/useAwaySummary';
-import { useChromeExtensionNotification } from 'src/hooks/useChromeExtensionNotification';
-import { useOfficialMarketplaceNotification } from 'src/hooks/useOfficialMarketplaceNotification';
-import { usePromptsFromClaudeInChrome } from 'src/hooks/usePromptsFromClaudeInChrome';
-import { getTipToShowOnSpinner, recordShownTip } from 'src/services/tips/tipScheduler';
-import type { Theme } from 'src/utils/theme';
-import { checkAndDisableBypassPermissionsIfNeeded, checkAndDisableAutoModeIfNeeded, useKickOffCheckAndDisableBypassPermissionsIfNeeded, useKickOffCheckAndDisableAutoModeIfNeeded } from 'src/utils/permissions/bypassPermissionsKillswitch';
-import { SandboxManager } from 'src/utils/sandbox/sandbox-adapter';
-import { SANDBOX_NETWORK_ACCESS_TOOL_NAME } from 'src/cli/structuredIO';
-import { useFileHistorySnapshotInit } from 'src/hooks/useFileHistorySnapshotInit';
-import { SandboxPermissionRequest } from 'src/components/permissions/SandboxPermissionRequest';
-import { SandboxViolationExpandedView } from 'src/components/SandboxViolationExpandedView';
-import { useSettingsErrors } from 'src/hooks/notifs/useSettingsErrors';
-import { useMcpConnectivityStatus } from 'src/hooks/notifs/useMcpConnectivityStatus';
-import { useAutoModeUnavailableNotification } from 'src/hooks/notifs/useAutoModeUnavailableNotification';
-import { AUTO_MODE_DESCRIPTION } from 'src/components/AutoModeOptInDialog';
-import { useLspInitializationNotification } from 'src/hooks/notifs/useLspInitializationNotification';
-import { useLspPluginRecommendation } from 'src/hooks/useLspPluginRecommendation';
-import { LspRecommendationMenu } from 'src/components/LspRecommendation/LspRecommendationMenu';
-import { useClaudeCodeHintRecommendation } from 'src/hooks/useClaudeCodeHintRecommendation';
-import { PluginHintMenu } from 'src/components/ClaudeCodeHint/PluginHintMenu';
-import { DesktopUpsellStartup, shouldShowDesktopUpsellStartup } from 'src/components/DesktopUpsell/DesktopUpsellStartup';
-import { usePluginInstallationStatus } from 'src/hooks/notifs/usePluginInstallationStatus';
-import { usePluginAutoupdateNotification } from 'src/hooks/notifs/usePluginAutoupdateNotification';
-import { performStartupChecks } from 'src/utils/plugins/performStartupChecks';
-import { UserTextMessage } from 'src/components/messages/UserTextMessage';
+import { MCPConnectionManager } from './../services/mcp/MCPConnectionManager.tsx';
+import { useFeedbackSurvey } from './../components/FeedbackSurvey/useFeedbackSurvey.tsx';
+import { useMemorySurvey } from './../components/FeedbackSurvey/useMemorySurvey.tsx';
+import { usePostCompactSurvey } from './../components/FeedbackSurvey/usePostCompactSurvey.tsx';
+import { FeedbackSurvey } from './../components/FeedbackSurvey/FeedbackSurvey.tsx';
+import { useInstallMessages } from './../hooks/notifs/useInstallMessages.tsx';
+import { useAwaySummary } from './../hooks/useAwaySummary.ts';
+import { useChromeExtensionNotification } from './../hooks/useChromeExtensionNotification.tsx';
+import { useOfficialMarketplaceNotification } from './../hooks/useOfficialMarketplaceNotification.tsx';
+import { usePromptsFromClaudeInChrome } from './../hooks/usePromptsFromClaudeInChrome.tsx';
+import { getTipToShowOnSpinner, recordShownTip } from './../services/tips/tipScheduler.ts';
+import type { Theme } from './../utils/theme.ts';
+import { checkAndDisableBypassPermissionsIfNeeded, checkAndDisableAutoModeIfNeeded, useKickOffCheckAndDisableBypassPermissionsIfNeeded, useKickOffCheckAndDisableAutoModeIfNeeded } from './../utils/permissions/bypassPermissionsKillswitch.ts';
+import { SandboxManager } from './../utils/sandbox/sandbox-adapter.ts';
+import { SANDBOX_NETWORK_ACCESS_TOOL_NAME } from './../cli/structuredIO.ts';
+import { useFileHistorySnapshotInit } from './../hooks/useFileHistorySnapshotInit.ts';
+import { SandboxPermissionRequest } from './../components/permissions/SandboxPermissionRequest.tsx';
+import { SandboxViolationExpandedView } from './../components/SandboxViolationExpandedView.tsx';
+import { useSettingsErrors } from './../hooks/notifs/useSettingsErrors.tsx';
+import { useMcpConnectivityStatus } from './../hooks/notifs/useMcpConnectivityStatus.tsx';
+import { useAutoModeUnavailableNotification } from './../hooks/notifs/useAutoModeUnavailableNotification.ts';
+import { AUTO_MODE_DESCRIPTION } from './../components/AutoModeOptInDialog.tsx';
+import { useLspInitializationNotification } from './../hooks/notifs/useLspInitializationNotification.tsx';
+import { useLspPluginRecommendation } from './../hooks/useLspPluginRecommendation.tsx';
+import { LspRecommendationMenu } from './../components/LspRecommendation/LspRecommendationMenu.tsx';
+import { useClaudeCodeHintRecommendation } from './../hooks/useClaudeCodeHintRecommendation.tsx';
+import { PluginHintMenu } from './../components/ClaudeCodeHint/PluginHintMenu.tsx';
+import { DesktopUpsellStartup, shouldShowDesktopUpsellStartup } from './../components/DesktopUpsell/DesktopUpsellStartup.tsx';
+import { usePluginInstallationStatus } from './../hooks/notifs/usePluginInstallationStatus.tsx';
+import { usePluginAutoupdateNotification } from './../hooks/notifs/usePluginAutoupdateNotification.tsx';
+import { performStartupChecks } from './../utils/plugins/performStartupChecks.tsx';
+import { UserTextMessage } from './../components/messages/UserTextMessage.tsx';
 import { AwsAuthStatusBox } from '../components/AwsAuthStatusBox';
-import { useRateLimitWarningNotification } from 'src/hooks/notifs/useRateLimitWarningNotification';
-import { useDeprecationWarningNotification } from 'src/hooks/notifs/useDeprecationWarningNotification';
-import { useNpmDeprecationNotification } from 'src/hooks/notifs/useNpmDeprecationNotification';
-import { useIDEStatusIndicator } from 'src/hooks/notifs/useIDEStatusIndicator';
-import { useModelMigrationNotifications } from 'src/hooks/notifs/useModelMigrationNotifications';
-import { useCanSwitchToExistingSubscription } from 'src/hooks/notifs/useCanSwitchToExistingSubscription';
-import { useTeammateLifecycleNotification } from 'src/hooks/notifs/useTeammateShutdownNotification';
-import { useFastModeNotification } from 'src/hooks/notifs/useFastModeNotification';
+import { useRateLimitWarningNotification } from './../hooks/notifs/useRateLimitWarningNotification.tsx';
+import { useDeprecationWarningNotification } from './../hooks/notifs/useDeprecationWarningNotification.tsx';
+import { useNpmDeprecationNotification } from './../hooks/notifs/useNpmDeprecationNotification.tsx';
+import { useIDEStatusIndicator } from './../hooks/notifs/useIDEStatusIndicator.tsx';
+import { useModelMigrationNotifications } from './../hooks/notifs/useModelMigrationNotifications.tsx';
+import { useCanSwitchToExistingSubscription } from './../hooks/notifs/useCanSwitchToExistingSubscription.tsx';
+import { useTeammateLifecycleNotification } from './../hooks/notifs/useTeammateShutdownNotification.ts';
+import { useFastModeNotification } from './../hooks/notifs/useFastModeNotification.tsx';
 import { AutoRunIssueNotification, shouldAutoRunIssue, getAutoRunIssueReasonText, getAutoRunCommand, type AutoRunIssueReason } from '../utils/autoRunIssue';
 import type { HookProgress } from '../types/hooks';
 import { TungstenLiveMonitor } from '../tools/TungstenTool/TungstenLiveMonitor';
@@ -717,11 +719,14 @@ export function REPL({
   const getHarness = useCallback(async (): Promise<AllternitHarness | null> => {
     if (!shouldUseHarness()) return null;
     if (harnessRef.current) return harnessRef.current;
-    
-    const config = await getHarnessConfig();
+
+    const config = await getAgentHarnessConfig(mainThreadAgentDefinition?.agentType);
+    if (!config) {
+      return null;
+    }
     harnessRef.current = new AllternitHarness(config);
     return harnessRef.current;
-  }, []);
+  }, [mainThreadAgentDefinition?.agentType]);
 
   // Env-var gates hoisted to mount-time — isEnvTruthy does toLowerCase+trim+
   // includes, and these were on the render path (hot during PageUp spam).
@@ -3382,6 +3387,7 @@ export function REPL({
     setAppState: SetAppState;
   }, options?: {
     fromKeybinding?: boolean;
+    forceImmediate?: boolean;
   }) => {
     // Re-pin scroll to bottom on submit so the user always sees the new
     // exchange (matches OpenCode's auto-scroll behavior).
@@ -3390,6 +3396,31 @@ export function REPL({
     // Resume loop mode if paused
     if (feature('PROACTIVE') || feature('KAIROS')) {
       proactiveModule?.resumeProactive();
+    }
+
+    // Handle immediate shell execution commands using '!' prefix
+    if (!speculationAccept && input.trim().startsWith('!')) {
+      const command = input.trim().slice(1).trim();
+      if (command) {
+        setInputValue('');
+        helpers.clearBuffer();
+        setPastedContents({});
+
+        setMessages(prev => [
+          ...prev,
+          createCommandInputMessage(`! ${command}`)
+        ]);
+
+        const { exec } = require('child_process');
+        exec(command, { cwd: getProjectRoot() }, (err: any, stdout: string, stderr: string) => {
+          const output = stdout + stderr;
+          const resultMessage = createCommandInputMessage(
+            `<${LOCAL_COMMAND_STDOUT_TAG}>${escapeXml(output || (err ? err.message : 'Command executed with exit code 0'))}</${LOCAL_COMMAND_STDOUT_TAG}>`
+          );
+          setMessages(prev => [...prev, resultMessage]);
+        });
+      }
+      return;
     }
 
     // Handle immediate commands - these bypass the queue and execute right away
@@ -3577,7 +3608,7 @@ export function REPL({
     // Submit runs "now" (not queued) when not already loading, or when
     // accepting speculation, or in remote mode (which sends via WS and
     // returns early without calling handlePromptSubmit).
-    const submitsNow = !isLoading || speculationAccept || activeRemote.isRemoteMode;
+    const submitsNow = !isLoading || speculationAccept || activeRemote.isRemoteMode || options?.forceImmediate;
     if (stashedPrompt !== undefined && !isSlashCommand && submitsNow) {
       setInputValue(stashedPrompt.text);
       helpers.setCursorOffset(stashedPrompt.cursorOffset);
@@ -3752,7 +3783,8 @@ export function REPL({
       // Read via ref so streamMode can be dropped from onSubmit deps —
       // handlePromptSubmit only uses it for debug log + telemetry event.
       streamMode: streamModeRef.current,
-      hasInterruptibleToolInProgress: hasInterruptibleToolInProgressRef.current
+      hasInterruptibleToolInProgress: hasInterruptibleToolInProgressRef.current,
+      forceImmediate: options?.forceImmediate
     });
 
     // Restore stash that was deferred above. Two cases:

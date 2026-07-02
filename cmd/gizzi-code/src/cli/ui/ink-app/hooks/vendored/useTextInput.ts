@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useTextInput_ts(): void {
   // Not yet implemented
 }

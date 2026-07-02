@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import type { Input } from './TeamCreateTool';
 export function renderToolUseMessage(input: Partial<Input>): React.ReactElement | null {

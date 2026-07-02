@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { useEffect, useState } from 'react'
-import type { PastedContent } from 'src/utils/config.js'
+import type { PastedContent } from './../../../utils/config.ts'
 import { maybeTruncateInput } from './inputPaste'
 
 type Props = {

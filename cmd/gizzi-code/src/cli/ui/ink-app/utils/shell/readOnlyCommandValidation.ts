@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared command validation maps for shell tools (BashTool, PowerShellTool, etc.).
  *

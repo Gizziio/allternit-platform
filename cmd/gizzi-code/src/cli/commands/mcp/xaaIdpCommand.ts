@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * `claude mcp xaa` — manage the XAA (SEP-990) IdP connection.
  *

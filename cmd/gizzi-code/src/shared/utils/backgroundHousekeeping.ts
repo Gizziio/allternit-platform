@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { initAutoDream } from '../../runtime/services/autoDream/autoDream.js'
 import { initMagicDocs } from '../../runtime/services/MagicDocs/magicDocs.js'
-import { initSkillImprovement } from '@/hooks/skillImprovement.js'
+import { initSkillImprovement } from './hooks/skillImprovement.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const extractMemoriesModule = feature('EXTRACT_MEMORIES')

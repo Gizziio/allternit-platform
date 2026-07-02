@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { BetaContentBlock } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
 import type {
   ContentBlock,

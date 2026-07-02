@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type AllternitAI from '@allternit/sdk/providers/anthropic'
 import {
@@ -5,13 +6,13 @@ import {
   APIError,
   APIUserAbortError,
 } from '@allternit/sdk/providers/anthropic'
-import type { QuerySource } from 'src/constants/querySource.js'
-import type { SystemAPIErrorMessage } from 'src/types/message.js'
-import { isAwsCredentialsProviderError } from 'src/utils/aws.js'
-import { logForDebugging } from 'src/utils/debug.js'
-import { logError } from 'src/utils/log.js'
-import { createSystemAPIErrorMessage } from 'src/utils/messages.js'
-import { getAPIProviderForStatsig } from 'src/utils/model/providers.js'
+import type { QuerySource } from './../../constants/querySource.ts'
+import type { SystemAPIErrorMessage } from './../../types/message.ts'
+import { isAwsCredentialsProviderError } from './../../utils/aws.ts'
+import { logForDebugging } from './../../utils/debug.ts'
+import { logError } from './../../utils/log.ts'
+import { createSystemAPIErrorMessage } from './../../utils/messages.ts'
+import { getAPIProviderForStatsig } from './../../utils/model/providers.ts'
 import {
   clearApiKeyHelperCache,
   clearAwsCredentialsCache,

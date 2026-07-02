@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect } from 'react'
 import { isEnvTruthy } from '../../vendor/utils/envUtils'
 

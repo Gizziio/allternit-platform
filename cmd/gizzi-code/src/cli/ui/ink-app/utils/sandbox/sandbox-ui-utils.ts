@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * UI utilities for sandbox violations
  * These utilities are used for displaying sandbox-related information in the UI

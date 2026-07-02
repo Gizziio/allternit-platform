@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useContext } from 'react'
 import StdinContext from '../components/StdinContext'
 

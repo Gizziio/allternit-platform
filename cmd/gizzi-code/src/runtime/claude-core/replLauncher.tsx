@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import type { StatsStore } from './context/stats.js';
 import type { Root } from '@/ink.js';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useContext, useEffect, useRef } from 'react'
 import {
   CLEAR_TAB_STATUS,

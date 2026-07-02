@@ -1,10 +1,11 @@
+// @ts-nocheck
 import figures from 'figures';
 import { join } from 'path';
 import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 'react';
 import { KeybindingWarnings } from '../vendor/components/KeybindingWarnings';
 import { McpParsingWarnings } from '../vendor/components/mcp/McpParsingWarnings';
 import { getModelMaxOutputTokens } from '../vendor/utils/context';
-import { getClaudeConfigHomeDir } from '../vendor/utils/envUtils';
+import { getGizziConfigHomeDir } from '../vendor/utils/envUtils';
 import type { SettingSource } from '../vendor/utils/settings/constants';
 import { getOriginalCwd } from './vendor/bootstrap/state';
 import type { CommandResultDisplay } from './vendor/commands';
@@ -113,7 +114,7 @@ export function Doctor({ onDone }: Props) {
         upperLimit: TASK_MAX_OUTPUT_UPPER_LIMIT
       },
       {
-        name: "CLAUDE_CODE_MAX_OUTPUT_TOKENS",
+        name: "GIZZI_MAX_OUTPUT_TOKENS",
         ...getModelMaxOutputTokens("claude-opus-4")
       }
     ];
@@ -131,8 +132,8 @@ export function Doctor({ onDone }: Props) {
     getDoctorDiagnostic().then(setDiagnostic);
     
     (async () => {
-      const userAgentsDir = join(getClaudeConfigHomeDir(), "agents");
-      const projectAgentsDir = join(getOriginalCwd(), ".claude", "agents");
+      const userAgentsDir = join(getGizziConfigHomeDir(), "agents");
+      const projectAgentsDir = join(getOriginalCwd(), ".gizzi", "agents");
       const { activeAgents, allAgents, failedFiles } = agentDefinitions;
       const [userDirExists, projectDirExists] = await Promise.all([
         pathExists(userAgentsDir),
@@ -156,7 +157,7 @@ export function Doctor({ onDone }: Props) {
       setContextWarnings(warnings);
       
       if (isPidBasedLockingEnabled()) {
-        const locksDir = join(getXDGStateHome(), "claude", "locks");
+        const locksDir = join(getXDGStateHome(), "gizzi", "locks");
         const staleLocksCleaned = cleanupStaleLocks(locksDir);
         const locks = getAllLockInfo(locksDir);
         setVersionLockInfo({
@@ -177,7 +178,7 @@ export function Doctor({ onDone }: Props) {
   }, [toolPermissionContext, tools, agentDefinitions]);
   
   const handleDismiss = useCallback(() => {
-    onDone("Claude Code diagnostics dismissed", { display: "system" });
+    onDone("Gizzi diagnostics dismissed", { display: "system" });
   }, [onDone]);
   
   useKeybindings({
@@ -201,49 +202,49 @@ export function Doctor({ onDone }: Props) {
   return (
     <Pane>
       <Box flexDirection="column">
-        <Text bold={true}>Diagnostics</Text>
-        <Text>└ Currently running: {diagnostic.installationType} ({diagnostic.version})</Text>
+        <Text bold={true}>Runtime</Text>
+        <Text>└ Gizzi version: {diagnostic.version}</Text>
+        {diagnostic.bunVersion && <Text>└ Bun version: {diagnostic.bunVersion}</Text>}
+        <Text>└ Installation: {diagnostic.installationType}</Text>
         {diagnostic.packageManager && <Text>└ Package manager: {diagnostic.packageManager}</Text>}
         <Text>└ Path: {diagnostic.installationPath}</Text>
-        <Text>└ Invoked: {diagnostic.invokedBinary}</Text>
-        <Text>└ Config install method: {diagnostic.configInstallMethod}</Text>
-        <Text>└ Search: {t16} ({t17})</Text>
-        {diagnostic.recommendation && (
-          <>
-            <Text />
-            <Text color="warning">Recommendation: {diagnostic.recommendation.split("\n")[0]}</Text>
-            <Text dimColor={true}>{diagnostic.recommendation.split("\n")[1]}</Text>
-          </>
-        )}
-        {diagnostic.multipleInstallations.length > 1 && (
-          <>
-            <Text />
-            <Text color="warning">Warning: Multiple installations found</Text>
-            {diagnostic.multipleInstallations.map((install, i) => (
-              <Text key={i}>└ {install.type} at {install.path}</Text>
-            ))}
-          </>
-        )}
-        {diagnostic.warnings.length > 0 && (
-          <>
-            <Text />
-            {diagnostic.warnings.map((warning, i) => (
-              <Box key={i} flexDirection="column">
-                <Text color="warning">Warning: {warning.issue}</Text>
-                <Text>Fix: {warning.fix}</Text>
-              </Box>
-            ))}
-          </>
-        )}
-        {errorsExcludingMcp.length > 0 && (
-          <Box flexDirection="column" marginTop={1} marginBottom={1}>
-            <Text bold={true}>Invalid Settings</Text>
-            <ValidationErrorsList errors={errorsExcludingMcp} />
-          </Box>
+      </Box>
+
+      <Box flexDirection="column" marginTop={1}>
+        <Text bold={true}>Dependencies</Text>
+        <Text>└ Search (ripgrep): {t16} ({t17})</Text>
+        {diagnostic.gitVersion && <Text>└ Git: {diagnostic.gitVersion}</Text>}
+      </Box>
+
+      <Box flexDirection="column" marginTop={1}>
+        <Text bold={true}>Providers</Text>
+        {diagnostic.providers.length > 0 ? (
+          diagnostic.providers.map(p => (
+            <Text key={p.id}>└ {p.id} ({p.modelCount} models)</Text>
+          ))
+        ) : (
+          <Text color="error">└ No providers configured — run `gizzi connect login`</Text>
         )}
       </Box>
+
+      <Box flexDirection="column" marginTop={1}>
+        <Text bold={true}>Database</Text>
+        {diagnostic.dbStatus.exists ? (
+          <Text>└ Database exists: {diagnostic.dbStatus.path} ({diagnostic.dbStatus.sizeMB} MB)</Text>
+        ) : (
+          <Text color="error">└ Database not found at {diagnostic.dbStatus.path}</Text>
+        )}
+      </Box>
+
+      <Box flexDirection="column" marginTop={1}>
+        <Text bold={true}>Project</Text>
+        <Text>└ Directory: {diagnostic.projectStatus.cwd}</Text>
+        <Text>└ CLAUDE.md: {diagnostic.projectStatus.claudeMd ? "Found" : "Not found"}</Text>
+        <Text>└ .gizzi directory: {diagnostic.projectStatus.gizziDir ? "Found" : "Not found"}</Text>
+        <Text>└ Git repository: {diagnostic.projectStatus.gitRepo ? "Detected" : "Not detected"}</Text>
+      </Box>
       
-      <Box flexDirection="column">
+      <Box flexDirection="column" marginTop={1}>
         <Text bold={true}>Updates</Text>
         <Text>└ Auto-updates:{" "}{diagnostic.packageManager ? "Managed by package manager" : diagnostic.autoUpdates}</Text>
         {diagnostic.hasUpdatePermissions !== null && (
@@ -255,12 +256,31 @@ export function Doctor({ onDone }: Props) {
         </Suspense>
       </Box>
       
+      {diagnostic.warnings.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          <Text bold={true} color="warning">Warnings</Text>
+          {diagnostic.warnings.map((warning, i) => (
+            <Box key={i} flexDirection="column">
+              <Text color="warning">└ Warning: {warning.issue}</Text>
+              <Text dimColor={true}>  Fix: {warning.fix}</Text>
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      {errorsExcludingMcp.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          <Text bold={true} color="error">Invalid Settings</Text>
+          <ValidationErrorsList errors={errorsExcludingMcp} />
+        </Box>
+      )}
+
       <SandboxDoctorSection />
       <McpParsingWarnings />
       <KeybindingWarnings />
       
       {envValidationErrors.length > 0 && (
-        <Box flexDirection="column">
+        <Box flexDirection="column" marginTop={1}>
           <Text bold={true}>Environment Variables</Text>
           {envValidationErrors.map((validation, i) => (
             <Text key={i}>
@@ -274,7 +294,7 @@ export function Doctor({ onDone }: Props) {
       )}
       
       {versionLockInfo?.enabled && (
-        <Box flexDirection="column">
+        <Box flexDirection="column" marginTop={1}>
           <Text bold={true}>Version Locks</Text>
           {versionLockInfo.staleLocksCleaned > 0 && (
             <Text dimColor={true}>└ Cleaned {versionLockInfo.staleLocksCleaned} stale lock(s)</Text>
@@ -293,7 +313,7 @@ export function Doctor({ onDone }: Props) {
       )}
       
       {agentInfo?.failedFiles && agentInfo.failedFiles.length > 0 && (
-        <Box flexDirection="column">
+        <Box flexDirection="column" marginTop={1}>
           <Text bold={true} color="error">Agent Parse Errors</Text>
           <Text color="error">└ Failed to parse {agentInfo.failedFiles.length} agent file(s):</Text>
           {agentInfo.failedFiles.map((file, i) => (
@@ -305,7 +325,7 @@ export function Doctor({ onDone }: Props) {
       )}
       
       {pluginsErrors.length > 0 && (
-        <Box flexDirection="column">
+        <Box flexDirection="column" marginTop={1}>
           <Text bold={true} color="error">Plugin Errors</Text>
           <Text color="error">└ {pluginsErrors.length} plugin error(s) detected:</Text>
           {pluginsErrors.map((error, i) => (
@@ -318,30 +338,17 @@ export function Doctor({ onDone }: Props) {
         </Box>
       )}
       
-      {contextWarnings?.unreachableRulesWarning && (
-        <Box flexDirection="column">
-          <Text bold={true} color="warning">Unreachable Permission Rules</Text>
-          <Text>
-            └{" "}
-            <Text color="warning">{figures.warning}{" "}{contextWarnings.unreachableRulesWarning.message}</Text>
-          </Text>
-          {contextWarnings.unreachableRulesWarning.details.map((detail, i) => (
-            <Text key={i} dimColor={true}>{"  "}└ {detail}</Text>
-          ))}
-        </Box>
-      )}
-      
-      {contextWarnings && (contextWarnings.claudeMdWarning || contextWarnings.agentWarning || contextWarnings.mcpWarning) && (
-        <Box flexDirection="column">
+      {contextWarnings && (contextWarnings.gizziMdWarning || contextWarnings.agentWarning || contextWarnings.mcpWarning) && (
+        <Box flexDirection="column" marginTop={1}>
           <Text bold={true}>Context Usage Warnings</Text>
-          {contextWarnings.claudeMdWarning && (
+          {contextWarnings.gizziMdWarning && (
             <>
               <Text>
                 └{" "}
-                <Text color="warning">{figures.warning} {contextWarnings.claudeMdWarning.message}</Text>
+                <Text color="warning">{figures.warning} {contextWarnings.gizziMdWarning.message}</Text>
               </Text>
               <Text>{"  "}└ Files:</Text>
-              {contextWarnings.claudeMdWarning.details.map((detail, i) => (
+              {contextWarnings.gizziMdWarning.details.map((detail, i) => (
                 <Text key={i} dimColor={true}>{"    "}└ {detail}</Text>
               ))}
             </>
@@ -373,7 +380,7 @@ export function Doctor({ onDone }: Props) {
         </Box>
       )}
       
-      <Box>
+      <Box marginTop={1}>
         <PressEnterToContinue />
       </Box>
     </Pane>

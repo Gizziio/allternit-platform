@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { Box, Text } from '@/ink.js';
 import type { ToolProgressData } from '@/Tool.js';

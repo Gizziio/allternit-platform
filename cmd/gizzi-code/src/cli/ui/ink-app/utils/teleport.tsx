@@ -1,11 +1,12 @@
+// @ts-nocheck
 import axios from 'axios';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import React from 'react';
-import { getOriginalCwd, getSessionId } from 'src/bootstrap/state';
-import { checkGate_CACHED_OR_BLOCKING } from 'src/services/analytics/growthbook';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import { isPolicyAllowed } from 'src/services/policyLimits/index';
+import { getOriginalCwd, getSessionId } from './../bootstrap/state.ts';
+import { checkGate_CACHED_OR_BLOCKING } from './../services/analytics/growthbook.ts';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';
+import { isPolicyAllowed } from './../services/policyLimits/index.ts';
 import { z } from 'zod/v4';
 import { getTeleportErrors, TeleportError, type TeleportLocalErrorType } from '../components/TeleportError';
 import { getOauthConfig } from '../constants/oauth';

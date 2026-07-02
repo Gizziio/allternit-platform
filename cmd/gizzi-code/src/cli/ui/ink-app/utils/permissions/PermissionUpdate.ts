@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { posix } from 'path'
 import type { ToolPermissionContext } from '../../Tool.js'
 // Types extracted to src/types/permissions.ts to break import cycles

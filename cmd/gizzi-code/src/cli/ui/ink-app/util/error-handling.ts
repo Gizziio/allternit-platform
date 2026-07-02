@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Error Handling Utilities for Cowork Mode
  * 

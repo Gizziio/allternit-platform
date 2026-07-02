@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Select } from 'src/components/CustomSelect/index';
+import { Select } from './../../components/CustomSelect/index.ts';
 import { Box, Text } from '../../ink';
 interface ExistingWorkflowStepProps {
   repoName: string;

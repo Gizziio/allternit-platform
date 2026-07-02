@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import React from 'react';
 import { MessageResponse } from 'src/components/MessageResponse.js';

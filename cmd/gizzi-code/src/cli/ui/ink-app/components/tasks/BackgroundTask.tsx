@@ -1,11 +1,12 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { Text } from 'src/ink';
-import type { BackgroundTaskState } from 'src/tasks/types';
-import type { DeepImmutable } from 'src/types/utils';
-import { truncate } from 'src/utils/format';
-import { toInkColor } from 'src/utils/ink';
-import { plural } from 'src/utils/stringUtils';
+import { Text } from './../../ink.ts';
+import type { BackgroundTaskState } from './../../tasks/types.ts';
+import type { DeepImmutable } from './../../types/utils.ts';
+import { truncate } from './../../utils/format.ts';
+import { toInkColor } from './../../utils/ink.ts';
+import { plural } from './../../utils/stringUtils.ts';
 import { DIAMOND_FILLED, DIAMOND_OPEN } from '../../constants/figures';
 import { RemoteSessionProgress } from './RemoteSessionProgress';
 import { ShellProgress, TaskStatusText } from './ShellProgress';

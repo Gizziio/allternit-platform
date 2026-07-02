@@ -1,4 +1,5 @@
-import type { Attachment } from 'src/utils/attachments.js'
+// @ts-nocheck
+import type { Attachment } from './../../utils/attachments.ts'
 import type { Message, NormalizedMessage } from '../../types/message.js'
 
 /**

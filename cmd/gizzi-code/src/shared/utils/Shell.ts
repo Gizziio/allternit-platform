@@ -29,7 +29,7 @@ import { which } from './which.js'
 export type { ExecResult } from './ShellCommand.js'
 
 import { accessSync } from 'fs'
-import { onCwdChangedForHooks } from '@/hooks/fileChangedWatcher.js'
+import { onCwdChangedForHooks } from './hooks/fileChangedWatcher.js'
 import { getClaudeTempDirName } from './permissions/filesystem.js'
 import { getPlatform } from './platform.js'
 import { SandboxManager } from './sandbox/sandbox-adapter.js'

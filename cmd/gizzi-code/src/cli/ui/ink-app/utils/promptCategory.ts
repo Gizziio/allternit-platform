@@ -1,4 +1,5 @@
-import type { QuerySource } from 'src/constants/querySource.js'
+// @ts-nocheck
+import type { QuerySource } from './../constants/querySource.ts'
 import {
   DEFAULT_OUTPUT_STYLE_NAME,
   OUTPUT_STYLE_CONFIG,

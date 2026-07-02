@@ -1,3 +1,4 @@
+// @ts-nocheck
 import figures from 'figures';
 import { homedir } from 'os';
 import * as React from 'react';

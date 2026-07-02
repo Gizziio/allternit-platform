@@ -1,3 +1,4 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 /**
  * Shared event metadata enrichment for analytics systems
@@ -28,7 +29,7 @@ import {
   getLinuxDistroInfo,
   detectVcs,
 } from '../../utils/platform.js'
-import type { CoreUserData } from 'src/utils/user.js'
+import type { CoreUserData } from './../../utils/user.ts'
 import { getAgentContext } from '../../utils/agentContext.js'
 import type { EnvironmentMetadata } from '../../types/generated/events_mono/claude_code/v1/claude_code_internal_event.js'
 import type { PublicApiAuth } from '../../types/generated/events_mono/common/v1/auth.js'

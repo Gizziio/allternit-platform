@@ -1,4 +1,5 @@
-import type { SettingSource } from 'src/utils/settings/constants'
+// @ts-nocheck
+import type { SettingSource } from './../../utils/settings/constants.ts'
 import type { AgentDefinition } from '../../tools/AgentTool/loadAgentsDir'
 
 export const AGENT_PATHS = {

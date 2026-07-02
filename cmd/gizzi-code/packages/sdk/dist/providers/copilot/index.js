@@ -8,7 +8,8 @@
  * Note: GitHub Copilot API access requires special authorization
  * This implementation supports both the Copilot API and Copilot Chat integration
  */
-import { HarnessError } from '../../harness/types.js';
+import { HarnessError } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 export const COPILOT_MODELS = {
     GPT_4: 'gpt-4',
     GPT_4_TURBO: 'gpt-4-turbo',

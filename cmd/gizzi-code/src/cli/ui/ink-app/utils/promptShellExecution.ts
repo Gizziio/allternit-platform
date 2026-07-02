@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from 'crypto'
 import type { Tool, ToolUseContext } from '../Tool.js'
 import { BashTool } from '../tools/BashTool/BashTool.js'

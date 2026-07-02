@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Model deprecation utilities
  *

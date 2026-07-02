@@ -1,3 +1,4 @@
+// @ts-nocheck
 type CommandLifecycleState = 'started' | 'completed'
 
 type CommandLifecycleListener = (

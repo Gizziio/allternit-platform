@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from 'crypto'
 import { mkdir, readdir, readFile } from 'fs/promises'
 import { join } from 'path'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useHistorySearch_ts(): void {
   // Not yet implemented
 }

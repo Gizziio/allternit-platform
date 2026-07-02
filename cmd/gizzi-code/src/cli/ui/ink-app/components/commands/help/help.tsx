@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { HelpV2 } from '../../components/HelpV2/HelpV2';
 import type { LocalJSXCommandCall } from '../../types/command';

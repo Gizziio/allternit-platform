@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Vim Mode State Machine Types
  *

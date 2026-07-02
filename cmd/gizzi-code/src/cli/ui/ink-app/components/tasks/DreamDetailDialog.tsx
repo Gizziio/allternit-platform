@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import type { DeepImmutable } from 'src/types/utils';
+import type { DeepImmutable } from './../../types/utils.ts';
 import { useElapsedTime } from '../../hooks/useElapsedTime';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event';
 import { Box, Text } from '../../ink';

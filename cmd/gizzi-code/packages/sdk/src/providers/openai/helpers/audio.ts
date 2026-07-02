@@ -39,7 +39,9 @@ async function nodejsPlayAudio(stream: NodeJS.ReadableStream | Response | File):
       if (isResponse(stream)) {
         (stream.body! as any).pipe(ffplay.stdin);
       } else if (isFile(stream)) {
-        Readable.from(stream.stream()).pipe(ffplay.stdin);
+        Readable.fromWeb(
+          stream.stream() as unknown as import('node:stream/web').ReadableStream<Uint8Array>,
+        ).pipe(ffplay.stdin);
       } else {
         stream.pipe(ffplay.stdin);
       }

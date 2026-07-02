@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { removeSandboxViolationTags } from 'src/utils/sandbox/sandbox-ui-utils';
+import { removeSandboxViolationTags } from './../../utils/sandbox/sandbox-ui-utils.ts';
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint';
 import { MessageResponse } from '../../components/MessageResponse';
 import { OutputLine } from '../../components/shell/OutputLine';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SubprocessLanguageModel — wraps a CLI subprocess (e.g. `claude`) as an AI SDK LanguageModelV2.
  *
@@ -18,6 +19,11 @@ import { Log } from "@/shared/util/log"
 
 const log = Log.create({ service: "subprocess-lm" })
 const TEXT_ID = "text-1"
+
+type OneShotInvocation = {
+  argv: string[]
+  mode: "one-shot"
+}
 
 // ---------------------------------------------------------------------------
 // Persistent process manager
@@ -220,6 +226,123 @@ function parseCmd(cmd: string): string[] {
   return cmd.trim().split(/\s+/)
 }
 
+function binaryName(command: string): string {
+  return command.split("/").pop() ?? command
+}
+
+function stripFlags(args: string[], flags: string[]): string[] {
+  const removed = new Set(flags)
+  const result: string[] = []
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+    if (!removed.has(arg)) {
+      result.push(arg)
+      continue
+    }
+
+    // Remove an attached value for flags that accept one.
+    if (
+      arg === "-p" ||
+      arg === "--prompt" ||
+      arg === "-m" ||
+      arg === "--model" ||
+      arg === "--output-format" ||
+      arg === "--input-format"
+    ) {
+      i += 1
+    }
+  }
+  return result
+}
+
+function buildOneShotInvocation(baseCmd: string[], message: string): OneShotInvocation | undefined {
+  const [command, ...args] = baseCmd
+  const name = binaryName(command)
+
+  if (name === "claude") {
+    const stripped = stripFlags(args, ["-p", "--print", "--output-format", "--input-format"])
+    return {
+      mode: "one-shot",
+      argv: [command, ...stripped, "--print", "--output-format", "text", message],
+    }
+  }
+
+  if (name === "kimi") {
+    const stripped = stripFlags(args, ["-p", "--prompt", "--print", "--output-format", "--input-format"])
+    return {
+      mode: "one-shot",
+      argv: [command, ...stripped, "--print", "--output-format", "text", "--final-message-only", "-p", message],
+    }
+  }
+
+  if (name === "codex") {
+    const stripped = stripFlags(args, ["-m", "--model"])
+    return {
+      mode: "one-shot",
+      argv: [command, "exec", "--skip-git-repo-check", ...stripped, message],
+    }
+  }
+
+  return undefined
+}
+
+async function readText(stream?: ReadableStream<Uint8Array> | null): Promise<string> {
+  if (!stream) return ""
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let text = ""
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      text += decoder.decode(value, { stream: true })
+    }
+    text += decoder.decode()
+  } finally {
+    reader.releaseLock()
+  }
+  return text
+}
+
+async function runOneShotRequest(
+  invocation: OneShotInvocation,
+  controller: ReadableStreamDefaultController<LanguageModelV2StreamPart>,
+) {
+  const proc = Bun.spawn(invocation.argv, {
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+  })
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    readText(proc.stdout),
+    readText(proc.stderr),
+    proc.exited,
+  ])
+
+  if (exitCode !== 0) {
+    const detail = stderr.trim() || stdout.trim() || `subprocess exited with code ${exitCode}`
+    throw new Error(detail)
+  }
+
+  const text = stdout.trim()
+  if (text) {
+    controller.enqueue({ type: "text-start", id: TEXT_ID })
+    controller.enqueue({ type: "text-delta", id: TEXT_ID, delta: text })
+    controller.enqueue({ type: "text-end", id: TEXT_ID })
+  }
+
+  controller.enqueue({
+    type: "finish",
+    finishReason: "stop",
+    usage: {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+    },
+  })
+}
+
 function extractLastUserText(prompt: any[]): string {
   let last = ""
   for (const msg of prompt) {
@@ -281,6 +404,33 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
 
     if (!message) {
       return emptyStream(options.prompt)
+    }
+
+    const oneShot = buildOneShotInvocation(baseCmd, message)
+    if (oneShot) {
+      const stream = new ReadableStream<LanguageModelV2StreamPart>({
+        async start(controller) {
+          controller.enqueue({ type: "stream-start", warnings: [] })
+          try {
+            await runOneShotRequest(oneShot, controller)
+          } catch (err) {
+            log.error("subprocess request failed", { error: err, argv: oneShot.argv })
+            controller.enqueue({ type: "error", error: err })
+            controller.enqueue({
+              type: "finish",
+              finishReason: "error",
+              usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+            })
+          } finally {
+            controller.close()
+          }
+        },
+      })
+
+      return {
+        stream,
+        rawCall: { rawPrompt: message, rawSettings: { argv: oneShot.argv } },
+      }
     }
 
     const mp = await getOrSpawn(poolKey, baseCmd)

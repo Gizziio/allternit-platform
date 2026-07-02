@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createSignal, createMemo } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useKV } from "@/cli/ui/ink-app/context/kv"

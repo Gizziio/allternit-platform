@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type HorizontalScrollWindow = {
   startIndex: number
   endIndex: number

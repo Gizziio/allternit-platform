@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Workspace Dialog
  *

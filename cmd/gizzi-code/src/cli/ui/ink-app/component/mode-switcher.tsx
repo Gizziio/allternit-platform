@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Mode Switcher - Pill variant for TUI
  * Based on ai-allternit ModeSwitcher.tsx

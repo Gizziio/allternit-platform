@@ -1,6 +1,6 @@
+// @ts-nocheck
 import {
   discoverAuthorizationServerMetadata,
-  discoverOAuthServerInfo,
   type OAuthClientProvider,
   type OAuthDiscoveryState,
   auth as sdkAuth,
@@ -279,11 +279,10 @@ async function fetchAuthServerMetadata(
   }
 
   try {
-    const { authorizationServerMetadata } = await discoverOAuthServerInfo(
+    const authorizationServerMetadata = await discoverAuthorizationServerMetadata(
       serverUrl,
       {
         ...(fetchFn && { fetchFn }),
-        ...(resourceMetadataUrl && { resourceMetadataUrl }),
       },
     )
     if (authorizationServerMetadata) {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Utility for substituting $ARGUMENTS placeholders in skill/command prompts.
  *

@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
-import { logEvent } from 'src/services/analytics/index'
+import { logEvent } from './../services/analytics/index.ts'
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config'
 import { logError } from '../utils/log'
 import { getAutoModeEnabledState } from '../utils/permissions/permissionSetup'

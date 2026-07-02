@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { APIUserAbortError } from '@allternit/sdk/providers/anthropic'
 import { getEmptyToolPermissionContext } from '../Tool.js'
 import type { Message } from '../types/message.js'

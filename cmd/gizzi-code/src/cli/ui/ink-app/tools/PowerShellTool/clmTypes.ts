@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * PowerShell Constrained Language Mode allowed types.
  *

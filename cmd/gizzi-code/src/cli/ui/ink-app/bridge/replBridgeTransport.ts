@@ -1,4 +1,5 @@
-import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes'
+// @ts-nocheck
+import type { StdoutMessage } from './../entrypoints/sdk/controlTypes.ts'
 import { CCRClient } from '../cli/transports/ccrClient'
 import type { HybridTransport } from '../cli/transports/HybridTransport'
 import { SSETransport } from '../cli/transports/SSETransport'

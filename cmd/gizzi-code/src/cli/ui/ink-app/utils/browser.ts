@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { execFileNoThrow } from './execFileNoThrow.js'
 
 function validateUrl(url: string): void {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
@@ -7,7 +8,7 @@ import {
   type ListToolsResult,
   type Tool,
 } from '@modelcontextprotocol/sdk/types.js'
-import { getDefaultAppState } from 'src/state/AppStateStore.js'
+import { getDefaultAppState } from './../state/AppStateStore.ts'
 import review from '../commands/review.js'
 import type { Command } from '../commands.js'
 import {

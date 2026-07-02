@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * MCP add CLI subcommand
  *

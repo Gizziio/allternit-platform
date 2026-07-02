@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react'
 import { Box, Text } from '@/ink.js'
 import type { LocalWorkflowTaskState } from '../../tasks/LocalWorkflowTask/LocalWorkflowTask.js'

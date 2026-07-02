@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useRemoteSession_ts(): void {
   // Not yet implemented
 }

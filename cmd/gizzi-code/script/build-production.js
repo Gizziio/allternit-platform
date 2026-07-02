@@ -137,6 +137,7 @@ const solidPlugin = {
             if (args.path.startsWith("@tui/")) {
                 relativePath = "cli/ui/tui/" + relativePath;
             }
+            relativePath = relativePath.replace(/\.(js|jsx|ts|tsx)$/, "");
             const base = resolve("src", relativePath);
             for (const ext of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
                 const path = base + ext;

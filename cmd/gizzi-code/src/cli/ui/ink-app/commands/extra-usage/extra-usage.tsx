@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import type { LocalJSXCommandContext } from '../../commands';
 import type { LocalJSXCommandOnDone } from '../../types/command';

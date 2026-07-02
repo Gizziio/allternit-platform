@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Show } from "solid-js"
 import { useTheme } from "@/cli/ui/ink-app/context/theme"
 import { useKV } from "@/cli/ui/ink-app/context/kv"

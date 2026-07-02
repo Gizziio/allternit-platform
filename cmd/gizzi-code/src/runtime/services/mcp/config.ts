@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { chmod, open, rename, stat, unlink } from 'fs/promises'
 import mapValues from 'lodash-es/mapValues.js'
@@ -22,8 +23,8 @@ import { logError } from '../../../utils/log.js'
 import { getPluginMcpServers } from '../../../utils/plugins/mcpPluginIntegration.js'
 import { loadAllPluginsCacheOnly } from '../../../utils/plugins/pluginLoader.js'
 import { isSettingSourceEnabled } from '../../../utils/settings/constants.js'
-import { getManagedFilePath } from '../../../utils/settings/managedPath.js'
-import { isRestrictedToPluginOnly } from '../../../utils/settings/pluginOnlyPolicy.js'
+import { getManagedFilePath } from '../../../shared/utils/settings/managedPath.js'
+import { isRestrictedToPluginOnly } from '../../../shared/utils/settings/pluginOnlyPolicy.js'
 import {
   getInitialSettings,
   getSettingsForSource,
@@ -34,7 +35,7 @@ import {
   isMcpServerUrlEntry,
   type SettingsJson,
 } from '../../../utils/settings/types.js'
-import type { ValidationError } from '../../../utils/settings/validation.js'
+import type { ValidationError } from '../../../shared/utils/settings/validation.js'
 import { jsonStringify } from '../../../utils/slowOperations.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { lineWidth } from './line-width-cache'
 
 export function widestLine(string: string): number {

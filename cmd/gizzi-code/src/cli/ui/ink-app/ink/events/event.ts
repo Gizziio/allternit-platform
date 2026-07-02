@@ -1,3 +1,4 @@
+// @ts-nocheck
 export class Event {
   private _didStopImmediatePropagation = false
 

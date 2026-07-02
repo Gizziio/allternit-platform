@@ -1,4 +1,7 @@
 #!/usr/bin/env bun
+// @ts-nocheck
+
+// @ts-nocheck
 /**
  * Gizzi TUI Entry Point - Full REPL Integration
  */

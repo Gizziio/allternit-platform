@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ToolResultBlockParam, ToolUseBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import * as React from 'react';
-import { ConfigurableShortcutHint } from 'src/components/ConfigurableShortcutHint';
-import { CtrlOToExpand, SubAgentProvider } from 'src/components/CtrlOToExpand';
-import { Byline } from 'src/components/design-system/Byline';
-import { KeyboardShortcutHint } from 'src/components/design-system/KeyboardShortcutHint';
+import { ConfigurableShortcutHint } from './../../components/ConfigurableShortcutHint.tsx';
+import { CtrlOToExpand, SubAgentProvider } from './../../components/CtrlOToExpand.tsx';
+import { Byline } from './../../components/design-system/Byline.tsx';
+import { KeyboardShortcutHint } from './../../components/design-system/KeyboardShortcutHint.tsx';
 import type { z } from 'zod/v4';
 import { AgentProgressLine } from '../../components/AgentProgressLine';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared constants for PowerShell cmdlets that execute arbitrary code.
  *

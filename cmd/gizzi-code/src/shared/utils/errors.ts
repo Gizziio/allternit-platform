@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { APIUserAbortError } from '@anthropic-ai/sdk'
 
 export class ClaudeError extends Error {

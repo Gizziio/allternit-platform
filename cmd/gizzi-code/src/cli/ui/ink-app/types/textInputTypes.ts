@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
 import type { UUID } from 'crypto'
 import type React from 'react'

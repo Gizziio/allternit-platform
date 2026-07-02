@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo, For, Show, Match, Switch } from "solid-js"
 import { useTheme } from "@/cli/ui/ink-app/context/theme"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi"

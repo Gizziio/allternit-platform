@@ -5,7 +5,7 @@
  * API: https://api.mistral.ai/v1
  */
 
-import { HarnessError } from '../../harness/errors.js';
+import { HarnessError, HarnessErrorCode } from '../../harness/errors.js';
 
 export interface AllternitMistralOptions {
   apiKey: string;
@@ -48,7 +48,7 @@ export class AllternitMistral {
     if (!response.ok) {
       throw new HarnessError(
         `Mistral API error: ${response.status} ${response.statusText}`,
-        'PROVIDER_NOT_FOUND'
+        HarnessErrorCode.PROVIDER_NOT_FOUND
       );
     }
 
@@ -68,12 +68,12 @@ export class AllternitMistral {
     if (!response.ok) {
       throw new HarnessError(
         `Mistral API error: ${response.status} ${response.statusText}`,
-        'PROVIDER_NOT_FOUND'
+        HarnessErrorCode.PROVIDER_NOT_FOUND
       );
     }
 
     const reader = response.body?.getReader();
-    if (!reader) throw new HarnessError('No response body', 'STREAM_ERROR');
+    if (!reader) throw new HarnessError('No response body', HarnessErrorCode.STREAM_ERROR);
 
     const decoder = new TextDecoder();
     let buffer = '';

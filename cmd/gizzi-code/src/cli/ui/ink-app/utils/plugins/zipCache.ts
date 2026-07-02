@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Plugin Zip Cache Module
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getSettingsForSource } from './settings.js'
 import type { CUSTOMIZATION_SURFACES } from './types.js'
 

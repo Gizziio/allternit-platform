@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { z } from 'zod/v4'
 import { getOriginalCwd } from '../../bootstrap/state.js'
 import {

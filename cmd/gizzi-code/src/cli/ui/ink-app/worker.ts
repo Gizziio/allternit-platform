@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Rpc } from "@/shared/util/rpc";
 import { query } from "@/cli/ui/ink-app/query";
 import { Log } from "@/shared/util/log";

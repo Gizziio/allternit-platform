@@ -1,3 +1,4 @@
+/// <reference path="./bun-sqlite.d.ts" />
 import { Database } from 'bun:sqlite';
 import type { Message, AgentRunStatus } from '../types.js';
 

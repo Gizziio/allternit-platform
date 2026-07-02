@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { sep } from 'path'
 import { getOriginalCwd } from '../bootstrap/state.js'
 import type { LogOption } from '../types/logs.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ToolUseBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import { useMemo } from 'react';

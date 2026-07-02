@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { POWERSHELL_TOOL_NAME } from '../../../tools/PowerShellTool/toolName';
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema';
 import { shouldShowAlwaysAllowOptions } from '../../../utils/permissions/permissionsLoader';

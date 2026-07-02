@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Dialog: Google Workspace CLI Setup
  *

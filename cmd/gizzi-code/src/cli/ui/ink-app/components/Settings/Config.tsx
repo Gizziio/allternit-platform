@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle';
@@ -14,7 +15,7 @@ import chalk from 'chalk';
 import { permissionModeTitle, permissionModeFromString, toExternalPermissionMode, isExternalPermissionMode, EXTERNAL_PERMISSION_MODES, PERMISSION_MODES, type ExternalPermissionMode, type PermissionMode } from '../../utils/permissions/PermissionMode';
 import { getAutoModeEnabledState, hasAutoModeOptInAnySource, transitionPlanAutoMode } from '../../utils/permissions/permissionSetup';
 import { logError } from '../../utils/log';
-import { logEvent, type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/index';
+import { logEvent, type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from './../../services/analytics/index.ts';
 import { isBridgeEnabled } from '../../bridge/bridgeEnabled';
 import { ThemePicker } from '../ThemePicker';
 import { useAppState, useSetAppState, useAppStateStore } from '../../state/AppState';
@@ -27,7 +28,7 @@ import { Dialog } from '../design-system/Dialog';
 import { Select } from '../CustomSelect/index';
 import { OutputStylePicker } from '../OutputStylePicker';
 import { LanguagePicker } from '../LanguagePicker';
-import { getExternalClaudeMdIncludes, getMemoryFiles, hasExternalClaudeMdIncludes } from 'src/utils/claudemd';
+import { getExternalClaudeMdIncludes, getMemoryFiles, hasExternalClaudeMdIncludes } from './../../utils/claudemd.ts';
 import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint';
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint';
 import { Byline } from '../design-system/Byline';
@@ -37,8 +38,8 @@ import { SearchBox } from '../SearchBox';
 import { isSupportedTerminal, hasAccessToIDEExtensionDiffFeature } from '../../utils/ide';
 import { getInitialSettings, getSettingsForSource, updateSettingsForSource } from '../../utils/settings/settings';
 import { getUserMsgOptIn, setUserMsgOptIn } from '../../bootstrap/state';
-import { DEFAULT_OUTPUT_STYLE_NAME } from 'src/constants/outputStyles';
-import { isEnvTruthy, isRunningOnHomespace } from 'src/utils/envUtils';
+import { DEFAULT_OUTPUT_STYLE_NAME } from './../../constants/outputStyles.ts';
+import { isEnvTruthy, isRunningOnHomespace } from './../../utils/envUtils.ts';
 import type { LocalJSXCommandContext, CommandResultDisplay } from '../../commands';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook';
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled';

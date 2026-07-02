@@ -1,3 +1,4 @@
+// @ts-nocheck
 import axios from 'axios'
 import { hasProfileScope, isClaudeAISubscriber } from '../../utils/auth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'

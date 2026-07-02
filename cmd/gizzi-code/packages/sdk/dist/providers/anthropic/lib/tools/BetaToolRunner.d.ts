@@ -1,5 +1,5 @@
 import { BetaRunnableTool } from './BetaRunnableTool';
-import { Anthropic } from '../..';
+import { AllternitAI as Anthropic } from '../..';
 import { BetaMessage, BetaMessageParam, BetaToolUnion, MessageCreateParams } from '../../resources/beta';
 import { BetaMessageStream } from '../BetaMessageStream';
 import { RequestOptions } from '../../internal/request-options';

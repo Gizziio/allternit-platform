@@ -1,5 +1,6 @@
-import type { HistoryMode } from 'src/hooks/useArrowKeyHistory'
-import type { PromptInputMode } from 'src/types/textInputTypes'
+// @ts-nocheck
+import type { HistoryMode } from './../../../hooks/useArrowKeyHistory.tsx'
+import type { PromptInputMode } from './../../../types/textInputTypes.ts'
 
 export function prependModeCharacterToInput(
   input: string,

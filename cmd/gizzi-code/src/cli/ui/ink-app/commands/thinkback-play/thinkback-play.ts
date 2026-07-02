@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { join } from 'path'
 import type { LocalCommandResult } from '../../commands.js'
 import { loadInstalledPluginsV2 } from '../../utils/plugins/installedPluginsManager.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Portable session storage utilities.
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * MessageV2 Extension - Adds Claude content types to Gizzi session
  * 

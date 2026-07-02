@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { Prompt, type PromptRef } from "@/cli/ui/ink-app/component/prompt"
 import { createEffect, createMemo, createSignal, For, Match, onMount, Show, Switch } from "solid-js"

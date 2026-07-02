@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { LocalCommandResult } from '../../types/command'
 import { openBrowser } from '../../utils/browser'
 

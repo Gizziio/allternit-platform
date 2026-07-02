@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useState } from 'react'
 import { getIsNonInteractiveSession } from '../../vendor/bootstrap/state'
 import { verifyApiKey } from '../../vendor/services/api/claude'

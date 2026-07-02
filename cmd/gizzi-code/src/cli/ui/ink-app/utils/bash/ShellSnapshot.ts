@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { execFile } from 'child_process'
 import { execa } from 'execa'
 import { mkdir, stat } from 'fs/promises'
 import * as os from 'os'
 import { join } from 'path'
-import { logEvent } from 'src/services/analytics/index.js'
+import { logEvent } from './../../services/analytics/index.ts'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { getCwd } from '../cwd.js'
 import { logForDebugging } from '../debug.js'

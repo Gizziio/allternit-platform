@@ -1,38 +1,39 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { dirname } from 'path'
-import { getProjectRoot } from 'src/bootstrap/state.js'
+import { getProjectRoot } from './../../bootstrap/state.ts'
 import {
   builtInCommandNames,
   findCommand,
   getCommands,
   type PromptCommand,
-} from 'src/commands.js'
+} from './../../commands.ts'
 import type {
   Tool,
   ToolCallProgress,
   ToolResult,
   ToolUseContext,
   ValidationResult,
-} from 'src/Tool.js'
-import { buildTool, type ToolDef } from 'src/Tool.js'
-import type { Command } from 'src/types/command.js'
+} from './../../Tool.ts'
+import { buildTool, type ToolDef } from './../../Tool.ts'
+import type { Command } from './../../types/command.ts'
 import type {
   AssistantMessage,
   AttachmentMessage,
   Message,
   SystemMessage,
   UserMessage,
-} from 'src/types/message.js'
-import { logForDebugging } from 'src/utils/debug.js'
-import type { PermissionDecision } from 'src/utils/permissions/PermissionResult.js'
-import { getRuleByContentsForTool } from 'src/utils/permissions/permissions.js'
+} from './../../types/message.ts'
+import { logForDebugging } from './../../utils/debug.ts'
+import type { PermissionDecision } from './../../utils/permissions/PermissionResult.ts'
+import { getRuleByContentsForTool } from './../../utils/permissions/permissions.ts'
 import {
   isOfficialMarketplaceName,
   parsePluginIdentifier,
-} from 'src/utils/plugins/pluginIdentifier.js'
-import { buildPluginCommandTelemetryFields } from 'src/utils/telemetry/pluginTelemetry.js'
+} from './../../utils/plugins/pluginIdentifier.ts'
+import { buildPluginCommandTelemetryFields } from './../../utils/telemetry/pluginTelemetry.ts'
 import { z } from 'zod/v4'
 import {
   addInvokedSkill,

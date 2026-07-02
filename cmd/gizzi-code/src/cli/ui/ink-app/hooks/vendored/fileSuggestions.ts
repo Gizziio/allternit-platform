@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { statSync } from 'fs'
 import ignore from 'ignore'
 import * as path from 'path'

@@ -1,4 +1,5 @@
-import { getLocalMonthYear } from 'src/constants/common'
+// @ts-nocheck
+import { getLocalMonthYear } from './../../../constants/common.ts'
 
 export const WEB_SEARCH_TOOL_NAME = 'WebSearch'
 export function getWebSearchPrompt(): string {

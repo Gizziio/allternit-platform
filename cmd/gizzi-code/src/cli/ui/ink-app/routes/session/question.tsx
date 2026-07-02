@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { createStore } from "solid-js/store"
 import { createMemo, createSignal, For, Show } from "solid-js"

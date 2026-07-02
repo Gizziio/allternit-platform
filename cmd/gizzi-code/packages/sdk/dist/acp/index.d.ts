@@ -9,6 +9,7 @@
 export * from './types.js';
 export { ACPRegistry, acpRegistry, type RegistryQuery, } from './registry.js';
 export { ACPHarnessBridge, type BridgeOptions, type BridgeStreamChunk, } from './harness-bridge.js';
-export { validateACPMessage, validateACPSession, validateACPRegistryEntry, assertValidACPMessage, assertValidACPSession, type ValidationResult, } from './validator.js';
+export { validateACPMessage, validateACPSession, validateACPRegistryEntry, assertValidACPMessage, assertValidACPSession, } from './validator.js';
+export type { ValidationResult } from './types.js';
 export * as ACP from '@agentclientprotocol/sdk';
 //# sourceMappingURL=index.d.ts.map

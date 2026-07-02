@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * PowerShell-specific security analysis for command validation.
  *

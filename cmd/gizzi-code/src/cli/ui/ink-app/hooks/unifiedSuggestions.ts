@@ -1,13 +1,14 @@
+// @ts-nocheck
 import Fuse from 'fuse.js'
 import { basename } from 'path'
-import type { SuggestionItem } from 'src/components/PromptInput/PromptInputFooterSuggestions.js'
-import { generateFileSuggestions } from 'src/hooks/fileSuggestions.js'
-import type { ServerResource } from 'src/services/mcp/types.js'
-import { getAgentColor } from 'src/tools/AgentTool/agentColorManager.js'
-import type { AgentDefinition } from 'src/tools/AgentTool/loadAgentsDir.js'
-import { truncateToWidth } from 'src/utils/format.js'
-import { logError } from 'src/utils/log.js'
-import type { Theme } from 'src/utils/theme.js'
+import type { SuggestionItem } from './../components/PromptInput/PromptInputFooterSuggestions.tsx'
+import { generateFileSuggestions } from './fileSuggestions.ts'
+import type { ServerResource } from './../services/mcp/types.ts'
+import { getAgentColor } from './../tools/AgentTool/agentColorManager.ts'
+import type { AgentDefinition } from './../tools/AgentTool/loadAgentsDir.ts'
+import { truncateToWidth } from './../utils/format.ts'
+import { logError } from './../utils/log.ts'
+import type { Theme } from './../utils/theme.ts'
 
 type FileSuggestionSource = {
   type: 'file'

@@ -85,6 +85,10 @@ async function* streamFromAnthropic(
     baseURL: config.baseURLs?.anthropic,
   });
 
+  if (!request.model) {
+    throw new AllternitError('model is required for Anthropic BYOK requests');
+  }
+
   // Convert messages to Anthropic format
   const anthropicMessages = convertToAnthropicMessages(request.messages);
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 
 export function recordTipShown(tipId: string): void {

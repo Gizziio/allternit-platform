@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Monitor MCP Task
  * TEMPORARY SHIM

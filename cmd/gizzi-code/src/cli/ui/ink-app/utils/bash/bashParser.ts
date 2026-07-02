@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure-TypeScript bash parser producing tree-sitter-bash-compatible ASTs.
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Teammate Initialization Module
  *

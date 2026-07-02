@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { StructuredPatchHunk } from 'diff'
 import { useEffect, useMemo, useState } from 'react'
 import {

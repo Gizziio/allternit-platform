@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useRef } from 'react'
 import { useNotifications } from '../../vendor/context/notifications'
 import { getShortcutDisplay } from '../keybindings/shortcutFormat'

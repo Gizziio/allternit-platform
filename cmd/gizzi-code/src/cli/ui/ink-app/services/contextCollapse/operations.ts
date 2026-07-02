@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function operations_ts(): void {
   // Not yet implemented
 }

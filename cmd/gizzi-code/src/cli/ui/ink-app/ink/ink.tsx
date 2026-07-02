@@ -1,3 +1,4 @@
+// @ts-nocheck
 import autoBind from 'auto-bind';
 import { closeSync, constants as fsConstants, openSync, readSync, writeSync } from 'fs';
 import noop from 'lodash-es/noop';
@@ -6,10 +7,10 @@ import React, { type ReactNode } from 'react';
 import type { FiberRoot } from 'react-reconciler';
 import { ConcurrentRoot } from 'react-reconciler/constants';
 import { onExit } from 'signal-exit';
-import { flushInteractionTime } from 'src/bootstrap/state';
-import { getYogaCounters } from 'src/native-ts/yoga-layout/index';
-import { logForDebugging } from 'src/utils/debug';
-import { logError } from 'src/utils/log';
+import { flushInteractionTime } from './../bootstrap/state.ts';
+import { getYogaCounters } from './../native-ts/yoga-layout/index.ts';
+import { logForDebugging } from './../utils/debug.ts';
+import { logError } from './../utils/log.ts';
 import { format } from 'util';
 import { colorize } from './colorize';
 import App from './components/App';

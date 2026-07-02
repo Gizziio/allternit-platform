@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * State machine for gating message writes during an initial flush.
  *

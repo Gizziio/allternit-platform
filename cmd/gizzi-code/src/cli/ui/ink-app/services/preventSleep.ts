@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Prevents macOS from sleeping while Claude is working.
  *

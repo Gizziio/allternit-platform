@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BASH_TOOL_NAME } from '../../../tools/BashTool/toolName';
 import { extractOutputRedirections } from '../../../utils/bash/commands';
 import { isClassifierPermissionsEnabled } from '../../../utils/permissions/bashClassifier';

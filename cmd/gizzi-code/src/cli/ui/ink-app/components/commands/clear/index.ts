@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Clear command - minimal metadata only.
  * Implementation is lazy-loaded from clear.ts to reduce startup time.

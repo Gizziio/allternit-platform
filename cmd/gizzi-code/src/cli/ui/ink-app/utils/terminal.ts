@@ -1,3 +1,4 @@
+// @ts-nocheck
 import chalk from 'chalk'
 import { ctrlOToExpand } from '../components/CtrlOToExpand.js'
 import { stringWidth } from '../ink/stringWidth.js'

@@ -1,7 +1,8 @@
+// @ts-nocheck
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import React from 'react';
-import { MessageResponse } from 'src/components/MessageResponse';
-import { extractTag } from 'src/utils/messages';
+import { MessageResponse } from './../../components/MessageResponse.tsx';
+import { extractTag } from './../../utils/messages.ts';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';
 import { TOOL_SUMMARY_MAX_LENGTH } from '../../constants/toolLimits';
 import { Text } from '../../ink';

@@ -1,7 +1,7 @@
 import { RealtimeClientEvent, RealtimeServerEvent, ErrorEvent } from '../../resources/beta/realtime/realtime';
 import { EventEmitter } from '../../lib/EventEmitter';
 import { AllternitOpenAIError } from '../../error';
-import { AzureOpenAI } from '../../index';
+import AllternitOpenAI, { AzureOpenAI } from '../../index';
 export declare class AllternitOpenAIRealtimeError extends AllternitOpenAIError {
     /**
      * The error data that the API sent back in an `error` event.

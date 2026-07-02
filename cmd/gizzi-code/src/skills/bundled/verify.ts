@@ -2,7 +2,7 @@ import { parseFrontmatter } from '../../utils/frontmatterParser.js'
 import { registerBundledSkill } from '../bundledSkills.js'
 import { SKILL_FILES, SKILL_MD } from './verifyContent.js'
 
-const { frontmatter, content: SKILL_BODY } = parseFrontmatter(SKILL_MD)
+const { frontmatter, body: SKILL_BODY } = parseFrontmatter(SKILL_MD)
 
 const DESCRIPTION =
   typeof frontmatter.description === 'string'

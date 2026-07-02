@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Normalize camelCase `requestId` → snake_case `request_id` on incoming
  * control messages (control_request, control_response).

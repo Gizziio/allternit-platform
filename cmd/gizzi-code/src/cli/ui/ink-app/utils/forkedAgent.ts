@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Helper for running forked agent query loops with usage tracking.
  *

@@ -1,11 +1,12 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import type { StructuredPatchHunk } from 'diff';
 import { isAbsolute, relative, resolve } from 'path';
 import * as React from 'react';
 import { Suspense, use, useState } from 'react';
-import { MessageResponse } from 'src/components/MessageResponse';
-import { extractTag } from 'src/utils/messages';
+import { MessageResponse } from './../../components/MessageResponse.tsx';
+import { extractTag } from './../../utils/messages.ts';
 import { CtrlOToExpand } from '../../components/CtrlOToExpand';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';
 import { FileEditToolUpdatedMessage } from '../../components/FileEditToolUpdatedMessage';

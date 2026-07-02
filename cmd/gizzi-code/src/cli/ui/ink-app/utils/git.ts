@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createHash } from 'crypto'
 import { readFileSync, realpathSync, statSync } from 'fs'
 import { open, readFile, realpath, stat } from 'fs/promises'

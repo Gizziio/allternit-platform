@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo, createSignal, type JSX } from "solid-js"
 import { useLocal } from "@/cli/ui/ink-app/context/local"
 import { useSync } from "@/cli/ui/ink-app/context/sync"

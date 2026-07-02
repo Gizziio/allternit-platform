@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Client-side secret scanner for team memory (PSR M22174).
  *

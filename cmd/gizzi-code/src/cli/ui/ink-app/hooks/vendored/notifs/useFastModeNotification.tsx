@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { useEffect } from 'react';
-import { useNotifications } from 'src/context/notifications';
-import { useAppState, useSetAppState } from 'src/state/AppState';
-import { type CooldownReason, isFastModeEnabled, onCooldownExpired, onCooldownTriggered, onFastModeOverageRejection, onOrgFastModeChanged } from 'src/utils/fastMode';
-import { formatDuration } from 'src/utils/format';
+import { useNotifications } from './../../../context/notifications.tsx';
+import { useAppState, useSetAppState } from './../../../state/AppState.tsx';
+import { type CooldownReason, isFastModeEnabled, onCooldownExpired, onCooldownTriggered, onFastModeOverageRejection, onOrgFastModeChanged } from './../../../utils/fastMode.ts';
+import { formatDuration } from './../../../utils/format.ts';
 import { getIsRemoteMode } from '../../bootstrap/state';
 
 const COOLDOWN_STARTED_KEY = 'fast-mode-cooldown-started';

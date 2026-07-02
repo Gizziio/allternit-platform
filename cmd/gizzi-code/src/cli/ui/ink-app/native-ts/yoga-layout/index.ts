@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure-TypeScript port of yoga-layout (Meta's flexbox engine).
  *

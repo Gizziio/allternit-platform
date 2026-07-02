@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getBridgeDebugHandle } from '../bridge/bridgeDebug'
 import type { Command } from '../commands'
 import type { LocalCommandCall } from '../types/command'

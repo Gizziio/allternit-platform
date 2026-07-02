@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Attributes } from '@opentelemetry/api'
 import { getSessionId } from '@/bootstrap/state.js'
 import { getOauthAccountInfo } from './auth.js'

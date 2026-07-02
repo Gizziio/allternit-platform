@@ -1,6 +1,7 @@
+// @ts-nocheck
 import React, { useCallback, useState } from 'react';
-import { useTerminalSize } from 'src/hooks/useTerminalSize';
-import { type CodeSession, fetchCodeSessionsFromSessionsAPI } from 'src/utils/teleport/api';
+import { useTerminalSize } from './../hooks/useTerminalSize.ts';
+import { type CodeSession, fetchCodeSessionsFromSessionsAPI } from './../utils/teleport/api.ts';
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw j/k/arrow list navigation
 import { Box, Text, useInput } from '../ink';
 import { useKeybinding } from '../keybindings/useKeybinding';

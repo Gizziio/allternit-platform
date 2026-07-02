@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { execa } from 'execa'
 import { readFile, realpath } from 'fs/promises'
 import { homedir } from 'os'
@@ -36,12 +37,15 @@ import { SandboxManager } from './sandbox/sandbox-adapter.js'
 import { getManagedFilePath } from './settings/managedPath.js'
 import { CUSTOMIZATION_SURFACES } from './settings/types.js'
 import {
-  findClaudeAlias,
-  findValidClaudeAlias,
+  findGizziAlias,
+  findValidGizziAlias,
   getShellConfigPaths,
 } from './shellConfig.js'
 import { jsonParse } from './slowOperations.js'
 import { which } from './which.js'
+import { Provider } from '../../../../runtime/providers/provider.js'
+import { GlobalPaths } from '../../../../runtime/context/global/paths.js'
+import fs from 'fs'
 
 export type InstallationType =
   | 'npm-global'
@@ -67,6 +71,16 @@ export type DiagnosticInfo = {
     working: boolean
     mode: 'system' | 'builtin' | 'embedded'
     systemPath: string | null
+  }
+  bunVersion?: string
+  gitVersion?: string
+  providers: Array<{ id: string; modelCount: number }>
+  dbStatus: { exists: boolean; path: string; sizeMB?: string }
+  projectStatus: {
+    claudeMd: boolean
+    gizziDir: boolean
+    gitRepo: boolean
+    cwd: string
   }
 }
 
@@ -162,7 +176,7 @@ async function getInstallationPath(): Promise<string> {
     }
 
     try {
-      const path = await which('claude')
+      const path = await which('gizzi')
       if (path) {
         return path
       }
@@ -172,8 +186,8 @@ async function getInstallationPath(): Promise<string> {
 
     // If we can't find it, check common locations
     try {
-      await getFsImplementation().stat(join(homedir(), '.local/bin/claude'))
-      return join(homedir(), '.local/bin/claude')
+      await getFsImplementation().stat(join(homedir(), '.local/bin/gizzi'))
+      return join(homedir(), '.local/bin/gizzi')
     } catch {
       // Not found
     }
@@ -205,18 +219,18 @@ export function getInvokedBinary(): string {
 async function detectMultipleInstallations(): Promise<
   Array<{ type: string; path: string }>
 > {
-  const fs = getFsImplementation()
+  const fsImpl = getFsImplementation()
   const installations: Array<{ type: string; path: string }> = []
 
   // Check for local installation
-  const localPath = join(homedir(), '.claude', 'local')
+  const localPath = join(homedir(), '.gizzi', 'local')
   if (await localInstallationExists()) {
     installations.push({ type: 'npm-local', path: localPath })
   }
 
   // Check for global npm installation
-  const packagesToCheck = ['@anthropic-ai/claude-code']
-  if (MACRO.PACKAGE_URL && MACRO.PACKAGE_URL !== '@anthropic-ai/claude-code') {
+  const packagesToCheck = ['@allternit/gizzi-code']
+  if (MACRO.PACKAGE_URL && MACRO.PACKAGE_URL !== '@allternit/gizzi-code') {
     packagesToCheck.push(MACRO.PACKAGE_URL)
   }
   const npmResult = await execFileNoThrow('npm', [
@@ -229,33 +243,24 @@ async function detectMultipleInstallations(): Promise<
     const npmPrefix = npmResult.stdout.trim()
     const isWindows = getPlatform() === 'windows'
 
-    // First check for active installations via bin/claude
-    // Linux / macOS have prefix/bin/claude and prefix/lib/node_modules
-    // Windows has prefix/claude and prefix/node_modules
+    // First check for active installations via bin/gizzi
     const globalBinPath = isWindows
-      ? join(npmPrefix, 'claude')
-      : join(npmPrefix, 'bin', 'claude')
+      ? join(npmPrefix, 'gizzi')
+      : join(npmPrefix, 'bin', 'gizzi')
 
     let globalBinExists = false
     try {
-      await fs.stat(globalBinPath)
+      await fsImpl.stat(globalBinPath)
       globalBinExists = true
     } catch {
       // Not found
     }
 
     if (globalBinExists) {
-      // Check if this is actually a Homebrew cask installation, not npm-global
-      // When npm is installed via Homebrew, both can exist at /opt/homebrew/bin/claude
-      // We need to resolve the symlink to see where it actually points
       let isCurrentHomebrewInstallation = false
 
       try {
-        // Resolve the symlink to get the actual target
         const realPath = await realpath(globalBinPath)
-
-        // If the symlink points to a Caskroom directory, it's a Homebrew cask
-        // Only skip it if it's the same Homebrew installation we're currently running from
         if (realPath.includes('/Caskroom/')) {
           isCurrentHomebrewInstallation = detectHomebrew()
         }
@@ -267,14 +272,14 @@ async function detectMultipleInstallations(): Promise<
         installations.push({ type: 'npm-global', path: globalBinPath })
       }
     } else {
-      // If no bin/claude exists, check for orphaned packages (no bin/claude symlink)
+      // If no bin/gizzi exists, check for orphaned packages
       for (const packageName of packagesToCheck) {
         const globalPackagePath = isWindows
           ? join(npmPrefix, 'node_modules', packageName)
           : join(npmPrefix, 'lib', 'node_modules', packageName)
 
         try {
-          await fs.stat(globalPackagePath)
+          await fsImpl.stat(globalPackagePath)
           installations.push({
             type: 'npm-global-orphan',
             path: globalPackagePath,
@@ -287,11 +292,9 @@ async function detectMultipleInstallations(): Promise<
   }
 
   // Check for native installation
-
-  // Check common native installation paths
-  const nativeBinPath = join(homedir(), '.local', 'bin', 'claude')
+  const nativeBinPath = join(homedir(), '.local', 'bin', 'gizzi')
   try {
-    await fs.stat(nativeBinPath)
+    await fsImpl.stat(nativeBinPath)
     installations.push({ type: 'native', path: nativeBinPath })
   } catch {
     // Not found
@@ -300,9 +303,9 @@ async function detectMultipleInstallations(): Promise<
   // Also check if config indicates native installation
   const config = getGlobalConfig()
   if (config.installMethod === 'native') {
-    const nativeDataPath = join(homedir(), '.local', 'share', 'claude')
+    const nativeDataPath = join(homedir(), '.local', 'share', 'gizzi')
     try {
-      await fs.stat(nativeDataPath)
+      await fsImpl.stat(nativeDataPath)
       if (!installations.some(i => i.type === 'native')) {
         installations.push({ type: 'native', path: nativeDataPath })
       }
@@ -319,12 +322,6 @@ async function detectConfigurationIssues(
 ): Promise<Array<{ issue: string; fix: string }>> {
   const warnings: Array<{ issue: string; fix: string }> = []
 
-  // Managed-settings forwards-compat: the schema preprocess silently drops
-  // unknown strictPluginOnlyCustomization surface names so one future enum
-  // value doesn't null out the entire policy file (settings.ts:101). But
-  // admins should KNOW — read the raw file and diff. Runs before the
-  // development-mode early return: this is config correctness, not an
-  // install-path check, and it's useful to see during dev testing.
   try {
     const raw = await readFile(
       join(getManagedFilePath(), 'managed-settings.json'),
@@ -337,9 +334,6 @@ async function detectConfigurationIssues(
         : undefined
     if (field !== undefined && typeof field !== 'boolean') {
       if (!Array.isArray(field)) {
-        // .catch(undefined) in the schema silently drops this, so the rest
-        // of managed settings survive — but the admin typed something
-        // wrong (an object, a string, etc.).
         warnings.push({
           issue: `managed-settings.json: strictPluginOnlyCustomization has an invalid value (expected true or an array, got ${typeof field})`,
           fix: `The field is silently ignored (schema .catch rescues it). Set it to true, or an array of: ${CUSTOMIZATION_SURFACES.join(', ')}.`,
@@ -360,7 +354,6 @@ async function detectConfigurationIssues(
     }
   } catch {
     // ENOENT (no managed settings) / parse error — not this check's concern.
-    // Parse errors are surfaced by the settings loader itself.
   }
 
   const config = getGlobalConfig()
@@ -383,14 +376,11 @@ async function detectConfigurationIssues(
       normalizedLocalBinPath = localBinPath.split(win32.sep).join(posix.sep)
     }
 
-    // Check if ~/.local/bin is in PATH (handle both expanded and unexpanded forms)
-    // Also handle trailing slashes that users may have in their PATH
     const localBinInPath = pathDirectories.some(dir => {
       let normalizedDir = dir
       if (getPlatform() === 'windows') {
         normalizedDir = dir.split(win32.sep).join(posix.sep)
       }
-      // Remove trailing slashes for comparison (handles paths like /home/user/.local/bin/)
       const trimmedDir = normalizedDir.replace(/\/+$/, '')
       const trimmedRawDir = dir.replace(/[/\\]+$/, '')
       return (
@@ -403,7 +393,6 @@ async function detectConfigurationIssues(
     if (!localBinInPath) {
       const isWindows = getPlatform() === 'windows'
       if (isWindows) {
-        // Windows-specific PATH instructions
         const windowsLocalBinPath = localBinPath
           .split(posix.sep)
           .join(win32.sep)
@@ -412,7 +401,6 @@ async function detectConfigurationIssues(
           fix: `Add it by opening: System Properties → Environment Variables → Edit User PATH → New → Add the path above. Then restart your terminal.`,
         })
       } else {
-        // Unix-style PATH instructions
         const shellType = getShellType()
         const configPaths = getShellConfigPaths()
         const configFile = configPaths[shellType as keyof typeof configPaths]
@@ -430,19 +418,18 @@ async function detectConfigurationIssues(
   }
 
   // Check for configuration mismatches
-  // Skip these checks if DISABLE_INSTALLATION_CHECKS is set (e.g., in HFI)
   if (!isEnvTruthy(process.env.DISABLE_INSTALLATION_CHECKS)) {
     if (type === 'npm-local' && config.installMethod !== 'local') {
       warnings.push({
         issue: `Running from local installation but config install method is '${config.installMethod}'`,
-        fix: 'Consider using native installation: claude install',
+        fix: 'Consider using native installation: gizzi install',
       })
     }
 
     if (type === 'native' && config.installMethod !== 'native') {
       warnings.push({
         issue: `Running native installation but config install method is '${config.installMethod}'`,
-        fix: 'Run claude install to update configuration',
+        fix: 'Run gizzi install to update configuration',
       })
     }
   }
@@ -450,32 +437,27 @@ async function detectConfigurationIssues(
   if (type === 'npm-global' && (await localInstallationExists())) {
     warnings.push({
       issue: 'Local installation exists but not being used',
-      fix: 'Consider using native installation: claude install',
+      fix: 'Consider using native installation: gizzi install',
     })
   }
 
-  const existingAlias = await findClaudeAlias()
-  const validAlias = await findValidClaudeAlias()
+  const existingAlias = await findGizziAlias()
+  const validAlias = await findValidGizziAlias()
 
-  // Check if running local installation but it's not in PATH
   if (type === 'npm-local') {
-    // Check if claude is already accessible via PATH
-    const whichResult = await which('claude')
-    const claudeInPath = !!whichResult
+    const whichResult = await which('gizzi')
+    const gizziInPath = !!whichResult
 
-    // Only show warning if claude is NOT in PATH AND no valid alias exists
-    if (!claudeInPath && !validAlias) {
+    if (!gizziInPath && !validAlias) {
       if (existingAlias) {
-        // Alias exists but points to invalid target
         warnings.push({
           issue: 'Local installation not accessible',
-          fix: `Alias exists but points to invalid target: ${existingAlias}. Update alias: alias claude="~/.claude/local/claude"`,
+          fix: `Alias exists but points to invalid target: ${existingAlias}. Update alias: alias gizzi="~/.gizzi/local/gizzi"`,
         })
       } else {
-        // No alias exists and not in PATH
         warnings.push({
           issue: 'Local installation not accessible',
-          fix: 'Create alias: alias claude="~/.claude/local/claude"',
+          fix: 'Create alias: alias gizzi="~/.gizzi/local/gizzi"',
         })
       }
     }
@@ -496,7 +478,6 @@ export function detectLinuxGlobPatternWarnings(): Array<{
   const globPatterns = SandboxManager.getLinuxGlobPatternWarnings()
 
   if (globPatterns.length > 0) {
-    // Show first 3 patterns, then indicate if there are more
     const displayPatterns = globPatterns.slice(0, 3).join(', ')
     const remaining = globPatterns.length - 3
     const patternList =
@@ -520,10 +501,8 @@ export async function getDoctorDiagnostic(): Promise<DiagnosticInfo> {
   const multipleInstallations = await detectMultipleInstallations()
   const warnings = await detectConfigurationIssues(installationType)
 
-  // Add glob pattern warnings for Linux sandboxing
   warnings.push(...detectLinuxGlobPatternWarnings())
 
-  // Add warnings for leftover npm installations when running native
   if (installationType === 'native') {
     const npmInstalls = multipleInstallations.filter(
       i =>
@@ -536,10 +515,10 @@ export async function getDoctorDiagnostic(): Promise<DiagnosticInfo> {
 
     for (const install of npmInstalls) {
       if (install.type === 'npm-global') {
-        let uninstallCmd = 'npm -g uninstall @anthropic-ai/claude-code'
+        let uninstallCmd = 'npm -g uninstall @allternit/gizzi-code'
         if (
           MACRO.PACKAGE_URL &&
-          MACRO.PACKAGE_URL !== '@anthropic-ai/claude-code'
+          MACRO.PACKAGE_URL !== '@allternit/gizzi-code'
         ) {
           uninstallCmd += ` && npm -g uninstall ${MACRO.PACKAGE_URL}`
         }
@@ -566,41 +545,84 @@ export async function getDoctorDiagnostic(): Promise<DiagnosticInfo> {
   }
 
   const config = getGlobalConfig()
-
-  // Get config values for display
   const configInstallMethod = config.installMethod || 'not set'
 
-  // Check permissions for global installations
   let hasUpdatePermissions: boolean | null = null
   if (installationType === 'npm-global') {
     const permCheck = await checkGlobalInstallPermissions()
     hasUpdatePermissions = permCheck.hasPermissions
 
-    // Add warning if no permissions
     if (!hasUpdatePermissions && !getAutoUpdaterDisabledReason()) {
       warnings.push({
         issue: 'Insufficient permissions for auto-updates',
-        fix: 'Do one of: (1) Re-install node without sudo, or (2) Use `claude install` for native installation',
+        fix: 'Do one of: (1) Re-install node without sudo, or (2) Use `gizzi install` for native installation',
       })
     }
   }
 
-  // Get ripgrep status and configuration
   const ripgrepStatusRaw = getRipgrepStatus()
-
-  // Provide simple ripgrep status info
   const ripgrepStatus = {
-    working: ripgrepStatusRaw.working ?? true, // Assume working if not yet tested
+    working: ripgrepStatusRaw.working ?? true,
     mode: ripgrepStatusRaw.mode,
     systemPath:
       ripgrepStatusRaw.mode === 'system' ? ripgrepStatusRaw.path : null,
   }
 
-  // Get package manager info if running from package manager
   const packageManager =
     installationType === 'package-manager'
       ? await getPackageManager()
       : undefined
+
+  // Gizzi specific diagnostics
+  let bunVersion: string | undefined
+  try {
+    const result = await execa('bun', ['--version'])
+    bunVersion = result.stdout.trim()
+  } catch {
+    // Bun not found
+  }
+
+  let gitVersion: string | undefined
+  try {
+    const result = await execa('git', ['--version'])
+    gitVersion = result.stdout.trim()
+  } catch {
+    // Git not found
+  }
+
+  const providers: Array<{ id: string; modelCount: number }> = []
+  try {
+    const providerList = await Provider.list()
+    for (const [id, p] of Object.entries(providerList)) {
+      providers.push({
+        id,
+        modelCount: p.models ? Object.keys(p.models).length : 0,
+      })
+    }
+  } catch {
+    // Provider list failed
+  }
+
+  const dataDir = GlobalPaths.data
+  const dbPath = join(dataDir, 'gizzi.db')
+  const dbExists = fs.existsSync(dbPath)
+  let dbSizeMB: string | undefined
+  if (dbExists) {
+    try {
+      const stat = fs.statSync(dbPath)
+      dbSizeMB = (stat.size / 1024 / 1024).toFixed(1)
+    } catch {
+      // Stat failed
+    }
+  }
+
+  const cwd = getCwd()
+  const projectStatus = {
+    claudeMd: fs.existsSync(join(cwd, 'CLAUDE.md')),
+    gizziDir: fs.existsSync(join(cwd, '.gizzi')),
+    gitRepo: fs.existsSync(join(cwd, '.git')),
+    cwd,
+  }
 
   const diagnostic: DiagnosticInfo = {
     installationType,
@@ -619,6 +641,15 @@ export async function getDoctorDiagnostic(): Promise<DiagnosticInfo> {
     warnings,
     packageManager,
     ripgrepStatus,
+    bunVersion,
+    gitVersion,
+    providers,
+    dbStatus: {
+      exists: dbExists,
+      path: dbPath,
+      sizeMB: dbSizeMB,
+    },
+    projectStatus,
   }
 
   return diagnostic

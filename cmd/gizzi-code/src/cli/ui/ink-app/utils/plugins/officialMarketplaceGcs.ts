@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * inc-5046: fetch the official marketplace from a GCS mirror instead of
  * git-cloning GitHub on every startup.

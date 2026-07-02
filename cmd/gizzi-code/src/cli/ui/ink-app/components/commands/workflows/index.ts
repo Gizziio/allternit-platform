@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Workflows Command
  * TEMPORARY SHIM

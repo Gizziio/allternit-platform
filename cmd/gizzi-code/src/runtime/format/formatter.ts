@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { readableStreamToText } from "bun"
 import { BunProc } from "@/shared/bun/bun"
 import { Instance } from "@/runtime/context/project/instance"

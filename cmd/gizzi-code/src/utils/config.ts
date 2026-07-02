@@ -2,6 +2,8 @@
  * Config Utilities
  */
 
+export type { PastedContent } from '../shared/utils/config.js'
+
 export interface Config {
   [key: string]: unknown
 }

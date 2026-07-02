@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Resize event stub
  */

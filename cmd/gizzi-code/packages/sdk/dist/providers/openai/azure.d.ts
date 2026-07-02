@@ -1,7 +1,7 @@
 import type { RequestInit } from './internal/builtin-types';
 import type { NullableHeaders } from './internal/headers';
 import { FinalRequestOptions } from './internal/request-options';
-import { ClientOptions } from './client';
+import { ClientOptions, AllternitOpenAI } from './client';
 /** API Client for interfacing with the Azure OpenAI API. */
 export interface AzureClientOptions extends ClientOptions {
     /**
@@ -28,7 +28,7 @@ export interface AzureClientOptions extends ClientOptions {
     azureADTokenProvider?: (() => Promise<string>) | undefined;
 }
 /** API Client for interfacing with the Azure OpenAI API. */
-export declare class AzureOpenAI extends OpenAI {
+export declare class AzureOpenAI extends AllternitOpenAI {
     deploymentName: string | undefined;
     apiVersion: string;
     /**

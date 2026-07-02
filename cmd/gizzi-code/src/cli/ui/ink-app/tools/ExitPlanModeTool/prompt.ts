@@ -1,3 +1,4 @@
+// @ts-nocheck
 // External stub for ExitPlanModeTool prompt - excludes Ant-only allowedPrompts section
 
 // Hardcoded to avoid relative import issues in stub

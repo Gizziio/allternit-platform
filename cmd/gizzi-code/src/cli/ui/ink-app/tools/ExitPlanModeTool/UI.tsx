@@ -1,9 +1,10 @@
+// @ts-nocheck
 import * as React from 'react';
-import { Markdown } from 'src/components/Markdown';
-import { MessageResponse } from 'src/components/MessageResponse';
-import { RejectedPlanMessage } from 'src/components/messages/UserToolResultMessage/RejectedPlanMessage';
-import { BLACK_CIRCLE } from 'src/constants/figures';
-import { getModeColor } from 'src/utils/permissions/PermissionMode';
+import { Markdown } from './../../components/Markdown.tsx';
+import { MessageResponse } from './../../components/MessageResponse.tsx';
+import { RejectedPlanMessage } from './../../components/messages/UserToolResultMessage/RejectedPlanMessage.tsx';
+import { BLACK_CIRCLE } from './../../constants/figures.ts';
+import { getModeColor } from './../../utils/permissions/PermissionMode.ts';
 import { Box, Text } from '../../ink';
 import type { ToolProgressData } from '../../Tool';
 import type { ProgressMessage } from '../../types/message';

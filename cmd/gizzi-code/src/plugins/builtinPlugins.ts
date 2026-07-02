@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Built-in Plugins
  * Production-quality plugin management

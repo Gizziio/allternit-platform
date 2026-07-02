@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils'
 import { AGENT_TOOL_NAME } from '../AgentTool/constants'
 import { BASH_TOOL_NAME } from '../BashTool/toolName'

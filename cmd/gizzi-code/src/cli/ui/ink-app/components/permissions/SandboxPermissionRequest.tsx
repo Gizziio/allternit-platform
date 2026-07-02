@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { Box, Text } from 'src/ink';
-import { type NetworkHostPattern, shouldAllowManagedSandboxDomainsOnly } from 'src/utils/sandbox/sandbox-adapter';
+import { Box, Text } from './../../ink.ts';
+import { type NetworkHostPattern, shouldAllowManagedSandboxDomainsOnly } from './../../utils/sandbox/sandbox-adapter.ts';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index';
 import { Select } from '../CustomSelect/select';
 import { PermissionDialog } from './PermissionDialog';

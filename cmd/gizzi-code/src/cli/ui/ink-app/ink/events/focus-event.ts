@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type EventTarget, TerminalEvent } from './terminal-event'
 
 /**

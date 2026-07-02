@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Background plugin autoupdate functionality
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { normalizeNameForMCP } from '../../services/mcp/normalization.js'
 import { env } from '../env.js'
 

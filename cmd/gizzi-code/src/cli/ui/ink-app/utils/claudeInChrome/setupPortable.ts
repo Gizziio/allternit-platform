@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { readdir } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'

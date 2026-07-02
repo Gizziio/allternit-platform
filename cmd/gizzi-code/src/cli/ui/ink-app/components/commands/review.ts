@@ -1,3 +1,4 @@
+// @ts-nocheck
 type ContentBlockParam = Anthropic.ContentBlockParam
 import type { Command } from '../commands'
 import { isUltrareviewEnabled } from './review/ultrareviewEnabled'

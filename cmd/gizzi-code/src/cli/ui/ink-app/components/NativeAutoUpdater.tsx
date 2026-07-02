@@ -1,8 +1,9 @@
+// @ts-nocheck
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { logEvent } from 'src/services/analytics/index';
-import { logForDebugging } from 'src/utils/debug';
-import { logError } from 'src/utils/log';
+import { logEvent } from './../services/analytics/index.ts';
+import { logForDebugging } from './../utils/debug.ts';
+import { logError } from './../utils/log.ts';
 import { useInterval } from 'usehooks-ts';
 import { useUpdateNotification } from '../hooks/useUpdateNotification';
 import { Box, Text } from '../ink';

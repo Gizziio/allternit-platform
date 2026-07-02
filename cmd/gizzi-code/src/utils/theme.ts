@@ -1,17 +1,14 @@
+// @ts-nocheck
 /**
- * Theme Utilities
+ * Theme utilities - re-export the full theme definitions from shared.
  */
-
-export interface Theme {
-  name: string
-  colors: Record<string, string>
-}
-
-export const defaultTheme: Theme = {
-  name: 'default',
-  colors: {},
-}
-
-export function getTheme(): Theme {
-  return defaultTheme
-}
+export {
+  type Theme,
+  type ThemeName,
+  type ThemeSetting,
+  THEME_NAMES,
+  THEME_SETTINGS,
+  getTheme,
+  isThemeName,
+  isThemeSetting,
+} from '../shared/utils/theme.js'

@@ -1,9 +1,10 @@
+// @ts-nocheck
 import type { ChildProcess, ExecFileException } from 'child_process'
 import { execFile, spawn } from 'child_process'
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import * as path from 'path'
-import { logEvent } from 'src/services/analytics/index.js'
+import { logEvent } from './../services/analytics/index.ts'
 import { fileURLToPath } from 'url'
 import { isInBundledMode } from './bundledMode.js'
 import { logForDebugging } from './debug.js'

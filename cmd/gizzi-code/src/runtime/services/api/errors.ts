@@ -1082,3 +1082,10 @@ export function getErrorMessageIfRefusal(
     error: 'invalid_request',
   })
 }
+
+// Auto-added export
+export const errorMessage: any = {}
+
+
+// Auto-added export
+export const isENOENT: any = {}

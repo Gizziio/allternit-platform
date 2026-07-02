@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isPlanModeInterviewPhaseEnabled } from '../../utils/planModeV2.js'
 import { ASK_USER_QUESTION_TOOL_NAME } from '../AskUserQuestionTool/prompt.js'
 

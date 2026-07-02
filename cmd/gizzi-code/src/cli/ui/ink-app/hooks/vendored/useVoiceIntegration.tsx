@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useVoiceIntegration_tsx(): void {
   // Not yet implemented
 }

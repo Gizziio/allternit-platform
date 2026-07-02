@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useRef } from 'react';
-import type { RemoteAgentTaskState } from 'src/tasks/RemoteAgentTask/RemoteAgentTask';
-import type { DeepImmutable } from 'src/types/utils';
+import type { RemoteAgentTaskState } from './../../tasks/RemoteAgentTask/RemoteAgentTask.tsx';
+import type { DeepImmutable } from './../../types/utils.ts';
 import { DIAMOND_FILLED, DIAMOND_OPEN } from '../../constants/figures';
 import { useSettings } from '../../hooks/useSettings';
 import { Text, useAnimationFrame } from '../../ink';

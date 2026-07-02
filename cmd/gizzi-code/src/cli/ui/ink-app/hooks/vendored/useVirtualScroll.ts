@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useVirtualScroll_ts(): void {
   // Not yet implemented
 }

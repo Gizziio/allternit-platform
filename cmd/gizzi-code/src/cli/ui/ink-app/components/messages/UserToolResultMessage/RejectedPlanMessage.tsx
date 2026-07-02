@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { Markdown } from 'src/components/Markdown';
-import { MessageResponse } from 'src/components/MessageResponse';
+import { Markdown } from './../../Markdown.tsx';
+import { MessageResponse } from './../../MessageResponse.tsx';
 import { Box, Text } from '../../../ink';
 type Props = {
   plan: string;

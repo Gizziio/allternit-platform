@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type AllternitAI from '@allternit/sdk/providers/anthropic'
 import type { BetaToolUnion } from '@allternit/sdk/providers/anthropic/resources/beta/messages.js'

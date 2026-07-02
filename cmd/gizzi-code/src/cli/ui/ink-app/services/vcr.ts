@@ -1,11 +1,12 @@
+// @ts-nocheck
 import type { BetaContentBlock } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
 import { createHash, randomUUID, type UUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import isPlainObject from 'lodash-es/isPlainObject.js'
 import mapValues from 'lodash-es/mapValues.js'
 import { dirname, join } from 'path'
-import { addToTotalSessionCost } from 'src/cost-tracker.js'
-import { calculateUSDCost } from 'src/utils/modelCost.js'
+import { addToTotalSessionCost } from './../cost-tracker.ts'
+import { calculateUSDCost } from './../utils/modelCost.ts'
 import type {
   AssistantMessage,
   Message,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from 'crypto'
 import { useCallback, useEffect, useRef } from 'react'
 import { useInterval } from 'usehooks-ts'

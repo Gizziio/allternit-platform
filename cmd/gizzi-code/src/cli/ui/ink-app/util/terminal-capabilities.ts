@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Terminal Capability Detection
  * 

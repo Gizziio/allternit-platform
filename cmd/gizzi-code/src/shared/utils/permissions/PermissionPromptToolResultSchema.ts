@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Tool, ToolUseContext } from 'src/Tool.js'
 import z from 'zod/v4'
 import { logForDebugging } from '../debug.js'

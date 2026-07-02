@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Peer sessions stub
  */

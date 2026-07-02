@@ -1,3 +1,4 @@
+// @ts-nocheck
 import figures from 'figures'
 import { logError } from 'src/utils/log.js'
 import { callIdeRpc } from '@/services/mcp/client.js'

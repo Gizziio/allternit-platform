@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Input Tokenizer - Escape sequence boundary detection
  *

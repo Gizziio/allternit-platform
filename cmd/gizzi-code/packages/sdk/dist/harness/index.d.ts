@@ -1,7 +1,5 @@
-/**
- * Allternit Harness - Main Entry Point
- * Unified AI interface for BYOK, Cloud, Local, and Subprocess modes
- */
+export type { HarnessErrorCode } from './errors.js';
+export { HarnessError } from './errors.js';
 import type { HarnessConfig, StreamRequest, HarnessStreamChunk, HarnessResponse, ProviderInfo, ModelInfo } from './types';
 export * from './types';
 export * from './modes';
@@ -11,6 +9,7 @@ export * from './modes';
  */
 export declare class AllternitHarness {
     private config;
+    private tierMap;
     constructor(config: HarnessConfig);
     /**
      * Validate the harness configuration
@@ -20,6 +19,11 @@ export declare class AllternitHarness {
      * Main streaming interface
      * Routes to the appropriate mode handler
      */
+    /**
+     * Resolve auto-routing: score messages and pick provider+model from tier map.
+     * Built lazily on first use; cached for the lifetime of this harness instance.
+     */
+    private resolveRoute;
     stream(request: StreamRequest): AsyncGenerator<HarnessStreamChunk>;
     /**
      * Non-streaming completion

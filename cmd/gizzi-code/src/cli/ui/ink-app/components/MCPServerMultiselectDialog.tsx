@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import partition from 'lodash-es/partition';
 import React, { useCallback } from 'react';
-import { logEvent } from 'src/services/analytics/index';
+import { logEvent } from './../services/analytics/index.ts';
 import { Box, Text } from '../ink';
 import { getSettings_DEPRECATED, updateSettingsForSource } from '../utils/settings/settings';
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint';

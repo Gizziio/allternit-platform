@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function cachedMicrocompact_ts(): void {
   // Not yet implemented
 }

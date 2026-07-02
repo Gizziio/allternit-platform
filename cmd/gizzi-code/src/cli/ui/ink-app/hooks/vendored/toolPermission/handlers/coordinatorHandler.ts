@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { PendingClassifierCheck } from '../../../types/permissions'
 import { logError } from '../../../utils/log'

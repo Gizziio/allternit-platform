@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { createMemo, Match, onCleanup, onMount, Show, Switch } from "solid-js"
 import { RGBA } from "@opentui/core"

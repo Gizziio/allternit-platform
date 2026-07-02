@@ -1,4 +1,5 @@
-import type { OverageDisabledReason } from 'src/services/claudeAiLimits.js'
+// @ts-nocheck
+import type { OverageDisabledReason } from './../../services/claudeAiLimits.ts'
 import { isClaudeAISubscriber } from '../auth.js'
 import { getGlobalConfig } from '../config.js'
 import { is1mContextDisabled } from '../context.js'

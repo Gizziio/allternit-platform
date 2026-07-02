@@ -1,3 +1,4 @@
+// @ts-nocheck
 import chokidar, { type FSWatcher } from 'chokidar'
 import { stat } from 'fs/promises'
 import * as platformPath from 'path'

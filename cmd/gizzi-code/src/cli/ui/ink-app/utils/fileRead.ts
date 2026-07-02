@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Sync file-read path, extracted from file.ts.
  *

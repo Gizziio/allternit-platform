@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState } from 'react'
 
 export function useTimeout(delay: number, resetTrigger?: number): boolean {

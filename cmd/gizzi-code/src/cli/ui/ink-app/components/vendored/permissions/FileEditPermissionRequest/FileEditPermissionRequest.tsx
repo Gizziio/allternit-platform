@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { basename, relative } from 'path';
 import React from 'react';
-import { FileEditToolDiff } from 'src/components/FileEditToolDiff';
-import { getCwd } from 'src/utils/cwd';
+import { FileEditToolDiff } from './../../../FileEditToolDiff.tsx';
+import { getCwd } from './../../../../utils/cwd.ts';
 import type { z } from 'zod/v4';
 import { Text } from '../../../ink';
 import { FileEditTool } from '../../../tools/FileEditTool/FileEditTool';

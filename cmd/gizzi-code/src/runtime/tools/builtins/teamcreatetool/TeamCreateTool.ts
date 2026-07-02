@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { z } from 'zod/v4'
 import { getSessionId } from '@/bootstrap/state.js'
 import { logEvent } from '@/services/analytics/index.js'

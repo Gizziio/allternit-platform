@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   discoverAuthorizationServerMetadata,
   discoverOAuthServerInfo,
@@ -39,7 +40,7 @@ import * as lockfile from '../../../utils/lockfile.js'
 import { logMCPDebug } from '../../../utils/log.js'
 import { getPlatform } from '../../../utils/platform.js'
 import { getSecureStorage } from '../../../utils/secureStorage/index.js'
-import { clearKeychainCache } from '../../../utils/secureStorage/macOsKeychainHelpers.js'
+import { clearKeychainCache } from '../../../shared/utils/secureStorage/macOsKeychainHelpers.js'
 import type { SecureStorageData } from '../../../utils/secureStorage/types.js'
 import { sleep } from '../../../utils/sleep.js'
 import { jsonParse, jsonStringify } from '../../../utils/slowOperations.js'

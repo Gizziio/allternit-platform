@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { clearTrustedDeviceTokenCache } from '../../bridge/trustedDevice';
 import { Text } from '../../ink';

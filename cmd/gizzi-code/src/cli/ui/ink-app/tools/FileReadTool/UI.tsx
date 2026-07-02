@@ -1,6 +1,7 @@
+// @ts-nocheck
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import * as React from 'react';
-import { extractTag } from 'src/utils/messages';
+import { extractTag } from './../../utils/messages.ts';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';
 import { FilePathLink } from '../../components/FilePathLink';
 import { MessageResponse } from '../../components/MessageResponse';

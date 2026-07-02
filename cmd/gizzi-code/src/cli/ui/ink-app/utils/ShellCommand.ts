@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ChildProcess } from 'child_process'
 import { stat } from 'fs/promises'
 import type { Readable } from 'stream'

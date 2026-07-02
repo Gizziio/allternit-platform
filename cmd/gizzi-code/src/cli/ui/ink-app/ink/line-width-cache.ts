@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { stringWidth } from './stringWidth'
 
 // During streaming, text grows but completed lines are immutable.

@@ -39,27 +39,24 @@ export const ACPMessageSchema = z.object({
         z.string(),
         z.array(ACPContentPartSchema),
     ]),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
     timestamp: z.string().datetime(),
     parentId: z.string().uuid().optional(),
 });
-// ============================================================================
-// Tool Schemas
-// ============================================================================
-export const ACPToolParameterSchema = z.object({
+export const ACPToolParameterSchema = z.lazy(() => z.object({
     type: z.string(),
     description: z.string().optional(),
     enum: z.array(z.string()).optional(),
-    properties: z.record(z.lazy(() => ACPToolParameterSchema)).optional(),
+    properties: z.record(z.string(), ACPToolParameterSchema).optional(),
     required: z.array(z.string()).optional(),
-    items: z.lazy(() => ACPToolParameterSchema).optional(),
-});
+    items: ACPToolParameterSchema.optional(),
+}));
 export const ACPToolSchema = z.object({
     name: z.string(),
     description: z.string(),
     parameters: z.object({
         type: z.literal('object'),
-        properties: z.record(ACPToolParameterSchema),
+        properties: z.record(z.string(), ACPToolParameterSchema),
         required: z.array(z.string()).optional(),
     }),
 });
@@ -103,7 +100,7 @@ export const ACPSessionSchema = z.object({
         topP: z.number().optional(),
         systemPrompt: z.string().optional(),
     }).optional(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
 });
@@ -158,7 +155,7 @@ export const ACPRegistryEntrySchema = z.object({
         scopes: z.array(z.string()).optional(),
     }),
     models: z.array(ACPModelInfoSchema),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
 });
 // ============================================================================
 // Request/Response Schemas

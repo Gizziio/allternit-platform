@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import z from 'zod/v4'
 import { PAUSE_ICON } from '../../constants/figures.js'

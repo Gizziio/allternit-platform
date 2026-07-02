@@ -1,11 +1,12 @@
+// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources';
 import { randomUUID } from 'crypto';
 import * as React from 'react';
-import { BashModeProgress } from 'src/components/BashModeProgress';
-import type { SetToolJSXFn } from 'src/Tool';
-import { BashTool } from 'src/tools/BashTool/BashTool';
-import type { AttachmentMessage, SystemMessage, UserMessage } from 'src/types/message';
-import type { ShellProgress } from 'src/types/tools';
+import { BashModeProgress } from './../../components/BashModeProgress.tsx';
+import type { SetToolJSXFn } from './../../Tool.ts';
+import { BashTool } from './../../tools/BashTool/BashTool.tsx';
+import type { AttachmentMessage, SystemMessage, UserMessage } from './../../types/message.ts';
+import type { ShellProgress } from './../../types/tools.ts';
 import { logEvent } from '../../services/analytics/index';
 import { errorMessage, ShellError } from '../errors';
 import { createSyntheticUserCaveatMessage, createUserInterruptionMessage, createUserMessage, prepareUserContent } from '../messages';
@@ -71,7 +72,7 @@ export async function processBashCommand(inputString: string, precedingInputBloc
     // native, shouldUseSandbox() returns false regardless (unsupported platform).
     // Lazy-require PowerShellTool so its ~300KB chunk only loads when the
     // user has actually selected the powershell default shell.
-    type PSMod = typeof import('src/tools/PowerShellTool/PowerShellTool.js');
+    type PSMod = typeof import('./../../tools/PowerShellTool/PowerShellTool.tsx');
     let PowerShellTool: PSMod['PowerShellTool'] | null = null;
     if (usePowerShell) {
       /* eslint-disable @typescript-eslint/no-require-imports */

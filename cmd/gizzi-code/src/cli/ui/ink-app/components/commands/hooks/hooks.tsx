@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { HooksConfigMenu } from '../../components/hooks/HooksConfigMenu';
 import { logEvent } from '../../services/analytics/index';

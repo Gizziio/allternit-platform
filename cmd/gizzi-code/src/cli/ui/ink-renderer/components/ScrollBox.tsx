@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { type PropsWithChildren, type Ref, useImperativeHandle, useRef, useState } from 'react';
 import type { Except } from 'type-fest';
 import { markScrollActivity } from '@/bootstrap/state.js';

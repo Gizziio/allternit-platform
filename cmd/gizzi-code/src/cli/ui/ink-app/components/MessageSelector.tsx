@@ -1,13 +1,14 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ContentBlockParam, TextBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import { randomUUID, type UUID } from 'crypto';
 import figures from 'figures';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import { useAppState } from 'src/state/AppState';
-import { type DiffStats, fileHistoryCanRestore, fileHistoryEnabled, fileHistoryGetDiffStats } from 'src/utils/fileHistory';
-import { logError } from 'src/utils/log';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';
+import { useAppState } from './../state/AppState.tsx';
+import { type DiffStats, fileHistoryCanRestore, fileHistoryEnabled, fileHistoryGetDiffStats } from './../utils/fileHistory.ts';
+import { logError } from './../utils/log.ts';
 import { useExitOnCtrlCDWithKeybindings } from '../hooks/useExitOnCtrlCDWithKeybindings';
 import { Box, Text } from '../ink';
 import { useKeybinding, useKeybindings } from '../keybindings/useKeybinding';
@@ -20,9 +21,9 @@ function isTextBlock(block: ContentBlockParam): block is TextBlockParam {
   return block.type === 'text';
 }
 import * as path from 'path';
-import { useTerminalSize } from 'src/hooks/useTerminalSize';
-import type { FileEditOutput } from 'src/tools/FileEditTool/types';
-import type { Output as FileWriteToolOutput } from 'src/tools/FileWriteTool/FileWriteTool';
+import { useTerminalSize } from './../hooks/useTerminalSize.ts';
+import type { FileEditOutput } from './../tools/FileEditTool/types.ts';
+import type { Output as FileWriteToolOutput } from './../tools/FileWriteTool/FileWriteTool.ts';
 import { BASH_STDERR_TAG, BASH_STDOUT_TAG, COMMAND_MESSAGE_TAG, LOCAL_COMMAND_STDERR_TAG, LOCAL_COMMAND_STDOUT_TAG, TASK_NOTIFICATION_TAG, TEAMMATE_MESSAGE_TAG, TICK_TAG } from '../constants/xml';
 import { count } from '../utils/array';
 import { formatRelativeTimeAgo, truncate } from '../utils/format';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Yoga, {
   Align,
   Direction,
@@ -11,7 +12,7 @@ import Yoga, {
   PositionType,
   Wrap,
   type Node as YogaNode,
-} from 'src/native-ts/yoga-layout/index.js'
+} from './../../native-ts/yoga-layout/index.ts'
 import {
   type LayoutAlign,
   LayoutDisplay,

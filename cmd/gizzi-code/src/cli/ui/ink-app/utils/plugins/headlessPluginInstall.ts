@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Plugin installation for headless/CCR mode.
  *

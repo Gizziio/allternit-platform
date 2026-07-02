@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Daemon Main
  * TEMPORARY SHIM

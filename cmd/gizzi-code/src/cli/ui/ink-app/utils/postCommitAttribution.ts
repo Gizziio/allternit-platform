@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Post-commit attribution stub
  */

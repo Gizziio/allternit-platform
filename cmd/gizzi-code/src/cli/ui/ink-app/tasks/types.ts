@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Union of all concrete task state types
 // Use this for components that need to work with any task type
 

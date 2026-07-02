@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { FLAG_ICON } from '../../constants/figures';
 import { Box, Text } from '../../core/ink';

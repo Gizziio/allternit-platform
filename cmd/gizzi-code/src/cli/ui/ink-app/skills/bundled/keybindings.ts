@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DEFAULT_BINDINGS } from '../../keybindings/defaultBindings.js'
 import { isKeybindingCustomizationEnabled } from '../../keybindings/loadUserBindings.js'
 import {

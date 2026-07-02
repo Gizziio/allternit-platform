@@ -5,7 +5,8 @@
  * API: https://open.bigmodel.cn/api/paas/v4
  * Docs: https://open.bigmodel.cn/dev/howuse/model
  */
-import { HarnessError } from '../../harness/types.js';
+import { HarnessError } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 export const GLM_MODELS = {
     GLM_4: 'glm-4',
     GLM_4V: 'glm-4v',

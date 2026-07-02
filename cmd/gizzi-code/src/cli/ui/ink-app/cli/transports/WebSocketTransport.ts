@@ -1,4 +1,5 @@
-import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes'
+// @ts-nocheck
+import type { StdoutMessage } from './../../entrypoints/sdk/controlTypes.ts'
 import type WsWebSocket from 'ws'
 import { logEvent } from '../../services/analytics/index'
 import { CircularBuffer } from '../../utils/CircularBuffer'

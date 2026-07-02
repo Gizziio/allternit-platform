@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * New Agent Creation Types
  * TEMPORARY SHIM

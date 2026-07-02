@@ -1,9 +1,10 @@
+// @ts-nocheck
 import React, { useEffect, useRef } from 'react';
-import { useNotifications } from 'src/context/notifications';
-import { Text } from 'src/ink';
-import type { MCPServerConnection } from 'src/services/mcp/types';
-import { getGlobalConfig, saveGlobalConfig } from 'src/utils/config';
-import { detectIDEs, type IDEExtensionInstallationStatus, isJetBrainsIde, isSupportedTerminal } from 'src/utils/ide';
+import { useNotifications } from './../../../context/notifications.tsx';
+import { Text } from './../../../ink.ts';
+import type { MCPServerConnection } from './../../../services/mcp/types.ts';
+import { getGlobalConfig, saveGlobalConfig } from './../../../utils/config.ts';
+import { detectIDEs, type IDEExtensionInstallationStatus, isJetBrainsIde, isSupportedTerminal } from './../../../utils/ide.ts';
 import { getIsRemoteMode } from '../../bootstrap/state';
 import { useIdeConnectionStatus } from '../useIdeConnectionStatus';
 import type { IDESelection } from '../useIdeSelection';

@@ -5,7 +5,7 @@ import {
   formatMessage,
   formatPart,
   formatTranscript,
-} from "../../../src/cli/cmd/tui/util/transcript"
+} from "../../../src/cli/ui/ink-app/util/transcript"
 import type { AssistantMessage, Part, UserMessage } from "@allternit/sdk"
 
 describe("transcript", () => {

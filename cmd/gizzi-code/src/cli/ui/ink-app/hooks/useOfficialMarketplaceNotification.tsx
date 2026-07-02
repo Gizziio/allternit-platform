@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import type { Notification } from '../context/notifications';
 import { Text } from '../ink';

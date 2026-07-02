@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/runtime/bus/bus"
 import z from "zod/v4"

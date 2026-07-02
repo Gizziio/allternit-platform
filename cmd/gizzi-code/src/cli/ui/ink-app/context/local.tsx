@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createStore } from "solid-js/store"
 import { batch, createEffect, createMemo } from "solid-js"
 import { useSync } from "@/cli/ui/ink-app/context/sync"

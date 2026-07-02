@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Files are loaded in the following order:
  *

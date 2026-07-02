@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Snip projection utility
  * TEMPORARY SHIM

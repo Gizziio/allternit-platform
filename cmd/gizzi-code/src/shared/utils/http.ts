@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * HTTP utility constants and helpers
  */

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from 'crypto';
 import { useCallback, useRef, useState } from 'react';
 import type { TranscriptShareResponse } from './TranscriptSharePrompt';

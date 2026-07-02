@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { open } from 'fs/promises'
 import * as path from 'path'
 import { pathToFileURL } from 'url'

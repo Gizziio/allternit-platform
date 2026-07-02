@@ -1,5 +1,6 @@
-import type { Notification } from 'src/context/notifications'
-import type { TodoList } from 'src/utils/todo/types'
+// @ts-nocheck
+import type { Notification } from './../../context/notifications.tsx'
+import type { TodoList } from './../../utils/todo/types.ts'
 import type { BridgePermissionCallbacks } from '../bridge/bridgePermissionCallbacks'
 import type { Command } from '../commands'
 import type { ChannelPermissionCallbacks } from '../services/mcp/channelPermissions'

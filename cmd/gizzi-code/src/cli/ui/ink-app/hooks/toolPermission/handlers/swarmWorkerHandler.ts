@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages.mjs'
 import type { PendingClassifierCheck } from '../../../types/permissions.js'

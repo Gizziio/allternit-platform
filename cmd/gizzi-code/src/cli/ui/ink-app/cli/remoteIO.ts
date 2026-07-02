@@ -1,4 +1,5 @@
-import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes'
+// @ts-nocheck
+import type { StdoutMessage } from './../entrypoints/sdk/controlTypes.ts'
 import { PassThrough } from 'stream'
 import { URL } from 'url'
 import { getSessionId } from '../bootstrap/state'

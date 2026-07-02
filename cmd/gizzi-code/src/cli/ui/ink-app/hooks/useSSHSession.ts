@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * REPL integration hook for `claude ssh` sessions.
  *

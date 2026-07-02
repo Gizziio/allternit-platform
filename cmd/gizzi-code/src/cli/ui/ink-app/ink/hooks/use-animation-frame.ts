@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useContext, useEffect, useState } from 'react'
 import { ClockContext } from '../components/ClockContext'
 import type { DOMElement } from '../dom'

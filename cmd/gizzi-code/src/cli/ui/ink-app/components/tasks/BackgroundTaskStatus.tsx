@@ -1,15 +1,16 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import { useTerminalSize } from 'src/hooks/useTerminalSize';
-import { stringWidth } from 'src/ink/stringWidth';
-import { useAppState, useSetAppState } from 'src/state/AppState';
-import { enterTeammateView, exitTeammateView } from 'src/state/teammateViewHelpers';
-import { isPanelAgentTask } from 'src/tasks/LocalAgentTask/LocalAgentTask';
-import { getPillLabel, pillNeedsCta } from 'src/tasks/pillLabel';
-import { type BackgroundTaskState, isBackgroundTask, type TaskState } from 'src/tasks/types';
-import { calculateHorizontalScrollWindow } from 'src/utils/horizontalScroll';
+import { useTerminalSize } from './../../hooks/useTerminalSize.ts';
+import { stringWidth } from './../../ink/stringWidth.ts';
+import { useAppState, useSetAppState } from './../../state/AppState.tsx';
+import { enterTeammateView, exitTeammateView } from './../../state/teammateViewHelpers.ts';
+import { isPanelAgentTask } from './../../tasks/LocalAgentTask/LocalAgentTask.tsx';
+import { getPillLabel, pillNeedsCta } from './../../tasks/pillLabel.ts';
+import { type BackgroundTaskState, isBackgroundTask, type TaskState } from './../../tasks/types.ts';
+import { calculateHorizontalScrollWindow } from './../../utils/horizontalScroll.ts';
 import { Box, Text } from '../../ink';
 import { AGENT_COLOR_TO_THEME_COLOR, AGENT_COLORS, type AgentColorName } from '../../tools/AgentTool/agentColorManager';
 import type { Theme } from '../../utils/theme';

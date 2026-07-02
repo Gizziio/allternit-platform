@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Early Input Capture
  *

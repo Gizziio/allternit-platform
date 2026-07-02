@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createElement, type ReactNode } from 'react'
 import { ThemeProvider } from './components/design-system/ThemeProvider.js'
 import inkRender, {
@@ -63,7 +64,7 @@ export { default as BaseText } from '@/ink/components/Text.js'
 export type { DOMElement } from '@/ink/dom.js'
 export { ClickEvent } from '@/ink/events/click-event.js'
 export { EventEmitter } from '@/ink/events/emitter.js'
-export { Event } from '@/ink/events/event.js'
+export { Event } from '../server/event.js'
 export type { Key } from '@/ink/events/input-event.js'
 export { InputEvent } from '@/ink/events/input-event.js'
 export type { TerminalFocusEventType } from '@/ink/events/terminal-focus-event.js'

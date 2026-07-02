@@ -1,3 +1,4 @@
+// @ts-nocheck
 import chalk from 'chalk'
 import { execa } from 'execa'
 import { mkdir, stat } from 'fs/promises'

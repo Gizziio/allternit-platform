@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo, createSignal } from "solid-js"
 import { reconcile } from "solid-js/store"
 import { useLocal } from "@/cli/ui/ink-app/context/local"

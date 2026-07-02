@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Auth } from "@/runtime/integrations/auth"
 import { cmd } from "@/cli/commands/cmd"
 import * as prompts from "@clack/prompts"

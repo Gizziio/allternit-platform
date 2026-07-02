@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import capitalize from 'lodash-es/capitalize';
 import * as React from 'react';

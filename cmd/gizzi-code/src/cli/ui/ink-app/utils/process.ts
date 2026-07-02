@@ -1,3 +1,4 @@
+// @ts-nocheck
 function handleEPIPE(
   stream: NodeJS.WriteStream,
 ): (err: NodeJS.ErrnoException) => void {

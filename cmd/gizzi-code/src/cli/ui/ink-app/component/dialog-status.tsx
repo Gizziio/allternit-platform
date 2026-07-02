@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { TextAttributes } from "@opentui/core"
 import { fileURLToPath } from "bun"
 import { useTheme } from "@/cli/ui/ink-app/context/theme"

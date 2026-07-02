@@ -10,7 +10,6 @@ export type {
   // Core types
   Agent,
   AgentCapabilities,
-  AgentInfo,
   AgentNotification,
   AgentRequest,
   AgentResponse,
@@ -19,31 +18,27 @@ export type {
   // Client types
   Client,
   ClientCapabilities,
-  ClientInfo,
   ClientNotification,
   ClientRequest,
   ClientResponse,
   
   // Session types
-  Session,
   SessionId,
   SessionInfo,
   SessionCapabilities,
   SessionNotification,
-  SessionStatus,
   
   // Content types
   Content,
+  ContentBlock,
   TextContent,
   ImageContent,
   AudioContent,
-  ResourceContents,
   TextResourceContents,
   BlobResourceContents,
   EmbeddedResource,
   
   // Tool types
-  Tool,
   ToolCall,
   ToolCallContent,
   ToolCallId,
@@ -109,21 +104,16 @@ export type {
   CancelNotification,
   CancelRequestNotification,
   Diff,
-  ErrorResponse,
   ExtNotification,
   ExtRequest,
   ExtResponse,
   McpCapabilities,
   McpServer,
-  Mode,
-  ModeOption,
   PlanEntry,
   PromptCapabilities,
   RequestId,
-  Resource,
   Role,
   StopReason,
-  TextEdit,
   UnstructuredCommandInput,
   Usage,
 } from '@agentclientprotocol/sdk';

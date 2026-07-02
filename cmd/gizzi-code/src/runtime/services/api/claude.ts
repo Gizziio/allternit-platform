@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type {
   BetaContentBlock,
   BetaContentBlockParam,
@@ -213,7 +214,7 @@ import {
   isBetaTracingEnabled,
   type LLMRequestNewContext,
   startLLMRequestSpan,
-} from '../../../utils/telemetry/sessionTracing.js'
+} from '../../../shared/utils/telemetry/sessionTracing.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

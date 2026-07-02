@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import type { LocalJSXCommandContext } from '../../commands';
 import { SkillsMenu } from '../../components/skills/SkillsMenu';

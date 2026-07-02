@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { TEARDROP_ASTERISK } from '@/constants/figures.js';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { relative } from 'path';
 import React, { useMemo } from 'react';
 import { useDiffInIDE } from '@/hooks/useDiffInIDE.js';

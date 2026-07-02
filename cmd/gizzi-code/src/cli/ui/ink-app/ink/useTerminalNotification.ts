@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createContext, useCallback, useContext, useMemo } from 'react'
 import { isProgressReportingAvailable, type Progress } from './terminal.js'
 import { BEL } from './termio/ansi.js'

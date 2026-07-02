@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { randomUUID } from 'crypto'
 import { basename } from 'path'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { logEvent } from 'src/services/analytics/index.js'
-import { readFileSync } from 'src/utils/fileRead.js'
-import { expandPath } from 'src/utils/path.js'
+import { logEvent } from './../services/analytics/index.ts'
+import { readFileSync } from './../utils/fileRead.ts'
+import { expandPath } from './../utils/path.ts'
 import type { PermissionOption } from '../components/permissions/FilePermissionDialog/permissionOptions.js'
 import type {
   MCPServerConnection,

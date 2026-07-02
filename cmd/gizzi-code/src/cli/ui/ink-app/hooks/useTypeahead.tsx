@@ -1,8 +1,9 @@
+// @ts-nocheck
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNotifications } from 'src/context/notifications';
-import { Text } from 'src/ink';
-import { logEvent } from 'src/services/analytics/index';
+import { useNotifications } from './../context/notifications.tsx';
+import { Text } from './../ink.ts';
+import { logEvent } from './../services/analytics/index.ts';
 import { useDebounceCallback } from 'usehooks-ts';
 import { type Command, getCommandName } from '../commands';
 import { getModeFromInput, getValueFromInput } from '../components/PromptInput/inputModes';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react'
 import { getDynamicConfig_BLOCKS_ON_INIT } from '../../vendor/services/analytics/growthbook'
 

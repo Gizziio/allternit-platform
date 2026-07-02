@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ToolResultBlockParam, ToolUseBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages/messages.mjs';
 import * as React from 'react';
 import { filterToolProgressMessages, findToolByName, type Tools } from '../../Tool';

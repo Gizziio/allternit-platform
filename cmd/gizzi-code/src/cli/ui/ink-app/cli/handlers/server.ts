@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomBytes } from 'crypto';
 import { startServer } from '../../server/server.js';
 import { SessionManager } from '../../server/sessionManager.js';

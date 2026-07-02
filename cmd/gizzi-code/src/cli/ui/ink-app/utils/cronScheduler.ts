@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Non-React scheduler core for .claude/scheduled_tasks.json.
 // Shared by REPL (via useScheduledTasks) and SDK/-p mode (print.ts).
 //

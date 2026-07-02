@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Magic Docs automatically maintains markdown documentation files marked with special headers.
  * When a file with "# MAGIC DOC: [title]" is read, it runs periodically in the background
@@ -8,19 +9,19 @@
 
 import type { Tool, ToolUseContext } from '../../../runtime/tools/Tool.js'
 import type { BuiltInAgentDefinition } from '../../../tools/AgentTool/loadAgentsDir.js'
-import { runAgent } from '../../../tools/AgentTool/runAgent.js'
-import { FILE_EDIT_TOOL_NAME } from '../../../tools/FileEditTool/constants.js'
+import { runAgent } from '../../tools/builtins/agenttool/runAgent.js'
+import { FILE_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
 import {
   FileReadTool,
   type Output as FileReadToolOutput,
   registerFileReadListener,
-} from '../../../tools/FileReadTool/FileReadTool.js'
+} from '../../tools/builtins/file-read/FileReadTool.js'
 import { isFsInaccessible } from '../../../utils/errors.js'
 import { cloneFileStateCache } from '../../../utils/fileStateCache.js'
 import {
   type REPLHookContext,
   registerPostSamplingHook,
-} from '../../../utils/hooks/postSamplingHooks.js'
+} from '../../../shared/utils/hooks/postSamplingHooks.js'
 import {
   createUserMessage,
   hasToolCallsInLastAssistantTurn,

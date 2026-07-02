@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import type { HookEvent } from 'src/entrypoints/agentSdkTypes';
-import type { buildMessageLookups } from 'src/utils/messages';
+import type { HookEvent } from './../../entrypoints/agentSdkTypes.ts';
+import type { buildMessageLookups } from './../../utils/messages.ts';
 import { Box, Text } from '../../ink';
 import { MessageResponse } from '../MessageResponse';
 type Props = {

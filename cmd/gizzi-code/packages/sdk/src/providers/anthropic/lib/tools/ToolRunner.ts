@@ -1,6 +1,6 @@
 import { BetaRunnableTool } from './BetaRunnableTool';
 import { ToolError } from './ToolError';
-import { Anthropic } from '../..';
+import { AllternitAI as Anthropic } from '../..';
 import { AllternitError } from '../../core/error';
 import { BetaMessage, BetaMessageParam, BetaToolUnion, MessageCreateParams } from '../../resources/beta';
 import { BetaMessageStream } from '../BetaMessageStream';
@@ -100,7 +100,7 @@ export class BetaToolRunner<Stream extends boolean> {
             this.#message = stream.finalMessage();
             // Make sure that this promise doesn't throw before we get the option to do something about it.
             // Error will be caught when we call await this.#message ultimately
-            this.#message.catch(() => {});
+            this.#message!.catch(() => {});
             yield stream as any;
           } else {
             this.#message = this.client.beta.messages.create({ ...params, stream: false });
@@ -108,7 +108,7 @@ export class BetaToolRunner<Stream extends boolean> {
           }
 
           if (!this.#mutated) {
-            const { role, content } = await this.#message;
+            const { role, content } = await this.#message!;
             this.#state.params.messages.push({ role, content });
           }
 

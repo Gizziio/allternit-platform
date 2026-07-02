@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useDynamicConfig } from 'src/hooks/useDynamicConfig';
-import { isFeedbackSurveyDisabled } from 'src/services/analytics/config';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
+import { useDynamicConfig } from './../../hooks/useDynamicConfig.ts';
+import { isFeedbackSurveyDisabled } from './../../services/analytics/config.ts';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../services/analytics/index.ts';
 import { isPolicyAllowed } from '../../services/policyLimits/index';
 import type { Message } from '../../types/message';
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config';

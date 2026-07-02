@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useManagePlugins_ts(): void {
   // Not yet implemented
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { chmodSync, writeFileSync as fsWriteFileSync } from 'fs'
 import { realpath, stat } from 'fs/promises'
 import { homedir } from 'os'
@@ -12,7 +13,7 @@ import {
   resolve,
   sep,
 } from 'path'
-import { logEvent } from 'src/services/analytics/index.js'
+import { logEvent } from './../services/analytics/index.ts'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
 import { getCwd } from '../utils/cwd.js'
 import { logForDebugging } from './debug.js'

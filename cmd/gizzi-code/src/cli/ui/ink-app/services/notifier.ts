@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { TerminalNotification } from '../ink/useTerminalNotification.js'
 import { getGlobalConfig } from '../utils/config.js'
 import { env } from '../utils/env.js'

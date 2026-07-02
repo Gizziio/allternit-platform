@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useSyncExternalStore } from 'react'
 import type { QueuedCommand } from '../types/textInputTypes'
 import {

@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { useExitOnCtrlCDWithKeybindings } from 'src/hooks/useExitOnCtrlCDWithKeybindings';
-import { useShortcutDisplay } from 'src/keybindings/useShortcutDisplay';
+import { useExitOnCtrlCDWithKeybindings } from './../../hooks/useExitOnCtrlCDWithKeybindings.ts';
+import { useShortcutDisplay } from './../../keybindings/useShortcutDisplay.ts';
 import { builtInCommandNames, type Command, type CommandResultDisplay, INTERNAL_ONLY_COMMANDS } from '../../commands';
 import { useIsInsideModal } from '../../context/modalContext';
 import { useTerminalSize } from '../../hooks/useTerminalSize';

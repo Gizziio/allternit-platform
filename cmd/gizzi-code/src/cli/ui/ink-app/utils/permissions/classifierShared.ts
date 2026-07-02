@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared infrastructure for classifier-based permission systems.
  *

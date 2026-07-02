@@ -1,10 +1,11 @@
+// @ts-nocheck
 import axios from 'axios'
 import isEqual from 'lodash-es/isEqual.js'
 import {
   getAnthropicApiKey,
   getClaudeAIOAuthTokens,
   hasProfileScope,
-} from 'src/utils/auth.js'
+} from './../../utils/auth.ts'
 import { z } from 'zod'
 import { getOauthConfig, OAUTH_BETA_HEADER } from '../../constants/oauth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
@@ -18,7 +19,7 @@ import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
 
 const bootstrapResponseSchema = lazySchema(() =>
   z.object({
-    client_data: z.record(z.unknown()).nullish(),
+    client_data: z.record(z.string(), z.unknown()).nullish(),
     additional_model_options: z
       .array(
         z

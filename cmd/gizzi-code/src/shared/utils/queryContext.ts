@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared helpers for building the API cache-key prefix (systemPrompt,
  * userContext, systemContext) for query() calls.
@@ -9,7 +10,7 @@
  * import from here (QueryEngine.ts, cli/print.ts).
  */
 
-import type { Command } from '../../cli/commands.js'
+import type { Command } from '../../runtime/verification/cli/commands.js'
 import { getSystemPrompt } from '@/constants/prompts.js'
 import { getSystemContext, getUserContext } from '../../runtime/context/context.js'
 import type { MCPServerConnection } from '../../runtime/services/mcp/types.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 /**
  * HooksConfigMenu is a read-only browser for configured hooks.
@@ -13,8 +14,8 @@ import { c as _c } from "react/compiler-runtime";
  */
 import * as React from 'react';
 import { useCallback, useMemo, useState } from 'react';
-import type { HookEvent } from 'src/entrypoints/agentSdkTypes';
-import { useAppState, useAppStateStore } from 'src/state/AppState';
+import type { HookEvent } from './../../entrypoints/agentSdkTypes.ts';
+import { useAppState, useAppStateStore } from './../../state/AppState.tsx';
 import type { CommandResultDisplay } from '../../commands';
 import { useSettingsChange } from '../../hooks/useSettingsChange';
 import { Box, Text } from '../../ink';

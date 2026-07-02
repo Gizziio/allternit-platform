@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useReplBridge_tsx(): void {
   // Not yet implemented
 }

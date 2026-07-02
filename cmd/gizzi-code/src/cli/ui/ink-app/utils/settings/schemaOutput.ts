@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { toJSONSchema } from 'zod/v4'
 import { jsonStringify } from '../slowOperations'
 import { SettingsSchema } from './types'

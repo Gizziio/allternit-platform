@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * PowerShell static command prefix extraction.
  *

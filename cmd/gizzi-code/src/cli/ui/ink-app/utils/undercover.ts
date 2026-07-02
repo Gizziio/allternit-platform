@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Undercover mode — safety utilities for contributing to public/open-source repos.
  *

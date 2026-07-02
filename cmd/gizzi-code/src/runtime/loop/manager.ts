@@ -6,6 +6,51 @@ import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { mergeDeep } from "remeda"
 import * as AgentWorkspaceLoader from "@/runtime/workspace/workspace-loader"
 
+const HarnessConfigInput = z.object({
+  mode: z.enum(["byok", "cloud", "local", "subprocess"]),
+  byok: z
+    .object({
+      anthropic: z
+        .object({
+          apiKey: z.string(),
+          baseURL: z.string().optional(),
+        })
+        .optional(),
+      openai: z
+        .object({
+          apiKey: z.string(),
+          baseURL: z.string().optional(),
+        })
+        .optional(),
+      google: z
+        .object({
+          apiKey: z.string(),
+          baseURL: z.string().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  cloud: z
+    .object({
+      baseURL: z.string(),
+      accessToken: z.string(),
+      refreshToken: z.string().optional(),
+    })
+    .optional(),
+  local: z
+    .object({
+      baseURL: z.string(),
+    })
+    .optional(),
+  subprocess: z
+    .object({
+      command: z.string(),
+      cwd: z.string().optional(),
+      env: z.record(z.string(), z.string()).optional(),
+    })
+    .optional(),
+})
+
 export namespace AgentManager {
   const log = Log.create({ service: "agent-manager" })
 
@@ -28,6 +73,7 @@ export namespace AgentManager {
     steps: z.number().int().positive().optional(),
     permission: z.record(z.string(), z.any()).optional(),
     options: z.record(z.string(), z.any()).optional(),
+    harness: HarnessConfigInput.optional(),
   })
   export type AgentInput = z.infer<typeof AgentInput>
 
@@ -60,6 +106,7 @@ export namespace AgentManager {
       options: input.options ?? {},
       permission: PermissionNext.merge(defaults, userPerms),
       native: false,
+      harness: input.harness,
     }
 
     const updatedAgents = {
@@ -104,6 +151,7 @@ export namespace AgentManager {
       ...(input.steps !== undefined && { steps: input.steps }),
       ...(input.permission !== undefined && { permission: input.permission }),
       ...(input.options !== undefined && { options: mergeDeep(currentConfig.options ?? {}, input.options) }),
+      ...(input.harness !== undefined && { harness: input.harness }),
     }
 
     await Config.updateGlobal({
@@ -220,6 +268,7 @@ export namespace AgentManager {
     if (agent.topP !== undefined) config.top_p = agent.topP
     if (agent.color) config.color = agent.color
     if (agent.steps) config.steps = agent.steps
+    if (agent.harness) config.harness = agent.harness
 
     return config
   }

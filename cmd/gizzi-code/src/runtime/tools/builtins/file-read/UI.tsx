@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import * as React from 'react';
 import { extractTag } from 'src/utils/messages.js';

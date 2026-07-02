@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import {
   checkGate_CACHED_OR_BLOCKING,

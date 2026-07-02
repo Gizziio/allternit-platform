@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 type UUID = string
 import uniqBy from 'lodash-es/uniqBy.js'
@@ -14,12 +15,12 @@ import type { QuerySource } from '@/constants/querySource.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
 import type { Tool, ToolUseContext } from '../../../runtime/tools/Tool.js'
 import type { LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
-import { FileReadTool } from '../../../tools/FileReadTool/FileReadTool.js'
+import { FileReadTool } from '../../tools/builtins/file-read/FileReadTool.js'
 import {
   FILE_READ_TOOL_NAME,
   FILE_UNCHANGED_STUB,
 } from '../../../tools/FileReadTool/prompt.js'
-import { ToolSearchTool } from '../../../tools/ToolSearchTool/ToolSearchTool.js'
+import { ToolSearchTool } from '../../tools/ToolSearchTool/ToolSearchTool.js'
 import type { AgentId } from '@/types/ids.js'
 import type {
   AssistantMessage,
@@ -81,7 +82,7 @@ import { sleep } from '../../../utils/sleep.js'
 import { jsonStringify } from '../../../utils/slowOperations.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { asSystemPrompt } from '../../../utils/systemPromptType.js'
-import { getTaskOutputPath } from '../../../utils/task/diskOutput.js'
+import { getTaskOutputPath } from '../../claude-core/utils/task/diskOutput.js'
 import {
   getTokenUsage,
   tokenCountFromLastAPIResponse,

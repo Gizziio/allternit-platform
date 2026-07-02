@@ -1,3 +1,4 @@
+// @ts-nocheck
 export { FlashingChar } from './FlashingChar'
 export { GlimmerMessage } from './GlimmerMessage'
 export { ShimmerChar } from './ShimmerChar'

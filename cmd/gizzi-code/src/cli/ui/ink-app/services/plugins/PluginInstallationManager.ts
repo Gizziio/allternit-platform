@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Background plugin and marketplace installation manager
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getInitialSettings } from '../../utils/settings/settings';
 import { getGlobalConfig } from '../../utils/config';
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled';

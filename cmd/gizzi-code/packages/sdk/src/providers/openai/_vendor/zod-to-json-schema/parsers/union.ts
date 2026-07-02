@@ -53,24 +53,29 @@ export function parseUnionDef(
   } else if (options.every((x) => x._def.typeName === 'ZodLiteral' && !x.description)) {
     // all options literals
 
-    const types = options.reduce((acc: JsonSchema7Primitive[], x: { _def: ZodLiteralDef }) => {
-      const type = typeof x._def.value;
-      switch (type) {
-        case 'string':
-        case 'number':
-        case 'boolean':
-          return [...acc, type];
-        case 'bigint':
-          return [...acc, 'integer' as const];
-        case 'object':
-          if (x._def.value === null) return [...acc, 'null' as const];
-        case 'symbol':
-        case 'undefined':
-        case 'function':
-        default:
-          return acc;
-      }
-    }, []);
+    const types: JsonSchema7Primitive[] = options.reduce(
+      (acc: JsonSchema7Primitive[], x: { _def: ZodLiteralDef }): JsonSchema7Primitive[] => {
+        const type = typeof x._def.value;
+        switch (type) {
+          case 'string':
+          case 'number':
+          case 'boolean':
+            return [...acc, type];
+          case 'bigint':
+            return [...acc, 'integer' as const];
+          case 'object':
+            if (x._def.value === null) return [...acc, 'null' as const];
+            break;
+          case 'symbol':
+          case 'undefined':
+          case 'function':
+          default:
+            break;
+        }
+        return acc;
+      },
+      [],
+    );
 
     if (types.length === options.length) {
       // all the literals are primitive, as far as null can be considered primitive

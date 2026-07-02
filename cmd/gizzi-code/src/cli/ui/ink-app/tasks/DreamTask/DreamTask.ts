@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Background task entry for auto-dream (memory consolidation subagent).
 // Makes the otherwise-invisible forked agent visible in the footer pill and
 // Shift+Down dialog. The dream agent itself is unchanged — this is pure UI

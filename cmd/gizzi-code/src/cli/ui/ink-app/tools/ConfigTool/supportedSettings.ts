@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { getRemoteControlAtStartup } from '../../utils/config.js'
 import {

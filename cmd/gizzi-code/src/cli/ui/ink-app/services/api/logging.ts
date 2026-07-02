@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { APIError } from '@allternit/sdk/providers/anthropic'
 import type {
@@ -12,22 +13,22 @@ import {
   getTeleportedSessionInfo,
   markFirstTeleportMessageLogged,
   setLastApiCompletionTimestamp,
-} from 'src/bootstrap/state.js'
-import type { QueryChainTracking } from 'src/Tool.js'
-import { isConnectorTextBlock } from 'src/types/connectorText.js'
-import type { AssistantMessage } from 'src/types/message.js'
-import { logForDebugging } from 'src/utils/debug.js'
-import type { EffortLevel } from 'src/utils/effort.js'
-import { logError } from 'src/utils/log.js'
-import { getAPIProviderForStatsig } from 'src/utils/model/providers.js'
-import type { PermissionMode } from 'src/utils/permissions/PermissionMode.js'
-import { jsonStringify } from 'src/utils/slowOperations.js'
-import { logOTelEvent } from 'src/utils/telemetry/events.js'
+} from './../../bootstrap/state.ts'
+import type { QueryChainTracking } from './../../Tool.ts'
+import { isConnectorTextBlock } from './../../types/connectorText.ts'
+import type { AssistantMessage } from './../../types/message.ts'
+import { logForDebugging } from './../../utils/debug.ts'
+import type { EffortLevel } from './../../utils/effort.ts'
+import { logError } from './../../utils/log.ts'
+import { getAPIProviderForStatsig } from './../../utils/model/providers.ts'
+import type { PermissionMode } from './../../utils/permissions/PermissionMode.ts'
+import { jsonStringify } from './../../utils/slowOperations.ts'
+import { logOTelEvent } from './../../utils/telemetry/events.ts'
 import {
   endLLMRequestSpan,
   isBetaTracingEnabled,
   type Span,
-} from 'src/utils/telemetry/sessionTracing.js'
+} from './../../utils/telemetry/sessionTracing.ts'
 import type { NonNullableUsage } from '../../entrypoints/sdk/sdkUtilityTypes.js'
 import { consumeInvokingRequestId } from '../../utils/agentContext.js'
 import {

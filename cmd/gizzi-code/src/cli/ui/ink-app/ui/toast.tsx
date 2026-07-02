@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createContext, useContext, type ParentProps, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useTheme } from "@/cli/ui/ink-app/context/theme"

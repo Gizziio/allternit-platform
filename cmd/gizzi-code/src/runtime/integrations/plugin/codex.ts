@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Hooks, PluginInput } from "@allternit/plugin"
 import { Log } from "@/shared/util/log"
 import { Installation } from "@/shared/installation"

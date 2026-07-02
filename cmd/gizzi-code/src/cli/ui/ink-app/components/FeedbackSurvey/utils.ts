@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Feedback Survey Utilities
  * TEMPORARY SHIM

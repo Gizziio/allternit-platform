@@ -86,10 +86,17 @@ export interface Tool {
     };
 }
 export interface StreamRequest {
-    /** Provider identifier: 'anthropic', 'openai', 'google', 'ollama', etc. */
-    provider: string;
-    /** Model identifier */
-    model: string;
+    /**
+     * Provider identifier: 'anthropic', 'openai', 'google', etc.
+     * Pass 'auto' or omit entirely to let the harness route to the cheapest
+     * model capable of handling this request.
+     */
+    provider?: string;
+    /**
+     * Model identifier. Ignored when provider is 'auto' or omitted —
+     * the router picks the model.
+     */
+    model?: string;
     /** Messages in the conversation */
     messages: Message[];
     /** Sampling temperature (0.0 - 1.0) */
@@ -156,5 +163,10 @@ export interface SSEEvent {
     event: string | null;
     data: string;
 }
-export { HarnessError, HarnessErrorCode } from './errors.js';
+export { HarnessError } from './errors.js';
+export type { HarnessErrorCode } from './errors.js';
+/** Alias for non-streaming harness responses. */
+export type StreamResponse = HarnessResponse;
+/** Alias for the configured harness operation mode. */
+export type HarnessMode = HarnessConfig['mode'];
 //# sourceMappingURL=types.d.ts.map

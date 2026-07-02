@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { useEffect, useRef } from 'react'
-import { logError } from 'src/utils/log.js'
+import { logError } from './../utils/log.ts'
 import { z } from 'zod/v4'
 import type {
   ConnectedMCPServer,

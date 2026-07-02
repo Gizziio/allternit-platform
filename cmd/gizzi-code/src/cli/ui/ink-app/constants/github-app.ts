@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const PR_TITLE = 'Add Claude Code GitHub Workflow'
 
 export const GITHUB_ACTION_SETUP_DOCS_URL =

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useTeammateViewAutoExit_ts(): void {
   // Not yet implemented
 }

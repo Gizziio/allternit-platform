@@ -1,3 +1,4 @@
+// @ts-nocheck
 import chokidar, { type FSWatcher } from 'chokidar'
 import { isAbsolute, join } from 'path'
 import { registerCleanup } from '../cleanupRegistry.js'

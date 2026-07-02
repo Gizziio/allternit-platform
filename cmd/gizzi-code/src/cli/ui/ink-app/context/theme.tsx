@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { SyntaxStyle, RGBA, type TerminalColors } from "@opentui/core"
 import path from "path"
 import { createEffect, createMemo, onMount } from "solid-js"

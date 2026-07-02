@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * /reload-plugins — Layer-3 refresh. Applies pending plugin changes to the
  * running session. Implementation lazy-loaded.

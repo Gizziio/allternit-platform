@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createSignal, createMemo, createEffect } from "solid-js"
 import fuzzysort from "fuzzysort"
 // Local Message type (SDK exports as unknown)

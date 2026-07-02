@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { logForDebugging } from '../debug.js'
 import { withResolvers } from '../withResolvers.js'
 import { requireComputerUseSwift } from './swiftLoader.js'

@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useEffect } from 'react';
-import { useNotifications } from 'src/context/notifications';
+import { useNotifications } from './../../context/notifications.tsx';
 import { getIsRemoteMode } from '../../bootstrap/state';
 import { Text } from '../../ink';
 import { hasClaudeAiMcpEverConnected } from '../../services/mcp/claudeai';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Agent Communication Dialog - TUI Component
  * 

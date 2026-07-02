@@ -1,1 +1,2 @@
-export * from '../../tools/AgentTool/loadAgentsDir.ts.js'
+// @ts-nocheck
+export * from '../../../tools/AgentTool/loadAgentsDir.js'

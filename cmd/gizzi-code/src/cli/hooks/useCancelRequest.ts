@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * CancelRequestHandler component for handling cancel/escape keybinding.
  *

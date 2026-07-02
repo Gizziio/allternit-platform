@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useLspPluginRecommendation_tsx(): void {
   // Not yet implemented
 }

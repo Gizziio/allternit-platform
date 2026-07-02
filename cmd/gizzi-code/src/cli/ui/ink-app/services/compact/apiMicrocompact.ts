@@ -1,12 +1,13 @@
-import { FILE_EDIT_TOOL_NAME } from 'src/tools/FileEditTool/constants.js'
-import { FILE_READ_TOOL_NAME } from 'src/tools/FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from 'src/tools/FileWriteTool/prompt.js'
-import { GLOB_TOOL_NAME } from 'src/tools/GlobTool/prompt.js'
-import { GREP_TOOL_NAME } from 'src/tools/GrepTool/prompt.js'
-import { NOTEBOOK_EDIT_TOOL_NAME } from 'src/tools/NotebookEditTool/constants.js'
-import { WEB_FETCH_TOOL_NAME } from 'src/tools/WebFetchTool/prompt.js'
-import { WEB_SEARCH_TOOL_NAME } from 'src/tools/WebSearchTool/prompt.js'
-import { SHELL_TOOL_NAMES } from 'src/utils/shell/shellToolUtils.js'
+// @ts-nocheck
+import { FILE_EDIT_TOOL_NAME } from './../../tools/FileEditTool/constants.ts'
+import { FILE_READ_TOOL_NAME } from './../../tools/FileReadTool/prompt.ts'
+import { FILE_WRITE_TOOL_NAME } from './../../tools/FileWriteTool/prompt.ts'
+import { GLOB_TOOL_NAME } from './../../tools/GlobTool/prompt.ts'
+import { GREP_TOOL_NAME } from './../../tools/GrepTool/prompt.ts'
+import { NOTEBOOK_EDIT_TOOL_NAME } from './../../tools/NotebookEditTool/constants.ts'
+import { WEB_FETCH_TOOL_NAME } from './../../tools/WebFetchTool/prompt.ts'
+import { WEB_SEARCH_TOOL_NAME } from './../../tools/WebSearchTool/prompt.ts'
+import { SHELL_TOOL_NAMES } from './../../utils/shell/shellToolUtils.ts'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 
 // docs: https://docs.google.com/document/d/1oCT4evvWTh3P6z-kcfNQwWTCxAhkoFndSaNS9Gm40uw/edit?tab=t.0

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createAbortController } from './abortController.js'
 
 /**

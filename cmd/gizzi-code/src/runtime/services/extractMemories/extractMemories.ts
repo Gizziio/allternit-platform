@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Extracts durable memories from the current session transcript
  * and writes them to the auto-memory directory (~/.claude/projects/<path>/memory/).
@@ -28,8 +29,8 @@ import {
   isAutoMemPath,
 } from '../../memdir/paths.js'
 import type { Tool } from '../../../runtime/tools/Tool.js'
-import { BASH_TOOL_NAME } from '../../../tools/BashTool/toolName.js'
-import { FILE_EDIT_TOOL_NAME } from '../../../tools/FileEditTool/constants.js'
+import { BASH_TOOL_NAME } from '../../tools/builtins/bash/toolName.js'
+import { FILE_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
 import { FILE_READ_TOOL_NAME } from '../../../tools/FileReadTool/prompt.js'
 import { FILE_WRITE_TOOL_NAME } from '../../../tools/FileWriteTool/prompt.js'
 import { GLOB_TOOL_NAME } from '../../../tools/GlobTool/prompt.js'
@@ -48,7 +49,7 @@ import {
   createCacheSafeParams,
   runForkedAgent,
 } from '../../../utils/forkedAgent.js'
-import type { REPLHookContext } from '../../../utils/hooks/postSamplingHooks.js'
+import type { REPLHookContext } from '../../../shared/utils/hooks/postSamplingHooks.js'
 import {
   createMemorySavedMessage,
   createUserMessage,

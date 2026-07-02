@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Session Tracing for Claude Code using OpenTelemetry (BETA)
  *

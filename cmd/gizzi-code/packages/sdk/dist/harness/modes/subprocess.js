@@ -28,7 +28,7 @@ export async function* streamFromSubprocess(config, request) {
         const [cmd, ...cmdArgs] = args;
         // Build prompt from messages
         const prompt = buildPrompt(request.messages);
-        // Spawn subprocess using Bun.spawn if available, otherwise use Node child_process
+        // Spawn subprocess using Bun!.spawn if available, otherwise use Node child_process
         yield* spawnAndStream(cmd, cmdArgs, prompt, config, timeout, signal);
     }
     catch (error) {
@@ -51,8 +51,8 @@ export async function* streamFromSubprocess(config, request) {
  * Spawn subprocess and stream output
  */
 async function* spawnAndStream(cmd, args, prompt, config, timeout, signal) {
-    // Check if Bun.spawn is available
-    if (typeof Bun !== 'undefined' && Bun.spawn) {
+    // Check if Bun!.spawn is available
+    if (typeof Bun !== 'undefined') {
         yield* spawnWithBun(cmd, args, prompt, config, timeout, signal);
     }
     else {
@@ -60,7 +60,7 @@ async function* spawnAndStream(cmd, args, prompt, config, timeout, signal) {
     }
 }
 /**
- * Spawn subprocess using Bun.spawn
+ * Spawn subprocess using Bun!.spawn
  */
 async function* spawnWithBun(cmd, args, prompt, config, timeout, signal) {
     // Create abort controller for timeout
@@ -224,8 +224,8 @@ export async function executeSubprocess(config, messages, signal) {
         throw new AllternitError('Empty command provided for subprocess mode');
     }
     const [cmd, ...cmdArgs] = args;
-    // Use Bun.spawn if available
-    if (typeof Bun !== 'undefined' && Bun.spawn) {
+    // Use Bun!.spawn if available
+    if (typeof Bun !== 'undefined') {
         const abortController = new AbortController();
         const timeoutId = setTimeout(() => abortController.abort(), timeout);
         if (signal) {

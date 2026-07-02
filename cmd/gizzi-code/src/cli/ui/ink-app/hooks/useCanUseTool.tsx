@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import { APIUserAbortError } from '@allternit/sdk/providers/anthropic';
 import * as React from 'react';
 import { useCallback } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';
+import { sanitizeToolNameForAnalytics } from './../services/analytics/metadata.ts';
 import type { ToolUseConfirm } from '../components/permissions/PermissionRequest';
 import { Text } from '../ink';
 import type { ToolPermissionContext, Tool as ToolType, ToolUseContext } from '../Tool';

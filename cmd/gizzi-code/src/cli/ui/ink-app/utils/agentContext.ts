@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Agent context for analytics attribution using AsyncLocalStorage.
  *

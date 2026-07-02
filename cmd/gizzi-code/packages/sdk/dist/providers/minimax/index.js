@@ -5,7 +5,8 @@
  * API: https://api.minimax.chat/v1
  * Docs: https://platform.minimaxi.com/document/ChatCompletion
  */
-import { HarnessError } from '../../harness/types.js';
+import { HarnessError } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 export const MINIMAX_MODELS = {
     ABA5_5: 'abab5.5-chat',
     ABA5_5S: 'abab5.5s-chat',

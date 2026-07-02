@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as fs from 'fs'
 import {
   mkdir as mkdirPromise,

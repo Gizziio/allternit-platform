@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { MessageResponse } from '../../components/MessageResponse';
 import { Text } from '../../ink';

@@ -1,3 +1,4 @@
+// @ts-ignore missing module tools/AgentTool/constants
 import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js'
 import { registerBundledSkill } from '../bundledSkills.js'
 

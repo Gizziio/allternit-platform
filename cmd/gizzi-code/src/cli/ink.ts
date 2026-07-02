@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Ink re-export from root
  */

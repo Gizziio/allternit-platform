@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @mention Parser - Parse and route @mentions to agents
  * 

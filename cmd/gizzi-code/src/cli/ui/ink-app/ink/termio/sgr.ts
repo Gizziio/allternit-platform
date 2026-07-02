@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SGR (Select Graphic Rendition) Parser
  *

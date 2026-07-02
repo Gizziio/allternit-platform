@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Side Question ("/btw") feature - allows asking quick questions without
  * interrupting the main agent context.

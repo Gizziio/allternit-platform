@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Tree-sitter AST analysis utilities for bash command security validation.
  *

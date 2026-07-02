@@ -33,11 +33,11 @@ export {
 export type {
   WorkspaceFile,
   TrustTier,
-  ScheduledTask,
+  ScheduledTask as WorkspaceScheduledTask,
   ToolDefinition,
   ContextPack,
   WorkspaceSession,
-  MessageRole,
+  MessageRole as WorkspaceMessageRole,
 } from './workspace/types';
 
 // Workspace Loader (NEW)

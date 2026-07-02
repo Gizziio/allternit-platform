@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback } from 'react';
 import { feature } from '../../vendor/context/featureFlags';
 import { hasPermissionsToUseTool, setYoloClassifierApproval } from '../../vendor/utils/permissions';

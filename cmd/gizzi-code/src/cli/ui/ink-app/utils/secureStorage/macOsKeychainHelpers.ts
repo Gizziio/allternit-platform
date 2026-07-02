@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Lightweight helpers shared between keychainPrefetch.ts and
  * macOsKeychainStorage.ts.
@@ -16,7 +17,7 @@
 
 import { createHash } from 'crypto'
 import { userInfo } from 'os'
-import { getOauthConfig } from 'src/constants/oauth.js'
+import { getOauthConfig } from './../../constants/oauth.ts'
 import { getClaudeConfigHomeDir } from '../envUtils.js'
 import type { SecureStorageData } from './types.js'
 

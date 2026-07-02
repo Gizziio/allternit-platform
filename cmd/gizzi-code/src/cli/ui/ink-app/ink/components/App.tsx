@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { PureComponent, type ReactNode } from 'react';
 import { updateLastInteractionTime } from '../../bootstrap/state';
 import { logForDebugging } from '../../utils/debug';

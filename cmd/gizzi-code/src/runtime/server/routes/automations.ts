@@ -1,0 +1,431 @@
+// @ts-nocheck
+import { Hono } from "hono"
+import { lazy } from "@/shared/util/lazy"
+import { Database } from "@/runtime/session/storage/db"
+import { RoutineTable, LoopTable, GoalTable } from "@/runtime/session/session.sql"
+import { eq } from "drizzle-orm"
+import { RoutineEngine } from "@/runtime/automation/routine-engine"
+import { LoopEngine } from "@/runtime/automation/loop-engine"
+import { GoalEngine } from "@/runtime/automation/goal-engine"
+import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
+import { errors } from "@/runtime/server/error"
+import z from "zod/v4"
+import crypto from "crypto"
+
+const RoutineCreateSchema = z.object({
+  id: z.string().optional(),
+  agent_id: z.string().optional(),
+  name: z.string(),
+  steps: z.array(z.object({ command: z.string(), status: z.string() })).default([]),
+  trigger: z.string().optional(),
+  schedule: z.string().optional(),
+})
+
+const RoutineUpdateSchema = z.object({
+  agent_id: z.string().optional(),
+  name: z.string().optional(),
+  steps: z.array(z.object({ command: z.string(), status: z.string() })).optional(),
+  trigger: z.string().optional(),
+  schedule: z.string().optional(),
+  state: z.string().optional(),
+})
+
+const LoopCreateSchema = z.object({
+  id: z.string().optional(),
+  agent_id: z.string().optional(),
+  command: z.string(),
+  exit_condition: z.string().optional(),
+  max_iterations: z.number().default(10),
+})
+
+const LoopUpdateSchema = z.object({
+  agent_id: z.string().optional(),
+  command: z.string().optional(),
+  exit_condition: z.string().optional(),
+  max_iterations: z.number().optional(),
+  state: z.string().optional(),
+})
+
+const GoalCreateSchema = z.object({
+  id: z.string().optional(),
+  agent_id: z.string().optional(),
+  objective: z.string(),
+})
+
+const GoalUpdateSchema = z.object({
+  agent_id: z.string().optional(),
+  objective: z.string().optional(),
+  milestones: z.array(z.any()).optional(),
+  validations: z.array(z.any()).optional(),
+  state: z.string().optional(),
+  progress: z.number().optional(),
+})
+
+const IdParamSchema = z.object({
+  id: z.string(),
+})
+
+export const AutomationsRoutes = lazy(() =>
+  new Hono()
+    // Routines CRUD
+    .get(
+      "/routines",
+      describeRoute({
+        summary: "List routines",
+        description: "Get all automation routines",
+        operationId: "automation.routines.list",
+        responses: {
+          200: {
+            description: "List of routines",
+            content: { "application/json": { schema: resolver(z.any()) } },
+          },
+        },
+      }),
+      async (c) => {
+        const rows = Database.use((db) => db.select().from(RoutineTable).all())
+        return c.json(rows)
+      },
+    )
+    .post(
+      "/routines",
+      describeRoute({
+        summary: "Create routine",
+        description: "Create a new automation routine",
+        operationId: "automation.routines.create",
+        responses: {
+          201: {
+            description: "Routine created",
+            content: { "application/json": { schema: resolver(z.any()) } },
+          },
+          ...errors(400),
+        },
+      }),
+      validator("json", RoutineCreateSchema),
+      async (c) => {
+        const body = c.req.valid("json")
+        const routine = {
+          id: body.id || crypto.randomUUID(),
+          agent_id: body.agent_id || null,
+          name: body.name,
+          steps: body.steps || [],
+          trigger: body.trigger || null,
+          schedule: body.schedule || null,
+          state: "defined",
+          time_created: Date.now(),
+          time_updated: Date.now(),
+        }
+        Database.use((db) => db.insert(RoutineTable).values(routine as any).run())
+        return c.json(routine, 201)
+      },
+    )
+    .put(
+      "/routines/:id",
+      describeRoute({
+        summary: "Update routine",
+        description: "Update an existing automation routine",
+        operationId: "automation.routines.update",
+        responses: {
+          200: { description: "Routine updated", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      validator("json", RoutineUpdateSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const body = c.req.valid("json")
+        Database.use((db) =>
+          db
+            .update(RoutineTable)
+            .set({
+              ...body,
+              time_updated: Date.now(),
+            } as any)
+            .where(eq(RoutineTable.id, id))
+            .run()
+        )
+        return c.json({ success: true })
+      },
+    )
+    .delete(
+      "/routines/:id",
+      describeRoute({
+        summary: "Delete routine",
+        description: "Delete an automation routine",
+        operationId: "automation.routines.delete",
+        responses: {
+          200: { description: "Routine deleted", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        Database.use((db) => db.delete(RoutineTable).where(eq(RoutineTable.id, id)).run())
+        return c.json({ success: true })
+      },
+    )
+    .post(
+      "/routines/:id/run",
+      describeRoute({
+        summary: "Run routine",
+        description: "Start executing an automation routine",
+        operationId: "automation.routines.run",
+        responses: {
+          200: { description: "Routine started", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        Database.use((db) =>
+          db
+            .update(RoutineTable)
+            .set({ state: "running", time_updated: Date.now() })
+            .where(eq(RoutineTable.id, id))
+            .run()
+        )
+        RoutineEngine.startRoutine(id).catch(console.error)
+        return c.json({ success: true, state: "running" })
+      },
+    )
+
+    // Loops CRUD
+    .get(
+      "/loops",
+      describeRoute({
+        summary: "List loops",
+        description: "Get all automation loops",
+        operationId: "automation.loops.list",
+        responses: {
+          200: { description: "List of loops", content: { "application/json": { schema: resolver(z.any()) } } },
+        },
+      }),
+      async (c) => {
+        const rows = Database.use((db) => db.select().from(LoopTable).all())
+        return c.json(rows)
+      },
+    )
+    .post(
+      "/loops",
+      describeRoute({
+        summary: "Create loop",
+        description: "Create a new automation loop",
+        operationId: "automation.loops.create",
+        responses: {
+          201: { description: "Loop created", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(400),
+        },
+      }),
+      validator("json", LoopCreateSchema),
+      async (c) => {
+        const body = c.req.valid("json")
+        const loop = {
+          id: body.id || crypto.randomUUID(),
+          agent_id: body.agent_id || null,
+          command: body.command,
+          exit_condition: body.exit_condition || null,
+          max_iterations: body.max_iterations,
+          iteration_log: [],
+          state: "running",
+          time_created: Date.now(),
+          time_updated: Date.now(),
+        }
+        Database.use((db) => db.insert(LoopTable).values(loop).run())
+        LoopEngine.startLoop(loop.id).catch(console.error)
+        return c.json(loop, 201)
+      },
+    )
+    .put(
+      "/loops/:id",
+      describeRoute({
+        summary: "Update loop",
+        description: "Update an existing automation loop",
+        operationId: "automation.loops.update",
+        responses: {
+          200: { description: "Loop updated", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      validator("json", LoopUpdateSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const body = c.req.valid("json")
+        Database.use((db) =>
+          db
+            .update(LoopTable)
+            .set({
+              ...body,
+              time_updated: Date.now(),
+            })
+            .where(eq(LoopTable.id, id))
+            .run()
+        )
+        return c.json({ success: true })
+      },
+    )
+    .delete(
+      "/loops/:id",
+      describeRoute({
+        summary: "Delete loop",
+        description: "Delete an automation loop",
+        operationId: "automation.loops.delete",
+        responses: {
+          200: { description: "Loop deleted", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        Database.use((db) => db.delete(LoopTable).where(eq(LoopTable.id, id)).run())
+        return c.json({ success: true })
+      },
+    )
+    .post(
+      "/loops/:id/run",
+      describeRoute({
+        summary: "Run loop",
+        description: "Restart an automation loop",
+        operationId: "automation.loops.run",
+        responses: {
+          200: { description: "Loop started", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        Database.use((db) =>
+          db
+            .update(LoopTable)
+            .set({ state: "running", time_updated: Date.now() })
+            .where(eq(LoopTable.id, id))
+            .run()
+        )
+        LoopEngine.startLoop(id).catch(console.error)
+        return c.json({ success: true, state: "running" })
+      },
+    )
+
+    // Goals CRUD
+    .get(
+      "/goals",
+      describeRoute({
+        summary: "List goals",
+        description: "Get all automation goals",
+        operationId: "automation.goals.list",
+        responses: {
+          200: { description: "List of goals", content: { "application/json": { schema: resolver(z.any()) } } },
+        },
+      }),
+      async (c) => {
+        const rows = Database.use((db) => db.select().from(GoalTable).all())
+        return c.json(rows)
+      },
+    )
+    .post(
+      "/goals",
+      describeRoute({
+        summary: "Create goal",
+        description: "Create a new automation goal",
+        operationId: "automation.goals.create",
+        responses: {
+          201: { description: "Goal created", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(400),
+        },
+      }),
+      validator("json", GoalCreateSchema),
+      async (c) => {
+        const body = c.req.valid("json")
+        const goal = {
+          id: body.id || crypto.randomUUID(),
+          agent_id: body.agent_id || null,
+          objective: body.objective,
+          milestones: [],
+          validations: [],
+          state: "planning",
+          progress: 0,
+          time_created: Date.now(),
+          time_updated: Date.now(),
+        }
+        Database.use((db) => db.insert(GoalTable).values(goal).run())
+        GoalEngine.startGoal(goal.id).catch(console.error)
+        return c.json(goal, 201)
+      },
+    )
+    .put(
+      "/goals/:id",
+      describeRoute({
+        summary: "Update goal",
+        description: "Update an existing automation goal",
+        operationId: "automation.goals.update",
+        responses: {
+          200: { description: "Goal updated", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      validator("json", GoalUpdateSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const body = c.req.valid("json")
+        Database.use((db) =>
+          db
+            .update(GoalTable)
+            .set({
+              ...body,
+              time_updated: Date.now(),
+            })
+            .where(eq(GoalTable.id, id))
+            .run()
+        )
+        return c.json({ success: true })
+      },
+    )
+    .delete(
+      "/goals/:id",
+      describeRoute({
+        summary: "Delete goal",
+        description: "Delete an automation goal",
+        operationId: "automation.goals.delete",
+        responses: {
+          200: { description: "Goal deleted", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        Database.use((db) => db.delete(GoalTable).where(eq(GoalTable.id, id)).run())
+        return c.json({ success: true })
+      },
+    )
+    .post(
+      "/goals/:id/run",
+      describeRoute({
+        summary: "Run goal",
+        description: "Restart an automation goal",
+        operationId: "automation.goals.run",
+        responses: {
+          200: { description: "Goal started", content: { "application/json": { schema: resolver(z.any()) } } },
+          ...errors(404),
+        },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        Database.use((db) =>
+          db
+            .update(GoalTable)
+            .set({ state: "planning", progress: 0, time_updated: Date.now() })
+            .where(eq(GoalTable.id, id))
+            .run()
+        )
+        GoalEngine.startGoal(id).catch(console.error)
+        return c.json({ success: true, state: "planning" })
+      },
+    )
+)

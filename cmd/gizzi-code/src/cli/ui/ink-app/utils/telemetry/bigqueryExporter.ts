@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Attributes, HrTime } from '@opentelemetry/api'
 import { type ExportResult, ExportResultCode } from '@opentelemetry/core'
 import {
@@ -8,7 +9,7 @@ import {
   type ResourceMetrics,
 } from '@opentelemetry/sdk-metrics'
 import axios from 'axios'
-import { checkMetricsEnabled } from 'src/services/api/metricsOptOut.js'
+import { checkMetricsEnabled } from './../../services/api/metricsOptOut.ts'
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import { getSubscriptionType, isClaudeAISubscriber } from '../auth.js'
 import { checkHasTrustDialogAccepted } from '../config.js'

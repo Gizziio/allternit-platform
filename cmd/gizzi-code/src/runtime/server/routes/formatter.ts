@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Hono } from "hono"
 import { describeRoute, resolver } from "@/runtime/server/openapi"
 import { Format } from "@/shared/format"

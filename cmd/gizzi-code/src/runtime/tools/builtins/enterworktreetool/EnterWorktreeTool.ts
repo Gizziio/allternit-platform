@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { z } from 'zod/v4'
 import { getSessionId, setOriginalCwd } from '@/bootstrap/state.js'
 import { clearSystemPromptSections } from '@/constants/systemPromptSections.js'

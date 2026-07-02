@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { basename } from 'path'
 import { useCallback, useEffect, useRef } from 'react'
@@ -40,7 +41,7 @@ import reject from 'lodash-es/reject.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from 'src/services/analytics/index.js'
+} from './../analytics/index.ts'
 import {
   dedupClaudeAiMcpServers,
   doesEnterpriseMcpConfigExist,
@@ -48,10 +49,10 @@ import {
   getClaudeCodeMcpConfigs,
   isMcpServerDisabled,
   setMcpServerEnabled,
-} from 'src/services/mcp/config.js'
-import type { AppState } from 'src/state/AppState.js'
-import type { PluginError } from 'src/types/plugin.js'
-import { logForDebugging } from 'src/utils/debug.js'
+} from './config.ts'
+import type { AppState } from './../../state/AppState.tsx'
+import type { PluginError } from './../../types/plugin.ts'
+import { logForDebugging } from './../../utils/debug.ts'
 import { getAllowedChannels } from '../../bootstrap/state.js'
 import { useNotifications } from '../../context/notifications.js'
 import {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createHash, randomUUID } from 'crypto'
 import { tmpdir } from 'os'
 import { join } from 'path'

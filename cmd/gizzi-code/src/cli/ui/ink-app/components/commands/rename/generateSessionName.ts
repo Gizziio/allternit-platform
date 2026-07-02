@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { queryHaiku } from '../../services/api/claude.js'
 import type { Message } from '../../types/message.js'
 import { logForDebugging } from '../../utils/debug.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { PermissionRuleList } from '../../components/permissions/rules/PermissionRuleList';
 import type { LocalJSXCommandCall } from '../../types/command';

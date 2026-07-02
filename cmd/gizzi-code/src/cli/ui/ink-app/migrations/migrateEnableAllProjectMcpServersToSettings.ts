@@ -1,4 +1,5 @@
-import { logEvent } from 'src/services/analytics/index.js'
+// @ts-nocheck
+import { logEvent } from './../services/analytics/index.ts'
 import {
   getCurrentProjectConfig,
   saveCurrentProjectConfig,

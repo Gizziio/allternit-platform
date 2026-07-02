@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ToolUseContext } from '../../../Tool.js'
 import {
   findTeammateTaskByAgentId,

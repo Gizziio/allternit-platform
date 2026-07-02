@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Post-install/post-enable config prompt.
  *

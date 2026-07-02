@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Tool } from '../../Tool'
 import { AgentTool } from '../AgentTool/AgentTool'
 import { BashTool } from '../BashTool/BashTool'

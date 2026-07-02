@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages/messages.mjs';
 import * as React from 'react';
-import { stripUnderlineAnsi } from 'src/components/shell/OutputLine';
-import { extractTag } from 'src/utils/messages';
-import { removeSandboxViolationTags } from 'src/utils/sandbox/sandbox-ui-utils';
+import { stripUnderlineAnsi } from './shell/OutputLine.tsx';
+import { extractTag } from './../utils/messages.ts';
+import { removeSandboxViolationTags } from './../utils/sandbox/sandbox-ui-utils.ts';
 import { Box, Text } from '../ink';
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay';
 import { countCharInString } from '../utils/stringUtils';

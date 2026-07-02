@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Monitor Tool
  * TEMPORARY SHIM

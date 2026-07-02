@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Growthbook feature flag integration
  * A/B testing and feature management

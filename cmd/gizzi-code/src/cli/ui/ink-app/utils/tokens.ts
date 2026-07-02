@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { BetaUsage as Usage } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
 import { roughTokenCountEstimationForMessages } from '../services/tokenEstimation.js'
 import type { AssistantMessage, Message } from '../types/message.js'

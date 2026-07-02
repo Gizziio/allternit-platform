@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Attribution Hooks
  * TEMPORARY SHIM

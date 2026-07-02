@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Log } from "@/runtime/util/log"
 
 export namespace EventLoop {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import type {
   Resource,

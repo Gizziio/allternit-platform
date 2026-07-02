@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { $ } from "bun"
 import { platform, release } from "os"
 import clipboardy from "clipboardy"

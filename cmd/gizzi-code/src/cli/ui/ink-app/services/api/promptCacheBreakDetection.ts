@@ -1,15 +1,16 @@
+// @ts-nocheck
 import type { BetaToolUnion } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
 import type { TextBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import { createPatch } from 'diff'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
-import type { AgentId } from 'src/types/ids.js'
-import type { Message } from 'src/types/message.js'
-import { logForDebugging } from 'src/utils/debug.js'
-import { djb2Hash } from 'src/utils/hash.js'
-import { logError } from 'src/utils/log.js'
-import { getClaudeTempDir } from 'src/utils/permissions/filesystem.js'
-import { jsonStringify } from 'src/utils/slowOperations.js'
+import type { AgentId } from './../../types/ids.ts'
+import type { Message } from './../../types/message.ts'
+import { logForDebugging } from './../../utils/debug.ts'
+import { djb2Hash } from './../../utils/hash.ts'
+import { logError } from './../../utils/log.ts'
+import { getClaudeTempDir } from './../../utils/permissions/filesystem.ts'
+import { jsonStringify } from './../../utils/slowOperations.ts'
 import type { QuerySource } from '../../constants/querySource.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

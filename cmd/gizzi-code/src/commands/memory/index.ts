@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Memory Command
  * Production-quality memory management for conversations

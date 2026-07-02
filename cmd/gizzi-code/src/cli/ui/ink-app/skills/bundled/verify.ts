@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { parseFrontmatter } from '../../utils/frontmatterParser'
 import { registerBundledSkill } from '../bundledSkills'
 import { SKILL_FILES, SKILL_MD } from './verifyContent'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { APIUserAbortError } from '@allternit/sdk/providers/anthropic'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'

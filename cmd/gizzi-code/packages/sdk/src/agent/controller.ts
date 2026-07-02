@@ -1,5 +1,5 @@
 import { AllternitHarness } from '../harness/index.js';
-import { AllternitClient } from '../dist/gen/allternit-client.js';
+import { AllternitClient } from '../../dist/gen/allternit-client.js';
 import { AgentRun } from './run.js';
 import { AgentStorage } from './persistence/index.js';
 import { LimaEnvironment } from '../environment/lima.js';

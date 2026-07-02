@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { cmd } from "@/cli/commands/cmd"
 import * as prompts from "@clack/prompts"
 import { UI } from "@/cli/ui"

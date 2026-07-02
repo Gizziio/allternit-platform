@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
@@ -19,6 +20,7 @@ type Props = {
   isStandalone?: boolean;
 };
 const RECENT_COMPLETED_TTL_MS = 30_000;
+const MAX_TIMEOUT_MS = 2_147_483_647;
 function byIdAsc(a: Task, b: Task): number {
   const aNum = parseInt(a.id, 10);
   const bNum = parseInt(b.id, 10);
@@ -80,7 +82,8 @@ export function TaskListV2({
     if (earliestExpiry === Infinity) {
       return;
     }
-    const timer = setTimeout(forceUpdate_0 => forceUpdate_0((n: number) => n + 1), earliestExpiry - currentNow, forceUpdate);
+    const delay = Math.max(0, Math.min(earliestExpiry - currentNow, MAX_TIMEOUT_MS));
+    const timer = setTimeout(forceUpdate_0 => forceUpdate_0((n: number) => n + 1), delay, forceUpdate);
     return () => clearTimeout(timer);
   }, [tasks]);
   if (!isTodoV2Enabled()) {

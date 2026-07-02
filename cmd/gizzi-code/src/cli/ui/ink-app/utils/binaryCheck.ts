@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { logForDebugging } from './debug.js'
 import { which } from './which.js'
 

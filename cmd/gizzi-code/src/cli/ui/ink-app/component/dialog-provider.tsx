@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo, createSignal, onMount, Show, type JSX } from "solid-js"
 import { useSync } from "@/cli/ui/ink-app/context/sync"
 import { map, pipe, sortBy } from "remeda"

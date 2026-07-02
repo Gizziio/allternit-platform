@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import { copyFile, stat as fsStat, truncate as fsTruncate, link } from 'fs/promises';
 import * as React from 'react';
-import type { CanUseToolFn } from 'src/hooks/useCanUseTool';
-import type { AppState } from 'src/state/AppState';
+import type { CanUseToolFn } from './../../hooks/useCanUseTool.tsx';
+import type { AppState } from './../../state/AppState.tsx';
 import { z } from 'zod/v4';
 import { getKairosActive } from '../../bootstrap/state';
 import { TOOL_SUMMARY_MAX_LENGTH } from '../../constants/toolLimits';

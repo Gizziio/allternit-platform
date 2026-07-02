@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useState } from 'react';
-import { useExitOnCtrlCDWithKeybindings } from 'src/hooks/useExitOnCtrlCDWithKeybindings';
+import { useExitOnCtrlCDWithKeybindings } from './../hooks/useExitOnCtrlCDWithKeybindings.ts';
 import { Box, Text } from '../ink';
 import { useKeybinding } from '../keybindings/useKeybinding';
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import sample from 'lodash-es/sample';
 import * as React from 'react';

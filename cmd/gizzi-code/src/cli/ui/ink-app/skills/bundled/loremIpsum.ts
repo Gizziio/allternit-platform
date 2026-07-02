@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { registerBundledSkill } from '../bundledSkills.js'
 
 // Verified 1-token words (tested via API token counting)

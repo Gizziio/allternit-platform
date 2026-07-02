@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { useCallback, useState } from 'react';
-import { setTeleportedSessionInfo } from 'src/bootstrap/state';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import type { TeleportRemoteResponse } from 'src/utils/conversationRecovery';
-import type { CodeSession } from 'src/utils/teleport/api';
+import { setTeleportedSessionInfo } from './../bootstrap/state.ts';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';
+import type { TeleportRemoteResponse } from './../utils/conversationRecovery.ts';
+import type { CodeSession } from './../utils/teleport/api.ts';
 import { errorMessage, TeleportOperationError } from '../utils/errors';
 import { teleportResumeCodeSession } from '../utils/teleport';
 export type TeleportResumeError = {

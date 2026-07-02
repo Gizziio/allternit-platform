@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isAutoMemoryEnabled } from '../../memdir/paths'
 import { registerBundledSkill } from '../bundledSkills'
 

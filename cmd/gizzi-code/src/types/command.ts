@@ -84,6 +84,7 @@ export type LocalJSXCommandContext = ToolUseContext & {
     dynamicMcpConfig?: Record<string, ScopedMcpServerConfig>
     ideInstallationStatus: IDEExtensionInstallationStatus | null
     theme: ThemeName
+    [key: string]: any
   }
   onChangeAPIKey: () => void
   onChangeDynamicMcpConfig?: (
@@ -95,6 +96,7 @@ export type LocalJSXCommandContext = ToolUseContext & {
     log: LogOption,
     entrypoint: ResumeEntrypoint,
   ) => Promise<void>
+  [key: string]: any
 }
 
 export type ResumeEntrypoint =
@@ -141,7 +143,7 @@ export type LocalJSXCommandModule = {
   call: LocalJSXCommandCall
 }
 
-type LocalJSXCommand = {
+export type LocalJSXCommand = {
   type: 'local-jsx'
   /**
    * Lazy-load the command implementation.
@@ -150,6 +152,11 @@ type LocalJSXCommand = {
    */
   load: () => Promise<LocalJSXCommandModule>
 }
+
+// Placeholder aliases for consumers until canonical shapes are finalized.
+export type CommandArg = any
+export type CommandOption = any
+export type CommandContext = any
 
 /**
  * Declares which auth/provider environments a command is available in.

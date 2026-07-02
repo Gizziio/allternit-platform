@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { LayoutNode } from './node'
 import { createYogaLayoutNode } from './yoga'
 

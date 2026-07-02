@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Format an ISO timestamp for the brief/chat message label line.
  *

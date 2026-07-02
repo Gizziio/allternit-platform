@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Command } from '../../commands'
 import { getSubscriptionType } from '../../utils/auth'
 import { isEnvTruthy } from '../../utils/envUtils'

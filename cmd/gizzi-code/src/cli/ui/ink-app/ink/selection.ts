@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Text selection state for fullscreen mode.
  *

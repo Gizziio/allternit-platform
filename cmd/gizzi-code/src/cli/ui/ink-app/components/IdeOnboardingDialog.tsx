@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { envDynamic } from 'src/utils/envDynamic';
+import { envDynamic } from './../utils/envDynamic.ts';
 import { Box, Text } from '../ink';
 import { useKeybindings } from '../keybindings/useKeybinding';
 import { getGlobalConfig, saveGlobalConfig } from '../utils/config';

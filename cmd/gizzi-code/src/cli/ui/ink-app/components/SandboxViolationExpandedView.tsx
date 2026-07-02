@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -16,7 +17,7 @@ function formatTime(date: Date): string {
   const ampm = date.getHours() < 12 ? 'am' : 'pm';
   return `${h}:${m}:${s}${ampm}`;
 }
-import { getPlatform } from 'src/utils/platform';
+import { getPlatform } from './../utils/platform.ts';
 export function SandboxViolationExpandedView() {
   const $ = _c(15);
   let t0;

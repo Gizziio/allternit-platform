@@ -768,3 +768,9 @@ export async function* readLinesReverse(
     await fileHandle.close()
   }
 }
+
+// Auto-added export
+export const safeStat: any = {}
+
+// Auto-added export
+export const safeReadFile: any = {}

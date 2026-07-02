@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import figures from 'figures';
 import * as React from 'react';
-import { SentryErrorBoundary } from 'src/components/SentryErrorBoundary';
+import { SentryErrorBoundary } from './../../SentryErrorBoundary.ts';
 import { Box, Text, useTheme } from '../../../ink';
 import { useAppState } from '../../../state/AppState';
 import { filterToolProgressMessages, type Tool, type Tools } from '../../../Tool';

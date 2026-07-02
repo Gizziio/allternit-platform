@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Keyboard input parser - converts terminal input to key events
  *

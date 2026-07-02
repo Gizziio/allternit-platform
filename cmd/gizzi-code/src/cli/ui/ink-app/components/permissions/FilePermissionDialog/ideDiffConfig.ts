@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ToolInput } from './useFilePermissionDialog.js'
 
 export interface FileEdit {

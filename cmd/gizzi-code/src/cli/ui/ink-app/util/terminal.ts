@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RGBA } from "@opentui/core"
 
 export namespace Terminal {

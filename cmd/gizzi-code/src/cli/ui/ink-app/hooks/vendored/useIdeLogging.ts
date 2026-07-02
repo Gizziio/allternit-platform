@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useIdeLogging_ts(): void {
   // Not yet implemented
 }

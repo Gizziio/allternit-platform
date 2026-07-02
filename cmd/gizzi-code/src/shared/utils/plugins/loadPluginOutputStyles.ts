@@ -1,3 +1,4 @@
+// @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
 import { basename } from 'path'
 import type { OutputStyleConfig } from '@/constants/outputStyles.js'

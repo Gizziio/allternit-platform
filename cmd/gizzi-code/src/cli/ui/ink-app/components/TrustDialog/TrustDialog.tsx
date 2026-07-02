@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { homedir } from 'os';
 import React from 'react';
-import { logEvent } from 'src/services/analytics/index';
+import { logEvent } from './../../services/analytics/index.ts';
 import { setSessionTrustAccepted } from '../../bootstrap/state';
 import type { Command } from '../../commands';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings';

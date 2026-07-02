@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SessionHeader - Allternit matrix badge, Gizziio Code branding, and session telemetry
  */

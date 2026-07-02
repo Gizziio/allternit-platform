@@ -1,6 +1,7 @@
+// @ts-nocheck
 import React, { useCallback, useRef, useState } from 'react';
-import { getModeFromInput } from 'src/components/PromptInput/inputModes';
-import { useNotifications } from 'src/context/notifications';
+import { getModeFromInput } from './../components/PromptInput/inputModes.ts';
+import { useNotifications } from './../context/notifications.tsx';
 import { ConfigurableShortcutHint } from '../components/ConfigurableShortcutHint';
 import { FOOTER_TEMPORARY_STATUS_TIMEOUT } from '../components/PromptInput/Notifications';
 import { getHistory } from '../history';

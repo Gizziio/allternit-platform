@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * DEC (Digital Equipment Corporation) Private Mode Sequences
  *

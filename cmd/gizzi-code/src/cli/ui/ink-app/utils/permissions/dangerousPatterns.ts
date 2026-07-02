@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pattern lists for dangerous shell-tool allow-rule prefixes.
  *

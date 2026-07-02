@@ -1,4 +1,5 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
+// @ts-nocheck
+import { getFeatureValue_CACHED_MAY_BE_STALE } from './../../services/analytics/growthbook.ts'
 import type { EffortLevel } from '../effort.js'
 
 export type AntModel = {

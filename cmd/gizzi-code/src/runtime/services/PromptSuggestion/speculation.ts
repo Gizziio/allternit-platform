@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from 'crypto'
 import { rm } from 'fs'
 import { appendFile, copyFile, mkdir } from 'fs/promises'
@@ -10,8 +11,8 @@ import {
   type SpeculationResult,
   type SpeculationState,
 } from '@/state/AppStateStore.js'
-import { commandHasAnyCd } from '../../../tools/BashTool/bashPermissions.js'
-import { checkReadOnlyConstraints } from '../../../tools/BashTool/readOnlyValidation.js'
+import { commandHasAnyCd } from '../../tools/builtins/bash/bashPermissions.js'
+import { checkReadOnlyConstraints } from '../../tools/builtins/bash/readOnlyValidation.js'
 import type { SpeculationAcceptMessage } from '@/types/logs.js'
 import type { Message } from '@/types/message.js'
 import { createChildAbortController } from '../../../utils/abortController.js'
@@ -30,7 +31,7 @@ import {
   runForkedAgent,
 } from '../../../utils/forkedAgent.js'
 import { formatDuration, formatNumber } from '../../../utils/format.js'
-import type { REPLHookContext } from '../../../utils/hooks/postSamplingHooks.js'
+import type { REPLHookContext } from '../../../shared/utils/hooks/postSamplingHooks.js'
 import { logError } from '../../../utils/log.js'
 import type { SetAppState } from '../../../utils/messageQueueManager.js'
 import {

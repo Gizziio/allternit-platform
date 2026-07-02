@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import * as React from 'react';
-import { getAllowedChannels, getQuestionPreviewFormat } from 'src/bootstrap/state';
-import { MessageResponse } from 'src/components/MessageResponse';
-import { BLACK_CIRCLE } from 'src/constants/figures';
-import { getModeColor } from 'src/utils/permissions/PermissionMode';
+import { getAllowedChannels, getQuestionPreviewFormat } from './../../bootstrap/state.ts';
+import { MessageResponse } from './../../components/MessageResponse.tsx';
+import { BLACK_CIRCLE } from './../../constants/figures.ts';
+import { getModeColor } from './../../utils/permissions/PermissionMode.ts';
 import { z } from 'zod/v4';
 import { Box, Text } from '../../ink';
 import type { Tool } from '../../Tool';

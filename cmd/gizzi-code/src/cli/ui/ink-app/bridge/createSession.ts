@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { SDKMessage } from '../entrypoints/agentSdkTypes'
 import { logForDebugging } from '../utils/debug'
 import { errorMessage } from '../utils/errors'

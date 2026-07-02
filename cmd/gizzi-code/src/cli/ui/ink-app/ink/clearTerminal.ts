@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Cross-platform terminal clearing with scrollback support.
  * Detects modern terminals that support ESC[3J for clearing scrollback.

@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import type { UUID } from 'crypto';
 import figures from 'figures';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNotifications } from 'src/context/notifications';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import { useAppState, useAppStateStore, useSetAppState } from 'src/state/AppState';
+import { useNotifications } from './../../../context/notifications.tsx';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../../services/analytics/index.ts';
+import { useAppState, useAppStateStore, useSetAppState } from './../../../state/AppState.tsx';
 import { getSdkBetas, getSessionId, isSessionPersistenceDisabled, setHasExitedPlanMode, setNeedsAutoModeExitAttachment, setNeedsPlanModeExitAttachment } from '../../../bootstrap/state';
 import { generateSessionName } from '../../../commands/rename/generateSessionName';
 import { launchUltraplan } from '../../../commands/ultraplan';

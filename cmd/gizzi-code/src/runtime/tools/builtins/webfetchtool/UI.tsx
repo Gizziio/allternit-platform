@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { MessageResponse } from '../../components/MessageResponse.js';
 import { TOOL_SUMMARY_MAX_LENGTH } from '@/constants/toolLimits.js';

@@ -1,7 +1,7 @@
 import { RealtimeClientEvent, RealtimeServerEvent, ErrorEvent } from '../../resources/beta/realtime/realtime';
 import { EventEmitter } from '../../lib/EventEmitter';
 import { AllternitOpenAIError } from '../../error';
-import OpenAI, { AzureOpenAI } from '../../index';
+import AllternitOpenAI, { AzureOpenAI } from '../../index';
 
 export class AllternitOpenAIRealtimeError extends AllternitOpenAIError {
   /**

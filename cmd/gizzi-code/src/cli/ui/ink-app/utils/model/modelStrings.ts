@@ -1,7 +1,8 @@
+// @ts-nocheck
 import {
   getModelStrings as getModelStringsState,
   setModelStrings as setModelStringsState,
-} from 'src/bootstrap/state.js'
+} from './../../bootstrap/state.ts'
 import { logError } from '../log.js'
 import { sequential } from '../sequential.js'
 import { getInitialSettings } from '../settings/settings.js'

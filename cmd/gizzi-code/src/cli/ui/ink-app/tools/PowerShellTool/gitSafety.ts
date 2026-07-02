@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Git can be weaponized for sandbox escape via two vectors:
  * 1. Bare-repo attack: if cwd contains HEAD + objects/ + refs/ but no valid

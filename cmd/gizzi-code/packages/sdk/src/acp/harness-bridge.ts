@@ -7,14 +7,15 @@
 
 import { AllternitHarness } from '../harness/index.js';
 import { ACPRegistry } from './registry.js';
-import type { 
+import type {
   AllternitACPSession,
   Content,
-  TextContent,
+  ContentBlock,
   ToolCall,
   ACPRegistryEntry,
   ValidationResult,
 } from './types.js';
+import type { Message } from '../harness/types.js';
 
 export interface BridgeOptions {
   harness: AllternitHarness;
@@ -53,8 +54,8 @@ export class ACPHarnessBridge {
 
     // Convert ACP messages to harness format
     // Note: ACP messages are stored differently, this is a simplified conversion
-    const messages: Array<{ role: string; content: string }> = [];
-    
+    const messages: Message[] = [];
+
     // Add system prompt if configured
     if (session.config?.systemPrompt) {
       messages.push({ role: 'system', content: session.config.systemPrompt });
@@ -72,17 +73,19 @@ export class ACPHarnessBridge {
       for await (const chunk of this.harness.stream(request)) {
         switch (chunk.type) {
           case 'text': {
-            const content: TextContent = {
-              type: 'text',
-              text: chunk.text,
+            const content: Content = {
+              content: {
+                type: 'text',
+                text: chunk.text,
+              } as ContentBlock,
             };
             yield { type: 'content', content };
             break;
           }
-          
+
           case 'tool_call': {
             const toolCall: ToolCall = {
-              toolCallId: chunk.callID || crypto.randomUUID(),
+              toolCallId: chunk.id || crypto.randomUUID(),
               title: chunk.name,
               status: 'in_progress',
             };

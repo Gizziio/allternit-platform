@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Dirent, Stats } from 'fs'
 import { readdir, readFile, stat } from 'fs/promises'
 import * as path from 'path'

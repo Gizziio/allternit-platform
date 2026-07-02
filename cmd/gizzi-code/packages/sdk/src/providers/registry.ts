@@ -19,6 +19,7 @@ import { AllternitQwen } from './qwen/index.js';
 import { AllternitMiniMax } from './minimax/index.js';
 import { AllternitGLM } from './glm/index.js';
 import { AllternitCopilot } from './copilot/index.js';
+import { AllternitMock } from './mock/index.js';
 
 export interface ProviderMetadata {
   id: string;
@@ -409,7 +410,7 @@ export function createProvider(id: string, config: ProviderConfig) {
     case 'openai':
       return new AllternitOpenAI({ apiKey: config.apiKey!, baseURL: config.baseURL });
     case 'google':
-      return new AllternitGoogleAI({ apiKey: config.apiKey! });
+      return new AllternitGoogleAI(config.apiKey!);
     case 'ollama':
       return new AllternitOllama({ baseURL: config.baseURL });
     case 'mistral':

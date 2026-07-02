@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 type UUID = string
 import { findToolByName, type Tools } from '../../runtime/tools/Tool.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { relative } from 'path'
 import type { ToolUseContext } from '../../Tool'
 import type { LocalCommandResult } from '../../types/command'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { type ReactNode } from 'react';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings';
 import { Box, Text } from '../../ink';

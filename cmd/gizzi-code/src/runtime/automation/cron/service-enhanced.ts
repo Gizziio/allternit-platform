@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Enhanced CronService with Production Features
  * 

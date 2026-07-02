@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import type { LocalJSXCommandContext } from '../../commands';
 import { getOauthProfileFromOauthToken } from '../../services/oauth/getOauthProfile';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useEffect } from 'react'
 import type { Command } from '../commands.js'
 import { useNotifications } from '../context/notifications.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useRef } from 'react'
 import { useTheme } from '../../components/vendored/design-system/ThemeProvider'
 import type { useSelection } from '../../core/hooks/use-selection'

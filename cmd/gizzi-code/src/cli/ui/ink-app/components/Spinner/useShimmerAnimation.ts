@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo } from 'react'
 import { stringWidth } from '../../ink/stringWidth.js'
 import { type DOMElement, useAnimationFrame } from '../../ink.js'

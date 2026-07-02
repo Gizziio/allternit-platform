@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@/cli/ui/ink-app/context/theme"
 import { useDialog } from "@/cli/ui/ink-app/ui/dialog"

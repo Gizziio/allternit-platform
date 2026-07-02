@@ -4,7 +4,8 @@
  * Azure OpenAI API client for Allternit SDK
  * API: https://{resource}.openai.azure.com/openai/deployments/{deployment}
  */
-import { HarnessError } from '../../harness/types.js';
+import { HarnessError } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 export class AllternitAzureOpenAI {
     apiKey;
     baseURL;

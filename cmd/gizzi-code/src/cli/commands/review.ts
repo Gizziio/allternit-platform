@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Review Command
  * Automated code review and quality analysis

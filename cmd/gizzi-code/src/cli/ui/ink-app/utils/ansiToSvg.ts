@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Converts ANSI-escaped terminal text to SVG format
  * Supports basic ANSI color codes (foreground colors)

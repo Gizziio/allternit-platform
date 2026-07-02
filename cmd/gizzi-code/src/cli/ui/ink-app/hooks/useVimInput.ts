@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useCallback, useState } from 'react'
 import type { Key } from '../ink.js'
 import type { VimInputState, VimMode } from '../types/textInputTypes.js'

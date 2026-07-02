@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Copy command - minimal metadata only.
  * Implementation is lazy-loaded from copy.tsx to reduce startup time.

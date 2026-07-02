@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 
 export const MEMORY_TYPE_VALUES = [

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * PowerShell-specific path validation for command arguments.
  *

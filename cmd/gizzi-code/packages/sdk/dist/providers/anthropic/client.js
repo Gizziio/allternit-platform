@@ -13,10 +13,6 @@ import * as Pagination from './core/pagination';
 import * as Uploads from './core/uploads';
 import * as API from './resources/index';
 import { APIPromise } from './core/api-promise';
-import { Completions, } from './resources/completions';
-import { Models, } from './resources/models';
-import { Beta, } from './resources/beta/beta';
-import { Messages, } from './resources/messages/messages';
 import { isRunningInBrowser } from './internal/detect-platform';
 import { buildHeaders } from './internal/headers';
 import { readEnv } from './internal/utils/env';
@@ -558,12 +554,4 @@ export class AllternitAI extends BaseAllternitAI {
     models = new API.Models(this);
     beta = new API.Beta(this);
 }
-AllternitAI.Completions = Completions;
-AllternitAI.Messages = Messages;
-AllternitAI.Models = Models;
-AllternitAI.Beta = Beta;
-BaseAllternitAI.Completions = Completions;
-BaseAllternitAI.Messages = Messages;
-BaseAllternitAI.Models = Models;
-BaseAllternitAI.Beta = Beta;
 //# sourceMappingURL=client.js.map

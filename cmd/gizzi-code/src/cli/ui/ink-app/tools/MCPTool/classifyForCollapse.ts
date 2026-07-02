@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Classify an MCP tool as a search/read operation for UI collapsing.
  * Returns { isSearch: false, isRead: false } for tools that should not

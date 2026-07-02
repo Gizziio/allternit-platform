@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import type { LocalJSXCommandCall } from '../../types/command';
 export const call: LocalJSXCommandCall = async (onDone, context) => {

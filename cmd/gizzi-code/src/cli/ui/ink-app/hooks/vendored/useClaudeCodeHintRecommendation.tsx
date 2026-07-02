@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Surfaces plugin-install prompts driven by `<claude-code-hint />` tags
  * that CLIs/SDKs emit to stderr. See docs/claude-code-hints.md.

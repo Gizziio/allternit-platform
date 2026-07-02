@@ -95,11 +95,14 @@ export function RuntimeDashboard({ onBack, refreshIntervalMs = 5000 }: Props) {
               {selected.agentClis.length > 0 && (
                 <Box flexDirection="column" marginTop={1}>
                   <Text bold color="cyan">Agent CLIs ({selected.agentClis.length})</Text>
-                  {selected.agentClis.map((cli) => (
-                    <Text key={cli.name} color="gray">
-                      {'  • '}<Text color="white">{cli.name.padEnd(14)}</Text>{' '}{cli.version}
-                    </Text>
-                  ))}
+                  {selected.agentClis.map((cli) => {
+                    const TextAny = Text as any
+                    return (
+                      <TextAny key={cli.name} color="gray">
+                        {'  • '}<Text color="white">{cli.name.padEnd(14)}</Text>{' '}{cli.version}
+                      </TextAny>
+                    )
+                  })}
                 </Box>
               )}
             </Box>

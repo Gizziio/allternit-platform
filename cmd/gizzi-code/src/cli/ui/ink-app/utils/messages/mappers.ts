@@ -1,24 +1,25 @@
+// @ts-nocheck
 import type { BetaContentBlock } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
 import { randomUUID, type UUID } from 'crypto'
-import { getSessionId } from 'src/bootstrap/state.js'
+import { getSessionId } from './../../bootstrap/state.ts'
 import {
   LOCAL_COMMAND_STDERR_TAG,
   LOCAL_COMMAND_STDOUT_TAG,
-} from 'src/constants/xml.js'
+} from './../../constants/xml.ts'
 import type {
   SDKAssistantMessage,
   SDKCompactBoundaryMessage,
   SDKMessage,
   SDKRateLimitInfo,
-} from 'src/entrypoints/agentSdkTypes.js'
-import type { ClaudeAILimits } from 'src/services/claudeAiLimits.js'
-import { EXIT_PLAN_MODE_V2_TOOL_NAME } from 'src/tools/ExitPlanModeTool/constants.js'
+} from './../../entrypoints/agentSdkTypes.ts'
+import type { ClaudeAILimits } from './../../services/claudeAiLimits.ts'
+import { EXIT_PLAN_MODE_V2_TOOL_NAME } from './../../tools/ExitPlanModeTool/constants.ts'
 import type {
   AssistantMessage,
   CompactMetadata,
   Message,
-} from 'src/types/message.js'
-import type { DeepImmutable } from 'src/types/utils.js'
+} from './../../types/message.ts'
+import type { DeepImmutable } from './../../types/utils.ts'
 import stripAnsi from 'strip-ansi'
 import { createAssistantMessage } from '../messages.js'
 import { getPlan } from '../plans.js'

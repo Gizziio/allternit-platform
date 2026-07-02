@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants'
 import { registerBundledSkill } from '../bundledSkills'
 

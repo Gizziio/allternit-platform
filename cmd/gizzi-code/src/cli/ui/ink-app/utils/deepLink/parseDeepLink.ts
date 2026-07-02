@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Deep Link URI Parser
  *

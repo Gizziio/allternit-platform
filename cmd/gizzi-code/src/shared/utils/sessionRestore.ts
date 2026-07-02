@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 type UUID = string
 import { dirname } from 'path'

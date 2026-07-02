@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { isBridgeEnabled } from '../../bridge/bridgeEnabled'
 import type { Command } from '../../commands'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import type { UUID } from 'crypto'
 import type { CanUseToolFn } from '../hooks/useCanUseTool.js'

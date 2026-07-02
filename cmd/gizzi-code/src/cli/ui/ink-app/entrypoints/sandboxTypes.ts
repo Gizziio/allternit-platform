@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Sandbox types for the Claude Code Agent SDK
  *

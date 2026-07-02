@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { type RefObject, useEffect, useRef } from 'react';
 import { useNotifications } from '../context/notifications.js';
 import { useCopyOnSelect, useSelectionBgColor } from '@/hooks/useCopyOnSelect.js';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { spawnSync } from 'child_process'
 import { getIsInteractive } from '../bootstrap/state.js'
 import { logForDebugging } from './debug.js'

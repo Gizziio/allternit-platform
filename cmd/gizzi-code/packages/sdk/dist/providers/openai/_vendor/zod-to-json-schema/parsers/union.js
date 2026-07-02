@@ -35,12 +35,14 @@ export function parseUnionDef(def, refs) {
                 case 'object':
                     if (x._def.value === null)
                         return [...acc, 'null'];
+                    break;
                 case 'symbol':
                 case 'undefined':
                 case 'function':
                 default:
-                    return acc;
+                    break;
             }
+            return acc;
         }, []);
         if (types.length === options.length) {
             // all the literals are primitive, as far as null can be considered primitive

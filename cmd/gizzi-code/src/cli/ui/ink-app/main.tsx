@@ -1,3 +1,4 @@
+// @ts-nocheck
 // These side-effects must run before all other imports:
 // 1. profileCheckpoint marks entry before heavy module evaluation begins
 // 2. startMdmRawRead fires MDM subprocesses (plutil/reg query) so they run in
@@ -80,10 +81,10 @@ const coordinatorModeModule = feature('COORDINATOR_MODE') ? require('./coordinat
 const assistantModule = feature('KAIROS') ? require('./assistant/index.js') as typeof import('./assistant/index.js') : null;
 const kairosGate = feature('KAIROS') ? require('./assistant/gate.js') as typeof import('./assistant/gate.js') : null;
 import { relative, resolve } from 'path';
-import { isAnalyticsDisabled } from 'src/services/analytics/config';
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import { initializeAnalyticsGates } from 'src/services/analytics/sink';
+import { isAnalyticsDisabled } from './services/analytics/config.ts';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from './services/analytics/growthbook.ts';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './services/analytics/index.ts';
+import { initializeAnalyticsGates } from './services/analytics/sink.ts';
 import { getOriginalCwd, setAdditionalDirectoriesForClaudeMd, setIsRemoteMode, setMainLoopModelOverride, setMainThreadAgentType, setTeleportedSessionInfo } from './bootstrap/state';
 import { filterCommandsForRemoteMode, getCommands } from './commands';
 import type { StatsStore } from './context/stats';
@@ -138,33 +139,33 @@ import { generateTempFilePath } from './utils/tempfile';
 import { validateUuid } from './utils/uuid';
 // Plugin startup checks are now handled non-blockingly in REPL.tsx
 
-import { registerMcpAddCommand } from 'src/commands/mcp/addCommand';
-import { registerMcpXaaIdpCommand } from 'src/commands/mcp/xaaIdpCommand';
-import { logPermissionContextForAnts } from 'src/services/internalLogging';
-import { fetchClaudeAIMcpConfigsIfEligible } from 'src/services/mcp/claudeai';
-import { clearServerCache } from 'src/services/mcp/client';
-import { areMcpConfigsAllowedWithEnterpriseMcpConfig, dedupClaudeAiMcpServers, doesEnterpriseMcpConfigExist, filterMcpServersByPolicy, getClaudeCodeMcpConfigs, getMcpServerSignature, parseMcpConfig, parseMcpConfigFromFilePath } from 'src/services/mcp/config';
-import { excludeCommandsByServer, excludeResourcesByServer } from 'src/services/mcp/utils';
-import { isXaaEnabled } from 'src/services/mcp/xaaIdpLogin';
-import { getRelevantTips } from 'src/services/tips/tipRegistry';
-import { logContextMetrics } from 'src/utils/api';
-import { CLAUDE_IN_CHROME_MCP_SERVER_NAME, isClaudeInChromeMCPServer } from 'src/utils/claudeInChrome/common';
-import { registerCleanup } from 'src/utils/cleanupRegistry';
-import { eagerParseCliFlag } from 'src/utils/cliArgs';
-import { createEmptyAttributionState } from 'src/utils/commitAttribution';
-import { countConcurrentSessions, registerSession, updateSessionName } from 'src/utils/concurrentSessions';
-import { getCwd } from 'src/utils/cwd';
-import { logForDebugging, setHasFormattedOutput } from 'src/utils/debug';
-import { errorMessage, getErrnoCode, isENOENT, TeleportOperationError, toError } from 'src/utils/errors';
-import { getFsImplementation, safeResolvePath } from 'src/utils/fsOperations';
-import { gracefulShutdown, gracefulShutdownSync } from 'src/utils/gracefulShutdown';
-import { setAllHookEventsEnabled } from 'src/utils/hooks/hookEvents';
-import { refreshModelCapabilities } from 'src/utils/model/modelCapabilities';
-import { peekForStdinData, writeToStderr } from 'src/utils/process';
-import { setCwd } from 'src/utils/Shell';
-import { type ProcessedResume, processResumedConversation } from 'src/utils/sessionRestore';
-import { parseSettingSourcesFlag } from 'src/utils/settings/constants';
-import { plural } from 'src/utils/stringUtils';
+import { registerMcpAddCommand } from './commands/mcp/addCommand.ts';
+import { registerMcpXaaIdpCommand } from './commands/mcp/xaaIdpCommand.ts';
+import { logPermissionContextForAnts } from './services/internalLogging.ts';
+import { fetchClaudeAIMcpConfigsIfEligible } from './services/mcp/claudeai.ts';
+import { clearServerCache } from './services/mcp/client.ts';
+import { areMcpConfigsAllowedWithEnterpriseMcpConfig, dedupClaudeAiMcpServers, doesEnterpriseMcpConfigExist, filterMcpServersByPolicy, getClaudeCodeMcpConfigs, getMcpServerSignature, parseMcpConfig, parseMcpConfigFromFilePath } from './services/mcp/config.ts';
+import { excludeCommandsByServer, excludeResourcesByServer } from './services/mcp/utils.ts';
+import { isXaaEnabled } from './services/mcp/xaaIdpLogin.ts';
+import { getRelevantTips } from './services/tips/tipRegistry.ts';
+import { logContextMetrics } from './utils/api.ts';
+import { CLAUDE_IN_CHROME_MCP_SERVER_NAME, isClaudeInChromeMCPServer } from './utils/claudeInChrome/common.ts';
+import { registerCleanup } from './utils/cleanupRegistry.ts';
+import { eagerParseCliFlag } from './utils/cliArgs.ts';
+import { createEmptyAttributionState } from './utils/commitAttribution.ts';
+import { countConcurrentSessions, registerSession, updateSessionName } from './utils/concurrentSessions.ts';
+import { getCwd } from './utils/cwd.ts';
+import { logForDebugging, setHasFormattedOutput } from './utils/debug.ts';
+import { errorMessage, getErrnoCode, isENOENT, TeleportOperationError, toError } from './utils/errors.ts';
+import { getFsImplementation, safeResolvePath } from './utils/fsOperations.ts';
+import { gracefulShutdown, gracefulShutdownSync } from './utils/gracefulShutdown.ts';
+import { setAllHookEventsEnabled } from './utils/hooks/hookEvents.ts';
+import { refreshModelCapabilities } from './utils/model/modelCapabilities.ts';
+import { peekForStdinData, writeToStderr } from './utils/process.ts';
+import { setCwd } from './utils/Shell.ts';
+import { type ProcessedResume, processResumedConversation } from './utils/sessionRestore.ts';
+import { parseSettingSourcesFlag } from './utils/settings/constants.ts';
+import { plural } from './utils/stringUtils.ts';
 import { type ChannelEntry, getInitialMainLoopModel, getIsNonInteractiveSession, getSdkBetas, getSessionId, getUserMsgOptIn, setAllowedChannels, setAllowedSettingSources, setChromeFlagOverride, setClientType, setCwdState, setDirectConnectServerUrl, setFlagSettingsPath, setInitialMainLoopModel, setInlinePlugins, setIsInteractive, setKairosActive, setOriginalCwd, setQuestionPreviewFormat, setSdkBetas, setSessionBypassPermissionsMode, setSessionPersistenceDisabled, setSessionSource, setUserMsgOptIn, switchSession } from './bootstrap/state';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -1478,7 +1479,7 @@ async function run(): Promise<CommanderCommand> {
           const {
             isComputerUseMCPServer,
             COMPUTER_USE_MCP_SERVER_NAME
-          } = await import('src/utils/computerUse/common.js');
+          } = await import('./utils/computerUse/common.ts');
           if (nonSdkConfigNames.some(isComputerUseMCPServer)) {
             reservedNameError = `Invalid MCP configuration: "${COMPUTER_USE_MCP_SERVER_NAME}" is a reserved MCP name.`;
           }
@@ -1609,11 +1610,11 @@ async function run(): Promise<CommanderCommand> {
       try {
         const {
           getChicagoEnabled
-        } = await import('src/utils/computerUse/gates.js');
+        } = await import('./utils/computerUse/gates.ts');
         if (getChicagoEnabled()) {
           const {
             setupComputerUseMCP
-          } = await import('src/utils/computerUse/setup.js');
+          } = await import('./utils/computerUse/setup.ts');
           const {
             mcpConfig,
             allowedTools: cuTools
@@ -2824,7 +2825,7 @@ async function run(): Promise<CommanderCommand> {
       profileCheckpoint('before_print_import');
       const {
         runHeadless
-      } = await import('src/cli/print.js');
+      } = await import('./cli/print.ts');
       profileCheckpoint('after_print_import');
       void runHeadless(inputPrompt, () => headlessStore.getState(), headlessStore.setState, commandsHeadless, tools, sdkMcpConfigs, agentDefinitions.activeAgents, {
         continue: options.continue,

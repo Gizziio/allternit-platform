@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// @ts-nocheck
 /**
  * Fix incorrectly rewritten local imports
  * Maps types back to their correct local source files

@@ -2,6 +2,8 @@
  * File History Tracking
  */
 
+export type { FileHistorySnapshot } from '../shared/utils/fileHistory.js'
+
 export interface FileHistoryEntry {
   path: string
   timestamp: number

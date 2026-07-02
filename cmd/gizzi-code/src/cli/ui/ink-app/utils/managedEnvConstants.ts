@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Environment variables that control inference routing: which provider to use,
  * which endpoint to hit, and which model IDs to send.

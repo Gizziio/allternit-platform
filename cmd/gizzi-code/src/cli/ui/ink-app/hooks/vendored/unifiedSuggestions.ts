@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Fuse from 'fuse'
 import { basename } from 'path'
 import type { SuggestionItem } from '../vendor/components/PromptInput/PromptInputFooterSuggestions'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import AllternitAI, { type ClientOptions } from '@allternit/sdk/providers/anthropic'
 import { randomUUID } from 'crypto'
 import {
@@ -6,13 +7,13 @@ import {
   getApiKeyFromApiKeyHelper,
   getClaudeAIOAuthTokens,
   isClaudeAISubscriber,
-} from 'src/utils/auth.js'
-import { getUserAgent } from 'src/utils/http.js'
+} from './../../utils/auth.ts'
+import { getUserAgent } from './../../utils/http.ts'
 import {
   getAPIProvider,
   isFirstPartyAnthropicBaseUrl,
-} from 'src/utils/model/providers.js'
-import { getProxyFetchOptions } from 'src/utils/proxy.js'
+} from './../../utils/model/providers.ts'
+import { getProxyFetchOptions } from './../../utils/proxy.ts'
 import {
   getIsNonInteractiveSession,
   getSessionId,

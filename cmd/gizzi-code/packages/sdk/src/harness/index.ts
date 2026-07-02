@@ -153,6 +153,10 @@ export class AllternitHarness {
    * Non-streaming completion
    */
   async complete(request: StreamRequest): Promise<HarnessResponse> {
+    if (!request.model) {
+      throw new AllternitError('StreamRequest.model is required for non-streaming completion');
+    }
+
     const routed = this.resolveRoute(request);
     const enrichedRequest = this.enrichRequest(routed);
 

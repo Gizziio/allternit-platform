@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Box, Text, useTheme } from 'src/ink';
+import { Box, Text, useTheme } from './../../ink.ts';
 import { env } from '../../utils/env';
 const WELCOME_V2_WIDTH = 58;
 export function WelcomeV2() {

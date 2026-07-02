@@ -128,6 +128,7 @@ function aggregateResponses(responses) {
                 if (!aggregatedResponse.candidates[candidateIndex]) {
                     aggregatedResponse.candidates[candidateIndex] = {
                         index: candidateIndex,
+                        content: candidate.content,
                     };
                 }
                 // Keep overwriting, the last one will be final

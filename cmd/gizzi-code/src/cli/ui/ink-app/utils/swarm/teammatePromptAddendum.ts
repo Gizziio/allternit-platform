@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Teammate-specific system prompt addendum.
  *

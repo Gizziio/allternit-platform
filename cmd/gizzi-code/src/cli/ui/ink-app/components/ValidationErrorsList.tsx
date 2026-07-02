@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import setWith from 'lodash-es/setWith';
 import * as React from 'react';

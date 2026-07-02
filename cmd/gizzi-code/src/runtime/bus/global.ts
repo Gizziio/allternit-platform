@@ -4,7 +4,7 @@
  */
 
 import { Bus, GlobalBus, onGlobal, offGlobal, emitGlobal, onceGlobal } from './bus.js'
-import type { BusEvent, BusHandler } from './bus-event.js'
+import type { BusEvent, BusHandler } from './bus.js'
 
 // Re-export everything from bus
 export { Bus, GlobalBus, onGlobal, offGlobal, emitGlobal, onceGlobal }

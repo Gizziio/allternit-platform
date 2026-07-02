@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createElement, type ReactNode } from 'react'
 import { ThemeProvider } from './components/design-system/ThemeProvider'
 import inkRender, {

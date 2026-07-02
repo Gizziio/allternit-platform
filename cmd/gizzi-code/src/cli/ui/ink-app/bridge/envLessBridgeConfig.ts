@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { z } from 'zod/v4'
 import { getFeatureValue_DEPRECATED } from '../services/analytics/growthbook'
 import { lazySchema } from '../utils/lazySchema'

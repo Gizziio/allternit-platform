@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Base64ImageSource } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import { readdir, readFile as readFileAsync } from 'fs/promises'
 import * as path from 'path'

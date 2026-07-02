@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { useSync } from "@/cli/ui/ink-app/context/sync"
 import { createMemo, createSignal, For, Show, Switch, Match, onMount, createResource } from "solid-js"

@@ -4,7 +4,8 @@
  * Together AI API client for Allternit SDK
  * API: https://api.together.xyz/v1 (OpenAI-compatible)
  */
-import { HarnessError } from '../../harness/types.js';
+import { HarnessError } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 export const TOGETHER_MODELS = {
     LLAMA2_70B: 'togethercomputer/llama-2-70b-chat',
     LLAMA2_13B: 'togethercomputer/llama-2-13b-chat',

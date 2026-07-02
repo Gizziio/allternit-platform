@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { checkInstall } from 'src/utils/nativeInstaller/index';
+import { checkInstall } from './../../../utils/nativeInstaller/index.ts';
 import { useStartupNotification } from './useStartupNotification';
 export function useInstallMessages() {
   useStartupNotification(_temp2);

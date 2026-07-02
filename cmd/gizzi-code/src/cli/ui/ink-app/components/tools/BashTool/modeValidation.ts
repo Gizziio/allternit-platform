@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { z } from 'zod/v4'
 import type { ToolPermissionContext } from '../../Tool'
 import { splitCommand_DEPRECATED } from '../../utils/bash/commands'

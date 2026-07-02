@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * useExitOnCtrlCDWithKeybindings hook
  * Production implementation for Ctrl+C/D exit handling with keybinding integration

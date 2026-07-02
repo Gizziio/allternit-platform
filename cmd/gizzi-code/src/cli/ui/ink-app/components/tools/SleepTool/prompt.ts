@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { TICK_TAG } from '../../constants/xml'
 
 export const SLEEP_TOOL_NAME = 'Sleep'

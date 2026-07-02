@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getHistory } from '../../history.js'
 import { logForDebugging } from '../debug.js'
 

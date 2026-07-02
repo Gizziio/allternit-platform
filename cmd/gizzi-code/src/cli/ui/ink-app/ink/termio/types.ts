@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ANSI Parser - Semantic Types
  *

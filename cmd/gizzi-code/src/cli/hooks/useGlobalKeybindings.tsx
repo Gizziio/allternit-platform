@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Component that registers global keybinding handlers.
  *

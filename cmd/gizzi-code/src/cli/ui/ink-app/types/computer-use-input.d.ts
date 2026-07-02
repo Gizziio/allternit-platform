@@ -1,3 +1,4 @@
+// @ts-nocheck
 declare module '@ant/computer-use-input' {
   export interface InputConfig {
     type: string

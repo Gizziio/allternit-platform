@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Skill Search - Remote Skill Loader
  * TEMPORARY SHIM

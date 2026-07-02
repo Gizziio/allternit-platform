@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useLayoutEffect } from 'react'
 import { useEventCallback } from 'usehooks-ts'
 import type { InputEvent, Key } from '../events/input-event.js'

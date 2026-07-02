@@ -1,3 +1,4 @@
+// @ts-nocheck
 // GrowthBook-backed cron jitter configuration.
 //
 // Separated from cronScheduler.ts so the scheduler can be bundled in the

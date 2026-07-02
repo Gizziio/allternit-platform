@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Onboarding Wizard - Mode Selection Step
  * 

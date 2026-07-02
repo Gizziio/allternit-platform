@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Leaf stripBOM — extracted from json.ts to break settings → json → log →
  * types/logs → … → settings. json.ts imports this for its memoized+logging

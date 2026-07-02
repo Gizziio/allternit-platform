@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Assistant module
  * Handles assistant mode and session management

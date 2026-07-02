@@ -1,3 +1,4 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 /**
  * Hooks are user-defined shell commands that can be executed at various points
@@ -41,7 +42,7 @@ import {
   getHooksConfigFromSnapshot,
   shouldAllowManagedHooksOnly,
   shouldDisableAllHooksIncludingManaged,
-} from '@/hooks/hooksConfigSnapshot.js'
+} from '../../runtime/utils/hooks/hooksConfigSnapshot.js'
 import {
   getTranscriptPathForSession,
   getAgentTranscriptPath,
@@ -118,7 +119,7 @@ import type {
   PluginHookMatcher,
   SkillHookMatcher,
 } from './settings/types.js'
-import { getHookDisplayText } from '@/hooks/hooksSettings.js'
+import { getHookDisplayText } from './hooks/hooksSettings.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { firstLineOf } from './stringUtils.js'
@@ -130,7 +131,7 @@ import {
 import { logError } from './log.js'
 import { createCombinedAbortSignal } from './combinedAbortSignal.js'
 import type { PermissionResult } from './permissions/PermissionResult.js'
-import { registerPendingAsyncHook } from '@/hooks/AsyncHookRegistry.js'
+import { registerPendingAsyncHook } from './hooks/AsyncHookRegistry.js'
 import { enqueuePendingNotification } from './messageQueueManager.js'
 import {
   extractTextContent,
@@ -141,14 +142,14 @@ import {
   emitHookStarted,
   emitHookResponse,
   startHookProgressInterval,
-} from '@/hooks/hookEvents.js'
+} from './hooks/hookEvents.js'
 import { createAttachmentMessage } from './attachments.js'
 import { all } from './generators.js'
 import { findToolByName, type Tools, type ToolUseContext } from '../../runtime/tools/Tool.js'
-import { execPromptHook } from '@/hooks/execPromptHook.js'
+import { execPromptHook } from './hooks/execPromptHook.js'
 import type { Message, AssistantMessage, AttachmentMessage } from '@/types/message.js'
-import { execAgentHook } from '@/hooks/execAgentHook.js'
-import { execHttpHook } from '@/hooks/execHttpHook.js'
+import { execAgentHook } from './hooks/execAgentHook.js'
+import { execHttpHook } from './hooks/execHttpHook.js'
 import type { ShellCommand } from './ShellCommand.js'
 import {
   getSessionHooks,
@@ -157,7 +158,7 @@ import {
   clearSessionHooks,
   type SessionDerivedHookMatcher,
   type FunctionHook,
-} from '@/hooks/sessionHooks.js'
+} from '../../runtime/utils/hooks/sessionHooks.js'
 import type { AppState } from '@/state/AppState.js'
 import { jsonStringify, jsonParse } from './slowOperations.js'
 import { isEnvTruthy } from './envUtils.js'

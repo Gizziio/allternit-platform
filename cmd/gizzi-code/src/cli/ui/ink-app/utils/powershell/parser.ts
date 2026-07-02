@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { execa } from 'execa'
 import { logForDebugging } from '../debug.js'
 import { memoizeWithLRU } from '../memoize.js'

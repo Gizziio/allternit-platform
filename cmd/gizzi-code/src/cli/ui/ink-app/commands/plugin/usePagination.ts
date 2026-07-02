@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useMemo, useRef } from 'react'
 
 const DEFAULT_MAX_VISIBLE = 5

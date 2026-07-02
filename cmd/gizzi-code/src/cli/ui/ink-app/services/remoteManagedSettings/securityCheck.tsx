@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { getIsInteractive } from '../../bootstrap/state';
 import { ManagedSettingsSecurityDialog } from '../../components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog';

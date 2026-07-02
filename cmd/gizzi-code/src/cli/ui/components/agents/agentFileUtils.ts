@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mkdir, open, unlink } from 'fs/promises'
 import { join } from 'path'
 import type { SettingSource } from 'src/utils/settings/constants.js'

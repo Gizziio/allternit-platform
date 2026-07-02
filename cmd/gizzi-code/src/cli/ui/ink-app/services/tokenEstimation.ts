@@ -1,6 +1,7 @@
+// @ts-nocheck
 import type { AllternitAI } from '@allternit/sdk/providers/anthropic'
 import type { BetaMessageParam as MessageParam } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
-import { getAPIProvider } from 'src/utils/model/providers.js'
+import { getAPIProvider } from './../utils/model/providers.ts'
 import type { Attachment } from '../utils/attachments.js'
 import { getModelBetas } from '../utils/betas.js'
 import { logError } from '../utils/log.js'

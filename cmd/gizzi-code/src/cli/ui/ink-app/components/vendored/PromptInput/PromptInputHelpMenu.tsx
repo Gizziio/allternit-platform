@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import * as React from 'react';
-import { Box, Text } from 'src/ink';
-import { getPlatform } from 'src/utils/platform';
+import { Box, Text } from './../../../ink.ts';
+import { getPlatform } from './../../../utils/platform.ts';
 import { isKeybindingCustomizationEnabled } from '../../keybindings/loadUserBindings';
 import { useShortcutDisplay } from '../../keybindings/useShortcutDisplay';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook';

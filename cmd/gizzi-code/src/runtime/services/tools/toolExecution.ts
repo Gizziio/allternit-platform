@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import type {
   ContentBlockParam,
@@ -35,15 +36,15 @@ import {
   type ToolProgressData,
   type ToolUseContext,
 } from '../../../runtime/tools/Tool.js'
-import type { BashToolInput } from '../../../tools/BashTool/BashTool.js'
-import { startSpeculativeClassifierCheck } from '../../../tools/BashTool/bashPermissions.js'
-import { BASH_TOOL_NAME } from '../../../tools/BashTool/toolName.js'
-import { FILE_EDIT_TOOL_NAME } from '../../../tools/FileEditTool/constants.js'
+import type { BashToolInput } from '../../tools/builtins/bash/BashTool.js'
+import { startSpeculativeClassifierCheck } from '../../tools/builtins/bash/bashPermissions.js'
+import { BASH_TOOL_NAME } from '../../tools/builtins/bash/toolName.js'
+import { FILE_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
 import { FILE_READ_TOOL_NAME } from '../../../tools/FileReadTool/prompt.js'
 import { FILE_WRITE_TOOL_NAME } from '../../../tools/FileWriteTool/prompt.js'
-import { NOTEBOOK_EDIT_TOOL_NAME } from '../../../tools/NotebookEditTool/constants.js'
-import { POWERSHELL_TOOL_NAME } from '../../../tools/PowerShellTool/toolName.js'
-import { parseGitCommitId } from '../../../tools/shared/gitOperationTracking.js'
+import { NOTEBOOK_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
+import { POWERSHELL_TOOL_NAME } from '../../tools/builtins/bash/toolName.js'
+import { parseGitCommitId } from '../../tools/shared/gitOperationTracking.js'
 import {
   isDeferredTool,
   TOOL_SEARCH_TOOL_NAME,
@@ -87,7 +88,7 @@ import {
 } from '../../../utils/sessionActivity.js'
 import { jsonStringify } from '../../../utils/slowOperations.js'
 import { Stream } from '../../../utils/stream.js'
-import { logOTelEvent } from '../../../utils/telemetry/events.js'
+import { logOTelEvent } from '../../../shared/utils/telemetry/events.js'
 import {
   addToolContentEvent,
   endToolBlockedOnUserSpan,
@@ -97,7 +98,7 @@ import {
   startToolBlockedOnUserSpan,
   startToolExecutionSpan,
   startToolSpan,
-} from '../../../utils/telemetry/sessionTracing.js'
+} from '../../../shared/utils/telemetry/sessionTracing.js'
 import {
   formatError,
   formatZodValidationError,

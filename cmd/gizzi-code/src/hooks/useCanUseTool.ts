@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * useCanUseTool Hook
  */

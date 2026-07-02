@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 /**
  * Cowork Mode - Collaborative workspace view

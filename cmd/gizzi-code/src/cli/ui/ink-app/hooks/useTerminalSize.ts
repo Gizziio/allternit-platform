@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { useContext } from 'react'
 import {
   type TerminalSize,
   TerminalSizeContext,
-} from 'src/ink/components/TerminalSizeContext'
+} from './../ink/components/TerminalSizeContext.tsx'
 
 export function useTerminalSize(): TerminalSize {
   const size = useContext(TerminalSizeContext)

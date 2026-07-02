@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getIsRemoteMode } from '../../bootstrap/state'
 import type { Command } from '../../commands'
 

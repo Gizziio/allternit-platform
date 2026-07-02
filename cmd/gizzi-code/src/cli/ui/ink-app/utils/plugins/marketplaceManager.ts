@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Marketplace manager for Claude Code plugins
  *

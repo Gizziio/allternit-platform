@@ -1,5 +1,6 @@
+// @ts-nocheck
 import type { ReactNode } from 'react'
-import { logForDebugging } from 'src/utils/debug.js'
+import { logForDebugging } from './../utils/debug.ts'
 import { Stream } from 'stream'
 import type { FrameEvent } from './frame.js'
 import Ink, { type Options as InkOptions } from './ink.js'

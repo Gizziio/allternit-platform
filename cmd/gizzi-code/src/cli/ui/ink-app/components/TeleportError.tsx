@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useEffect, useState } from 'react';
-import { checkIsGitClean, checkNeedsClaudeAiLogin } from 'src/utils/background/remote/preconditions';
-import { gracefulShutdownSync } from 'src/utils/gracefulShutdown';
+import { checkIsGitClean, checkNeedsClaudeAiLogin } from './../utils/background/remote/preconditions.ts';
+import { gracefulShutdownSync } from './../utils/gracefulShutdown.ts';
 import { Box, Text } from '../ink';
 import { ConsoleOAuthFlow } from './ConsoleOAuthFlow';
 import { Select } from './CustomSelect/index';

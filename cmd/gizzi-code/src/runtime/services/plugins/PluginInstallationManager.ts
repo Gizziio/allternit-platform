@@ -18,8 +18,8 @@ import { clearPluginCache } from '../../../utils/plugins/pluginLoader.js'
 import {
   diffMarketplaces,
   reconcileMarketplaces,
-} from '../../../utils/plugins/reconciler.js'
-import { refreshActivePlugins } from '../../../utils/plugins/refresh.js'
+} from '../../../shared/utils/plugins/reconciler.js'
+import { refreshActivePlugins } from '../../../shared/utils/plugins/refresh.js'
 import { logEvent } from '../analytics/index.js'
 
 type SetAppState = (f: (prevState: AppState) => AppState) => void

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { roughTokenCountEstimation } from '../services/tokenEstimation'
 import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir'
 

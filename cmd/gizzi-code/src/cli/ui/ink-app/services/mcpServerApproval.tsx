@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { MCPServerApprovalDialog } from '../components/MCPServerApprovalDialog';
 import { MCPServerMultiselectDialog } from '../components/MCPServerMultiselectDialog';

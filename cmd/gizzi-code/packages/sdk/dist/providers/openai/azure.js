@@ -3,7 +3,7 @@ import * as Errors from './error';
 import { isObj, readEnv } from './internal/utils';
 import { AllternitOpenAI } from './client';
 /** API Client for interfacing with the Azure OpenAI API. */
-export class AllternitAzureOpenAI extends AllternitOpenAI {
+export class AzureOpenAI extends AllternitOpenAI {
     deploymentName;
     apiVersion = '';
     /**
@@ -25,7 +25,7 @@ export class AllternitAzureOpenAI extends AllternitOpenAI {
      */
     constructor({ baseURL = readEnv('ALLTERNIT_OPENAI_BASE_URL'), apiKey = readEnv('AZURE_ALLTERNIT_OPENAI_API_KEY'), apiVersion = readEnv('ALLTERNIT_OPENAI_API_VERSION'), endpoint, deployment, azureADTokenProvider, dangerouslyAllowBrowser, ...opts } = {}) {
         if (!apiVersion) {
-            throw new Errors.AllternitOpenAIError("The ALLTERNIT_OPENAI_API_VERSION environment variable is missing or empty; either provide it, or instantiate the AzureOpenAI client with an apiVersion option, like new AllternitAzureOpenAI({ apiVersion: 'My API Version' }).");
+            throw new Errors.AllternitOpenAIError("The ALLTERNIT_OPENAI_API_VERSION environment variable is missing or empty; either provide it, or instantiate the AzureOpenAI client with an apiVersion option, like new AzureOpenAI({ apiVersion: 'My API Version' }).");
         }
         if (typeof azureADTokenProvider === 'function') {
             dangerouslyAllowBrowser = true;
@@ -90,6 +90,4 @@ const _deployments_endpoints = new Set([
     '/batches',
     '/images/edits',
 ]);
-// Alias for backward compatibility
-export { AllternitAzureOpenAI as AzureOpenAI };
 //# sourceMappingURL=azure.js.map

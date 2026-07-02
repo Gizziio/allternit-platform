@@ -410,7 +410,7 @@ export class AllternitOpenAI {
     }
 
     this.baseURL = options.baseURL!;
-    this.timeout = options.timeout ?? AllternitAllternitOpenAI.DEFAULT_TIMEOUT /* 10 minutes */;
+    this.timeout = options.timeout ?? AllternitOpenAI.DEFAULT_TIMEOUT /* 10 minutes */;
     this.logger = options.logger ?? console;
     const defaultLogLevel = 'warn';
     // Set default logLevel early so that we can log a warning in parseLogLevel.

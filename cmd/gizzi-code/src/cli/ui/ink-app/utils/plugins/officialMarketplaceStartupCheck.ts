@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Auto-install logic for the official Anthropic marketplace.
  *

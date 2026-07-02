@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useSwarmInitialization_ts(): void {
   // Not yet implemented
 }

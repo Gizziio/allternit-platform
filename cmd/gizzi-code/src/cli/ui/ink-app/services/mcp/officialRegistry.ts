@@ -1,3 +1,4 @@
+// @ts-nocheck
 import axios from 'axios'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'

@@ -12,7 +12,7 @@ import fs from "fs/promises"
 import path from "path"
 import os from "os"
 import { Log } from "@/shared/util/log"
-import { Global } from "@/runtime/context/global"
+import { GlobalPaths } from "@/runtime/context/global/paths"
 import { Filesystem } from "@/shared/util/filesystem"
 
 const log = Log.create({ service: "sidecar" })
@@ -50,16 +50,16 @@ export namespace Sidecar {
 
   const paths = {
     get root() {
-      return path.join(Global.Path.data, "sidecar")
+      return path.join(GlobalPaths.data, "sidecar")
     },
     get pid() {
-      return path.join(Global.Path.data, "sidecar", "sidecar.pid")
+      return path.join(GlobalPaths.data, "sidecar", "sidecar.pid")
     },
     get log() {
-      return path.join(Global.Path.data, "sidecar", "sidecar.log")
+      return path.join(GlobalPaths.data, "sidecar", "sidecar.log")
     },
     get ready() {
-      return path.join(Global.Path.data, "sidecar", "ready")
+      return path.join(GlobalPaths.data, "sidecar", "ready")
     },
   }
 
@@ -184,7 +184,7 @@ export namespace Sidecar {
     const env = {
       ...process.env,
       OLLAMA_HOST: `${SIDECAR_HOST}:${SIDECAR_PORT}`,
-      OLLAMA_MODELS: path.join(Global.Path.data, "models"),
+      OLLAMA_MODELS: path.join(GlobalPaths.data, "models"),
       // Limit resource usage — this is a background sidecar
       OLLAMA_NUM_PARALLEL: "1",
       OLLAMA_MAX_LOADED_MODELS: "1",

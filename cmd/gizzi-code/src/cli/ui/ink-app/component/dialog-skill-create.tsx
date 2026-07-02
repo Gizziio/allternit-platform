@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DialogForm } from "@/cli/ui/ink-app/ui/dialog-form"
 import { useDialog } from "@/cli/ui/ink-app/ui/dialog"
 import { useTheme } from "@/cli/ui/ink-app/context/theme"

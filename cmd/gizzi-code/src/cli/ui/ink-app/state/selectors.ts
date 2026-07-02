@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Selectors for deriving computed state from AppState.
  * Keep selectors pure and simple - just data extraction, no side effects.

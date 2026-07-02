@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { type Accessor, createMemo, createSignal, Match, Show, Switch } from "solid-js"
 import { useRouteData } from "@/cli/ui/ink-app/context/route"

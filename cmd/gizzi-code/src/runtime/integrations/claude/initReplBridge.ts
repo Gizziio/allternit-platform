@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * REPL-specific wrapper around initBridgeCore. Owns the parts that read
  * bootstrap state — gates, cwd, session ID, git context, OAuth, title

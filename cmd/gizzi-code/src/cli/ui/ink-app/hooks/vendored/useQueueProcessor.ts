@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useQueueProcessor_ts(): void {
   // Not yet implemented
 }

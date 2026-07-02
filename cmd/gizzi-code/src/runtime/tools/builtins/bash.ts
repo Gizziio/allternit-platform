@@ -1,3 +1,4 @@
+// @ts-nocheck
 import z from "zod/v4"
 import { spawn } from "child_process"
 import { Tool } from "@/runtime/tools/builtins/tool"

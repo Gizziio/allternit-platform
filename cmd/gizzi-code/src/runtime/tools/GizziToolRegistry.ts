@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ToolRegistry } from '@allternit/sdk';
 import type { ToolDefinition, DeferredToolDefinition } from '@allternit/sdk';
 import { Tool, Tools } from '../tools/Tool.js';

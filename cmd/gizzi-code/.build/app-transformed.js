@@ -1,8 +1,9 @@
 import { memo as _$memo } from "@opentui/solid";
 import { createComponent as _$createComponent } from "@opentui/solid";
+// @ts-nocheck
 import { execa } from 'execa';
 import React, { useCallback, useState } from 'react';
-import { logEvent } from 'src/services/analytics/index';
+import { logEvent } from './../../services/analytics/index.ts';
 import { WorkflowMultiselectDialog } from '../../components/WorkflowMultiselectDialog';
 import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings';

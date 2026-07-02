@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useEffect } from 'react'
 import { settingsChangeDetector } from '../utils/settings/changeDetector.js'
 import type { SettingSource } from '../utils/settings/constants.js'

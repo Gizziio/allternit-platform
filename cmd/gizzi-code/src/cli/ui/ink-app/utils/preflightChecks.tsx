@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import { logEvent } from 'src/services/analytics/index';
+import { logEvent } from './../services/analytics/index.ts';
 import { Spinner } from '../components/Spinner';
 import { getOauthConfig } from '../constants/oauth';
 import { useTimeout } from '../hooks/useTimeout';

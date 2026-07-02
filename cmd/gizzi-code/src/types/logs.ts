@@ -1,7 +1,7 @@
 // UUID type alias for compatibility
 type UUID = string
-import type { FileHistorySnapshot } from '../../utils/fileHistory.js'
-import type { ContentReplacementRecord } from '../../utils/toolResultStorage.js'
+import type { FileHistorySnapshot } from '../utils/fileHistory.js'
+import type { ContentReplacementRecord } from '../utils/toolResultStorage.js'
 import type { AgentId } from './ids.js'
 import type { Message } from './message.js'
 import type { QueueOperationMessage } from './messageQueueTypes.js'

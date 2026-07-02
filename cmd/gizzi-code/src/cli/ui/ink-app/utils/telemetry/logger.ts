@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { DiagLogger } from '@opentelemetry/api'
 import { logForDebugging } from '../debug.js'
 import { logError } from '../log.js'

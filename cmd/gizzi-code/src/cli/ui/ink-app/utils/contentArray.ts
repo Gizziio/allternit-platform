@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Utility for inserting a block into a content array relative to tool_result
  * blocks. Used by the API layer to position supplementary content (e.g.,

@@ -3,7 +3,7 @@
  * Central event management for the runtime
  */
 
-import { Log } from './bus-event.js'
+import { Log } from '@/shared/util/log'
 
 export interface BusEvent {
   type: string

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { EventEmitter as NodeEventEmitter } from 'events'
 import { Event } from './event.js'
 

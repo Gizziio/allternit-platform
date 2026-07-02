@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Shorthand (+500k) anchored to start/end to avoid false positives in natural language.
 // Verbose (use/spend 2M tokens) matches anywhere.
 const SHORTHAND_START_RE = /^\s*\+(\d+(?:\.\d+)?)\s*(k|m|b)\b/i

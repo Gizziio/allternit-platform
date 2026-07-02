@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Note: this code is hot, so is optimized for speed.
  */

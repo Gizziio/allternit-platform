@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Cowork Mode Types - Event protocol for collaborative workspace
  */

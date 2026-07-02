@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useRef, useState } from 'react'
 import type { PastedContent } from '../utils/config.js'
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { QuestionTool } from "@/runtime/tools/builtins/question"
 import { VerifyTool } from "@/runtime/tools/builtins/verify"
 import { BashTool } from "@/runtime/tools/builtins/bash"

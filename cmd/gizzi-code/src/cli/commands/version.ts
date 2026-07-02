@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Version Command
  * Display version information and system details

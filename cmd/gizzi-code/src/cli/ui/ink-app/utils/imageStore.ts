@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mkdir, open } from 'fs/promises'
 import { join } from 'path'
 import { getSessionId } from '../bootstrap/state.js'

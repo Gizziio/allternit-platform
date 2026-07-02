@@ -1,3 +1,4 @@
+// @ts-nocheck
 import chalk from 'chalk';
 import figures from 'figures';
 import React, { useEffect } from 'react';

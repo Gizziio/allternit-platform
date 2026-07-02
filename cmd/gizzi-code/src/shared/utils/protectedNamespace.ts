@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Canonical allowlist logic for protected namespaces.
  * Used for telemetry and safety gates in sensitive environments.

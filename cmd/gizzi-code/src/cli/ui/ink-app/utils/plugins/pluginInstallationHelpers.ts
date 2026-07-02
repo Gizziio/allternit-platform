@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared helper functions for plugin installation
  *

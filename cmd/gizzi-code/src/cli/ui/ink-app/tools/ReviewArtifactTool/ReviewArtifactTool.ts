@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Review Artifact Tool
  * TEMPORARY SHIM

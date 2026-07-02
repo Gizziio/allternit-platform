@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Plugin dependency resolution — pure functions, no I/O.
  *

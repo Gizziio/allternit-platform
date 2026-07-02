@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Hooks, PluginInput, Plugin as PluginInstance } from "@allternit/plugin"
 import { Config } from "@/runtime/context/config/config"
 import { Bus } from "@/shared/bus"

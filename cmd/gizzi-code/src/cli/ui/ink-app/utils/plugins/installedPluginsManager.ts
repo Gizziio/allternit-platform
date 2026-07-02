@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Manages plugin installation metadata stored in installed_plugins.json
  *

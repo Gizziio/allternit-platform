@@ -33,7 +33,7 @@ async function nodejsPlayAudio(stream) {
                 stream.body.pipe(ffplay.stdin);
             }
             else if (isFile(stream)) {
-                Readable.from(stream.stream()).pipe(ffplay.stdin);
+                Readable.fromWeb(stream.stream()).pipe(ffplay.stdin);
             }
             else {
                 stream.pipe(ffplay.stdin);

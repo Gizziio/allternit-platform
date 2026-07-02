@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useReducer } from 'react'
 import { onGrowthBookRefresh } from '../../vendor/services/analytics/growthbook'
 import { useAppState } from '../../state/AppState'

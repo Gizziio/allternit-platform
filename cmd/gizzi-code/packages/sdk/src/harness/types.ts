@@ -178,3 +178,9 @@ export interface SSEEvent {
 
 export { HarnessError } from './errors.js';
 export type { HarnessErrorCode } from './errors.js';
+
+/** Alias for non-streaming harness responses. */
+export type StreamResponse = HarnessResponse;
+
+/** Alias for the configured harness operation mode. */
+export type HarnessMode = HarnessConfig['mode'];

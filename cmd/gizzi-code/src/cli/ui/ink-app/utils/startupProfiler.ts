@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Startup profiling utility for measuring and reporting time spent in various
  * initialization phases.
@@ -10,7 +11,7 @@
  */
 
 import { dirname, join } from 'path'
-import { getSessionId } from 'src/bootstrap/state.js'
+import { getSessionId } from './../bootstrap/state.ts'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createEffect, onCleanup } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 

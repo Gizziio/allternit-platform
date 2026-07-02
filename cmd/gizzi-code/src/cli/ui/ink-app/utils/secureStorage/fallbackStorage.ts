@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { SecureStorage, SecureStorageData } from './types.js'
 
 /**

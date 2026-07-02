@@ -133,14 +133,33 @@ async function apiCall<T>(
   body?: unknown
 ): Promise<T> {
   const url = `${API_BASE}${path}`
-  const token = process.env.Allternit_API_TOKEN
+  let token = process.env.Allternit_API_TOKEN
+  if (!token) {
+    try {
+      const fs = require("fs")
+      const path = require("path")
+      const os = require("os")
+      const sessionPath = path.join(os.homedir(), ".config", "gizzi", "session.json")
+      if (fs.existsSync(sessionPath)) {
+        const session = JSON.parse(fs.readFileSync(sessionPath, "utf8"))
+        token = session?.accessToken || null
+      }
+    } catch {
+      // Ignore reading error
+    }
+  }
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
   }
 
-  if (token) {
+  if (process.env.Allternit_DEV_MODE === "true") {
+    headers["x-allternit-user-id"] = "gizzi-agent-1"
+    headers["x-allternit-desktop-access-token"] = "dev-bootstrap-token"
+    headers["x-allternit-user-email"] = "test@allternit.com"
+    headers["x-allternit-user-name"] = "Cowork Tester"
+  } else if (token) {
     headers["Authorization"] = `Bearer ${token}`
   }
 
@@ -192,6 +211,7 @@ export const CoworkCommand = cmd({
       .command(CoworkTimerCommand)
       .command(CoworkRuntimeCommand)
       .command(CoworkWorkspaceCommand)
+      .command(CoworkRunDaemonCommand)
       .demandCommand(1, "Choose a command")
   },
   async handler() {
@@ -1542,6 +1562,7 @@ export const CoworkTasksCommand = cmd({
       })
       .command(CoworkTasksListCommand)
       .command(CoworkTasksCreateCommand)
+      .command(CoworkTasksReadCommand)
       .command(CoworkTasksEditCommand)
       .command(CoworkTasksMoveCommand)
       .command(CoworkTasksAssignCommand)
@@ -1551,7 +1572,8 @@ export const CoworkTasksCommand = cmd({
   },
   handler: async (args) => {
     try {
-      const tasks = await apiCall<TaskItem[]>("GET", `/api/v1/tasks?workspace_id=${args.workspace}&limit=100`)
+      const resp = await apiCall<any>("GET", `/api/v1/tasks?workspace_id=${args.workspace}&limit=100`)
+      const tasks = (Array.isArray(resp) ? resp : resp?.tasks) || []
 
       if (tasks.length === 0) {
         UI.println(UI.Style.TEXT_WARNING + "No tasks found in workspace." + UI.Style.TEXT_NORMAL)
@@ -1560,22 +1582,90 @@ export const CoworkTasksCommand = cmd({
         return
       }
 
+      const commentsMap: Record<string, any[]> = {};
+      await Promise.all(
+        tasks.map(async (t: any) => {
+          try {
+            const comments = await apiCall<any[]>("GET", `/api/v1/tasks/${t.id}/comments`);
+            commentsMap[t.id] = comments.map(c => ({
+              id: c.id || c.comment_id || String(Math.random()),
+              author: c.author_name || c.author_id || "Unknown",
+              body: c.body,
+              createdAt: c.created_at
+            }));
+          } catch {
+            commentsMap[t.id] = [];
+          }
+        })
+      );
+
       const { unmount } = await render(
         React.createElement(IntelliTaskScreen, {
           tasks: tasks.map(t => ({
             id: t.id,
             title: t.title,
-            priority: t.priority,
+            priority: Number(t.priority) || 1,
             estimatedMinutes: t.estimated_minutes || t.estimatedMinutes || 60,
             deadline: t.deadline ? new Date(t.deadline).getTime() : undefined,
             dependencies: t.dependencies || [],
+            status: t.status || 'todo',
+            assignee_id: t.assignee_id || undefined,
+            assignee_name: t.assignee_name || undefined,
+            assignee_type: t.assignee_type || undefined,
           })),
+          comments: commentsMap,
           onSelect: (taskId: string) => {
             UI.println(`${UI.Style.TEXT_INFO_BOLD}Selected task:${UI.Style.TEXT_NORMAL} ${taskId}`)
           },
           onQuit: () => {
             unmount()
             process.exit(0)
+          },
+          onStatusChange: (taskId: string, status: string) => {
+            apiCall("PUT", `/api/v1/tasks/${taskId}`, { status })
+              .catch(err => {
+                UI.error(`Failed to update task status: ${err instanceof Error ? err.message : String(err)}`)
+              });
+          },
+          onAssign: async (taskId: string, currentAssigneeId?: string) => {
+            try {
+              const me = await apiCall<any>("GET", "/api/v1/me");
+              const isAssignedToMe = currentAssigneeId === me.id;
+
+              const body = isAssignedToMe ? {
+                assignee_type: null,
+                assignee_id: null,
+                assignee_name: null,
+              } : {
+                assignee_type: "human",
+                assignee_id: me.id,
+                assignee_name: me.name || me.email || "You",
+              };
+
+              await apiCall("POST", `/api/v1/tasks/${taskId}/assign`, body);
+              return {
+                assignee_id: body.assignee_id,
+                assignee_name: body.assignee_name,
+              };
+            } catch (err) {
+              UI.error(`Failed to assign task: ${err instanceof Error ? err.message : String(err)}`);
+              return null;
+            }
+          },
+          onAddComment: async (taskId: string, body: string) => {
+            try {
+              await apiCall("POST", `/api/v1/tasks/${taskId}/comments`, { body });
+              const updated = await apiCall<any[]>("GET", `/api/v1/tasks/${taskId}/comments`);
+              return updated.map(c => ({
+                id: c.id || c.comment_id || String(Math.random()),
+                author: c.author_name || c.author_id || "Unknown",
+                body: c.body,
+                createdAt: c.created_at
+              }));
+            } catch (err) {
+              UI.error(`Failed to add comment: ${err instanceof Error ? err.message : String(err)}`);
+              return null;
+            }
           },
         })
       )
@@ -1625,7 +1715,8 @@ export const CoworkTasksListCommand = cmd({
         params.append("limit", String(args.limit))
 
         const query = params.toString() ? `?${params.toString()}` : ""
-        const tasks = await apiCall<TaskItem[]>("GET", `/api/v1/tasks${query}`)
+        const resp = await apiCall<any>("GET", `/api/v1/tasks${query}`)
+        const tasks = (Array.isArray(resp) ? resp : resp?.tasks) || []
 
         if (args.format === "json") {
           UI.println(JSON.stringify(tasks, null, 2))
@@ -1723,7 +1814,8 @@ export const CoworkTasksCreateCommand = cmd({
           body.deadline = args.deadline
         }
 
-        const task = await apiCall<TaskItem>("POST", "/api/v1/tasks", body)
+        const resp = await apiCall<any>("POST", "/api/v1/tasks", body)
+        const task = resp?.task || resp
         UI.println(UI.Style.TEXT_SUCCESS_BOLD + "✓ Task created" + UI.Style.TEXT_NORMAL)
         UI.println(`  ID: ${task.id}`)
         UI.println(`  Title: ${task.title}`)
@@ -1782,7 +1874,8 @@ export const CoworkTasksEditCommand = cmd({
         if (args.status) updates.status = args.status
         if (args.title) updates.title = args.title
 
-        const task = await apiCall<TaskItem>("PUT", `/api/v1/tasks/${args.id}`, updates)
+        const resp = await apiCall<any>("PUT", `/api/v1/tasks/${args.id}`, updates)
+        const task = resp?.task || resp
         UI.println(`${UI.Style.TEXT_SUCCESS}✓ Updated task:${UI.Style.TEXT_NORMAL} ${task.id}`)
       } catch (error) {
         UI.error(`Failed to update task: ${error instanceof Error ? error.message : String(error)}`)
@@ -1819,7 +1912,8 @@ export const CoworkTasksMoveCommand = cmd({
   handler: async (args) => {
     await bootstrap(process.cwd(), async () => {
       try {
-        const task = await apiCall<TaskItem>("PUT", `/api/v1/tasks/${args.id}`, { status: args.status })
+        const resp = await apiCall<any>("PUT", `/api/v1/tasks/${args.id}`, { status: args.status })
+        const task = resp?.task || resp
         UI.println(`${UI.Style.TEXT_SUCCESS}✓ Moved task:${UI.Style.TEXT_NORMAL} ${task.id} → ${task.status}`)
       } catch (error) {
         UI.error(`Failed to move task: ${error instanceof Error ? error.message : String(error)}`)
@@ -1983,6 +2077,60 @@ export const CoworkTasksCommentCommand = cmd({
   },
 })
 
+export const CoworkTasksReadCommand = cmd({
+  command: "read <id>",
+  aliases: ["show", "get", "info"],
+  describe: "read task details and comments",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "Task ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const task = await apiCall<any>("GET", `/api/v1/tasks/${args.id}`)
+        let comments: any[] = []
+        try {
+          comments = await apiCall<any[]>("GET", `/api/v1/tasks/${args.id}/comments`)
+        } catch {
+          // comments offline
+        }
+        UI.println(UI.Style.TEXT_NORMAL_BOLD + "Task Details" + UI.Style.TEXT_NORMAL)
+        UI.println(`  ID:          ${task.id}`)
+        UI.println(`  Title:       ${task.title}`)
+        UI.println(`  Description: ${task.description || "N/A"}`)
+        UI.println(`  Status:      ${task.status}`)
+        UI.println(`  Priority:    ${task.priority || "N/A"}`)
+        UI.println(`  Estimate:    ${task.estimated_minutes || task.estimatedMinutes || "N/A"} minutes`)
+        UI.println(`  Deadline:    ${task.deadline || "N/A"}`)
+        UI.println(`  Assignee:    ${task.assignee_name ? `${task.assignee_name} (${task.assignee_type}: ${task.assignee_id})` : "Unassigned"}`)
+        UI.println("")
+        UI.println(UI.Style.TEXT_NORMAL_BOLD + `Comments (${comments.length})` + UI.Style.TEXT_NORMAL)
+        if (comments.length === 0) {
+          UI.println("  No comments.")
+        } else {
+          for (const c of comments) {
+            UI.println(`  - [${new Date(c.created_at || c.createdAt).toLocaleString()}] ${c.author_name || c.author_id || "Unknown"}: ${c.body}`)
+          }
+        }
+      } catch (error) {
+        UI.error(`Failed to read task: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
 // ============================================================================
 // Tasks Optimize Command
 // ============================================================================
@@ -2003,7 +2151,8 @@ export const CoworkTasksOptimizeCommand = cmd({
   handler: async (args) => {
     await bootstrap(process.cwd(), async () => {
       try {
-        const tasks = await apiCall<TaskItem[]>("POST", `/api/v1/tasks/optimize?workspace_id=${args.workspace}`)
+        const resp = await apiCall<any>("POST", `/api/v1/tasks/optimize?workspace_id=${args.workspace}`)
+        const tasks = (Array.isArray(resp) ? resp : resp?.tasks) || []
         UI.println(`${UI.Style.TEXT_SUCCESS}✓ Optimized ${tasks.length} tasks for workspace ${args.workspace}${UI.Style.TEXT_NORMAL}`)
         for (const t of tasks.slice(0, 10)) {
           UI.println(`  #${t.optimize_rank} ${t.title} (priority: ${t.priority})`)
@@ -2380,5 +2529,187 @@ export const CoworkWorkspaceCommand = cmd({
       UI.println("Switching workspace...")
       UI.println("Use the Allternit platform board drawer to switch workspaces.")
     }
+  },
+})
+
+export const CoworkRunDaemonCommand = cmd({
+  command: "run",
+  describe: "run the agent cowork worker daemon loop",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("agent-id", {
+        alias: "a",
+        describe: "Agent ID to run as",
+        type: "string",
+        default: "gizzi-agent-1",
+      })
+      .option("agent-role", {
+        alias: "r",
+        describe: "Agent role",
+        type: "string",
+        default: "cowork",
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID to filter tasks",
+        type: "string",
+      })
+      .option("interval", {
+        alias: "i",
+        describe: "Polling interval in seconds",
+        type: "number",
+        default: 5,
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      UI.println(`${UI.Style.TEXT_SUCCESS_BOLD}⚡ Starting Cowork Worker Daemon...${UI.Style.TEXT_NORMAL}`)
+      UI.println(`  Agent ID:   ${args["agent-id"]}`)
+      UI.println(`  Agent Role: ${args["agent-role"]}`)
+      if (args.workspace) {
+        UI.println(`  Workspace:  ${args.workspace}`)
+      }
+      UI.println(`  Interval:   ${args.interval}s`)
+      UI.println("")
+
+      const { spawn } = require("child_process")
+
+      let running = true
+      process.on("SIGINT", () => {
+        UI.println(`\n${UI.Style.TEXT_WARNING}Stopping worker daemon...${UI.Style.TEXT_NORMAL}`)
+        running = false
+      })
+
+      while (running) {
+        try {
+          // 1. Claim a queue item
+          const claimBody = {
+            agent_id: args["agent-id"],
+            agent_role: args["agent-role"],
+            workspace_id: args.workspace || null,
+          }
+          const item = await apiCall<{
+            id: string
+            task_id: string
+            status: string
+          } | null>("POST", "/api/v1/queue/claim", claimBody)
+
+          if (!item) {
+            // Sleep and poll again
+            await new Promise((resolve) => setTimeout(resolve, (args.interval as number) * 1000))
+            continue
+          }
+
+          UI.println(`${UI.Style.TEXT_SUCCESS}✓ Claimed task queue item:${UI.Style.TEXT_NORMAL} ${item.id} (Task ID: ${item.task_id})`)
+
+          // Mark queue item as running
+          await apiCall("POST", `/api/v1/queue/${item.id}/start`, {})
+
+          // Fetch the task description
+          const taskRes = await apiCall<any>("GET", `/api/v1/tasks/${item.task_id}`)
+          const task = taskRes.task || taskRes
+          
+          UI.println(`  Executing instruction: "${task.title || "No Title"}"`)
+
+          // Create a cowork run session to store logs and stream events
+          const run = await apiCall<{ id: string }>("POST", "/api/v1/runs", {
+            tenant_id: "default",
+            workspace_id: task.workspace_id || "default",
+            initiator: args["agent-id"] as string,
+            mode: "cowork",
+            entrypoint: task.title || "No Title",
+            policy_profile: "default",
+          })
+
+          UI.println(`  Created run session: ${run.id}`)
+
+          // Spawn the agent execution
+          const binPath = process.argv[1]
+          const isCompiled = binPath.startsWith("/$bunfs/") || !process.execPath.endsWith("bun");
+          const spawnOpts = {
+            stdio: ["ignore", "pipe", "pipe"] as const,
+            env: {
+              ...process.env,
+              GIZZI_DISABLE_MODELS_FETCH: "true",
+              DISABLE_MODELS_FETCH: "true"
+            }
+          };
+          const child = isCompiled
+            ? spawn(process.execPath, ["run", task.title || "No Title"], spawnOpts)
+            : spawn("bun", [binPath, "run", task.title || "No Title"], spawnOpts);
+
+          let stdoutData = ""
+          let stderrData = ""
+
+          child.stdout.on("data", async (data: Buffer) => {
+            const chunk = data.toString()
+            stdoutData += chunk
+            process.stdout.write(chunk)
+            try {
+              await apiCall("POST", `/api/v1/runs/${run.id}/events`, {
+                event_type: "stdout",
+                payload: { content: chunk },
+              })
+            } catch {
+              // Ignore network drops
+            }
+          })
+
+          child.stderr.on("data", async (data: Buffer) => {
+            const chunk = data.toString()
+            stderrData += chunk
+            process.stderr.write(chunk)
+            try {
+              await apiCall("POST", `/api/v1/runs/${run.id}/events`, {
+                event_type: "stderr",
+                payload: { content: chunk },
+              })
+            } catch {
+              // Ignore network drops
+            }
+          })
+
+          const exitCode = await new Promise<number>((resolve) => {
+            child.on("close", resolve)
+          })
+
+          const start_time = Date.now()
+          const duration_ms = Date.now() - start_time
+          const error_msg = exitCode === 0 ? null : `Process exited with code ${exitCode}`
+
+          // Post final exit status event
+          try {
+            await apiCall("POST", `/api/v1/runs/${run.id}/events`, {
+              event_type: exitCode === 0 ? "step_completed" : "step_failed",
+              payload: { step_name: exitCode === 0 ? "Execution Completed" : `Execution Failed (code ${exitCode})` },
+            })
+          } catch {
+            // Ignore
+          }
+
+          // Complete queue item
+          await apiCall("POST", `/api/v1/queue/${item.id}/complete`, {
+            result: JSON.stringify({
+              success: exitCode === 0,
+              duration_ms,
+              stdout: stdoutData,
+              stderr: stderrData,
+            }),
+            error: error_msg,
+          })
+
+          // Update task status to done or todo (on error)
+          await apiCall("PUT", `/api/v1/tasks/${item.task_id}`, {
+            status: error_msg ? "todo" : "done",
+          })
+
+          UI.println(`  Reported task completion back to backend.\n`)
+
+        } catch (error: any) {
+          UI.error(`Error in daemon loop: ${error.message || String(error)}`)
+          await new Promise((resolve) => setTimeout(resolve, (args.interval as number) * 1000))
+        }
+      }
+    })
   },
 })

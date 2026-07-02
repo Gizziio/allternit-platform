@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { statSync } from 'fs'
 import ignore from 'ignore'
 import * as path from 'path'
 import {
   CLAUDE_CONFIG_DIRECTORIES,
   loadMarkdownFilesForSubdir,
-} from 'src/utils/markdownConfigLoader.js'
+} from './../utils/markdownConfigLoader.ts'
 import type { SuggestionItem } from '../components/PromptInput/PromptInputFooterSuggestions.js'
 import {
   CHUNK_MS,

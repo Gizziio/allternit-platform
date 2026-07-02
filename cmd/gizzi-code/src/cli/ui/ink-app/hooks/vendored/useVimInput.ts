@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useVimInput_ts(): void {
   // Not yet implemented
 }

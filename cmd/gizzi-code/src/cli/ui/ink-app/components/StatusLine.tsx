@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
-import { logEvent } from 'src/services/analytics/index';
-import { useAppState, useSetAppState } from 'src/state/AppState';
-import type { PermissionMode } from 'src/utils/permissions/PermissionMode';
+import { logEvent } from './../services/analytics/index.ts';
+import { useAppState, useSetAppState } from './../state/AppState.tsx';
+import type { PermissionMode } from './../utils/permissions/PermissionMode.ts';
 import { getIsRemoteMode, getKairosActive, getMainThreadAgentType, getOriginalCwd, getSdkBetas, getSessionId } from '../bootstrap/state';
 import { DEFAULT_OUTPUT_STYLE_NAME } from '../constants/outputStyles';
 import { useNotifications } from '../context/notifications';

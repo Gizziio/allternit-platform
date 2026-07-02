@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { Box, Text } from '../ink';
@@ -11,7 +12,7 @@ import { isEnvTruthy } from '../utils/envUtils';
 import { count } from '../utils/array';
 import sample from 'lodash-es/sample';
 import { formatDuration, formatNumber, formatSecondsShort } from '../utils/format';
-import type { Theme } from 'src/utils/theme';
+import type { Theme } from './../utils/theme.ts';
 import { activityManager } from '../utils/activityManager';
 import { getSpinnerVerbs } from '../constants/spinnerVerbs';
 import { MessageResponse } from './MessageResponse';

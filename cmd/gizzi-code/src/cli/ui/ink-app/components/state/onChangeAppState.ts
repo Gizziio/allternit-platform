@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { setMainLoopModelOverride } from '../bootstrap/state'
 import {
   clearApiKeyHelperCache,

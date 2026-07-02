@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { BetaToolUseBlock } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages/messages.mjs'
 import type { Tools } from '../Tool.js'

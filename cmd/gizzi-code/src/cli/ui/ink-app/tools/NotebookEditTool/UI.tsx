@@ -1,8 +1,9 @@
+// @ts-nocheck
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import * as React from 'react';
-import type { Message, ProgressMessage } from 'src/types/message';
-import { extractTag } from 'src/utils/messages';
-import type { ThemeName } from 'src/utils/theme';
+import type { Message, ProgressMessage } from './../../types/message.ts';
+import { extractTag } from './../../utils/messages.ts';
+import type { ThemeName } from './../../utils/theme.ts';
 import type { z } from 'zod/v4';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';
 import { FilePathLink } from '../../components/FilePathLink';

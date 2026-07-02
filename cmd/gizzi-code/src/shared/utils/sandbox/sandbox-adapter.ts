@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Adapter layer that wraps @anthropic-ai/sandbox-runtime with Claude CLI-specific integrations.
  * This file provides the bridge between the external sandbox-runtime package and Claude CLI's
@@ -49,6 +50,8 @@ import {
   updateSettingsForSource,
 } from '../settings/settings.js'
 import type { SettingsJson } from '../settings/types.js'
+import type { SandboxFilesystemConfig } from '../../entrypoints/sandboxTypes.js'
+export type { SandboxFilesystemConfig }
 
 // ============================================================================
 // Settings Converter

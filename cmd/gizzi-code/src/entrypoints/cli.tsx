@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   // For all other paths, load the startup profiler
   const {
     profileCheckpoint
-  } = await import('../utils/startupProfiler.js');
+  } = (await import('../utils/startupProfiler.js')) as any;
   profileCheckpoint('cli_entry');
 
   // Fast-path for --dump-system-prompt: output the rendered system prompt and exit.
@@ -54,16 +54,16 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_dump_system_prompt_path');
     const {
       enableConfigs
-    } = await import('../utils/config.js');
+    } = (await import('../utils/config.js')) as any;
     enableConfigs();
     const {
       getMainLoopModel
-    } = await import('../utils/model/model.js');
+    } = (await import('../utils/model/model.js')) as any;
     const modelIdx = args.indexOf('--model');
     const model = modelIdx !== -1 && args[modelIdx + 1] || getMainLoopModel();
     const {
       getSystemPrompt
-    } = await import('../constants/prompts.js');
+    } = (await import('../constants/prompts.js')) as any;
     const prompt = await getSystemPrompt([], model);
     // biome-ignore lint/suspicious/noConsole:: intentional console output
     console.log(prompt.join('\n'));
@@ -73,21 +73,21 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_claude_in_chrome_mcp_path');
     const {
       runClaudeInChromeMcpServer
-    } = await import('../utils/claudeInChrome/mcpServer.js');
+    } = (await import('../utils/claudeInChrome/mcpServer.js')) as any;
     await runClaudeInChromeMcpServer();
     return;
   } else if (process.argv[2] === '--chrome-native-host') {
     profileCheckpoint('cli_chrome_native_host_path');
     const {
       runChromeNativeHost
-    } = await import('../utils/claudeInChrome/chromeNativeHost.js');
+    } = (await import('../utils/claudeInChrome/chromeNativeHost.js')) as any;
     await runChromeNativeHost();
     return;
   } else if (feature('CHICAGO_MCP') && process.argv[2] === '--computer-use-mcp') {
     profileCheckpoint('cli_computer_use_mcp_path');
     const {
       runComputerUseMcpServer
-    } = await import('../utils/computerUse/mcpServer.js');
+    } = (await import('../utils/computerUse/mcpServer.js')) as any;
     await runComputerUseMcpServer();
     return;
   }
@@ -100,7 +100,7 @@ async function main(): Promise<void> {
   if (feature('DAEMON') && args[0] === '--daemon-worker') {
     const {
       runDaemonWorker
-    } = await import('../daemon/workerRegistry.js');
+    } = (await import('../daemon/workerRegistry.js')) as any;
     await runDaemonWorker(args[1]);
     return;
   }
@@ -113,21 +113,21 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_bridge_path');
     const {
       enableConfigs
-    } = await import('../utils/config.js');
+    } = (await import('../utils/config.js')) as any;
     enableConfigs();
     const {
       getBridgeDisabledReason,
       checkBridgeMinVersion
-    } = await import('../bridge/bridgeEnabled.js');
+    } = (await import('../bridge/bridgeEnabled.js')) as any;
     const {
       BRIDGE_LOGIN_ERROR
-    } = await import('../bridge/types.js');
+    } = (await import('../bridge/types.js')) as any;
     const {
       bridgeMain
-    } = await import('../bridge/bridgeMain.js');
+    } = (await import('../bridge/bridgeMain.js')) as any;
     const {
       exitWithError
-    } = await import('../utils/process.js');
+    } = (await import('../utils/process.js')) as any;
 
     // Auth check must come before the GrowthBook gate check — without auth,
     // GrowthBook has no user context and would return a stale/default false.
@@ -135,7 +135,7 @@ async function main(): Promise<void> {
     // (not the stale disk cache), but init still needs auth headers to work.
     const {
       getClaudeAIOAuthTokens
-    } = await import('../utils/auth.js');
+    } = (await import('../utils/auth.js')) as any;
     if (!getClaudeAIOAuthTokens()?.accessToken) {
       exitWithError(BRIDGE_LOGIN_ERROR);
     }
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
     const {
       waitForPolicyLimitsToLoad,
       isPolicyAllowed
-    } = await import('../services/policyLimits/index.js');
+    } = (await import('../services/policyLimits/index.js')) as any;
     await waitForPolicyLimitsToLoad();
     if (!isPolicyAllowed('allow_remote_control')) {
       exitWithError("Error: Remote Control is disabled by your organization's policy.");
@@ -166,15 +166,15 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_daemon_path');
     const {
       enableConfigs
-    } = await import('../utils/config.js');
+    } = (await import('../utils/config.js')) as any;
     enableConfigs();
     const {
       initSinks
-    } = await import('../utils/sinks.js');
+    } = (await import('../utils/sinks.js')) as any;
     initSinks();
     const {
       daemonMain
-    } = await import('../daemon/main.js');
+    } = (await import('../daemon/main.js')) as any;
     await daemonMain(args.slice(1));
     return;
   }
@@ -186,9 +186,9 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_bg_path');
     const {
       enableConfigs
-    } = await import('../utils/config.js');
+    } = (await import('../utils/config.js')) as any;
     enableConfigs();
-    const bg = await import('../cli/bg.js');
+    const bg = (await import('../cli/bg.js')) as any;
     switch (args[0]) {
       case 'ps':
         await bg.psHandler(args.slice(1));
@@ -213,7 +213,7 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_templates_path');
     const {
       templatesMain
-    } = await import('../cli/handlers/templateJobs.js');
+    } = (await import('../cli/handlers/templateJobs.js')) as any;
     await templatesMain(args);
     // process.exit (not return) — mountFleetView's Ink TUI can leave event
     // loop handles that prevent natural exit.
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_environment_runner_path');
     const {
       environmentRunnerMain
-    } = await import('../environment-runner/main.js');
+    } = (await import('../environment-runner/main.js')) as any;
     await environmentRunnerMain(args.slice(1));
     return;
   }
@@ -239,7 +239,7 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_self_hosted_runner_path');
     const {
       selfHostedRunnerMain
-    } = await import('../self-hosted-runner/main.js');
+    } = (await import('../self-hosted-runner/main.js')) as any;
     await selfHostedRunnerMain(args.slice(1));
     return;
   }
@@ -250,15 +250,15 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_tmux_worktree_fast_path');
     const {
       enableConfigs
-    } = await import('../utils/config.js');
+    } = (await import('../utils/config.js')) as any;
     enableConfigs();
     const {
       isWorktreeModeEnabled
-    } = await import('../utils/worktreeModeEnabled.js');
+    } = (await import('../utils/worktreeModeEnabled.js')) as any;
     if (isWorktreeModeEnabled()) {
       const {
         execIntoTmuxWorktree
-      } = await import('../utils/worktree.js');
+      } = (await import('../utils/worktree.js')) as any;
       const result = await execIntoTmuxWorktree(args);
       if (result.handled) {
         return;
@@ -267,7 +267,7 @@ async function main(): Promise<void> {
       if (result.error) {
         const {
           exitWithError
-        } = await import('../utils/process.js');
+        } = (await import('../utils/process.js')) as any;
         exitWithError(result.error);
       }
     }
@@ -287,12 +287,12 @@ async function main(): Promise<void> {
   // No special flags detected, load and run the full CLI
   const {
     startCapturingEarlyInput
-  } = await import('../utils/earlyInput.js');
+  } = (await import('../utils/earlyInput.js')) as any;
   startCapturingEarlyInput();
   profileCheckpoint('cli_before_main_import');
   const {
     main: cliMain
-  } = await import('../main.js');
+  } = (await import('../main.js')) as any;
   profileCheckpoint('cli_after_main_import');
   await cliMain();
   profileCheckpoint('cli_after_main_complete');

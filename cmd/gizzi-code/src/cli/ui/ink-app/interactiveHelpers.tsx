@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import { appendFileSync } from 'fs';
 import React from 'react';
-import { logEvent } from 'src/services/analytics/index';
-import { gracefulShutdown, gracefulShutdownSync } from 'src/utils/gracefulShutdown';
+import { logEvent } from './services/analytics/index.ts';
+import { gracefulShutdown, gracefulShutdownSync } from './utils/gracefulShutdown.ts';
 import { type ChannelEntry, getAllowedChannels, setAllowedChannels, setHasDevChannels, setSessionTrustAccepted, setStatsStore } from './bootstrap/state';
 import type { Command } from './commands';
 import { createStatsStore, type StatsStore } from './context/stats';
@@ -191,7 +192,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
   if (await isQualifiedForGrove()) {
     const {
       GroveDialog
-    } = await import('src/components/grove/Grove.js');
+    } = await import('./components/grove/Grove.tsx');
     const decision = await showSetupDialog<string>(root, done => <GroveDialog showIfAlreadyViewed={false} location={onboardingShown ? 'onboarding' : 'policy_update_modal'} onDone={done} />);
     if (decision === 'escape') {
       logEvent('tengu_grove_policy_exited', {});

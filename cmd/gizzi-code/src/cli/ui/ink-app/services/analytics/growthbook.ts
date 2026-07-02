@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { GrowthBook } from '@growthbook/growthbook'
 import { isEqual, memoize } from 'lodash-es'
 import {

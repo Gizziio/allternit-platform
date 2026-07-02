@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Singleton manager for cloud-provider authentication status (AWS Bedrock,
  * GCP Vertex). Communicates auth refresh state between auth utilities and

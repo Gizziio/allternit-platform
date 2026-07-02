@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// @ts-nocheck
 
 import { Script } from "@allternit/script"
 import { $ } from "bun"

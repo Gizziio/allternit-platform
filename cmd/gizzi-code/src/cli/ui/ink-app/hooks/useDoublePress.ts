@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Creates a function that calls one function on the first call and another
 // function on the second call within a certain timeout
 

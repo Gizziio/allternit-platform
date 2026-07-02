@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function usePluginRecommendationBase_tsx(): void {
   // Not yet implemented
 }

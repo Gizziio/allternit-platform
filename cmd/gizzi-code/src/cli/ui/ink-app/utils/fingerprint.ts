@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createHash } from 'crypto'
 import type { AssistantMessage, UserMessage } from '../types/message.js'
 

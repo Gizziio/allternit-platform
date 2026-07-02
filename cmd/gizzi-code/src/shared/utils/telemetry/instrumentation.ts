@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DiagLogLevel, diag, trace } from '@opentelemetry/api'
 // @ts-ignore OpenTelemetry module declarations not working
 import { logs } from '@opentelemetry/api-logs'

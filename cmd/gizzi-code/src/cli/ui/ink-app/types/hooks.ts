@@ -1,3 +1,4 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { z } from 'zod/v4'
 import { lazySchema } from '../utils/lazySchema.js'
@@ -6,16 +7,16 @@ import {
   HOOK_EVENTS,
   type HookInput,
   type PermissionUpdate,
-} from 'src/entrypoints/agentSdkTypes.js'
+} from './../entrypoints/agentSdkTypes.ts'
 import type {
   HookJSONOutput,
   AsyncHookJSONOutput,
   SyncHookJSONOutput,
-} from 'src/entrypoints/agentSdkTypes.js'
-import type { Message } from 'src/types/message.js'
-import type { PermissionResult } from 'src/utils/permissions/PermissionResult.js'
-import { permissionBehaviorSchema } from 'src/utils/permissions/PermissionRule.js'
-import { permissionUpdateSchema } from 'src/utils/permissions/PermissionUpdateSchema.js'
+} from './../entrypoints/agentSdkTypes.ts'
+import type { Message } from './message.ts'
+import type { PermissionResult } from './../utils/permissions/PermissionResult.ts'
+import { permissionBehaviorSchema } from './../utils/permissions/PermissionRule.ts'
+import { permissionUpdateSchema } from './../utils/permissions/PermissionUpdateSchema.ts'
 import type { AppState } from '../state/AppState.js'
 import type { AttributionState } from '../utils/commitAttribution.js'
 

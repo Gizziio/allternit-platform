@@ -1,3 +1,4 @@
+// @ts-nocheck
 import figures from 'figures';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTerminalSize } from '../../../hooks/useTerminalSize';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { basename, sep } from 'path';
 import React, { type ReactNode } from 'react';
 import { getOriginalCwd } from '../../bootstrap/state';

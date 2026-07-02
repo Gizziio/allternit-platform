@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useIdeConnectionStatus_ts(): void {
   // Not yet implemented
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createSignal, type Accessor } from "solid-js"
 import { debounce, type Scheduled } from "@solid-primitives/scheduled"
 

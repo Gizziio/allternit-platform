@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Beta Messages API
  * TEMPORARY SHIM

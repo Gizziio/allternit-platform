@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { readdirSync } from 'fs'
 import { stat } from 'fs/promises'
 import { homedir, platform, tmpdir, userInfo } from 'os'

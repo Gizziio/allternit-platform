@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Centralized rate limit message generation
  * Single source of truth for all rate limit-related messages

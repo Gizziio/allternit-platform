@@ -28,6 +28,8 @@ export const SessionTable = sqliteTable(
     revert: text({ mode: "json" }).$type<{ messageID: string; partID?: string; snapshot?: string; diff?: string }>(),
     permission: text({ mode: "json" }).$type<PermissionNext.Ruleset>(),
     agent_id: text(),
+    surface: text(),
+    pinned: integer(),
     ...Timestamps,
     time_compacting: integer(),
     time_archived: integer(),
@@ -36,6 +38,8 @@ export const SessionTable = sqliteTable(
     index("session_project_idx").on(table.project_id),
     index("session_parent_idx").on(table.parent_id),
     index("session_agent_idx").on(table.agent_id),
+    index("session_surface_idx").on(table.surface),
+    index("session_pinned_idx").on(table.pinned),
   ],
 )
 
@@ -91,3 +95,55 @@ export const PermissionTable = sqliteTable("permission", {
   ...Timestamps,
   data: text({ mode: "json" }).notNull().$type<PermissionNext.Ruleset>(),
 })
+
+export const RoutineTable = sqliteTable(
+  "routine",
+  {
+    id: text().primaryKey(),
+    agent_id: text(),
+    name: text().notNull(),
+    steps: text({ mode: "json" }).notNull().$type<Array<{ command: string; status: 'pending' | 'running' | 'done' | 'failed' }>>(),
+    trigger: text(),
+    schedule: text(),
+    state: text().notNull().default("defined"),
+    ...Timestamps,
+  },
+  (table) => [
+    index("routine_agent_idx").on(table.agent_id),
+  ]
+)
+
+export const LoopTable = sqliteTable(
+  "loop",
+  {
+    id: text().primaryKey(),
+    agent_id: text(),
+    command: text().notNull(),
+    exit_condition: text(),
+    max_iterations: integer().notNull().default(10),
+    iteration_log: text({ mode: "json" }).notNull().$type<Array<{ iteration: number; output: string; exitCode: number; timestamp: string }>>(),
+    state: text().notNull().default("running"),
+    ...Timestamps,
+  },
+  (table) => [
+    index("loop_agent_idx").on(table.agent_id),
+  ]
+)
+
+export const GoalTable = sqliteTable(
+  "goal",
+  {
+    id: text().primaryKey(),
+    agent_id: text(),
+    objective: text().notNull(),
+    milestones: text({ mode: "json" }).notNull().$type<Array<{ name: string; status: string; completedAt?: string }>>(),
+    validations: text({ mode: "json" }).notNull().$type<Array<{ testName: string; status: string; output?: string }>>(),
+    state: text().notNull().default("planning"),
+    progress: integer().notNull().default(0),
+    ...Timestamps,
+  },
+  (table) => [
+    index("goal_agent_idx").on(table.agent_id),
+  ]
+)
+

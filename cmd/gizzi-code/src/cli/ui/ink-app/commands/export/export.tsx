@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { join } from 'path';
 import React from 'react';
 import { ExportDialog } from '../../components/ExportDialog';

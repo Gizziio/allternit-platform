@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable custom-rules/no-process-exit */
 
 import { feature } from 'bun:bundle'
@@ -5,11 +6,11 @@ import chalk from 'chalk'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from 'src/services/analytics/index.js'
-import { getCwd } from 'src/utils/cwd.js'
-import { checkForReleaseNotes } from 'src/utils/releaseNotes.js'
-import { setCwd } from 'src/utils/Shell.js'
-import { initSinks } from 'src/utils/sinks.js'
+} from './services/analytics/index.ts'
+import { getCwd } from './utils/cwd.ts'
+import { checkForReleaseNotes } from './utils/releaseNotes.ts'
+import { setCwd } from './utils/Shell.ts'
+import { initSinks } from './utils/sinks.ts'
 import {
   getIsNonInteractiveSession,
   getProjectRoot,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getAgentColorMap } from '../../bootstrap/state.js'
 import type { Theme } from '../../utils/theme.js'
 

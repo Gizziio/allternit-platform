@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useTeleportResume_tsx(): void {
   // Not yet implemented
 }

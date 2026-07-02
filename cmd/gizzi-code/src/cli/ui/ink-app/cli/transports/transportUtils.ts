@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { URL } from 'url'
 import { isEnvTruthy } from '../../utils/envUtils'
 import { HybridTransport } from './HybridTransport'

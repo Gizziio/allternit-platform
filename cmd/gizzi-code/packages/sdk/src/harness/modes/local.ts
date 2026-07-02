@@ -45,7 +45,7 @@ export async function* streamFromLocal(
 
     // Build request body
     const requestBody: OllamaRequest = {
-      model: request.model,
+      model: request.model!,
       messages: ollamaMessages,
       stream: true,
       options: {
@@ -230,7 +230,7 @@ export async function completeViaLocal(
   const ollamaMessages = convertToOllamaMessages(request.messages);
 
   const requestBody: OllamaRequest = {
-    model: request.model,
+    model: request.model!,
     messages: ollamaMessages,
     stream: false,
     options: {

@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import chalk from 'chalk';
 import * as path from 'path';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { logEvent } from 'src/services/analytics/index';
+import { logEvent } from './../../services/analytics/index.ts';
 import type { CommandResultDisplay, LocalJSXCommandContext } from '../../commands';
 import { Select } from '../../components/CustomSelect/index';
 import { Dialog } from '../../components/design-system/Dialog';

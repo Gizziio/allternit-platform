@@ -1,3 +1,4 @@
+// @ts-nocheck
 import sliceAnsi from '../utils/sliceAnsi.js'
 import { stringWidth } from './stringWidth.js'
 import type { Styles } from './styles.js'

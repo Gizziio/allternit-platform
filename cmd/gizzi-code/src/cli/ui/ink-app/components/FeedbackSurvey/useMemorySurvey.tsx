@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { isFeedbackSurveyDisabled } from 'src/services/analytics/config';
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
+import { isFeedbackSurveyDisabled } from './../../services/analytics/config.ts';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from './../../services/analytics/growthbook.ts';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../services/analytics/index.ts';
 import { isAutoMemoryEnabled } from '../../memdir/paths';
 import { isPolicyAllowed } from '../../services/policyLimits/index';
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt';

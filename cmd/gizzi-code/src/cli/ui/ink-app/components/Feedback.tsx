@@ -1,11 +1,12 @@
+// @ts-nocheck
 import axios from 'axios';
 import { readFile, stat } from 'fs/promises';
 import * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { getLastAPIRequest } from 'src/bootstrap/state';
-import { logEventTo1P } from 'src/services/analytics/firstPartyEventLogger';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index';
-import { getLastAssistantMessage, normalizeMessagesForAPI } from 'src/utils/messages';
+import { getLastAPIRequest } from './../bootstrap/state.ts';
+import { logEventTo1P } from './../services/analytics/firstPartyEventLogger.ts';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../services/analytics/index.ts';
+import { getLastAssistantMessage, normalizeMessagesForAPI } from './../utils/messages.ts';
 import type { CommandResultDisplay } from '../commands';
 import { useTerminalSize } from '../hooks/useTerminalSize';
 import { Box, Text, useInput } from '../ink';

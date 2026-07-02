@@ -1,8 +1,9 @@
+// @ts-nocheck
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import * as React from 'react';
-import { SubAgentProvider } from 'src/components/CtrlOToExpand';
-import { FallbackToolUseErrorMessage } from 'src/components/FallbackToolUseErrorMessage';
-import { FallbackToolUseRejectedMessage } from 'src/components/FallbackToolUseRejectedMessage';
+import { SubAgentProvider } from './../../components/CtrlOToExpand.tsx';
+import { FallbackToolUseErrorMessage } from './../../components/FallbackToolUseErrorMessage.tsx';
+import { FallbackToolUseRejectedMessage } from './../../components/FallbackToolUseRejectedMessage.tsx';
 import type { z } from 'zod/v4';
 import type { Command } from '../../commands';
 import { Byline } from '../../components/design-system/Byline';

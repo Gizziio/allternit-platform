@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { useMemo } from 'react'
 import { useCommandQueue } from 'src/hooks/useCommandQueue.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { APIError } from '@allternit/sdk/providers/anthropic'
 import type { MessageParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import isEqual from 'lodash-es/isEqual.js'

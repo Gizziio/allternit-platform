@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useReducer } from 'react'
 
 export type AnswerValue = string

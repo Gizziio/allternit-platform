@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Critical system constants extracted to break circular dependencies
 
 import { feature } from 'bun:bundle'

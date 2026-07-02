@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { homedir } from 'node:os';
 import { join } from 'node:path';

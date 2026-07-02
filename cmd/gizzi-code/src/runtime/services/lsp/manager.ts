@@ -13,3 +13,6 @@ export function createLspManager(): LspManager {
     stop: async () => {},
   }
 }
+
+// Auto-added export
+export const getInitializationStatus: any = {}

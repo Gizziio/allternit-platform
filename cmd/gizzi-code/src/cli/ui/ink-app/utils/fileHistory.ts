@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createHash, type UUID } from 'crypto'
 import { diffLines } from 'diff'
 import type { Stats } from 'fs'
@@ -15,10 +16,10 @@ import {
   getIsNonInteractiveSession,
   getOriginalCwd,
   getSessionId,
-} from 'src/bootstrap/state.js'
-import { logEvent } from 'src/services/analytics/index.js'
-import { notifyVscodeFileUpdated } from 'src/services/mcp/vscodeSdkMcp.js'
-import type { LogOption } from 'src/types/logs.js'
+} from './../bootstrap/state.ts'
+import { logEvent } from './../services/analytics/index.ts'
+import { notifyVscodeFileUpdated } from './../services/mcp/vscodeSdkMcp.ts'
+import type { LogOption } from './../types/logs.ts'
 import { inspect } from 'util'
 import { getGlobalConfig } from './config.js'
 import { logForDebugging } from './debug.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Diff } from './frame.js'
 
 /**

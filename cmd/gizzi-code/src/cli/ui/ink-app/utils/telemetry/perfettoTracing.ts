@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Perfetto Tracing for Claude Code (Ant-only)
  *

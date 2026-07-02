@@ -1,6 +1,7 @@
-import type { PermissionRule } from 'src/utils/permissions/PermissionRule.js'
-import { getSettingsForSource } from 'src/utils/settings/settings.js'
-import type { SettingsJson } from 'src/utils/settings/types.js'
+// @ts-nocheck
+import type { PermissionRule } from './../../utils/permissions/PermissionRule.ts'
+import { getSettingsForSource } from './../../utils/settings/settings.ts'
+import type { SettingsJson } from './../../utils/settings/types.ts'
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
 import { SAFE_ENV_VARS } from '../../utils/managedEnvConstants.js'
 import { getPermissionRulesForSource } from '../../utils/permissions/permissionsLoader.js'

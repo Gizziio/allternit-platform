@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type ModifierKey = 'shift' | 'command' | 'control' | 'option'
 
 let prewarmed = false

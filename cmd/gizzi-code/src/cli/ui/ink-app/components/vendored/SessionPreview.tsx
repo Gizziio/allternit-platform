@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 type UUID = string;
 import React, { useCallback } from 'react';

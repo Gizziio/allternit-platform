@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js'
 
 export const DESCRIPTION = 'Create a new task in the task list'

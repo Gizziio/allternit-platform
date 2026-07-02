@@ -29,8 +29,9 @@ export {
   validateACPRegistryEntry,
   assertValidACPMessage,
   assertValidACPSession,
-  type ValidationResult,
 } from './validator.js';
+
+export type { ValidationResult } from './types.js';
 
 // Re-export the official ACP SDK for advanced usage
 export * as ACP from '@agentclientprotocol/sdk';

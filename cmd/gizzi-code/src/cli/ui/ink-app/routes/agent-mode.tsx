@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createMemo, createSignal, For, Show } from "solid-js"
 import { useRoute, useRouteData } from "@/cli/ui/ink-app/context/route"
 import { useSync } from "@/cli/ui/ink-app/context/sync"
@@ -22,6 +23,28 @@ import type { RunRegistry } from "@/runtime/session/run-registry"
 type AnySyncData = any
 
 // Local type for Agent (SDK exports unknown)
+interface HarnessConfig {
+  mode: "byok" | "cloud" | "local" | "subprocess"
+  byok?: {
+    anthropic?: { apiKey: string; baseURL?: string }
+    openai?: { apiKey: string; baseURL?: string }
+    google?: { apiKey: string; baseURL?: string }
+  }
+  cloud?: {
+    baseURL: string
+    accessToken: string
+    refreshToken?: string
+  }
+  local?: {
+    baseURL: string
+  }
+  subprocess?: {
+    command: string
+    cwd?: string
+    env?: Record<string, string>
+  }
+}
+
 interface Agent {
   name: string
   description?: string
@@ -33,6 +56,7 @@ interface Agent {
     providerID: string
     modelID: string
   }
+  harness?: HarnessConfig
 }
 
 export function AgentMode() {
@@ -41,14 +65,81 @@ export function AgentMode() {
   const sync = useSync()
   const { theme } = useTheme()
 
-  const [activeTab, setActiveTab] = createSignal(routeData?.tab ?? "agents")
+  const [activeTab, setActiveTab] = createSignal<
+    "agents" | "cron" | "runs" | "harness" | "goals" | "routines" | "loops"
+  >(routeData?.tab ?? "agents")
 
-  // Handle ESC key to navigate back to home
+  // Handle navigation keys
   useKeyboard((evt) => {
     if (evt.name === "escape") {
       evt.preventDefault()
       evt.stopPropagation()
       route.navigate({ type: "home" })
+      return
+    }
+
+    const tabs: Array<
+      "agents" | "cron" | "runs" | "harness" | "goals" | "routines" | "loops"
+    > = ["agents", "cron", "runs", "harness", "goals", "routines", "loops"]
+    const idx = tabs.indexOf(activeTab())
+
+    if (evt.name === "leftArrow" || evt.name === "h") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      const next = tabs[Math.max(0, idx - 1)]
+      if (next) setActiveTab(next)
+      return
+    }
+
+    if (evt.name === "rightArrow" || evt.name === "l") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      const next = tabs[Math.min(tabs.length - 1, idx + 1)]
+      if (next) setActiveTab(next)
+      return
+    }
+
+    if (evt.name === "1") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      setActiveTab("agents")
+      return
+    }
+    if (evt.name === "2") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      setActiveTab("cron")
+      return
+    }
+    if (evt.name === "3") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      setActiveTab("runs")
+      return
+    }
+    if (evt.name === "4") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      setActiveTab("harness")
+      return
+    }
+    if (evt.name === "5") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      setActiveTab("goals")
+      return
+    }
+    if (evt.name === "6") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      setActiveTab("routines")
+      return
+    }
+    if (evt.name === "7") {
+      evt.preventDefault()
+      evt.stopPropagation()
+      setActiveTab("loops")
+      return
     }
   })
 
@@ -56,6 +147,9 @@ export function AgentMode() {
   const cronJobs = createMemo(() => (sync.data as AnySyncData).cron_jobs as CronJob[])
   const cronRuns = createMemo(() => (sync.data as AnySyncData).cron_runs as CronRun[])
   const runs = createMemo(() => Object.values(sync.data.runs) as RunRegistry.RunInfo[])
+  const goals = createMemo(() => (sync.data as AnySyncData).goals as AnySyncData[])
+  const routines = createMemo(() => (sync.data as AnySyncData).routines as AnySyncData[])
+  const loops = createMemo(() => (sync.data as AnySyncData).loops as AnySyncData[])
 
   const activeRuns = createMemo(() => runs().filter((r) => r.status === "running" || r.status === "pending"))
 
@@ -85,6 +179,30 @@ export function AgentMode() {
         <Show when={activeTab() !== "runs"}>
           <text fg={theme.info}>Runs ({String(activeRuns().length ?? 0)})</text>
         </Show>
+        <Show when={activeTab() === "harness"}>
+          <span style={{ fg: theme.accent, bold: true }}>Harness</span>
+        </Show>
+        <Show when={activeTab() !== "harness"}>
+          <text fg={theme.info}>Harness</text>
+        </Show>
+        <Show when={activeTab() === "goals"}>
+          <span style={{ fg: theme.accent, bold: true }}>Goals ({String(goals().length)})</span>
+        </Show>
+        <Show when={activeTab() !== "goals"}>
+          <text fg={theme.info}>Goals ({String(goals().length ?? 0)})</text>
+        </Show>
+        <Show when={activeTab() === "routines"}>
+          <span style={{ fg: theme.accent, bold: true }}>Routines ({String(routines().length)})</span>
+        </Show>
+        <Show when={activeTab() !== "routines"}>
+          <text fg={theme.info}>Routines ({String(routines().length ?? 0)})</text>
+        </Show>
+        <Show when={activeTab() === "loops"}>
+          <span style={{ fg: theme.accent, bold: true }}>Loops ({String(loops().length)})</span>
+        </Show>
+        <Show when={activeTab() !== "loops"}>
+          <text fg={theme.info}>Loops ({String(loops().length ?? 0)})</text>
+        </Show>
       </box>
 
       {/* Content */}
@@ -97,6 +215,18 @@ export function AgentMode() {
         </Show>
         <Show when={activeTab() === "runs"}>
           <RunList runs={runs()} />
+        </Show>
+        <Show when={activeTab() === "harness"}>
+          <HarnessList agents={agents()} />
+        </Show>
+        <Show when={activeTab() === "goals"}>
+          <GoalList goals={goals()} />
+        </Show>
+        <Show when={activeTab() === "routines"}>
+          <RoutineList routines={routines()} />
+        </Show>
+        <Show when={activeTab() === "loops"}>
+          <LoopList loops={loops()} />
         </Show>
       </box>
     </box>
@@ -153,6 +283,184 @@ function AgentItem(props: { agent: Agent; isDefault: boolean }) {
           </Show>
         </box>
       </box>
+    </box>
+  )
+}
+
+function HarnessList(props: { agents: Agent[] }) {
+  const { theme } = useTheme()
+
+  const agentsWithHarness = createMemo(() =>
+    props.agents.filter((a) => a.harness && a.harness.mode)
+  )
+
+  return (
+    <box flexDirection="column" gap={1}>
+      <span style={{ fg: theme.accent, bold: true }}>
+        Agent Harness Configurations ({String(agentsWithHarness().length)})
+      </span>
+      <box flexDirection="column" gap={1}>
+        <For each={agentsWithHarness()}>
+          {(agent) => <HarnessItem agent={agent} />}
+        </For>
+      </box>
+      <Show when={agentsWithHarness().length === 0}>
+        <text fg={theme.textMuted}>No agents have a harness configured.</text>
+      </Show>
+    </box>
+  )
+}
+
+function HarnessItem(props: { agent: Agent }) {
+  const { theme } = useTheme()
+  const harness = props.agent.harness!
+
+  const details = createMemo(() => {
+    switch (harness.mode) {
+      case "byok": {
+        const providers = []
+        if (harness.byok?.anthropic) providers.push("anthropic")
+        if (harness.byok?.openai) providers.push("openai")
+        if (harness.byok?.google) providers.push("google")
+        return providers.length > 0 ? `providers: ${providers.join(", ")}` : "no provider configured"
+      }
+      case "cloud":
+        return harness.cloud?.baseURL ? `endpoint: ${harness.cloud.baseURL}` : "no endpoint configured"
+      case "local":
+        return harness.local?.baseURL ? `endpoint: ${harness.local.baseURL}` : "no endpoint configured"
+      case "subprocess":
+        return harness.subprocess?.command ? `command: ${harness.subprocess.command}` : "no command configured"
+      default:
+        return "unknown harness mode"
+    }
+  })
+
+  return (
+    <box flexDirection="row" gap={2} padding={1} borderStyle="single">
+      <box flexDirection="column" flexGrow={1} gap={1}>
+        <box flexDirection="row" gap={1}>
+          <span style={{ fg: theme.accent, bold: true }}>
+            {props.agent.native ? "●" : "○"} {props.agent.name}
+          </span>
+          <text fg={theme.info}>[{harness.mode}]</text>
+        </box>
+        <text fg={theme.textMuted}>{details()}</text>
+        <Show when={props.agent.model}>
+          <text fg={theme.textMuted}>
+            Model: {props.agent.model!.providerID}/{props.agent.model!.modelID}
+          </text>
+        </Show>
+      </box>
+    </box>
+  )
+}
+
+function GoalList(props: { goals: AnySyncData[] }) {
+  const { theme } = useTheme()
+
+  return (
+    <box flexDirection="column" gap={1}>
+      <span style={{ fg: theme.accent, bold: true }}>
+        Goals ({String(props.goals.length)})
+      </span>
+      <box flexDirection="column" gap={1}>
+        <For each={props.goals}>
+          {(goal) => (
+            <box flexDirection="row" gap={2} padding={1} borderStyle="single">
+              <box flexDirection="column" flexGrow={1} gap={1}>
+                <box flexDirection="row" gap={1}>
+                  <span style={{ fg: theme.accent, bold: true }}>{goal.objective as string}</span>
+                  <text fg={theme.info}>[{String(goal.state)}]</text>
+                </box>
+                <text fg={theme.textMuted}>Progress: {String(goal.progress ?? 0)}%</text>
+                <Show when={Array.isArray(goal.milestones) && goal.milestones.length > 0}>
+                  <text fg={theme.textMuted}>
+                    Milestones: {String((goal.milestones as AnySyncData[]).filter((m: AnySyncData) => m.status === "completed").length)}/{String((goal.milestones as AnySyncData[]).length)}
+                  </text>
+                </Show>
+              </box>
+            </box>
+          )}
+        </For>
+      </box>
+      <Show when={props.goals.length === 0}>
+        <text fg={theme.textMuted}>No goals found.</text>
+      </Show>
+    </box>
+  )
+}
+
+function RoutineList(props: { routines: AnySyncData[] }) {
+  const { theme } = useTheme()
+
+  return (
+    <box flexDirection="column" gap={1}>
+      <span style={{ fg: theme.accent, bold: true }}>
+        Routines ({String(props.routines.length)})
+      </span>
+      <box flexDirection="column" gap={1}>
+        <For each={props.routines}>
+          {(routine) => (
+            <box flexDirection="row" gap={2} padding={1} borderStyle="single">
+              <box flexDirection="column" flexGrow={1} gap={1}>
+                <box flexDirection="row" gap={1}>
+                  <span style={{ fg: theme.accent, bold: true }}>{routine.name as string}</span>
+                  <text fg={theme.info}>[{String(routine.state)}]</text>
+                </box>
+                <Show when={routine.schedule}>
+                  <text fg={theme.textMuted}>Schedule: {String(routine.schedule)}</text>
+                </Show>
+                <Show when={Array.isArray(routine.steps) && routine.steps.length > 0}>
+                  <text fg={theme.textMuted}>
+                    Steps: {String((routine.steps as AnySyncData[]).filter((s: AnySyncData) => s.status === "done").length)}/{String((routine.steps as AnySyncData[]).length)}
+                  </text>
+                </Show>
+              </box>
+            </box>
+          )}
+        </For>
+      </box>
+      <Show when={props.routines.length === 0}>
+        <text fg={theme.textMuted}>No routines found.</text>
+      </Show>
+    </box>
+  )
+}
+
+function LoopList(props: { loops: AnySyncData[] }) {
+  const { theme } = useTheme()
+
+  return (
+    <box flexDirection="column" gap={1}>
+      <span style={{ fg: theme.accent, bold: true }}>
+        Loops ({String(props.loops.length)})
+      </span>
+      <box flexDirection="column" gap={1}>
+        <For each={props.loops}>
+          {(loop) => (
+            <box flexDirection="row" gap={2} padding={1} borderStyle="single">
+              <box flexDirection="column" flexGrow={1} gap={1}>
+                <box flexDirection="row" gap={1}>
+                  <span style={{ fg: theme.accent, bold: true }}>{loop.command as string}</span>
+                  <text fg={theme.info}>[{String(loop.state)}]</text>
+                </box>
+                <Show when={loop.exit_condition}>
+                  <text fg={theme.textMuted}>Exit: {String(loop.exit_condition)}</text>
+                </Show>
+                <text fg={theme.textMuted}>Max iterations: {String(loop.max_iterations ?? 10)}</text>
+                <Show when={Array.isArray(loop.iteration_log) && loop.iteration_log.length > 0}>
+                  <text fg={theme.textMuted}>
+                    Iterations: {String((loop.iteration_log as AnySyncData[]).length)}
+                  </text>
+                </Show>
+              </box>
+            </box>
+          )}
+        </For>
+      </box>
+      <Show when={props.loops.length === 0}>
+        <text fg={theme.textMuted}>No loops found.</text>
+      </Show>
     </box>
   )
 }

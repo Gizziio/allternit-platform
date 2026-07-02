@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { z } from 'zod/v4'
 import {
   isUnsafeCompoundCommand_DEPRECATED,

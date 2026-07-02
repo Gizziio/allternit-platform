@@ -1,1 +1,2 @@
+// @ts-nocheck
 export * from '../../tools/ScheduleCronTool/CronDeleteTool.ts.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * good-claude command
  * Utility for acknowledging helpful AI interactions

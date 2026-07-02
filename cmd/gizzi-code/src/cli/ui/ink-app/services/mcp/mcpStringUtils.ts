@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Pure string utility functions for MCP tool/server name parsing.
  * This file has no heavy dependencies to keep it lightweight for

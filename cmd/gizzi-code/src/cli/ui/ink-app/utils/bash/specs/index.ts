@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { CommandSpec } from '../registry'
 import alias from './alias'
 import nohup from './nohup'

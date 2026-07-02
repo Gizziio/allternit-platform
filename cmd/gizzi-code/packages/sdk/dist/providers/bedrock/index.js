@@ -4,7 +4,8 @@
  * AWS Bedrock API client for Allternit SDK
  * Uses AWS SDK for Bedrock Runtime
  */
-import { HarnessError } from '../../harness/types.js';
+import { HarnessError } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 export const BEDROCK_MODELS = {
     CLAUDE_3_OPUS: 'anthropic.claude-3-opus-20240229-v1:0',
     CLAUDE_3_SONNET: 'anthropic.claude-3-sonnet-20240229-v1:0',

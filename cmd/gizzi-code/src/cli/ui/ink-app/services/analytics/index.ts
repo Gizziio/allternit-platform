@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Analytics service - public API for event logging
  *

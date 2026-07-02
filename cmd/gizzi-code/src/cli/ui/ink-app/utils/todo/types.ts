@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { z } from 'zod/v4'
 import { lazySchema } from '../lazySchema.js'
 

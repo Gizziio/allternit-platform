@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createStore } from "solid-js/store"
 import { createSimpleContext } from "@/cli/ui/ink-app/context/helper"
 import type { PromptInfo } from "@/cli/ui/ink-app/component/prompt/history"

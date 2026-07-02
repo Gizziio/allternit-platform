@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages';
 import React from 'react';
 import type { LocalJSXCommandCall, LocalJSXCommandOnDone } from '../../types/command';

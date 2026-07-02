@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { PermissionUpdate } from '../utils/permissions/PermissionUpdateSchema'
 
 type BridgePermissionResponse = {

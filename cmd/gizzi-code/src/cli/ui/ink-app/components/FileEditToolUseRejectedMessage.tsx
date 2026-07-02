@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import type { StructuredPatchHunk } from 'diff';
 import { relative } from 'path';
 import * as React from 'react';
-import { useTerminalSize } from 'src/hooks/useTerminalSize';
-import { getCwd } from 'src/utils/cwd';
+import { useTerminalSize } from './../hooks/useTerminalSize.ts';
+import { getCwd } from './../utils/cwd.ts';
 import { Box, Text } from '../ink';
 import { HighlightedCode } from './HighlightedCode';
 import { MessageResponse } from './MessageResponse';

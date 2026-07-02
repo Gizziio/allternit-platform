@@ -102,6 +102,32 @@ export function resetAppState(): void {
   AppStateStore.reset()
 }
 
+// Compatibility shims for consumers expecting the global store API.
+export function getGlobalStore(): AppStateStoreClass {
+  return AppStateStore
+}
+
+export function setGlobalStore(_store: AppStateStoreClass): void {
+  // no-op stub
+}
+
+export function useAppStateSelector<T>(
+  selector: (state: AppState) => T,
+): T {
+  return useAppStateValue(selector)
+}
+
+export function useAppStateActions(): (
+  updates: Partial<AppState>,
+) => void {
+  return useSetAppState()
+}
+
+export type UserPreferences = any
+export type UserSession = any
+export type ConnectionStatus = any
+export type AppError = any
+
 export default {
   AppStateStore,
   useAppStateStore,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type {
   BetaTool,
   BetaToolUnion,
@@ -16,13 +17,13 @@ import {
 } from '@/services/analytics/index.js'
 import { prefetchAllMcpResources } from '@/services/mcp/client.js'
 import type { ScopedMcpServerConfig } from '@/services/mcp/types.js'
-import { BashTool } from '../../tools/BashTool/BashTool.js'
-import { FileEditTool } from '../../tools/FileEditTool/FileEditTool.js'
+import { BashTool } from '../../runtime/tools/BashTool/BashTool.js'
+import { FileEditTool } from '../../runtime/tools/FileEditTool/FileEditTool.js'
 import {
   normalizeFileEditInput,
   stripTrailingWhitespace,
 } from '../../tools/FileEditTool/utils.js'
-import { FileWriteTool } from '../../tools/FileWriteTool/FileWriteTool.js'
+import { FileWriteTool } from '../../runtime/tools/FileWriteTool/FileWriteTool.js'
 import { getTools } from '../../tools.js'
 import type { AgentId } from '@/types/ids.js'
 import type { z } from 'zod/v4'

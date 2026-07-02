@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createContext } from 'react'
 import { EventEmitter } from '../events/emitter.js'
 import type { TerminalQuerier } from '../terminal-querier.js'

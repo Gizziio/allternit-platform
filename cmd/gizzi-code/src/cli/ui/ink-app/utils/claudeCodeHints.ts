@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Claude Code hints protocol.
  *

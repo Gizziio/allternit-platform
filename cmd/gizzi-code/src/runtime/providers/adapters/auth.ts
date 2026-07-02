@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Instance } from "@/runtime/context/project/instance"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { map, filter, pipe, fromEntries, mapValues } from "remeda"

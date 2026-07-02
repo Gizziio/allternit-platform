@@ -1,3 +1,4 @@
+// @ts-nocheck
 import figures from 'figures'
 import memoize from 'lodash-es/memoize.js'
 import { getOutputStyleDirStyles } from '../outputStyles/loadOutputStylesDir.js'

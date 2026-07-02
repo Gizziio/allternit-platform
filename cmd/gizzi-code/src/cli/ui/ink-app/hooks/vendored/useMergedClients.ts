@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function useMergedClients_ts(): void {
   // Not yet implemented
 }

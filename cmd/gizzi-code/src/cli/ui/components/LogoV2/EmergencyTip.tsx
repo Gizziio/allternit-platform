@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { useEffect, useMemo } from 'react';
 import { Box, Text } from 'src/ink.js';

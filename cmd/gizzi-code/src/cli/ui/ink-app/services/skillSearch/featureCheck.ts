@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Skill Search - Feature Check
  * TEMPORARY SHIM

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as React from 'react';
-import { getOauthProfileFromApiKey } from 'src/services/oauth/getOauthProfile';
-import { isClaudeAISubscriber } from 'src/utils/auth';
+import { getOauthProfileFromApiKey } from './../../../services/oauth/getOauthProfile.ts';
+import { isClaudeAISubscriber } from './../../../utils/auth.ts';
 import { Text } from '../../ink';
 import { logEvent } from '../../services/analytics/index';
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config';

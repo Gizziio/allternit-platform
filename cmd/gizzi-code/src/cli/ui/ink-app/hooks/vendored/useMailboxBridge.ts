@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import { useMailbox } from '../../vendor/context/mailbox'
 

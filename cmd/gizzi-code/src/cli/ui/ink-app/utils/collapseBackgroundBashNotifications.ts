@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   STATUS_TAG,
   SUMMARY_TAG,

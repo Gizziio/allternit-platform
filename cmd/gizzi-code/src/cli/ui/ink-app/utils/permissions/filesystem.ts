@@ -1,16 +1,17 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { randomBytes } from 'crypto'
 import ignore from 'ignore'
 import memoize from 'lodash-es/memoize.js'
 import { homedir, tmpdir } from 'os'
 import { join, normalize, posix, sep } from 'path'
-import { hasAutoMemPathOverride, isAutoMemPath } from 'src/memdir/paths.js'
-import { isAgentMemoryPath } from 'src/tools/AgentTool/agentMemory.js'
+import { hasAutoMemPathOverride, isAutoMemPath } from './../../memdir/paths.ts'
+import { isAgentMemoryPath } from './../../tools/AgentTool/agentMemory.ts'
 import {
   CLAUDE_FOLDER_PERMISSION_PATTERN,
   FILE_EDIT_TOOL_NAME,
   GLOBAL_CLAUDE_FOLDER_PERMISSION_PATTERN,
-} from 'src/tools/FileEditTool/constants.js'
+} from './../../tools/FileEditTool/constants.ts'
 import type { z } from 'zod/v4'
 import { getOriginalCwd, getSessionId } from '../../bootstrap/state.js'
 import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'

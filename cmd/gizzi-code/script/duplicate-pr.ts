@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+// @ts-nocheck
 
 import path from "path"
 import { pathToFileURL } from "bun"

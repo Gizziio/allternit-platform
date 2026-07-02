@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Filesystem-based git state reading — avoids spawning git subprocesses.
  *

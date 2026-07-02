@@ -1,10 +1,11 @@
+// @ts-nocheck
 import type { ToolUseBlock } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import last from 'lodash-es/last.js'
 import {
   getSessionId,
   isSessionPersistenceDisabled,
-} from 'src/bootstrap/state.js'
-import type { SDKMessage } from 'src/entrypoints/agentSdkTypes.js'
+} from './../bootstrap/state.ts'
+import type { SDKMessage } from './../entrypoints/agentSdkTypes.ts'
 import type { CanUseToolFn } from '../hooks/useCanUseTool.js'
 import { runTools } from '../services/tools/toolOrchestration.js'
 import { findToolByName, type Tool, type Tools } from '../Tool.js'

@@ -4,7 +4,8 @@
  * Cohere API client for Allternit SDK
  * API: https://api.cohere.com/v1
  */
-import { HarnessError } from '../../harness/types.js';
+import { HarnessError } from '../../harness/errors.js';
+import { HarnessErrorCode } from '../../harness/errors.js';
 export const COHERE_MODELS = {
     COMMAND: 'command',
     COMMAND_LIGHT: 'command-light',

@@ -1,5 +1,6 @@
 import { type RequestOptions } from './request-options';
 import type { FilePropertyBag, Fetch } from './builtin-types';
+import type { AllternitOpenAI } from '../client';
 export type BlobPart = string | ArrayBuffer | ArrayBufferView | Blob | DataView;
 type FsReadStream = AsyncIterable<Uint8Array> & {
     path: string | {
@@ -31,11 +32,11 @@ export declare const isAsyncIterable: (value: any) => value is AsyncIterable<any
  * Returns a multipart/form-data request if any part of the given request body contains a File / Blob value.
  * Otherwise returns the request as is.
  */
-export declare const maybeMultipartFormRequestOptions: (opts: RequestOptions, fetch: OpenAI | Fetch) => Promise<RequestOptions>;
+export declare const maybeMultipartFormRequestOptions: (opts: RequestOptions, fetch: AllternitOpenAI | Fetch) => Promise<RequestOptions>;
 type MultipartFormRequestOptions = Omit<RequestOptions, 'body'> & {
     body: unknown;
 };
-export declare const multipartFormRequestOptions: (opts: MultipartFormRequestOptions, fetch: OpenAI | Fetch) => Promise<RequestOptions>;
-export declare const createForm: <T = Record<string, unknown>>(body: T | undefined, fetch: OpenAI | Fetch) => Promise<FormData>;
+export declare const multipartFormRequestOptions: (opts: MultipartFormRequestOptions, fetch: AllternitOpenAI | Fetch) => Promise<RequestOptions>;
+export declare const createForm: <T = Record<string, unknown>>(body: T | undefined, fetch: AllternitOpenAI | Fetch) => Promise<FormData>;
 export {};
 //# sourceMappingURL=uploads.d.ts.map

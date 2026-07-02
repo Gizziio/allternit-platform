@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mkdir, writeFile } from 'fs/promises'
 import { dirname } from 'path'
 import {

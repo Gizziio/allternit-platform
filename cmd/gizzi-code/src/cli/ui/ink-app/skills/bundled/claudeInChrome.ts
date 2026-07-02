@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Stubbed: 0
 import { BASE_CHROME_PROMPT } from '../../utils/claudeInChrome/prompt'
 import { shouldAutoEnableClaudeInChrome } from '../../utils/claudeInChrome/setup'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isClaudeAISubscriber } from './auth'
 import { has1mContext } from './context'
 

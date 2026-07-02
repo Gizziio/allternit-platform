@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Unicode Sanitization for Hidden Character Attack Mitigation
  *

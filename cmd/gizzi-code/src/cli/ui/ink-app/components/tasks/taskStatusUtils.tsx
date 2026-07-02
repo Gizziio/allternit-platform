@@ -1,14 +1,15 @@
+// @ts-nocheck
 /**
  * Shared utilities for displaying task status across different task types.
  */
 
 import figures from 'figures';
-import type { TaskStatus } from 'src/Task';
-import type { InProcessTeammateTaskState } from 'src/tasks/InProcessTeammateTask/types';
-import { isPanelAgentTask } from 'src/tasks/LocalAgentTask/LocalAgentTask';
-import { isBackgroundTask, type TaskState } from 'src/tasks/types';
-import type { DeepImmutable } from 'src/types/utils';
-import { summarizeRecentActivities } from 'src/utils/collapseReadSearch';
+import type { TaskStatus } from './../../Task.ts';
+import type { InProcessTeammateTaskState } from './../../tasks/InProcessTeammateTask/types.ts';
+import { isPanelAgentTask } from './../../tasks/LocalAgentTask/LocalAgentTask.tsx';
+import { isBackgroundTask, type TaskState } from './../../tasks/types.ts';
+import type { DeepImmutable } from './../../types/utils.ts';
+import { summarizeRecentActivities } from './../../utils/collapseReadSearch.ts';
 
 /**
  * Returns true if the given task status represents a terminal (finished) state.

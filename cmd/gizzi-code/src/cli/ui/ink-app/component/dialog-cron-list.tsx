@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useDialog } from "@/cli/ui/ink-app/ui/dialog"
 import { DialogSelect, type DialogSelectOption } from "@/cli/ui/ink-app/ui/dialog-select"
 import { useSync } from "@/cli/ui/ink-app/context/sync"

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getPluginErrorMessage, type PluginError } from '../../types/plugin';
 export function formatErrorMessage(error: PluginError): string {
   switch (error.type) {

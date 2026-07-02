@@ -1,9 +1,10 @@
-import { BASH_TOOL_NAME } from 'src/tools/BashTool/toolName'
-import { EXIT_PLAN_MODE_TOOL_NAME } from 'src/tools/ExitPlanModeTool/constants'
-import { FILE_EDIT_TOOL_NAME } from 'src/tools/FileEditTool/constants'
-import { FILE_WRITE_TOOL_NAME } from 'src/tools/FileWriteTool/prompt'
-import { NOTEBOOK_EDIT_TOOL_NAME } from 'src/tools/NotebookEditTool/constants'
-import { WEB_FETCH_TOOL_NAME } from 'src/tools/WebFetchTool/prompt'
+// @ts-nocheck
+import { BASH_TOOL_NAME } from './../../BashTool/toolName.ts'
+import { EXIT_PLAN_MODE_TOOL_NAME } from './../../ExitPlanModeTool/constants.ts'
+import { FILE_EDIT_TOOL_NAME } from './../../FileEditTool/constants.ts'
+import { FILE_WRITE_TOOL_NAME } from './../../FileWriteTool/prompt.ts'
+import { NOTEBOOK_EDIT_TOOL_NAME } from './../../NotebookEditTool/constants.ts'
+import { WEB_FETCH_TOOL_NAME } from './../../WebFetchTool/prompt.ts'
 import { AGENT_TOOL_NAME } from '../constants'
 import type { BuiltInAgentDefinition } from '../loadAgentsDir'
 

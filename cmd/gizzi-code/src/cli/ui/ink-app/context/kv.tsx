@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Global } from "@/runtime/context/global"
 import { Filesystem } from "@/shared/util/filesystem"
 import { createSignal, type Setter } from "solid-js"

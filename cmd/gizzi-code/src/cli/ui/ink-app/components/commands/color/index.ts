@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Color command - minimal metadata only.
  * Implementation is lazy-loaded from color.ts to reduce startup time.

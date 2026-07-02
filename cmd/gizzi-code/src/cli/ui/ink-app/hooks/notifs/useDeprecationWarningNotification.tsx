@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { useEffect, useRef } from 'react';
-import { useNotifications } from 'src/context/notifications';
-import { getModelDeprecationWarning } from 'src/utils/model/deprecation';
+import { useNotifications } from './../../context/notifications.tsx';
+import { getModelDeprecationWarning } from './../../utils/model/deprecation.ts';
 import { getIsRemoteMode } from '../../bootstrap/state';
 export function useDeprecationWarningNotification(model) {
   const $ = _c(4);

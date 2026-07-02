@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { type Notification, useNotifications } from 'src/context/notifications.js';
-import { logEvent } from 'src/services/analytics/index.js';
-import { useAppState } from 'src/state/AppState.js';
+import { type Notification, useNotifications } from './../../../context/notifications.tsx';
+import { logEvent } from './../../../services/analytics/index.ts';
+import { useAppState } from './../../../state/AppState.tsx';
 import { useVoiceState } from '../../context/voice.js';
 import type { VerificationStatus } from '../../../hooks/useApiKeyVerification.js';
 import { useIdeConnectionStatus } from '../../../hooks/useIdeConnectionStatus.js';

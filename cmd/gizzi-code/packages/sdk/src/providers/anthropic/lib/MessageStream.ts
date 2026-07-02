@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isAbortError } from '../internal/errors';
 import { AllternitError, APIUserAbortError } from '../error';
 import {

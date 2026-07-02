@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Store all instances of Ink (instance.js) to ensure that consecutive render() calls
 // use the same instance of Ink and don't create a new one
 //

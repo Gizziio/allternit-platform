@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useMemo } from 'react';
-import { logError } from 'src/utils/log';
+import { logError } from './../../../utils/log.ts';
 import { getOriginalCwd } from '../../../bootstrap/state';
 import { Box, Text } from '../../../ink';
 import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata';

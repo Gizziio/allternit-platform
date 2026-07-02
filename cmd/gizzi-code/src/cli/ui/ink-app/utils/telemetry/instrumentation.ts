@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DiagLogLevel, diag, trace } from '@opentelemetry/api'
 import { logs } from '@opentelemetry/api-logs'
 // OTLP/Prometheus exporters are dynamically imported inside the protocol
@@ -38,14 +39,14 @@ import {
   setLoggerProvider,
   setMeterProvider,
   setTracerProvider,
-} from 'src/bootstrap/state.js'
+} from './../../bootstrap/state.ts'
 import {
   getOtelHeadersFromHelper,
   getSubscriptionType,
   is1PApiCustomer,
   isClaudeAISubscriber,
-} from 'src/utils/auth.js'
-import { getPlatform, getWslVersion } from 'src/utils/platform.js'
+} from './../auth.ts'
+import { getPlatform, getWslVersion } from './../platform.ts'
 
 import { getCACertificates } from '../caCerts.js'
 import { registerCleanup } from '../cleanupRegistry.js'

@@ -1,4 +1,4 @@
-import { transformJSONSchema } from '../..//lib/transform-json-schema';
+import { transformJSONSchema, type JSONSchema } from '../../lib/transform-json-schema';
 import type { infer as zodInfer, ZodType } from 'zod';
 import * as z from 'zod/v4';
 import { AllternitError } from '../../core/error';
@@ -17,7 +17,7 @@ import { BetaToolResultContentBlockParam } from '../../resources/beta';
 export function betaZodOutputFormat<ZodInput extends ZodType>(
   zodObject: ZodInput,
 ): AutoParseableBetaOutputFormat<zodInfer<ZodInput>> {
-  let jsonSchema = z.toJSONSchema(zodObject, { reused: 'ref' });
+  let jsonSchema: JSONSchema = z.toJSONSchema(zodObject, { reused: 'ref' }) as JSONSchema;
 
   jsonSchema = transformJSONSchema(jsonSchema);
 

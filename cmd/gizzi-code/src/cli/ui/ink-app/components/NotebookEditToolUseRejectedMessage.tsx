@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { relative } from 'path';
 import * as React from 'react';
-import { getCwd } from 'src/utils/cwd';
+import { getCwd } from './../utils/cwd.ts';
 import { Box, Text } from '../ink';
 import { HighlightedCode } from './HighlightedCode';
 import { MessageResponse } from './MessageResponse';

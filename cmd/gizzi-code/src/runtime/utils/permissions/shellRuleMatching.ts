@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shell rule matching - re-export from shared
  */

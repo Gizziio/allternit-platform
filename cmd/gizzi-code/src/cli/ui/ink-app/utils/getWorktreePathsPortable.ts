@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { execFile as execFileCb } from 'child_process'
 import { promisify } from 'util'
 

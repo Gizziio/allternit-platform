@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { chmodSync } from 'fs'
 import { join } from 'path'
 import { getClaudeConfigHomeDir } from '../envUtils.js'

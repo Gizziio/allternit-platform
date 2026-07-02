@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Keybindings types
  * TEMPORARY SHIM

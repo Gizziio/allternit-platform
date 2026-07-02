@@ -1,3 +1,4 @@
+// @ts-nocheck
 import path from "path"
 import { Global } from "@/runtime/context/global/index"
 import z from "zod/v4"

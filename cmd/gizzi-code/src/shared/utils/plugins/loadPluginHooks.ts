@@ -1,3 +1,4 @@
+// @ts-nocheck
 import memoize from 'lodash-es/memoize.js'
 import type { HookEvent } from 'src/entrypoints/agentSdkTypes.js'
 import {

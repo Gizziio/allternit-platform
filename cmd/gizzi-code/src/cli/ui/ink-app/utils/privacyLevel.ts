@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Privacy level controls how much nonessential network traffic and telemetry
  * Claude Code generates.

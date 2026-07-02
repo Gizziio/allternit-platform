@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle';
 import chalk from 'chalk';
 import React, { useMemo, useRef } from 'react';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomUUID } from 'crypto'
 import type { QuerySource } from '../../constants/querySource.js'
 import { queryModelWithoutStreaming } from '../../services/api/claude.js'

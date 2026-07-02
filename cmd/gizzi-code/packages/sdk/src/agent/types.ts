@@ -1,5 +1,7 @@
 import type { Message, StreamRequest } from '../harness/types.js';
 
+export type { Message } from '../harness/types.js';
+
 export type AgentRunStatus = 
   | 'queued' 
   | 'thinking' 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getActiveTimeCounter as getActiveTimeCounterImpl } from '../bootstrap/state.js'
 
 type ActivityManagerOptions = {

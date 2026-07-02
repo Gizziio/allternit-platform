@@ -1,7 +1,8 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
-import { Box, Text } from 'src/ink';
+import { Box, Text } from './../../../ink.ts';
 type Props = {
   hasStash: boolean;
 };

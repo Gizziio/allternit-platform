@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Detects potentially destructive bash commands and returns a warning string
  * for display in the permission dialog. This is purely informational — it

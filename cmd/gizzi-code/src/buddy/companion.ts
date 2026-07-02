@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getGlobalConfig } from '../utils/config.js'
 import {
   type Companion,

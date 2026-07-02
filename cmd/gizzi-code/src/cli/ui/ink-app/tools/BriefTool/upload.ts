@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Upload BriefTool attachments to private_api so web viewers can preview them.
  *

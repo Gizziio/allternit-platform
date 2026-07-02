@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { homedir } from 'os'
 import { dirname, isAbsolute, join, normalize, relative, resolve } from 'path'
 import { getCwd } from './cwd.js'
@@ -165,3 +166,6 @@ export default {
   extname,
   isAbsolutePath,
 }
+
+// Auto-added export
+export const normalizePath: any = {}

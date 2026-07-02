@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { z } from 'zod'
 import type { SuggestionItem } from '../../components/PromptInput/PromptInputFooterSuggestions.js'
 import type { MCPServerConnection } from '@/services/mcp/types.js'

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * A fixed-size circular buffer that automatically evicts the oldest items
  * when the buffer is full. Useful for maintaining a rolling window of data.

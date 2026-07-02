@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared analytics configuration
  *

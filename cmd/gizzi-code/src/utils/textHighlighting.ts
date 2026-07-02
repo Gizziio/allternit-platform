@@ -2,6 +2,8 @@
  * Text Highlighting Utilities
  */
 
+export type { TextHighlight } from '../shared/utils/textHighlighting.js'
+
 export interface HighlightOptions {
   language?: string
   theme?: string

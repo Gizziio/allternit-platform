@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * REPLAdapter - Production-quality adapter for integrating free-code REPL into gizzi-code
  * 

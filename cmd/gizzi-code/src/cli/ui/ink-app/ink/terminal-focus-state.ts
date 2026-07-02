@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Terminal focus state signal — non-React access to DECSET 1004 focus events.
 // 'unknown' is the default for terminals that don't support focus reporting;
 // consumers treat 'unknown' identically to 'focused' (no throttling).

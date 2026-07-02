@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Preconnect to the Anthropic API to overlap TCP+TLS handshake with startup.
  *

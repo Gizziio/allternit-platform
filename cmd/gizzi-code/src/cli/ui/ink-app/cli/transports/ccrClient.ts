@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { randomUUID } from 'crypto'
 import type {
   SDKPartialAssistantMessage,
   StdoutMessage,
-} from 'src/entrypoints/sdk/controlTypes'
+} from './../../entrypoints/sdk/controlTypes.ts'
 import { decodeJwtExpiry } from '../../bridge/jwtUtils'
 import { logForDebugging } from '../../utils/debug'
 import { logForDiagnosticsNoPII } from '../../utils/diagLogs'

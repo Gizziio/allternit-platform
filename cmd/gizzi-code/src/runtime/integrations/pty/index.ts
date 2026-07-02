@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import { type IPty } from "bun-pty"

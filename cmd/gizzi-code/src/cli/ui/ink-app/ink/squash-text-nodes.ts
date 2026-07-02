@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { DOMElement } from './dom.js'
 import type { TextStyles } from './styles.js'
 

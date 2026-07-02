@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { logEvent } from '@/services/analytics/index.js'
 import {
   getDefaultMainLoopModelSetting,

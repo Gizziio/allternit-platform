@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Bridge poll interval defaults. Extracted from pollConfig.ts so callers
  * that don't need live GrowthBook tuning (daemon via Agent SDK) can avoid

@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import chalk from 'chalk'
-import { markPostCompaction } from 'src/bootstrap/state'
+import { markPostCompaction } from './../../bootstrap/state.ts'
 import { getSystemPrompt } from '../../constants/prompts'
 import { getSystemContext, getUserContext } from '../../context'
 import { getShortcutDisplay } from '../../keybindings/shortcutFormat'

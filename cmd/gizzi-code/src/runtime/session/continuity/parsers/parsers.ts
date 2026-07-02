@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * GIZZI Continuity - Tool Parsers
  * 

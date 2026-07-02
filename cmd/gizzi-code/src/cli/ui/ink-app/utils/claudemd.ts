@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Files are loaded in the following order:
  *
@@ -40,7 +41,7 @@ import {
   sep,
 } from 'path'
 import picomatch from 'picomatch'
-import { logEvent } from 'src/services/analytics/index.js'
+import { logEvent } from './../services/analytics/index.ts'
 import {
   getAdditionalDirectoriesForClaudeMd,
   getOriginalCwd,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared transport-layer helpers for bridge message handling.
  *

@@ -33,7 +33,7 @@
 export class AllternitOllamaError extends Error {
   readonly code: string;
   readonly statusCode?: number;
-  readonly cause?: Error;
+  override readonly cause?: Error;
 
   constructor({
     message,

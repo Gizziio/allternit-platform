@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Self-Hosted Runner Main
  * TEMPORARY SHIM

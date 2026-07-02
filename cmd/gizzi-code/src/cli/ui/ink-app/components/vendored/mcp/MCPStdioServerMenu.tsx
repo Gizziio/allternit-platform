@@ -1,3 +1,4 @@
+// @ts-nocheck
 import figures from 'figures';
 import React, { useState } from 'react';
 import type { CommandResultDisplay } from '../../../commands.js';

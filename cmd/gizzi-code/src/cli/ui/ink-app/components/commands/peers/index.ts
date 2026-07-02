@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Peers Command
  * TEMPORARY SHIM

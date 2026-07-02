@@ -1,3 +1,4 @@
+// @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { toolMatchesName, type Tool, type Tools } from '@/Tool.js'
 import { AgentTool } from './tools/AgentTool/AgentTool.js'

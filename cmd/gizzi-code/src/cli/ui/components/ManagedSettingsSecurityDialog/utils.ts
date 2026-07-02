@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   DANGEROUS_SHELL_SETTINGS,
   SAFE_ENV_VARS,

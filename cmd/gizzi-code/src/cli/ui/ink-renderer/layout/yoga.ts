@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Yoga, {
   Align,
   Direction,

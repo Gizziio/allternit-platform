@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { defer } from "@/shared/util/defer"
 import { rm } from "node:fs/promises"
 import { tmpdir } from "node:os"

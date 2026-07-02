@@ -17,3 +17,7 @@ export function getContext(): RuntimeContext {
 export function setContext(ctx: Partial<RuntimeContext>): void {
   currentContext = { ...currentContext, ...ctx }
 }
+
+// Auto-added export
+export const getSystemContext: any = {}
+

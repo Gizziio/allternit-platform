@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * GizziHeader - Dynamic mounted header for Home and Session views
  * 

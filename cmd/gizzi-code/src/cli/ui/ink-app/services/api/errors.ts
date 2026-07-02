@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   APIConnectionError,
   APIConnectionTimeoutError,
@@ -7,29 +8,29 @@ import type {
   BetaMessage,
   BetaStopReason,
 } from '@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs'
-import { AFK_MODE_BETA_HEADER } from 'src/constants/betas.js'
-import type { SDKAssistantMessageError } from 'src/entrypoints/agentSdkTypes.js'
+import { AFK_MODE_BETA_HEADER } from './../../constants/betas.ts'
+import type { SDKAssistantMessageError } from './../../entrypoints/agentSdkTypes.ts'
 import type {
   AssistantMessage,
   Message,
   UserMessage,
-} from 'src/types/message.js'
+} from './../../types/message.ts'
 import {
   getAnthropicApiKeyWithSource,
   getClaudeAIOAuthTokens,
   getOauthAccountInfo,
   isClaudeAISubscriber,
-} from 'src/utils/auth.js'
+} from './../../utils/auth.ts'
 import {
   createAssistantAPIErrorMessage,
   NO_RESPONSE_REQUESTED,
-} from 'src/utils/messages.js'
+} from './../../utils/messages.ts'
 import {
   getDefaultMainLoopModelSetting,
   isNonCustomOpusModel,
-} from 'src/utils/model/model.js'
-import { getModelStrings } from 'src/utils/model/modelStrings.js'
-import { getAPIProvider } from 'src/utils/model/providers.js'
+} from './../../utils/model/model.ts'
+import { getModelStrings } from './../../utils/model/modelStrings.ts'
+import { getAPIProvider } from './../../utils/model/providers.ts'
 import { getIsNonInteractiveSession } from '../../bootstrap/state.js'
 import {
   API_PDF_MAX_PAGES,

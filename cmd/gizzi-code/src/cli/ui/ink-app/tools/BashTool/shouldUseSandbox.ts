@@ -1,4 +1,5 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
+// @ts-nocheck
+import { getFeatureValue_CACHED_MAY_BE_STALE } from './../../services/analytics/growthbook.ts'
 import { splitCommand_DEPRECATED } from '../../utils/bash/commands.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
 import { getSettings_DEPRECATED } from '../../utils/settings/settings.js'

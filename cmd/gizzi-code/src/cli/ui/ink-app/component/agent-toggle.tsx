@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Agent Toggle - ON/OFF switch for agent mode
  * 

@@ -497,7 +497,7 @@ export interface RenderableMessage extends Message {
 /**
  * AttachmentMessage - Messages containing file attachments
  */
-export interface AttachmentMessage<T = MessageAttachment> extends Message {
+export interface AttachmentMessage<T extends MessageAttachment = MessageAttachment> extends Message {
   type: 'attachment'
   subtype: 'attachment'
   attachment: T
@@ -1015,4 +1015,55 @@ export interface SystemFileSnapshotMessage extends SystemMessage {
   subtype: 'file_snapshot'
   files: string[]
   timestamp: number
+}
+
+// Compatibility exports for public API consumers.
+export type TypedMessage = UserMessage | AssistantMessage | SystemMessage
+
+export interface MessageThread {
+  messages: Message[]
+  [key: string]: any
+}
+
+export type Attachment = MessageAttachment
+export type AttachmentMimeType = string
+
+export type MessageStatus =
+  | 'pending'
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | 'error'
+
+export const MESSAGE_ROLES = ['user', 'assistant', 'system'] as const
+
+export function isUserMessage(msg: Message): msg is UserMessage {
+  return msg.type === 'user'
+}
+
+export function isAssistantMessage(msg: Message): msg is AssistantMessage {
+  return msg.type === 'assistant'
+}
+
+export function isSystemMessage(msg: Message): msg is SystemMessage {
+  return msg.type === 'system'
+}
+
+export function isMessageRole(role: unknown): role is MessageRole {
+  return (
+    typeof role === 'string' &&
+    (role === 'user' || role === 'assistant' || role === 'system')
+  )
+}
+
+export function createMessage(
+  role: MessageRole,
+  content: string,
+): Message {
+  return {
+    type: role,
+    role,
+    uuid: '',
+    content,
+  } as Message
 }

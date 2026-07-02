@@ -6,7 +6,6 @@
  */
 
 import type {
-  Session,
   SessionId,
   ToolCall,
   Content,

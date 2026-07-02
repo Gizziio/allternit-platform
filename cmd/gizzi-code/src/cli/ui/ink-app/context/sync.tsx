@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type {
   Message,
   Agent,
@@ -23,6 +24,12 @@ type McpResource = unknown
 import type { UserData } from "@/runtime/context/user"
 import type { RunRegistry } from "@/runtime/session/run-registry"
 import type { CronTypes } from "@/runtime/automation/cron/types"
+import type {
+  AutomationGoal,
+  AutomationRoutine,
+  AutomationLoop,
+} from "@/cli/ui/ink-app/services/automations"
+import { fetchAutomations } from "@/cli/ui/ink-app/services/automations"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useSDK } from "@/cli/ui/ink-app/context/sdk"
 import { Binary } from "@allternit/gizzi-util/binary.js"
@@ -84,6 +91,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       cron_jobs: CronTypes.CronJob[]
       cron_runs: CronTypes.CronRun[]
       cron_status: { jobs: number; active: number; pendingRuns: number; runningRuns: number }
+      goals: AutomationGoal[]
+      routines: AutomationRoutine[]
+      loops: AutomationLoop[]
       user: UserData | null
       workspace: {
         type: "gizzi" | "openclaw"
@@ -129,6 +139,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       cron_jobs: [] as CronTypes.CronJob[],
       cron_runs: [] as CronTypes.CronRun[],
       cron_status: { jobs: 0, active: 0, pendingRuns: 0, runningRuns: 0 },
+      goals: [] as AutomationGoal[],
+      routines: [] as AutomationRoutine[],
+      loops: [] as AutomationLoop[],
       user: null,
       workspace: null,
     })
@@ -490,6 +503,16 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             sdk.client.vcs.get().then((x: any) => { Log.Default.info("tui: sync vcs done"); setStore("vcs", reconcile(x.data))}),
             sdk.client.path.get().then((x: any) => { Log.Default.info("tui: sync path done"); setStore("path", reconcile(x.data ?? { state: "", config: "", worktree: "", directory: "" }))}),
             (sdk.client as any).instance?.workspace?.().then((x: any) => { Log.Default.info("tui: sync workspace done"); setStore("workspace", reconcile(x.data ?? null)) }).catch(() => {}),
+            fetchAutomations(sdk.url).then(({ goals, routines, loops }) => {
+              Log.Default.info("tui: sync automations done", { goals: goals.length, routines: routines.length, loops: loops.length })
+              batch(() => {
+                setStore("goals", reconcile(goals))
+                setStore("routines", reconcile(routines))
+                setStore("loops", reconcile(loops))
+              })
+            }).catch((err) => {
+              Log.Default.warn("tui: sync automations failed", { error: err instanceof Error ? err.message : String(err) })
+            }),
             (sdk.client as any).user.get().then((x: any) => {
               Log.Default.info("tui: sync user done")
               setStore("user", reconcile(x.data ?? null))

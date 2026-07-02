@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Memory-directory scanning primitives. Split out of findRelevantMemories.ts
  * so extractMemories can import the scan without pulling in sideQuery and

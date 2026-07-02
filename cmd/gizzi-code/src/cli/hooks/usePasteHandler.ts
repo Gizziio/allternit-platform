@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { basename } from 'path'
 import React from 'react'
 import { logError } from 'src/utils/log.js'

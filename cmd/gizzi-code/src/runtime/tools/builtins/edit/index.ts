@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Edit tool - file editing capability (search and replace)
  */

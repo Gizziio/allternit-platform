@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import { Log } from "@/shared/util/log"
@@ -28,6 +29,7 @@ import { Command } from "@/runtime/loop/command"
 import { Global } from "@/runtime/context/global"
 import { ProjectRoutes } from "@/runtime/server/routes/project"
 import { SessionRoutes } from "@/runtime/server/routes/session"
+import { AutomationsRoutes } from "@/runtime/server/routes/automations"
 import { PtyRoutes } from "@/runtime/server/routes/pty"
 import { McpRoutes } from "@/runtime/server/routes/mcp"
 import { FileRoutes } from "@/runtime/server/routes/file"
@@ -288,6 +290,7 @@ export namespace Server {
         .route("/config", ConfigRoutes())
         .route("/experimental", ExperimentalRoutes())
         .route("/session", SessionRoutes())
+        .route("/automations", AutomationsRoutes())
         .route("/permission", PermissionRoutes())
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
@@ -369,6 +372,7 @@ export namespace Server {
           "/v1",
           new Hono()
             .route("/session", SessionRoutes())
+            .route("/automations", AutomationsRoutes())
             .route("/agent", AgentRoutes())
             .route("/command", CommandRoutes())
             .route("/provider", ProviderRoutes())

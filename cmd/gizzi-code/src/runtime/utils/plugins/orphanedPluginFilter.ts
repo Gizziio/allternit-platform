@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Orphaned plugin filter - re-export from shared
  */

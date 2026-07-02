@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { dirname, isAbsolute, sep } from 'path'
 import { logEvent } from '@/services/analytics/index.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'

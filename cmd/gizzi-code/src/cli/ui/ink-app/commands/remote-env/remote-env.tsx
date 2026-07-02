@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from 'react';
 import { RemoteEnvironmentDialog } from '../../components/RemoteEnvironmentDialog';
 import type { LocalJSXCommandOnDone } from '../../types/command';

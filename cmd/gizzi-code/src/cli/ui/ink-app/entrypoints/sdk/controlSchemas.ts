@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SDK Control Schemas - Zod schemas for the control protocol.
  *

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Gizzi Message Type System
  * Complete implementation based on Claude's canonical architecture

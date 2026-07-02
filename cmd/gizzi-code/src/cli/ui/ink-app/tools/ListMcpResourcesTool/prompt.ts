@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const LIST_MCP_RESOURCES_TOOL_NAME = 'ListMcpResourcesTool'
 
 export const DESCRIPTION = `

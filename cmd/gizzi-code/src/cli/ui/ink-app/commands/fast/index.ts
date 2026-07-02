@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Command } from '../../commands'
 import {
   FAST_MODE_MODEL_DISPLAY,

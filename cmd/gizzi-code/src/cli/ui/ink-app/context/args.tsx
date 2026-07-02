@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createSimpleContext } from "@/cli/ui/ink-app/context/helper"
 
 export interface Args {

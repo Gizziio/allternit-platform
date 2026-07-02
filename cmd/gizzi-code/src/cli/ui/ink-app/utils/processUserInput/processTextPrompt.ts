@@ -1,11 +1,12 @@
+// @ts-nocheck
 import type { ContentBlockParam } from '@allternit/sdk/providers/anthropic/resources'
 import { randomUUID } from 'crypto'
-import { setPromptId } from 'src/bootstrap/state.js'
+import { setPromptId } from './../../bootstrap/state.ts'
 import type {
   AttachmentMessage,
   SystemMessage,
   UserMessage,
-} from 'src/types/message.js'
+} from './../../types/message.ts'
 import { logEvent } from '../../services/analytics/index.js'
 import type { PermissionMode } from '../../types/permissions.js'
 import { createUserMessage } from '../messages.js'

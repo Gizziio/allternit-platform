@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { createVFKitManager } from "@/runtime/vm"

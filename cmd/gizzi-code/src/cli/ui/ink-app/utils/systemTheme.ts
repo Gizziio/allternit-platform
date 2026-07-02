@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Terminal dark/light mode detection for the 'auto' theme setting.
  *

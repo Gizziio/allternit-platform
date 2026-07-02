@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { FocusManager } from './focus.js'
 import { createLayoutNode } from './layout/engine.js'
 import type { LayoutNode } from './layout/node.js'

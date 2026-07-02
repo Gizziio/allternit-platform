@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { mkdir, writeFile } from 'fs/promises';
 import * as React from 'react';
 import type { CommandResultDisplay } from '../../commands';

@@ -1,9 +1,10 @@
+// @ts-nocheck
 import axios from 'axios'
 import { createHash } from 'crypto'
 import memoize from 'lodash-es/memoize.js'
 import { getOrCreateUserID } from '../../../config/config.js'
 import { logError } from '../../util/log.js'
-import { getCanonicalName } from '@/types/model.js'
+import { getCanonicalName } from '../../types/model.js'
 import { getAPIProvider } from '../../../shared/utils/model/providers.js'
 import { MODEL_COSTS } from '../../../shared/utils/modelCost.js'
 import { isAnalyticsDisabled } from './config.js'

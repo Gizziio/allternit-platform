@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getInitialSettings } from '../utils/settings/settings'
 
 export function getSpinnerVerbs(): string[] {

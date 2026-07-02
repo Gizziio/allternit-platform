@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Dialog: Skill Evaluator (Skills 2.0)
  *

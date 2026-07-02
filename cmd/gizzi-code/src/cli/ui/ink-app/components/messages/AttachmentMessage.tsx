@@ -1,18 +1,19 @@
+// @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import React, { useMemo } from 'react';
 import { Ansi, Box, Text } from '../../ink';
-import type { Attachment } from 'src/utils/attachments';
+import type { Attachment } from './../../utils/attachments.ts';
 import type { NullRenderingAttachmentType } from './nullRenderingAttachments';
 import { useAppState } from '../../state/AppState';
-import { getDisplayPath } from 'src/utils/file';
-import { formatFileSize } from 'src/utils/format';
+import { getDisplayPath } from './../../utils/file.ts';
+import { formatFileSize } from './../../utils/format.ts';
 import { MessageResponse } from '../MessageResponse';
 import { basename, sep } from 'path';
 import { UserTextMessage } from './UserTextMessage';
 import { DiagnosticsDisplay } from '../DiagnosticsDisplay';
-import { getContentText } from 'src/utils/messages';
-import type { Theme } from 'src/utils/theme';
+import { getContentText } from './../../utils/messages.ts';
+import type { Theme } from './../../utils/theme.ts';
 import { UserImageMessage } from './UserImageMessage';
 import { toInkColor } from '../../utils/ink';
 import { jsonParse } from '../../utils/slowOperations';

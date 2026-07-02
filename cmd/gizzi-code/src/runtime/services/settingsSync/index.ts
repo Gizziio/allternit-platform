@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Settings Sync Service
  *
@@ -33,9 +34,9 @@ import {
   getAPIProvider,
   isFirstPartyAnthropicBaseUrl,
 } from '../../../utils/model/providers.js'
-import { markInternalWrite } from '../../../utils/settings/internalWrites.js'
+import { markInternalWrite } from '../../../shared/utils/settings/internalWrites.js'
 import { getSettingsFilePathForSource } from '../../../utils/settings/settings.js'
-import { resetSettingsCache } from '../../../utils/settings/settingsCache.js'
+import { resetSettingsCache } from '../../../shared/utils/settings/settingsCache.js'
 import { sleep } from '../../../utils/sleep.js'
 import { getClaudeCodeUserAgent } from '../../../utils/userAgent.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'

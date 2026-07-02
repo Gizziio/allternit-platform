@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ToolUseBlock } from '@anthropic-ai/sdk/resources/index.mjs'
 import {
   createUserMessage,
@@ -6,7 +7,7 @@ import {
 } from 'src/utils/messages.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
 import { findToolByName, type Tools, type ToolUseContext } from '../../../runtime/tools/Tool.js'
-import { BASH_TOOL_NAME } from '../../../tools/BashTool/toolName.js'
+import { BASH_TOOL_NAME } from '../../tools/builtins/bash/toolName.js'
 import type { AssistantMessage, Message } from '@/types/message.js'
 import { createChildAbortController } from '../../../utils/abortController.js'
 import { runToolUse } from './toolExecution.js'

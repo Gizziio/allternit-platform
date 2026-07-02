@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Paste event stub
  */

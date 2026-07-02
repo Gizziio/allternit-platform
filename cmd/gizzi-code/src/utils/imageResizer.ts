@@ -2,6 +2,8 @@
  * Image Resizer Utilities
  */
 
+export type { ImageDimensions } from '../shared/utils/imageResizer.js'
+
 export interface ImageResizeOptions {
   maxWidth?: number
   maxHeight?: number

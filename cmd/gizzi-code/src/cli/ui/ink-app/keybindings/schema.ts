@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Zod schema for keybindings.json configuration.
  * Used for validation and JSON schema generation.

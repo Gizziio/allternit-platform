@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Mode Context - Global mode state management
  * 

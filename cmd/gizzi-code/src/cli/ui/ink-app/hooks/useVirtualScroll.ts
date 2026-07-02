@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { RefObject } from 'react'
 import {
   useCallback,

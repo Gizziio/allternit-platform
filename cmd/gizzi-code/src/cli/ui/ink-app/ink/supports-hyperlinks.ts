@@ -1,3 +1,4 @@
+// @ts-nocheck
 import supportsHyperlinksLib from 'supports-hyperlinks'
 
 // Additional terminals that support OSC 8 hyperlinks but aren't detected by supports-hyperlinks.

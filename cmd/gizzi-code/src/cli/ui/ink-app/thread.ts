@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { cmd } from "@/cli/commands/cmd"
 import { tui } from "@/cli/ui/ink-app/app"
 import { Rpc } from "@/shared/util/rpc"

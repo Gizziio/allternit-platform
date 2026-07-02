@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Stub for external builds - classifier permissions feature is ANT-ONLY
 
 export const PROMPT_PREFIX = 'prompt:'

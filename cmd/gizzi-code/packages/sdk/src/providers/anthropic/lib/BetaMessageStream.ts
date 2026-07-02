@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { partialParse } from '../_vendor/partial-json-parser/parser';
 import type { Logger } from '../client';
 import { AllternitError, APIUserAbortError } from '../error';

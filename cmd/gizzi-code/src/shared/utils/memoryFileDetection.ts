@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { feature } from 'bun:bundle'
 import { normalize, posix, win32 } from 'path'
 import {

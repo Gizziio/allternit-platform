@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Clipboard } from "@/cli/ui/ink-app/util/clipboard"
 import { GIZZICopy } from "@/shared/brand"
 

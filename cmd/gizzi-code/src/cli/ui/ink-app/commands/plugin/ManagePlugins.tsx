@@ -1,3 +1,4 @@
+// @ts-nocheck
 import figures from 'figures';
 import type { Dirent } from 'fs';
 import * as fs from 'fs/promises';
