@@ -98,11 +98,11 @@ function CoworkPluginsView({
               <div style={{ display: 'flex', gap: 8 }}>
                 {installed ? (
                   <>
-                    <button onClick={() => onUpdate(plugin)} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: 'color-mix(in srgb, var(--status-info) 20%, transparent)', color: 'var(--status-info)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Update</button>
-                    <button onClick={() => onUninstall(plugin)} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${THEME.border}`, backgroundColor: 'transparent', color: THEME.textSecondary, fontSize: 13, cursor: 'pointer' }}>Remove</button>
+                    <button type="button" onClick={() => onUpdate(plugin)} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: 'color-mix(in srgb, var(--status-info) 20%, transparent)', color: 'var(--status-info)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Update</button>
+                    <button type="button" onClick={() => onUninstall(plugin)} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${THEME.border}`, backgroundColor: 'transparent', color: THEME.textSecondary, fontSize: 13, cursor: 'pointer' }}>Remove</button>
                   </>
                 ) : (
-                  <button onClick={() => onInstall(plugin)} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: 'var(--status-info)', color: 'var(--ui-text-inverse)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Install</button>
+                  <button type="button" onClick={() => onInstall(plugin)} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: 'var(--status-info)', color: 'var(--ui-text-inverse)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Install</button>
                 )}
               </div>
             </div>
@@ -145,16 +145,10 @@ export function BrowsePluginsOverlay({
   fs: FileSystemAPI;
 }) {
   const [activeTab, setActiveTab] = useState<PluginMarketplaceTab>('marketplace');
-  const [searchQuery] = useState('');
-  const [activeCategory] = useState<string>('all');
+  const searchQuery = '';
+  const activeCategory = 'all';
   const [marketplacePlugins, setMarketplacePlugins] = useState<MarketplacePlugin[]>([]);
-  const [, setMarketplaceSource] = useState<'api' | 'curated' | 'github' | 'none'>('none');
-  const [, setMarketplaceError] = useState<string | null>(null);
-  const [, setPersonalEntries] = useState<Array<{ source: PersonalMarketplaceSource; plugin: MarketplacePlugin }>>([]);
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(true);
-  const [, setIsPersonalLoading] = useState(false);
-  const [, setPersonalSourceWarnings] = useState<Record<string, string>>({});
-  const [refreshNonce] = useState(0);
   const { showError, showInfo } = useErrorToast();
 
   const enabledCuratedSourceIds = useMemo(() => {
@@ -166,57 +160,48 @@ export function BrowsePluginsOverlay({
   useEffect(() => {
     void (async () => {
       setIsMarketplaceLoading(true);
-      setMarketplaceError(null);
       try {
         const result = await searchMarketplace(searchQuery, {
           category: activeCategory === 'all' ? undefined : activeCategory,
           allowedCuratedSourceIds: enabledCuratedSourceIds,
         });
-        setMarketplaceSource(result.source);
         setMarketplacePlugins(result.plugins.map((p) => ({
           ...p,
           installed: marketplaceInstalledIds.includes(p.id),
         })));
       } catch (e) {
-        showError('Failed to load marketplace');
+        showError(e instanceof Error ? e.message : 'Failed to load marketplace');
         setMarketplacePlugins([]);
-        setMarketplaceError(e instanceof Error ? e.message : 'Unable to load marketplace data.');
       } finally {
         setIsMarketplaceLoading(false);
       }
     })();
-  }, [searchQuery, activeCategory, enabledCuratedSourceIds, marketplaceInstalledIds, refreshNonce, showError]);
+  }, [searchQuery, activeCategory, enabledCuratedSourceIds, marketplaceInstalledIds, showError]);
 
   const loadPersonalSources = useCallback(async () => {
-    setIsPersonalLoading(true);
-    const warnings: Record<string, string> = {};
-    const loadedEntries: Array<{ source: PersonalMarketplaceSource; plugin: MarketplacePlugin }> = [];
     const seen = new Set<string>();
 
     for (const source of personalSources) {
       try {
         if (source.type === 'github') {
           const repo = parseGitHubRepoRef(source.value);
-          if (!repo) { warnings[source.id] = 'Invalid GitHub format.'; continue; }
+          if (!repo) { showError(`${source.label || source.value}: Invalid GitHub format.`); continue; }
           const plugin = await fetchPluginFromGitHub(repo.owner, repo.repo);
-          if (!plugin) { warnings[source.id] = 'Unable to fetch metadata.'; continue; }
+          if (!plugin) { showError(`${source.label || source.value}: Unable to fetch metadata.`); continue; }
           const candidate = { ...plugin, category: plugin.category || 'personal' };
-          if (!seen.has(candidate.id)) { seen.add(candidate.id); loadedEntries.push({ source, plugin: candidate }); }
+          seen.add(candidate.id);
         } else if (source.type === 'url') {
           const response = await fetch(source.value);
-          if (!response.ok) { warnings[source.id] = `Source unavailable (${response.status}).`; continue; }
+          if (!response.ok) { showError(`${source.label || source.value}: Source unavailable (${response.status}).`); continue; }
           const payload = await response.json();
           const plugin = normalizeMarketplacePluginPayload(payload, { id: source.id, name: source.label || source.value });
-          if (plugin && !seen.has(plugin.id)) { seen.add(plugin.id); loadedEntries.push({ source, plugin }); }
+          if (plugin) seen.add(plugin.id);
         }
       } catch (error) {
-        warnings[source.id] = error instanceof Error ? error.message : 'Failed to resolve source.';
+        showError(`${source.label || source.value}: ${error instanceof Error ? error.message : 'Failed to resolve source.'}`);
       }
     }
-    setPersonalSourceWarnings(warnings);
-    setPersonalEntries(loadedEntries);
-    setIsPersonalLoading(false);
-  }, [personalSources]);
+  }, [personalSources, showError]);
 
   useEffect(() => { void loadPersonalSources(); }, [loadPersonalSources]);
 
@@ -227,13 +212,13 @@ export function BrowsePluginsOverlay({
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.92)', backdropFilter: 'blur(12px)', zIndex: 200, display: 'flex', flexDirection: 'column' }} role="dialog">
       <header style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 40px 16px', borderBottom: `1px solid ${THEME.border}`, backgroundColor: 'rgba(12, 10, 9, 0.8)' }}>
-        <button onClick={onClose} style={{ position: 'absolute', right: 24, top: 24, background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} color={THEME.textTertiary} /></button>
+        <button type="button" onClick={onClose} style={{ position: 'absolute', right: 24, top: 24, background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} color={THEME.textTertiary} /></button>
         <h2 style={{ fontSize: 28, fontWeight: 600, color: THEME.textPrimary, margin: 0 }}>Browse plugins</h2>
       </header>
 
       <div style={{ display: 'flex', gap: 8, padding: '16px 40px', borderBottom: `1px solid ${THEME.border}` }}>
         {(['marketplace', 'personal', 'directories', 'publish', 'cowork'] as PluginMarketplaceTab[]).map((t) => (
-          <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', backgroundColor: activeTab === t ? 'var(--ui-border-default)' : 'transparent', color: activeTab === t ? THEME.textPrimary : THEME.textSecondary, cursor: 'pointer', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button type="button" key={t} onClick={() => setActiveTab(t)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', backgroundColor: activeTab === t ? 'var(--ui-border-default)' : 'transparent', color: activeTab === t ? THEME.textPrimary : THEME.textSecondary, cursor: 'pointer', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: 6 }}>
             {t === 'cowork' && <UsersThree size={16} weight="bold" color={activeTab === t ? 'var(--status-info)' : THEME.textSecondary} />}
             {t}
             {t === 'cowork' && (
@@ -256,7 +241,7 @@ export function BrowsePluginsOverlay({
             isLoading={isMarketplaceLoading}
           />
         ) : (
-          <div style={{ color: THEME.textPrimary }}>Tab {activeTab} content here (simplified for now)</div>
+          <div style={{ color: THEME.textPrimary }}>{activeTab} content</div>
         )}
       </div>
 

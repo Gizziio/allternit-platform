@@ -1,3 +1,4 @@
+import { unstable_cache as cache } from "next/cache";
 import { config } from "@/lib/config";
 import type { AnyImageModelId } from "@/lib/models/image-model-id";
 import type { AppModelId, ModelId } from "./app-model-id";
@@ -115,18 +116,23 @@ function buildChatModels(
     });
 }
 
-// Model data is generated at build time, so caching via next/cache is not
-// appropriate for the browser/Vite build. These helpers simply transform the
-// static generated model list on demand.
-async function fetchAllAppModels(): Promise<AppModelDefinition[]> {
-  const models = await fetchModels();
-  return buildAppModels(models);
-}
+const fetchAllAppModels = cache(
+  async (): Promise<AppModelDefinition[]> => {
+    const models = await fetchModels();
+    return buildAppModels(models);
+  },
+  ["all-app-models"],
+  { revalidate: 3600, tags: ["ai-gateway-models"] }
+);
 
-async function fetchChatModels(): Promise<AppModelDefinition[]> {
-  const appModels = await fetchAllAppModels();
-  return buildChatModels(appModels);
-}
+const fetchChatModels = cache(
+  async (): Promise<AppModelDefinition[]> => {
+    const appModels = await fetchAllAppModels();
+    return buildChatModels(appModels);
+  },
+  ["chat-models"],
+  { revalidate: 3600, tags: ["ai-gateway-models"] }
+);
 
 export async function getAppModelDefinition(
   modelId: AppModelId

@@ -8,7 +8,6 @@
  * - Download files
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 import { X, FileCsv, FileCode, FileText, Clipboard } from '@phosphor-icons/react';
 import { TEXT, BACKGROUND } from '@/design/allternit.tokens';
@@ -90,7 +89,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
         style={{ borderColor: 'var(--surface-hover)' }}
       >
         <span className="text-sm font-medium" style={{ color: TEXT.primary }}>Export Data</span>
-        <button 
+        <button type="button" 
           onClick={onClose}
           className="size-6  rounded flex items-center justify-center hover:bg-white/5"
           style={{ color: TEXT.tertiary }}
@@ -102,7 +101,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
       {/* Tabs */}
       <div className="flex border-b" style={{ borderColor: 'var(--surface-hover)' }}>
         {(['agents', 'metrics'] as const).map(tab => (
-          <button
+          <button type="button"
             key={tab}
             onClick={() => setActiveTab(tab)}
             className="flex-1 py-2 text-xs font-medium capitalize transition-colors"
@@ -126,7 +125,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
             
             <div className="grid grid-cols-3 gap-2">
               {(['csv', 'json', 'markdown'] as ExportFormat[]).map(format => (
-                <button
+                <button type="button"
                   key={format}
                   onClick={() => handleExportAgents(format)}
                   disabled={isExporting}
@@ -139,7 +138,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
               ))}
             </div>
 
-            <button
+            <button type="button"
               onClick={handleCopySnapshot}
               className="w-full py-2 rounded-lg text-xs font-medium transition-all hover:bg-white/5"
               style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
@@ -155,7 +154,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
             </p>
             
             <div className="grid grid-cols-2 gap-2">
-              <button
+              <button type="button"
                 onClick={() => handleExportMetrics('csv')}
                 disabled={isExporting}
                 className="py-2 rounded-lg text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"
@@ -164,7 +163,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
                 <FileCsv size={16} weight="duotone" style={{ margin: '0 auto 4px' }} />
                 CSV
               </button>
-              <button
+              <button type="button"
                 onClick={() => handleExportMetrics('json')}
                 disabled={isExporting}
                 className="py-2 rounded-lg text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"

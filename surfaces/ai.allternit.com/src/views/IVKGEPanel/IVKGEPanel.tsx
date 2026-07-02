@@ -456,7 +456,7 @@ export function IVKGEPanel() {
                       <div className="flex gap-2 flex-wrap">
                         {ambiguity.options.map((option, idx) => (
                           <Button
-                            key={idx}
+                            key={`ivkgepanel-${idx}`}
                             size="sm"
                             variant="outline"
                             onClick={() => handleResolveAmbiguity(ambiguity.ambiguity_id, idx)}

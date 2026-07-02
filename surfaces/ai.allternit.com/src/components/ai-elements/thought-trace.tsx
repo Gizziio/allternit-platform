@@ -236,7 +236,7 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
     return (
       <div className={cn("my-2", className)} style={{ userSelect: 'none' }}>
         {/* ── Header row ── */}
-        <button
+        <button type="button"
           onClick={() => canExpand && setIsExpanded(e => !e)}
           style={{
             display: 'flex',
@@ -301,7 +301,7 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
             gap: '5px',
           }}>
             {prevSteps.map((step, idx) => (
-              <div key={idx} style={{
+              <div key={`thought-trace-${idx}`} style={{
                 fontSize: '13px',
                 lineHeight: '1.5',
                 color: 'rgba(236,236,236,0.35)',
@@ -329,7 +329,7 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
   if (isComplete && !isStreaming && !isExpanded) {
     return (
       <div className={cn("my-1.5", className)}>
-        <button
+        <button type="button"
           onClick={() => setIsExpanded(true)}
           style={{
             display: 'flex',
@@ -359,7 +359,7 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
   if (isComplete && !isStreaming && isExpanded) {
     return (
       <div className={cn("my-2", className)}>
-        <button
+        <button type="button"
           onClick={() => setIsExpanded(false)}
           style={{
             display: 'flex',
@@ -390,7 +390,7 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
           gap: '6px',
         }}>
           {steps.map((step, idx) => (
-            <div key={idx} style={{
+            <div key={`thought-trace-${idx}`} style={{
               fontSize: '13px',
               lineHeight: '1.55',
               color: 'rgba(236,236,236,0.48)',

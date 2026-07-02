@@ -72,4 +72,4 @@ export function useStudioTheme(): StudioTheme {
  * Static fallback for non-React contexts.
  * Defaults to dark since that was the previous hardcoded behavior.
  */
-export const STUDIO_THEME_FALLBACK: StudioTheme = DARK_THEME;
+const STUDIO_THEME_FALLBACK: StudioTheme = DARK_THEME;

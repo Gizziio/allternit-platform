@@ -108,7 +108,7 @@ export const WithContent: Story = {
  * Interactive card with click handler
  */
 export const Interactive: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [clicked, setClicked] = React.useState(false);
     return (
       <GlassCard

@@ -4,7 +4,7 @@
  * Secure credential input with provider API console links.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { getProvider } from '../../data/providers';
 import { openInBrowser } from '@/lib/openInBrowser';
 
@@ -83,11 +83,10 @@ export const Step4Credentials: React.FC<Step4CredentialsProps> = ({ providerId, 
 
       <form onSubmit={handleSubmit}>
         {provider.credentialFields.map((field, index) => (
-          <div key={index} className="form-group">
-            <label>{field.name}</label>
+          <div key={field.name} className="form-group">
+            <div>{field.name}</div>
             <div className="password-input">
-              <input
-                type={field.type === 'password' && showSecret ? 'text' : field.type}
+              <input aria-label="Input" type={field.type === 'password' && showSecret ? 'text' : field.type}
                 value={index === 0 ? apiKey : apiSecret}
                 onChange={(e) => index === 0 ? setApiKey(e.target.value) : setApiSecret(e.target.value)}
                 placeholder={field.placeholder}

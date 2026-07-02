@@ -194,7 +194,7 @@ export function DataCard({
             <tbody>
               {previewData.map((row, idx) => (
                 <tr 
-                  key={idx}
+                  key={`datacard-${idx}`}
                   className="border-b border-[#2a2a2a] hover:bg-[#1e1e1e]/50"
                 >
                   {previewColumns.map(col => (
@@ -258,7 +258,7 @@ export function DataCard({
                 const height = max > 0 ? (value / max) * 100 : 0;
                 return (
                   <div
-                    key={i}
+                    key={`datacard-${i}`}
                     className="flex-1 flex flex-col items-center gap-1"
                   >
                     <div

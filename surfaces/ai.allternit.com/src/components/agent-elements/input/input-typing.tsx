@@ -8,13 +8,22 @@ export function useInputTyping(
 ) {
   const [visibleChars, setVisibleChars] = useState(0);
   const [showImage, setShowImage] = useState(false);
+  
+  // Inline state adjustment for isActive change
+  const [prevIsActive, setPrevIsActive] = useState(isActive);
+  if (isActive !== prevIsActive) {
+    setPrevIsActive(isActive);
+    if (!isActive) {
+      setVisibleChars(0);
+      setShowImage(false);
+    }
+  }
+
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
 
   useEffect(() => {
     if (!isActive) {
-      setVisibleChars(0);
-      setShowImage(false);
       return;
     }
 
@@ -41,7 +50,9 @@ export function useInputTyping(
       ),
     );
 
-    return () => timers.forEach(clearTimeout);
+    return () => {
+      timers.forEach(t => clearTimeout(t));
+    };
   }, [isActive, text, duration]);
 
   return { displayedText: text.slice(0, visibleChars), showImage };

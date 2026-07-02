@@ -16,8 +16,6 @@ export {
   getVersionManifest,
   VPS_PROVIDERS,
   savePurchaseIntent,
-  getPendingPurchases,
-  checkCompletedPurchases,
   type SSHConnectionConfig,
   type SystemInfo,
   type InstallProgress,

@@ -11,7 +11,7 @@
  *   </question-form>
  */
 
-export type QuestionType =
+type QuestionType =
   | 'radio'
   | 'checkbox'
   | 'select'
@@ -28,7 +28,7 @@ export interface DirectionCard {
   references: string[];
 }
 
-export interface FormOption {
+interface FormOption {
   value: string;
   label: string;
   description?: string;

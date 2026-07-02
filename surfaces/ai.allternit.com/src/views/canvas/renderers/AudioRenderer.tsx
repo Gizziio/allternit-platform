@@ -21,7 +21,6 @@ import {
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { MoATask } from '@/lib/api/moa-client';
-import { cn } from '@/lib/utils';
 
 interface AudioRendererProps {
   artifact: ArtifactUIPart;
@@ -263,8 +262,7 @@ export function AudioRenderer({
                 <SpeakerHigh size={16} />
               )}
             </Button>
-            <input
-              type="range"
+            <input aria-label="Input" type="range"
               min="0"
               max="1"
               step="0.1"

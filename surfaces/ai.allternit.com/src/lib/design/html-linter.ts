@@ -1,4 +1,4 @@
-export interface LintViolation {
+interface LintViolation {
   rule: string;
   severity: 'error' | 'warning';
   message: string;

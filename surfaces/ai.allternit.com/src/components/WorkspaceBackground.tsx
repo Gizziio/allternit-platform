@@ -3,7 +3,7 @@ import { useMode } from '../providers/mode-provider';
 
 const BACKGROUND_TREATMENT: 'classic' | 'sharp-v1' = 'sharp-v1';
 
-export function WorkspaceBackground(): JSX.Element {
+export function WorkspaceBackground(): React.ReactNode {
   const { mode } = useMode();
 
   if (BACKGROUND_TREATMENT === 'classic') {
@@ -111,6 +111,8 @@ export function WorkspaceBackground(): JSX.Element {
           ? 'var(--view-chat-bg)'
           : mode === 'browser'
           ? 'var(--view-browser-bg)'
+          : mode === 'cowork'
+          ? 'var(--view-cowork-bg)'
           : 'var(--shell-frame-bg)',
       }}
     >
@@ -156,42 +158,6 @@ export function WorkspaceBackground(): JSX.Element {
             mixBlendMode: 'multiply',
           }}
         />
-      )}
-
-      {mode === 'cowork' && (
-        <>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `
-                radial-gradient(circle, color-mix(in srgb, var(--accent-cowork) 18%, transparent) 1px, transparent 1px)
-              `,
-              backgroundSize: '36px 36px',
-              backgroundPosition: 'center',
-              opacity: 0.6,
-            }}
-          />
-          <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, opacity: 0.16 }}>
-            <defs>
-              <pattern id="crosshair" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                <line x1="17" y1="20" x2="23" y2="20" stroke="var(--accent-cowork)" strokeWidth="1" />
-                <line x1="20" y1="17" x2="20" y2="23" stroke="var(--accent-cowork)" strokeWidth="1" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#crosshair)" />
-          </svg>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: `
-                radial-gradient(70% 60% at 50% 35%, color-mix(in srgb, var(--accent-cowork) 12%, transparent) 0%, transparent 75%),
-                linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--accent-cowork) 6%, transparent) 100%)
-              `,
-            }}
-          />
-        </>
       )}
 
       <div

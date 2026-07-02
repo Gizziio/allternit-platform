@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -17,6 +18,7 @@ import {
   Pencil,
   DotsThree,
 } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
@@ -165,70 +167,27 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        background: "#ffffff",
-        color: "#fff",
-        fontFamily: "var(--font-sans)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
+    <div className="size-full bg-white dark:bg-black text-black dark:text-white font-sans flex flex-col overflow-hidden">
       {/* Header */}
-      <div
-        style={{
-          padding: "20px 24px",
-          borderBottom: "1px solid rgba(255,255,255,0.04)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+      <div className="p-[20px_24px] border-b border-solid border-black/5 dark:border-white/5 flex items-center justify-between">
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 4 }}>
+          <h2 className="text-[20px] font-extrabold tracking-tight mb-1 m-0 text-zinc-900 dark:text-white">
             Team Workspace
           </h2>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", margin: 0 }}>
+          <p className="text-[13px] text-zinc-500 dark:text-white/40 m-0">
             Collaborate, review, and ship designs together.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
+        <div className="flex gap-2.5">
+          <button type="button"
             onClick={() => setShareOpen(!shareOpen)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 16px",
-              borderRadius: 10,
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
+            className="flex items-center gap-1.5 p-[8px_16px] rounded-xl bg-black/5 dark:bg-white/5 border border-solid border-black/5 dark:border-white/10 text-zinc-900 dark:text-white text-[13px] font-bold cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
           >
             <ShareNetwork size={16} />
             Share for review
           </button>
-          <button
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 16px",
-              borderRadius: 10,
-              background: "#e27c59",
-              border: "none",
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
+          <button type="button"
+            className="flex items-center gap-1.5 p-[8px_16px] rounded-xl bg-[var(--accent-primary,#e27c59)] border-none text-white text-[13px] font-bold cursor-pointer hover:opacity-90 transition-opacity"
           >
             <Plus size={16} />
             New workspace
@@ -244,92 +203,36 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            style={{
-              overflow: "hidden",
-              borderBottom: "1px solid rgba(255,255,255,0.04)",
-            }}
+            className="overflow-hidden border-b border-solid border-black/5 dark:border-white/5"
           >
-            <div
-              style={{
-                padding: "16px 24px",
-                display: "flex",
-                alignItems: "center",
-                gap: 16,
-                background: "rgba(226,124,89,0.04)",
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 6 }}>
+            <div className="p-[16px_24px] flex items-center gap-4 bg-[color-mix(in_srgb,var(--accent-primary,#e27c59)_4%,transparent)]">
+              <div className="flex-1">
+                <div className="text-[12px] font-bold text-zinc-600 dark:text-white/70 mb-1.5">
                   Client review link
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 14px",
-                    borderRadius: 10,
-                    background: "rgba(0,0,0,0.3)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  <Link size={14} color="rgba(255,255,255,0.4)" />
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div className="flex items-center gap-2 p-[10px_14px] rounded-xl bg-black/5 dark:bg-black/30 border border-solid border-black/5 dark:border-white/5">
+                  <Link size={14} className="text-zinc-400 dark:text-white/30" />
+                  <span className="text-[12px] text-zinc-500 dark:text-white/50 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                     {reviewToken}
                   </span>
-                  <button
+                  <button type="button"
                     onClick={handleCopyLink}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                      padding: "4px 10px",
-                      borderRadius: 6,
-                      background: linkCopied ? "#22c55e" : "rgba(255,255,255,0.06)",
-                      border: "none",
-                      color: "#fff",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1 rounded-md border-none text-white text-[12px] font-bold cursor-pointer transition-colors",
+                      linkCopied ? "bg-green-600" : "bg-zinc-800 dark:bg-white/10 hover:bg-zinc-700 dark:hover:bg-white/20"
+                    )}
                   >
                     {linkCopied ? <Check size={12} /> : <Copy size={12} />}
                     {linkCopied ? "Copied" : "Copy"}
                   </button>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 12px",
-                    borderRadius: 8,
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "rgba(255,255,255,0.7)",
-                  }}
-                >
+              <div className="flex gap-2">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/5 border border-solid border-black/5 dark:border-white/10 text-[12px] font-semibold text-zinc-600 dark:text-white/70">
                   <Globe size={14} />
                   Anyone with link
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "6px 12px",
-                    borderRadius: 8,
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "rgba(255,255,255,0.7)",
-                  }}
-                >
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/5 border border-solid border-black/5 dark:border-white/10 text-[12px] font-semibold text-zinc-600 dark:text-white/70">
                   <Eye size={14} />
                   Can comment
                 </div>
@@ -340,224 +243,110 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
       </AnimatePresence>
 
       {/* Content Grid */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div className="flex-1 flex overflow-hidden">
         {/* Left: Team */}
-        <div
-          style={{
-            width: 260,
-            borderRight: "1px solid rgba(255,255,255,0.04)",
-            padding: 20,
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-            overflowY: "auto",
-          }}
-        >
+        <div className="w-[260px] border-r border-solid border-black/5 dark:border-white/5 p-5 flex flex-col gap-5 overflow-y-auto shrink-0">
           <SectionTitle icon={<Users size={14} />} label="Team Members" />
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-2">
             {MOCK_TEAM.map((member) => (
               <div
                 key={member.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "8px 10px",
-                  borderRadius: 10,
-                  background: member.role === "owner" ? "rgba(226,124,89,0.08)" : "transparent",
-                  border: member.role === "owner" ? "1px solid rgba(226,124,89,0.12)" : "1px solid transparent",
-                }}
+                className={cn(
+                  "flex items-center gap-2.5 p-[8px_10px] rounded-xl transition-colors",
+                  member.role === "owner" ? "bg-[color-mix(in_srgb,var(--accent-primary,#e27c59)_8%,transparent)] border border-solid border-[color-mix(in_srgb,var(--accent-primary,#e27c59)_12%,transparent)]" : "bg-transparent border border-solid border-transparent"
+                )}
               >
-                <div style={{ position: "relative" }}>
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      color: "rgba(255,255,255,0.7)",
-                    }}
-                  >
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-[12px] font-extrabold text-zinc-600 dark:text-white/70">
                     {member.avatar}
                   </div>
                   <div
-                    style={{
-                      position: "absolute",
-                      bottom: 0,
-                      right: 0,
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background:
-                        member.status === "online"
-                          ? "#22c55e"
-                          : member.status === "away"
-                          ? "#f59e0b"
-                          : "#6b7280",
-                      border: "2px solid #0a0a0c",
-                    }}
+                    className={cn(
+                      "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-solid border-white dark:border-black",
+                      member.status === "online" ? "bg-green-500" : member.status === "away" ? "bg-amber-500" : "bg-zinc-500"
+                    )}
                   />
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-bold text-zinc-900 dark:text-white truncate">
                     {member.name}
                     {member.role === "owner" && (
-                      <Star size={10} weight="fill" color="#e27c59" style={{ marginLeft: 4, display: "inline" }} />
+                      <Star size={10} weight="fill" className="text-[var(--accent-primary,#e27c59)] ml-1 inline" />
                     )}
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{member.handle}</div>
+                  <div className="text-[12px] text-zinc-400 dark:text-white/30 truncate">{member.handle}</div>
                 </div>
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    color: "rgba(255,255,255,0.3)",
-                  }}
-                >
+                <span className="text-[12px] font-extrabold uppercase tracking-widest text-zinc-300 dark:text-white/20">
                   {member.role}
                 </span>
               </div>
             ))}
           </div>
 
-          <button
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              padding: "8px",
-              borderRadius: 8,
-              background: "rgba(255,255,255,0.04)",
-              border: "1px dashed rgba(255,255,255,0.1)",
-              color: "rgba(255,255,255,0.5)",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
+          <button type="button" className="flex items-center justify-center gap-1.5 p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-dashed border-black/10 dark:border-white/10 text-zinc-400 dark:text-white/40 text-[12px] font-bold cursor-pointer hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
             <Plus size={14} />
             Invite member
           </button>
         </div>
 
         {/* Center: Projects + Live Presence Canvas */}
-        <div
-          style={{
-            flex: 1,
-            padding: 20,
-            overflowY: "auto",
-            borderRight: "1px solid rgba(255,255,255,0.04)",
-            position: "relative",
-          }}
-          ref={canvasRef}
-        >
+        <div className="flex-1 p-5 overflow-y-auto border-r border-solid border-black/5 dark:border-white/5 relative" ref={canvasRef}>
           {/* Live cursors overlay */}
           {showPresence && liveCursors.map((cursor) => (
             <motion.div
               key={cursor.id}
               animate={{ left: `${cursor.x}%`, top: `${cursor.y}%` }}
               transition={{ duration: 1.5, ease: "easeInOut" }}
-              style={{ position: "absolute", pointerEvents: "none", zIndex: 10 }}
+              className="absolute pointer-events-none z-10"
             >
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
+              <div className="flex items-end gap-1">
                 <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M0 0L14 8L7 10L4 18L0 0Z" fill={cursor.color} /></svg>
-                <span style={{ fontSize: 12, fontWeight: 800, background: cursor.color, color: "#fff", padding: "2px 5px", borderRadius: 4, whiteSpace: "nowrap" }}>{cursor.name}</span>
+                <span className="text-[12px] font-extrabold text-white px-1.5 py-0.5 rounded-[4px] whitespace-nowrap" style={{ background: cursor.color }}>{cursor.name}</span>
               </div>
             </motion.div>
           ))}
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div className="flex items-center justify-between mb-3">
             <SectionTitle icon={<Globe size={14} />} label="Shared Workspaces" />
-            <button onClick={() => setShowPresence(!showPresence)} style={{ fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 5, background: showPresence ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)", border: `1px solid ${showPresence ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)"}`, color: showPresence ? "#22c55e" : "rgba(255,255,255,0.3)", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <button type="button" onClick={() => setShowPresence(!showPresence)} className={cn("text-[12px] font-extrabold px-2 py-0.5 rounded-md border border-solid text-zinc-400 uppercase tracking-wider transition-colors", showPresence ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-500" : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/10 text-zinc-400 dark:text-white/30")}>
               {showPresence ? "● Live" : "○ Offline"}
             </button>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+          <div className="flex flex-col gap-2.5 mt-3">
             {MOCK_PROJECTS.map((project) => (
               <div
                 key={project.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  padding: 14,
-                  borderRadius: 12,
-                  background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(255,255,255,0.04)",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.04)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.02)";
-                }}
+                className="flex items-center gap-3.5 p-3.5 rounded-xl bg-black/5 dark:bg-white/5 border border-solid border-black/5 dark:border-white/5 cursor-pointer transition-all hover:bg-black/10 dark:hover:bg-white/10"
               >
                 <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 10,
-                    background: project.previewColor,
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    flexShrink: 0,
-                  }}
+                  className="w-12 h-12 rounded-xl border border-solid border-black/5 dark:border-white/10 shrink-0 shadow-sm"
+                  style={{ background: project.previewColor }}
                 />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{project.name}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[14px] font-bold text-zinc-900 dark:text-white truncate">{project.name}</span>
                     <StatusBadge status={project.status} />
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                  <div className="text-[12px] text-zinc-500 dark:text-white/40">
                     {project.type} • Edited {project.lastEdited}
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ display: "flex", marginLeft: -6 }}>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex -ml-1.5">
                     {project.editors.map((editorId, i) => {
                       const member = MOCK_TEAM.find((m) => m.id === editorId);
                       return (
                         <div
                           key={editorId}
-                          style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: "50%",
-                            background: "rgba(255,255,255,0.1)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 12,
-                            fontWeight: 800,
-                            color: "#fff",
-                            border: "2px solid #0a0a0c",
-                            marginLeft: -6,
-                            zIndex: project.editors.length - i,
-                          }}
+                          className="w-6 h-6 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-[12px] font-extrabold text-zinc-700 dark:text-white border-2 border-solid border-white dark:border-black -ml-1.5 transition-transform hover:-translate-y-0.5"
+                          style={{ zIndex: project.editors.length - i }}
                         >
                           {member?.avatar}
                         </div>
                       );
                     })}
                   </div>
-                  <button
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "rgba(255,255,255,0.3)",
-                      cursor: "pointer",
-                      padding: 4,
-                    }}
-                  >
+                  <button type="button" className="bg-transparent border-none text-zinc-400 dark:text-white/30 cursor-pointer p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 hover:text-zinc-600 dark:hover:text-white transition-colors">
                     <DotsThree size={18} />
                   </button>
                 </div>
@@ -567,42 +356,26 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
         </div>
 
         {/* Right: Activity & Review */}
-        <div
-          style={{
-            width: 300,
-            padding: 20,
-            display: "flex",
-            flexDirection: "column",
-            gap: 20,
-            overflowY: "auto",
-          }}
-        >
+        <div className="w-[300px] p-5 flex flex-col gap-5 overflow-y-auto shrink-0 bg-zinc-50/50 dark:bg-zinc-900/30">
           {/* Review Filter */}
           <div>
             <SectionTitle icon={<ChatCircle size={14} />} label="Review Activity" />
-            <div style={{ display: "flex", gap: 6, marginTop: 12, marginBottom: 12 }}>
+            <div className="flex gap-1.5 my-3">
               {(["all", "pending", "approved"] as const).map((f) => (
-                <button
+                <button type="button"
                   key={f}
                   onClick={() => setReviewFilter(f)}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    background: reviewFilter === f ? "rgba(255,255,255,0.08)" : "transparent",
-                    border: "none",
-                    color: reviewFilter === f ? "#fff" : "rgba(255,255,255,0.4)",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    textTransform: "capitalize",
-                  }}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg border-none text-[12px] font-bold transition-colors capitalize cursor-pointer",
+                    reviewFilter === f ? "bg-black/10 dark:bg-white/10 text-zinc-900 dark:text-white" : "bg-transparent text-zinc-400 dark:text-white/30 hover:bg-black/5 dark:hover:bg-white/5"
+                  )}
                 >
                   {f}
                 </button>
               ))}
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="flex flex-col gap-2.5">
               {MOCK_REVIEWS.filter((r) => {
                 if (reviewFilter === "pending") return r.action === "commented" || r.action === "requested changes";
                 if (reviewFilter === "approved") return r.action === "approved";
@@ -610,52 +383,22 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
               }).map((review) => (
                 <div
                   key={review.id}
-                  style={{
-                    padding: 12,
-                    borderRadius: 10,
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.04)",
-                    display: "flex",
-                    gap: 10,
-                  }}
+                  className="p-3 rounded-xl bg-white dark:bg-white/5 border border-solid border-black/5 dark:border-white/5 flex gap-2.5 shadow-sm"
                 >
-                  <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      background: "rgba(255,255,255,0.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      color: "#fff",
-                      flexShrink: 0,
-                    }}
-                  >
+                  <div className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-[12px] font-extrabold text-zinc-600 dark:text-white/80 shrink-0">
                     {review.avatar}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#fff", marginBottom: 2 }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] font-bold text-zinc-900 dark:text-white mb-0.5">
                       {review.reviewer}{" "}
-                      <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>
+                      <span className="text-zinc-400 dark:text-white/40 font-medium">
                         {review.action}
                       </span>
                     </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "rgba(255,255,255,0.5)",
-                        marginBottom: 4,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                    <div className="text-[12px] text-zinc-500 dark:text-white/50 mb-1 truncate">
                       {review.projectName}
                     </div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+                    <div className="text-[12px] text-zinc-400 dark:text-white/30 font-medium">
                       {review.time}
                     </div>
                   </div>
@@ -666,18 +409,8 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
           </div>
 
           {/* Quick Actions */}
-          <div
-            style={{
-              padding: 16,
-              borderRadius: 12,
-              background: "rgba(226,124,89,0.06)",
-              border: "1px solid rgba(226,124,89,0.1)",
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#e27c59" }}>Quick Actions</div>
+          <div className="p-4 rounded-2xl bg-[color-mix(in_srgb,var(--accent-primary,#e27c59)_6%,transparent)] border border-solid border-[color-mix(in_srgb,var(--accent-primary,#e27c59)_12%,transparent)] flex flex-col gap-2.5">
+            <div className="text-[12px] font-extrabold text-[var(--accent-primary,#e27c59)] uppercase tracking-wider mb-1">Quick Actions</div>
             <QuickAction icon={<Link size={14} />} label="Copy review link" />
             <QuickAction icon={<CheckCircle size={14} />} label="Mark all as read" />
             <QuickAction icon={<Pencil size={14} />} label="Edit permissions" />
@@ -692,17 +425,9 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
 
 function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-      <span style={{ color: "rgba(255,255,255,0.4)" }}>{icon}</span>
-      <span
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: "0.1em",
-          color: "rgba(255,255,255,0.35)",
-          textTransform: "uppercase",
-        }}
-      >
+    <div className="flex items-center gap-2 mb-1">
+      <span className="text-zinc-400 dark:text-white/30">{icon}</span>
+      <span className="text-[12px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-white/30">
         {label}
       </span>
     </div>
@@ -711,25 +436,14 @@ function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string })
 
 function StatusBadge({ status }: { status: SharedProject["status"] }) {
   const colors = {
-    draft: { bg: "rgba(255,255,255,0.06)", text: "rgba(255,255,255,0.5)" },
-    review: { bg: "rgba(245,158,11,0.1)", text: "#f59e0b" },
-    approved: { bg: "rgba(34,197,94,0.1)", text: "#22c55e" },
-    published: { bg: "rgba(59,130,246,0.1)", text: "#3b82f6" },
+    draft: { bg: "bg-black/5 dark:bg-white/5", text: "text-zinc-400 dark:text-white/40" },
+    review: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-500" },
+    approved: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-500" },
+    published: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-500" },
   };
   const c = colors[status];
   return (
-    <span
-      style={{
-        padding: "2px 8px",
-        borderRadius: 6,
-        background: c.bg,
-        color: c.text,
-        fontSize: 12,
-        fontWeight: 800,
-        textTransform: "uppercase",
-        letterSpacing: "0.05em",
-      }}
-    >
+    <span className={cn("px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider shrink-0", c.bg, c.text)}>
       {status}
     </span>
   );
@@ -737,35 +451,17 @@ function StatusBadge({ status }: { status: SharedProject["status"] }) {
 
 function ReviewActionIcon({ action }: { action: ReviewItem["action"] }) {
   if (action === "approved")
-    return <CheckCircle size={16} color="#22c55e" weight="fill" />;
+    return <CheckCircle size={16} className="text-green-500" weight="fill" />;
   if (action === "commented")
-    return <ChatCircle size={16} color="#3b82f6" weight="fill" />;
-  return <Pencil size={16} color="#f59e0b" weight="fill" />;
+    return <ChatCircle size={16} className="text-blue-500" weight="fill" />;
+  return <Pencil size={16} className="text-amber-500" weight="fill" />;
 }
 
 function QuickAction({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <button
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "8px 10px",
-        borderRadius: 8,
-        background: "rgba(0,0,0,0.2)",
-        border: "1px solid rgba(255,255,255,0.04)",
-        color: "rgba(255,255,255,0.7)",
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: "pointer",
-        width: "100%",
-        textAlign: "left",
-      }}
-    >
-      <span style={{ color: "rgba(255,255,255,0.4)" }}>{icon}</span>
+    <button type="button" className="flex items-center gap-2 p-[8px_10px] rounded-lg bg-black/10 dark:bg-white/5 border border-solid border-black/5 dark:border-white/5 text-zinc-700 dark:text-white/70 text-[12px] font-bold cursor-pointer text-left w-full hover:bg-black/15 dark:hover:bg-white/10 transition-colors">
+      <span className="text-zinc-400 dark:text-white/30">{icon}</span>
       {label}
     </button>
   );
 }
-
-

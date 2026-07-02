@@ -116,7 +116,7 @@ export const Step5Review: React.FC<Step5ReviewProps> = ({ config, onStart, onBac
 
         <div className="terms-check">
           <label>
-            <input type="checkbox" required />
+            <input aria-label="Checkbox" type="checkbox" required />
             I understand that I will be billed by the cloud provider directly.
           </label>
         </div>

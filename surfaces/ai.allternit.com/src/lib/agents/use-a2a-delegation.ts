@@ -16,7 +16,7 @@ import type { Agent } from "./agent.types";
  * - Swarm execution (agent triggers a swarm run)
  * - Cross-agent messaging (A2A message to another agent)
  */
-export function useA2ADelegation() {
+function useA2ADelegation() {
   const agents = useAgentStore((state: { agents: Agent[] }) => state.agents);
   const startSwarmRun = useAdvancedAgentStore((state: { startSwarmRun: (swarmId: string, input: string) => Promise<string> }) => state.startSwarmRun);
   const sendMessage = useAgentCommunicationStore((state: { sendMessage: (msg: any) => void }) => state.sendMessage);

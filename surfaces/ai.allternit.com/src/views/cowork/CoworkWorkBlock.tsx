@@ -72,22 +72,20 @@ const isToolResultEvent = (event: AnyCoworkEvent): event is ToolResultEvent =>
 // ============================================================================
 
 const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
-  if (!isActionEvent(event)) {
-    console.warn('[CoworkWorkBlock] Expected action event, got:', event.type);
-    return null;
-  }
-  
+  if (!isActionEvent(event)) return null;
+
   return (
-    <div 
+    <div role="button" tabIndex={0}
       onClick={onToggle}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(); }}
       className={cn(
         "group flex items-center gap-3 p-3 rounded-lg cursor-pointer",
-        "bg-[#1e1e1e] border border-white/5 hover:border-white/10",
+        "bg-[var(--surface-panel,#1e1e1e)] border border-white/5 hover:border-white/10",
         "transition-all duration-200"
       )}
     >
-      <div className="size-8  rounded-md bg-green-500/10 flex items-center justify-center shrink-0">
-        <MousePointerClick className="size-4  text-green-400" />
+      <div className="size-8 rounded-md bg-green-500/10 flex items-center justify-center shrink-0">
+        <MousePointerClick className="size-4 text-green-400" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -97,7 +95,7 @@ const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: B
              event.actionType === 'scroll' ? 'Scrolled' : 'Action'}
           </span>
           <span className="text-xs text-white/40">
-            {event.target?.type === 'coordinates' ? 'at position' : 
+            {event.target?.type === 'coordinates' ? 'at position' :
              event.target?.type === 'selector' ? 'on element' : ''}
           </span>
         </div>
@@ -108,9 +106,9 @@ const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: B
         )}
       </div>
       {isExpanded ? (
-        <CaretUp className="size-4  text-white/30" />
+        <CaretUp className="size-4 text-white/30" />
       ) : (
-        <CaretDown className="size-4  text-white/30" />
+        <CaretDown className="size-4 text-white/30" />
       )}
     </div>
   );
@@ -121,26 +119,24 @@ const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: B
 // ============================================================================
 
 const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
-  if (!isCommandEvent(event)) {
-    console.warn('[CoworkWorkBlock] Expected command event, got:', event.type);
-    return null;
-  }
-  
+  if (!isCommandEvent(event)) return null;
+
   const commands = event.commands;
-  
+
   return (
-    <div 
+    <div
       className={cn(
-        "bg-[#1e1e1e] border border-white/5 rounded-lg overflow-hidden",
+        "bg-[var(--surface-panel,#1e1e1e)] border border-white/5 rounded-lg overflow-hidden",
         "transition-all duration-200"
       )}
     >
-      <div 
+      <div role="button" tabIndex={0}
         onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(); }}
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5"
       >
-        <div className="size-8  rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
-          <Terminal className="size-4  text-blue-400" />
+        <div className="size-8 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
+          <Terminal className="size-4 text-blue-400" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">
@@ -148,17 +144,17 @@ const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }:
           </span>
         </div>
         {isExpanded ? (
-          <CaretUp className="size-4  text-white/30" />
+          <CaretUp className="size-4 text-white/30" />
         ) : (
-          <CaretDown className="size-4  text-white/30" />
+          <CaretDown className="size-4 text-white/30" />
         )}
       </div>
-      
+
       {isExpanded && (
         <div className="px-3 pb-3">
           <div className="bg-black/30 rounded-md p-3 font-mono text-xs text-white/70 space-y-1">
-            {commands.map((cmd: string, i: number) => (
-              <div key={i} className="flex items-start gap-2">
+            {commands.map((cmd: string) => (
+              <div key={cmd + event.timestamp} className="flex items-start gap-2">
                 <span className="text-green-500">$</span>
                 <span>{cmd}</span>
               </div>
@@ -175,14 +171,11 @@ const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }:
 // ============================================================================
 
 const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
-  if (!isFileEvent(event)) {
-    console.warn('[CoworkWorkBlock] Expected file event, got:', event.type);
-    return null;
-  }
-  
+  if (!isFileEvent(event)) return null;
+
   const files = event.files;
   const operation = event.operation;
-  
+
   const operationConfig = {
     read: { icon: Eye, color: 'text-purple-400', bg: 'bg-purple-500/10' },
     edit: { icon: Code, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
@@ -194,39 +187,40 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: Block
   const Icon = config.icon;
   
   return (
-    <div 
+    <div
       className={cn(
-        "bg-[#1e1e1e] border border-white/5 rounded-lg overflow-hidden",
+        "bg-[var(--surface-panel,#1e1e1e)] border border-white/5 rounded-lg overflow-hidden",
         "transition-all duration-200"
       )}
     >
-      <div 
+      <div role="button" tabIndex={0}
         onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(); }}
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5"
       >
-        <div className={cn("size-8  rounded-md flex items-center justify-center shrink-0", config.bg)}>
-          <Icon className={cn("size-4 ", config.color)} />
+        <div className={cn("size-8 rounded-md flex items-center justify-center shrink-0", config.bg)}>
+          <Icon className={cn("size-4", config.color)} />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">
-            {operation === 'read' ? 'Read' : 
+            {operation === 'read' ? 'Read' :
              operation === 'edit' ? 'Edited' :
              operation === 'create' ? 'Created' : 'Deleted'} {files.length} file{files.length > 1 ? 's' : ''}
           </span>
         </div>
         {isExpanded ? (
-          <CaretUp className="size-4  text-white/30" />
+          <CaretUp className="size-4 text-white/30" />
         ) : (
-          <CaretDown className="size-4  text-white/30" />
+          <CaretDown className="size-4 text-white/30" />
         )}
       </div>
-      
+
       {isExpanded && (
         <div className="px-3 pb-3">
           <div className="space-y-1">
-            {files.map((file, i: number) => (
-              <div key={i} className="flex items-center gap-2 text-xs text-white/60">
-                <FileText className="size-3.5  text-white/30" />
+            {files.map((file) => (
+              <div key={(file.path || file.name) + event.timestamp} className="flex items-center gap-2 text-xs text-white/60">
+                <FileText className="size-3.5 text-white/30" />
                 <span className="font-mono">{file.path || file.name}</span>
                 {file.changes !== undefined && (
                   <span className="text-white/30">({file.changes} changes)</span>
@@ -245,40 +239,43 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: Block
 // ============================================================================
 
 const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
-  if (!isObservationEvent(event)) {
-    console.warn('[CoworkWorkBlock] Expected observation event, got:', event.type);
-    return null;
+  if (!isObservationEvent(event)) return null;
+
+  let urlHostname: string | null = null;
+  if (event.metadata?.url) {
+    try { urlHostname = new URL(event.metadata.url).hostname; } catch { urlHostname = event.metadata.url; }
   }
-  
+
   return (
-    <div 
+    <div
       className={cn(
-        "bg-[#1e1e1e] border border-white/5 rounded-lg overflow-hidden",
+        "bg-[var(--surface-panel,#1e1e1e)] border border-white/5 rounded-lg overflow-hidden",
         "transition-all duration-200"
       )}
     >
-      <div 
+      <div role="button" tabIndex={0}
         onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(); }}
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5"
       >
-        <div className="size-8  rounded-md bg-cyan-500/10 flex items-center justify-center shrink-0">
-          <Camera className="size-4  text-cyan-400" />
+        <div className="size-8 rounded-md bg-cyan-500/10 flex items-center justify-center shrink-0">
+          <Camera className="size-4 text-cyan-400" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">Viewed page</span>
-          {event.metadata?.url && (
+          {urlHostname && (
             <span className="text-xs text-white/40 ml-2 truncate">
-              {new URL(event.metadata.url).hostname}
+              {urlHostname}
             </span>
           )}
         </div>
         {isExpanded ? (
-          <CaretUp className="size-4  text-white/30" />
+          <CaretUp className="size-4 text-white/30" />
         ) : (
-          <CaretDown className="size-4  text-white/30" />
+          <CaretDown className="size-4 text-white/30" />
         )}
       </div>
-      
+
       {isExpanded && event.imageRef && (
         <div className="px-3 pb-3">
           <img 
@@ -301,15 +298,12 @@ interface CheckpointBlockProps {
 }
 
 const CheckpointBlock = memo(function CheckpointBlock({ event }: CheckpointBlockProps) {
-  if (!isCheckpointEvent(event)) {
-    console.warn('[CoworkWorkBlock] Expected checkpoint event, got:', event.type);
-    return null;
-  }
-  
+  if (!isCheckpointEvent(event)) return null;
+
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1e1e1e] border border-purple-500/20">
-      <div className="size-8  rounded-md bg-purple-500/10 flex items-center justify-center shrink-0">
-        <Flag className="size-4  text-purple-400" />
+    <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--surface-panel,#1e1e1e)] border border-purple-500/20">
+      <div className="size-8 rounded-md bg-purple-500/10 flex items-center justify-center shrink-0">
+        <Flag className="size-4 text-purple-400" />
       </div>
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium text-white/80">Checkpoint saved</span>
@@ -330,27 +324,25 @@ const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: Block
       ? event 
       : null;
       
-  if (!toolEvent) {
-    console.warn('[CoworkWorkBlock] Expected tool call or result event, got:', event.type);
-    return null;
-  }
-  
+  if (!toolEvent) return null;
+
   const toolName = isToolCallEvent(event) ? event.toolName : 'tool';
   const toolData = isToolCallEvent(event) ? event.args : (event as ToolResultEvent).result;
-  
+
   return (
-    <div 
+    <div
       className={cn(
-        "bg-[#1e1e1e] border border-white/5 rounded-lg overflow-hidden",
+        "bg-[var(--surface-panel,#1e1e1e)] border border-white/5 rounded-lg overflow-hidden",
         "transition-all duration-200"
       )}
     >
-      <div 
+      <div role="button" tabIndex={0}
         onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle(); }}
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5"
       >
-        <div className="size-8  rounded-md bg-orange-500/10 flex items-center justify-center shrink-0">
-          <Code className="size-4  text-orange-400" />
+        <div className="size-8 rounded-md bg-orange-500/10 flex items-center justify-center shrink-0">
+          <Code className="size-4 text-orange-400" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">
@@ -358,12 +350,12 @@ const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: Block
           </span>
         </div>
         {isExpanded ? (
-          <CaretUp className="size-4  text-white/30" />
+          <CaretUp className="size-4 text-white/30" />
         ) : (
-          <CaretDown className="size-4  text-white/30" />
+          <CaretDown className="size-4 text-white/30" />
         )}
       </div>
-      
+
       {isExpanded && (
         <div className="px-3 pb-3">
           <div className="bg-black/30 rounded-md p-3 font-mono text-xs text-white/60">

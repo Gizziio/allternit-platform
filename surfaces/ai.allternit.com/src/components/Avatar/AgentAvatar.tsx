@@ -16,7 +16,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { AvatarConfig, AvatarEmotion } from '../../lib/agents/character.types';
+import type { AvatarEmotion } from '../../lib/agents/character.types';
 import { DEFAULT_AVATAR_CONFIG } from '../../lib/agents/character.types';
 import type { AgentAvatarProps } from './AgentAvatar.types';
 import { calculateAvatarDimensions } from './AgentAvatar.types';
@@ -61,6 +61,29 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   const [currentEmotion, setCurrentEmotion] = useState<AvatarEmotion>(
     config.currentEmotion ?? emotion
   );
+
+  const [prevEmotionProp, setPrevEmotionProp] = useState(emotion);
+  const [prevConfigEmotion, setPrevConfigEmotion] = useState(config.currentEmotion);
+
+  if (emotion !== prevEmotionProp) {
+    const prev = currentEmotion;
+    setPrevEmotionProp(emotion);
+    setCurrentEmotion(emotion);
+    onEmotionChange?.(emotion);
+    
+    // Dispatch custom event for emotion change
+    if (containerRef.current) {
+      const event = new CustomEvent('avatar:emotionchange', {
+        detail: { from: prev, to: emotion }
+      });
+      containerRef.current.dispatchEvent(event);
+    }
+  }
+
+  if (config.currentEmotion && config.currentEmotion !== prevConfigEmotion) {
+    setPrevConfigEmotion(config.currentEmotion);
+    setCurrentEmotion(config.currentEmotion);
+  }
   
   // Animation hooks
   const emotionAnim = useEmotionAnimation(currentEmotion, config.personality);
@@ -69,30 +92,6 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   
   // Calculate dimensions
   const dimensions = calculateAvatarDimensions(size);
-  
-  // Update emotion when prop changes
-  useEffect(() => {
-    if (emotion !== currentEmotion) {
-      const prevEmotion = currentEmotion;
-      setCurrentEmotion(emotion);
-      onEmotionChange?.(emotion);
-      
-      // Dispatch custom event for emotion change
-      if (containerRef.current) {
-        const event = new CustomEvent('avatar:emotionchange', {
-          detail: { from: prevEmotion, to: emotion }
-        });
-        containerRef.current.dispatchEvent(event);
-      }
-    }
-  }, [emotion, currentEmotion, onEmotionChange]);
-  
-  // Update current emotion from config
-  useEffect(() => {
-    if (config.currentEmotion && config.currentEmotion !== currentEmotion) {
-      setCurrentEmotion(config.currentEmotion);
-    }
-  }, [config.currentEmotion, currentEmotion]);
   
   // Interaction handlers
   const handleMouseEnter = useCallback(() => {
@@ -263,7 +262,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
 };
 
 // Convenience export for common sizes
-export const AgentAvatarSizes = {
+const AgentAvatarSizes = {
   XS: 24,
   SM: 32,
   MD: 44,
@@ -274,7 +273,7 @@ export const AgentAvatarSizes = {
 } as const;
 
 // Static avatar (no animations)
-export const StaticAgentAvatar: React.FC<Omit<AgentAvatarProps, 'isAnimating'>> = (props) => (
+const StaticAgentAvatar: React.FC<Omit<AgentAvatarProps, 'isAnimating'>> = (props) => (
   <AgentAvatar {...props} isAnimating={false} />
 );
 

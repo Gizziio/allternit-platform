@@ -28,11 +28,11 @@ export function removeToken(app: ConnectorApp) {
   localStorage.setItem(TOKENS_KEY, JSON.stringify(next));
 }
 
-export function hasToken(app: ConnectorApp): boolean {
+function hasToken(app: ConnectorApp): boolean {
   return getStoredTokens().some(t => t.app === app);
 }
 
-export function getToken(app: ConnectorApp): string | undefined {
+function getToken(app: ConnectorApp): string | undefined {
   return getStoredTokens().find(t => t.app === app)?.token;
 }
 
@@ -106,7 +106,7 @@ export async function fetchNotionPages(token: string): Promise<NotionPage[]> {
 
 // ─── Slack ──────────────────────────────────────────────────────────────────
 
-export interface SlackMessage {
+interface SlackMessage {
   channel: string;
   text: string;
   timestamp: string;

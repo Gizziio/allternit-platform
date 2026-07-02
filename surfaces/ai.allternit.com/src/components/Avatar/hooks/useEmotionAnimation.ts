@@ -110,10 +110,15 @@ export function useEmotionAnimation(
   const [previousEmotion, setPreviousEmotion] = useState<AvatarEmotion>(emotion);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
+  const [currentEmotionOC, setCurrentEmotionOC] = useState(emotion);
+  if (emotion !== currentEmotionOC) {
+    setCurrentEmotionOC(emotion);
+    setIsTransitioning(true);
+  }
+
   // Track emotion changes
   useEffect(() => {
-    if (emotion !== previousEmotion) {
-      setIsTransitioning(true);
+    if (isTransitioning) {
       const timer = setTimeout(() => {
         setPreviousEmotion(emotion);
         setIsTransitioning(false);
@@ -121,7 +126,7 @@ export function useEmotionAnimation(
       
       return () => clearTimeout(timer);
     }
-  }, [emotion, previousEmotion]);
+  }, [isTransitioning, emotion]);
   
   const result = useMemo((): EmotionAnimationResult => {
     const config = EMOTION_CONFIG[emotion];
@@ -170,20 +175,20 @@ export function useEmotionAnimation(
 /**
  * Get the CSS animation class for an emotion
  */
-export function getEmotionAnimationClass(emotion: AvatarEmotion): string {
+function getEmotionAnimationClass(emotion: AvatarEmotion): string {
   return `agent-avatar--emotion-${emotion}`;
 }
 
 /**
  * Get animation duration for an emotion
  */
-export function getEmotionDuration(emotion: AvatarEmotion): number {
+function getEmotionDuration(emotion: AvatarEmotion): number {
   return EMOTION_CONFIG[emotion].duration;
 }
 
 /**
  * Check if an emotion should loop continuously
  */
-export function isContinuousEmotion(emotion: AvatarEmotion): boolean {
+function isContinuousEmotion(emotion: AvatarEmotion): boolean {
   return emotion === 'steady';
 }

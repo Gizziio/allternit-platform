@@ -9,26 +9,26 @@ export interface AllternitClientOptions {
   timeout?: number;
 }
 
-export interface SessionInfo {
+interface SessionInfo {
   id: string;
   title?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export interface Message {
+interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp?: string;
 }
 
-export interface PermissionReply {
+interface PermissionReply {
   granted: boolean;
   reason?: string;
 }
 
-export interface QuestionReply {
+interface QuestionReply {
   question: string;
   options?: string[];
   answered?: boolean;

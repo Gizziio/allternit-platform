@@ -1,5 +1,9 @@
 import { parseDesignMd } from '../../openui/design-md-parser';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('DesignExtractor.tool');
+
 /**
  * Design Extractor Tool
  * 
@@ -18,7 +22,7 @@ export const designExtractorTool = {
     required: ['source']
   },
   execute: async ({ source, style = 'modern' }: { source: string, style?: string }) => {
-    console.debug(`[DesignExtractor] Analyzing: ${source}...`);
+    logger.debug(`Analyzing: ${source}...`);
 
     // In a real implementation, this would use a headless browser to compute styles.
     // For Allternit, we return a deterministic high-quality Design.md.

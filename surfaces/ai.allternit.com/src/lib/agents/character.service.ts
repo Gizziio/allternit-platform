@@ -16,6 +16,10 @@ import type {
   RoleHardBan,
 } from "./character.types";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Character');
+
 const STORAGE_PREFIX = "allternit:character";
 const MAX_TELEMETRY_EVENTS = 1000;
 
@@ -75,7 +79,7 @@ export const CHARACTER_SETUPS: Array<{
   },
 ];
 
-export const CHARACTER_SPECIALTY_OPTIONS: Record<AgentSetup, string[]> = {
+const CHARACTER_SPECIALTY_OPTIONS: Record<AgentSetup, string[]> = {
   coding: [
     "TypeScript", "API design", "Debugging", "Testing", "Refactoring",
     "Performance", "Security hardening", "Code review", "Architecture",
@@ -670,7 +674,7 @@ export function getSetupStatDefinitions(setup: AgentSetup): CharacterStatDefinit
   return SETUP_STAT_DEFINITIONS[setup] || SETUP_STAT_DEFINITIONS.generalist;
 }
 
-export function normalizeCharacterBlueprint(
+function normalizeCharacterBlueprint(
   blueprint?: Partial<CharacterBlueprint> | null,
 ): CharacterBlueprint {
   const setup = normalizeSetup(blueprint?.setup);
@@ -730,12 +734,65 @@ function evaluateFormula(formula: string, variables: Record<string, number>): nu
   };
 
   try {
-    // Simple but safer evaluator for the restricted set of math operations
-    // Note: In a production app with complex needs, use a library like 'expr-eval'
-    const names = Object.keys(context);
-    const values = Object.values(context);
-    const fn = new Function(...names, `return (${sanitized});`);
-    return Number(fn(...values));
+    // Replace variables with their values in the formula
+    let formulaWithValues = sanitized;
+    // Sort variables by length descending to avoid partial matches (e.g. replacing 'var' inside 'var2')
+    const sortedVars = Object.entries(context).sort((a, b) => b[0].length - a[0].length);
+    for (const [name, value] of sortedVars) {
+      if (typeof value === 'number') {
+        // Simple string replacement since we trust the variable names
+        formulaWithValues = formulaWithValues.split(name).join((value as number).toString());
+      }
+    }
+
+    // Simple recursive descent parser for basic math (+, -, *, /, clamp, parenthesis)
+    const tokens = formulaWithValues.match(/clamp|\d+\.\d+|\d+|[+\-*/(),]/g) || [];
+    let pos = 0;
+
+    function parsePrimary(): number {
+      const token = tokens[pos++];
+      if (!token) return 0;
+      if (token === 'clamp') {
+        pos++; // '('
+        const val = parseExpr();
+        pos++; // ','
+        const min = parseExpr();
+        pos++; // ','
+        const max = parseExpr();
+        pos++; // ')'
+        return Math.min(Math.max(val, min), max);
+      }
+      if (token === '(') {
+        const val = parseExpr();
+        pos++; // ')'
+        return val;
+      }
+      return parseFloat(token) || 0;
+    }
+
+    function parseFactor(): number {
+      let val = parsePrimary();
+      while (pos < tokens.length && (tokens[pos] === '*' || tokens[pos] === '/')) {
+        const op = tokens[pos++];
+        const next = parsePrimary();
+        if (op === '*') val *= next;
+        else val /= next;
+      }
+      return val;
+    }
+
+    function parseExpr(): number {
+      let val = parseFactor();
+      while (pos < tokens.length && (tokens[pos] === '+' || tokens[pos] === '-')) {
+        const op = tokens[pos++];
+        const next = parseFactor();
+        if (op === '+') val += next;
+        else val -= next;
+      }
+      return val;
+    }
+
+    return parseExpr();
   } catch (error) {
     console.error(`[character.service] Formula evaluation failed: ${sanitized}`, error);
     return 0;
@@ -874,7 +931,7 @@ export function appendTelemetryEvent(agentId: string, event: CharacterTelemetryE
   return next;
 }
 
-export function deriveVoiceModifiers(events: CharacterTelemetryEvent[]): string[] {
+function deriveVoiceModifiers(events: CharacterTelemetryEvent[]): string[] {
   const memoryByType: Record<string, number> = {};
   for (const event of events) {
     if (event.type !== "memory_written") continue;
@@ -1034,7 +1091,7 @@ function yamlString(value: unknown, indent = 0): string {
     .join("\n");
 }
 
-export function buildCharacterArtifacts(
+function buildCharacterArtifacts(
   agentId: string,
   config: CharacterLayerConfig,
   compiled: CharacterCompiledConfig,

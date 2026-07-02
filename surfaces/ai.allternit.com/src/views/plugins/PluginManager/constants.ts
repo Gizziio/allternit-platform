@@ -20,20 +20,20 @@ export const THEME = {
   warning: 'var(--status-warning)',
 };
 
-export const ENABLED_OVERRIDES_STORAGE_KEY = 'allternit:plugin-manager:enabled-overrides:v1';
-export const CUSTOM_CAPABILITIES_STORAGE_KEY = 'allternit:plugin-manager:custom-capabilities:v1';
-export const MARKETPLACE_INSTALLS_STORAGE_KEY = 'allternit:plugin-manager:marketplace-installs:v1';
-export const PERSONAL_MARKETPLACE_STORAGE_KEY = 'allternit:plugin-manager:personal-marketplaces:v1';
-export const CONNECTOR_CONNECTIONS_STORAGE_KEY = 'allternit:plugin-manager:connector-connections:v1';
-export const CURATED_SOURCE_SETTINGS_STORAGE_KEY = 'allternit:plugin-manager:curated-source-settings:v1';
-export const ALLOW_UNTRUSTED_MARKETPLACE_STORAGE_KEY = 'allternit:plugin-manager:allow-untrusted-marketplace:v1';
+const ENABLED_OVERRIDES_STORAGE_KEY = 'allternit:plugin-manager:enabled-overrides:v1';
+const CUSTOM_CAPABILITIES_STORAGE_KEY = 'allternit:plugin-manager:custom-capabilities:v1';
+const MARKETPLACE_INSTALLS_STORAGE_KEY = 'allternit:plugin-manager:marketplace-installs:v1';
+const PERSONAL_MARKETPLACE_STORAGE_KEY = 'allternit:plugin-manager:personal-marketplaces:v1';
+const CONNECTOR_CONNECTIONS_STORAGE_KEY = 'allternit:plugin-manager:connector-connections:v1';
+const CURATED_SOURCE_SETTINGS_STORAGE_KEY = 'allternit:plugin-manager:curated-source-settings:v1';
+const ALLOW_UNTRUSTED_MARKETPLACE_STORAGE_KEY = 'allternit:plugin-manager:allow-untrusted-marketplace:v1';
 
-export const PLUGIN_MANAGER_STATE_DIR = '.allternit/plugin-manager';
-export const PLUGIN_MANAGER_STATE_FILE = 'ui-state.json';
-export const PLUGIN_MANAGER_STATE_VERSION = 1;
+const PLUGIN_MANAGER_STATE_DIR = '.allternit/plugin-manager';
+const PLUGIN_MANAGER_STATE_FILE = 'ui-state.json';
+const PLUGIN_MANAGER_STATE_VERSION = 1;
 
-export const SKILL_IMPORT_DIR = '.allternit/skills';
-export const LEFT_PANE_TOP_OFFSET = 0;
+const SKILL_IMPORT_DIR = '.allternit/skills';
+const LEFT_PANE_TOP_OFFSET = 0;
 
 export const CONNECTOR_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'all', label: 'Type' },
@@ -45,7 +45,7 @@ export const CONNECTOR_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'other', label: 'Other' },
 ];
 
-export const PLUGIN_CATEGORIES_PUBLISH = [
+const PLUGIN_CATEGORIES_PUBLISH = [
   'Development',
   'Productivity',
   'Data',

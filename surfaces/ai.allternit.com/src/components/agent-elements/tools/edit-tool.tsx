@@ -11,7 +11,7 @@ import {
 } from "../utils/tool-adapters";
 import { ToolApprovalFooter, type ToolApproval } from "./tool-approval-footer";
 
-export type EditToolDiffCardProps = {
+type EditToolDiffCardProps = {
   step: Extract<TimelineStep, { type: "tool-call" }>;
   state: StepState;
   onComplete: () => void;
@@ -21,7 +21,7 @@ export type EditToolDiffCardProps = {
   approval?: ToolApproval;
 };
 
-export function EditToolDiffCard({
+function EditToolDiffCard({
   step,
   state,
   onComplete,

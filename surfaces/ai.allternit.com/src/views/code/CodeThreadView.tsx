@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { CodeCanvas } from './CodeCanvas';
 import { CodePreviewPane } from './CodePreviewPane';
@@ -10,7 +10,11 @@ import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { ChatIdProvider } from '@/providers/chat-id-provider';
 import { DataStreamProvider } from '@/providers/data-stream-provider';
 import { MessageTreeProvider } from '@/providers/message-tree-provider';
-import { useCodeModeStore, getActiveWorkspace } from './CodeModeStore';
+import { ChatInputProvider } from '@/providers/chat-input-provider';
+import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
+import { ChatModelsProvider } from '@/providers/chat-models-provider';
+import { ModelSelectionProvider } from '@/providers/model-selection-provider';
+import { useCodeModeStore } from './CodeModeStore';
 import type { CodeWorkspaceRecord } from './CodeModeStore';
 
 const BASE_ROOT_INSET = 12;
@@ -74,7 +78,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         isolation: 'isolate',
         display: 'flex',
         flexDirection: 'column',
-        background: '#ffffff',
+        background: 'var(--view-code-bg, var(--surface-canvas))',
       }}
     >
       <AgentModeBackdrop
@@ -94,7 +98,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
             pointerEvents: 'none',
           }}
         >
-          <button
+          <button type="button"
             data-testid="code-preview-toggle"
             onClick={togglePreview}
             style={{
@@ -141,7 +145,15 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
           >
             <DataStreamProvider>
               <MessageTreeProvider>
-                <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} />
+                <ChatInputProvider>
+                  <PromptInputProvider>
+                    <ChatModelsProvider>
+                      <ModelSelectionProvider>
+                        <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} />
+                      </ModelSelectionProvider>
+                    </ChatModelsProvider>
+                  </PromptInputProvider>
+                </ChatInputProvider>
               </MessageTreeProvider>
             </DataStreamProvider>
           </ChatIdProvider>

@@ -8,7 +8,6 @@
  * - Approve/reject requests
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   CheckCircle,
@@ -41,6 +40,8 @@ import type {
   ApprovalStatus,
   ApprovalType,
 } from '@/lib/governance/policy.types';
+import { cn } from '@/lib/utils';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 // Approval type configurations
 const APPROVAL_TYPES: { value: ApprovalType; label: string; icon: React.ReactNode; color: string }[] = [
@@ -74,6 +75,7 @@ export function PolicyGating() {
   const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'requests' | 'workflows'>('requests');
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Fetch approvals
   const fetchApprovals = useCallback(async () => {
@@ -139,14 +141,19 @@ export function PolicyGating() {
     }
   };
 
-  const handleCancel = async (approvalId: string) => {
-    if (!confirm('Are you sure you want to cancel this request?')) return;
-    try {
-      await cancelApproval(approvalId);
-      fetchApprovals();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel');
-    }
+  const handleCancel = (approvalId: string) => {
+    setConfirmDialog({
+      message: 'Are you sure you want to cancel this request?',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await cancelApproval(approvalId);
+          fetchApprovals();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to cancel');
+        }
+      },
+    });
   };
 
   // Filter approvals
@@ -171,52 +178,33 @@ export function PolicyGating() {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--surface-panel)' }}>
+    <div className="h-full flex flex-col bg-[var(--surface-panel)]">
       {/* Header */}
-      <div style={{ 
-        padding: '20px 24px', 
-        borderBottom: '1px solid var(--ui-border-muted)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        background: 'var(--surface-panel)',
-      }}>
+      <div className="p-5 px-6 border-b border-solid border-[var(--ui-border-muted)] flex items-center justify-between bg-[var(--surface-panel)] shrink-0">
         <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+          <h1 className="m-0 text-[20px] font-semibold text-[var(--ui-text-primary)]">
             Policy Gating
           </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
+          <p className="m-1 m-0 text-[13px] text-[var(--ui-text-secondary)]">
             Approval workflows and access control
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button
+        <div className="flex gap-3">
+          <button type="button"
             onClick={() => setActiveTab('requests')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 6,
-              border: 'none',
-              background: activeTab === 'requests' ? 'var(--accent-primary)' : 'var(--surface-hover)',
-              color: activeTab === 'requests' ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
+            className={cn(
+              "px-4 py-2 rounded-md border-none text-[13px] font-medium cursor-pointer transition-colors",
+              activeTab === 'requests' ? "bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]" : "bg-[var(--surface-hover)] text-[var(--ui-text-muted)] hover:bg-[var(--surface-active)]"
+            )}
           >
             Requests
           </button>
-          <button
+          <button type="button"
             onClick={() => setActiveTab('workflows')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 6,
-              border: 'none',
-              background: activeTab === 'workflows' ? 'var(--accent-primary)' : 'var(--surface-hover)',
-              color: activeTab === 'workflows' ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
+            className={cn(
+              "px-4 py-2 rounded-md border-none text-[13px] font-medium cursor-pointer transition-colors",
+              activeTab === 'workflows' ? "bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]" : "bg-[var(--surface-hover)] text-[var(--ui-text-muted)] hover:bg-[var(--surface-active)]"
+            )}
           >
             Workflows
           </button>
@@ -226,14 +214,7 @@ export function PolicyGating() {
       {activeTab === 'requests' ? (
         <>
           {/* Stats */}
-          <div style={{ 
-            padding: '16px 24px', 
-            borderBottom: '1px solid var(--ui-border-muted)',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 16,
-            background: 'var(--surface-panel)',
-          }}>
+          <div className="p-4 px-6 border-b border-solid border-[var(--ui-border-muted)] grid grid-cols-4 gap-4 bg-[var(--surface-panel)] shrink-0">
             <StatCard 
               label="Pending" 
               value={stats.pending} 
@@ -269,68 +250,35 @@ export function PolicyGating() {
           </div>
 
           {/* Filters */}
-          <div style={{ 
-            padding: '12px 24px', 
-            borderBottom: '1px solid var(--ui-border-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            background: 'var(--surface-panel)',
-          }}>
-            <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-              <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ui-text-muted)' }} />
-              <input
-                type="text"
+          <div className="p-3 px-6 border-b border-solid border-[var(--ui-border-muted)] flex items-center gap-3 bg-[var(--surface-panel)] shrink-0">
+            <div className="relative flex-1 max-w-[300px]">
+              <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ui-text-muted)]" />
+              <input aria-label="Search requests…" type="text"
                 placeholder="Search requests…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px 8px 36px',
-                  borderRadius: 6,
-                  border: '1px solid var(--ui-border-default)',
-                  background: 'var(--surface-panel)',
-                  color: 'var(--ui-text-primary)',
-                  fontSize: 13,
-                  outline: 'none',
-                }}
+                className="w-full pl-9 pr-3 py-2 rounded-md border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none transition-colors focus:border-[var(--accent-primary)]"
               />
             </div>
-            <select
-              value={filterType}
+            <select aria-label="Selection" value={filterType}
               onChange={(e) => setFilterType(e.target.value as ApprovalType | 'all')}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 6,
-                border: '1px solid var(--ui-border-default)',
-                background: 'var(--surface-panel)',
-                color: 'var(--ui-text-primary)',
-                fontSize: 13,
-                cursor: 'pointer',
-              }}
+              className="px-3 py-2 rounded-md border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] cursor-pointer outline-none focus:border-[var(--accent-primary)]"
             >
               <option value="all">All Types</option>
               {APPROVAL_TYPES.map(type => (
                 <option key={type.value} value={type.value}>{type.label}</option>
               ))}
             </select>
-            <button
+            <button type="button"
               onClick={fetchApprovals}
-              style={{
-                padding: '8px 12px',
-                borderRadius: 6,
-                border: '1px solid var(--ui-border-default)',
-                background: 'transparent',
-                color: 'var(--ui-text-secondary)',
-                cursor: 'pointer',
-              }}
+              className="p-2 rounded-md border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
             >
               <ArrowsClockwise size={16} />
             </button>
           </div>
 
           {/* Content */}
-          <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+          <div className="flex-1 overflow-auto p-4">
             {loading ? (
               <LoadingState />
             ) : error ? (
@@ -338,7 +286,7 @@ export function PolicyGating() {
             ) : filteredApprovals.length === 0 ? (
               <EmptyState pendingOnly={pendingOnly} />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="flex flex-col gap-2">
                 {filteredApprovals.map(approval => (
                   <ApprovalCard
                     key={approval.id}
@@ -373,6 +321,15 @@ export function PolicyGating() {
           onReject={(note) => handleReject(selectedApproval.id, note)}
         />
       )}
+      <ConfirmModal
+        isOpen={confirmDialog !== null}
+        title="Cancel Request"
+        message={confirmDialog?.message || ''}
+        confirmLabel="Cancel Request"
+        destructive
+        onConfirm={confirmDialog?.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }
@@ -386,8 +343,6 @@ function ApprovalCard({
   onClick,
   onApprove,
   onReject,
-  onEscalate,
-  onCancel,
 }: {
   approval: ApprovalRequest;
   onClick: () => void;
@@ -402,85 +357,55 @@ function ApprovalCard({
   const isExpired = new Date(approval.expiresAt) < new Date();
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       onClick={onClick}
-      style={{
-        background: 'var(--surface-panel)',
-        borderRadius: 8,
-        border: '1px solid var(--ui-border-muted)',
-        padding: '16px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-        cursor: 'pointer',
-        transition: 'var(--transition-fast)',
-      }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+      className="bg-[var(--surface-panel)] rounded-lg border border-solid border-[var(--ui-border-muted)] p-[16px_20px] flex items-center gap-4 cursor-pointer transition-all hover:bg-[var(--surface-hover)]"
     >
-      <div style={{
-        width: 44,
-        height: 44,
-        borderRadius: 10,
-        background: `${typeConfig.color}20`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: typeConfig.color,
-      }}>
+      <div 
+        className="w-11 h-11 rounded-[10px] flex items-center justify-center shrink-0"
+        style={{ background: `${typeConfig.color}20`, color: typeConfig.color }}
+      >
         {typeConfig.icon}
       </div>
 
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2.5 mb-1 flex-wrap">
+          <span className="text-[14px] font-semibold text-[var(--ui-text-primary)] truncate max-w-[200px]">
             {approval.title}
           </span>
-          <span style={{
-            padding: '3px 10px',
-            background: statusConfig.bgColor,
-            color: statusConfig.color,
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}>
+          <span className={cn(
+            "px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider flex items-center gap-1",
+            statusConfig.bgColor,
+            statusConfig.color
+          )} style={{ backgroundColor: statusConfig.bgColor, color: statusConfig.color }}>
             {statusConfig.icon}
             {statusConfig.label}
           </span>
           {isExpired && isPending && (
-            <span style={{
-              padding: '2px 8px',
-              background: 'var(--status-error-bg)',
-              color: 'var(--status-error)',
-              borderRadius: 4,
-              fontSize: 12,
-            }}>
+            <span className="px-2 py-0.5 rounded bg-[var(--status-error-bg)] text-[var(--status-error)] text-[11px] font-bold uppercase tracking-wider">
               Expired
             </span>
           )}
         </div>
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-secondary)', lineHeight: 1.4 }}>
+        <p className="m-0 text-[13px] text-[var(--ui-text-secondary)] leading-tight truncate">
           {approval.description}
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
-            <User size={12} style={{ display: 'inline', marginRight: 4 }} />
+        <div className="flex items-center gap-4 mt-2 flex-wrap">
+          <span className="text-[12px] text-[var(--ui-text-muted)] flex items-center gap-1">
+            <User size={12} />
             {approval.requester.agentName}
           </span>
-          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
-            <Clock size={12} style={{ display: 'inline', marginRight: 4 }} />
+          <span className="text-[12px] text-[var(--ui-text-muted)] flex items-center gap-1">
+            <Clock size={12} />
             {new Date(approval.createdAt).toLocaleString()}
           </span>
           {approval.resource.riskLevel && (
-            <span style={{
-              padding: '1px 8px',
-              background: getRiskColor(approval.resource.riskLevel).bg,
-              color: getRiskColor(approval.resource.riskLevel).text,
-              borderRadius: 4,
-              fontSize: 12,
-              fontWeight: 500,
-            }}>
+            <span className={cn(
+              "px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider",
+              getRiskColor(approval.resource.riskLevel).bg,
+              getRiskColor(approval.resource.riskLevel).text
+            )} style={{ backgroundColor: getRiskColor(approval.resource.riskLevel).bg, color: getRiskColor(approval.resource.riskLevel).text }}>
               {approval.resource.riskLevel} risk
             </span>
           )}
@@ -488,41 +413,17 @@ function ApprovalCard({
       </div>
 
       {isPending && !isExpired && (
-        <div style={{ display: 'flex', gap: 8 }} onClick={(e) => e.stopPropagation()}>
-          <button
+        <div className="flex gap-2 shrink-0" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} role="presentation">
+          <button type="button"
             onClick={onReject}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 6,
-              border: '1px solid #ef4444',
-              background: 'transparent',
-              color: 'var(--status-error)',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            className="px-4 py-2 rounded-md border border-solid border-[#ef4444] bg-transparent text-[var(--status-error)] text-[13px] font-medium cursor-pointer flex items-center gap-1.5 transition-colors hover:bg-[#ef4444]/5"
           >
             <X size={16} />
             Reject
           </button>
-          <button
+          <button type="button"
             onClick={onApprove}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 6,
-              border: 'none',
-              background: 'var(--status-success)',
-              color: 'var(--ui-text-primary)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
+            className="px-4 py-2 rounded-md border-none bg-[var(--status-success)] text-[var(--ui-text-primary)] text-[13px] font-bold cursor-pointer flex items-center gap-1.5 transition-opacity hover:opacity-90"
           >
             <Check size={16} />
             Approve
@@ -554,105 +455,69 @@ function ApprovalDetailModal({
   const isPending = approval.status === 'pending';
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'var(--shell-overlay-backdrop)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    }}>
-      <div style={{
-        width: 600,
-        maxHeight: '90vh',
-        background: 'var(--surface-panel)',
-        borderRadius: 12,
-        border: '1px solid var(--ui-border-muted)',
-        overflow: 'auto',
-      }}>
-        <div style={{
-          padding: '20px 24px',
-          borderBottom: '1px solid var(--ui-border-muted)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: 8,
-              background: `${typeConfig.color}20`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: typeConfig.color,
-            }}>
+    <div 
+      role="button" tabIndex={0}
+      className="fixed inset-0 bg-[var(--shell-overlay-backdrop)] backdrop-blur-md flex items-center justify-center z-[1000] p-6"
+      onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
+    >
+      <div 
+        role="button" tabIndex={0}
+        className="w-full max-w-[600px] max-h-[90vh] bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] overflow-hidden flex flex-col shadow-2xl"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+      >
+        <div className="p-[20px_24px] border-b border-solid border-[var(--ui-border-muted)] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: `${typeConfig.color}20`, color: typeConfig.color }}
+            >
               {typeConfig.icon}
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+              <h2 className="m-0 text-[16px] font-bold text-[var(--ui-text-primary)]">
                 {approval.title}
               </h2>
-              <span style={{
-                padding: '2px 8px',
-                background: statusConfig.bgColor,
-                color: statusConfig.color,
-                borderRadius: 4,
-                fontSize: 12,
-                fontWeight: 600,
-              }}>
+              <span className={cn(
+                "px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider inline-block mt-1",
+                statusConfig.bgColor,
+                statusConfig.color
+              )} style={{ backgroundColor: statusConfig.bgColor, color: statusConfig.color }}>
                 {statusConfig.label}
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
+          <button type="button" onClick={onClose} className="bg-transparent border-none text-[var(--ui-text-secondary)] cursor-pointer p-1 hover:text-[var(--ui-text-primary)] transition-colors">
             <X size={20} />
           </button>
         </div>
 
-        <div style={{ padding: 24 }}>
+        <div className="flex-1 overflow-auto p-6">
           {/* Description */}
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div className="mb-6">
+            <h3 className="m-[0_0_8px_0] text-[11px] font-bold text-[var(--ui-text-muted)] uppercase tracking-widest">
               Description
             </h3>
-            <p style={{ margin: 0, fontSize: 14, color: 'var(--ui-text-muted)', lineHeight: 1.6 }}>
+            <p className="m-0 text-[14px] text-[var(--ui-text-muted)] leading-relaxed">
               {approval.description}
             </p>
           </div>
 
           {/* Requester Info */}
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div className="mb-6">
+            <h3 className="m-[0_0_8px_0] text-[11px] font-bold text-[var(--ui-text-muted)] uppercase tracking-widest">
               Requester
             </h3>
-            <div style={{ 
-              padding: 12, 
-              background: 'var(--surface-panel)', 
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-            }}>
-              <div style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--accent-primary)',
-              }}>
+            <div className="p-3 bg-black/5 dark:bg-white/5 rounded-lg flex items-center gap-3 border border-solid border-[var(--ui-border-muted)]">
+              <div className="w-9 h-9 rounded-full bg-[var(--accent-primary)]/10 flex items-center justify-center shrink-0 text-[var(--accent-primary)]">
                 <User size={18} />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ui-text-primary)' }}>
+                <div className="text-[14px] font-bold text-[var(--ui-text-primary)]">
                   {approval.requester.agentName}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
+                <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5">
                   Agent ID: {approval.requester.agentId}
                 </div>
               </div>
@@ -660,32 +525,29 @@ function ApprovalDetailModal({
           </div>
 
           {/* Resource Details */}
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div className="mb-6">
+            <h3 className="m-[0_0_8px_0] text-[11px] font-bold text-[var(--ui-text-muted)] uppercase tracking-widest">
               Resource
             </h3>
-            <div style={{ padding: 12, background: 'var(--surface-panel)', borderRadius: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>Type:</span>
-                <span style={{ fontSize: 13, color: 'var(--ui-text-primary)' }}>{approval.resource.type}</span>
+            <div className="p-3 bg-black/5 dark:bg-white/5 rounded-lg border border-solid border-[var(--ui-border-muted)] space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-[var(--ui-text-secondary)]">Type:</span>
+                <span className="text-[13px] font-semibold text-[var(--ui-text-primary)]">{approval.resource.type}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>Identifier:</span>
-                <code style={{ fontSize: 12, color: 'var(--accent-primary)', background: 'var(--surface-panel)', padding: '2px 6px', borderRadius: 4 }}>
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-[var(--ui-text-secondary)]">Identifier:</span>
+                <code className="text-[12px] text-[var(--accent-primary)] bg-[var(--surface-panel)] px-1.5 py-0.5 rounded border border-solid border-[var(--ui-border-muted)] font-mono">
                   {approval.resource.identifier}
                 </code>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>Risk Level:</span>
-                <span style={{
-                  padding: '2px 8px',
-                  background: getRiskColor(approval.resource.riskLevel).bg,
-                  color: getRiskColor(approval.resource.riskLevel).text,
-                  borderRadius: 4,
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}>
-                  {approval.resource.riskLevel.toUpperCase()}
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-[var(--ui-text-secondary)]">Risk Level:</span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider",
+                  getRiskColor(approval.resource.riskLevel).bg,
+                  getRiskColor(approval.resource.riskLevel).text
+                )} style={{ backgroundColor: getRiskColor(approval.resource.riskLevel).bg, color: getRiskColor(approval.resource.riskLevel).text }}>
+                  {approval.resource.riskLevel}
                 </span>
               </div>
             </div>
@@ -693,36 +555,29 @@ function ApprovalDetailModal({
 
           {/* Decisions */}
           {approval.decisions.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <div className="mb-6">
+              <h3 className="m-[0_0_8px_0] text-[11px] font-bold text-[var(--ui-text-muted)] uppercase tracking-widest">
                 Decisions
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {approval.decisions.map((decision, index) => (
-                  <div key={index} style={{ 
-                    padding: 12, 
-                    background: 'var(--surface-panel)', 
-                    borderRadius: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                  }}>
+              <div className="flex flex-col gap-2">
+                {approval.decisions.map((decision) => (
+                  <div key={`${decision.reviewerId}-${decision.timestamp}`} className="p-3 bg-black/5 dark:bg-white/5 rounded-lg flex items-center gap-3 border border-solid border-[var(--ui-border-muted)]">
                     {decision.decision === 'approved' ? (
-                      <CheckCircle size={18} color="var(--status-success)" />
+                      <CheckCircle size={18} className="text-[var(--status-success)] shrink-0" />
                     ) : (
-                      <XCircle size={18} color="var(--status-error)" />
+                      <XCircle size={18} className="text-[var(--status-error)] shrink-0" />
                     )}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, color: 'var(--ui-text-primary)' }}>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-semibold text-[var(--ui-text-primary)]">
                         {decision.reviewerName || decision.reviewerId}
                       </div>
                       {decision.note && (
-                        <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', marginTop: 2 }}>
+                        <div className="text-[12px] text-[var(--ui-text-secondary)] mt-0.5 italic">
                           "{decision.note}"
                         </div>
                       )}
                     </div>
-                    <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
+                    <span className="text-[11px] text-[var(--ui-text-muted)] font-medium shrink-0">
                       {new Date(decision.timestamp).toLocaleString()}
                     </span>
                   </div>
@@ -733,70 +588,36 @@ function ApprovalDetailModal({
 
           {/* Action Buttons */}
           {isPending && (
-            <>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
-                  Note (optional)
-                </label>
-                <textarea
-                  value={note}
+            <div className="space-y-4 pt-2">
+              <div>
+                <div className="block text-[13px] font-bold text-[var(--ui-text-muted)] mb-2 uppercase tracking-wide">
+                  Decision Note (optional)
+                </div>
+                <textarea aria-label="Text Area" value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Add a note about your decision…"
+                  placeholder="Add a reason for your approval or rejection…"
                   rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: 6,
-                    border: '1px solid var(--ui-border-default)',
-                    background: 'var(--surface-panel)',
-                    color: 'var(--ui-text-primary)',
-                    fontSize: 14,
-                    resize: 'vertical',
-                  }}
+                  className="w-full p-3 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[14px] resize-y outline-none transition-colors focus:border-[var(--accent-primary)] font-inherit"
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                <button
+              <div className="flex justify-end gap-3">
+                <button type="button"
                   onClick={() => onReject(note)}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: 6,
-                    border: '1px solid #ef4444',
-                    background: 'transparent',
-                    color: 'var(--status-error)',
-                    fontSize: 14,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
+                  className="px-5 py-2.5 rounded-lg border border-solid border-[#ef4444] bg-transparent text-[var(--status-error)] text-[14px] font-bold cursor-pointer flex items-center gap-2 transition-colors hover:bg-[#ef4444]/5"
                 >
                   <X size={18} />
                   Reject
                 </button>
-                <button
+                <button type="button"
                   onClick={() => onApprove(note)}
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: 'var(--status-success)',
-                    color: 'var(--ui-text-primary)',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
+                  className="px-5 py-2.5 rounded-lg border-none bg-[var(--status-success)] text-[var(--ui-text-primary)] text-[14px] font-bold cursor-pointer flex items-center gap-2 transition-opacity hover:opacity-90"
                 >
                   <Check size={18} />
                   Approve
                 </button>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -809,92 +630,73 @@ function ApprovalDetailModal({
 // ============================================================================
 
 function WorkflowConfiguration() {
-  const [workflows] = useState([
+  const workflows = [
     { id: 'wf-1', name: 'Critical Tool Execution', type: 'tool_execution', approvers: 2, autoEscalate: true, timeout: 30 },
     { id: 'wf-2', name: 'Sensitive File Access', type: 'file_access', approvers: 1, autoEscalate: true, timeout: 60 },
     { id: 'wf-3', name: 'Production Deployment', type: 'deployment', approvers: 2, autoEscalate: false, timeout: 120 },
     { id: 'wf-4', name: 'Data Export', type: 'data_export', approvers: 2, autoEscalate: true, timeout: 30 },
-  ]);
+  ];
 
   return (
-    <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
-      <div style={{ maxWidth: 800 }}>
-        <h2 style={{ margin: '0 0 24px 0', fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+    <div className="flex-1 overflow-auto p-6">
+      <div className="max-w-[800px] mx-auto">
+        <h2 className="m-[0_0_24px_0] text-[16px] font-bold text-[var(--ui-text-primary)] uppercase tracking-wide">
           Approval Workflows
         </h2>
-        <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--ui-text-secondary)' }}>
+        <p className="m-[0_0_24px_0] text-[14px] text-[var(--ui-text-secondary)] leading-relaxed">
           Configure approval requirements for different action types. Set the number of required approvers,
           escalation settings, and timeout periods.
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="flex flex-col gap-3">
           {workflows.map(workflow => (
-            <div key={workflow.id} style={{
-              padding: 20,
-              background: 'var(--surface-panel)',
-              borderRadius: 8,
-              border: '1px solid var(--ui-border-muted)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 8,
-                    background: 'var(--surface-hover)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--accent-primary)',
-                  }}>
+            <div key={workflow.id} className="p-5 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] transition-all hover:border-[var(--ui-border-default)]">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[var(--surface-hover)] flex items-center justify-center shrink-0 text-[var(--accent-primary)]">
                     <GearSix size={20} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+                    <div className="text-[14px] font-bold text-[var(--ui-text-primary)]">
                       {workflow.name}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
+                    <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5">
                       Type: {workflow.type}
                     </div>
                   </div>
                 </div>
-                <button style={{
-                  padding: '6px 12px',
-                  borderRadius: 6,
-                  border: '1px solid var(--ui-border-default)',
-                  background: 'transparent',
-                  color: 'var(--ui-text-muted)',
-                  fontSize: 12,
-                  cursor: 'pointer',
-                }}>
+                <button type="button" className="px-3.5 py-1.5 rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-muted)] text-[12px] font-bold cursor-pointer hover:bg-[var(--surface-hover)] hover:text-[var(--ui-text-primary)] transition-all">
                   Edit
                 </button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+              <div className="grid grid-cols-3 gap-4 border-t border-solid border-[var(--ui-border-muted)] pt-4">
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div className="text-[11px] font-bold text-[var(--ui-text-muted)] uppercase tracking-widest mb-1.5">
                     Required Approvals
                   </div>
-                  <div style={{ fontSize: 14, color: 'var(--ui-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Users size={14} />
+                  <div className="text-[14px] font-bold text-[var(--ui-text-primary)] flex items-center gap-1.5">
+                    <Users size={14} className="text-[var(--accent-primary)]" />
                     {workflow.approvers}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div className="text-[11px] font-bold text-[var(--ui-text-muted)] uppercase tracking-widest mb-1.5">
                     Auto-escalate
                   </div>
-                  <div style={{ fontSize: 14, color: workflow.autoEscalate ? 'var(--status-success)' : 'var(--ui-text-muted)' }}>
+                  <div className={cn(
+                    "text-[14px] font-bold",
+                    workflow.autoEscalate ? "text-[var(--status-success)]" : "text-[var(--ui-text-muted)]"
+                  )}>
                     {workflow.autoEscalate ? 'Enabled' : 'Disabled'}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div className="text-[11px] font-bold text-[var(--ui-text-muted)] uppercase tracking-widest mb-1.5">
                     Timeout
                   </div>
-                  <div style={{ fontSize: 14, color: 'var(--ui-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Timer size={14} />
+                  <div className="text-[14px] font-bold text-[var(--ui-text-primary)] flex items-center gap-1.5">
+                    <Timer size={14} className="text-[var(--accent-primary)]" />
                     {workflow.timeout} min
                   </div>
                 </div>
@@ -903,17 +705,7 @@ function WorkflowConfiguration() {
           ))}
         </div>
 
-        <button style={{
-          marginTop: 16,
-          width: '100%',
-          padding: '12px',
-          borderRadius: 6,
-          border: '1px dashed #444',
-          background: 'transparent',
-          color: 'var(--ui-text-secondary)',
-          fontSize: 14,
-          cursor: 'pointer',
-        }}>
+        <button type="button" className="mt-5 w-full py-3.5 rounded-xl border border-dashed border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[14px] font-bold cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 hover:border-[var(--ui-border-muted)] transition-all">
           + Create Custom Workflow
         </button>
       </div>
@@ -941,35 +733,23 @@ function StatCard({
   onClick: () => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
-      style={{
-        padding: 16,
-        background: active ? `${color}15` : 'var(--surface-panel)',
-        borderRadius: 8,
-        border: `1px solid ${active ? color : 'var(--surface-hover)'}`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        cursor: 'pointer',
-        textAlign: 'left',
-      }}
+      className={cn(
+        "p-4 rounded-xl border border-solid flex items-center gap-4 cursor-pointer text-left transition-all",
+        active ? "shadow-sm" : "bg-[var(--surface-panel)] border-[var(--surface-hover)] hover:bg-[var(--surface-hover)]"
+      )}
+      style={active ? { backgroundColor: `${color}15`, borderColor: color } : undefined}
     >
-      <div style={{
-        width: 40,
-        height: 40,
-        borderRadius: 8,
-        background: `${color}20`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color,
-      }}>
+      <div 
+        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+        style={{ background: `${color}20`, color }}
+      >
         {icon}
       </div>
       <div>
-        <div style={{ fontSize: 24, fontWeight: 700, color }}>{value}</div>
-        <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>{label}</div>
+        <div className="text-[24px] font-extrabold leading-none mb-1" style={{ color }}>{value}</div>
+        <div className="text-[12px] font-bold text-[var(--ui-text-secondary)] uppercase tracking-wider">{label}</div>
       </div>
     </button>
   );
@@ -977,28 +757,21 @@ function StatCard({
 
 function LoadingState() {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
-      <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
-      <p>Loading approvals…</p>
+    <div className="text-center py-20 text-[var(--ui-text-muted)]">
+      <ArrowsClockwise size={32} className="animate-spin mx-auto mb-3" />
+      <p className="m-0 font-medium">Loading approvals…</p>
     </div>
   );
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div style={{ textAlign: 'center', padding: 60 }}>
-      <Warning size={32} color="var(--status-error)" />
-      <p style={{ color: 'var(--status-error)', marginBottom: 16 }}>{message}</p>
-      <button
+    <div className="text-center py-20 px-6">
+      <Warning size={32} className="text-[var(--status-error)] mx-auto mb-3" />
+      <p className="text-[var(--status-error)] font-bold mb-4">{message}</p>
+      <button type="button"
         onClick={onRetry}
-        style={{
-          padding: '8px 16px',
-          borderRadius: 6,
-          border: '1px solid var(--ui-border-default)',
-          background: 'transparent',
-          color: 'var(--ui-text-muted)',
-          cursor: 'pointer',
-        }}
+        className="px-5 py-2 rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] font-bold cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
       >
         Retry
       </button>
@@ -1008,12 +781,12 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 
 function EmptyState({ pendingOnly }: { pendingOnly: boolean }) {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
-      <CheckCircle size={48} style={{ marginBottom: 16 }} />
-      <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: 'var(--ui-text-muted)' }}>
+    <div className="text-center py-20 px-6 text-[var(--ui-text-muted)]">
+      <CheckCircle size={48} className="mx-auto mb-4 opacity-20" />
+      <h3 className="m-0 mb-2 text-[16px] font-bold text-[var(--ui-text-muted)]">
         {pendingOnly ? 'No pending approvals' : 'No approvals found'}
       </h3>
-      <p style={{ margin: 0, fontSize: 14 }}>
+      <p className="m-0 text-[14px] font-medium max-w-[300px] mx-auto leading-relaxed">
         {pendingOnly 
           ? 'All approval requests have been processed.' 
           : 'There are no approval requests matching your filters.'}

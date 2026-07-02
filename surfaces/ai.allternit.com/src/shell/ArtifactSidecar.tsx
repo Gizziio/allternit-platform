@@ -26,8 +26,9 @@ import { ArtifactDetailView } from '../views/cowork/ArtifactDetailView';
 import { useMiniAppDiscovery } from '../views/aci/use-mini-app-discovery';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
 import type { ModeSession } from '../lib/agents/mode-session-store';
+import { cn } from '@/lib/utils';
 
-export function ArtifactSidecar(): JSX.Element | null {
+export function ArtifactSidecar(): React.ReactNode | null {
   const { mode } = useMode();
   const {
     isOpen,
@@ -48,17 +49,9 @@ export function ArtifactSidecar(): JSX.Element | null {
   if (!isOpen) return null;
 
   return (
-    <div style={{ width, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{
-        height: 48,
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 12px',
-        borderBottom: '1px solid var(--border-subtle)',
-        justifyContent: 'space-between',
-        background: 'var(--bg-secondary)'
-      }}>
-        <div style={{ display: 'flex', gap: 4 }}>
+    <div className="flex flex-col h-full bg-[var(--bg-primary)] border-l border-solid border-[var(--border-subtle)]" style={{ width }}>
+      <div className="h-12 flex items-center px-3 border-b border-solid border-[var(--border-subtle)] justify-between bg-[var(--bg-secondary)]">
+        <div className="flex gap-1">
           <TabButton
             active={activePanel === 'context'}
             onClick={() => setActivePanel('context')}
@@ -86,15 +79,15 @@ export function ArtifactSidecar(): JSX.Element | null {
             title="Changes"
           />
         </div>
-        <button
+        <button type="button"
           onClick={() => setOpen(false)}
-          style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
+          className="bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer p-1 rounded-md hover:bg-[var(--bg-hover)] transition-colors"
         >
           <X size={16} />
         </button>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div className="flex-1 overflow-auto">
         <SidecarPanel panel={activePanel} mode={mode} />
       </div>
     </div>
@@ -108,36 +101,28 @@ interface TabButtonProps {
   title: string;
 }
 
-function TabButton({ active, onClick, icon: Icon, title }: TabButtonProps): JSX.Element {
+function TabButton({ active, onClick, icon: Icon, title }: TabButtonProps): React.ReactNode {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       title={title}
-      style={{
-        padding: '6px 10px',
-        borderRadius: 6,
-        border: 'none',
-        background: active ? 'var(--bg-primary)' : 'transparent',
-        color: active ? 'var(--accent-chat)' : 'var(--text-tertiary)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s',
-      }}
+      className={cn(
+        "p-[6px_10px] rounded-md border-none flex items-center justify-center cursor-pointer transition-all duration-200",
+        active ? "bg-[var(--bg-primary)] text-[var(--accent-chat)]" : "bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]"
+      )}
     >
       <Icon size={18} weight={active ? 'fill' : 'regular'} />
     </button>
   );
 }
 
-function SidecarPanel({ panel, mode }: { panel: string; mode: string }): JSX.Element | null {
+function SidecarPanel({ panel, mode }: { panel: string; mode: string }): React.ReactNode | null {
   const { panels } = useSidecarStore();
 
   switch (panel) {
     case 'artifact':
       return panels.artifact.activeArtifactId ? (
-        <div style={{ padding: 16 }}>
+        <div className="p-4">
           <ArtifactDetailView artifactId={panels.artifact.activeArtifactId} />
         </div>
       ) : (
@@ -165,7 +150,7 @@ function SidecarPanel({ panel, mode }: { panel: string; mode: string }): JSX.Ele
   }
 }
 
-function WorkspaceOverviewPanel({ mode }: { mode: string }): JSX.Element {
+function WorkspaceOverviewPanel({ mode }: { mode: string }): React.ReactNode {
   const { projects, activeProjectId, threads } = useChatStore((state) => ({
     projects: state.projects,
     activeProjectId: state.activeProjectId,
@@ -211,7 +196,7 @@ function WorkspaceOverviewPanel({ mode }: { mode: string }): JSX.Element {
   const progressLabel = getProgressLabel(activeSession, threads.length);
 
   return (
-    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="p-4 flex flex-col gap-3">
       <PanelSection
         title="Progress"
         icon={<ClockClockwise size={16} />}
@@ -245,22 +230,10 @@ function WorkspaceOverviewPanel({ mode }: { mode: string }): JSX.Element {
         icon={<NotePencil size={16} />}
         subtitle="Quick notes that stay with the shell"
       >
-        <textarea
-          value={scratchpad}
+        <textarea aria-label="Text Area" value={scratchpad}
           onChange={(event) => setScratchpad(event.target.value)}
-          placeholder="Capture notes, prompts, or next steps."
-          style={{
-            width: '100%',
-            minHeight: 110,
-            resize: 'vertical',
-            borderRadius: 10,
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-primary)',
-            color: 'var(--text-primary)',
-            padding: 10,
-            fontSize: 12,
-            lineHeight: 1.45,
-          }}
+          placeholder="Capture notes, prompts, or next steps…"
+          className="w-full min-h-[110px] resize-y rounded-[10px] border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] p-2.5 text-[12px] leading-relaxed outline-none"
         />
       </PanelSection>
 
@@ -271,7 +244,7 @@ function WorkspaceOverviewPanel({ mode }: { mode: string }): JSX.Element {
       >
         <StatRow label="Threads" value={String(activeProject?.threadIds.length ?? 0)} />
         <StatRow label="Workspace files" value={String(workspaceFiles.length)} />
-        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="mt-2 flex flex-col gap-1.5">
           {attachedConnectors.length ? (
             attachedConnectors.map((connector) => (
               <ListRow
@@ -290,7 +263,7 @@ function WorkspaceOverviewPanel({ mode }: { mode: string }): JSX.Element {
   );
 }
 
-function ActivityPanel({ mode }: { mode: string }): JSX.Element {
+function ActivityPanel({ mode }: { mode: string }): React.ReactNode {
   const sessions = useMemo(() => {
     if (mode === 'code') return useCodeSessionStore.getState().sessions ?? [];
     if (mode === 'cowork') return useCoworkSessionStore.getState().sessions ?? [];
@@ -302,7 +275,7 @@ function ActivityPanel({ mode }: { mode: string }): JSX.Element {
     .slice(0, 6);
 
   return (
-    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="p-4 flex flex-col gap-3">
       <PanelSection
         title="Recent Activity"
         icon={<Lightning size={16} />}
@@ -335,22 +308,15 @@ function PanelSection({
   subtitle?: string;
   icon: React.ReactNode;
   children: React.ReactNode;
-}): JSX.Element {
+}): React.ReactNode {
   return (
-    <section
-      style={{
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 14,
-        background: 'var(--bg-secondary)',
-        padding: 12,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <div style={{ color: 'var(--text-secondary)' }}>{icon}</div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</div>
+    <section className="border border-solid border-[var(--border-subtle)] rounded-[14px] bg-[var(--bg-secondary)] p-3">
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className="text-[var(--text-secondary)]">{icon}</div>
+        <div className="min-w-0">
+          <div className="text-[13px] font-bold text-[var(--text-primary)]">{title}</div>
           {subtitle ? (
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{subtitle}</div>
+            <div className="text-[11px] text-[var(--text-tertiary)] mt-0.5">{subtitle}</div>
           ) : null}
         </div>
       </div>
@@ -359,33 +325,23 @@ function PanelSection({
   );
 }
 
-function StatRow({ label, value }: { label: string; value: string }): JSX.Element {
+function StatRow({ label, value }: { label: string; value: string }): React.ReactNode {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12, marginBottom: 6 }}>
-      <span style={{ color: 'var(--text-tertiary)' }}>{label}</span>
-      <span style={{ color: 'var(--text-secondary)' }}>{value}</span>
+    <div className="flex justify-between gap-3 text-[12px] mb-1.5">
+      <span className="text-[var(--text-tertiary)]">{label}</span>
+      <span className="text-[var(--text-secondary)]">{value}</span>
     </div>
   );
 }
 
-function ListRow({ icon, label, meta }: { icon: React.ReactNode; label: string; meta?: string }): JSX.Element {
+function ListRow({ icon, label, meta }: { icon: React.ReactNode; label: string; meta?: string }): React.ReactNode {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '7px 8px',
-        borderRadius: 10,
-        background: 'var(--bg-primary)',
-        border: '1px solid var(--border-subtle)',
-      }}
-    >
-      <div style={{ color: 'var(--text-tertiary)' }}>{icon}</div>
-      <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+    <div className="flex items-center gap-2 p-[7px_8px] rounded-[10px] bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)]">
+      <div className="text-[var(--text-tertiary)]">{icon}</div>
+      <span className="flex-1 min-w-0 text-[12px] text-[var(--text-primary)] overflow-hidden text-ellipsis whitespace-nowrap">
         {label}
       </span>
-      {meta ? <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{meta}</span> : null}
+      {meta ? <span className="text-[11px] text-[var(--text-tertiary)]">{meta}</span> : null}
     </div>
   );
 }
@@ -398,18 +354,18 @@ function EmptyPanel({
   icon: React.ReactNode;
   title: string;
   description: string;
-}): JSX.Element {
+}): React.ReactNode {
   return (
-    <div style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, height: '100%', textAlign: 'center' }}>
-      <div style={{ color: 'var(--text-tertiary)' }}>{icon}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</div>
-      <div style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 240 }}>{description}</div>
+    <div className="p-5 flex flex-col items-center justify-center gap-2.5 h-full text-center">
+      <div className="text-[var(--text-tertiary)]">{icon}</div>
+      <div className="text-[14px] font-bold text-[var(--text-primary)]">{title}</div>
+      <div className="text-[12px] text-[var(--text-secondary)] max-w-[240px]">{description}</div>
     </div>
   );
 }
 
-function MutedText({ children }: { children: React.ReactNode }): JSX.Element {
-  return <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{children}</div>;
+function MutedText({ children }: { children: React.ReactNode }): React.ReactNode {
+  return <div className="text-[12px] text-[var(--text-tertiary)]">{children}</div>;
 }
 
 function formatFileSize(size: number): string {

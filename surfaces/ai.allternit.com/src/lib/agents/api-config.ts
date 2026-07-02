@@ -82,15 +82,63 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
+type DesktopSession = {
+  userId: string;
+  userEmail: string;
+  accessToken: string;
+  expiresAt: number;
+};
+
+async function buildAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+
+  if (typeof window === 'undefined') {
+    return headers;
+  }
+
+  const bearerToken = window.localStorage.getItem('allternit_token');
+  if (bearerToken) {
+    headers.Authorization = `Bearer ${bearerToken}`;
+  }
+
+  try {
+    const session = await window.allternit?.auth?.getSession?.() as DesktopSession | null | undefined;
+    if (session?.accessToken && session?.userId) {
+      headers['X-Allternit-Desktop-Access-Token'] = session.accessToken;
+      headers['X-Allternit-User-Id'] = session.userId;
+      if (session.userEmail) {
+        headers['X-Allternit-User-Email'] = session.userEmail;
+      }
+    }
+  } catch {
+    // Ignore desktop auth lookup failures and fall back to any bearer token.
+  }
+
+  const isElectronShell =
+    window.allternitSidecar !== undefined ||
+    (window as any).process?.versions?.electron !== undefined;
+
+  if (isElectronShell && !headers.Authorization && !headers['X-Allternit-Desktop-Access-Token']) {
+    headers['X-Allternit-Desktop-Access-Token'] = 'desktop-dev-bootstrap';
+    headers['X-Allternit-User-Id'] = 'desktop-dev-user';
+    headers['X-Allternit-User-Email'] = 'desktop@allternit.local';
+    headers['X-Allternit-User-Name'] = 'Desktop Dev User';
+  }
+
+  return headers;
+}
+
 export async function apiRequest<T>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
   const { headers, ...restOptions } = options || {};
+  const authHeaders = await buildAuthHeaders();
   const response = await fetch(url, {
     ...restOptions,
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...(headers || {}),
     },
   });
@@ -107,10 +155,12 @@ export async function apiRequestWithError<T>(
   options?: RequestInit
 ): Promise<T> {
   const { headers, ...restOptions } = options || {};
+  const authHeaders = await buildAuthHeaders();
   const response = await fetch(url, {
     ...restOptions,
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...(headers || {}),
     },
   });

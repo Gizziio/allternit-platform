@@ -29,7 +29,7 @@ import {
   Info,
 } from '@phosphor-icons/react';
 
-export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'about';
+type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'about';
 
 export interface SettingsNavItem {
   id: string;
@@ -68,7 +68,7 @@ export type SettingsSection = typeof SETTINGS_NAV_ITEMS[number]['id'];
 /**
  * Valid section IDs as a runtime Set for O(1) lookups.
  */
-export const SETTINGS_SECTION_IDS: Set<string> = new Set(
+const SETTINGS_SECTION_IDS: Set<string> = new Set(
   SETTINGS_NAV_ITEMS.map((i) => i.id)
 );
 

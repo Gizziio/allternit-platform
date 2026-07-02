@@ -117,7 +117,7 @@ export function FileAttachment({
       onMouseLeave={() => setIsHovered(false)}
     >
       {isImageOnly ? (
-        <div
+        <div role="button" tabIndex={0}
           className={cn(
             "size-8 overflow-hidden shrink-0 rounded-[calc(var(--an-input-border-radius)-var(--an-context-padding)-2px)]",
             canPreview && "cursor-pointer",
@@ -133,7 +133,7 @@ export function FileAttachment({
       ) : (
         <>
           {isImage && url ? (
-            <div
+            <div role="button" tabIndex={0}
               className={cn(
                 "w-8 self-stretch overflow-hidden shrink-0 rounded-[calc(var(--an-input-border-radius)-var(--an-context-padding)-2px)]",
                 canPreview && "cursor-pointer",
@@ -169,7 +169,7 @@ export function FileAttachment({
       )}
 
       {onRemove && (
-        <button
+        <button type="button"
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
@@ -178,7 +178,6 @@ export function FileAttachment({
                      flex items-center justify-center transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] z-10
                      text-muted-foreground hover:text-foreground
                      ${isHovered ? "opacity-100" : "opacity-0"}`}
-          type="button"
         >
           <X className="size-3" />
         </button>

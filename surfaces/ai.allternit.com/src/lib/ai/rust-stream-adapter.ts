@@ -18,12 +18,15 @@ import type {
   McpAppResourcePermissions,
   McpAppToolDefinition,
 } from "./mcp/apps";
+import { createModuleLogger } from "@/lib/logger";
+
+const logger = createModuleLogger("rust-stream-adapter");
 
 // ============================================================================
 // Rust API Event Types (existing contract)
 // ============================================================================
 
-export type RustEventType =
+type RustEventType =
   | "message_start"
   | "content_block_start"
   | "content_block_delta"
@@ -113,9 +116,9 @@ export interface RustStreamEvent {
 /**
  * Message role for AI Elements - matches UIMessage["role"]
  */
-export type MessageRole = "user" | "assistant" | "system";
+type MessageRole = "user" | "assistant" | "system";
 
-export interface ReasoningUIPart {
+interface ReasoningUIPart {
   type: "reasoning";
   reasoningId: string;
   text: string;
@@ -124,7 +127,7 @@ export interface ReasoningUIPart {
   trace?: ReasoningTrace;
 }
 
-export type ArtifactKind = 
+type ArtifactKind = 
   | "image" 
   | "svg" 
   | "mermaid" 
@@ -138,7 +141,7 @@ export type ArtifactKind =
   | "podcast";    // Multi-track audio
 type ChatMessageStatus = "streaming" | "complete" | "error" | "stopped";
 
-export interface LinkedSourceDocumentUIPart extends SourceDocumentUIPart {
+interface LinkedSourceDocumentUIPart extends SourceDocumentUIPart {
   url?: string;
 }
 
@@ -151,7 +154,7 @@ export interface ArtifactUIPart {
   title: string;
 }
 
-export interface ErrorUIPart {
+interface ErrorUIPart {
   type: "error";
   message: string;
   stackTrace?: string;
@@ -178,7 +181,7 @@ export interface McpAppUIPart {
   domain?: string;
 }
 
-export interface ChatMessageMetadata {
+interface ChatMessageMetadata {
   modelId?: string;
   runtimeModelId?: string;
   startedAt?: number;
@@ -193,7 +196,7 @@ export interface ChatMessageMetadata {
   agentName?: string;
 }
 
-export type ReasoningTraceStepType =
+type ReasoningTraceStepType =
   | "reasoning"
   | "search"
   | "file-read"
@@ -202,7 +205,7 @@ export type ReasoningTraceStepType =
   | "agent"
   | "tool";
 
-export interface ReasoningTraceStepMetadata {
+interface ReasoningTraceStepMetadata {
   files?: string[];
   agents?: string[];
   commands?: string[];
@@ -210,7 +213,7 @@ export interface ReasoningTraceStepMetadata {
   results?: number;
 }
 
-export interface ReasoningTraceStep {
+interface ReasoningTraceStep {
   type: ReasoningTraceStepType;
   summary: string;
   detail?: string;
@@ -225,27 +228,27 @@ export interface ReasoningTrace {
   steps: ReasoningTraceStep[];
 }
 
-export interface PlanStep {
+interface PlanStep {
   id: string;
   description: string;
   status: "pending" | "in-progress" | "complete" | "error";
 }
 
-export interface PlanUIPart {
+interface PlanUIPart {
   type: "plan";
   planId: string;
   title: string;
   steps: PlanStep[];
 }
 
-export interface CheckpointUIPart {
+interface CheckpointUIPart {
   type: "checkpoint";
   checkpointId: string;
   description: string;
   metadata?: Record<string, unknown>;
 }
 
-export interface TaskUIPart {
+interface TaskUIPart {
   type: "task";
   taskId: string;
   title: string;
@@ -254,7 +257,7 @@ export interface TaskUIPart {
   progress?: number;
 }
 
-export interface CitationUIPart {
+interface CitationUIPart {
   type: "citation";
   citationId: string;
   sourceId: string;
@@ -697,7 +700,7 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
 
     // If we've already received deltas for this message, do NOT reset/overwrite
     if (ctx.hasStreamedDeltasByMessageId.get(messageId)) {
-      console.debug("[rust-stream-adapter] Preserving live stream state, ignoring redundant message_start");
+      logger.debug('Preserving live stream state, ignoring redundant message_start');
       return;
     }
 
@@ -1242,7 +1245,7 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
 
   finish: (event, ctx) => {
     // finish is strictly metadata-only. setIsLoading(false) happens in finally.
-    console.debug("[rust-stream-adapter] Received finish metadata", event);
+    logger.debug("Received finish metadata");
     updateMessageMetadata(ctx.setMessages, ctx.assistantMessageId, {
       finishedAt: event.finishedAt,
       durationMs: event.durationMs,
@@ -1290,7 +1293,7 @@ function updateMessageParts(ctx: AdapterContext, immediate: boolean): void {
 // Hook Interface
 // ============================================================================
 
-export interface SubmitMessageParams {
+interface SubmitMessageParams {
   chatId: string;
   message: string;
   modelId: string;
@@ -1880,10 +1883,10 @@ export function useRustStreamAdapter(
       let lastErrorMessage = "";
       let terminalSessionId: string | null = null;
 
-      console.debug('[rust-stream-adapter] Trying endpoints:', endpointAttempts.map(e => e.label));
-      
+      logger.debug(`Trying endpoints: ${endpointAttempts.map(e => e.label).join(', ')}`);
+
       for (const attempt of endpointAttempts) {
-        console.debug('[rust-stream-adapter] Attempting endpoint:', attempt.url);
+        logger.debug(`Attempting endpoint: ${attempt.url}`);
         
         // Check if this is a Terminal Server endpoint (either direct or via proxy)
         const isTerminalEndpoint = (attempt.url.includes("/session/") && attempt.url.includes("/message")) ||
@@ -1911,7 +1914,7 @@ export function useRustStreamAdapter(
               terminalSessionId = sessionData.id || chatId;
             }
           } catch (e) {
-            console.warn('[rust-stream-adapter] Failed to create session:', e);
+            logger.warn({ err: e }, 'Failed to create session:');
           }
         }
         
@@ -1956,10 +1959,10 @@ export function useRustStreamAdapter(
           const detail = detailText.trim().slice(0, 240);
           
           // Detect specific error types for better user messages
-          console.debug(`[rust-stream-adapter] HTTP Error ${candidate.status}:`, detail);
+          logger.debug(`HTTP Error ${candidate.status}: ${detail}`);
           if (candidate.status === 429) {
             lastErrorMessage = "Rate limit exceeded. The AI service is temporarily unavailable. Please wait a moment and try again.";
-            console.error('[rust-stream-adapter] Rate limit detected (429)');
+            logger.error('Rate limit detected (429)');
           } else if (candidate.status === 401 || candidate.status === 403) {
             lastErrorMessage = "Authentication failed. Please check your API key or sign in again.";
           } else if (candidate.status >= 500 && candidate.status < 600) {
@@ -1991,7 +1994,7 @@ export function useRustStreamAdapter(
       }
 
       if (!response) {
-        console.error('[rust-stream-adapter] No response, throwing error:', lastErrorMessage);
+        logger.error(`No response, throwing error: ${lastErrorMessage}`);
         throw new Error(
           lastErrorMessage || "Unable to reach any chat endpoint"
         );
@@ -2074,7 +2077,7 @@ export function useRustStreamAdapter(
         if (parsed.info && parsed.parts && Array.isArray(parsed.parts)) {
           const syncId = parsed.info.id || assistantMessageIdRef.current || '';
           if (context.hasStreamedDeltasByMessageId.get(syncId)) {
-            console.debug("[rust-stream-adapter] Ignoring DB full-sync object to preserve live streamed deltas");
+            logger.debug('Ignoring DB full-sync object to preserve live streamed deltas');
             return;
           }
 
@@ -2149,7 +2152,7 @@ export function useRustStreamAdapter(
             const parsed = JSON.parse(data);
             processStreamItem(parsed);
           } catch (e) {
-            console.warn("[rust-stream-adapter] Failed to parse stream line:", line);
+            logger.warn(`Failed to parse stream line: ${line}`);
           }
         }
       }
@@ -2169,7 +2172,7 @@ export function useRustStreamAdapter(
       finalizeAssistantMessage(receivedErrorEventRef.current ? "error" : "complete");
       options.onFinish?.();
     } catch (error) {
-      console.error('[rust-stream-adapter] Caught error in submitMessage:', error);
+      logger.error({ err: error }, 'Caught error in submitMessage');
       if (error instanceof Error) {
         const isAbort = error.name === "AbortError";
         const isTimeout = error.name === "TimeoutError";
@@ -2192,7 +2195,7 @@ export function useRustStreamAdapter(
             ? error.message 
             : `Request failed: ${error.message}`;
         
-        console.error('[rust-stream-adapter] Error:', error);
+        logger.error({ err: error }, 'Error');
         options.onError?.(error);
         finalizeAssistantMessage("error");
         
@@ -2217,7 +2220,7 @@ export function useRustStreamAdapter(
             status: "error",
           },
         };
-        console.debug('[rust-stream-adapter] Adding error message to chat:', assistantError);
+        logger.debug("Adding error message to chat");
         setMessages((prev: ChatMessage[]) => [...prev, assistantError]);
       }
     } finally {

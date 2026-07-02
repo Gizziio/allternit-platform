@@ -56,6 +56,12 @@ export function useAvatarAnimation(
 ): AvatarAnimationResult {
   const animationRef = useRef<Animation | null>(null);
   const [animationState, setAnimationState] = useState<'idle' | 'playing'>('idle');
+  const [prevIsAnimating, setPrevIsAnimating] = useState(isAnimating);
+
+  if (isAnimating !== prevIsAnimating) {
+    setPrevIsAnimating(isAnimating);
+    setAnimationState(isAnimating ? 'playing' : 'idle');
+  }
   
   // Generate unique animation name based on config
   const animationName = useMemo(() => {
@@ -67,7 +73,6 @@ export function useAvatarAnimation(
   useEffect(() => {
     if (!isAnimating) {
       animationRef.current?.cancel();
-      setAnimationState('idle');
       return;
     }
     
@@ -93,8 +98,6 @@ export function useAvatarAnimation(
       
       document.head.appendChild(style);
     }
-    
-    setAnimationState('playing');
     
     return () => {
       animationRef.current?.cancel();
@@ -133,7 +136,7 @@ export function useAvatarAnimation(
 /**
  * Hook for locomotion animations (entry/exit)
  */
-export function useLocomotionAnimation(
+function useLocomotionAnimation(
   type: 'walk-in' | 'walk-out' | 'crawl' | 'pop-in' | 'fade-in',
   direction: 'left' | 'right' = 'left',
   onComplete?: () => void
@@ -204,7 +207,7 @@ export function useLocomotionAnimation(
 /**
  * Hook for blinking animation
  */
-export function useBlinkAnimation(
+function useBlinkAnimation(
   blinkRate: BlinkRate | undefined,
   isAnimating: boolean
 ): {
@@ -246,7 +249,7 @@ export function useBlinkAnimation(
  * Hook for tracking animation frame
  * Useful for smooth animations
  */
-export function useAnimationFrame(
+function useAnimationFrame(
   callback: (deltaTime: number) => void,
   isRunning: boolean
 ): void {

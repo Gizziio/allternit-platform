@@ -10,6 +10,9 @@ import {
   getRuntimeGatewayBaseUrl,
   getRuntimeGatewayWsBaseUrl,
 } from '@/lib/runtime-backend-client';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Terminal');
 
 const TERMINAL_SESSIONS_STORAGE_KEY = 'allternit_terminal_sessions';
 const TERMINAL_SNAPSHOTS_STORAGE_KEY = 'allternit_terminal_snapshots';
@@ -20,7 +23,7 @@ export interface VolumeMount {
   readOnly: boolean;
 }
 
-export interface SandboxConfig {
+interface SandboxConfig {
   image: string;
   cpus?: number;
   memory_mb?: number;
@@ -46,7 +49,7 @@ export interface TerminalSession {
   sandbox?: SandboxConfig;
 }
 
-export interface SessionStatusResponse {
+interface SessionStatusResponse {
   exists: boolean;
   session_id: string;
   node_id?: string;
@@ -69,7 +72,7 @@ export interface TerminalSnapshotFrame {
   updated_at?: string;
 }
 
-export interface TerminalSnapshotState {
+interface TerminalSnapshotState {
   snapshot: string;
   cols: number;
   rows: number;
@@ -78,11 +81,11 @@ export interface TerminalSnapshotState {
 
 export type TerminalDataHandler = (data: string) => void;
 export type TerminalStatusHandler = (connected: boolean) => void;
-export type TerminalTimeoutWarningHandler = (warning: TimeoutWarning) => void;
-export type TerminalSnapshotHandler = (frame: TerminalSnapshotFrame) => void;
+type TerminalTimeoutWarningHandler = (warning: TimeoutWarning) => void;
+type TerminalSnapshotHandler = (frame: TerminalSnapshotFrame) => void;
 
 // File operations types
-export interface FileEntry {
+interface FileEntry {
   name: string;
   path: string;
   is_dir: boolean;
@@ -104,7 +107,7 @@ export interface FileTransferProgress {
   percentage: number;
 }
 
-export type FileTransferHandler = (progress: FileTransferProgress) => void;
+type FileTransferHandler = (progress: FileTransferProgress) => void;
 
 interface ReconnectionAttempt {
   attempt: number;
@@ -160,7 +163,7 @@ class NodeTerminalService {
       
       localStorage.setItem(TERMINAL_SESSIONS_STORAGE_KEY, JSON.stringify(sessionsData));
     } catch (e) {
-      console.warn('[Terminal] Failed to save sessions to localStorage:', e);
+      logger.warn({ err: e }, 'Failed to save sessions to localStorage');
     }
   }
 
@@ -181,7 +184,7 @@ class NodeTerminalService {
         this._pendingRestoredSessions = sessionsData;
       }
     } catch (e) {
-      console.warn('[Terminal] Failed to restore sessions from localStorage:', e);
+      logger.warn({ err: e }, 'Failed to restore sessions from localStorage');
     }
   }
 
@@ -198,7 +201,7 @@ class NodeTerminalService {
       }
       return JSON.parse(stored) as Record<string, TerminalSnapshotState>;
     } catch (e) {
-      console.warn('[Terminal] Failed to read snapshots from localStorage:', e);
+      logger.warn({ err: e }, 'Failed to read snapshots from localStorage');
       return {};
     }
   }
@@ -214,7 +217,7 @@ class NodeTerminalService {
       }
       localStorage.setItem(TERMINAL_SNAPSHOTS_STORAGE_KEY, JSON.stringify(snapshots));
     } catch (e) {
-      console.warn('[Terminal] Failed to write snapshots to localStorage:', e);
+      logger.warn({ err: e }, 'Failed to write snapshots to localStorage');
     }
   }
 
@@ -274,7 +277,7 @@ class NodeTerminalService {
 
       return await response.json();
     } catch (error) {
-      console.error('[Terminal] Failed to check session status:', error);
+      logger.error({ err: error }, 'Failed to check session status');
       return null;
     }
   }
@@ -291,7 +294,7 @@ class NodeTerminalService {
       const status = await this.checkSessionStatus(sessionId);
       
       if (!status || !status.exists || !status.can_reconnect) {
-        console.debug('[Terminal] Session cannot be reconnected:', status);
+        logger.debug('Session cannot be reconnected: ' + String(status));
         return null;
       }
 
@@ -310,14 +313,14 @@ class NodeTerminalService {
       });
 
       if (!response.ok) {
-        console.error('[Terminal] Failed to reconnect session:', response.statusText);
+        logger.error({ status: response.statusText }, 'Failed to reconnect session');
         return null;
       }
 
       const data = await response.json();
       
       if (!data.reconnected) {
-        console.debug('[Terminal] Server created new session instead of reconnecting');
+        logger.debug('Server created new session instead of reconnecting');
         return null;
       }
 
@@ -338,10 +341,10 @@ class NodeTerminalService {
       // Connect WebSocket for this session
       await this.connectWebSocket(sessionId);
 
-      console.debug('[Terminal] Successfully reconnected to session:', sessionId);
+      logger.debug('Successfully reconnected to session: ' + String(sessionId));
       return session;
     } catch (error) {
-      console.error('[Terminal] Error reconnecting session:', error);
+      logger.error({ err: error }, 'Error reconnecting session');
       return null;
     }
   }
@@ -378,7 +381,7 @@ class NodeTerminalService {
       if (reconnected) {
         return reconnected;
       }
-      console.debug('[Terminal] Reconnect failed, creating new session');
+      logger.debug('Reconnect failed, creating new session');
     }
 
     try {
@@ -395,7 +398,7 @@ class NodeTerminalService {
       });
 
       if (!response.ok) {
-        console.error('Failed to create terminal session:', response.statusText);
+        logger.error({ status: response.statusText }, 'Failed to create terminal session');
         return null;
       }
 
@@ -421,7 +424,7 @@ class NodeTerminalService {
 
       return session;
     } catch (error) {
-      console.error('Error creating terminal session:', error);
+      logger.error({ err: error }, 'Error creating terminal session');
       return null;
     }
   }
@@ -442,7 +445,7 @@ class NodeTerminalService {
       this.sockets.set(sessionId, socket);
 
       socket.onopen = () => {
-        console.debug(`[Terminal] Connected to session ${sessionId}`);
+        logger.debug(`Connected to session ${sessionId}`);
         session.connected = true;
         session.lastActivity = new Date();
         this.statusHandlers.get(sessionId)?.(true);
@@ -492,7 +495,7 @@ class NodeTerminalService {
       };
 
       socket.onclose = (event) => {
-        console.debug(`[Terminal] Disconnected from session ${sessionId}`, event.code, event.reason);
+        logger.debug(`Disconnected from session ${sessionId} (${event.code} ${event.reason})`);
         session.connected = false;
         this.statusHandlers.get(sessionId)?.(false);
         this.sockets.delete(sessionId);
@@ -505,7 +508,7 @@ class NodeTerminalService {
       };
 
       socket.onerror = (error) => {
-        console.error(`[Terminal] WebSocket error for session ${sessionId}:`, error);
+        logger.error({ err: error }, `WebSocket error for session ${sessionId}`);
         session.connected = false;
         this.statusHandlers.get(sessionId)?.(false);
         reject(error);
@@ -535,7 +538,7 @@ class NodeTerminalService {
     }
 
     if (attemptState.attempt >= attemptState.maxAttempts) {
-      console.debug(`[Terminal] Max reconnection attempts reached for session ${sessionId}`);
+      logger.debug(`Max reconnection attempts reached for session ${sessionId}`);
       this.statusHandlers.get(sessionId)?.(false);
       return;
     }
@@ -548,14 +551,14 @@ class NodeTerminalService {
       attemptState.maxDelay
     );
 
-    console.debug(`[Terminal] Reconnection attempt ${attemptState.attempt}/${attemptState.maxAttempts} for session ${sessionId} in ${delay}ms`);
+    logger.debug(`Reconnection attempt ${attemptState.attempt}/${attemptState.maxAttempts} for session ${sessionId} in ${delay}ms`);
 
     // Wait before attempting reconnection
     await new Promise(resolve => setTimeout(resolve, delay));
 
     // Check if session is already connected (maybe another reconnection succeeded)
     if (this.sockets.has(sessionId)) {
-      console.debug(`[Terminal] Session ${sessionId} already reconnected`);
+      logger.debug(`Session ${sessionId} already reconnected`);
       return;
     }
 
@@ -564,13 +567,13 @@ class NodeTerminalService {
       const reconnected = await this.reconnectSession(sessionId, session.nodeId);
       
       if (reconnected) {
-        console.debug(`[Terminal] Successfully reconnected session ${sessionId}`);
+        logger.debug(`Successfully reconnected session ${sessionId}`);
       } else {
         // Schedule next attempt
         this.attemptReconnection(sessionId);
       }
     } catch (error) {
-      console.error(`[Terminal] Reconnection attempt failed for session ${sessionId}:`, error);
+      logger.error({ err: error }, `Reconnection attempt failed for session ${sessionId}`);
       this.attemptReconnection(sessionId);
     }
   }
@@ -622,7 +625,7 @@ class NodeTerminalService {
         session.lastActivity = new Date();
       }
     } else {
-      console.warn(`[Terminal] Cannot send data, socket not open for session ${sessionId}`);
+      logger.warn(`Cannot send data, socket not open for session ${sessionId}`);
     }
   }
 
@@ -655,7 +658,7 @@ class NodeTerminalService {
         session.lastActivity = new Date();
       }
       
-      console.debug(`[Terminal] Keepalive sent for session ${sessionId}`);
+      logger.debug(`Keepalive sent for session ${sessionId}`);
     }
   }
 
@@ -726,7 +729,7 @@ class NodeTerminalService {
           method: 'DELETE',
         }),
       )
-      .catch(console.error);
+      .catch((err: unknown) => logger.error({ err }, 'Async error'));
     
     // Save updated sessions to storage
     this.saveSessionsToStorage();
@@ -787,13 +790,13 @@ class NodeTerminalService {
       );
 
       if (!response.ok) {
-        console.error('[Terminal] Failed to list files:', response.statusText);
+        logger.error({ status: response.statusText }, 'Failed to list files');
         return null;
       }
 
       return await response.json();
     } catch (error) {
-      console.error('[Terminal] Error listing files:', error);
+      logger.error({ err: error }, 'Error listing files');
       return null;
     }
   }
@@ -848,7 +851,7 @@ class NodeTerminalService {
           });
       });
     } catch (error) {
-      console.error('[Terminal] Error uploading file:', error);
+      logger.error({ err: error }, 'Error uploading file');
       return { success: false, error: 'Upload failed' };
     }
   }
@@ -863,7 +866,7 @@ class NodeTerminalService {
       );
 
       if (!response.ok) {
-        console.error('[Terminal] Failed to download file:', response.statusText);
+        logger.error({ status: response.statusText }, 'Failed to download file');
         return false;
       }
 
@@ -879,7 +882,7 @@ class NodeTerminalService {
 
       return true;
     } catch (error) {
-      console.error('[Terminal] Error downloading file:', error);
+      logger.error({ err: error }, 'Error downloading file');
       return false;
     }
   }
@@ -903,7 +906,7 @@ class NodeTerminalService {
 
       return { success: true };
     } catch (error) {
-      console.error('[Terminal] Error deleting file:', error);
+      logger.error({ err: error }, 'Error deleting file');
       return { success: false, error: 'Delete failed' };
     }
   }
@@ -927,7 +930,7 @@ class NodeTerminalService {
 
       return { success: true };
     } catch (error) {
-      console.error('[Terminal] Error creating directory:', error);
+      logger.error({ err: error }, 'Error creating directory');
       return { success: false, error: 'Failed to create directory' };
     }
   }
@@ -947,7 +950,7 @@ class NodeTerminalService {
 
       return await response.json();
     } catch (error) {
-      console.error('[Terminal] Error getting file info:', error);
+      logger.error({ err: error }, 'Error getting file info');
       return null;
     }
   }

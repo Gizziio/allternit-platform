@@ -7,30 +7,25 @@
 
 'use client';
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useMemo, useState } from 'react';
 import { GlassSurface } from '../design/GlassSurface';
 import {
   Clock,
   MagnifyingGlass,
   Plus,
-  Trash,
-  DotsThreeVertical,
-  ChatCircleText,
-  Code as CodeIcon,
-  Robot,
-  TerminalWindow,
 } from '@phosphor-icons/react';
+import { useChatSessionStore } from './chat/ChatSessionStore';
+import { useCodeSessionStore } from './code/CodeSessionStore';
+import { useCoworkSessionStore } from './cowork/CoworkSessionStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SessionMode = 'chat' | 'code' | 'agent' | 'terminal';
+type SessionMode = 'chat' | 'code' | 'cowork';
 
 interface Session {
   id: string;
   title: string;
   lastActivity: string;
-  messageCount: number;
   mode: SessionMode;
 }
 
@@ -43,8 +38,7 @@ interface GroupedSessions {
 const MODE_COLORS: Record<SessionMode, string> = {
   chat: 'var(--accent-chat)',
   code: 'var(--accent-primary)',
-  agent: 'var(--status-success)',
-  terminal: 'var(--status-warning)',
+  cowork: 'var(--accent-cowork, var(--status-success))',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -104,7 +98,7 @@ interface SessionRowProps {
 
 function SessionRow({ session, selected, onSelect }: SessionRowProps) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={() => onSelect(session.id)}
       className={`group cursor-pointer transition-colors duration-200 p-3 px-4 rounded-lg flex items-center justify-between gap-3 border border-solid ${
         selected 
@@ -115,10 +109,10 @@ function SessionRow({ session, selected, onSelect }: SessionRowProps) {
       {/* Left: Mode indicator + Title */}
       <div className="flex-1 flex items-center gap-3 min-w-0">
         <div
-          className="size-2 rounded-full shrink-0"
+          className="size-2 rounded-full shrink-0 bg-[var(--mode-color)]"
           style={{
-            backgroundColor: MODE_COLORS[session.mode],
-          }}
+            '--mode-color': MODE_COLORS[session.mode],
+          } as React.CSSProperties}
         />
         <div className="min-w-0">
           <div className="text-sm font-medium text-[var(--text-primary)] truncate">
@@ -127,11 +121,8 @@ function SessionRow({ session, selected, onSelect }: SessionRowProps) {
         </div>
       </div>
 
-      {/* Right: Message count badge + timestamp */}
+      {/* Right: timestamp */}
       <div className="flex items-center gap-3 shrink-0">
-        <div className="text-[12px] text-[var(--text-tertiary)] bg-[var(--bg-primary)] px-2.5 py-1 rounded-xl whitespace-nowrap border border-solid border-[var(--border-subtle)]">
-          {session.messageCount} msg
-        </div>
         <div className="text-[12px] text-[var(--text-tertiary)] whitespace-nowrap min-w-[60px] text-right">
           {formatRelativeTime(session.lastActivity)}
         </div>
@@ -145,19 +136,20 @@ function SessionRow({ session, selected, onSelect }: SessionRowProps) {
 export function HistoryView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Mock initial data
-  useState(() => {
-    const mock: Session[] = [
-      { id: '1', title: 'Refactor login validation logic', lastActivity: new Date().toISOString(), messageCount: 12, mode: 'code' },
-      { id: '2', title: 'Brainstorm product launch names', lastActivity: new Date().toISOString(), messageCount: 8, mode: 'chat' },
-      { id: '3', title: 'Automated test suite run #42', lastActivity: new Date(Date.now() - 90000000).toISOString(), messageCount: 45, mode: 'agent' },
-      { id: '4', title: 'System architecture review', lastActivity: new Date(Date.now() - 200000000).toISOString(), messageCount: 22, mode: 'chat' },
-      { id: '5', title: 'Database migration scripts', lastActivity: new Date(Date.now() - 800000000).toISOString(), messageCount: 15, mode: 'code' },
+  const chatSessions   = useChatSessionStore((s) => s.sessions);
+  const codeSessions   = useCodeSessionStore((s) => s.sessions);
+  const coworkSessions = useCoworkSessionStore((s) => s.sessions);
+
+  const sessions = useMemo<Session[]>(() => {
+    const all: Session[] = [
+      ...chatSessions.map((s) => ({ id: s.id, title: s.name || 'Untitled chat', lastActivity: s.updatedAt, mode: 'chat' as const })),
+      ...codeSessions.map((s) => ({ id: s.id, title: s.name || 'Untitled session', lastActivity: s.updatedAt, mode: 'code' as const })),
+      ...coworkSessions.map((s) => ({ id: s.id, title: s.name || 'Untitled cowork', lastActivity: s.updatedAt, mode: 'cowork' as const })),
     ];
-    setSessions(mock);
-  });
+    all.sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime());
+    return all;
+  }, [chatSessions, codeSessions, coworkSessions]);
 
   const filteredSessions = useMemo(() => {
     if (!searchQuery) return sessions;
@@ -183,7 +175,7 @@ export function HistoryView() {
             History
           </h2>
         </div>
-        <button
+        <button type="button"
           className="size-8 rounded-lg border-none bg-[var(--accent-primary)] text-white cursor-pointer flex items-center justify-center transition-all duration-200 hover:brightness-110 active:scale-95"
           title="New conversation"
         >
@@ -200,8 +192,7 @@ export function HistoryView() {
               size={16}
               className="text-[var(--text-tertiary)] shrink-0"
             />
-            <input
-              type="text"
+            <input aria-label="Search conversations..." type="text"
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

@@ -27,6 +27,10 @@ import { Button } from '@/components/ui/button';
 import { vpsApi } from '@/api/infrastructure';
 import type { VPSConnection, EnvironmentTemplate } from '@/api/infrastructure';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('PreFlightCheck');
+
 export interface PreFlightCheckProps {
   template: EnvironmentTemplate;
   targetVpsId?: string;
@@ -101,7 +105,7 @@ export function PreFlightCheck({
       const vps = await vpsApi.get(targetVpsId);
       setVpsConnection(vps);
     } catch (err) {
-      console.error('Failed to load VPS:', err);
+      logger.error({ err: err }, 'Failed to load VPS:');
     }
   };
 

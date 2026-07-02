@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback, useRef, useEffect } from "react";
+import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import type { ChatStatus } from "ai";
 import { cn } from "./utils/cn";
 
@@ -33,14 +33,14 @@ import type {
   QuestionConfig,
 } from "./question/question-prompt";
 
-export type AttachedImage = {
+type AttachedImage = {
   id: string;
   filename: string;
   url: string;
   size?: number;
 };
 
-export type AttachedFile = {
+type AttachedFile = {
   id: string;
   filename: string;
   size?: number;
@@ -122,7 +122,7 @@ export type InputBarProps = {
   rightActions?: React.ReactNode;
 };
 
-export const InputBar = memo(function InputBar({
+const InputBar = memo(function InputBar({
   onSend,
   status,
   onStop,
@@ -431,7 +431,7 @@ export const InputBar = memo(function InputBar({
         >
           {infoBarPosition === "top" && infoBarNode}
           {questionBarNode}
-          <div
+          <div role="button" tabIndex={0}
             className={cn(
               "relative cursor-text rounded-an-input-border-radius bg-an-input-background shadow-2xs ring-1 ring-foreground/10",
               isDragOver && "ring-2 ring-an-primary-color",
@@ -503,8 +503,7 @@ export const InputBar = memo(function InputBar({
                 </div>
               ) : (
                 <>
-                  <textarea
-                    ref={textareaRef}
+                  <textarea aria-label="Text Area" ref={textareaRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -537,7 +536,7 @@ export const InputBar = memo(function InputBar({
                   <AttachmentButton onClick={onAttach} />
                 )}
                 {/* Send / Stop button */}
-                <div
+                <div role="button" tabIndex={0}
                   onClick={() => {
                     if (isStreaming) {
                       onStop();

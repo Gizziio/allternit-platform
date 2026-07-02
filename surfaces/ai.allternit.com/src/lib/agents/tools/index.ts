@@ -218,7 +218,7 @@ registerTool(skillGraphTool as any, skillGraphTool.execute as any);
 // Re-exports
 // ============================================================================
 
-export { ASK_USER_TOOL_DEFINITION, type AskUserToolActions, type AskUserToolState, type PendingQuestion, type QuestionConfig, type QuestionOption, type QuestionResponse, type QuestionType, type ValidationRule, executeAskUserTool, formatQuestionForDisplay, useAskUserToolStore, validateAnswer } from './ask-user.tool';
+export { ASK_USER_TOOL_DEFINITION, type AskUserToolActions, type AskUserToolState, type PendingQuestion, type QuestionConfig, type QuestionOption, type QuestionType, type ValidationRule, executeAskUserTool, useAskUserToolStore, validateAnswer } from './ask-user.tool';
 export {
   READ_FILE_DEFINITION,
   WRITE_FILE_DEFINITION,
@@ -234,6 +234,6 @@ export {
   type FileEntry,
   FilesApiClientError,
 } from "./file-tools";
-export { FETCH_JSON_DEFINITION, HTTP_REQUEST_DEFINITION, type HttpResponse, WEBHOOK_DEFINITION, executeFetchJson, executeHttpRequest, executeSendWebhook } from './api-tools';
-export { GIT_BRANCH_DEFINITION, GIT_DIFF_DEFINITION, GIT_LOG_DEFINITION, GIT_SHOW_DEFINITION, GIT_STATUS_DEFINITION, type GitBranch, type GitCommit, type GitDiff, type GitStatus, executeGitBranch, executeGitDiff, executeGitLog, executeGitShow, executeGitStatus } from './git-tools';
-export { CHECK_COVERAGE_DEFINITION, type CoverageReport, LINT_CHECK_DEFINITION, type LintResult, RUN_TESTS_DEFINITION, TYPE_CHECK_DEFINITION, type TestResult, type TypeCheckResult, executeCheckCoverage, executeLintCheck, executeRunTests, executeTypeCheck } from './test-tools';
+export { FETCH_JSON_DEFINITION, HTTP_REQUEST_DEFINITION, WEBHOOK_DEFINITION, executeFetchJson, executeHttpRequest, executeSendWebhook } from './api-tools';
+export { GIT_BRANCH_DEFINITION, GIT_DIFF_DEFINITION, GIT_LOG_DEFINITION, GIT_SHOW_DEFINITION, GIT_STATUS_DEFINITION, executeGitBranch, executeGitDiff, executeGitLog, executeGitShow, executeGitStatus } from './git-tools';
+export { CHECK_COVERAGE_DEFINITION, LINT_CHECK_DEFINITION, RUN_TESTS_DEFINITION, TYPE_CHECK_DEFINITION, executeCheckCoverage, executeLintCheck, executeRunTests, executeTypeCheck } from './test-tools';

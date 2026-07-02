@@ -34,6 +34,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('SkillBuilderWizard');
+
 interface SkillBuilderWizardProps {
   agentId: string;
   onClose: () => void;
@@ -422,9 +426,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+                <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                   Skill Name *
-                </label>
+                </div>
                 <Input
                   value={formData.name}
                   onChange={(e) => {
@@ -440,9 +444,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                 />
               </div>
               <div>
-                <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+                <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                   Skill ID
-                </label>
+                </div>
                 <Input
                   value={formData.id || generateSkillId(formData.name)}
                   readOnly
@@ -452,9 +456,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
             </div>
 
             <div>
-              <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+              <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                 Description *
-              </label>
+              </div>
               <Textarea
                 value={formData.description}
                 onChange={(e) => updateForm('description', e.target.value)}
@@ -466,9 +470,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+                <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                   Version
-                </label>
+                </div>
                 <Input
                   value={formData.version}
                   onChange={(e) => updateForm('version', e.target.value)}
@@ -476,9 +480,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                 />
               </div>
               <div>
-                <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+                <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                   Author
-                </label>
+                </div>
                 <Input
                   value={formData.author}
                   onChange={(e) => updateForm('author', e.target.value)}
@@ -489,14 +493,14 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
             </div>
 
             <div>
-              <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+              <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                 Tags
-              </label>
+              </div>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                 {formData.tags.map(tag => (
                   <Badge key={tag} variant="secondary" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {tag}
-                    <button onClick={() => removeTag(tag)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <button type="button" onClick={() => removeTag(tag)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       <X style={{ width: 12, height: 12 }} />
                     </button>
                   </Badge>
@@ -517,9 +521,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
             </div>
 
             <div>
-              <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+              <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                 When to Use
-              </label>
+              </div>
               <Textarea
                 value={formData.whenToUse}
                 onChange={(e) => updateForm('whenToUse', e.target.value)}
@@ -561,7 +565,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                       <span style={{ fontSize: '13px', fontWeight: 500, color: theme.textSecondary }}>
                         Input {index + 1}
                       </span>
-                      <button
+                      <button type="button"
                         onClick={() => removeInput(input.id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}
                       >
@@ -575,8 +579,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                         placeholder="Name"
                         style={{ background: theme.bgCard, border: `1px solid ${theme.borderSubtle}`, color: theme.textPrimary }}
                       />
-                      <select
-                        value={input.type}
+                      <select aria-label="Selection" value={input.type}
                         onChange={(e) => updateInput(input.id, { type: e.target.value as any })}
                         style={{ background: theme.bgCard, border: `1px solid ${theme.borderSubtle}`, color: theme.textPrimary, padding: '8px', borderRadius: '6px' }}
                       >
@@ -632,7 +635,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                       <span style={{ fontSize: '13px', fontWeight: 500, color: theme.textSecondary }}>
                         Output {index + 1}
                       </span>
-                      <button
+                      <button type="button"
                         onClick={() => removeOutput(output.id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}
                       >
@@ -646,8 +649,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                         placeholder="Name"
                         style={{ background: theme.bgCard, border: `1px solid ${theme.borderSubtle}`, color: theme.textPrimary }}
                       />
-                      <select
-                        value={output.type}
+                      <select aria-label="Selection" value={output.type}
                         onChange={(e) => updateOutput(output.id, { type: e.target.value as any })}
                         style={{ background: theme.bgCard, border: `1px solid ${theme.borderSubtle}`, color: theme.textPrimary, padding: '8px', borderRadius: '6px' }}
                       >
@@ -676,12 +678,12 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Execution Mode */}
             <div>
-              <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '12px', display: 'block' }}>
+              <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '12px', display: 'block' }}>
                 Execution Mode
-              </label>
+              </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 {(['sync', 'async', 'streaming'] as const).map(mode => (
-                  <button
+                  <button type="button"
                     key={mode}
                     onClick={() => updateForm('mode', mode)}
                     style={{
@@ -715,9 +717,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
             {/* Timeout and Retries */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div>
-                <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+                <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                   Timeout (seconds)
-                </label>
+                </div>
                 <Input
                   type="number"
                   value={formData.timeout}
@@ -728,9 +730,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                 />
               </div>
               <div>
-                <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+                <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                   Max Retries
-                </label>
+                </div>
                 <Input
                   type="number"
                   value={formData.retries}
@@ -744,15 +746,15 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
 
             {/* Required Tools */}
             <div>
-              <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+              <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                 Required Tools
-              </label>
+              </div>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                 {formData.requiredTools.map(tool => (
                   <Badge key={tool} variant="secondary" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Cube style={{ width: 12, height: 12 }} />
                     {tool}
-                    <button onClick={() => updateForm('requiredTools', formData.requiredTools.filter(t => t !== tool))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <button type="button" onClick={() => updateForm('requiredTools', formData.requiredTools.filter(t => t !== tool))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       <X style={{ width: 12, height: 12 }} />
                     </button>
                   </Badge>
@@ -774,15 +776,15 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
 
             {/* Required Permissions */}
             <div>
-              <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
+              <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '6px', display: 'block' }}>
                 Required Permissions
-              </label>
+              </div>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                 {formData.requiredPermissions.map(perm => (
                   <Badge key={perm} variant="secondary" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Shield style={{ width: 12, height: 12 }} />
                     {perm}
-                    <button onClick={() => updateForm('requiredPermissions', formData.requiredPermissions.filter(p => p !== perm))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <button type="button" onClick={() => updateForm('requiredPermissions', formData.requiredPermissions.filter(p => p !== perm))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       <X style={{ width: 12, height: 12 }} />
                     </button>
                   </Badge>
@@ -835,7 +837,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                       placeholder={`Example ${index + 1} Name`}
                       style={{ background: theme.bgCard, border: `1px solid ${theme.borderSubtle}`, color: theme.textPrimary, flex: 1, marginRight: '12px' }}
                     />
-                    <button
+                    <button type="button"
                       onClick={() => removeExample(example.id)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}
                     >
@@ -844,9 +846,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                      <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                         Input (JSON)
-                      </label>
+                      </div>
                       <Textarea
                         value={example.input}
                         onChange={(e) => updateExample(example.id, { input: e.target.value })}
@@ -862,9 +864,9 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                      <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                         Output (JSON)
-                      </label>
+                      </div>
                       <Textarea
                         value={example.output}
                         onChange={(e) => updateExample(example.id, { output: e.target.value })}
@@ -1046,7 +1048,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
               </p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}>
             <X style={{ width: 20, height: 20 }} />
           </button>
         </div>

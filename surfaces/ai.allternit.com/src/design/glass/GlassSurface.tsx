@@ -193,7 +193,7 @@ export function GlassSurface({
   }, [disabled, onClick]);
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       className={combinedClasses}
       style={combinedStyles}
       onClick={handleClick}

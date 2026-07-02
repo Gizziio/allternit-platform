@@ -3,9 +3,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-export type MockChatStyle = 'claude' | 'gpt' | 'grok' | 'gemini';
+type MockChatStyle = 'claude' | 'gpt' | 'grok' | 'gemini';
 
-export interface MockChatMessage {
+interface MockChatMessage {
   role: 'user' | 'assistant';
   content: string;
   thinking?: string;
@@ -63,7 +63,7 @@ export function MockChat({ style = 'claude', messages, className }: MockChatProp
       {/* Messages */}
       <div className="flex flex-col gap-4 p-4">
         {messages.map((msg, i) => (
-          <div key={i} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
+          <div key={`mock-chat-${i}`} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
             {msg.role === 'assistant' && (
               <div className={cn(
                 "mr-2 mt-0.5 size-6  flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white",

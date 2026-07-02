@@ -1,9 +1,9 @@
 import JSZip from 'jszip';
 import { createShapeId, type Editor } from 'tldraw';
 import type {
-  PenpotFile, PenpotPage, PenpotShape, PenpotFrame, PenpotFill, PenpotStroke,
+  PenpotFile, PenpotPage, PenpotFrame, PenpotFill,
 } from './schema';
-import { walkShapes, isFrame } from './schema';
+import { walkShapes } from './schema';
 import type { DesignComponentShapeProps, DesignFrameShapeProps } from '@/lib/tldraw/custom-shapes';
 
 // Inline prop shapes to avoid circular dep on DesignTldrawCanvas
@@ -100,8 +100,6 @@ export async function importPenpotFile(
         props,
       });
     }
-    // TODO: PenpotText → tldraw text shape once text ShapeUtil is added
-    // TODO: PenpotPath → tldraw geo shape
   });
 
   if (shapesToCreate.length > 0) {

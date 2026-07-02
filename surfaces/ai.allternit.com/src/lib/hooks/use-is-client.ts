@@ -12,6 +12,6 @@ const getServerSnapshot = () => false;
  * const isClient = useIsClient();
  * return isClient ? <ClientOnlyComponent /> : <Placeholder />;
  */
-export function useIsClient(): void {
+export function useIsClient(): boolean {
   return useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
 }

@@ -78,7 +78,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
             h5i MCP Server
           </span>
         </div>
-        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+        <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
           <X size={16} />
         </button>
       </div>
@@ -131,7 +131,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
                   Claude Code Settings
                 </span>
-                <button
+                <button type="button"
                   onClick={handleCopy}
                   style={{
                     display: 'flex',

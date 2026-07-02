@@ -79,7 +79,7 @@ export function disable(type: CapabilityType, id: string): void {
   setEnabledIds(type, ids);
 }
 
-export function toggle(type: CapabilityType, id: string): void {
+function toggle(type: CapabilityType, id: string): void {
   const ids = new Set(getEnabledIds(type));
   if (ids.has(id)) ids.delete(id);
   else ids.add(id);

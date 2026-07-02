@@ -22,11 +22,15 @@ import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 import {
   sessionApi,
   chatApi,
+  NativeAgentApiError,
   type BackendSession,
   type BackendMessage,
   type AgentContext,
 } from './native-agent-api';
 import { subscribeSSE } from '../sse/global-sse-manager';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ModeSessionStore');
 import type {
   ContextPackOptions,
 } from './agent-context-pack';
@@ -35,7 +39,7 @@ import type {
 // Types
 // ============================================================================
 
-export type MessageRole = 'user' | 'assistant' | 'system' | 'tool';
+type MessageRole = 'user' | 'assistant' | 'system' | 'tool';
 
 export interface ModeSessionMessage {
   id: string;
@@ -234,7 +238,7 @@ function invalidateContextPackCache(agentId: string): void {
   contextPackCache.delete(agentId);
 }
 
-export function invalidateAllContextPacks(): void {
+function invalidateAllContextPacks(): void {
   contextPackCache.clear();
 }
 
@@ -266,7 +270,7 @@ async function buildContextPackForSession(
       if (workspace) {
         const currentHash = generateContextHash(workspace);
         if (currentHash === cached.hash) {
-          console.debug(`[ModeSessionStore] Using cached context pack for agent ${agentId}`);
+          logger.debug(`Using cached context pack for agent ${agentId}`);
           return cached;
         }
         // Hash mismatch — invalidate and rebuild
@@ -281,7 +285,7 @@ async function buildContextPackForSession(
   // Load workspace using real file system
   const workspace = await agentWorkspaceFS.loadWorkspace(agentId);
   if (!workspace) {
-    console.warn(`[ModeSessionStore] No workspace found for agent ${agentId}`);
+    logger.warn(`No workspace found for agent ${agentId}`);
     return null;
   }
   
@@ -376,7 +380,7 @@ async function executeStartupTasks(
 ): Promise<void> {
   if (!contextPack || !session.metadata.agentId) return;
   
-  console.debug(`[ModeSessionStore] Executing startup tasks for session ${session.id}`);
+  logger.debug(`Executing startup tasks for session ${session.id}`);
   
   try {
     const taskManager = getHeartbeatTaskManager(
@@ -396,9 +400,7 @@ async function executeStartupTasks(
       agentCronScheduler.start({
         checkIntervalMs: 60000, // Check every minute
         onPermissionRequest: async (action, agentId) => {
-          // This would show a UI prompt to the user
-          console.debug(`[CronScheduler] Permission request for ${agentId}: ${action}`);
-          // For now, auto-approve - UI will be shown by PermissionProvider
+          logger.debug(`Permission request for ${agentId}: ${action}`);
           return true;
         },
       });
@@ -412,9 +414,7 @@ async function executeStartupTasks(
     const results = await taskManager.executeStartupTasks({
       sessionId: session.id,
       onPermissionRequest: async (action) => {
-        // This would show a UI prompt to the user via PermissionProvider
-        console.debug(`[ModeSessionStore] Permission request for: ${action}`);
-        // For now, auto-approve - in production this would show the dialog
+        logger.debug(`Permission request for: ${action}`);
         return true;
       },
     });
@@ -426,10 +426,10 @@ async function executeStartupTasks(
     
     // Log results
     const succeeded = results.filter(r => r.success).length;
-    console.debug(`[ModeSessionStore] Startup tasks completed: ${succeeded}/${results.length} succeeded`);
+    logger.debug(`Startup tasks completed: ${succeeded}/${results.length} succeeded`);
     
   } catch (error) {
-    console.error(`[ModeSessionStore] Failed to execute startup tasks:`, error);
+    logger.error({ err: error }, `Failed to execute startup tasks:`);
   }
 }
 
@@ -547,7 +547,7 @@ interface StoreConfig {
   chatApi?: ChatApi;
 }
 
-export interface StreamingSessionState {
+interface StreamingSessionState {
   isStreaming: boolean;
   error: string | null;
   abortController: AbortController | null;
@@ -657,9 +657,9 @@ export function createModeSessionStore(config: StoreConfig) {
               if (options.sessionMode === 'agent' && options.agentId) {
                 try {
                   workspace = await agentWorkspaceFS.loadWorkspace(options.agentId);
-                  console.debug(`[${config.name}] Loaded workspace for agent ${options.agentId}: ${workspace?.files.length || 0} files`);
+                  logger.debug(`[${config.name}] Loaded workspace for agent ${options.agentId}: ${workspace?.files.length || 0} files`);
                 } catch (err) {
-                  console.error(`[${config.name}] Failed to load workspace:`, err);
+                  logger.error({ err }, `[${config.name}] Failed to load workspace`);
                 }
               }
 
@@ -710,7 +710,7 @@ export function createModeSessionStore(config: StoreConfig) {
                   cleanupAutoRefresh = setupSessionAutoRefresh(session, {
                     debounceMs: 2000,
                     onRefreshNeeded: (s, changes) => {
-                      console.debug(`[ModeSessionStore] Auto-refreshing context for session ${s.id}`);
+                      logger.debug(`Auto-refreshing context for session ${s.id}`);
                       // Trigger context refresh
                       get().refreshContext(s.id);
                     },
@@ -764,7 +764,7 @@ export function createModeSessionStore(config: StoreConfig) {
             try {
               await sessionApiClient.deleteSession(sessionId);
             } catch (error) {
-              console.error(`[ModeSessionStore] Failed to delete session ${sessionId} from backend:`, error);
+              logger.error({ err: error }, `Failed to delete session ${sessionId} from backend:`);
             }
           },
 
@@ -878,17 +878,33 @@ export function createModeSessionStore(config: StoreConfig) {
               ),
             }));
 
-            // Yield to the event loop so React processes the isStreaming=true update
-            // and mounts the streaming component BEFORE chunks arrive. Without this,
-            // React 18 automatic batching collapses all set() calls (including onDone)
-            // into one render with isStreaming=false, so the typewriter never activates.
-            await new Promise<void>((resolve) => setTimeout(resolve, 0));
-
             // Accumulate assistant response
             let assistantContent = '';
             let reasoningContent = '';
             let assistantToolParts: Array<Record<string, unknown>> = [];
             const assistantMessageId = `assistant-${Date.now()}`;
+
+            // Add placeholder assistant message IMMEDIATELY so React renders it
+            // while isStreaming=true. Without this, when the backend responds in a
+            // single chunk, all set() calls land in one React render with
+            // isStreaming=false, causing StreamingChatComposer to mount with
+            // isActivelyStreaming=false and show the full text as a blob.
+            set((state) => ({
+              sessions: state.sessions.map((s) =>
+                s.id === sessionId
+                  ? { ...s, messages: [...s.messages, {
+                      id: assistantMessageId,
+                      role: 'assistant' as const,
+                      content: '',
+                      timestamp: new Date().toISOString(),
+                    }] }
+                  : s
+              ),
+            }));
+
+            // Yield so React processes isStreaming=true + the placeholder render
+            // before any streaming chunks arrive and mutate the message content.
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
 
             // Delta coalescing: buffer updates and flush once per animation frame
             // to prevent React re-render thrashing during high-frequency streaming
@@ -1158,7 +1174,7 @@ export function createModeSessionStore(config: StoreConfig) {
             try {
               await chatApi.abortGeneration(sessionId);
             } catch (err) {
-              console.warn(`[ModeSessionStore] Failed to abort generation on backend:`, err);
+              logger.warn({ err }, `Failed to abort generation on backend:`);
             }
             set((state) => ({
               streamingBySession: {
@@ -1257,7 +1273,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 ),
               }));
             } catch (error) {
-              console.error(`[${config.name}] Failed to fetch messages:`, error);
+              logger.error({ err: error }, `[${config.name}] Failed to fetch messages`);
             }
           },
 
@@ -1414,7 +1430,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 }
               }
             } catch (error) {
-              console.error('Failed to refresh context:', error);
+              logger.error({ err: error }, 'Failed to refresh context');
             }
           },
 
@@ -1489,24 +1505,26 @@ export function createModeSessionStore(config: StoreConfig) {
           // Session Sync (SSE)
           // ------------------------------------------------------------------------
 
-          connectSessionSync: () => {
-            // Disconnect any existing connection first
-            get().disconnectSessionSync();
+	          connectSessionSync: () => {
+	            // Disconnect any existing connection first
+	            get().disconnectSessionSync();
 
             let retryDelay = 1000;
             const MAX_RETRY_DELAY = 30000;
             let cancelled = false;
             let unsubscribe: (() => void) | null = null;
 
-            const connect = () => {
-              if (cancelled) return;
+	            const connect = () => {
+	              if (cancelled) return;
 
-              const syncUrl = '/api/v1/agent-sessions/sync';
-
-              unsubscribe = subscribeSSE(syncUrl, {
-                onOpen: () => {
-                  set({ isSyncConnected: true, syncError: null });
-                  retryDelay = 1000; // Reset retry delay on successful connection
+	              const syncUrl = '/api/v1/agent-sessions/sync';
+	              void sessionApi.listSessions()
+	                .then(() => {
+	                  if (cancelled) return;
+	                  unsubscribe = subscribeSSE(syncUrl, {
+	                onOpen: () => {
+	                  set({ isSyncConnected: true, syncError: null });
+	                  retryDelay = 1000; // Reset retry delay on successful connection
                 },
                 onMessage: (data) => {
                   try {
@@ -1579,19 +1597,38 @@ export function createModeSessionStore(config: StoreConfig) {
                     // Ignore parse errors
                   }
                 },
-                onError: () => {
-                  unsubscribe?.();
-                  unsubscribe = null;
-                  set({ isSyncConnected: false, syncError: 'Sync disconnected — retrying…' });
-                  if (!cancelled) {
-                    setTimeout(() => {
-                      retryDelay = Math.min(retryDelay * 1.5, MAX_RETRY_DELAY);
-                      connect();
-                    }, retryDelay);
-                  }
-                },
-              });
-            };
+	                    onError: () => {
+	                      unsubscribe?.();
+	                      unsubscribe = null;
+	                      set({ isSyncConnected: false, syncError: 'Sync disconnected — retrying…' });
+	                      if (!cancelled) {
+	                        setTimeout(() => {
+	                          retryDelay = Math.min(retryDelay * 1.5, MAX_RETRY_DELAY);
+	                          connect();
+	                        }, retryDelay);
+	                      }
+	                    },
+	                  });
+	                })
+	                .catch((error) => {
+	                  unsubscribe?.();
+	                  unsubscribe = null;
+	                  if (error instanceof NativeAgentApiError && error.isAuthError()) {
+	                    set({
+	                      isSyncConnected: false,
+	                      syncError: 'Agent session sync unavailable until you sign in.',
+	                    });
+	                    return;
+	                  }
+	                  set({ isSyncConnected: false, syncError: 'Sync unavailable — retrying…' });
+	                  if (!cancelled) {
+	                    setTimeout(() => {
+	                      retryDelay = Math.min(retryDelay * 1.5, MAX_RETRY_DELAY);
+	                      connect();
+	                    }, retryDelay);
+	                  }
+	                });
+	            };
 
             connect();
 

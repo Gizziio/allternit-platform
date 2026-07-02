@@ -7,6 +7,10 @@
 import type { MarketplacePlugin } from './capability.types';
 import { authorToDisplayName } from './pluginStandards';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('MarketplaceApi');
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -19,11 +23,11 @@ export interface MarketplaceSearchResult {
   source: 'api' | 'curated' | 'github' | 'none';
 }
 
-export type ExternalMarketplaceDirectoryProvider = 'claudemarketplaces' | 'claudepluginhub';
+type ExternalMarketplaceDirectoryProvider = 'claudemarketplaces' | 'claudepluginhub';
 
-export type PersonalMarketplaceType = 'github' | 'url' | 'upload' | 'local';
+type PersonalMarketplaceType = 'github' | 'url' | 'upload' | 'local';
 
-export interface ExternalMarketplaceDirectorySourceSuggestion {
+interface ExternalMarketplaceDirectorySourceSuggestion {
   type: 'github' | 'url';
   value: string;
   label: string;
@@ -42,7 +46,7 @@ export interface ExternalMarketplaceDirectoryEntry {
   sourceSuggestion?: ExternalMarketplaceDirectorySourceSuggestion;
 }
 
-export type ConnectorMarketplaceType =
+type ConnectorMarketplaceType =
   | 'productivity'
   | 'development'
   | 'data'
@@ -65,7 +69,7 @@ export interface ConnectorMarketplaceSearchResult {
   source: 'api' | 'none';
 }
 
-export interface GitHubRepoInfo {
+interface GitHubRepoInfo {
   id: number;
   full_name: string;
   description: string | null;
@@ -594,7 +598,7 @@ export async function searchGitHubForPlugins(query: string = ''): Promise<Market
 
       if (!response.ok) {
         if (response.status === 403) {
-          console.warn('[marketplaceApi] GitHub rate limit exceeded');
+          logger.warn('GitHub rate limit exceeded');
         }
         return [];
       }
@@ -602,7 +606,7 @@ export async function searchGitHubForPlugins(query: string = ''): Promise<Market
       const data = await response.json();
       return Array.isArray(data.items) ? (data.items as GitHubRepoInfo[]) : [];
     } catch (e) {
-      console.warn('[marketplaceApi] GitHub search failed:', e);
+      logger.warn({ err: e }, 'GitHub search failed');
       return [];
     }
   });
@@ -713,7 +717,7 @@ export async function fetchPluginFromGitHub(
 /**
  * Get the download URL for a GitHub repository.
  */
-export function getGitHubDownloadUrl(owner: string, repo: string, ref: string = 'main'): string {
+function getGitHubDownloadUrl(owner: string, repo: string, ref: string = 'main'): string {
   return `${GITHUB_API}/repos/${owner}/${repo}/zipball/${ref}`;
 }
 
@@ -984,7 +988,7 @@ export async function loadPluginsFromLocalDirectory(
     
     return plugins;
   } catch (error) {
-    console.error('[marketplaceApi] Failed to load local plugins:', error);
+    logger.error({ err: error }, 'Failed to load local plugins');
     throw error;
   }
 }
@@ -1446,7 +1450,7 @@ function toBoolean(value: unknown): boolean {
 // Categories
 // ============================================================================
 
-export const PLUGIN_CATEGORIES = [
+const PLUGIN_CATEGORIES = [
   { id: 'all', label: 'All', icon: 'grid' },
   { id: 'productivity', label: 'Productivity', icon: 'zap' },
   { id: 'development', label: 'Development', icon: 'code' },

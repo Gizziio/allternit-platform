@@ -26,7 +26,7 @@ export function useReducedMotion(): boolean {
   return useFramerReducedMotion() ?? false;
 }
 
-export interface AccessibleMotionProps extends HTMLMotionProps<'div'> {
+interface AccessibleMotionProps extends HTMLMotionProps<'div'> {
   /** Children to render */
   children: React.ReactNode;
   /** Fallback component when reduced motion is preferred */
@@ -48,7 +48,7 @@ export interface AccessibleMotionProps extends HTMLMotionProps<'div'> {
  *   <AnimatedContent />
  * </AccessibleMotion>
  */
-export function AccessibleMotion({
+function AccessibleMotion({
   children,
   fallback,
   disableOnReducedMotion = true,
@@ -100,7 +100,7 @@ export function AccessibleMotion({
  *   <AnimatedIcon />
  * </MotionEnabled>
  */
-export function MotionReduced({
+function MotionReduced({
   children,
   fallback = null,
 }: {
@@ -119,7 +119,7 @@ export function MotionReduced({
  *   <AnimatedBackground />
  * </MotionEnabled>
  */
-export function MotionEnabled({
+function MotionEnabled({
   children,
   fallback = null,
 }: {
@@ -133,7 +133,7 @@ export function MotionEnabled({
 /**
  * AccessiblePresence - AnimatePresence that respects reduced motion.
  */
-export function AccessiblePresence({
+function AccessiblePresence({
   children,
   mode = 'wait',
   ...props
@@ -168,7 +168,7 @@ export function AccessiblePresence({
  * const transition = useAccessibleTransition({ duration: 0.3 });
  * <motion.div transition={transition} />
  */
-export function useAccessibleTransition(
+function useAccessibleTransition(
   normalTransition: object,
   reducedTransition?: object
 ): object {
@@ -185,7 +185,7 @@ export function useAccessibleTransition(
  * prefersReducedMotion - SSR-safe check for reduced motion preference.
  * Use only in client-side effects.
  */
-export function prefersReducedMotion(): boolean {
+function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return false;
   
   const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');

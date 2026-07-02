@@ -184,7 +184,7 @@ function SidebarItem({
   onClick: () => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         display: "flex",
@@ -274,7 +274,7 @@ function TemplatesSection({
                 {selectedTemplate.category} • v{selectedTemplate.version}
               </span>
             </div>
-            <button
+            <button type="button"
               onClick={onClose}
               style={{
                 padding: 8,
@@ -332,7 +332,7 @@ function TemplatesSection({
           >
             {selectedTemplate.variables.map((variable) => (
               <div key={variable.name}>
-                <label
+                <div
                   style={{
                     display: "block",
                     fontSize: 12,
@@ -342,9 +342,8 @@ function TemplatesSection({
                 >
                   {variable.name}
                   {variable.required && <span style={{ color: "#ff3b30" }}> *</span>}
-                </label>
-                <input
-                  type="text"
+                </div>
+                <input aria-label="Input" type="text"
                   value={templateVars[variable.name] || ""}
                   onChange={(e) => onVarChange(variable.name, e.target.value)}
                   placeholder={variable.description}
@@ -363,7 +362,7 @@ function TemplatesSection({
             ))}
           </div>
 
-          <button
+          <button type="button"
             onClick={onExecute}
             style={{
               width: "100%",
@@ -389,7 +388,7 @@ function TemplatesSection({
           }}
         >
           {templates.map((template) => (
-            <div
+            <div role="button" tabIndex={0}
               key={template.id}
               onClick={() => onSelect(template)}
               style={{
@@ -531,7 +530,7 @@ function SnapshotsSection({
           Snapshots
         </h2>
         {snapshots.length > 0 && (
-          <button
+          <button type="button"
             onClick={onClearAll}
             style={{
               padding: "8px 16px",
@@ -627,7 +626,7 @@ function SnapshotsSection({
                   </div>
                 </div>
               </div>
-              <button
+              <button type="button"
                 onClick={() => onClear(snapshot.snapshotId)}
                 style={{
                   padding: 8,
@@ -683,7 +682,7 @@ function ReceiptsSection({
         >
           Receipts
         </h2>
-        <button
+        <button type="button"
           onClick={onRefresh}
           style={{
             padding: 8,
@@ -718,8 +717,7 @@ function ReceiptsSection({
           }}
         >
           <MagnifyingGlass size={16} color="#888" />
-          <input
-            type="text"
+          <input aria-label="Input" type="text"
             value={filter}
             onChange={(e) => onFilterChange(e.target.value)}
             placeholder="Search receipts…"
@@ -733,8 +731,7 @@ function ReceiptsSection({
             }}
           />
         </div>
-        <select
-          value={kindFilter}
+        <select aria-label="Selection" value={kindFilter}
           onChange={(e) => onKindFilterChange(e.target.value)}
           style={{
             padding: "10px 14px",

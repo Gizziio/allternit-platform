@@ -10,31 +10,31 @@ export type RuntimeIsolationLevel =
   | "maximum";
 export type RuntimeReplayCaptureLevel = "none" | "minimal" | "full";
 
-export interface RuntimeDriverConfig {
+interface RuntimeDriverConfig {
   driver_type: RuntimeDriverType;
   isolation_level: RuntimeIsolationLevel;
   enabled: boolean;
 }
 
-export interface RuntimeResourceLimits {
+interface RuntimeResourceLimits {
   cpu_millicores: number;
   memory_mib: number;
   budget_credits_per_hour: number | null;
 }
 
-export interface RuntimeReplayConfig {
+interface RuntimeReplayConfig {
   capture_level: RuntimeReplayCaptureLevel;
   deterministic_mode: boolean;
   snapshot_interval_seconds: number;
 }
 
-export interface RuntimePrewarmConfig {
+interface RuntimePrewarmConfig {
   enabled: boolean;
   pool_size: number;
   warmup_commands: string[];
 }
 
-export interface RuntimeVersioningConfig {
+interface RuntimeVersioningConfig {
   auto_commit: boolean;
   commit_message_template: string;
   branch_prefix: string;
@@ -56,7 +56,7 @@ export interface RuntimeSettingsPatch {
   versioning?: RuntimeVersioningConfig;
 }
 
-export interface RuntimeDriverInfo {
+interface RuntimeDriverInfo {
   driver_type: RuntimeDriverType;
   name: string;
   description: string;
@@ -66,7 +66,7 @@ export interface RuntimeDriverInfo {
   max_resources: RuntimeResourceLimits;
 }
 
-export interface RuntimeDriverStatus {
+interface RuntimeDriverStatus {
   driver_type: RuntimeDriverType;
   status: string;
   active_instances: number;

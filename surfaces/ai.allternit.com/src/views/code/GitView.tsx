@@ -31,6 +31,8 @@ export const GitView: React.FC = () => {
   const [commitMessage, setCommitMessage] = useState('');
   const [commits, setCommits] = useState<Commit[]>([]);
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [isCommitting, setIsCommitting] = useState(false);
 
   useEffect(() => {
     apiRequest<{ commits: Array<{ hash: string; shortHash?: string; message: string; author: string; date: string }> }>(
@@ -54,10 +56,43 @@ export const GitView: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  const refreshLog = () => {
+    apiRequest<{ commits: Array<{ hash: string; shortHash?: string; message: string; author: string; date: string }> }>(
+      `${API_BASE_URL}/git/log`,
+      { method: 'POST', body: JSON.stringify({ path: '.', limit: 20 }) }
+    )
+      .then(({ commits: raw }) =>
+        setCommits(raw.map((c) => ({
+          hash: c.shortHash ?? c.hash.slice(0, 7),
+          message: c.message,
+          author: c.author,
+          avatar: c.author.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
+          avatarColor: 'var(--status-info)',
+          timestamp: new Date(c.date).toLocaleDateString(),
+          isMerge: c.message.toLowerCase().startsWith('merge'),
+        })))
+      )
+      .catch(() => {});
+  };
+
   const handleCommit = (): void => {
-    if (commitMessage.trim()) {
-      setCommitMessage('');
-    }
+    const message = commitMessage.trim();
+    if (!message) return;
+    setCommitError(null);
+    setIsCommitting(true);
+    apiRequest<{ success: boolean }>(`${API_BASE_URL}/git/commit`, {
+      method: 'POST',
+      body: JSON.stringify({ path: '.', message }),
+    })
+      .then(() => {
+        setCommitMessage('');
+        setStagedFiles([]);
+        refreshLog();
+      })
+      .catch((err: unknown) => {
+        setCommitError(err instanceof Error ? err.message : 'Commit failed');
+      })
+      .finally(() => setIsCommitting(false));
   };
 
   const getStatusBadgeColor = (status: 'M' | 'A' | 'D'): { bg: string; color: string; label: string } => {
@@ -122,7 +157,7 @@ export const GitView: React.FC = () => {
             { label: '2 open PRs', value: '2' },
           ].map((stat, idx) => (
             <div
-              key={idx}
+              key={`gitview-${idx}`}
               style={{
                 padding: '8px 12px',
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -306,9 +341,11 @@ export const GitView: React.FC = () => {
 
         {/* Commit Input */}
         <div style={{ padding: '12px 16px' }}>
+          {commitError && (
+            <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--status-error)' }}>{commitError}</p>
+          )}
           <div style={{ display: 'flex', gap: '8px' }}>
-            <input
-              type="text"
+            <input aria-label="Write commit message…" type="text"
               placeholder="Write commit message…"
               value={commitMessage}
               onChange={(e) => setCommitMessage(e.target.value)}
@@ -337,8 +374,9 @@ export const GitView: React.FC = () => {
                 (e.target as HTMLElement).style.borderColor = 'var(--border-subtle)';
               }}
             />
-            <button
+            <button type="button"
               onClick={handleCommit}
+              disabled={isCommitting || !commitMessage.trim()}
               style={{
                 padding: '8px 16px',
                 backgroundColor: 'var(--accent-primary)',
@@ -347,7 +385,8 @@ export const GitView: React.FC = () => {
                 borderRadius: '6px',
                 fontSize: '13px',
                 fontWeight: '600',
-                cursor: 'pointer',
+                cursor: isCommitting || !commitMessage.trim() ? 'not-allowed' : 'pointer',
+                opacity: isCommitting || !commitMessage.trim() ? 0.6 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',

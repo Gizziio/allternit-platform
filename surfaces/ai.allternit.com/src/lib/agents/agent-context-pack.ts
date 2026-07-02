@@ -21,14 +21,14 @@ import type { ModeSession } from './mode-session-store';
 // Types
 // ============================================================================
 
-export interface TrustTier {
+interface TrustTier {
   level: 1 | 2 | 3;
   name: string;
   rules: string[];
   enforce: 'always' | 'contextual' | 'permission';
 }
 
-export interface ScheduledTask {
+interface ScheduledTask {
   id: string;
   frequency: 'on-session-start' | 'daily' | 'weekly' | 'monthly' | 'on-event';
   action: string;
@@ -36,14 +36,14 @@ export interface ScheduledTask {
   lastExecuted?: string;
 }
 
-export interface ToolDefinition {
+interface ToolDefinition {
   name: string;
   description: string;
   requiresPermission: boolean;
   permissionLevel: 1 | 2 | 3;
 }
 
-export interface ContextPack {
+interface ContextPack {
   version: '1.0.0';
   agentId: string;
   agentName: string;
@@ -257,7 +257,6 @@ function generateContextHash(context: Partial<ContextPack>): string {
     heartbeat: context.heartbeat,
   });
   
-  // Simple hash for now - replace with proper crypto hash in production
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
@@ -271,7 +270,7 @@ function generateContextHash(context: Partial<ContextPack>): string {
 // Context Pack Builder
 // ============================================================================
 
-export function buildContextPack(
+function buildContextPack(
   session: ModeSession,
   options: ContextPackOptions = {}
 ): ContextPack {
@@ -384,7 +383,7 @@ function truncateContext(content: string, maxLength: number, policy: string): st
 // System Prompt Builder
 // ============================================================================
 
-export function buildSystemPromptFromPack(pack: ContextPack): string {
+function buildSystemPromptFromPack(pack: ContextPack): string {
   const sections: string[] = [];
   
   // Section 1: Identity
@@ -465,11 +464,11 @@ ${pack.memory.lessons.map(l => `- ${l}`).join('\n') || 'None'}`);
 // Utility Functions
 // ============================================================================
 
-export function shouldRefreshContext(pack: ContextPack): boolean {
+function shouldRefreshContext(pack: ContextPack): boolean {
   return new Date() > new Date(pack.expiresAt);
 }
 
-export function getTrustTierForAction(pack: ContextPack, action: string): TrustTier | null {
+function getTrustTierForAction(pack: ContextPack, action: string): TrustTier | null {
   const actionLower = action.toLowerCase();
   
   // Check Tier 1
@@ -490,16 +489,16 @@ export function getTrustTierForAction(pack: ContextPack, action: string): TrustT
   return null;
 }
 
-export function requiresPermission(pack: ContextPack, action: string): boolean {
+function requiresPermission(pack: ContextPack, action: string): boolean {
   const tier = getTrustTierForAction(pack, action);
   return tier?.enforce === 'permission' || false;
 }
 
-export function getStartupTasks(pack: ContextPack): ScheduledTask[] {
+function getStartupTasks(pack: ContextPack): ScheduledTask[] {
   return pack.heartbeat.tasks.filter(t => t.frequency === 'on-session-start');
 }
 
-export function markTaskExecuted(pack: ContextPack, taskId: string): void {
+function markTaskExecuted(pack: ContextPack, taskId: string): void {
   const task = pack.heartbeat.tasks.find(t => t.id === taskId);
   if (task) {
     task.lastExecuted = new Date().toISOString();

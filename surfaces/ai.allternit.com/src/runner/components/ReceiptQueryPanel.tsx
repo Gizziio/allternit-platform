@@ -66,6 +66,7 @@ export function ReceiptQueryPanel() {
               placeholder="Filter by DAG ID…"
               value={filterDagId}
               onChange={(e) => setFilterDagId(e.target.value)}
+              aria-label="Filter by DAG ID"
             />
           </div>
           <div className="flex-1">
@@ -73,6 +74,7 @@ export function ReceiptQueryPanel() {
               placeholder="Filter by Node ID…"
               value={filterNodeId}
               onChange={(e) => setFilterNodeId(e.target.value)}
+              aria-label="Filter by Node ID"
             />
           </div>
           <div className="flex-1">
@@ -80,6 +82,7 @@ export function ReceiptQueryPanel() {
               placeholder="Filter by WIH ID…"
               value={filterWihId}
               onChange={(e) => setFilterWihId(e.target.value)}
+              aria-label="Filter by WIH ID"
             />
           </div>
         </div>
@@ -168,7 +171,7 @@ function ReceiptListItem({
   
   return (
     <div className="border rounded-lg overflow-hidden">
-      <div 
+      <div role="button" tabIndex={0} 
         className={`p-3 cursor-pointer transition-colors hover:bg-muted/50 ${
           isExpanded ? 'bg-muted' : ''
         }`}
@@ -202,32 +205,32 @@ function ReceiptListItem({
         <div className="border-t p-4 bg-muted/30">
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium">Receipt ID</label>
+              <div className="text-sm font-medium">Receipt ID</div>
               <p className="text-sm font-mono text-muted-foreground">{receipt.receiptId}</p>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="text-sm text-muted-foreground">Run ID</label>
+                <div className="text-sm text-muted-foreground">Run ID</div>
                 <p className="text-sm font-mono">{receipt.runId}</p>
               </div>
               <div>
-                <label className="text-sm text-muted-foreground">WIH ID</label>
+                <div className="text-sm text-muted-foreground">WIH ID</div>
                 <p className="text-sm font-mono">{receipt.wihId}</p>
               </div>
               <div>
-                <label className="text-sm text-muted-foreground">Timestamp</label>
+                <div className="text-sm text-muted-foreground">Timestamp</div>
                 <p className="text-sm">{new Date(receipt.timestamp).toLocaleString()}</p>
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium">Payload</label>
+              <div className="text-sm font-medium">Payload</div>
               <div className="mt-1 p-3 bg-muted rounded-lg">
                 <pre className="text-xs overflow-auto">{JSON.stringify(receipt.payload, null, 2)}</pre>
               </div>
             </div>
             {receipt.signature && (
               <div>
-                <label className="text-sm font-medium">Signature</label>
+                <div className="text-sm font-medium">Signature</div>
                 <p className="text-xs font-mono text-muted-foreground break-all">{receipt.signature}</p>
               </div>
             )}

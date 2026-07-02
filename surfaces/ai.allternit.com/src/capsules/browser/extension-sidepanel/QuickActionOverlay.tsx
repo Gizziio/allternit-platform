@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   BACKGROUND,
   TEXT,
@@ -88,7 +88,7 @@ export function QuickActionOverlay({
         >
           {displayUrl}
         </span>
-        <button
+        <button type="button"
           onClick={onClose}
           style={{
             padding: 2,
@@ -105,7 +105,7 @@ export function QuickActionOverlay({
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button
+        <button type="button"
           onClick={onQuick}
           style={{
             flex: 1,
@@ -132,7 +132,7 @@ export function QuickActionOverlay({
         >
           <span style={{ marginRight: 4 }}>⚡</span> Quick
         </button>
-        <button
+        <button type="button"
           onClick={onDeep}
           style={{
             flex: 1,
@@ -159,7 +159,7 @@ export function QuickActionOverlay({
         >
           <span style={{ marginRight: 4 }}>🔍</span> Deep
         </button>
-        <button
+        <button type="button"
           onClick={onChat}
           style={{
             flex: 1,

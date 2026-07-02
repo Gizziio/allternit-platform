@@ -5,21 +5,24 @@ import React, {
   useCallback,
   useContext,
   useRef,
-  useState,
 } from "react";
 import type { UIPart } from "@/lib/ai/rust-stream-adapter";
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AppContext');
 
 /**
  * Model context passed from MCP App to host for next turn
  */
-export interface McpAppModelContext {
+interface McpAppModelContext {
   [key: string]: unknown;
 }
 
 /**
  * Message sent from MCP App to chat thread
  */
-export interface McpAppMessage {
+interface McpAppMessage {
   role: "user" | "assistant";
   parts: UIPart[];
   timestamp: number;
@@ -61,7 +64,7 @@ const McpAppHostContext = createContext<McpAppHostContextValue | null>(null);
  * Provider for MCP Apps host integration
  * Manages app-originated messages and model context
  */
-export function McpAppHostProvider({
+function McpAppHostProvider({
   children,
 }: {
   children: React.ReactNode;
@@ -154,7 +157,7 @@ export function McpAppHostProvider({
 /**
  * Hook to access MCP App host context
  */
-export function useMcpAppHost(): McpAppHostContextValue {
+function useMcpAppHost(): McpAppHostContextValue {
   const context = useContext(McpAppHostContext);
   if (!context) {
     throw new Error(
@@ -246,7 +249,7 @@ export function useMcpAppModelContext(): {
 /**
  * Hook for chat components to subscribe to MCP App messages
  */
-export function useMcpAppMessageSubscription(
+function useMcpAppMessageSubscription(
   callback: (message: McpAppMessage) => void
 ): void {
   const context = useContext(McpAppHostContext);

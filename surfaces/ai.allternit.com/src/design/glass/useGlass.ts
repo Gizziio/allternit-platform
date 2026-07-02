@@ -21,7 +21,7 @@ import {
 // Hook Options Interface
 // ============================================================================
 
-export interface UseGlassOptions extends GlassOptions {
+interface UseGlassOptions extends GlassOptions {
   /** Force dark mode override */
   darkMode?: boolean;
   /** Additional custom className */
@@ -32,7 +32,7 @@ export interface UseGlassOptions extends GlassOptions {
   focusable?: boolean;
 }
 
-export interface UseGlassReturn {
+interface UseGlassReturn {
   /** Computed className string */
   className: string;
   /** Computed styles object */
@@ -190,7 +190,7 @@ export function useGlass(options: UseGlassOptions = {}): UseGlassReturn {
 /**
  * Simplified hook for static glass cards (no interaction)
  */
-export function useGlassCard(options: Omit<UseGlassOptions, 'focusable'> = {}): {
+function useGlassCard(options: Omit<UseGlassOptions, 'focusable'> = {}): {
   className: string;
   style: React.CSSProperties;
 } {
@@ -201,7 +201,7 @@ export function useGlassCard(options: Omit<UseGlassOptions, 'focusable'> = {}): 
 /**
  * Hook for interactive glass buttons
  */
-export function useGlassButton(options: UseGlassOptions = {}): UseGlassReturn {
+function useGlassButton(options: UseGlassOptions = {}): UseGlassReturn {
   return useGlass({
     ...options,
     hover: options.hover ?? 'lift',
@@ -214,7 +214,7 @@ export function useGlassButton(options: UseGlassOptions = {}): UseGlassReturn {
 /**
  * Hook for glass panels (sidebars, drawers)
  */
-export function useGlassPanel(options: UseGlassOptions = {}): {
+function useGlassPanel(options: UseGlassOptions = {}): {
   className: string;
   style: React.CSSProperties;
 } {
@@ -230,7 +230,7 @@ export function useGlassPanel(options: UseGlassOptions = {}): {
 /**
  * Hook for glass dialogs/modals
  */
-export function useGlassDialog(options: UseGlassOptions = {}): {
+function useGlassDialog(options: UseGlassOptions = {}): {
   className: string;
   style: React.CSSProperties;
 } {
@@ -248,7 +248,7 @@ export function useGlassDialog(options: UseGlassOptions = {}): {
 /**
  * Hook for glass tooltips
  */
-export function useGlassTooltip(options: UseGlassOptions = {}): {
+function useGlassTooltip(options: UseGlassOptions = {}): {
   className: string;
   style: React.CSSProperties;
 } {
@@ -266,7 +266,7 @@ export function useGlassTooltip(options: UseGlassOptions = {}): {
 /**
  * Hook for glass inputs
  */
-export function useGlassInput(options: UseGlassOptions = {}): UseGlassReturn {
+function useGlassInput(options: UseGlassOptions = {}): UseGlassReturn {
   return useGlass({
     ...options,
     elevation: options.elevation ?? 'flat',

@@ -76,7 +76,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
             Commit with Provenance
           </span>
         </div>
-        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+        <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
           <X size={16} />
         </button>
       </div>
@@ -84,11 +84,10 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
       {/* Body */}
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
             Commit Message *
-          </label>
-          <input
-            type="text"
+          </div>
+          <input aria-label="Input" type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="e.g. Refactor auth module"
@@ -107,11 +106,10 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
               Model
-            </label>
-            <input
-              type="text"
+            </div>
+            <input aria-label="Input" type="text"
               value={model}
               onChange={(e) => setModel(e.target.value)}
               style={{
@@ -127,11 +125,10 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
             />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
               Agent
-            </label>
-            <input
-              type="text"
+            </div>
+            <input aria-label="Input" type="text"
               value={agent}
               onChange={(e) => setAgent(e.target.value)}
               style={{
@@ -149,11 +146,10 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
         </div>
 
         <div>
-          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
             Prompt / Reasoning
-          </label>
-          <textarea
-            value={prompt}
+          </div>
+          <textarea aria-label="Text Area" value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="What prompted this change?"
             rows={3}
@@ -172,7 +168,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
           />
         </div>
 
-        <button
+        <button type="button"
           onClick={handleCommit}
           disabled={loading || !message.trim()}
           style={{

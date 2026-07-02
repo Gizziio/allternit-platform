@@ -24,9 +24,9 @@ const logger = createModuleLogger('AgentWizard.Persistence');
 // Constants and Types
 // ============================================================================
 
-export const WIZARD_STORAGE_KEY = 'agent-creation-wizard-state';
-export const WIZARD_VERSION = '4.0.0';
-export const STATE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+const WIZARD_STORAGE_KEY = 'agent-creation-wizard-state';
+const WIZARD_VERSION = '4.0.0';
+const STATE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export interface WizardPersistedConfig {
   name: string;
@@ -42,14 +42,14 @@ export interface WizardPersistedConfig {
   maxIterations: number;
 }
 
-export interface WizardPersistedState {
+interface WizardPersistedState {
   config: WizardPersistedConfig;
   currentStep: number;
   timestamp: number;
   version: string;
 }
 
-export interface SaveStatus {
+interface SaveStatus {
   isSaving: boolean;
   lastSaved: Date | null;
   error: string | null;
@@ -238,7 +238,6 @@ export function useWizardPersistence(
 // Draft Saved Indicator Component
 // ============================================================================
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React from 'react';
 
 interface DraftSavedIndicatorProps {
@@ -322,7 +321,7 @@ interface BrowserCompatibilityWarningProps {
   dismissed?: boolean;
 }
 
-export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningProps> = ({
+const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningProps> = ({
   compatibility,
   onDismiss,
   dismissed = false,
@@ -378,7 +377,7 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
           ))}
         </ul>
         <div className="flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={onDismiss}
             className="text-xs font-medium hover:underline"
             style={{ color: 'rgba(255, 255, 255, 0.7)' }}
@@ -396,7 +395,7 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
           </span>
         </div>
       </div>
-      <button
+      <button type="button"
         onClick={onDismiss}
         className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
         aria-label="Dismiss warning"
@@ -417,7 +416,6 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
 
 import { 
   formatFileSize, 
-  isFileSizeWarning, 
   isFileSizeExceeded,
   MAX_FILE_SIZE_BYTES 
 } from './AgentCreationWizard.validations';
@@ -429,7 +427,7 @@ interface FileSizeWarningProps {
   showDismiss?: boolean;
 }
 
-export const FileSizeWarning: React.FC<FileSizeWarningProps> = ({
+const FileSizeWarning: React.FC<FileSizeWarningProps> = ({
   fileSize,
   fileName,
   onDismiss,
@@ -498,7 +496,7 @@ export const FileSizeWarning: React.FC<FileSizeWarningProps> = ({
         )}
       </div>
       {showDismiss && onDismiss && (
-        <button
+        <button type="button"
           onClick={onDismiss}
           className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
           aria-label="Dismiss warning"
@@ -518,7 +516,7 @@ export const FileSizeWarning: React.FC<FileSizeWarningProps> = ({
 // Plugin Conflict Warning Component
 // ============================================================================
 
-import { detectPluginConflicts, type PluginConflictResult } from './AgentCreationWizard.validations';
+import { detectPluginConflicts } from './AgentCreationWizard.validations';
 
 interface PluginConflictWarningProps {
   selectedTools: string[];
@@ -526,7 +524,7 @@ interface PluginConflictWarningProps {
   showDismiss?: boolean;
 }
 
-export const PluginConflictWarning: React.FC<PluginConflictWarningProps> = ({
+const PluginConflictWarning: React.FC<PluginConflictWarningProps> = ({
   selectedTools,
   onDismiss,
   showDismiss = false,
@@ -578,7 +576,7 @@ export const PluginConflictWarning: React.FC<PluginConflictWarningProps> = ({
         </h4>
         <ul className="text-sm space-y-1 mb-2" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
           {conflictResult.conflicts.map((conflict, idx) => (
-            <li key={idx} className="flex items-center gap-2">
+            <li key={`agentcreationwizard.persistence-${idx}`} className="flex items-center gap-2">
               <span 
                 className="size-1.5  rounded-full" 
                 style={{ background: colors.text }}
@@ -595,7 +593,7 @@ export const PluginConflictWarning: React.FC<PluginConflictWarningProps> = ({
         )}
       </div>
       {showDismiss && onDismiss && (
-        <button
+        <button type="button"
           onClick={onDismiss}
           className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
           aria-label="Dismiss warning"
@@ -621,7 +619,7 @@ interface DuplicateNameWarningProps {
   showDismiss?: boolean;
 }
 
-export const DuplicateNameWarning: React.FC<DuplicateNameWarningProps> = ({
+const DuplicateNameWarning: React.FC<DuplicateNameWarningProps> = ({
   agentName,
   onDismiss,
   showDismiss = false,
@@ -675,7 +673,7 @@ export const DuplicateNameWarning: React.FC<DuplicateNameWarningProps> = ({
         </p>
       </div>
       {showDismiss && onDismiss && (
-        <button
+        <button type="button"
           onClick={onDismiss}
           className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
           aria-label="Dismiss warning"

@@ -1,35 +1,8 @@
-/**
- * Tool Call Visualization Component
- * 
- * Renders tool calls and their results inline in chat messages.
- * Shows when the agent uses tools with expandable details,
- * progress indicators, and rich formatting.
- */
-
-import React, { useState, useCallback } from "react";
-import {
-  Wrench,
-  Check,
-  X,
-  CaretDown,
-  CaretUp,
-  CircleNotch,
-  Clock,
-  Copy,
-  ArrowCounterClockwise,
-  Terminal,
-  FileText,
-  Globe,
-  Database,
-  MagnifyingGlass,
-  GearSix,
-  Warning,
-  CheckCircle,
-  XCircle,
-  ArrowsOut,
-  ArrowsIn,
-} from '@phosphor-icons/react';
+import React, { useCallback, useState } from "react";
+import { ArrowCounterClockwise, ArrowsIn, ArrowsOut, CaretDown, CaretUp, Check, CheckCircle, CircleNotch, Clock, Copy, FileText, GearSix, MagnifyingGlass, Terminal, Warning, Wrench, X, XCircle, Record } from "@phosphor-icons/react";
 import type { ToolCall } from "@/lib/agents";
+import { cn } from "@/lib/utils";
+import { MODE_COLORS } from "@/design/allternit.tokens";
 
 interface ToolCallVisualizationProps {
   toolCalls: ToolCall[];
@@ -113,6 +86,10 @@ function getToolMeta(toolName: string): ToolMeta {
   };
 }
 
+export function useToolCallAccent(mode: keyof typeof MODE_COLORS): string {
+  return MODE_COLORS[mode]?.accent ?? "#D4956A";
+}
+
 export function ToolCallVisualization({
   toolCalls,
   results = {},
@@ -122,33 +99,21 @@ export function ToolCallVisualization({
   onRetry,
   executionTimes = {},
 }: ToolCallVisualizationProps) {
-  if (!toolCalls || toolCalls.length === 0) return null;
-
   const [expandedAll, setExpandedAll] = useState(false);
 
   const toggleAll = useCallback(() => {
     setExpandedAll(!expandedAll);
   }, [expandedAll]);
 
+  if (!toolCalls || toolCalls.length === 0) return null;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+    <div className="flex flex-col gap-2 mt-3">
       {/* Header with expand/collapse all */}
       {toolCalls.length > 1 && (
-        <button
+        <button type="button"
           onClick={toggleAll}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "4px 8px",
-            borderRadius: 6,
-            border: "none",
-            background: "transparent",
-            color: "#7a6b5d",
-            fontSize: 12,
-            cursor: "pointer",
-            alignSelf: "flex-end",
-          }}
+          className="flex items-center gap-1.5 px-2 py-1 rounded-md border-none bg-transparent text-[#7a6b5d] text-[12px] cursor-pointer self-end hover:bg-white/5 transition-colors"
         >
           {expandedAll ? <ArrowsIn size={12} /> : <ArrowsOut size={12} />}
           {expandedAll ? "Collapse All" : "Expand All"}
@@ -204,57 +169,38 @@ function SingleToolCallView({
 
   return (
     <div
+      className="rounded-xl border border-solid transition-all duration-200 overflow-hidden"
       style={{
-        borderRadius: 12,
-        border: `1px solid ${accentColor}30`,
-        background: `${accentColor}08`,
-        overflow: "hidden",
-        transition: "all 0.2s ease",
+        borderColor: `${accentColor}4d`,
+        background: `${accentColor}14`,
       }}
     >
       {/* Header - Always visible */}
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 12px",
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
-        }}
+        className="w-full flex items-center gap-2.5 p-[10px_12px] bg-transparent border-none cursor-pointer text-left"
       >
         {/* Status Icon */}
         <div
+          className="size-7 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200"
           style={{
-            width: 28,
-            height: 28,
-            borderRadius: 8,
             background: isLoading
-              ? `${accentColor}30`
+              ? `${accentColor}4d`
               : hasResult
                 ? isSuccess
                   ? "rgba(121,196,124,0.2)"
                   : "rgba(239,68,68,0.2)"
-                : `${accentColor}20`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            transition: "all 0.2s ease",
+                : `${accentColor}33`,
           }}
         >
           {isLoading ? (
-            <CircleNotch size={14} style={{ color: accentColor, animation: "spin 1s linear infinite" }} />
+            <CircleNotch size={14} className="animate-spin" style={{ color: accentColor }} />
           ) : hasResult ? (
             isSuccess ? (
-              <CheckCircle size={14} style={{ color: "#79C47C" }} />
+              <CheckCircle size={14} className="text-[#79C47C]" />
             ) : (
-              <XCircle size={14} style={{ color: "#ef4444" }} />
+              <XCircle size={14} className="text-[#ef4444]" />
             )
           ) : (
             <span style={{ color: accentColor }}>{meta.icon}</span>
@@ -262,59 +208,34 @@ function SingleToolCallView({
         </div>
 
         {/* Tool Info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#f6eee7",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] font-semibold text-[#f6eee7] truncate">
               {meta.label}
             </span>
-            <span
-              style={{
-                fontSize: 12,
-                padding: "2px 6px",
-                borderRadius: 4,
-                background: "var(--ui-border-muted)",
-                color: "#7a6b5d",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-              }}
-            >
+            <span className="text-[11px] px-1.5 py-0.5 rounded bg-[var(--ui-border-muted)] text-[#7a6b5d] uppercase tracking-wider font-bold">
               {meta.category}
             </span>
           </div>
-          <div style={{ fontSize: 12, color: "#a8998c", marginTop: 2 }}>
+          <div className="text-[12px] text-[#a8998c] mt-0.5">
             {isLoading ? (
-              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <CircleNotch size={10} style={{ animation: "spin 1s linear infinite" }} />
-                Executing...
+              <span className="flex items-center gap-1">
+                <CircleNotch size={10} className="animate-spin" />
+                Executing…
               </span>
             ) : hasResult ? (
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span className="flex items-center gap-1.5">
                 {isSuccess ? (
                   <>
-                    <Check size={10} style={{ color: "#79C47C" }} />
+                    <Check size={10} className="text-[#79C47C]" />
                     Completed
                     {executionTime && (
-                      <span style={{ color: "#7a6b5d" }}>• {formatExecutionTime(executionTime)}</span>
+                      <span className="text-[#7a6b5d]">· {formatExecutionTime(executionTime)}</span>
                     )}
                   </>
                 ) : (
                   <>
-                    <X size={10} style={{ color: "#ef4444" }} />
+                    <X size={10} className="text-[#ef4444]" />
                     Failed
                   </>
                 )}
@@ -326,25 +247,17 @@ function SingleToolCallView({
         </div>
 
         {/* Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <div className="flex items-center gap-1">
           {hasResult && !isLoading && (
-            <button
+            <button type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 handleCopy();
               }}
-              style={{
-                padding: "4px 8px",
-                borderRadius: 4,
-                border: "none",
-                background: copied ? "rgba(121,196,124,0.2)" : "transparent",
-                color: copied ? "#79C47C" : "#7a6b5d",
-                cursor: "pointer",
-                fontSize: 12,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
+              className={cn(
+                "p-1 px-2 rounded-md border-none text-[12px] cursor-pointer flex items-center gap-1 transition-colors",
+                copied ? "bg-[#79C47C]/20 text-[#79C47C]" : "bg-transparent text-[#7a6b5d] hover:bg-white/5"
+              )}
               title="Copy result"
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
@@ -352,30 +265,19 @@ function SingleToolCallView({
           )}
           
           {error && onRetry && (
-            <button
+            <button type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onRetry();
               }}
-              style={{
-                padding: "4px 8px",
-                borderRadius: 4,
-                border: "none",
-                background: "var(--status-error-bg)",
-                color: "#ef4444",
-                cursor: "pointer",
-                fontSize: 12,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
+              className="p-1 px-2 rounded-md border-none bg-[var(--status-error-bg)] text-[#ef4444] cursor-pointer text-[12px] flex items-center gap-1 hover:opacity-80 transition-opacity"
               title="Retry"
             >
               <ArrowCounterClockwise size={12} />
             </button>
           )}
 
-          <div style={{ color: accentColor, fontSize: 12, marginLeft: 4 }}>
+          <div className="text-[12px] ml-1 transition-transform duration-200" style={{ color: accentColor }}>
             {isExpanded ? <CaretUp size={16} /> : <CaretDown size={16} />}
           </div>
         </div>
@@ -383,22 +285,16 @@ function SingleToolCallView({
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div
-          style={{
-            padding: "0 12px 12px",
-            borderTop: "1px solid var(--ui-border-muted)",
-            animation: "slideDown 0.2s ease",
-          }}
-        >
+        <div className="px-3 pb-3 border-t border-solid border-[var(--ui-border-muted)] animate-slideDown">
           {/* Arguments Section */}
-          <div style={{ marginTop: 12 }}>
+          <div className="mt-3">
             <SectionHeader accentColor={accentColor} title="Arguments" count={Object.keys(toolCall.arguments).length} />
             <CodeBlock content={JSON.stringify(toolCall.arguments, null, 2)} maxHeight={120} />
           </div>
 
           {/* Result Section */}
           {hasResult && (
-            <div style={{ marginTop: 12 }}>
+            <div className="mt-3">
               <SectionHeader 
                 accentColor={isSuccess ? "#79C47C" : "#ef4444"} 
                 title={isSuccess ? "Result" : "Error"}
@@ -429,40 +325,19 @@ function SectionHeader({
   isError?: boolean;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 6,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          color: accentColor,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-        }}
+    <div className="flex items-center gap-2 mb-1.5">
+      <div className="text-[11px] font-extrabold text-[var(--accent-color)] uppercase tracking-wider"
+        style={{ '--accent-color': accentColor } as React.CSSProperties}
       >
         {title}
       </div>
       {count !== undefined && (
-        <span
-          style={{
-            fontSize: 12,
-            padding: "1px 5px",
-            borderRadius: 4,
-            background: "var(--ui-border-muted)",
-            color: "#7a6b5d",
-          }}
-        >
+        <span className="text-[11px] px-1 rounded bg-[var(--ui-border-muted)] text-[#7a6b5d]">
           {count}
         </span>
       )}
       {isError && (
-        <Warning size={12} style={{ color: "#ef4444" }} />
+        <Warning size={12} className="text-[#ef4444]" />
       )}
     </div>
   );
@@ -471,18 +346,8 @@ function SectionHeader({
 function CodeBlock({ content, maxHeight = 150 }: { content: string; maxHeight?: number }) {
   return (
     <pre
-      style={{
-        margin: 0,
-        padding: 10,
-        borderRadius: 8,
-        background: "var(--surface-panel)",
-        fontSize: 12,
-        fontFamily: 'var(--font-mono)',
-        color: "#d1c3b4",
-        overflow: "auto",
-        maxHeight,
-        lineHeight: 1.4,
-      }}
+      className="m-0 p-2.5 rounded-lg bg-[var(--surface-panel)] text-[12px] font-mono text-[#d1c3b4] overflow-auto leading-relaxed"
+      style={{ maxHeight }}
     >
       {content}
     </pre>
@@ -491,33 +356,10 @@ function CodeBlock({ content, maxHeight = 150 }: { content: string; maxHeight?: 
 
 function ErrorBlock({ error }: { error: string }) {
   return (
-    <div
-      style={{
-        padding: 10,
-        borderRadius: 8,
-        background: "var(--status-error-bg)",
-        border: "1px solid rgba(239,68,68,0.2)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 8,
-        }}
-      >
-        <XCircle size={16} style={{ color: "#ef4444", flexShrink: 0, marginTop: 2 }} />
-        <pre
-          style={{
-            margin: 0,
-            fontSize: 12,
-            fontFamily: 'var(--font-mono)',
-            color: "#ef4444",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            lineHeight: 1.4,
-          }}
-        >
+    <div className="p-2.5 rounded-lg bg-[var(--status-error-bg)] border border-solid border-[#ef4444]/20">
+      <div className="flex items-start gap-2">
+        <XCircle size={16} className="text-[#ef4444] shrink-0 mt-0.5" />
+        <pre className="m-0 text-[12px] font-mono text-[#ef4444] whitespace-pre-wrap break-words leading-relaxed">
           {error}
         </pre>
       </div>
@@ -526,27 +368,16 @@ function ErrorBlock({ error }: { error: string }) {
 }
 
 function ResultViewer({ result }: { result: unknown }) {
-  // Handle different result types
   if (result === null || result === undefined) {
     return <CodeBlock content="null" />;
   }
 
   if (typeof result === "string") {
-    // Check if it's a file path or content
     if (result.includes("\n") || result.length > 100) {
       return <CodeBlock content={result} maxHeight={200} />;
     }
     return (
-      <div
-        style={{
-          padding: 10,
-          borderRadius: 8,
-          background: "rgba(121,196,124,0.08)",
-          border: "1px solid rgba(121,196,124,0.2)",
-          fontSize: 12,
-          color: "#d1c3b4",
-        }}
-      >
+      <div className="p-2.5 rounded-lg bg-[#79C47C]/10 border border-solid border-[#79C47C]/20 text-[12px] text-[#d1c3b4] leading-relaxed">
         {result}
       </div>
     );
@@ -554,123 +385,64 @@ function ResultViewer({ result }: { result: unknown }) {
 
   if (typeof result === "boolean") {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: 10,
-          borderRadius: 8,
-          background: result ? "rgba(121,196,124,0.1)" : "var(--status-error-bg)",
-        }}
-      >
+      <div className={cn(
+        "flex items-center gap-2 p-2.5 rounded-lg",
+        result ? "bg-[#79C47C]/10" : "bg-red-500/10"
+      )}>
         {result ? (
-          <CheckCircle size={16} style={{ color: "#79C47C" }} />
+          <CheckCircle size={16} className="text-[#79C47C]" />
         ) : (
-          <XCircle size={16} style={{ color: "#ef4444" }} />
+          <XCircle size={16} className="text-[#ef4444]" />
         )}
-        <span style={{ color: result ? "#79C47C" : "#ef4444", fontWeight: 600 }}>
+        <span className={cn("font-bold text-[13px]", result ? "text-[#79C47C]" : "text-[#ef4444]")}>
           {result ? "True" : "False"}
         </span>
       </div>
     );
   }
 
-  // Array with search results or file entries
   if (Array.isArray(result)) {
     if (result.length === 0) {
       return (
-        <div
-          style={{
-            padding: 16,
-            textAlign: "center",
-            color: "#7a6b5d",
-            fontSize: 12,
-          }}
-        >
+        <div className="p-4 text-center text-[#7a6b5d] text-[12px] italic">
           No results found
         </div>
       );
     }
 
-    // Search results
     if (result[0] && typeof result[0] === "object" && "file" in result[0] && "line" in result[0]) {
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {result.slice(0, 5).map((item: any, index) => (
-            <div
-              key={index}
-              style={{
-                padding: 10,
-                borderRadius: 8,
-                background: "var(--surface-hover)",
-                border: "1px solid var(--surface-hover)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "#a8998c",
-                  marginBottom: 4,
-                  fontFamily: "var(--font-mono)",
-                }}
-              >
+            <div key={`${item.file}-${item.line}-${index}`} className="p-2.5 rounded-lg bg-[var(--surface-hover)] border border-solid border-transparent">
+              <div className="text-[12px] text-[#a8998c] mb-1 font-mono">
                 {item.file}:{item.line}
               </div>
-              <pre
-                style={{
-                  margin: 0,
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono)",
-                  color: "#d1c3b4",
-                  overflow: "auto",
-                }}
-              >
+              <pre className="m-0 text-[12px] font-mono text-[#d1c3b4] overflow-auto leading-relaxed">
                 {item.content}
               </pre>
             </div>
           ))}
           {result.length > 5 && (
-            <div style={{ textAlign: "center", color: "#7a6b5d", fontSize: 12 }}>
-              ... and {result.length - 5} more results
+            <div className="text-center text-[#7a6b5d] text-[12px]">
+              … and {result.length - 5} more results
             </div>
           )}
         </div>
       );
     }
 
-    // File entries
     if (result[0] && typeof result[0] === "object" && "name" in result[0] && "type" in result[0]) {
       return (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-            gap: 4,
-          }}
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-1">
           {result.map((item: any, index) => (
-            <div
-              key={index}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 8px",
-                borderRadius: 6,
-                background: "var(--surface-hover)",
-                fontSize: 12,
-                color: item.type === "directory" ? "#a8998c" : "#d1c3b4",
-              }}
-            >
+            <div key={`file-res-${item.name}-${index}`} className="flex items-center gap-2 p-1.5 px-2 rounded-md bg-[var(--surface-hover)] text-[12px] text-[#d1c3b4] transition-colors hover:bg-[var(--surface-active)]">
               {item.type === "directory" ? (
-                <GearSix size={12} style={{ color: "#a8998c" }} />
+                <GearSix size={12} className="text-[#a8998c]" />
               ) : (
-                <FileText size={12} style={{ color: "#d1c3b4" }} />
+                <FileText size={12} className="text-[#d1c3b4]" />
               )}
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {item.name}
-              </span>
+              <span className="truncate">{item.name}</span>
             </div>
           ))}
         </div>
@@ -680,12 +452,11 @@ function ResultViewer({ result }: { result: unknown }) {
     return <CodeBlock content={JSON.stringify(result, null, 2)} maxHeight={200} />;
   }
 
-  // Default JSON display
   return <CodeBlock content={JSON.stringify(result, null, 2)} maxHeight={200} />;
 }
 
 // Helper hook to get surface accent color
-export function useToolCallAccent(surface: "chat" | "cowork" | "code" | "browser" | "design"): string {
+export function getToolCallAccent(surface: "chat" | "cowork" | "code" | "browser" | "design"): string {
   const colors = {
     chat: "#D4956A",
     cowork: "#A78BFA",

@@ -53,7 +53,7 @@ export function useReactiveAnimation(
  * Hook for tracking mouse position relative to avatar
  * Useful for eye tracking effects
  */
-export function useMouseTracking(
+function useMouseTracking(
   containerRef: React.RefObject<HTMLElement>,
   enabled: boolean = true
 ): { x: number; y: number } | null {
@@ -99,7 +99,7 @@ export function useMouseTracking(
 /**
  * Hook for handling click interactions with debounce
  */
-export function useClickAnimation(
+function useClickAnimation(
   onClick?: () => void,
   debounceMs: number = 150
 ): {

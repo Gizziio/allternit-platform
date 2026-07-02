@@ -11,7 +11,7 @@
 
 export type PolicyType = 'security' | 'compliance' | 'operational' | 'data' | 'access';
 export type PolicySeverity = 'critical' | 'high' | 'medium' | 'low';
-export type PolicyStatus = 'active' | 'disabled' | 'draft';
+type PolicyStatus = 'active' | 'disabled' | 'draft';
 export type EnforcementMode = 'block' | 'warn' | 'audit' | 'allow';
 
 export interface Policy {
@@ -33,7 +33,7 @@ export interface Policy {
   lastViolationAt?: string;
 }
 
-export interface PolicyRule {
+interface PolicyRule {
   id: string;
   name: string;
   condition: RuleCondition;
@@ -42,7 +42,7 @@ export interface PolicyRule {
   enabled: boolean;
 }
 
-export interface RuleCondition {
+interface RuleCondition {
   type: 'threshold' | 'regex' | 'list' | 'time' | 'composite';
   field?: string;
   operator?: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'matches' | 'in';
@@ -51,13 +51,13 @@ export interface RuleCondition {
   logic?: 'and' | 'or';
 }
 
-export interface RuleAction {
+interface RuleAction {
   type: 'block' | 'allow' | 'log' | 'alert' | 'escalate' | 'mask';
   parameters?: Record<string, unknown>;
   message?: string;
 }
 
-export interface PolicyScope {
+interface PolicyScope {
   agents?: string[];
   agentTypes?: string[];
   tools?: string[];
@@ -84,7 +84,7 @@ export interface UpdatePolicyInput extends Partial<CreatePolicyInput> {
 // Policy Violation Types
 // ============================================================================
 
-export type ViolationStatus = 'open' | 'resolved' | 'dismissed' | 'escalated';
+type ViolationStatus = 'open' | 'resolved' | 'dismissed' | 'escalated';
 
 export interface PolicyViolation {
   id: string;
@@ -107,14 +107,14 @@ export interface PolicyViolation {
   resolution?: string;
 }
 
-export interface ToolCallInfo {
+interface ToolCallInfo {
   tool: string;
   arguments: Record<string, unknown>;
   result?: unknown;
   error?: string;
 }
 
-export interface ViolationContext {
+interface ViolationContext {
   userId?: string;
   workspaceId?: string;
   environment?: string;
@@ -122,7 +122,7 @@ export interface ViolationContext {
   metadata?: Record<string, unknown>;
 }
 
-export interface ViolationEvidence {
+interface ViolationEvidence {
   type: 'log' | 'screenshot' | 'code' | 'data' | 'message';
   content: string;
   timestamp: string;
@@ -158,7 +158,7 @@ export interface ApprovalRequest {
   metadata?: Record<string, unknown>;
 }
 
-export interface RequesterInfo {
+interface RequesterInfo {
   agentId: string;
   agentName: string;
   userId?: string;
@@ -166,14 +166,14 @@ export interface RequesterInfo {
   runId?: string;
 }
 
-export interface ApprovalResource {
+interface ApprovalResource {
   type: string;
   identifier: string;
   details?: Record<string, unknown>;
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
 }
 
-export interface ApprovalDecision {
+interface ApprovalDecision {
   reviewerId: string;
   reviewerName?: string;
   decision: 'approved' | 'rejected';
@@ -205,7 +205,7 @@ export interface Purpose {
   agentBindings: AgentPurposeBinding[];
 }
 
-export interface PurposeRestriction {
+interface PurposeRestriction {
   type: 'tool' | 'resource' | 'time' | 'data';
   target: string;
   allowed: boolean;
@@ -277,7 +277,7 @@ export interface SecurityEvent {
   resolvedAt?: string;
 }
 
-export interface EventSource {
+interface EventSource {
   agentId?: string;
   agentName?: string;
   userId?: string;
@@ -285,13 +285,13 @@ export interface EventSource {
   sessionId?: string;
 }
 
-export interface EventTarget {
+interface EventTarget {
   type: string;
   identifier: string;
   resource?: string;
 }
 
-export interface SecurityContext {
+interface SecurityContext {
   environment: string;
   timestamp: string;
   correlationId: string;
@@ -310,7 +310,7 @@ export interface ComplianceStatus {
   controls: ControlStatus[];
 }
 
-export interface FrameworkCompliance {
+interface FrameworkCompliance {
   id: string;
   name: string;
   version: string;
@@ -321,7 +321,7 @@ export interface FrameworkCompliance {
   failedControls: number;
 }
 
-export interface ControlStatus {
+interface ControlStatus {
   id: string;
   name: string;
   framework: string;
@@ -345,7 +345,7 @@ export interface SecurityOverview {
   metrics: SecurityMetrics;
 }
 
-export interface SecurityMetrics {
+interface SecurityMetrics {
   totalViolations24h: number;
   blockedActions24h: number;
   approvedRequests24h: number;

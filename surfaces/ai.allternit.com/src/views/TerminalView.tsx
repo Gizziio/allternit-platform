@@ -3,7 +3,7 @@ import { TerminalTabs } from './nodes/terminal';
 import { GlassCard } from '@/design/glass/GlassCard';
 import { tokens } from '@/design/tokens';
 
-export function TerminalView({ noPadding = false }: { noPadding?: boolean }): JSX.Element {
+export function TerminalView({ noPadding = false }: { noPadding?: boolean }): React.ReactNode {
   return (
     <div
       style={{

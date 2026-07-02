@@ -5,7 +5,6 @@
  * Shows preview with "Open Full" option to expand to sidecar.
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -139,7 +138,7 @@ export function DocumentCard({
           {isExpanded ? (
             <div className="space-y-2">
               {content.split('\n').filter(line => line.trim()).slice(0, 10).map((line, i) => (
-                <p key={i}>{line}</p>
+                <p key={`documentcard-${i}`}>{line}</p>
               ))}
               {hasMoreContent && (
                 <p className="text-[#666] italic">
@@ -157,7 +156,7 @@ export function DocumentCard({
           <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
             {evidence.slice(0, 3).map((item, i) => (
               <div
-                key={i}
+                key={`documentcard-${i}`}
                 className="flex-shrink-0 w-24 h-16 rounded-lg bg-[#242424] border border-[#333] overflow-hidden"
               >
                 {item.type === 'image' || item.type === 'screenshot' ? (
@@ -220,7 +219,7 @@ export function DocumentCard({
           </div>
 
           {hasMoreContent && (
-            <button
+            <button type="button"
               onClick={() => setIsExpanded(!isExpanded)}
               className="flex items-center gap-1 text-xs text-[#888] hover:text-[#ECECEC] transition-colors"
             >

@@ -1,3 +1,4 @@
+import React from 'react';
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="mb-10">
     <h2 style={{ fontFamily: 'var(--font-research)', fontWeight: 400, fontSize: 22, color: 'var(--ui-text-inverse)', marginBottom: 12 }}>

@@ -6,7 +6,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 
-export interface BrowserShortcut {
+interface BrowserShortcut {
   id: string;
   label: string;
   url: string;

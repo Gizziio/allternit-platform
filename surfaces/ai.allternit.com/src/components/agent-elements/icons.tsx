@@ -76,7 +76,7 @@ export function IconArrowRight(props: IconProps) {
   );
 }
 
-export function IconDoubleChevronRight(props: IconProps) {
+function IconDoubleChevronRight(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" width="16" height="16" {...props}>
       <path

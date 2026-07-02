@@ -7,6 +7,10 @@
 
 import type { FileSystemAPI, FileEntry } from './fileSystem.types';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('FileSystem.real');
+
 // ============================================================================
 // Real File System (for Electron/Node.js environment)
 // ============================================================================
@@ -62,14 +66,14 @@ export class RealFileSystem implements FileSystemAPI {
 
   private async detectEnvironment() {
     if (this.tryRequireNodeModules()) {
-      console.debug('[RealFileSystem] Using Node.js fs APIs via require');
+      logger.debug('Using Node.js fs APIs via require');
       return;
     }
 
     // In browser bundles, fall back quietly instead of trying to smuggle
     // Node builtins through eval-based dynamic imports.
     if (process.env.NODE_ENV === 'development') {
-      console.debug('[RealFileSystem] Browser environment detected, using API-backed filesystem');
+      logger.debug('Browser environment detected, using API-backed filesystem');
     }
 
     this.isNode = false;
@@ -117,7 +121,7 @@ export class RealFileSystem implements FileSystemAPI {
         });
       }
     } catch {
-      console.debug(`[RealFileSystem] Cannot read directory: ${dirPath}`);
+      logger.debug(`Cannot read directory: ${dirPath}`);
     }
 
     return entries;
@@ -238,7 +242,7 @@ export class RealFileSystem implements FileSystemAPI {
 // Environment Scanner
 // ============================================================================
 
-export class EnvironmentScanner {
+class EnvironmentScanner {
   private fs: RealFileSystem;
 
   constructor(fs: RealFileSystem) {
@@ -467,4 +471,4 @@ export class EnvironmentScanner {
 
 // Export singleton
 export const realFileSystem = new RealFileSystem();
-export const environmentScanner = new EnvironmentScanner(realFileSystem);
+const environmentScanner = new EnvironmentScanner(realFileSystem);

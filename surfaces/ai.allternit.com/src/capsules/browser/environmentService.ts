@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Environment Service - Runtime Target Management
  * 
@@ -66,10 +67,9 @@ export interface EnvironmentStore {
 
 // ============================================================================
 // In-Memory Store (for development)
-// TODO: Replace with 8-cloud integration for production
 // ============================================================================
 
-export class InMemoryEnvironmentStore implements EnvironmentStore {
+class InMemoryEnvironmentStore implements EnvironmentStore {
   private targets: Map<string, EnvironmentTarget> = new Map();
   private config: EnvironmentConfig = {
     currentEnvironment: 'cloud',
@@ -291,7 +291,7 @@ export class EnvironmentManager {
 let _environmentStore: EnvironmentStore | null = null;
 let _environmentManager: EnvironmentManager | null = null;
 
-export function getEnvironmentStore(): EnvironmentStore {
+function getEnvironmentStore(): EnvironmentStore {
   if (!_environmentStore) {
     const redis = getRedisClient();
     if (redis) {

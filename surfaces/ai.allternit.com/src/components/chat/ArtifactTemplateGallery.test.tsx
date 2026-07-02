@@ -12,7 +12,7 @@
 
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ArtifactTemplateGallery } from './ArtifactTemplateGallery';
 import { ARTIFACT_TEMPLATES } from '@/lib/ai/tools/templates/artifact-templates';
 

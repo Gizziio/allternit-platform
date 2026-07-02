@@ -1,38 +1,11 @@
-/**
- * Cron Job Wizard - Enhanced Version
- * 
- * Comprehensive job scheduling with:
- * - Task templates (run program, API call, file operations, etc.)
- * - LLM-assisted prompt generation
- * - Customizable task parameters
- * - Preview and validation
- */
-
-import React, { useState, useCallback } from "react";
-import {
-  Calendar,
-  Clock,
-  FloppyDisk,
-  X,
-  CaretRight,
-  CaretLeft,
-  Check,
-  Warning,
-  CircleNotch,
-  Sparkle,
-  Terminal,
-  Globe,
-  FileText,
-  Code,
-  GearSix,
-  Robot,
-} from '@phosphor-icons/react';
-
+import React, { useCallback, useMemo, useState } from "react";
+import { Calendar, CaretLeft, CaretRight, Check, CircleNotch, Clock, Code, FileText, FloppyDisk, GearSix, Globe, Pencil, Robot, Sparkle, Terminal, Warning, X, Record } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 // ============================================================================
 // Types
 // ============================================================================
 
-export type TaskType = 
+type TaskType = 
   | "code-review"
   | "generate-docs"
   | "dependency-check"
@@ -55,7 +28,7 @@ export interface TaskTemplate {
   examples: string[];
 }
 
-export interface TaskParameter {
+interface TaskParameter {
   id: string;
   name: string;
   type: "string" | "number" | "boolean" | "select" | "multi-select" | "textarea" | "json";
@@ -681,7 +654,7 @@ const TASK_TEMPLATES: TaskTemplate[] = [
         name: "Additional Context",
         type: "textarea",
         required: false,
-        placeholder: "Any files, URLs, or background info the AI should know...",
+        placeholder: "Any files, URLs, or background info the AI should know…",
         description: "Helps the AI understand the task better",
       },
       {
@@ -981,59 +954,32 @@ export function CronJobWizard({
   if (!isOpen) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "var(--shell-overlay-backdrop)",
-        backdropFilter: "blur(8px)",
-        zIndex: 180,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
-      }}
+    <div role="button" tabIndex={0}
+      className="fixed inset-0 bg-[var(--shell-overlay-backdrop)] backdrop-blur-md z-[180] flex items-center justify-center p-5"
       onClick={(e) => e.target === e.currentTarget && handleClose()}
+      onKeyDown={(e) => e.key === 'Escape' && handleClose()}
     >
       <div
+        className="w-full max-w-[640px] max-h-[90vh] overflow-auto rounded-[20px] border border-solid border-[var(--accent-glow)] bg-[linear-gradient(180deg,#2B2520_0%,#1a1714_100%)] shadow-[0_28px_100px_var(--shell-overlay-backdrop),0_0_0_1px_var(--accent-glow-subtle)]"
         style={{
-          width: "100%",
-          maxWidth: 640,
-          maxHeight: "90vh",
-          overflow: "auto",
-          borderRadius: 20,
-          border: `1px solid ${accentColor}30`,
-          background: "linear-gradient(180deg, #2B2520 0%, #1a1714 100%)",
-          boxShadow: `0 28px 100px var(--shell-overlay-backdrop), 0 0 0 1px ${accentColor}20`,
-        }}
+          '--accent-glow': `${accentColor}30`,
+          '--accent-glow-subtle': `${accentColor}20`,
+        } as React.CSSProperties}
       >
         {/* Header */}
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "16px 20px",
-            borderBottom: `1px solid ${accentColor}20`,
-            background: `linear-gradient(90deg, ${accentColor}10, transparent)`,
-          }}
+          className="flex items-center justify-between p-[16px_20px] border-b border-solid border-[var(--accent-glow-subtle)] bg-[linear-gradient(90deg,var(--accent-glow-tiny),transparent)]"
+          style={{ '--accent-glow-tiny': `${accentColor}10` } as React.CSSProperties}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="flex items-center gap-2.5">
             <Calendar size={20} style={{ color: accentColor }} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: "#f6eee7" }}>
+            <span className="text-[16px] font-bold text-[#f6eee7]">
               Schedule a Job
             </span>
           </div>
-          <button
+          <button type="button"
             onClick={handleClose}
-            style={{
-              padding: 6,
-              borderRadius: 8,
-              border: "none",
-              background: "transparent",
-              color: "#a8998c",
-              cursor: "pointer",
-            }}
+            className="p-1.5 rounded-lg border-none bg-transparent text-[#a8998c] cursor-pointer hover:bg-white/5 transition-colors"
           >
             <X size={18} />
           </button>
@@ -1041,15 +987,13 @@ export function CronJobWizard({
 
         {/* Progress */}
         {step !== "success" && (
-          <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--ui-border-muted)" }}>
-            <div style={{ display: "flex", gap: 8 }}>
+          <div className="p-[12px_20px] border-b border-solid border-[var(--ui-border-muted)]">
+            <div className="flex gap-2">
               {["template", "configure", "schedule", "review"].map((s, i) => (
                 <div
                   key={s}
+                  className="flex-1 h-1 rounded-full transition-colors duration-300"
                   style={{
-                    flex: 1,
-                    height: 4,
-                    borderRadius: 2,
                     background:
                       i <= ["template", "configure", "schedule", "review"].indexOf(step)
                         ? accentColor
@@ -1062,7 +1006,7 @@ export function CronJobWizard({
         )}
 
         {/* Content */}
-        <div style={{ padding: 20 }}>
+        <div className="p-5">
           {step === "template" && (
             <TemplateSelectionStep
               onSelect={handleTemplateSelect}
@@ -1101,18 +1045,7 @@ export function CronJobWizard({
 
           {error && (
             <div
-              style={{
-                marginTop: 16,
-                padding: 12,
-                borderRadius: 10,
-                background: "var(--status-error-bg)",
-                border: "1px solid color-mix(in srgb, var(--status-error) 20%, transparent)",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                color: "#ef4444",
-                fontSize: 13,
-              }}
+              className="mt-4 p-3 rounded-[10px] bg-[var(--status-error-bg)] border border-solid border-[var(--status-error)]/20 flex items-center gap-2 text-[#ef4444] text-[13px]"
             >
               <Warning size={16} />
               {error}
@@ -1123,56 +1056,30 @@ export function CronJobWizard({
         {/* Footer */}
         {step !== "success" && step !== "template" && (
           <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "16px 20px",
-              borderTop: "1px solid var(--ui-border-muted)",
-            }}
+            className="flex justify-between p-[16px_20px] border-t border-solid border-[var(--ui-border-muted)]"
           >
-            <button
+            <button type="button"
               onClick={handleBack}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 14px",
-                borderRadius: 10,
-                border: "1px solid var(--ui-border-default)",
-                background: "transparent",
-                color: "#d1c3b4",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
+              className="flex items-center gap-1.5 p-[8px_14px] rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[#d1c3b4] text-[13px] font-semibold cursor-pointer transition-colors hover:bg-white/5"
             >
               <CaretLeft size={16} />
               Back
             </button>
 
             {step === "review" ? (
-              <button
+              <button type="button"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 16px",
-                  borderRadius: 10,
-                  border: `1px solid ${accentColor}`,
-                  background: accentColor,
-                  color: "#1a1714",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: isSubmitting ? "wait" : "pointer",
-                  opacity: isSubmitting ? 0.7 : 1,
-                }}
+                className={cn(
+                  "flex items-center gap-1.5 p-[8px_16px] rounded-lg border border-solid text-[#1a1714] text-[13px] font-bold transition-all",
+                  isSubmitting ? "cursor-wait opacity-70" : "cursor-pointer hover:opacity-90"
+                )}
+                style={{ borderColor: accentColor, background: accentColor }}
               >
                 {isSubmitting ? (
                   <>
-                    <CircleNotch size={16} style={{ animation: "spin 1s linear infinite" }} />
-                    Creating...
+                    <CircleNotch size={16} className="animate-spin" />
+                    Creating…
                   </>
                 ) : (
                   <>
@@ -1182,21 +1089,10 @@ export function CronJobWizard({
                 )}
               </button>
             ) : (
-              <button
+              <button type="button"
                 onClick={handleNext}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "8px 16px",
-                  borderRadius: 10,
-                  border: `1px solid ${accentColor}`,
-                  background: accentColor,
-                  color: "#1a1714",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
+                className="flex items-center gap-1.5 p-[8px_16px] rounded-lg border border-solid text-[#1a1714] text-[13px] font-bold cursor-pointer hover:opacity-90 transition-all"
+                style={{ borderColor: accentColor, background: accentColor }}
               >
                 Next
                 <CaretRight size={16} />
@@ -1237,27 +1133,22 @@ function TemplateSelectionStep({
     : TASK_TEMPLATES;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontSize: 14, color: "#b3a395", lineHeight: 1.5 }}>
+    <div className="flex flex-col gap-4">
+      <div className="text-[14px] text-[#b3a395] leading-relaxed">
         Select a task type for your scheduled job. Each template provides a starting point that you can customize.
       </div>
 
       {/* Categories */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      <div className="flex flex-wrap gap-2">
         {categories.map((cat) => (
-          <button
+          <button type="button"
             key={cat.id || "all"}
             onClick={() => setSelectedCategory(cat.id)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: 999,
-              border: "none",
-              background: selectedCategory === cat.id ? accentColor : "var(--surface-hover)",
-              color: selectedCategory === cat.id ? "#1a1714" : "#a8998c",
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={cn(
+              "px-3 py-1.5 rounded-full border-none text-[12px] font-semibold cursor-pointer transition-all",
+              selectedCategory === cat.id ? "text-[#1a1714]" : "bg-[var(--surface-hover)] text-[#a8998c] hover:bg-[var(--surface-active)]"
+            )}
+            style={selectedCategory === cat.id ? { background: accentColor } : {}}
           >
             {cat.label}
           </button>
@@ -1265,24 +1156,12 @@ function TemplateSelectionStep({
       </div>
 
       {/* Templates Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+      <div className="grid grid-cols-2 gap-2.5">
         {filteredTemplates.map((template) => (
-          <button
+          <button type="button"
             key={template.id}
             onClick={() => onSelect(template)}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              gap: 8,
-              padding: 14,
-              borderRadius: 12,
-              border: `1px solid var(--ui-border-muted)`,
-              background: "var(--surface-hover)",
-              cursor: "pointer",
-              textAlign: "left",
-              transition: "all 0.2s",
-            }}
+            className="flex flex-col items-start gap-2 p-3.5 rounded-xl border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-hover)] cursor-pointer text-left transition-all hover:bg-white/5"
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = accentColor;
               e.currentTarget.style.background = `${accentColor}10`;
@@ -1294,10 +1173,10 @@ function TemplateSelectionStep({
           >
             <div style={{ color: accentColor }}>{template.icon}</div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#f6eee7" }}>
+              <div className="text-[13px] font-semibold text-[#f6eee7]">
                 {template.name}
               </div>
-              <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 2 }}>
+              <div className="text-[12px] text-[#7a6b5d] mt-0.5 leading-tight">
                 {template.description}
               </div>
             </div>
@@ -1326,88 +1205,58 @@ function ConfigureStep({
   const [activeTab, setActiveTab] = useState<"params" | "prompt">("params");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div className="flex flex-col gap-4">
       {/* Template Header */}
       <div
+        className="flex items-center gap-3 p-3 rounded-lg border border-solid border-[var(--accent-glow)] bg-[var(--accent-glow-subtle)]"
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: 12,
-          borderRadius: 10,
-          background: `${accentColor}10`,
-          border: `1px solid ${accentColor}30`,
-        }}
+          '--accent-glow': `${accentColor}30`,
+          '--accent-glow-subtle': `${accentColor}10`,
+        } as React.CSSProperties}
       >
         <div style={{ color: accentColor }}>{template.icon}</div>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#f6eee7" }}>
+          <div className="text-[14px] font-semibold text-[#f6eee7]">
             {template.name}
           </div>
-          <div style={{ fontSize: 12, color: "#a8998c" }}>{template.description}</div>
+          <div className="text-[12px] text-[#a8998c]">{template.description}</div>
         </div>
       </div>
 
       {/* Job Name */}
       <div>
-        <label style={{
-          display: "block",
-          fontSize: 12,
-          fontWeight: 800,
-          color: accentColor,
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          marginBottom: 6,
-        }}>
+        <div className="block text-[12px] font-extrabold uppercase tracking-[0.08em] mb-1.5" style={{ color: accentColor }}>
           Job Name *
-        </label>
-        <input
-          type="text"
+        </div>
+        <input aria-label="Input" type="text"
           value={config.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
           placeholder={`e.g., ${template.examples[0]}`}
-          style={{
-            width: "100%",
-            padding: "10px 12px",
-            borderRadius: 10,
-            border: "1px solid var(--ui-border-default)",
-            background: "var(--surface-panel)",
-            color: "#f6eee7",
-            fontSize: 14,
-            outline: "none",
-          }}
+          className="w-full p-[10px_12px] rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[#f6eee7] text-[14px] outline-none transition-colors focus:border-[var(--ui-border-active)]"
         />
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${accentColor}30`, paddingBottom: 8 }}>
-        <button
+      <div className="flex gap-2 border-b border-solid border-[var(--accent-glow)] pb-2"
+        style={{ '--accent-glow': `${accentColor}30` } as React.CSSProperties}
+      >
+        <button type="button"
           onClick={() => setActiveTab("params")}
-          style={{
-            padding: "6px 12px",
-            borderRadius: 8,
-            border: "none",
-            background: activeTab === "params" ? accentColor : "transparent",
-            color: activeTab === "params" ? "#1a1714" : "#a8998c",
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className={cn(
+            "px-3 py-1.5 rounded-lg border-none text-[12px] font-semibold cursor-pointer transition-all",
+            activeTab === "params" ? "text-[#1a1714]" : "bg-transparent text-[#a8998c] hover:bg-white/5"
+          )}
+          style={activeTab === "params" ? { background: accentColor } : {}}
         >
           Parameters
         </button>
-        <button
+        <button type="button"
           onClick={() => setActiveTab("prompt")}
-          style={{
-            padding: "6px 12px",
-            borderRadius: 8,
-            border: "none",
-            background: activeTab === "prompt" ? accentColor : "transparent",
-            color: activeTab === "prompt" ? "#1a1714" : "#a8998c",
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className={cn(
+            "px-3 py-1.5 rounded-lg border-none text-[12px] font-semibold cursor-pointer transition-all",
+            activeTab === "prompt" ? "text-[#1a1714]" : "bg-transparent text-[#a8998c] hover:bg-white/5"
+          )}
+          style={activeTab === "prompt" ? { background: accentColor } : {}}
         >
           AI Prompt
         </button>
@@ -1415,7 +1264,7 @@ function ConfigureStep({
 
       {/* Tab Content */}
       {activeTab === "params" ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-3">
           {template.parameters.map((param) => (
             <ParameterField
               key={param.id}
@@ -1429,56 +1278,30 @@ function ConfigureStep({
           ))}
           
           {/* Generate Prompt Button */}
-          <button
+          <button type="button"
             onClick={onGeneratePrompt}
             disabled={isGenerating}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: "10px",
-              borderRadius: 10,
-              border: `1px dashed ${accentColor}`,
-              background: "transparent",
-              color: accentColor,
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: isGenerating ? "wait" : "pointer",
-              marginTop: 8,
-            }}
+            className="flex items-center justify-center gap-2 p-2.5 rounded-lg border border-dashed border-[var(--accent-glow)] bg-transparent text-[12px] font-semibold cursor-pointer mt-2 transition-all hover:bg-white/5"
+            style={{ '--accent-glow': accentColor, color: accentColor } as React.CSSProperties}
           >
             {isGenerating ? (
-              <CircleNotch size={14} style={{ animation: "spin 1s linear infinite" }} />
+              <CircleNotch size={14} className="animate-spin" />
             ) : (
               <Sparkle size={14} />
             )}
-            {isGenerating ? "Generating..." : "Generate AI Prompt from Parameters"}
+            {isGenerating ? "Generating…" : "Generate AI Prompt from Parameters"}
           </button>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 12, color: "#a8998c" }}>
+        <div className="flex flex-col gap-2">
+          <div className="text-[12px] text-[#a8998c] leading-relaxed">
             This is the prompt that will be sent to the AI agent when the job runs.
             You can edit it directly or regenerate it from the parameters tab.
           </div>
-          <textarea
-            value={config.prompt}
+          <textarea aria-label="Text Area" value={config.prompt}
             onChange={(e) => onUpdate({ prompt: e.target.value })}
             rows={10}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid var(--ui-border-default)",
-              background: "var(--surface-panel)",
-              color: "#f6eee7",
-              fontSize: 13,
-              outline: "none",
-              resize: "vertical",
-              fontFamily: "inherit",
-              lineHeight: 1.5,
-            }}
+            className="w-full p-[10px_12px] rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[#f6eee7] text-[13px] outline-none resize-none font-inherit leading-relaxed"
           />
         </div>
       )}
@@ -1497,37 +1320,22 @@ function ParameterField({
   onChange: (v: unknown) => void;
   accentColor: string;
 }) {
-  const inputStyle = {
-    width: "100%",
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: "1px solid var(--ui-border-default)",
-    background: "var(--surface-panel)",
-    color: "#f6eee7",
-    fontSize: 13,
-    outline: "none",
-  };
+  const inputClassName = "w-full p-2 px-2.5 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[#f6eee7] text-[13px] outline-none transition-colors focus:border-[var(--ui-border-active)]";
 
   return (
     <div>
-      <label style={{
-        display: "block",
-        fontSize: 12,
-        fontWeight: 700,
-        color: param.required ? accentColor : "#9f8a78",
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        marginBottom: 4,
-      }}>
+      <div className={cn(
+        "block text-[12px] font-bold uppercase tracking-[0.08em] mb-1",
+        param.required ? "text-[var(--accent-color)]" : "text-[#9f8a78]"
+      )} style={{ '--accent-color': accentColor } as React.CSSProperties}>
         {param.name}
-        {param.required && <span style={{ color: "#ef4444" }}> *</span>}
-      </label>
+        {param.required && <span className="text-[#ef4444]"> *</span>}
+      </div>
       
       {param.type === "select" && param.options ? (
-        <select
-          value={(value as string) || ""}
+        <select aria-label="Selection" value={(value as string) || ""}
           onChange={(e) => onChange(e.target.value)}
-          style={inputStyle}
+          className={inputClassName}
         >
           {param.options.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1541,46 +1349,34 @@ function ParameterField({
           accentColor={accentColor}
         />
       ) : param.type === "boolean" ? (
-        <button
+        <button type="button"
           onClick={() => onChange(!value)}
+          className={cn(
+            "flex items-center gap-2 p-2 px-3 rounded-lg border border-solid text-[13px] cursor-pointer transition-all",
+            value ? "bg-[var(--accent-glow)] border-[var(--accent-color)] text-[var(--accent-color)]" : "bg-[var(--surface-panel)] border-[var(--ui-border-default)] text-[#a8998c]"
+          )}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: `1px solid ${value ? accentColor : "var(--ui-border-default)"}`,
-            background: value ? `${accentColor}20` : "var(--surface-panel)",
-            color: value ? accentColor : "#a8998c",
-            fontSize: 13,
-            cursor: "pointer",
-          }}
+            '--accent-glow': `${accentColor}20`,
+            '--accent-color': accentColor,
+          } as React.CSSProperties}
         >
-          <div style={{
-            width: 18,
-            height: 18,
-            borderRadius: 4,
-            background: value ? accentColor : "transparent",
-            border: `2px solid ${value ? accentColor : "#666"}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            {value ? <Check size={12} style={{ color: "#1a1714" }} /> : null}
+          <div className={cn(
+            "size-[18px] rounded flex items-center justify-center border-2 border-solid transition-colors",
+            value ? "bg-[var(--accent-color)] border-[var(--accent-color)]" : "bg-transparent border-[#666]"
+          )} style={{ '--accent-color': accentColor } as React.CSSProperties}>
+            {value ? <Check size={12} className="text-[#1a1714]" /> : null}
           </div>
           {value ? "Enabled" : "Disabled"}
         </button>
       ) : param.type === "textarea" ? (
-        <textarea
-          value={(value as string) || ""}
+        <textarea aria-label="Text Area" value={(value as string) || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={param.placeholder}
           rows={3}
-          style={{ ...inputStyle, resize: "vertical", fontFamily: "inherit" }}
+          className={cn(inputClassName, "resize-none font-inherit")}
         />
       ) : param.type === "json" ? (
-        <textarea
-          value={typeof value === "object" ? JSON.stringify(value, null, 2) : (value as string) || ""}
+        <textarea aria-label="Text Area" value={typeof value === "object" ? JSON.stringify(value, null, 2) : (value as string) || ""}
           onChange={(e) => {
             try {
               onChange(JSON.parse(e.target.value));
@@ -1590,27 +1386,25 @@ function ParameterField({
           }}
           placeholder={param.placeholder}
           rows={4}
-          style={{ ...inputStyle, fontFamily: "var(--font-mono)", fontSize: 12 }}
+          className={cn(inputClassName, "font-mono text-[12px] resize-none")}
         />
       ) : param.type === "number" ? (
-        <input
-          type="number"
+        <input aria-label="Input" type="number"
           value={(value as number) ?? ""}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-          style={inputStyle}
+          className={inputClassName}
         />
       ) : (
-        <input
-          type="text"
+        <input aria-label="Input" type="text"
           value={(value as string) || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={param.placeholder}
-          style={inputStyle}
+          className={inputClassName}
         />
       )}
       
       {param.description && (
-        <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 4 }}>
+        <div className="text-[12px] text-[#7a6b5d] mt-1">
           {param.description}
         </div>
       )}
@@ -1638,40 +1432,32 @@ function MultiSelectField({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div className="flex flex-col gap-1.5">
       {options.map((opt) => {
         const isSelected = value.includes(opt.value);
         return (
-          <button
+          <button type="button"
             key={opt.value}
             onClick={() => toggleOption(opt.value)}
+            className={cn(
+              "flex items-center gap-2.5 p-2 rounded-lg border border-solid cursor-pointer text-left transition-all",
+              isSelected ? "bg-[var(--accent-glow)] border-[var(--accent-color)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-default)]"
+            )}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "8px 10px",
-              borderRadius: 8,
-              border: `1px solid ${isSelected ? accentColor : "var(--ui-border-default)"}`,
-              background: isSelected ? `${accentColor}15` : "var(--surface-hover)",
-              cursor: "pointer",
-              textAlign: "left",
-            }}
+              '--accent-glow': `${accentColor}15`,
+              '--accent-color': accentColor,
+            } as React.CSSProperties}
           >
             <div
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: 4,
-                border: `2px solid ${isSelected ? accentColor : "#666"}`,
-                background: isSelected ? accentColor : "transparent",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
+              className={cn(
+                "size-4 rounded border-2 border-solid flex items-center justify-center transition-colors",
+                isSelected ? "bg-[var(--accent-color)] border-[var(--accent-color)]" : "bg-transparent border-[#666]"
+              )}
+              style={{ '--accent-color': accentColor } as React.CSSProperties}
             >
-              {isSelected ? <Check size={12} style={{ color: "#1a1714" }} /> : null}
+              {isSelected ? <Check size={12} className="text-[#1a1714]" /> : null}
             </div>
-            <span style={{ fontSize: 13, color: isSelected ? "#f6eee7" : "#d1c3b4" }}>
+            <span className={cn("text-[13px] font-medium", isSelected ? "text-[#f6eee7]" : "text-[#d1c3b4]")}>
               {opt.label}
             </span>
           </button>
@@ -1697,15 +1483,15 @@ function ScheduleStep({
   const isValid = validateCronExpression(config.schedule);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontSize: 14, color: "#b3a395", lineHeight: 1.5 }}>
+    <div className="flex flex-col gap-4">
+      <div className="text-[14px] text-[#b3a395] leading-relaxed">
         Choose when this job should run. You can use presets or create a custom schedule.
       </div>
 
       {!customCron ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {PRESET_SCHEDULES.map((preset) => (
-            <button
+            <button type="button"
               key={preset.value}
               onClick={() => {
                 if (preset.value === "custom") {
@@ -1714,24 +1500,21 @@ function ScheduleStep({
                   onUpdate({ schedule: preset.value });
                 }
               }}
+              className={cn(
+                "flex items-center gap-3 p-3 px-3.5 rounded-xl border border-solid cursor-pointer text-left transition-all hover:bg-white/5",
+                config.schedule === preset.value && preset.value !== "custom" ? "bg-[var(--accent-glow)] border-[var(--accent-color)]" : "border-[var(--ui-border-muted)]"
+              )}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "12px 14px",
-                borderRadius: 10,
-                border: `1px solid ${config.schedule === preset.value && preset.value !== "custom" ? accentColor : "var(--ui-border-muted)"}`,
-                background: config.schedule === preset.value && preset.value !== "custom" ? `${accentColor}15` : "var(--surface-hover)",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
+                '--accent-glow': `${accentColor}15`,
+                '--accent-color': accentColor,
+              } as React.CSSProperties}
             >
               <Clock size={18} style={{ color: preset.value === "custom" ? "#a8998c" : accentColor }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#f6eee7" }}>
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold text-[#f6eee7]">
                   {preset.label}
                 </div>
-                <div style={{ fontSize: 12, color: "#7a6b5d" }}>{preset.description}</div>
+                <div className="text-[12px] text-[#7a6b5d]">{preset.description}</div>
               </div>
               {config.schedule === preset.value && preset.value !== "custom" && (
                 <Check size={16} style={{ color: accentColor }} />
@@ -1740,65 +1523,36 @@ function ScheduleStep({
           ))}
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="flex flex-col gap-3">
           <div>
-            <label style={{
-              display: "block",
-              fontSize: 12,
-              fontWeight: 800,
-              color: accentColor,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              marginBottom: 6,
-            }}>
+            <div className="block text-[12px] font-extrabold uppercase tracking-[0.08em] mb-1.5" style={{ color: accentColor }}>
               Cron Expression
-            </label>
-            <input
-              type="text"
+            </div>
+            <input aria-label="Input" type="text"
               value={config.schedule}
               onChange={(e) => onUpdate({ schedule: e.target.value })}
               placeholder="* * * * *"
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                border: `1px solid ${isValid ? accentColor : "#ef4444"}`,
-                background: "var(--surface-panel)",
-                color: "#f6eee7",
-                fontSize: 14,
-                fontFamily: "var(--font-mono)",
-                outline: "none",
-              }}
+              className={cn(
+                "w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[#f6eee7] text-[14px] font-mono outline-none transition-colors",
+                isValid ? "focus:border-[var(--ui-border-active)]" : "border-[#ef4444]"
+              )}
+              style={isValid ? {} : { borderColor: '#ef4444' }}
             />
             {!isValid && config.schedule && (
-              <div style={{ fontSize: 12, color: "#ef4444", marginTop: 6 }}>
+              <div className="text-[12px] text-[#ef4444] mt-1.5">
                 Invalid cron expression
               </div>
             )}
           </div>
 
-          <div style={{
-            padding: 12,
-            borderRadius: 10,
-            background: "var(--surface-hover)",
-            fontSize: 12,
-            color: "#7a6b5d",
-          }}>
-            <strong style={{ color: "#9f8a78" }}>Format:</strong> minute hour day month weekday
+          <div className="p-3 rounded-lg bg-[var(--surface-hover)] text-[12px] text-[#7a6b5d] leading-relaxed">
+            <strong className="text-[#9f8a78]">Format:</strong> minute hour day month weekday
             <br/>0 9 * * 1-5 = Weekdays at 9am
           </div>
 
-          <button
+          <button type="button"
             onClick={() => setCustomCron(false)}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 10,
-              border: "1px solid var(--ui-border-default)",
-              background: "transparent",
-              color: "#9f8a78",
-              fontSize: 12,
-              cursor: "pointer",
-            }}
+            className="self-start p-2 px-3.5 rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[#9f8a78] text-[12px] cursor-pointer hover:bg-white/5 transition-colors"
           >
             ← Back to presets
           </button>
@@ -1806,78 +1560,52 @@ function ScheduleStep({
       )}
 
       {/* Additional Options */}
-      <div style={{
-        marginTop: 16,
-        padding: 16,
-        borderRadius: 12,
-        background: "var(--surface-hover)",
-        border: "1px solid var(--ui-border-muted)",
-      }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#f6eee7", marginBottom: 12 }}>
+      <div className="mt-4 p-4 rounded-xl bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)]">
+        <div className="text-[12px] font-semibold text-[#f6eee7] mb-3">
           Additional Options
         </div>
         
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label style={{ fontSize: 12, color: "#9f8a78" }}>Max Retries</label>
-            <input
-              type="number"
+            <div className="text-[12px] text-[#9f8a78] block mb-1">Max Retries</div>
+            <input aria-label="Input" type="number"
               min={0}
               max={5}
               value={config.maxRetries}
-              onChange={(e) => onUpdate({ maxRetries: parseInt(e.target.value) || 0 })}
-              style={{
-                width: "100%",
-                marginTop: 4,
-                padding: "6px 10px",
-                borderRadius: 6,
-                border: "1px solid var(--ui-border-default)",
-                background: "var(--surface-panel)",
-                color: "#f6eee7",
-                fontSize: 13,
-              }}
+              onChange={(e) => onUpdate({ maxRetries: parseInt(e.target.value, 10) || 0 })}
+              className="w-full p-[6px_10px] rounded-md border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[#f6eee7] text-[13px] outline-none"
             />
           </div>
           <div>
-            <label style={{ fontSize: 12, color: "#9f8a78" }}>Timeout (min)</label>
-            <input
-              type="number"
+            <div className="text-[12px] text-[#9f8a78] block mb-1">Timeout (min)</div>
+            <input aria-label="Input" type="number"
               min={1}
               max={120}
               value={config.timeout}
-              onChange={(e) => onUpdate({ timeout: parseInt(e.target.value) || 30 })}
-              style={{
-                width: "100%",
-                marginTop: 4,
-                padding: "6px 10px",
-                borderRadius: 6,
-                border: "1px solid var(--ui-border-default)",
-                background: "var(--surface-panel)",
-                color: "#f6eee7",
-                fontSize: 13,
-              }}
+              onChange={(e) => onUpdate({ timeout: parseInt(e.target.value, 10) || 30 })}
+              className="w-full p-[6px_10px] rounded-md border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[#f6eee7] text-[13px] outline-none"
             />
           </div>
         </div>
 
-        <div style={{ marginTop: 12, display: "flex", gap: 16 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-            <input
-              type="checkbox"
+        <div className="mt-4 flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <input aria-label="Checkbox" type="checkbox"
               checked={config.notifyOnSuccess}
               onChange={(e) => onUpdate({ notifyOnSuccess: e.target.checked })}
+              className="cursor-pointer"
               style={{ accentColor }}
             />
-            <span style={{ fontSize: 12, color: "#a8998c" }}>Notify on success</span>
+            <span className="text-[12px] text-[#a8998c] group-hover:text-[#d1c3b4] transition-colors">Notify on success</span>
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-            <input
-              type="checkbox"
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <input aria-label="Checkbox" type="checkbox"
               checked={config.notifyOnFailure}
               onChange={(e) => onUpdate({ notifyOnFailure: e.target.checked })}
+              className="cursor-pointer"
               style={{ accentColor }}
             />
-            <span style={{ fontSize: 12, color: "#a8998c" }}>Notify on failure</span>
+            <span className="text-[12px] text-[#a8998c] group-hover:text-[#d1c3b4] transition-colors">Notify on failure</span>
           </label>
         </div>
       </div>
@@ -1897,17 +1625,18 @@ function ReviewStep({
   const preset = PRESET_SCHEDULES.find((p) => p.value === config.schedule);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ fontSize: 14, color: "#b3a395" }}>
+    <div className="flex flex-col gap-4">
+      <div className="text-[14px] text-[#b3a395]">
         Review your scheduled job before creating it.
       </div>
 
-      <div style={{
-        borderRadius: 12,
-        border: `1px solid ${accentColor}30`,
-        background: `${accentColor}08`,
-        padding: 16,
-      }}>
+      <div
+        className="rounded-xl border border-solid border-[var(--accent-glow)] bg-[var(--accent-glow-tiny)] p-4"
+        style={{
+          '--accent-glow': `${accentColor}30`,
+          '--accent-glow-tiny': `${accentColor}08`,
+        } as React.CSSProperties}
+      >
         <ReviewItem label="Name" value={config.name} accentColor={accentColor} />
         <ReviewItem 
           label="Task Type" 
@@ -1926,27 +1655,11 @@ function ReviewStep({
           accentColor={accentColor} 
         />
         
-        <div style={{ marginTop: 12 }}>
-          <div style={{
-            fontSize: 12,
-            fontWeight: 800,
-            color: accentColor,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            marginBottom: 6,
-          }}>
+        <div className="mt-3">
+          <div className="text-[12px] font-extrabold text-[var(--accent-color)] uppercase tracking-[0.08em] mb-1.5" style={{ '--accent-color': accentColor } as React.CSSProperties}>
             AI Prompt Preview
           </div>
-          <div style={{
-            padding: 10,
-            borderRadius: 8,
-            background: "var(--surface-panel)",
-            fontSize: 12,
-            color: "#a8998c",
-            maxHeight: 100,
-            overflow: "auto",
-            fontFamily: "var(--font-mono)",
-          }}>
+          <div className="p-2.5 rounded-lg bg-[var(--surface-panel)] text-[12px] text-[#a8998c] max-h-[100px] overflow-auto font-mono leading-relaxed">
             {config.prompt.slice(0, 200)}{config.prompt.length > 200 ? "…" : ""}
           </div>
         </div>
@@ -1967,19 +1680,12 @@ function ReviewItem({
   accentColor: string;
 }) {
   return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={{
-        fontSize: 12,
-        fontWeight: 800,
-        color: accentColor,
-        textTransform: "uppercase",
-        letterSpacing: "0.08em",
-        marginBottom: 2,
-      }}>
+    <div className="mb-2.5">
+      <div className="text-[12px] font-extrabold text-[var(--accent-color)] uppercase tracking-[0.08em] mb-0.5" style={{ '--accent-color': accentColor } as React.CSSProperties}>
         {label}
       </div>
-      <div style={{ fontSize: 13, color: "#f6eee7" }}>{value}</div>
-      {subValue && <div style={{ fontSize: 12, color: "#7a6b5d" }}>{subValue}</div>}
+      <div className="text-[13px] text-[#f6eee7] font-medium">{value}</div>
+      {subValue && <div className="text-[12px] text-[#7a6b5d]">{subValue}</div>}
     </div>
   );
 }
@@ -1994,45 +1700,25 @@ function SuccessStep({
   onClose: () => void;
 }) {
   return (
-    <div style={{ textAlign: "center", padding: "20px 0" }}>
-      <div style={{
-        width: 60,
-        height: 60,
-        borderRadius: "50%",
-        background: `${accentColor}20`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        margin: "0 auto 20px",
-      }}>
-        <Check size={32} style={{ color: accentColor }} />
+    <div className="text-center py-5">
+      <div className="size-[60px] rounded-full bg-[var(--status-success-bg)] flex items-center justify-center mx-auto mb-4 border border-solid border-[var(--status-success)]/20">
+        <Check size={32} className="text-[var(--status-success)]" weight="bold" />
       </div>
+      
+      <h2 className="text-[20px] font-bold text-[#f6eee7] mb-2">Job Scheduled!</h2>
+      <p className="text-[14px] text-[#b3a395] max-w-[320px] mx-auto mb-6 leading-relaxed">
+        "<span className="text-[#f6eee7] font-semibold">{config.name}</span>" has been successfully created and scheduled to run.
+      </p>
 
-      <div style={{ fontSize: 18, fontWeight: 700, color: "#f6eee7", marginBottom: 8 }}>
-        Job Created Successfully!
+      <div className="flex flex-col gap-2 max-w-[240px] mx-auto">
+        <button type="button"
+          onClick={onClose}
+          className="p-2.5 rounded-lg border border-solid text-[#1a1714] text-[13px] font-bold cursor-pointer transition-all hover:opacity-90"
+          style={{ borderColor: accentColor, background: accentColor }}
+        >
+          View Scheduled Jobs
+        </button>
       </div>
-
-      <div style={{ fontSize: 14, color: "#b3a395", marginBottom: 24 }}>
-        "{config.name}" is now scheduled and will run {config.schedule === "0 9 * * *" ? "daily at 9am" : "according to schedule"}.
-      </div>
-
-      <button
-        onClick={onClose}
-        style={{
-          padding: "10px 24px",
-          borderRadius: 10,
-          border: `1px solid ${accentColor}`,
-          background: accentColor,
-          color: "#1a1714",
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: "pointer",
-        }}
-      >
-        Done
-      </button>
     </div>
   );
 }
-
-export default CronJobWizard;

@@ -98,7 +98,7 @@ export const Clickable: Story = {
  * Active state demonstration
  */
 export const ActiveState: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [active, setActive] = useState(false);
     return (
       <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>

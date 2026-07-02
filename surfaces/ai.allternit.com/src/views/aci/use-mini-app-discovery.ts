@@ -21,6 +21,9 @@ const BUILTIN_MINI_APPS: Array<{
       version: 'local',
       category: 'runtime',
       pinnable: true,
+      repo: 'openclaw-sh/openclaw',
+      githubUrl: 'https://github.com/openclaw-sh/openclaw',
+      downloadable: true,
     },
   },
   {
@@ -32,6 +35,9 @@ const BUILTIN_MINI_APPS: Array<{
       version: 'local',
       category: 'connector',
       pinnable: true,
+      repo: 'allternit/hermes',
+      githubUrl: 'https://github.com/allternit/hermes',
+      downloadable: true,
     },
   },
 ];
@@ -54,6 +60,20 @@ async function probePort(port: number): Promise<InstalledMiniApp | null> {
   }
 }
 
+// Reachability check for apps that don't serve the JSON manifest (e.g. OpenClaw
+// serves its own SPA at all routes). Uses no-cors so CORS headers are irrelevant.
+async function checkReachable(port: number): Promise<boolean> {
+  try {
+    await fetch(`http://localhost:${port}/`, {
+      mode: 'no-cors',
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function useMiniAppDiscovery() {
   const [discovered, setDiscovered] = useState<InstalledMiniApp[]>([]);
   const [pinned, setPinned] = useState<InstalledMiniApp[]>(getPinnedMiniApps);
@@ -61,15 +81,22 @@ export function useMiniAppDiscovery() {
 
   const probe = useCallback(async () => {
     setProbing(true);
-    const results = await Promise.all(KNOWN_PORTS.map(probePort));
-    const found = results.filter((r): r is InstalledMiniApp => r !== null);
+    const [manifestResults, reachable] = await Promise.all([
+      Promise.all(KNOWN_PORTS.map(probePort)),
+      Promise.all(KNOWN_PORTS.map(checkReachable)),
+    ]);
+    const found = manifestResults.filter((r): r is InstalledMiniApp => r !== null);
     const withBuiltins = BUILTIN_MINI_APPS.map(({ port, manifest }) => {
       const base = `http://localhost:${port}`;
+      const portIdx = KNOWN_PORTS.indexOf(port);
+      // Prefer a full manifest response; fall back to reachability for apps
+      // (like OpenClaw) that serve their own SPA at all routes.
       const live = found.find((app) => app.id === manifest.id || app.sourceUrl === base);
       if (live) return live;
+      const isUp = portIdx >= 0 && reachable[portIdx];
       return {
         ...manifestToMiniApp(manifest, base, 'builtin'),
-        status: 'offline' as const,
+        status: isUp ? 'available' as const : 'offline' as const,
       };
     });
 
@@ -78,7 +105,7 @@ export function useMiniAppDiscovery() {
     for (const app of pinnedNow) {
       if (!app.sourceUrl) continue;
       const isOnline = withBuiltins.some((f) => f.sourceUrl === app.sourceUrl && f.status !== 'offline');
-      const newStatus = isOnline ? 'running' : app.status === 'running' ? 'offline' : app.status;
+      const newStatus = isOnline ? 'running' : 'offline';
       if (newStatus !== app.status) updateMiniAppStatus(app.id, newStatus);
     }
 

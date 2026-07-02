@@ -20,8 +20,12 @@
 import { execEvents } from './exec.events';
 import { RunRequest } from './exec.types';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Exec.facade');
+
 // Deprecation warning (silenced for production)
-// console.warn('[DEPRECATED] exec.facade.ts is deprecated. Use api-client.ts instead.');
+// logger.warn('exec.facade.ts is deprecated. Use api-client.ts instead.');
 
 type BrainType = "cli" | "api" | "local";
 

@@ -21,7 +21,7 @@ const SIDECAR_DEFAULT = 350;
 // Types
 // =============================================================================
 
-export interface PanelLayout {
+interface PanelLayout {
   railWidth: number;
   sidecarWidth: number;
 }

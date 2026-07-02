@@ -12,7 +12,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ImageSkeleton } from './ViewSkeleton';
 
-export interface OptimizedImageProps {
+interface OptimizedImageProps {
   src: string;
   alt: string;
   width?: number;
@@ -259,7 +259,7 @@ export function OptimizedImage({
 // Responsive Image Component
 // ============================================================================
 
-export interface ResponsiveImageProps extends Omit<OptimizedImageProps, 'srcSet' | 'sizes'> {
+interface ResponsiveImageProps extends Omit<OptimizedImageProps, 'srcSet' | 'sizes'> {
   /** Available widths for srcset generation */
   widths?: number[];
   /** Base URL for image (without extension) */
@@ -358,7 +358,7 @@ export function useImagePreloader() {
 // Background Image Component
 // ============================================================================
 
-export interface BackgroundImageProps {
+interface BackgroundImageProps {
   src: string;
   children?: React.ReactNode;
   className?: string;

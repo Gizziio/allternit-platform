@@ -22,6 +22,10 @@
 
 import { Redis } from '@upstash/redis';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Client');
+
 // ─── Client singleton ──────────────────────────────────────────────────────────
 
 export type RedisClient = ReturnType<typeof buildClient>;
@@ -125,11 +129,11 @@ export function getRedisClient(): RedisClient | null {
   if (_client) return _client;
   _client = buildClient();
   if (!_client) {
-    console.warn('[redis] KV_REST_API_URL / KV_REST_API_TOKEN not set — falling back to in-memory stores');
+    logger.warn('KV_REST_API_URL / KV_REST_API_TOKEN not set — falling back to in-memory stores');
   }
   return _client;
 }
 
-export function isRedisAvailable(): boolean {
+function isRedisAvailable(): boolean {
   return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }

@@ -20,7 +20,7 @@ import {
 import { AgentContextStrip } from '@/components/agents/AgentContextStrip';
 import type { GizziAttention } from '@/components/ai-elements/GizziMascot';
 import { StreamingChatComposer } from '@/components/chat/StreamingChatComposer';
-import { ChatComposer } from '../chat/ChatComposer';
+import { ChatComposer, type ChatAttachment } from '../chat/ChatComposer';
 import {
   useRustStreamAdapter,
   type ChatMessage as StreamChatMessage,
@@ -42,9 +42,23 @@ import {
   getAgentSessionDescriptor,
   getAgentSessionStatusLabel,
 } from '@/lib/agents';
-import { useCodeSessionStore, type CodeSession } from './CodeSessionStore';
+import { useCodeSessionStore, createCodeSession, type CodeSession } from './CodeSessionStore';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ACIComputerUseBar } from '@/capsules/browser/ACIComputerUseSidecar';
+import { useModeCanvasBridge } from '@/hooks/useModeCanvasBridge';
+import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
+import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from '@/components/chat/AttachmentPreview';
+import {
+  ComposerPermissionInfoBar,
+  ComposerQuestionBar,
+  ComposerStatusInfoBar,
+} from '../chat/ChatComposerEnhancements';
+import { usePendingPermissions, usePendingQuestions } from '@/lib/agents';
+import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CodeCanvas');
 
 const CONTENT_WIDTH = 760;
 const CODE_MODEL_NAMES: Record<string, string> = {
@@ -376,6 +390,71 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanv
     });
   }, [isEmbeddedAgentSession, activeSessionId]);
 
+  // Harness routing: connect mode selection to canvas/sidecar opening (parity with Chat/Cowork)
+  useModeCanvasBridge({ surface: 'code' });
+
+  // File attachments (drag-and-drop parity with Cowork)
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [previewItem, setPreviewItem] = useState<AttachmentPreviewItem | null>(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+
+  const extToAttachmentType = useCallback((filename: string): ChatAttachment['type'] => {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
+    if (['pdf'].includes(ext)) return 'document';
+    if (['docx', 'doc', 'txt', 'md'].includes(ext)) return 'document';
+    if (['ts', 'tsx', 'js', 'jsx', 'py', 'rs', 'go'].includes(ext)) return 'code';
+    if (['json'].includes(ext)) return 'json';
+    if (['csv', 'xlsx', 'xls'].includes(ext)) return 'spreadsheet';
+    return 'other';
+  }, []);
+
+  const handleAddAttachment = useCallback((file: FileWithData) => {
+    const attachment: ChatAttachment = {
+      id: `code-att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.file.name,
+      dataUrl: file.dataUrl,
+      type: extToAttachmentType(file.file.name),
+    };
+    setAttachments((prev) => [...prev, attachment]);
+  }, [extToAttachmentType]);
+
+  const handleAddChatAttachment = useCallback((attachment: ChatAttachment) => {
+    setAttachments((prev) => [...prev, attachment]);
+  }, []);
+
+  const handleRemoveAttachment = useCallback((id: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  const handleDroppedFiles = useCallback((files: FileWithData[]) => {
+    files.forEach(handleAddAttachment);
+  }, [handleAddAttachment]);
+
+  useDropTarget('code', handleDroppedFiles);
+
+  const attachmentPreviewItems = useMemo<AttachmentPreviewItem[]>(() =>
+    attachments.map((a) => ({
+      id: a.id,
+      name: a.name,
+      type: a.type as AttachmentPreviewItem['type'],
+      dataUrl: a.dataUrl,
+      size: 0,
+    })),
+  [attachments]);
+
+  const handlePreviewAttachment = useCallback((item: AttachmentPreviewItem) => {
+    setPreviewItem(item);
+    setPreviewModalOpen(true);
+  }, []);
+
+  // Tool permission / question gates (parity with Chat/Cowork)
+  const activeComposerSessionId = embeddedAgentSession?.sessionId ?? null;
+  const pendingPermissions = usePendingPermissions(activeComposerSessionId || '__inactive__');
+  const pendingQuestions = usePendingQuestions(activeComposerSessionId || '__inactive__');
+  const { executionMode } = useRuntimeExecutionMode();
+  const brainMode = executionMode?.mode === 'plan' ? 'plan' : 'build';
+
   return (
     <CodeSessionSurface
       key={effectiveCanvasKey}
@@ -421,6 +500,17 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanv
       activeSessionId={activeSessionId}
       activeWorkspaceId={activeWorkspaceId}
       onConfirmWorkspace={confirmWorkspace}
+      attachments={attachments}
+      onAddChatAttachment={handleAddChatAttachment}
+      onRemoveAttachment={handleRemoveAttachment}
+      attachmentPreviewItems={attachmentPreviewItems}
+      onPreviewAttachment={handlePreviewAttachment}
+      previewItem={previewItem}
+      previewModalOpen={previewModalOpen}
+      onClosePreviewModal={() => setPreviewModalOpen(false)}
+      pendingPermissions={pendingPermissions}
+      pendingQuestions={pendingQuestions}
+      brainMode={brainMode}
     />
   );
 }
@@ -455,6 +545,17 @@ interface CodeSessionSurfaceProps {
   activeSessionId: string;
   activeWorkspaceId: string;
   onConfirmWorkspace: (workspaceId?: string) => void;
+  attachments: ChatAttachment[];
+  onAddChatAttachment: (attachment: ChatAttachment) => void;
+  onRemoveAttachment: (id: string) => void;
+  attachmentPreviewItems: AttachmentPreviewItem[];
+  onPreviewAttachment: (item: AttachmentPreviewItem) => void;
+  previewItem: AttachmentPreviewItem | null;
+  previewModalOpen: boolean;
+  onClosePreviewModal: () => void;
+  pendingPermissions: import('@/lib/agents').PendingPermissionRequest[];
+  pendingQuestions: import('@/lib/agents').PendingQuestionRequest[];
+  brainMode: 'plan' | 'build';
 }
 
 function CodeSessionSurface({
@@ -487,6 +588,17 @@ function CodeSessionSurface({
   activeSessionId,
   activeWorkspaceId,
   onConfirmWorkspace,
+  attachments,
+  onAddChatAttachment,
+  onRemoveAttachment,
+  attachmentPreviewItems,
+  onPreviewAttachment,
+  previewItem,
+  previewModalOpen,
+  onClosePreviewModal,
+  pendingPermissions,
+  pendingQuestions,
+  brainMode,
 }: CodeSessionSurfaceProps) {
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('code');
@@ -502,7 +614,6 @@ function CodeSessionSurface({
   const setActiveCodeSession = useCodeSessionStore(
     (state) => state.setActiveSession,
   );
-  const createCodeSession = useCodeSessionStore((state) => state.createSession);
   const sendCodeMessageStream = useCodeSessionStore(
     (state) => state.sendMessageStream,
   );
@@ -527,7 +638,7 @@ function CodeSessionSurface({
   } = useRustStreamAdapter({
     initialMessages,
     onMessagesChange,
-    onError: (error) => console.error('[CodeCanvas] stream error', error),
+    onError: (error) => logger.error({ err: error }, '[CodeCanvas] stream error'),
   });
 
   const effectiveModelId = resolveCodeChatModel(selectedModel);
@@ -566,7 +677,7 @@ function CodeSessionSurface({
     }
 
     if (!isEmbeddedAgentSession && agentModeEnabled && !selectedAgentId) {
-      console.warn('[CodeCanvas] Agent mode is enabled but no agent is selected');
+      logger.warn('Agent mode is enabled but no agent is selected');
       return;
     }
 
@@ -585,6 +696,7 @@ function CodeSessionSurface({
           sessionMode: 'agent',
           agentId: selectedAgent?.id,
           agentName: selectedAgent?.name,
+          workspaceId: activeWorkspaceId,
           metadata: {
             runtimeModel: selectedAgent?.model,
             agentFeatures: { workspace: true, tools: true, automation: true },
@@ -594,7 +706,7 @@ function CodeSessionSurface({
         await sendCodeMessageStream(sessionId, { text: draft });
         return;
       } catch (err) {
-        console.error('[CodeCanvas] Failed to create code agent session:', err);
+        logger.error({ err: err }, 'Failed to create code agent session');
         return;
       }
     }
@@ -604,10 +716,10 @@ function CodeSessionSurface({
     if (!sessionId && !regularChatSessionCreating.current) {
       regularChatSessionCreating.current = true;
       try {
-        sessionId = await createCodeSession({ name: 'Code Session' });
+        sessionId = await createCodeSession({ name: 'Code Session', workspaceId: activeWorkspaceId });
         setRegularChatSessionId(sessionId);
       } catch (err) {
-        console.warn('[CodeCanvas] Session creation failed:', err);
+        logger.warn({ err: err }, 'Session creation failed');
       } finally {
         regularChatSessionCreating.current = false;
       }
@@ -624,7 +736,7 @@ function CodeSessionSurface({
     });
   }, [
     agentModeEnabled,
-    createCodeSession,
+    activeWorkspaceId,
     embeddedAgentSession?.sessionId,
     effectiveModelId,
     isEmbeddedAgentSession,
@@ -696,6 +808,20 @@ function CodeSessionSurface({
     stop,
   ]);
 
+  const composerTopInfoBar = pendingPermissions[0]
+    ? <ComposerPermissionInfoBar request={pendingPermissions[0]} />
+    : null;
+  const composerQuestionBar = pendingQuestions[0]
+    ? <ComposerQuestionBar request={pendingQuestions[0]} />
+    : null;
+  const composerBottomInfoBar = (
+    <ComposerStatusInfoBar
+      modelLabel={selectedModelDisplayName || selectedModel || null}
+      modeLabel={brainMode === 'plan' ? 'Plan' : 'Build'}
+      attachmentCount={attachments.length}
+    />
+  );
+
   if (hasMessages) {
     return (
       <ConversationStage
@@ -729,6 +855,17 @@ function CodeSessionSurface({
         activeSessionId={activeSessionId}
         activeWorkspaceId={activeWorkspaceId}
         onConfirmWorkspace={onConfirmWorkspace}
+        attachments={attachments}
+        onRemoveAttachment={onRemoveAttachment}
+        onAddChatAttachment={onAddChatAttachment}
+        attachmentPreviewItems={attachmentPreviewItems}
+        onPreviewAttachment={onPreviewAttachment}
+        previewItem={previewItem}
+        previewModalOpen={previewModalOpen}
+        onClosePreviewModal={onClosePreviewModal}
+        composerTopInfoBar={composerTopInfoBar}
+        composerQuestionBar={composerQuestionBar}
+        composerBottomInfoBar={composerBottomInfoBar}
       />
     );
   }
@@ -764,6 +901,17 @@ function CodeSessionSurface({
       agentModePulse={agentModePulse}
       selectedAgentName={selectedAgent?.name ?? null}
       onConfirmWorkspace={onConfirmWorkspace}
+      attachments={attachments}
+      onRemoveAttachment={onRemoveAttachment}
+      onAddChatAttachment={onAddChatAttachment}
+      attachmentPreviewItems={attachmentPreviewItems}
+      onPreviewAttachment={onPreviewAttachment}
+      previewItem={previewItem}
+      previewModalOpen={previewModalOpen}
+      onClosePreviewModal={onClosePreviewModal}
+      composerTopInfoBar={composerTopInfoBar}
+      composerQuestionBar={composerQuestionBar}
+      composerBottomInfoBar={composerBottomInfoBar}
     />
   );
 }
@@ -798,6 +946,17 @@ function LaunchpadStage({
   agentModePulse,
   selectedAgentName,
   onConfirmWorkspace,
+  attachments,
+  onRemoveAttachment,
+  onAddChatAttachment,
+  attachmentPreviewItems,
+  onPreviewAttachment,
+  previewItem,
+  previewModalOpen,
+  onClosePreviewModal,
+  composerTopInfoBar,
+  composerQuestionBar,
+  composerBottomInfoBar,
 }: {
   activeAction: ActionGroup | null;
   activeWorkspace: ReturnType<typeof getActiveWorkspace>;
@@ -828,11 +987,22 @@ function LaunchpadStage({
   agentModePulse: number;
   selectedAgentName: string | null;
   onConfirmWorkspace: (workspaceId?: string) => void;
+  attachments: ChatAttachment[];
+  onRemoveAttachment: (id: string) => void;
+  onAddChatAttachment: (attachment: ChatAttachment) => void;
+  attachmentPreviewItems: AttachmentPreviewItem[];
+  onPreviewAttachment: (item: AttachmentPreviewItem) => void;
+  previewItem: AttachmentPreviewItem | null;
+  previewModalOpen: boolean;
+  onClosePreviewModal: () => void;
+  composerTopInfoBar: React.ReactNode;
+  composerQuestionBar: React.ReactNode;
+  composerBottomInfoBar: React.ReactNode;
 }) {
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
 
   return (
-    <div data-testid="code-canvas-shell" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 24px 32px', boxSizing: 'border-box', overflow: 'auto', minHeight: 0 }}>
+    <div data-testid="code-canvas-shell" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 24px 120px', boxSizing: 'border-box', overflow: 'auto', minHeight: 0 }}>
       {agentContextStrip ? (
         <div style={{ width: '100%', textAlign: 'left', marginBottom: 18 }}>
           {agentContextStrip}
@@ -849,6 +1019,17 @@ function LaunchpadStage({
       <div style={{ width: '100%', marginTop: 28 }}>
         {/* CodeActionPills removed per annotation - pills no longer necessary */}
         <div data-testid="code-shared-composer" style={{ marginTop: 14 }}>
+          {attachmentPreviewItems.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <AttachmentPreview
+                attachments={attachmentPreviewItems}
+                onRemove={onRemoveAttachment}
+                onPreview={onPreviewAttachment}
+                variant="compact"
+                maxHeight={120}
+              />
+            </div>
+          )}
           <ChatComposer
             key={`code-launchpad-composer-${composerVersion}`}
             onSend={onSend}
@@ -867,6 +1048,12 @@ function LaunchpadStage({
             variant="large"
             onAttentionChange={setBrandingAttention}
             agentModeSurface="code"
+            attachments={attachments}
+            onRemoveAttachment={onRemoveAttachment}
+            onAddAttachment={onAddChatAttachment}
+            topInfoBarContent={composerTopInfoBar}
+            questionBarContent={composerQuestionBar}
+            bottomInfoBarContent={composerBottomInfoBar}
             bottomDockContent={
               <CompactUtilityBar
                 activeWorkspace={activeWorkspace}
@@ -880,6 +1067,11 @@ function LaunchpadStage({
           />
         </div>
       </div>
+      <AttachmentPreviewModal
+        item={previewItem}
+        isOpen={previewModalOpen}
+        onClose={onClosePreviewModal}
+      />
     </div>
   );
 }
@@ -915,6 +1107,17 @@ function ConversationStage({
   activeSessionId,
   activeWorkspaceId,
   onConfirmWorkspace,
+  attachments,
+  onRemoveAttachment,
+  onAddChatAttachment,
+  attachmentPreviewItems,
+  onPreviewAttachment,
+  previewItem,
+  previewModalOpen,
+  onClosePreviewModal,
+  composerTopInfoBar,
+  composerQuestionBar,
+  composerBottomInfoBar,
 }: {
   activeAction: ActionGroup | null;
   activeSession: ReturnType<typeof getActiveSession>;
@@ -946,6 +1149,17 @@ function ConversationStage({
   activeSessionId: string;
   activeWorkspaceId: string;
   onConfirmWorkspace: (workspaceId?: string) => void;
+  attachments: ChatAttachment[];
+  onRemoveAttachment: (id: string) => void;
+  onAddChatAttachment: (attachment: ChatAttachment) => void;
+  attachmentPreviewItems: AttachmentPreviewItem[];
+  onPreviewAttachment: (item: AttachmentPreviewItem) => void;
+  previewItem: AttachmentPreviewItem | null;
+  previewModalOpen: boolean;
+  onClosePreviewModal: () => void;
+  composerTopInfoBar: React.ReactNode;
+  composerQuestionBar: React.ReactNode;
+  composerBottomInfoBar: React.ReactNode;
 }) {
   const workspaceBranch = activeWorkspace?.repo_status?.branch ?? 'workspace';
 
@@ -1033,6 +1247,17 @@ function ConversationStage({
 
           <div data-testid="code-shared-composer" style={{ marginTop: 8 }}>
             <ACIComputerUseBar suppressInBrowserMode />
+            {attachmentPreviewItems.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <AttachmentPreview
+                  attachments={attachmentPreviewItems}
+                  onRemove={onRemoveAttachment}
+                  onPreview={onPreviewAttachment}
+                  variant="compact"
+                  maxHeight={120}
+                />
+              </div>
+            )}
             <ChatComposer
               key={`code-conversation-composer-${composerVersion}`}
               onSend={onSend}
@@ -1045,6 +1270,12 @@ function ConversationStage({
               showTopActions={false}
               inputValue={composerSeed}
               agentModeSurface="code"
+              attachments={attachments}
+              onRemoveAttachment={onRemoveAttachment}
+              onAddAttachment={onAddChatAttachment}
+              topInfoBarContent={composerTopInfoBar}
+              questionBarContent={composerQuestionBar}
+              bottomInfoBarContent={composerBottomInfoBar}
             />
           </div>
 
@@ -1066,6 +1297,11 @@ function ConversationStage({
           />
         </div>
       </div>
+      <AttachmentPreviewModal
+        item={previewItem}
+        isOpen={previewModalOpen}
+        onClose={onClosePreviewModal}
+      />
     </div>
   );
 }
@@ -1155,7 +1391,7 @@ function ComposerUtilityBar({
           </button>
 
           {showSessionPicker ? (
-            <div style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleSessionPicker} />
+            <div role="button" tabIndex={0} style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleSessionPicker} />
           ) : null}
         </div>
 
@@ -1172,7 +1408,7 @@ function ComposerUtilityBar({
           </button>
 
           {showWorkspacePicker ? (
-            <div style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleWorkspacePicker} />
+            <div role="button" tabIndex={0} style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleWorkspacePicker} />
           ) : null}
         </div>
 

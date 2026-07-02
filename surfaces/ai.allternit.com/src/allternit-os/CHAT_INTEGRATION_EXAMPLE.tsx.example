@@ -6,13 +6,12 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  A2rCanvas,
-  useAgentRuntime,
-  useChatWithPrograms,
-  useProgramStreaming,
-  useSidecarStore,
-} from './index';
+
+} from ;
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('');
 
 // ============================================================================
 // Example 1: Complete Chat Shell with A2rCanvas

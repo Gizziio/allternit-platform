@@ -57,7 +57,9 @@ interface CoworkState {
   createProject: (title: string) => TaskProject;
   deleteProject: (id: string) => void;
   renameProject: (id: string, title: string) => void;
+  updateProjectInstructions: (id: string, instructions: string) => void;
   moveTaskToProject: (taskId: string, projectId: string | null) => void;
+  bindSessionToTask: (taskId: string, sessionId: string) => void;
   setActiveTask: (id: string | null) => void;
   setActiveProject: (id: string | null) => void;
   // === Team Assignment (delegates to useTaskStore) ===
@@ -85,6 +87,7 @@ interface CoworkState {
   // === Audit Log (delegates to useTaskStore) ===
   getTaskAuditLog: (taskId: string) => Array<{ id: string; action: string; actor: string; timestamp: string; details?: string }>;
   addAuditLogEntry: (taskId: string, action: string, details?: string) => void;
+  fetchTasks: () => Promise<void>;
 
   // === UI Toggles (delegates to useCoworkUIStore) ===
   selectEvent: (eventId: string | null) => void;
@@ -166,7 +169,9 @@ export const useCoworkStore = create<CoworkState>()((set, get) => {
     createProject: (title) => useTaskStore.getState().createProject(title),
     deleteProject: (id) => useTaskStore.getState().deleteProject(id),
     renameProject: (id, title) => useTaskStore.getState().renameProject(id, title),
+    updateProjectInstructions: (id, instructions) => useTaskStore.getState().updateProjectInstructions(id, instructions),
     moveTaskToProject: (taskId, projectId) => useTaskStore.getState().moveTaskToProject(taskId, projectId),
+    bindSessionToTask: (taskId, sessionId) => useTaskStore.getState().bindSessionToTask(taskId, sessionId),
     setActiveTask: (id) => useTaskStore.getState().setActiveTask(id),
     setActiveProject: (id) => useTaskStore.getState().setActiveProject(id),
     // === Team Assignment (delegates to useTaskStore) ===
@@ -223,6 +228,7 @@ export const useCoworkStore = create<CoworkState>()((set, get) => {
     // === Audit Log (delegates to useTaskStore) ===
     getTaskAuditLog: (taskId) => useTaskStore.getState().getTaskAuditLog(taskId),
     addAuditLogEntry: (taskId, action, details) => useTaskStore.getState().addAuditLogEntry(taskId, action, details),
+    fetchTasks: () => useTaskStore.getState().fetchTasks(),
 
     // === UI Toggles (delegates to useCoworkUIStore) ===
     selectEvent: (eventId) => useCoworkUIStore.getState().selectEvent(eventId),

@@ -146,7 +146,7 @@ export function LocalModelManager() {
             Offline AI that runs on your machine — no API key, no data sent anywhere.
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={() => { fetchStatus(); fetchModels(); }}
           disabled={refreshing}
           className="p-2 rounded-lg hover:bg-secondary transition-colors text-[var(--text-secondary)]"
@@ -227,7 +227,7 @@ export function LocalModelManager() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">Download failed</p>
               <p className="text-xs text-[var(--text-tertiary)] mb-3">{pullError}</p>
-              <button
+              <button type="button"
                 onClick={startDownload}
                 className="text-xs font-semibold text-[var(--accent-primary)] hover:underline"
               >
@@ -253,7 +253,7 @@ export function LocalModelManager() {
                 llama3.2:3b · offline · no API key · works on any machine
               </p>
             </div>
-            <button
+            <button type="button"
               onClick={startDownload}
               className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--accent-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-opacity"
             >
@@ -298,7 +298,7 @@ export function LocalModelManager() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button type="button" className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Trash size={18} />
                   </button>
                   <CheckCircle size={20} weight="fill" className="text-green-500" />

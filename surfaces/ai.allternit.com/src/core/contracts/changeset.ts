@@ -1,6 +1,6 @@
 import { UUID, ISODate, RiskTier } from './base';
 
-export interface DiffLine {
+interface DiffLine {
   readonly id: string;
   type: 'context' | 'addition' | 'deletion';
   content: string;

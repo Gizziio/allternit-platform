@@ -205,8 +205,7 @@ function ModelSelect({ providerId, modelId, execMode, onChange }: ModelSelectPro
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {/* Provider */}
       <div style={{ position: 'relative' }}>
-        <select
-          value={providerId}
+        <select aria-label="Selection" value={providerId}
           onChange={e => {
             const next = PROVIDERS.find(p => p.id === e.target.value) ?? PROVIDERS[0];
             onChange(next.id, next.models[0].id, execMode);
@@ -222,8 +221,7 @@ function ModelSelect({ providerId, modelId, execMode, onChange }: ModelSelectPro
 
       {/* Model */}
       <div style={{ position: 'relative' }}>
-        <select
-          value={modelId}
+        <select aria-label="Selection" value={modelId}
           onChange={e => onChange(providerId, e.target.value, execMode)}
           style={{ ...SELECT_STYLE, color: TEXT.secondary }}
         >
@@ -236,8 +234,7 @@ function ModelSelect({ providerId, modelId, execMode, onChange }: ModelSelectPro
 
       {/* Exec mode */}
       <div style={{ position: 'relative' }}>
-        <select
-          value={execMode}
+        <select aria-label="Selection" value={execMode}
           onChange={e => onChange(providerId, modelId, e.target.value as ExecMode)}
           style={{ ...SELECT_STYLE, color: TEXT.tertiary }}
         >
@@ -371,9 +368,8 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
 
         {/* ── Goal input ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Goal</label>
-          <textarea
-            value={goal}
+          <div style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Goal</div>
+          <textarea aria-label="Text Area" value={goal}
             onChange={e => setGoal(e.target.value)}
             placeholder="Describe what the swarm should accomplish…"
             rows={3}
@@ -398,12 +394,12 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
 
         {/* ── Template selector ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Template</label>
+          <div style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Template</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             {TEMPLATES.map(tpl => {
               const isSelected = selectedTemplate === tpl.id;
               return (
-                <button
+                <button type="button"
                   key={tpl.id}
                   onClick={() => selectTemplate(tpl.id)}
                   style={{
@@ -427,9 +423,9 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
         {/* ── Role assignment ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <label style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Roles</label>
+            <div style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Roles</div>
             {selectedTemplate === 'custom' && (
-              <button
+              <button type="button"
                 onClick={addCustomRole}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '4px 10px', borderRadius: 8, background: ACCENT_DIM, color: ACCENT, border: `1px solid ${ACCENT_BORDER}`, cursor: 'pointer' }}
               >
@@ -462,7 +458,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
                       />
                     </div>
                     {selectedTemplate === 'custom' && roles.length > 1 && (
-                      <button onClick={() => removeRole(role.id)} style={{ padding: 4, borderRadius: 4, background: 'none', border: 'none', cursor: 'pointer', opacity: 0.4 }}>
+                      <button type="button" onClick={() => removeRole(role.id)} style={{ padding: 4, borderRadius: 4, background: 'none', border: 'none', cursor: 'pointer', opacity: 0.4 }}>
                         <Minus size={12} color={TEXT.secondary} />
                       </button>
                     )}
@@ -483,18 +479,18 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 12, color: TEXT.secondary }}>Max iterations</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <button onClick={() => setMaxIterations(v => Math.max(1, v - 1))} style={{ width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-hover)', border: 'none', cursor: 'pointer' }}>
+              <button type="button" onClick={() => setMaxIterations(v => Math.max(1, v - 1))} style={{ width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-hover)', border: 'none', cursor: 'pointer' }}>
                 <Minus size={10} color={TEXT.secondary} />
               </button>
               <span style={{ width: 24, textAlign: 'center', fontSize: 13, fontWeight: 500, color: TEXT.primary, fontVariantNumeric: 'tabular-nums' }}>{maxIterations}</span>
-              <button onClick={() => setMaxIterations(v => Math.min(10, v + 1))} style={{ width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-hover)', border: 'none', cursor: 'pointer' }}>
+              <button type="button" onClick={() => setMaxIterations(v => Math.min(10, v + 1))} style={{ width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-hover)', border: 'none', cursor: 'pointer' }}>
                 <Plus size={10} color={TEXT.secondary} />
               </button>
             </div>
           </div>
           <div style={{ width: 1, height: 20, background: BORDER_COLOR }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button
+            <button type="button"
               onClick={() => setEscalate(v => !v)}
               style={{ position: 'relative', width: 32, height: 18, borderRadius: 9, background: escalate ? ACCENT : 'var(--ui-border-default)', border: 'none', cursor: 'pointer', padding: 0 }}
             >
@@ -512,7 +508,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
         )}
 
         {/* ── Launch button ── */}
-        <button
+        <button type="button"
           onClick={launch}
           disabled={!canLaunch}
           style={{

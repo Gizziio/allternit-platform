@@ -31,6 +31,10 @@ import type { AgentWorkspace } from '@/lib/agents/agent.types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('PackageManager');
+
 interface PackageManagerProps {
   agentId: string;
   onClose: () => void;
@@ -83,9 +87,9 @@ interface PackageFile {
 export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEME }: PackageManagerProps) {
   const [activeTab, setActiveTab] = useState<'export' | 'import'>('export');
   const [workspace, setWorkspace] = useState<AgentWorkspace | null>(null);
-  const [, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Export state
   const [exportOptions, setExportOptions] = useState({
@@ -133,7 +137,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
 
   // Preview import file
   const previewImport = async (file: File) => {
-    setIsLoading(true);
+
     setError(null);
     try {
       const zip = await JSZip.loadAsync(file);
@@ -142,8 +146,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
       const manifestFile = zip.file('manifest.json');
       if (!manifestFile) {
         setError('Invalid .allternit package: manifest.json not found');
-        setIsLoading(false);
-        return;
+          return;
       }
       
       const manifest: PackageManifest = JSON.parse(await manifestFile.async('text'));
@@ -166,7 +169,6 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
       setError('Failed to read package file');
       console.error(e);
     } finally {
-      setIsLoading(false);
     }
   };
 
@@ -266,7 +268,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
               </p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}>
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}>
             <X style={{ width: 20, height: 20 }} />
           </button>
         </div>
@@ -277,7 +279,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
           borderBottom: `1px solid ${theme.borderSubtle}`,
         }}>
           {(['export', 'import'] as const).map((tab) => (
-            <button
+            <button type="button"
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
@@ -382,9 +384,9 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
 
                 {/* Layer Preview */}
                 <div>
-                  <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '12px', display: 'block' }}>
+                  <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '12px', display: 'block' }}>
                     Included Layers
-                  </label>
+                  </div>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     {workspace?.layers && Object.entries(workspace.layers).map(([layer, enabled]) => (
                       enabled && (
@@ -406,13 +408,12 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
 
                 {/* Export Options */}
                 <div>
-                  <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '12px', display: 'block' }}>
+                  <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '12px', display: 'block' }}>
                     Export Options
-                  </label>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
+                      <input aria-label="Checkbox" type="checkbox"
                         checked={exportOptions.includeMemory}
                         onChange={(e) => setExportOptions({ ...exportOptions, includeMemory: e.target.checked })}
                         style={{ width: 18, height: 18 }}
@@ -420,8 +421,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                       <span style={{ fontSize: '13px', color: theme.textPrimary }}>Include memory files</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
+                      <input aria-label="Checkbox" type="checkbox"
                         checked={exportOptions.includeHistory}
                         onChange={(e) => setExportOptions({ ...exportOptions, includeHistory: e.target.checked })}
                         style={{ width: 18, height: 18 }}
@@ -429,8 +429,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                       <span style={{ fontSize: '13px', color: theme.textPrimary }}>Include execution history</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
+                      <input aria-label="Checkbox" type="checkbox"
                         checked={exportOptions.compress}
                         onChange={(e) => setExportOptions({ ...exportOptions, compress: e.target.checked })}
                         style={{ width: 18, height: 18 }}
@@ -477,7 +476,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
               >
                 {!importPreview ? (
                   /* File Upload Area */
-                  <div
+                  <div role="button" tabIndex={0}
                     onClick={() => fileInputRef.current?.click()}
                     style={{
                       padding: '48px',
@@ -486,17 +485,18 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                       textAlign: 'center',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      background: theme.bg,
+                      background: isDragging ? `${theme.accent}10` : theme.bg,
+                      borderColor: isDragging ? theme.accent : theme.borderSubtle,
                     }}
                     onDragOver={(e) => {
                       e.preventDefault();
-                      e.currentTarget.style.borderColor = theme.accent;
-                      e.currentTarget.style.background = `${theme.accent}10`;
+                      setIsDragging(true);
                     }}
                     onDragLeave={(e) => {
-                      e.currentTarget.style.borderColor = theme.borderSubtle;
-                      e.currentTarget.style.background = theme.bg;
+                      e.preventDefault();
+                      setIsDragging(false);
                     }}
+
                     onDrop={(e) => {
                       e.preventDefault();
                       const file = e.dataTransfer.files[0];
@@ -514,8 +514,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                     <p style={{ fontSize: '13px', color: theme.textMuted, margin: 0 }}>
                       or click to browse
                     </p>
-                    <input
-                      ref={fileInputRef}
+                    <input aria-label="File upload" ref={fileInputRef}
                       type="file"
                       accept=".allternit"
                       onChange={handleFileSelect}
@@ -582,9 +581,9 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
 
                     {/* File List */}
                     <div>
-                      <label style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '12px', display: 'block' }}>
+                      <div style={{ fontSize: '13px', color: theme.textSecondary, marginBottom: '12px', display: 'block' }}>
                         Package Contents ({importPreview.files.length} files)
-                      </label>
+                      </div>
                       <div style={{
                         maxHeight: '200px',
                         overflow: 'auto',

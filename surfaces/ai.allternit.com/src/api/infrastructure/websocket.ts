@@ -6,7 +6,11 @@ import type { Deployment, Instance } from './cloud';
 import type { Environment } from './environments';
 import type { VPSConnection } from './vps';
 
-export type InfrastructureEventType = 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Websocket');
+
+type InfrastructureEventType = 
   | 'deployment_update'
   | 'instance_update'
   | 'environment_status'
@@ -20,13 +24,13 @@ export interface InfrastructureEvent {
   timestamp: string;
 }
 
-export interface LogOutputData {
+interface LogOutputData {
   resource_id: string;
   resource_type: string;
   output: string;
 }
 
-export interface HealthCheckData {
+interface HealthCheckData {
   status: 'healthy' | 'degraded' | 'unhealthy';
   services: Record<string, {
     status: 'healthy' | 'unhealthy';
@@ -69,7 +73,7 @@ export class InfrastructureWebSocket {
       this.ws.close();
       this.ws = null;
     }
-    console.debug('[InfrastructureWebSocket] Disconnected');
+    logger.debug('Disconnected');
   }
 
   onEvent(handler: EventHandler): void {
@@ -88,12 +92,12 @@ export class InfrastructureWebSocket {
       const data = JSON.parse(event.data) as InfrastructureEvent;
       this.handlers.forEach(handler => handler(data));
     } catch (err) {
-      console.error('[InfrastructureWebSocket] Failed to parse message:', err);
+      logger.error({ err: err }, 'Failed to parse message');
     }
   }
 
   private handleError(error: Event): void {
-    console.error('[InfrastructureWebSocket] Error:', error);
+    logger.error({ err: error }, 'Error');
   }
 
   private handleClose(): void {
@@ -106,7 +110,7 @@ export class InfrastructureWebSocket {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-      console.debug(`[InfrastructureWebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+      logger.debug(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
       setTimeout(() => this.connect(), delay);
     }
   }
@@ -115,7 +119,7 @@ export class InfrastructureWebSocket {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(data));
     } else {
-      console.warn('[InfrastructureWebSocket] Cannot send, connection not open');
+      logger.warn('Cannot send, connection not open');
     }
   }
 

@@ -11,7 +11,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 
-export interface OnboardingPreferences {
+interface OnboardingPreferences {
   // API Configuration
   defaultProvider?: string;
   apiKeysConfigured?: boolean;
@@ -153,14 +153,14 @@ export const useOnboardingStore = create<OnboardingState>()(
 );
 
 // Selector hooks for better performance
-export const useHasCompletedOnboarding = () => 
+const useHasCompletedOnboarding = () => 
   useOnboardingStore((state) => state.hasCompletedOnboarding);
 
-export const useOnboardingScreen = () => 
+const useOnboardingScreen = () => 
   useOnboardingStore((state) => state.currentScreen);
 
-export const useShowWizard = () => 
+const useShowWizard = () => 
   useOnboardingStore((state) => state.showWizard);
 
-export const useOnboardingPreferences = () => 
+const useOnboardingPreferences = () => 
   useOnboardingStore((state) => state.preferences);

@@ -66,7 +66,7 @@ Examples:
   },
 };
 
-export interface TestResult {
+interface TestResult {
   success: boolean;
   testRunner: string;
   totalTests: number;
@@ -148,7 +148,7 @@ Examples:
   },
 };
 
-export interface CoverageReport {
+interface CoverageReport {
   overall: {
     lines: number;
     statements: number;
@@ -227,7 +227,7 @@ Examples:
   },
 };
 
-export interface LintResult {
+interface LintResult {
   linter: string;
   success: boolean;
   errorCount: number;
@@ -297,7 +297,7 @@ Examples:
   },
 };
 
-export interface TypeCheckResult {
+interface TypeCheckResult {
   success: boolean;
   errorCount: number;
   errors: Array<{

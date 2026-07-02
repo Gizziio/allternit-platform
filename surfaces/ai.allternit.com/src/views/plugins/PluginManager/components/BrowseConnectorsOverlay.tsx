@@ -115,7 +115,7 @@ export function BrowseConnectorsOverlay({
               Connect apps, files, and services to expand execution context across your workspace.
             </p>
           </div>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{ border: 'none', background: 'transparent', color: THEME.textTertiary, cursor: 'pointer' }}
             aria-label="Close connectors browser"
@@ -133,7 +133,7 @@ export function BrowseConnectorsOverlay({
             borderBottom: `1px solid ${THEME.border}`,
           }}
         >
-          <button
+          <button type="button"
             onClick={() => setTab('featured')}
             style={{
               padding: '7px 10px',
@@ -147,7 +147,7 @@ export function BrowseConnectorsOverlay({
           >
             Featured
           </button>
-          <button
+          <button type="button"
             onClick={() => setTab('all')}
             style={{
               padding: '7px 10px',
@@ -177,8 +177,7 @@ export function BrowseConnectorsOverlay({
             }}
           >
             <MagnifyingGlass size={14} color={THEME.textTertiary} />
-            <input
-              value={searchQuery}
+            <input value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search"
               style={{
@@ -193,8 +192,7 @@ export function BrowseConnectorsOverlay({
             />
           </div>
 
-          <select
-            value={selectedType}
+          <select aria-label="Selection" value={selectedType}
             onChange={(event) => setSelectedType(event.target.value)}
             style={{
               borderRadius: 8,
@@ -212,8 +210,7 @@ export function BrowseConnectorsOverlay({
             ))}
           </select>
 
-          <select
-            value={selectedCategory}
+          <select aria-label="Selection" value={selectedCategory}
             onChange={(event) => setSelectedCategory(event.target.value)}
             style={{
               borderRadius: 8,
@@ -233,7 +230,7 @@ export function BrowseConnectorsOverlay({
         </div>
 
         <div style={{ padding: '12px 20px 0' }}>
-          <button
+          <button type="button"
             onClick={onCreateCustomConnector}
             style={{
               border: 'none',
@@ -282,7 +279,7 @@ export function BrowseConnectorsOverlay({
               <div style={{ color: THEME.textSecondary, fontSize: 12, lineHeight: 1.5, marginBottom: 10 }}>
                 {catalogError}
               </div>
-              <button
+              <button type="button"
                 onClick={() => void loadConnectorCatalog()}
                 style={{
                   border: `1px solid ${THEME.borderStrong}`,
@@ -342,7 +339,7 @@ export function BrowseConnectorsOverlay({
                         {item.description}
                       </div>
                     </div>
-                    <button
+                    <button type="button"
                       onClick={() => onInstallConnector(item)}
                       style={{
                         width: 28,

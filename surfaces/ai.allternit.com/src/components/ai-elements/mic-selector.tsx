@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import {
   CaretUpDown as ChevronsUpDownIcon,
 } from '@phosphor-icons/react';
+import { createModuleLogger } from '@/lib/logger';
 import {
   createContext,
   useCallback,
@@ -30,6 +31,8 @@ import {
   useRef,
   useState,
 } from "react";
+
+const logger = createModuleLogger('MicSelector');
 
 const deviceIdRegex = /\(([\da-fA-F]{4}:[\da-fA-F]{4})\)$/;
 

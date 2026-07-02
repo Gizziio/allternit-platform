@@ -4,7 +4,7 @@
  * TypeScript client for the Allternit Cloud API backend.
  */
 
-export interface DeploymentConfig {
+interface DeploymentConfig {
   provider_id: string;
   region_id: string;
   instance_type_id: string;
@@ -30,7 +30,7 @@ export interface WizardState {
   progress: number;
 }
 
-export interface WizardContext {
+interface WizardContext {
   provider?: string;
   api_token?: string;
   ssh_host?: string;
@@ -43,14 +43,14 @@ export interface WizardContext {
   agent_guidance: string[];
 }
 
-export interface WizardTimestamps {
+interface WizardTimestamps {
   created_at: string;
   last_step_started_at?: string;
   last_step_completed_at?: string;
   completed_at?: string;
 }
 
-export interface StartWizardRequest {
+interface StartWizardRequest {
   provider: string;
   api_token?: string;
   ssh_host?: string;
@@ -59,11 +59,11 @@ export interface StartWizardRequest {
   ssh_private_key?: string;
 }
 
-export interface ResumeWizardRequest {
+interface ResumeWizardRequest {
   checkpoint_type: string;
 }
 
-export interface Deployment {
+interface Deployment {
   deployment_id: string;
   provider_id: string;
   region_id: string;
@@ -90,7 +90,7 @@ export interface DeploymentEvent {
   data?: Record<string, unknown>;
 }
 
-export class CloudDeployApi {
+class CloudDeployApi {
   private baseUrl: string;
 
   constructor(baseUrl: string = 'http://localhost:8013') {
@@ -301,7 +301,7 @@ export class CloudDeployApi {
   }
 }
 
-export interface Instance {
+interface Instance {
   id: string;
   name: string;
   provider: string;

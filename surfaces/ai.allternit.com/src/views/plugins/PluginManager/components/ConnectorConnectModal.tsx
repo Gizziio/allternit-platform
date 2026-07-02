@@ -44,7 +44,7 @@ export function ConnectorConnectModal({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <h3 style={{ margin: 0, fontSize: 20, color: THEME.textPrimary }}>Connect {connectorName}</h3>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{ border: 'none', background: 'transparent', color: THEME.textTertiary, cursor: 'pointer' }}
             aria-label="Close connect dialog"
@@ -58,11 +58,10 @@ export function ConnectorConnectModal({
           Add an optional account label so this connector can be identified in connected workspace context.
         </p>
 
-        <label style={{ display: 'block', fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>
+        <div style={{ display: 'block', fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>
           Account label (optional)
-        </label>
-        <input
-          value={accountLabel}
+        </div>
+        <input aria-label="Input" value={accountLabel}
           onChange={(event) => onAccountLabelChange(event.target.value)}
           placeholder="team@company.com"
           style={{
@@ -79,7 +78,7 @@ export function ConnectorConnectModal({
         />
 
         <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button
+          <button type="button"
             onClick={onClose}
             disabled={isConnecting}
             style={{
@@ -95,7 +94,7 @@ export function ConnectorConnectModal({
           >
             Cancel
           </button>
-          <button
+          <button type="button"
             onClick={onConnect}
             disabled={isConnecting}
             style={{

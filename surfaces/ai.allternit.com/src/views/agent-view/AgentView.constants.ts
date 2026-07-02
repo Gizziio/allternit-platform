@@ -1,4 +1,6 @@
 import type { MascotTemplate } from "@/lib/agents/agent.types";
+export { AGENT_MODELS, AGENT_TYPES, SETUP_CAPABILITY_PRESETS, BAN_CATEGORY_OPTIONS } from "@/lib/agents/agent.types";
+export { CHARACTER_SETUPS } from "@/lib/agents/character.service";
 import {
   Brain,
   Terminal,
@@ -6,7 +8,7 @@ import {
   Globe,
 } from '@phosphor-icons/react';
 
-export const MASCOT_TEMPLATES: Record<MascotTemplate, {
+const MASCOT_TEMPLATES: Record<MascotTemplate, {
   name: string;
   description: string;
   defaultColors: string[];
@@ -158,14 +160,14 @@ export const MASCOT_TEMPLATES: Record<MascotTemplate, {
   },
 };
 
-export const CAPABILITY_CATEGORIES = [
+const CAPABILITY_CATEGORIES = [
   { id: 'core', label: 'Core Intelligence', icon: Brain },
   { id: 'system', label: 'System Access', icon: Terminal },
   { id: 'data', label: 'Data & Analysis', icon: MagnifyingGlass },
   { id: 'communication', label: 'Communication', icon: Globe },
 ];
 
-export const AGENT_CAPABILITIES_ENHANCED = [
+const AGENT_CAPABILITIES_ENHANCED = [
   { id: 'code-generation', name: 'Code Generation', description: 'Generate and edit code', category: 'core' },
   { id: 'reasoning', name: 'Advanced Reasoning', description: 'Complex logic and chain-of-thought', category: 'core' },
   { id: 'planning', name: 'Multi-step Planning', description: 'Break tasks into actionable steps', category: 'core' },
@@ -178,7 +180,7 @@ export const AGENT_CAPABILITIES_ENHANCED = [
   { id: 'memory', name: 'Long-term Memory', description: 'Persistence across sessions', category: 'data' },
 ];
 
-export const ENHANCED_VOICE_STYLES = [
+const ENHANCED_VOICE_STYLES = [
   { id: 'professional', label: 'Professional', description: 'Formal, business-like communication' },
   { id: 'casual', label: 'Casual', description: 'Relaxed, conversational tone' },
   { id: 'enthusiastic', label: 'Enthusiastic', description: 'High energy, excited' },
@@ -211,3 +213,6 @@ export const STUDIO_THEME = {
   textSecondary: '#9B9B9B',
   textMuted: '#6E6E6E',
 };
+
+export const DEFAULT_AGENT_NAME = 'New Agent';
+export const DEFAULT_AGENT_DESCRIPTION = 'An autonomous AI teammate aligned to a clear ownership area.';

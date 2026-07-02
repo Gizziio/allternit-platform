@@ -65,7 +65,7 @@ export const Default: Story = {
  * Interactive SegmentedControl with state
  */
 export const Interactive: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [value, setValue] = useState('day');
     return (
       <SegmentedControl
@@ -89,7 +89,7 @@ export const Interactive: Story = {
  * Two option toggle (binary choice)
  */
 export const Binary: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [value, setValue] = useState('grid');
     const options = [
       { value: 'grid', label: 'Grid' },
@@ -109,7 +109,7 @@ export const Binary: Story = {
  * Many options
  */
 export const ManyOptions: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [value, setValue] = useState('small');
     const options = [
       { value: 'xs', label: 'XS' },
@@ -133,7 +133,7 @@ export const ManyOptions: Story = {
  * View mode selector pattern
  */
 export const ViewModeSelector: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [value, setValue] = useState('chat');
     const options = [
       { value: 'chat', label: 'Chat' },
@@ -157,7 +157,7 @@ export const ViewModeSelector: Story = {
  * Time range selector
  */
 export const TimeRangeSelector: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [value, setValue] = useState('24h');
     const options = [
       { value: '1h', label: '1H' },
@@ -181,7 +181,7 @@ export const TimeRangeSelector: Story = {
  * Keyboard navigation test
  */
 export const KeyboardNavigation: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [value, setValue] = useState('day');
     return (
       <SegmentedControl
@@ -222,7 +222,7 @@ export const DarkMode: Story = {
       default: 'dark',
     },
   },
-  render: () => {
+  render: function StoryRender() {
     const [value, setValue] = useState('week');
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -253,7 +253,7 @@ export const LightMode: Story = {
       default: 'light',
     },
   },
-  render: () => {
+  render: function StoryRender() {
     const [value, setValue] = useState('week');
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

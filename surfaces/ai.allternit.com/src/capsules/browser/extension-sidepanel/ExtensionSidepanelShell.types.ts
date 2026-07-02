@@ -9,6 +9,8 @@ export type ExtensionSidepanelActivity =
 
 export type ExtensionSidepanelHistoricalEvent =
   | {
+      id?: string;
+      timestamp?: number;
       type: "step";
       stepIndex?: number;
       reflection?: {
@@ -25,21 +27,29 @@ export type ExtensionSidepanelHistoricalEvent =
       rawResponse?: unknown;
     }
   | {
+      id?: string;
+      timestamp?: number;
       type: "observation";
       content: string;
     }
   | {
+      id?: string;
+      timestamp?: number;
       type: "retry";
       message: string;
       attempt: number;
       maxAttempts: number;
     }
   | {
+      id?: string;
+      timestamp?: number;
       type: "error";
       message: string;
       rawResponse?: unknown;
     }
   | {
+      id?: string;
+      timestamp?: number;
       type: "user_takeover";
       message?: string;
     };

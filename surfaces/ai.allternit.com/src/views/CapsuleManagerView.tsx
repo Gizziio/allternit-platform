@@ -12,11 +12,7 @@ import type { InteractiveCapsule, CapsuleEvent } from '@allternit/mcp-apps-adapt
 import { GlassSurface } from '@/design/GlassSurface';
 import { ErrorBoundary } from '@/components/error-boundary';
 
-// TODO: Import from @allternit/shell-ui once package is added to dependencies
-// import { CapsuleManager as ShellCapsuleManager } from '../../../7-apps/shell/web/src/components/CapsuleManager';
-// import { CapsuleRenderer as ShellCapsuleRenderer } from '../../../7-apps/shell/web/src/components/CapsuleRenderer';
-
-// Stub components until shell-ui package is available
+// Stub components — replace when @allternit/shell-ui package is available
 interface CapsuleManagerProps {
   onViewCapsule?: (capsule: InteractiveCapsule) => void;
   defaultToolId?: string;
@@ -30,9 +26,8 @@ function ShellCapsuleManager({ onViewCapsule, defaultToolId }: CapsuleManagerPro
       <p className="text-sm text-[var(--text-tertiary)] mt-2">
         Tool ID: {defaultToolId}
       </p>
-      <button
+      <button type="button"
         onClick={() => {
-          // Stub: create a dummy capsule for testing
           const dummyCapsule: InteractiveCapsule = {
             id: 'stub-capsule-001',
             type: 'test',
@@ -97,19 +92,19 @@ function ShellCapsuleRenderer({
         <p className="text-sm text-[var(--text-secondary)]">State: {capsule.state}</p>
         <p className="text-sm text-[var(--text-secondary)]">Tool: {capsule.toolId}</p>
         <div className="mt-4 flex gap-2">
-          <button
+          <button type="button"
             onClick={handleTestEvent}
             className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
           >
             Test Event
           </button>
-          <button
+          <button type="button"
             onClick={handleTestTool}
             className="px-3 py-1 bg-purple-500 text-white rounded text-sm hover:bg-purple-600"
           >
             Test Tool
           </button>
-          <button
+          <button type="button"
             onClick={onClose}
             className="px-3 py-1 bg-zinc-500 text-white rounded text-sm hover:bg-zinc-600"
           >
@@ -145,7 +140,7 @@ export function CapsuleManagerView({ context }: CapsuleManagerViewProps) {
       <GlassSurface className="h-full w-full flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
           <h2 className="text-lg font-semibold">Capsule: {viewingCapsule.id}</h2>
-          <button
+          <button type="button"
             onClick={handleCloseCapsule}
             className="p-2 rounded-lg hover:bg-[var(--rail-hover)] transition-colors"
           >

@@ -9,6 +9,8 @@
 
 import { VoicePreset, VoicesResponse } from './agent.types';
 
+export type Voice = VoicePreset;
+
 const VOICE_SERVICE_API_BASE = '/api/v1/voice';
 
 function resolveVoiceAssetUrl(audioUrl: string): string {
@@ -90,7 +92,7 @@ export async function checkVoiceServiceHealth(): Promise<boolean> {
 /**
  * Get voice engine icon/color mapping
  */
-export function getVoiceEngineStyle(engine: string): { color: string; label: string } {
+function getVoiceEngineStyle(engine: string): { color: string; label: string } {
   switch (engine) {
     case 'chatterbox':
       return { color: 'bg-blue-500', label: 'Chatterbox' };
@@ -102,3 +104,10 @@ export function getVoiceEngineStyle(engine: string): { color: string; label: str
       return { color: 'bg-zinc-500', label: engine };
   }
 }
+
+export const voiceService = {
+  listVoices,
+  previewVoice,
+  checkVoiceServiceHealth,
+  getVoiceEngineStyle,
+};

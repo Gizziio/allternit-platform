@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Theme (matching PluginManager)
@@ -150,50 +151,30 @@ export function StarRating({
   
   return (
     <div
-      className={className}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        ...style,
-      }}
+      className={cn("inline-flex items-center gap-1", className)}
+      style={style}
       onMouseLeave={handleMouseLeave}
     >
-      <div
-        style={{
-          display: 'flex',
-          gap: 2,
-          cursor: interactive ? 'pointer' : 'default',
-        }}
-      >
+      <div className={cn("flex gap-0.5", interactive ? "cursor-pointer" : "cursor-default")}>
         {Array.from({ length: maxStars }, (_, index) => {
           const filled = getStarFilled(index);
           const isHovered = hoverRating !== null && index < hoverRating;
           
           return (
             <button
-              key={index}
+              key={`star-${index}`}
               type="button"
               onClick={() => handleClick(index)}
               onMouseEnter={() => handleMouseEnter(index)}
               disabled={!interactive}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                margin: 0,
-                cursor: interactive ? 'pointer' : 'default',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              className="bg-transparent border-none p-0 m-0 flex items-center justify-center transition-transform duration-150 hover:scale-110 disabled:hover:scale-100"
               aria-label={interactive ? `Rate ${index + 1} stars` : undefined}
             >
               <StarIcon
                 filled={filled}
                 size={size}
-                color={THEME.accent}
-                emptyColor={THEME.textTertiary}
+                color="var(--accent-primary)"
+                emptyColor="var(--ui-text-muted)"
                 isHovered={isHovered}
               />
             </button>
@@ -203,16 +184,12 @@ export function StarRating({
       
       {showValue && (
         <span
-          style={{
-            marginLeft: 8,
-            fontSize: size * 0.7,
-            color: THEME.textSecondary,
-            fontWeight: 500,
-          }}
+          className="ml-2 font-medium text-[var(--ui-text-secondary)]"
+          style={{ fontSize: size * 0.7 }}
         >
           {formatRating(clampedRating)}
           {reviewCount !== undefined && reviewCount > 0 && (
-            <span style={{ color: THEME.textTertiary, marginLeft: 4 }}>
+            <span className="text-[var(--ui-text-muted)] ml-1">
               ({reviewCount.toLocaleString()})
             </span>
           )}
@@ -226,36 +203,32 @@ export function StarRating({
 // Compact Star Rating (for list views)
 // ============================================================================
 
-export interface CompactStarRatingProps {
+interface CompactStarRatingProps {
   rating: number;
   size?: number;
   style?: React.CSSProperties;
 }
 
-export function CompactStarRating({ rating, size = 14, style }: CompactStarRatingProps) {
+function CompactStarRating({ rating, size = 14, style }: CompactStarRatingProps) {
   const filled = Math.round(rating);
   
   return (
     <div
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 1,
-        ...style,
-      }}
+      className="inline-flex items-center gap-0.5"
+      style={style}
     >
       {Array.from({ length: 5 }, (_, index) => (
         <svg
-          key={index}
+          key={`compact-star-${index}`}
           width={size}
           height={size}
           viewBox="0 0 24 24"
-          fill={index < filled ? THEME.accent : 'transparent'}
-          style={{ flexShrink: 0 }}
+          fill={index < filled ? "var(--accent-primary)" : "transparent"}
+          className="shrink-0"
         >
           <path
             d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-            stroke={THEME.accent}
+            stroke="var(--accent-primary)"
             strokeWidth="1.5"
             strokeLinejoin="round"
           />

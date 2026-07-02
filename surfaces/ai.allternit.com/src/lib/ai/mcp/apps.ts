@@ -2,12 +2,12 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 export const MCP_APPS_EXTENSION_ID = "io.modelcontextprotocol/ui";
 export const MCP_APP_RESOURCE_MIME_TYPE = "text/html;profile=mcp-app";
-export const MCP_APP_RESOURCE_URI_META_KEY = "ui/resourceUri";
+const MCP_APP_RESOURCE_URI_META_KEY = "ui/resourceUri";
 
-export type McpAppToolVisibility = "model" | "app";
+type McpAppToolVisibility = "model" | "app";
 export type McpAppBridgeDisplayMode = "inline" | "fullscreen" | "pip";
 
-export type McpAppBridgeAction =
+type McpAppBridgeAction =
   | "tools/list"
   | "tools/call"
   | "resources/list"

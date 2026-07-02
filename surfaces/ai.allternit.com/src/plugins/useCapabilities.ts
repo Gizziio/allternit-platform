@@ -222,15 +222,51 @@ function useCapabilitiesCore() {
   const cliTools = useMemo(() => rawCliTools.map(mapCliTool), [rawCliTools]);
   const webhooks = useMemo(() => rawWebhooks.map(mapWebhook), [rawWebhooks]);
 
-  const [enabledSkillIds, setEnabledSkillIds] = useState<Set<string>>(new Set());
-  const [enabledCommandIds, setEnabledCommandIds] = useState<Set<string>>(new Set());
-  const [enabledConnectorIds, setEnabledConnectorIds] = useState<Set<string>>(new Set());
-  const [enabledMcpIds, setEnabledMcpIds] = useState<Set<string>>(new Set());
-  const [enabledCliToolIds, setEnabledCliToolIds] = useState<Set<string>>(new Set());
-  const [enabledWebhookIds, setEnabledWebhookIds] = useState<Set<string>>(new Set());
+  const [enabledSkillIds, setEnabledSkillIds] = useState<Set<string>>(() => deriveEnabledIds('skill', skills));
+  const [enabledCommandIds, setEnabledCommandIds] = useState<Set<string>>(() => deriveEnabledIds('command', commands));
+  const [enabledConnectorIds, setEnabledConnectorIds] = useState<Set<string>>(() => deriveEnabledIds('connector', connectors));
+  const [enabledMcpIds, setEnabledMcpIds] = useState<Set<string>>(() => deriveEnabledIds('mcp', mcps));
+  const [enabledCliToolIds, setEnabledCliToolIds] = useState<Set<string>>(() => deriveEnabledIds('cli-tool', cliTools));
+  const [enabledWebhookIds, setEnabledWebhookIds] = useState<Set<string>>(() => deriveEnabledIds('webhook', webhooks));
+
+  // Inline state adjustment for raw data changes
+  const [prevSkills, setPrevSkills] = useState(skills);
+  if (skills !== prevSkills) {
+    setPrevSkills(skills);
+    setEnabledSkillIds(deriveEnabledIds('skill', skills));
+  }
+
+  const [prevCommands, setPrevCommands] = useState(commands);
+  if (commands !== prevCommands) {
+    setPrevCommands(commands);
+    setEnabledCommandIds(deriveEnabledIds('command', commands));
+  }
+
+  const [prevConnectors, setPrevConnectors] = useState(connectors);
+  if (connectors !== prevConnectors) {
+    setPrevConnectors(connectors);
+    setEnabledConnectorIds(deriveEnabledIds('connector', connectors));
+  }
+
+  const [prevMcps, setPrevMcps] = useState(mcps);
+  if (mcps !== prevMcps) {
+    setPrevMcps(mcps);
+    setEnabledMcpIds(deriveEnabledIds('mcp', mcps));
+  }
+
+  const [prevCliTools, setPrevCliTools] = useState(cliTools);
+  if (cliTools !== prevCliTools) {
+    setPrevCliTools(cliTools);
+    setEnabledCliToolIds(deriveEnabledIds('cli-tool', cliTools));
+  }
+
+  const [prevWebhooks, setPrevWebhooks] = useState(webhooks);
+  if (webhooks !== prevWebhooks) {
+    setPrevWebhooks(webhooks);
+    setEnabledWebhookIds(deriveEnabledIds('webhook', webhooks));
+  }
 
   useEffect(() => {
-    setEnabledSkillIds(deriveEnabledIds('skill', skills));
     const unsubscribe = subscribeToCapabilityChanges('skill', () => {
       setEnabledSkillIds(deriveEnabledIds('skill', skills));
     });
@@ -238,7 +274,6 @@ function useCapabilitiesCore() {
   }, [skills]);
 
   useEffect(() => {
-    setEnabledCommandIds(deriveEnabledIds('command', commands));
     const unsubscribe = subscribeToCapabilityChanges('command', () => {
       setEnabledCommandIds(deriveEnabledIds('command', commands));
     });
@@ -246,7 +281,6 @@ function useCapabilitiesCore() {
   }, [commands]);
 
   useEffect(() => {
-    setEnabledConnectorIds(deriveEnabledIds('connector', connectors));
     const unsubscribe = subscribeToCapabilityChanges('connector', () => {
       setEnabledConnectorIds(deriveEnabledIds('connector', connectors));
     });
@@ -254,7 +288,6 @@ function useCapabilitiesCore() {
   }, [connectors]);
 
   useEffect(() => {
-    setEnabledMcpIds(deriveEnabledIds('mcp', mcps));
     const unsubscribe = subscribeToCapabilityChanges('mcp', () => {
       setEnabledMcpIds(deriveEnabledIds('mcp', mcps));
     });
@@ -262,7 +295,6 @@ function useCapabilitiesCore() {
   }, [mcps]);
 
   useEffect(() => {
-    setEnabledCliToolIds(deriveEnabledIds('cli-tool', cliTools));
     const unsubscribe = subscribeToCapabilityChanges('cli-tool', () => {
       setEnabledCliToolIds(deriveEnabledIds('cli-tool', cliTools));
     });
@@ -270,7 +302,6 @@ function useCapabilitiesCore() {
   }, [cliTools]);
 
   useEffect(() => {
-    setEnabledWebhookIds(deriveEnabledIds('webhook', webhooks));
     const unsubscribe = subscribeToCapabilityChanges('webhook', () => {
       setEnabledWebhookIds(deriveEnabledIds('webhook', webhooks));
     });
@@ -402,7 +433,7 @@ function useCapabilitiesCore() {
   };
 }
 
-export function useSkills() {
+function useSkills() {
   const core = useCapabilitiesCore();
   return {
     skills: core.skills,
@@ -412,7 +443,7 @@ export function useSkills() {
   };
 }
 
-export function useCommands() {
+function useCommands() {
   const core = useCapabilitiesCore();
   return {
     commands: core.commands,
@@ -422,7 +453,7 @@ export function useCommands() {
   };
 }
 
-export function useConnectors() {
+function useConnectors() {
   const core = useCapabilitiesCore();
   return {
     connectors: core.connectors,
@@ -432,7 +463,7 @@ export function useConnectors() {
   };
 }
 
-export function useMcps() {
+function useMcps() {
   const core = useCapabilitiesCore();
   return {
     mcps: core.mcps,
@@ -442,7 +473,7 @@ export function useMcps() {
   };
 }
 
-export function useCliTools() {
+function useCliTools() {
   const core = useCapabilitiesCore();
   return {
     cliTools: core.cliTools,
@@ -452,7 +483,7 @@ export function useCliTools() {
   };
 }
 
-export function useWebhooks() {
+function useWebhooks() {
   const core = useCapabilitiesCore();
   return {
     webhooks: core.webhooks,

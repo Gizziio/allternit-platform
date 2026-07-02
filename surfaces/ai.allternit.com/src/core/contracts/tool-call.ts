@@ -1,6 +1,6 @@
 import { UUID, ISODate, RiskTier } from './base';
 
-export interface ToolCall {
+interface ToolCall {
   readonly id: UUID;
   readonly messageId: UUID;
   readonly threadId: UUID;

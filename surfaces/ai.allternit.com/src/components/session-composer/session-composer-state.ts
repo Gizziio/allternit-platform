@@ -13,7 +13,7 @@ export interface PermissionRequest {
   tool?: { messageID: string; callID: string };
 }
 
-export interface QuestionOption {
+interface QuestionOption {
   label: string;
   description: string;
 }

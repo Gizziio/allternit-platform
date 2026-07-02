@@ -1,7 +1,15 @@
-import { KBarProvider, KBarPortal, KBarPositioner, KBarAnimator, KBarSearch, KBarResults, useMatches } from 'kbar';
-import { useRegisterActions } from 'kbar';
-import type { Action } from 'kbar';
 import React, { useCallback, useMemo } from 'react';
+import {
+  KBarAnimator,
+  KBarPortal,
+  KBarPositioner,
+  KBarProvider,
+  KBarResults,
+  KBarSearch,
+  useMatches,
+  useRegisterActions,
+  type Action,
+} from 'kbar';
 
 // Re-export kbar components and hooks
 export {

@@ -8,7 +8,6 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import type { Attachment, UiToolName } from "@/lib/ai/types";
@@ -51,33 +50,30 @@ export function ChatInputProvider({
   localStorageEnabled = true,
   isProjectContext = false,
 }: ChatInputProviderProps) {
-  const [inputValue, setInputValue] = useState(initialInput);
+  const [inputValue, setInputValue] = useState(() => {
+    if (typeof window !== 'undefined' && localStorageEnabled) {
+      try {
+        const saved = localStorage.getItem("allternit:input");
+        if (saved && !initialInput) return saved;
+      } catch {
+        // ignore
+      }
+    }
+    return initialInput || "";
+  });
   const [selectedTool, setSelectedTool] = useState<UiToolName>(initialTool);
   const [attachments, setAttachments] = useState<Attachment[]>(initialAttachments);
   const [selectedModelId, setSelectedModelId] = useState(defaultModelId);
+
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
     setHasHydrated(true);
   }, []);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    if (!localStorageEnabled || !hasHydrated) return;
-    
-    try {
-      const savedInput = localStorage.getItem("allternit:input");
-      if (savedInput && !initialInput) {
-        setInputValue(savedInput);
-      }
-    } catch {
-      // Ignore localStorage errors
-    }
-  }, [localStorageEnabled, hasHydrated, initialInput]);
-
   // Save to localStorage
   useEffect(() => {
-    if (!localStorageEnabled) return;
+    if (!localStorageEnabled || !hasHydrated) return;
     
     try {
       localStorage.setItem("allternit:input", inputValue);
@@ -92,10 +88,11 @@ export function ChatInputProvider({
     setInputValue("");
     setAttachments([]);
     setSelectedTool(null);
+    setSelectedModelId(defaultModelId);
     if (localStorageEnabled) {
       localStorage.removeItem("allternit:input");
     }
-  }, [localStorageEnabled]);
+  }, [localStorageEnabled, defaultModelId]);
 
   const handleSubmit = useCallback(
     (submitFn: () => void) => {
@@ -137,7 +134,7 @@ export function ChatInputProvider({
   );
 }
 
-export function useChatInput() {
+function useChatInput() {
   const context = useContext(ChatInputContext);
   if (context === undefined) {
     throw new Error("useChatInput must be used within a ChatInputProvider");

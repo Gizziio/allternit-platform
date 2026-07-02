@@ -149,8 +149,6 @@ export class BudgetCalculator {
    * Get total usage across all tenants
    */
   getTotalUsage(): UsageSummary {
-    // In a real implementation, this would aggregate per-tenant usage
-    // For now, return the summary
     return { ...this.dashboard.usage_summary };
   }
 

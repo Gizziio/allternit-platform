@@ -32,7 +32,7 @@ export interface NodeRecord {
   last_seen_at?: string;
 }
 
-export interface NodeConnection {
+interface NodeConnection {
   id: string;
   status: string;
 }

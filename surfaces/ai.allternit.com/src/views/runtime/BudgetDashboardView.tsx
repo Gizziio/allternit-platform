@@ -116,7 +116,7 @@ export function BudgetDashboardView() {
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <Warning className="mb-4 size-12  text-red-500" />
         <p className="mb-4">Failed to load runtime budget</p>
-        <button
+        <button type="button"
           onClick={() => void refetch()}
           className="flex items-center gap-2 rounded-2xl bg-accent/15 px-4 py-2 text-accent transition-colors hover:bg-accent/25"
         >
@@ -151,7 +151,7 @@ export function BudgetDashboardView() {
               />
               <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 <span>Last sync {formatTimestamp(lastUpdatedAt)}</span>
-                <button
+                <button type="button"
                   onClick={() => void refetch()}
                   className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-[12px] text-foreground transition hover:bg-black/25"
                 >
@@ -217,7 +217,7 @@ export function BudgetDashboardView() {
                   />
                 </label>
 
-                <button
+                <button type="button"
                   onClick={() => void handleQuotaSubmit()}
                   disabled={isSaving || quotaDraft.trim() === ''}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
@@ -233,7 +233,7 @@ export function BudgetDashboardView() {
 
               <div className="flex flex-wrap gap-2">
                 {QUICK_QUOTAS.map((quota) => (
-                  <button
+                  <button type="button"
                     key={quota}
                     onClick={() => setQuotaDraft(quota.toString())}
                     className="rounded-full border border-white/10 bg-black/15 px-3 py-1.5 text-xs uppercase tracking-[0.16em] text-muted-foreground transition hover:border-amber-300/30 hover:text-foreground"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   FileText,
   Table as Table2,
@@ -18,11 +18,11 @@ interface Draft {
 const getIcon = (type: Draft['type']) => {
   switch (type) {
     case 'document':
-      return <FileText size={20} color="#3b82f6" />;
+      return <FileText size={20} color="var(--status-info)" />;
     case 'table':
-      return <Table2 size={20} color="#8b5cf6" />;
+      return <Table2 size={20} color="var(--accent-cowork)" />;
     case 'code':
-      return <Code size={20} color="#06b6d4" />;
+      return <Code size={20} color="var(--status-success)" />;
     default:
       return <FileText size={20} />;
   }
@@ -30,14 +30,14 @@ const getIcon = (type: Draft['type']) => {
 
 export const DraftsView: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [drafts] = useState<Draft[]>([]);
+  const drafts: Draft[] = [];
 
   return (
     <div style={{ padding: 'var(--spacing-lg)' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-xl)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <FileText size={24} color="#af52de" />
+          <FileText size={24} color="var(--accent-primary)" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Drafts</h1>
         </div>
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Work in progress</p>
@@ -119,7 +119,7 @@ export const DraftsView: React.FC = () => {
               <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
                 {draft.wordCount.toLocaleString()} words
               </span>
-              <button
+              <button type="button"
                 onMouseEnter={() => setEditingId(draft.id)}
                 onMouseLeave={() => setEditingId(null)}
                 style={{
@@ -132,7 +132,7 @@ export const DraftsView: React.FC = () => {
                   fontWeight: 500,
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  borderBottom: editingId === draft.id ? '2px solid #af52de' : '2px solid transparent',
+                  borderBottom: editingId === draft.id ? '2px solid var(--accent-cowork)' : '2px solid transparent',
                 }}
               >
                 Continue editing

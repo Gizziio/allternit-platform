@@ -46,7 +46,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     return (
-      <button
+      <button type="button"
         ref={ref}
         style={{
           borderRadius: '8px',

@@ -14,15 +14,14 @@ export interface Session {
   expiresAt?: Date;
 }
 
-export interface User {
+interface User {
   id: string;
   email?: string;
   name?: string;
   image?: string;
 }
 
-// Stub auth object for browser
-export const auth = {
+const auth = {
   handler: async () => new Response(JSON.stringify({ error: "Auth not available in browser" }), { status: 501 }),
   api: {
     signIn: async () => ({ error: "Auth not available in browser" }),

@@ -15,7 +15,7 @@ export interface ProviderMeta {
   textColor?: string;
 }
 
-export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
+const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
   anthropic: {
     id: 'anthropic',
     name: 'Anthropic',

@@ -67,7 +67,7 @@ const aiGatewayModelSchema = z.object({
 export type AiGatewayModel = z.infer<typeof aiGatewayModelSchema>;
 
 // Models response schema
-export const aiGatewayModelsResponseSchema = z.object({
+const aiGatewayModelsResponseSchema = z.object({
   object: z.literal("list"),
   data: z.array(aiGatewayModelSchema),
 });

@@ -1,6 +1,10 @@
 import { create } from 'zustand';
 import { subscribeSSE } from '../lib/sse/global-sse-manager';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Board');
+
 export interface BoardItem {
   id: string;
   workspaceId: string;
@@ -228,11 +232,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
             }
           }
         } catch (err) {
-          console.error('[BoardStream] Failed to process message:', err);
+          logger.error({ err: err }, 'Failed to process message');
         }
       },
       onError: () => {
-        console.warn('[BoardStream] Connection error, retrying...');
+        logger.warn('Connection error, retrying...');
       },
       onCustom: {
         connected: () => {

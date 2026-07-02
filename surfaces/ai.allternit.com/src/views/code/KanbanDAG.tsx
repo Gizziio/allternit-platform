@@ -23,6 +23,10 @@ import {
 } from '@phosphor-icons/react';
 import { GlassCard } from '../../design/glass/GlassCard';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('KanbanDAG');
+
 interface DagNode {
   id: string;
   title: string;
@@ -84,7 +88,7 @@ export function KanbanDAG() {
     try {
       await executeDag(dagId);
     } catch (err) {
-      console.error('Failed to execute DAG:', err);
+      logger.error({ err: err }, 'Failed to execute DAG:');
     }
   };
 
@@ -146,7 +150,7 @@ export function KanbanDAG() {
           justifyContent: 'space-between'
         }}>
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>DAG Plans</h3>
-          <button 
+          <button type="button" 
             onClick={() => fetchDags()}
             disabled={isLoading}
             style={{
@@ -165,7 +169,7 @@ export function KanbanDAG() {
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--ui-text-muted)' }}>
               <GitBranch size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
               <p style={{ fontSize: 13 }}>No DAGs yet</p>
-              <button
+              <button type="button"
                 onClick={handleOpenInPlan}
                 style={{
                   marginTop: 12,
@@ -183,7 +187,7 @@ export function KanbanDAG() {
             </div>
           ) : (
             dags.map(dag => (
-              <div
+              <div role="button" tabIndex={0}
                 key={dag.dagId}
                 onClick={() => selectDag(dag.dagId)}
                 style={{
@@ -232,7 +236,7 @@ export function KanbanDAG() {
             display: 'flex',
             gap: 8
           }}>
-            <button
+            <button type="button"
               onClick={() => handleExecuteDag(selectedDagId)}
               disabled={isLoading}
               style={{
@@ -255,7 +259,7 @@ export function KanbanDAG() {
               <Play size={14} />
               Execute DAG
             </button>
-            <button
+            <button type="button"
               onClick={handleOpenInPlan}
               style={{
                 padding: '10px',
@@ -365,20 +369,20 @@ export function KanbanDAG() {
             return (
               <>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>ID</label>
+                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>ID</div>
                   <div style={{ fontSize: 13, fontFamily: 'var(--font-mono)' }}>{node.id}</div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Title</label>
+                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Title</div>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{node.title}</div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Status</label>
+                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Status</div>
                   <NodeStatusBadge status={node.status} />
                 </div>
                 {node.dependencies.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Dependencies</label>
+                    <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Dependencies</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {node.dependencies.map(depId => (
                         <div key={depId} style={{ 
@@ -395,7 +399,7 @@ export function KanbanDAG() {
                 )}
                 {node.wih_id && (
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>WIH ID</label>
+                    <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>WIH ID</div>
                     <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)' }}>{node.wih_id}</div>
                   </div>
                 )}
@@ -418,7 +422,7 @@ function DagNodeCard({
   onClick: () => void;
 }) {
   return (
-    <div onClick={onClick} style={{ cursor: 'pointer' }}>
+    <div role="button" tabIndex={0} onClick={onClick} style={{ cursor: 'pointer' }}>
     <GlassCard
       style={{
         padding: 12,

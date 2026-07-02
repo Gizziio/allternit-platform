@@ -87,7 +87,7 @@ export const Glow: React.FC<GlowProps> = ({
 };
 
 // Predefined glow intensity presets
-export const GLOW_INTENSITY_PRESETS = {
+const GLOW_INTENSITY_PRESETS = {
   dim: 0.3,
   soft: 0.5,
   bright: 0.7,
@@ -95,7 +95,7 @@ export const GLOW_INTENSITY_PRESETS = {
 } as const;
 
 // Helper to calculate glow color from base color
-export function calculateGlowColor(baseColor: string, intensity: number = 1): string {
+function calculateGlowColor(baseColor: string, intensity: number = 1): string {
   // If it's a hex color, we can use it directly with adjusted opacity
   if (baseColor.startsWith('#')) {
     return baseColor;
@@ -104,7 +104,7 @@ export function calculateGlowColor(baseColor: string, intensity: number = 1): st
 }
 
 // Helper to create gradient glow effect
-export function createGlowGradient(
+function createGlowGradient(
   color: string,
   id: string
 ): React.ReactNode {

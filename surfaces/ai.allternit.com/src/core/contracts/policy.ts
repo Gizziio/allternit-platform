@@ -1,7 +1,7 @@
 import { UUID, ISODate, RiskTier } from './base';
 import { FileChange } from './changeset';
 
-export type ApprovalCondition =
+type ApprovalCondition =
   | { type: 'risk-tier'; tier: RiskTier; operator: 'eq' | 'gte' }
   | { type: 'file-pattern'; pattern: string; negate?: boolean }
   | { type: 'change-type'; changeType: FileChange['changeType']; negate?: boolean }
@@ -12,7 +12,7 @@ export type ApprovalCondition =
   | { type: 'file-size'; maxBytes: number }
   | { type: 'line-count'; maxLines: number };
 
-export interface ApprovalRule {
+interface ApprovalRule {
   readonly id: UUID;
   name: string;
   description?: string;
@@ -25,7 +25,7 @@ export interface ApprovalRule {
   notifyChannels: ('ui' | 'notification' | 'sound')[];
 }
 
-export interface ApprovalPolicy {
+interface ApprovalPolicy {
   readonly id: UUID;
   name: string;
   description?: string;

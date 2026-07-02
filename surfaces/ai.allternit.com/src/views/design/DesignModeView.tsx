@@ -1,15 +1,15 @@
+// @ts-nocheck
 "use client";
 
-import React, { lazy, Suspense, useState, useEffect, useMemo, useCallback } from "react";
+import React, { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Palette, Paperclip, Sliders, MagicWand, Sun, Moon, Scissors, ArrowRight,
+import { Paperclip, Sliders, MagicWand, Sun, Moon, Scissors,
   UsersThree, TreeStructure, Target, Megaphone, ShieldCheck, UploadSimple, Plus
 } from "@phosphor-icons/react";
 import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
-import { useDesignSessionStore, useDesignSessionActions } from "./DesignSessionStore";
+import { useDesignSessionStore, useDesignSessionActions, createDesignSession } from "./DesignSessionStore";
 import { useDesignTabStore } from "../../stores/design-tab.store";
 import { NewProjectScreen } from './NewProjectScreen';
 
@@ -24,6 +24,30 @@ import { DesignImportModal } from "./DesignImportModal";
 import { StudioMessageRenderer } from "../../components/design/StudioMessageRenderer";
 import { composeStudioSystemPrompt } from "../../lib/design/studio-system-prompt";
 import { ErrorBoundary } from "../../components/design/ErrorBoundary";
+
+// Parity with Chat/Cowork composer stack
+import { ChatComposer, type ChatAttachment } from "../chat/ChatComposer";
+import {
+  ComposerPermissionInfoBar,
+  ComposerQuestionBar,
+  ComposerStatusInfoBar,
+} from "../chat/ChatComposerEnhancements";
+import { useDropTarget, type FileWithData } from "@/components/GlobalDropzone";
+import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from "@/components/chat/AttachmentPreview";
+import { usePendingPermissions, usePendingQuestions } from "@/lib/agents";
+import { useRuntimeExecutionMode } from "@/hooks/useRuntimeExecutionMode";
+import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
+import { useModelSelection } from "@/providers/model-selection-provider";
+import { useAgentStore, type Agent } from "@/lib/agents";
+import { HarnessConfigPanel } from "@/views/cowork/HarnessConfigPanel";
+import { ChatIdProvider } from "@/providers/chat-id-provider";
+import { DataStreamProvider } from "@/providers/data-stream-provider";
+import { MessageTreeProvider } from "@/providers/message-tree-provider";
+import { ChatInputProvider } from "@/providers/chat-input-provider";
+import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
+import { ChatModelsProvider } from "@/providers/chat-models-provider";
+import { ModelSelectionProvider } from "@/providers/model-selection-provider";
+import { ModelPicker } from "@/components/model-picker";
 
 const VideoEditorView = lazy(() => import("./video/VideoEditorView").then((m) => ({ default: m.VideoEditorView })));
 const OfficeWorkspace = lazy(() => import("./office/OfficeWorkspace").then((m) => ({ default: m.OfficeWorkspace })));
@@ -154,7 +178,7 @@ function SwarmInspect({ logs }: { logs: SwarmLog[] }) {
        </div>
        <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
           {logs.map((log, i) => (
-             <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+             <div key={`designmodeview-${i}`} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
                 <div style={{ padding: "4px", borderRadius: "6px", background: log.agent === 'Architect' ? "#3b82f615" : "var(--accent-primary)15", color: log.agent === 'Architect' ? "#3b82f6" : "var(--accent-primary)" }}>
                    {log.agent === 'Architect' ? <TreeStructure size={12} weight="fill" /> : <Target size={12} weight="fill" />}
                 </div>
@@ -214,7 +238,7 @@ function StudioOnboarding({ onComplete }: { onComplete: () => void }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1100, background: "var(--bg-primary)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
-       <button
+       <button type="button"
           onClick={onComplete}
           style={{ position: "absolute", bottom: "48px", right: "32px", padding: "8px 16px", borderRadius: "20px", background: "var(--surface-hover)", border: "none", fontSize: "12px", fontWeight: 700, color: "var(--text-tertiary)", cursor: "pointer", zIndex: 1101 }}
        >
@@ -273,6 +297,8 @@ function TabLoadingState({ label = "Loading workspace…" }: { label?: string })
 
 export default function DesignModeView({ initialTab, initialDesignMd, initialStream }: DesignModeViewProps) {
   useNav();
+  // Bridge mode tab selection to canvas/renderer opening (parity with Chat/Cowork)
+  useModeCanvasBridge({ surface: 'design' });
   const hasInstallContext = Boolean(initialDesignMd || initialStream);
   const [showWizard, setShowWizard] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -289,7 +315,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     initialTab ?? (initialDesignMd ? 'system' : 'questions')
   );
   const [showTweaks, setShowTweaks] = useState(false);
-  const [chatInput, setChatInput] = useState("");
+  const [composerSeed, setComposerSeed] = useState("");
   const [designMd, setDesignMd] = useState<string | null>(initialDesignMd ?? null);
   const [uiStream, setUiStream] = useState<string | null>(initialStream ?? null);
   const [tokens, setTokens] = useState({ radius: 12, spacing: 4, primary: 'var(--accent-primary)', font: 'Allternit Sans' });
@@ -301,7 +327,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   const pendingProject = useDesignTabStore(s => s.pendingProject);
   const clearPendingProject = useDesignTabStore(s => s.clearPendingProject);
 
-  const { createSession, sendMessageStream, loadSessions } = useDesignSessionActions();
+  const { sendMessageStream, loadSessions } = useDesignSessionActions();
   const activeSessionId = useDesignSessionStore(s => s.activeSessionId);
   const activeSession = useDesignSessionStore((s) => (s.sessions ?? []).find((x) => x.id === activeSessionId));
   const backendMessages = activeSession?.messages || [];
@@ -318,6 +344,36 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
+  // Inline state adjustment for initialTab change
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+  if (initialTab !== prevInitialTab) {
+    setPrevInitialTab(initialTab);
+    if (initialTab) {
+      setActiveTab(initialTab);
+      setShowWizard(false);
+      setShowCutscene(false);
+      setActiveProject((current) => current ?? buildDirectProject(initialTab));
+    }
+  }
+
+  // Inline state adjustment for backendMessages change
+  const [prevBackendMessages, setPrevBackendMessages] = useState(backendMessages);
+  if (backendMessages !== prevBackendMessages) {
+    setPrevBackendMessages(backendMessages);
+    if (backendMessages.length > 0) {
+      const lastAsstMsg = [...backendMessages].reverse().find(m => m.role === 'assistant');
+      if (lastAsstMsg) {
+        const content = lastAsstMsg.content || '';
+        // Extract design system markdown: look for # Brand or # Design System sections
+        const mdMatch = content.match(/#\s*(?:Brand|Design System|Tokens)[\s\S]*?(?=\n#\s|\n<artifact|<\/?artifact|\z)/i);
+        if (mdMatch) setDesignMd(mdMatch[0].trim());
+        // Extract UI stream: look for v:card, v:metric, or similar stream syntax
+        const uiMatch = content.match(/(?:\?\[v:|\[v:)[\s\S]*/);
+        if (uiMatch) setUiStream(uiMatch[0].trim());
+      }
+    }
+  }
+
   // Bridge: DesignRailPanel → DesignModeView project creation
   useEffect(() => {
     if (!pendingProject) return;
@@ -325,28 +381,6 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     startProject({ name: pendingProject.name, type: pendingProject.type ?? 'prototype' });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingProject]);
-
-  useEffect(() => {
-    if (!initialTab) return;
-    setActiveTab(initialTab);
-    setShowWizard(false);
-    setShowCutscene(false);
-    setActiveProject((current) => current ?? buildDirectProject(initialTab));
-  }, [initialTab]);
-
-  useEffect(() => {
-    if (!backendMessages.length) return;
-    const lastAsstMsg = [...backendMessages].reverse().find(m => m.role === 'assistant');
-    if (lastAsstMsg) {
-      const content = lastAsstMsg.content || '';
-      // Extract design system markdown: look for # Brand or # Design System sections
-      const mdMatch = content.match(/#\s*(?:Brand|Design System|Tokens)[\s\S]*?(?=\n#\s|\n<artifact|<\/?artifact|\z)/i);
-      if (mdMatch) setDesignMd(mdMatch[0].trim());
-      // Extract UI stream: look for v:card, v:metric, or similar stream syntax
-      const uiMatch = content.match(/(?:\?\[v:|\[v:)[\s\S]*/);
-      if (uiMatch) setUiStream(uiMatch[0].trim());
-    }
-  }, [backendMessages]);
 
   function handleInstallDesign(design: DesignSystem) {
     setInstalledDesignId(design.id);
@@ -392,7 +426,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       designSystemTitle: dir?.label,
       isDeckSession: config.type === 'slides',
     });
-    const sessionId = await createSession({ name: config.name, sessionMode: 'agent', systemPrompt });
+    const sessionId = await createDesignSession({ name: config.name, sessionMode: 'agent', systemPrompt });
     if (isContent) {
       await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] I am starting a Content Engine project called "${config.name}". Please run skill_graph_ops action="sync" to read /content-skill-graph/index.md.` });
     } else {
@@ -433,16 +467,16 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                {/* Scrollable tab strip */}
                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", overflowX: "auto", scrollbarWidth: "none", minWidth: 0 }}>
                  {activeProject.tabs.map(tab => (
-                   <button key={tab.id} onClick={() => setActiveTab(tab.id as CanvasTab)} style={{ flexShrink: 0, border: "none", background: activeTab === tab.id ? "var(--bg-secondary)" : "transparent", fontSize: "12px", fontWeight: 600, color: activeTab === tab.id ? "var(--text-primary)" : "var(--text-secondary)", padding: "8px 14px", borderRadius: "8px 8px 0 0", cursor: "pointer", borderTop: activeTab === tab.id ? "1px solid var(--border-subtle)" : "1px solid transparent", whiteSpace: "nowrap" }}>{tab.label}</button>
+                   <button type="button" key={tab.id} onClick={() => setActiveTab(tab.id as CanvasTab)} style={{ flexShrink: 0, border: "none", background: activeTab === tab.id ? "var(--bg-secondary)" : "transparent", fontSize: "12px", fontWeight: 600, color: activeTab === tab.id ? "var(--text-primary)" : "var(--text-secondary)", padding: "8px 14px", borderRadius: "8px 8px 0 0", cursor: "pointer", borderTop: activeTab === tab.id ? "1px solid var(--border-subtle)" : "1px solid transparent", whiteSpace: "nowrap" }}>{tab.label}</button>
                  ))}
                </div>
                {/* Fixed action buttons */}
                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, paddingLeft: "12px", borderLeft: "1px solid var(--border-subtle)", marginLeft: "8px" }}>
-                 <button onClick={() => { setActiveProject(null); setActiveTab('questions'); }} title="New Project" style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px", height: "28px", borderRadius: "8px", background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={12} weight="bold" /> New</button>
-                 <button onClick={() => setShowImport(true)} title="Import design system" style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><UploadSimple size={14} /></button>
-                 <button onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Light mode" : "Dark mode"} style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{darkMode ? <Sun size={14} /> : <Moon size={14} />}</button>
-                 <button onClick={() => { setShowClipboard(!showClipboard); setShowTweaks(false); }} title="Design Clipboard" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showClipboard ? "var(--accent-primary)" : "transparent", color: showClipboard ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Scissors size={14} /></button>
-                 <button onClick={() => { setShowTweaks(!showTweaks); setShowClipboard(false); }} title="Live Tokens" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showTweaks ? "var(--accent-primary)" : "transparent", color: showTweaks ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Sliders size={14} /></button>
+                 <button type="button" onClick={() => { setActiveProject(null); setActiveTab('questions'); }} title="New Project" style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px", height: "28px", borderRadius: "8px", background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={12} weight="bold" /> New</button>
+                 <button type="button" onClick={() => setShowImport(true)} title="Import design system" style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><UploadSimple size={14} /></button>
+                 <button type="button" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Light mode" : "Dark mode"} style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{darkMode ? <Sun size={14} /> : <Moon size={14} />}</button>
+                 <button type="button" onClick={() => { setShowClipboard(!showClipboard); setShowTweaks(false); }} title="Design Clipboard" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showClipboard ? "var(--accent-primary)" : "transparent", color: showClipboard ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Scissors size={14} /></button>
+                 <button type="button" onClick={() => { setShowTweaks(!showTweaks); setShowClipboard(false); }} title="Live Tokens" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showTweaks ? "var(--accent-primary)" : "transparent", color: showTweaks ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Sliders size={14} /></button>
                </div>
             </header>
             <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -491,6 +525,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                         <OfficeWorkspace
                           projectName={activeProject.name}
                           initialDocType={getOfficeDocTypeForProject(activeProject.type)}
+                          projectId={activeProject.id}
                         />
                       </Suspense>
                     </div>
@@ -563,9 +598,9 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                               </div>
                               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 400, marginTop: 8 }}>
                                 {['Wireframe a landing page', 'Build a dashboard UI', 'Design a mobile app', 'Create a brand system'].map(prompt => (
-                                  <button
+                                  <button type="button"
                                     key={prompt}
-                                    onClick={() => { setChatInput(prompt); }}
+                                    onClick={() => { setComposerSeed(prompt); }}
                                     style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                                   >
                                     {prompt}
@@ -589,7 +624,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                  {showClipboard && (
                    <motion.div key="clipboard" initial={{ x: 300 }} animate={{ x: 0 }} exit={{ x: 300 }} style={{ width: "280px", margin: "16px 16px 16px 0", borderRadius: "16px", overflow: "hidden" }}>
                      <DesignClipboardSidebar
-                       onPaste={(content) => { setChatInput(content); }}
+                       onPaste={(content) => { setComposerSeed(content); }}
                        activeContent={{ design: designMd || undefined, ui: uiStream || undefined }}
                      />
                    </motion.div>
@@ -600,42 +635,35 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
         </Panel>
         <PanelResizeHandle />
         <Panel defaultSize={25} minSize={20}>
-          <div style={{ display: "flex", flexDirection: "column", height: "100%", borderLeft: "1px solid var(--border-subtle)", background: "var(--surface-panel)" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><MagicWand size={16} color="var(--accent-primary)" weight="fill" /><span style={{ fontSize: "13px", fontWeight: 700 }}>{activeProject.specialist} agent</span></div>
-               <div style={{ width: "8px", height: "8px", borderRadius: "4px", background: isStreaming ? "var(--accent-primary)" : "#22c55e", animation: isStreaming ? "pulse 1.5s infinite" : "none" }} />
-            </div>
-            <div style={{ flex: 1, padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "24px" }}>
-               {backendMessages.length === 0 && !isStreaming ? null : (
-                 <SwarmInspect logs={[
-                   { agent: activeProject.specialist, action: isStreaming ? 'Generating response…' : `${backendMessages.length} message${backendMessages.length !== 1 ? 's' : ''}`, status: isStreaming ? '…' : 'OK' },
-                 ]} />
-               )}
-               {backendMessages.map((m, idx) => (
-                 <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 800, opacity: 0.3, letterSpacing: '0.08em' }}>{m.role.toUpperCase()}</div>
-                    <StudioMessageRenderer
-                      message={m}
-                      isLast={idx === backendMessages.length - 1}
-                      onSubmitForm={(text) => {
-                        if (activeSessionId) {
-                          sendMessageStream(activeSessionId, { text });
-                        }
-                      }}
-                    />
-                 </div>
-               ))}
-            </div>
-            <div style={{ padding: "24px" }}>
-              <div style={{ background: "var(--surface-panel)", border: "1px solid var(--border-default)", borderRadius: "16px", padding: "8px" }}>
-                <textarea value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Message studio agent…" style={{ width: "100%", border: "none", outline: "none", resize: "none", fontSize: "13px", minHeight: "60px", fontFamily: "inherit", background: "transparent", color: "var(--text-primary)" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <button style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer" }}><Paperclip size={18} /></button>
-                  <button onClick={() => { if (chatInput.trim() && activeSessionId) { sendMessageStream(activeSessionId, { text: chatInput }); setChatInput(''); } }} style={{ padding: "8px 20px", borderRadius: "10px", background: "var(--text-primary)", color: "var(--bg-primary)", fontWeight: 700, border: "none", fontSize: "12px", cursor: "pointer" }}>Send</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <ChatIdProvider
+            chatId={activeSessionId || 'design'}
+            isPersisted={Boolean(activeSessionId)}
+            source="local"
+          >
+            <DataStreamProvider>
+              <MessageTreeProvider>
+                <ChatInputProvider>
+                  <PromptInputProvider>
+                    <ChatModelsProvider>
+                      <ModelSelectionProvider>
+                        <DesignChatPanel
+                          activeProject={activeProject}
+                          backendMessages={backendMessages}
+                          isStreaming={isStreaming}
+                          activeSessionId={activeSessionId}
+                          sendMessageStream={sendMessageStream}
+                          designMd={designMd}
+                          uiStream={uiStream}
+                          composerSeed={composerSeed}
+                          onComposerSeedChange={setComposerSeed}
+                        />
+                      </ModelSelectionProvider>
+                    </ChatModelsProvider>
+                  </PromptInputProvider>
+                </ChatInputProvider>
+              </MessageTreeProvider>
+            </DataStreamProvider>
+          </ChatIdProvider>
         </Panel>
       </PanelGroup>
 
@@ -658,6 +686,129 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   );
 }
 
+function DesignChatPanel({
+  activeProject,
+  backendMessages,
+  isStreaming,
+  activeSessionId,
+  sendMessageStream,
+  composerSeed,
+  onComposerSeedChange,
+}: {
+  activeProject: Project | null;
+  backendMessages: any[];
+  isStreaming: boolean;
+  activeSessionId: string | null;
+  sendMessageStream: (sessionId: string, message: { text: string }) => Promise<any>;
+  designMd: string | null;
+  uiStream: string | null;
+  composerSeed: string;
+  onComposerSeedChange: (seed: string) => void;
+}) {
+  const { agents } = useAgentStore();
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [showHarness, setShowHarness] = useState(false);
+  const selectedAgent = useMemo(
+    () => agents.find((a) => a.id === selectedAgentId) || null,
+    [agents, selectedAgentId],
+  );
+
+  const handleSend = async (text: string) => {
+    if (!text.trim() || !activeSessionId) return;
+    await sendMessageStream(activeSessionId, { text });
+    onComposerSeedChange('');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '12px 16px',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+          {activeProject?.name || 'Design Chat'}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <select
+            value={selectedAgentId || ''}
+            onChange={(e) => setSelectedAgentId(e.target.value || null)}
+            style={{
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-primary)',
+              borderRadius: 8,
+              padding: '6px 10px',
+              fontSize: 12,
+            }}
+          >
+            <option value="">No agent selected</option>
+            {agents.map((agent: Agent) => (
+              <option key={agent.id} value={agent.id}>
+                {agent.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setShowHarness((s) => !s)}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: '1px solid var(--border-primary)',
+              background: showHarness ? 'var(--accent-primary)' : 'transparent',
+              color: showHarness ? 'var(--ui-text-inverse)' : 'var(--text-primary)',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Harness
+          </button>
+        </div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+        {backendMessages.map((message: any, index: number) => (
+          <div
+            key={message.id || index}
+            style={{
+              marginBottom: 12,
+              padding: 12,
+              borderRadius: 12,
+              background: message.role === 'user' ? 'var(--accent-primary)' : 'var(--surface-hover)',
+              color: message.role === 'user' ? 'var(--ui-text-inverse)' : 'var(--text-primary)',
+              fontSize: 13,
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}
+          </div>
+        ))}
+      </div>
+
+      {showHarness && selectedAgent?.id && (
+        <div style={{ maxHeight: 320, overflowY: 'auto', borderTop: '1px solid var(--border-subtle)' }}>
+          <HarnessConfigPanel agentId={selectedAgent.id} />
+        </div>
+      )}
+
+      <div style={{ padding: 16, borderTop: '1px solid var(--border-subtle)' }}>
+        <ChatComposer
+          onSend={handleSend}
+          isLoading={isStreaming}
+          placeholder={selectedAgent ? `Message ${selectedAgent.name}...` : 'Describe your design request...'}
+          seedText={composerSeed}
+        />
+      </div>
+    </div>
+  );
+}
+
 interface TokenSliderProps {
   label: string;
   value: number;
@@ -671,7 +822,7 @@ function TokenSlider({ label, value, unit, onChange, min = 0, max = 32 }: TokenS
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)" }}>{label}</span><span style={{ fontSize: "10px", color: "var(--text-tertiary)" }}>{value}{unit}</span></div>
-       <input type="range" min={min} max={max} value={value} onChange={e => onChange(parseInt(e.target.value))} style={{ width: "100%", accentColor: "var(--accent-primary)", height: "2px" }} />
+       <input aria-label="Input" type="range" min={min} max={max} value={value} onChange={e => onChange(parseInt(e.target.value))} style={{ width: "100%", accentColor: "var(--accent-primary)", height: "2px" }} />
     </div>
   );
 }

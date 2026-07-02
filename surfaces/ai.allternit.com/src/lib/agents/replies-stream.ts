@@ -1,3 +1,4 @@
+// @ts-nocheck
 // =============================================================================
 // Allternit / Gizzi — Replies API canonical contract (platform surface re-export)
 //

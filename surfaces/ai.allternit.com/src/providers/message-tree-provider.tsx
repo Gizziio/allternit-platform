@@ -1,6 +1,5 @@
 "use client";
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { createContext, useContext, useCallback, useMemo, ReactNode, useRef, useState, useEffect } from "react";
 import type { ChatMessage } from "@/lib/ai/types";
 import { useChatId } from "./chat-id-provider";
@@ -35,22 +34,16 @@ export function MessageTreeProvider({ children, initialMessages = [] }: MessageT
   const { setDataStream } = useDataStream();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [threadEpoch, setThreadEpoch] = useState(0);
-  const prevChatIdRef = useRef<string | null>(null);
 
-  // Reset when chat changes - but preserve temp chat messages
-  useEffect(() => {
-    // Don't reset if we're just updating the same chat
-    if (prevChatIdRef.current === chatId) return;
-    prevChatIdRef.current = chatId || null;
-    
-    // Only reset for new persisted chats
+  const [prevChatId, setPrevChatId] = useState(chatId);
+  if (chatId !== prevChatId) {
+    setPrevChatId(chatId);
     if (isPersisted) {
       setMessages(initialMessages);
       setThreadEpoch(0);
       setDataStream([]);
     }
-    // For temp chats, keep existing messages until explicitly cleared
-  }, [chatId, isPersisted, initialMessages, setDataStream]);
+  }
 
   // Build parent->children mapping
   const childrenMap = useMemo(() => {

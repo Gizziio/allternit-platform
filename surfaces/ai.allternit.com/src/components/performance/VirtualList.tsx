@@ -15,7 +15,7 @@
 
 import React, { useRef, useEffect, useState, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
 
-export interface VirtualListProps<T> {
+interface VirtualListProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => React.ReactNode;
   estimateSize: (index: number) => number;
@@ -44,7 +44,7 @@ interface VirtualItem {
   style: React.CSSProperties;
 }
 
-export interface VirtualListRef {
+interface VirtualListRef {
   scrollToIndex: (index: number, behavior?: ScrollBehavior) => void;
   scrollToTop: (behavior?: ScrollBehavior) => void;
   scrollToBottom: (behavior?: ScrollBehavior) => void;
@@ -283,7 +283,7 @@ export const VirtualList = forwardRef(VirtualListInner) as <T>(
 // Specialized Virtual Lists
 // ============================================================================
 
-export interface VirtualMessageListProps {
+interface VirtualMessageListProps {
   messages: Array<{
     id: string;
     content: React.ReactNode;

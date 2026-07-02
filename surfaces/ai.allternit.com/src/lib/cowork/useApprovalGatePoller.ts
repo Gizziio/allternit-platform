@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { usePermissionStore } from '@/lib/agents/permission-store';
+import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
 
 interface GatePendingApproval {
   actionId: string;
@@ -22,7 +23,7 @@ const POLL_INTERVAL_MS = 5_000;
  * Polls the ApprovalGate API and injects pending approvals into the permission store.
  * Mount this once in CoworkRoot when an active session is running.
  */
-export function useApprovalGatePoller(active = true) {
+export function useApprovalGatePoller(active = true, surface: AgentModeSurface = 'cowork') {
   const seenIds = useRef(new Set<string>());
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function useApprovalGatePoller(active = true) {
           usePermissionStore.getState().addPermissionRequest({
             requestId: approval.actionId,
             sessionId: approval.sessionId,
-            surface: 'cowork',
+            surface,
             permission: approval.details.actionType,
             patterns: [approval.details.target ?? ''],
             metadata: {

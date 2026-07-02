@@ -1,19 +1,10 @@
-/**
- * Unified Message Renderer
- * 
- * Renders AI Elements based on stream content type.
- * Used across ALL modes: Chat, Cowork, Agent, Runner, Code
- * 
- * Core principle: Elements appear based on DATA, not mode.
- * All modes share the same rendering surface.
- */
-
-import React from 'react';
+import React, { useMemo, useState } from "react";
 import { cn } from '@/lib/utils';
 import type { ExtendedUIPart } from '@/lib/ai/rust-stream-adapter-extended';
 import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
 import { useBrowserStore } from '@/capsules/browser/browser.store';
 import { useNav } from '@/nav/useNav';
+import { openInBrowser } from '@/lib/openInBrowser';
 import { ThoughtTrace, coerceThoughtSteps, parseThoughtSteps } from './thought-trace';
 import { injectWebPreviewParts } from './browser-preview-utils';
 import { GlassPill, TerminalPill } from './glass-pill';
@@ -172,10 +163,6 @@ export function UnifiedMessageRenderer({
     return injectWebPreviewParts(result);
   }, [parts]);
 
-  if (!parsedParts || parsedParts.length === 0) {
-    return isStreaming ? <Shimmer className="h-4 w-3/4" /> : null;
-  }
-
   // Summary mode: only show text parts, skip reasoning and tool calls
   const visibleParts = React.useMemo(() => {
     if (viewMode === 'summary') {
@@ -183,6 +170,10 @@ export function UnifiedMessageRenderer({
     }
     return parsedParts;
   }, [parsedParts, viewMode]);
+
+  if (!parsedParts || parsedParts.length === 0) {
+    return isStreaming ? <Shimmer className="h-4 w-3/4" /> : null;
+  }
 
   // Collect source-document parts for the footer strip (P4)
   const sourceParts = parsedParts.filter(p => p.type === 'source-document') as Array<Extract<ExtendedUIPart, { type: 'source-document' }>>;
@@ -323,36 +314,18 @@ function BrowserPreviewCard({ part }: { part: Extract<ExtendedUIPart, { type: 'w
 function SourcesFooter({ sources }: { sources: Array<Extract<ExtendedUIPart, { type: 'source-document' }>> }) {
   if (sources.length === 0) return null;
   return (
-    <div style={{
-      marginTop: '12px',
-      paddingTop: '10px',
-      borderTop: '1px solid var(--ui-border-muted)',
-    }}>
-      <div style={{
-        fontSize: '12px',
-        fontWeight: 700,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'rgba(255,255,255,0.22)',
-        marginBottom: '8px',
-      }}>
+    <div className="mt-3 pt-2.5 border-t border-solid border-[var(--ui-border-muted)]">
+      <div className="text-[12px] font-bold tracking-[0.08em] uppercase text-white/20 mb-2">
         Sources
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div className="flex flex-col gap-1">
         {sources.map((src, i) => {
           const url = 'url' in src && typeof src.url === 'string' ? src.url : undefined;
           let host = '';
           try { if (url) host = new URL(url).hostname.replace(/^www\./, ''); } catch { host = url ?? ''; }
           return (
-            <div key={src.sourceId ?? i} style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: 'rgba(255,255,255,0.2)',
-                flexShrink: 0,
-                minWidth: '16px',
-                fontVariantNumeric: 'tabular-nums',
-              }}>
+            <div key={src.sourceId || `src-${i}`} className="flex items-baseline gap-2">
+              <span className="text-[12px] font-bold text-white/20 shrink-0 min-w-[16px] tabular-nums">
                 {i + 1}.
               </span>
               {url ? (
@@ -360,21 +333,13 @@ function SourcesFooter({ sources }: { sources: Array<Extract<ExtendedUIPart, { t
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    fontSize: '12px',
-                    color: 'rgba(212,176,140,0.65)',
-                    textDecoration: 'none',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    flex: 1,
-                  }}
+                  className="text-[12px] text-[#d4b08c]/65 no-underline overflow-hidden text-ellipsis whitespace-nowrap flex-1"
                   title={url}
                 >
                   {src.title ? `${src.title} — ${host}` : host}
                 </a>
               ) : (
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.38)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span className="text-[12px] text-white/40 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                   {src.title ?? 'Source'}
                 </span>
               )}
@@ -397,7 +362,7 @@ function ToolInputDisplay({ input }: { input: unknown }) {
   if (keys.length === 0) return null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "3px", marginTop: "4px" }}>
+    <div className="flex flex-col gap-1 mt-1">
       {keys.map((k) => {
         const val = obj[k];
         const display =
@@ -407,22 +372,14 @@ function ToolInputDisplay({ input }: { input: unknown }) {
             ? String(val)
             : JSON.stringify(val).slice(0, 200);
         return (
-          <div key={k} style={{ display: "flex", gap: "6px", fontSize: "12px", lineHeight: "1.5" }}>
-            <span style={{
-              flexShrink: 0,
-              fontFamily: "var(--font-mono)",
-              color: "rgba(212,176,140,0.55)",
-              fontWeight: 600,
-              fontSize: '12px',
-            }}>
+          <div key={`arg-${k}`} className="flex gap-1.5 text-[12px] leading-relaxed">
+            <span className="shrink-0 font-mono text-[#d4b08c]/55 font-bold">
               {k}
             </span>
-            <span style={{
-              color: "rgba(236,236,236,0.6)",
-              wordBreak: "break-all",
-              fontFamily: typeof val === "string" && val.includes("/") ? "monospace" : "inherit",
-              fontSize: "12px",
-            }}>
+            <span className={cn(
+              "text-[#ececec]/60 break-all",
+              typeof val === "string" && val.includes("/") ? "font-mono" : "font-sans"
+            )}>
               {display.length > 160 ? display.slice(0, 160) + "…" : display}
             </span>
           </div>
@@ -444,19 +401,13 @@ function renderToolResult(result: unknown): React.ReactNode {
   // Plain string result
   if (typeof result === 'string') {
     const trimmed = result.trim();
-    if (!trimmed) return <span style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", fontStyle: "italic" }}>Empty result</span>;
+    if (!trimmed) return <span className="text-[12px] text-white/30 italic">Empty result</span>;
     const preview = trimmed.length > 500 ? trimmed.slice(0, 500) + '…' : trimmed;
     return (
-      <div style={{
-        maxHeight: "160px",
-        overflowY: "auto",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-        fontSize: "12px",
-        lineHeight: "1.6",
-        color: "rgba(236,236,236,0.6)",
-        fontFamily: preview.includes("\n") || preview.startsWith("{") ? "monospace" : "inherit",
-      }}>
+      <div className={cn(
+        "max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-[12px] leading-relaxed text-[#ececec]/60",
+        preview.includes("\n") || preview.startsWith("{") ? "font-mono" : "font-sans"
+      )}>
         {preview}
       </div>
     );
@@ -483,7 +434,7 @@ function renderToolResult(result: unknown): React.ReactNode {
       <div className="space-y-1 max-h-40 overflow-y-auto">
         <div className="text-muted-foreground text-xs mb-1">{result.length} items</div>
         {(result as any[]).slice(0, 4).map((item: any, i: number) => (
-          <div key={i} className="rounded-xl bg-background/30 p-2 text-[12px] leading-5">
+          <div key={`res-item-${i}`} className="rounded-xl bg-background/30 p-2 text-[12px] leading-5">
             {typeof item === 'object' ? (
               <>
                 {item.title && <div className="font-medium break-words">{item.title}</div>}
@@ -515,7 +466,7 @@ function renderToolResult(result: unknown): React.ReactNode {
       return (
         <div className="space-y-1.5 max-h-40 overflow-y-auto">
           {results.slice(0, 4).map((r: any, i: number) => (
-            <div key={i} className="rounded-xl bg-background/30 p-2">
+            <div key={`search-res-${i}`} className="rounded-xl bg-background/30 p-2">
               {r.title && <div className="text-[12px] font-medium leading-5 break-words">{r.title}</div>}
               {r.url && (
                 <div className="mt-0.5 break-all text-xs text-muted-foreground">{r.url}</div>
@@ -568,8 +519,8 @@ function renderToolResult(result: unknown): React.ReactNode {
     if (keys.length <= 6) {
       return (
         <div className="space-y-0.5 text-xs">
-          {keys.map(k => (
-            <div key={k} className="flex gap-2">
+          {keys.map((k) => (
+            <div key={`res-k-${k}`} className="flex gap-2">
               <span className="text-muted-foreground font-mono flex-shrink-0">{k}:</span>
               <span className="break-words">
                 {typeof obj[k] === 'object'
@@ -611,7 +562,7 @@ function humanizeToolCall(
   const inp = (input && typeof input === 'object') ? input as Record<string, unknown> : {};
 
   const query   = String(inp.query   ?? inp.search ?? inp.q          ?? '');
-  const path    = String(inp.path    ?? inp.filename ?? inp.file ?? inp.name ?? '');
+  const path    = String(inp.path    ?? inp.file_path ?? inp.filename ?? inp.file ?? inp.name ?? '');
   const url     = String(inp.url     ?? inp.link    ?? inp.uri       ?? '');
   const command = String(inp.command ?? inp.cmd     ?? inp.code      ?? '');
   const content = String(inp.content ?? inp.text    ?? inp.new_content ?? inp.new_string ?? '');
@@ -640,11 +591,16 @@ function humanizeToolCall(
 
   if (name.includes('websearch') || name.includes('browsersearch') || name.includes('googlesearch') || name === 'search') {
     title = query ? `Searched web for "${query.slice(0, 55)}"` : 'Searched the web';
-  } else if (name.includes('todowrite') || name.includes('todoupdate') || name.includes('todoread')) {
-    title = state === 'output-available' ? 'Updated todo list' : 'Updating todo list';
+  } else if (name.includes('todowrite') || name.includes('todoupdate') || name.includes('todoread')
+    || name === 'taskcreate' || name === 'taskupdate' || name === 'taskget' || name === 'tasklist' || name === 'taskstop') {
+    title = state === 'output-available' ? 'Updated task list' : 'Updating task list';
+  } else if (name === 'exitplanmode') {
+    title = 'Plan approved';
+  } else if (name === 'askuserquestion') {
+    title = state === 'output-available' ? 'Got user input' : 'Asking for input';
   } else if (name.includes('bash') || name.includes('runcode') || name.includes('executecode') || name.includes('computer')) {
     title = command ? `Ran: ${command.slice(0, 50)}` : 'Ran code';
-  } else if (name.includes('strreplace') || name.includes('editfile') || name === 'edit') {
+  } else if (name.includes('multiedit') || name.includes('notebookedit') || name.includes('strreplace') || name.includes('editfile') || name === 'edit') {
     title = fname ? `Edited ${fname}` : 'Edited file';
   } else if (name.includes('writefile') || name === 'write' || name.includes('createfile')) {
     title = fname ? `Writing ${fname}` : 'Writing file';
@@ -891,8 +847,8 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
             <TestResultsSummary />
           </TestResultsHeader>
           <TestResultsContent>
-            {part.tests.map((test, i) => (
-              <Test key={i} name={test.name} status={test.status} duration={test.durationMs} />
+            {(part.tests || []).map((test) => (
+              <Test key={`${test.name}-${test.status}`} name={test.name} status={test.status} duration={test.durationMs} />
             ))}
           </TestResultsContent>
         </TestResults>
@@ -1070,7 +1026,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           <div className="text-sm text-muted-foreground mb-4">{part.description}</div>
           <div className="flex gap-2">
             {part.actions.map(action => (
-              <button
+              <button type="button"
                 key={action.id}
                 className={cn(
                   "px-4 py-2 rounded text-sm font-medium transition-colors",
@@ -1126,7 +1082,8 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
                 srcDoc={part.html}
                 className="w-full h-64 border-0"
                 sandbox="allow-scripts"
-              />
+              title="Preview Content"
+            />
             )}
           </div>
         </div>
@@ -1338,8 +1295,8 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
         <ChainOfThought>
           <ChainOfThoughtHeader />
           <ChainOfThoughtContent>
-            {part.steps.map((step, i) => (
-              <ChainOfThoughtStep key={i} label={step} status="complete" />
+            {(part.steps || []).map((step) => (
+              <ChainOfThoughtStep key={`${step}-${(part.steps || []).length}`} label={step} status="complete" />
             ))}
           </ChainOfThoughtContent>
         </ChainOfThought>
@@ -1383,7 +1340,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
         <button
           type="button"
           className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm text-primary hover:bg-primary/15 transition-colors"
-          onClick={() => window.open(part.openInId, '_blank')}
+          onClick={() => openInBrowser(part.openInId)}
         >
           <ArrowSquareOut className="size-3.5 " />
           {part.text}
@@ -1534,7 +1491,7 @@ function FileChangeCard({
   const dir = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
 
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

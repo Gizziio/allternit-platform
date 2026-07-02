@@ -426,7 +426,7 @@ export const sshConnectionsApi = new SSHConnectionsAPI();
 
 import { useState, useCallback, useEffect } from 'react';
 
-export function useSSHConnections() {
+function useSSHConnections() {
   const [connections, setConnections] = useState<SSHConnection[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

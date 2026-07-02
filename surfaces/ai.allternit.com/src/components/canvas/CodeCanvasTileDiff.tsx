@@ -91,8 +91,7 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
       >
         <FileCode size={24} opacity={0.3} />
         <span>No diff content</span>
-        <textarea
-          value={pastedDiff}
+        <textarea aria-label="Text Area" value={pastedDiff}
           onChange={(e) => setPastedDiff(e.target.value)}
           placeholder="Paste unified diff here…"
           style={{
@@ -127,7 +126,7 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
       }}
     >
       {files.map((file, fi) => (
-        <div key={fi}>
+        <div key={`codecanvastilediff-${fi}`}>
           <div
             style={{
               padding: '6px 12px',
@@ -150,7 +149,7 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
           <div style={{ padding: '8px 0' }}>
             {file.lines.map((line, i) => (
               <div
-                key={i}
+                key={`codecanvastilediff-${i}`}
                 style={{
                   display: 'flex',
                   background:

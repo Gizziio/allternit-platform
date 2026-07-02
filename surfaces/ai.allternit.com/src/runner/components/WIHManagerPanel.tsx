@@ -204,8 +204,8 @@ export function WIHManagerPanel() {
                       <WIHListItem
                         key={wih.wihId}
                         wih={wih}
-                        isSelected={false}
-                        onClick={() => {}}
+                        isSelected={selectedWihId === wih.wihId}
+                        onClick={() => selectWih(wih.wihId)}
                         showActions={false}
                       />
                     ))
@@ -232,8 +232,8 @@ export function WIHManagerPanel() {
                       <WIHListItem
                         key={wih.wihId}
                         wih={wih}
-                        isSelected={false}
-                        onClick={() => {}}
+                        isSelected={selectedWihId === wih.wihId}
+                        onClick={() => selectWih(wih.wihId)}
                         showActions={false}
                       />
                     ))
@@ -345,7 +345,7 @@ function WIHDetails({ wih, isClient }: { wih: WihInfo; isClient: boolean }) {
         <p id="detail-dag" className="text-[13px] text-[var(--text-primary)]">{wih.dagId}</p>
       </div>
       <div className="space-y-1.5">
-        <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Status</label>
+        <div className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Status</div>
         <div className="mt-1">
           <Badge variant={
             wih.status === "open" ? "default" :
@@ -358,7 +358,7 @@ function WIHDetails({ wih, isClient }: { wih: WihInfo; isClient: boolean }) {
       </div>
       {wih.ready !== undefined && (
         <div className="space-y-1.5">
-          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Ready</label>
+          <div className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Ready</div>
           <div className="flex items-center gap-1.5 mt-1">
              <div className={cn("size-2 rounded-full", wih.ready ? "bg-green-500" : "bg-zinc-600")} />
              <span className="text-[13px] font-medium">{wih.ready ? "Processable" : "Blocked"}</span>
@@ -367,7 +367,7 @@ function WIHDetails({ wih, isClient }: { wih: WihInfo; isClient: boolean }) {
       )}
       {wih.blockedBy && wih.blockedBy.length > 0 && (
         <div className="space-y-1.5">
-          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Blocked By</label>
+          <div className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Blocked By</div>
           <div className="flex flex-wrap gap-1 mt-1">
             {wih.blockedBy.map((id) => (
               <Badge key={id} variant="outline" className="text-[10px] font-mono">{id.slice(0, 8)}…</Badge>

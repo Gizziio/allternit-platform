@@ -12,19 +12,19 @@ import {
 
 const PLATFORM_SIDEPANEL_COPY = {
   title: "Allternit",
-  subtitle: "Browser Agent",
-  emptyStateTitle: "Allternit Browser Agent",
+  subtitle: "Computer Agent",
+  emptyStateTitle: "Allternit Computer Agent",
   emptyStateDescription: "Automate browsing tasks with AI",
   readyLabel: "Ready",
   contextLabel: "Current Browser Tab",
   settingsEyebrow: "Agent Settings",
-  settingsTitle: "Configure how the browser agent executes tasks.",
+  settingsTitle: "Configure how the computer agent executes tasks.",
   settingsDescription:
     "Adjust model, API key, and behavior preferences for the page agent.",
   settingsContextLabel: "Platform Browser",
 } as const;
 
-export function BrowserChatPane(): JSX.Element {
+export function BrowserChatPane(): React.ReactNode {
   const { adapter } = useBrowserExtensionPaneAdapter();
 
   return (

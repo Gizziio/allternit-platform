@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Client-side icon components for registered OAuth apps.
  * Kept separate from oauth-apps.ts so that file stays server-safe (no JSX).

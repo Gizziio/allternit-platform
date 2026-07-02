@@ -75,14 +75,10 @@ export function ImageRenderer({
   };
 
   // Handle draw-to-edit
-  const handleDrawToEdit = (image: ImageAsset) => {
-    console.debug('[ImageRenderer] Opening draw-to-edit for:', image);
-    // In production, this would open the DrawToEditCanvas modal
-    // For now, just log
-  };
+  const handleDrawToEdit = (_image: ImageAsset) => {};
 
   // Grid view
-  const renderGridView = (): JSX.Element => (
+  const renderGridView = (): React.ReactNode => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
       {images.map((image, index) => (
         <motion.div
@@ -152,10 +148,10 @@ export function ImageRenderer({
   );
 
   // List view
-  const renderListView = (): JSX.Element => (
+  const renderListView = (): React.ReactNode => (
     <div className="divide-y divide-[var(--border-subtle)]">
       {images.map((image, index) => (
-        <div
+        <div role="button" tabIndex={0}
           key={image.id}
           className="flex items-center gap-4 p-4 hover:bg-[var(--bg-secondary)] cursor-pointer transition-colors"
           onClick={() => {
@@ -282,7 +278,7 @@ export function ImageRenderer({
             onClick={() => setLightboxOpen(false)}
           >
             {/* Image */}
-            <div
+            <div role="button" tabIndex={0}
               className="relative max-w-7xl max-h-[90vh] flex items-center justify-center"
               onClick={(e) => e.stopPropagation()}
               style={{
@@ -369,7 +365,7 @@ export function ImageRenderer({
             </div>
 
             {/* Close button */}
-            <button
+            <button type="button"
               onClick={() => setLightboxOpen(false)}
               className="absolute top-4 right-4 text-white/60 hover:text-white"
             >

@@ -248,7 +248,7 @@ export const swarmApi = {
 // Polling Utilities
 // ============================================================================
 
-export function createPollingConfig(options?: {
+function createPollingConfig(options?: {
   circuitBreakerInterval?: number;
   quarantineInterval?: number;
   messageStatsInterval?: number;
@@ -262,7 +262,7 @@ export function createPollingConfig(options?: {
   };
 }
 
-export function startPolling<T>(
+function startPolling<T>(
   fn: () => Promise<T>,
   interval: number,
   onData: (data: T) => void,

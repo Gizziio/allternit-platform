@@ -1,11 +1,8 @@
 /**
  * Accessories Component
- * 
+ *
  * Renders unlockable accessories for the avatar.
  * Supports glasses, hats, neck items, and other decorations.
- * 
- * Note: This is a placeholder for future accessory system.
- * Currently returns null as accessories are not yet implemented.
  */
 
 import React from 'react';
@@ -18,7 +15,6 @@ interface AccessoriesProps {
   size: number;
 }
 
-// Accessory definitions (placeholder for future implementation)
 const ACCESSORY_DEFINITIONS: Record<string, {
   name: string;
   layer: 'back' | 'front';
@@ -130,7 +126,7 @@ export const Accessories: React.FC<AccessoriesProps> = ({
 };
 
 // Export available accessories
-export const AVAILABLE_ACCESSORIES = Object.entries(ACCESSORY_DEFINITIONS).map(
+const AVAILABLE_ACCESSORIES = Object.entries(ACCESSORY_DEFINITIONS).map(
   ([id, def]) => ({
     id,
     name: def.name,
@@ -139,7 +135,7 @@ export const AVAILABLE_ACCESSORIES = Object.entries(ACCESSORY_DEFINITIONS).map(
 );
 
 // Export accessory by category
-export const ACCESSORIES_BY_CATEGORY = {
+const ACCESSORIES_BY_CATEGORY = {
   glasses: ['glasses-round', 'glasses-square'],
   hats: ['hat-cap', 'hat-wizard'],
   neck: ['bow-tie'],

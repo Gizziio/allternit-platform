@@ -3,7 +3,7 @@ import { tokens } from '../tokens';
 
 export function IconButton({ icon: Icon, onClick, active, title, size = 20 }: any) {
   return (
-    <button 
+    <button type="button" 
       onClick={onClick}
       title={title}
       style={{

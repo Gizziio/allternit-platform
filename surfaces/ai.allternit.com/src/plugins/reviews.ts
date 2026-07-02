@@ -100,7 +100,7 @@ export function getCurrentUserId(): string {
 /**
  * Set the current user ID (for testing or when user logs in)
  */
-export function setCurrentUserId(userId: string): void {
+function setCurrentUserId(userId: string): void {
   const storage = getStorage();
   if (!storage) return;
   storage.setItem(CURRENT_USER_ID_KEY, userId);
@@ -284,7 +284,7 @@ export function getUserReview(pluginId: string, userId: string): PluginReview | 
 /**
  * Delete a review (useful for moderation or user deletion).
  */
-export function deleteReview(reviewId: string, userId?: string): boolean {
+function deleteReview(reviewId: string, userId?: string): boolean {
   const reviews = loadAllReviews();
   const index = reviews.findIndex(r => r.id === reviewId);
   
@@ -301,7 +301,7 @@ export function deleteReview(reviewId: string, userId?: string): boolean {
 /**
  * Get all reviews by a specific user.
  */
-export function getReviewsByUser(userId: string): PluginReview[] {
+function getReviewsByUser(userId: string): PluginReview[] {
   return loadAllReviews()
     .filter(r => r.userId === userId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -311,7 +311,7 @@ export function getReviewsByUser(userId: string): PluginReview[] {
  * Get the top-rated plugins based on average rating.
  * Returns array of pluginIds sorted by average rating.
  */
-export function getTopRatedPlugins(limit: number = 10): Array<{ pluginId: string; summary: PluginRatingSummary }> {
+function getTopRatedPlugins(limit: number = 10): Array<{ pluginId: string; summary: PluginRatingSummary }> {
   const reviews = loadAllReviews();
   const pluginIds = Array.from(new Set(reviews.map(r => r.pluginId)));
   
@@ -335,7 +335,7 @@ export function getTopRatedPlugins(limit: number = 10): Array<{ pluginId: string
 /**
  * Clear all reviews (useful for testing).
  */
-export function clearAllReviews(): void {
+function clearAllReviews(): void {
   const storage = getStorage();
   if (!storage) return;
   storage.removeItem(REVIEWS_STORAGE_KEY);
@@ -344,14 +344,14 @@ export function clearAllReviews(): void {
 /**
  * Export reviews to JSON (for backup or migration).
  */
-export function exportReviews(): string {
+function exportReviews(): string {
   return JSON.stringify(loadAllReviews(), null, 2);
 }
 
 /**
  * Import reviews from JSON (for restore or migration).
  */
-export function importReviews(json: string): boolean {
+function importReviews(json: string): boolean {
   try {
     const reviews = JSON.parse(json) as PluginReview[];
     if (!Array.isArray(reviews)) return false;

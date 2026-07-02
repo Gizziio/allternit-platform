@@ -9,8 +9,6 @@ import { useSidecarStore } from '../stores/useSidecarStore';
 import type {
   OrchestratorState,
   OrchestratorAgent,
-  OrchestratorTaskGraph,
-  ResearchDocState,
 } from '../types/programs';
 
 // ============================================================================
@@ -49,9 +47,6 @@ export interface ExecutionPlan {
 // ============================================================================
 
 export function decomposeTask(prompt: string): ExecutionPlan {
-  // This would typically call an LLM to decompose the task
-  // For now, we use a rule-based approach based on prompt keywords
-  
   const lowerPrompt = prompt.toLowerCase();
   
   // Research tasks
@@ -297,6 +292,7 @@ export class OrchestratorEngine {
   private plan: ExecutionPlan;
   private abortController: AbortController;
   private onUpdate: () => void;
+  private agentRoleMap: Map<string, AgentConfig> = new Map();
 
   constructor(programId: string, plan: ExecutionPlan, onUpdate: () => void) {
     this.programId = programId;
@@ -308,6 +304,14 @@ export class OrchestratorEngine {
   async execute(): Promise<void> {
     const store = useSidecarStore.getState();
     
+    // Initialize role-to-agent map for fast lookup
+    this.agentRoleMap.clear();
+    this.plan.agents.forEach(a => {
+      if (!this.agentRoleMap.has(a.role)) {
+        this.agentRoleMap.set(a.role, a);
+      }
+    });
+
     // Initialize orchestrator state
     store.setProgramState<OrchestratorState>(this.programId, {
       agents: this.plan.agents.map(a => ({
@@ -343,7 +347,7 @@ export class OrchestratorEngine {
         await this.executeDAG();
       }
     } catch (error) {
-      console.error('[Orchestrator] Execution failed:', error);
+      logger.error({ err: error }, 'Execution failed');
       throw error;
     }
   }
@@ -404,8 +408,8 @@ export class OrchestratorEngine {
     // Update task status
     this.updateTaskStatus(task.id, 'running');
     
-    // Find or assign agent
-    const agent = this.plan.agents.find(a => a.role === this.getRoleForTask(task)) || this.plan.agents[0];
+    // Find or assign agent using fast lookup map
+    const agent = this.agentRoleMap.get(this.getRoleForTask(task)) || this.plan.agents[0];
     
     // Update agent status
     this.updateAgentStatus(agent.id, 'working', `Executing: ${task.name}`);
@@ -521,7 +525,11 @@ export class OrchestratorEngine {
 
 import { useCallback, useRef } from 'react';
 
-export function useOrchestrator() {
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('OrchestratorEngine');
+
+function useOrchestrator() {
   const engineRef = useRef<OrchestratorEngine | null>(null);
 
   const startOrchestration = useCallback((programId: string, prompt: string) => {

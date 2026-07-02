@@ -7,6 +7,10 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Index');
+
 // ============================================================================
 // Web Vitals Monitoring
 // ============================================================================
@@ -67,7 +71,7 @@ export function useRenderCount(componentName: string): number {
 
   useEffect(() => {
     if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
-      console.debug(`[RenderCount] ${componentName}: ${renderCount.current} renders`);
+      logger.debug(`${componentName}: ${renderCount.current} renders`);
     }
   });
 
@@ -86,7 +90,7 @@ export function useMountTiming(componentName: string): void {
     return () => {
       const duration = performance.now() - startTime.current;
       if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
-        console.debug(`[MountTime] ${componentName}: ${duration.toFixed(2)}ms`);
+        logger.debug(`${componentName}: ${duration.toFixed(2)}ms`);
       }
     };
   }, [componentName]);
@@ -118,7 +122,7 @@ export function measure(name: string, startMark: string, endMark?: string): Perf
     const entries = performance.getEntriesByName(name, 'measure');
     return entries[entries.length - 1] as PerformanceMeasure;
   } catch (e) {
-    console.warn(`[Performance] Failed to measure ${name}:`, e);
+    logger.warn({ err: e }, 'Failed to measure ${name}:');
     return null;
   }
 }

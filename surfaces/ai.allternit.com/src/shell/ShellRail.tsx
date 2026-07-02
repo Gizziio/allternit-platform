@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
@@ -14,7 +14,13 @@ import {
   CheckSquare,
   GraduationCap,
   BookOpen,
+  AppWindow,
+  Plugs,
+  Globe,
+  PushPinSlash,
 } from '@phosphor-icons/react';
+import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
+import type { InstalledMiniApp } from '../views/aci/mini-app.types';
 import { useChatStore } from '../views/chat/ChatStore';
 
 import { useCoworkStore } from '../views/cowork/CoworkStore';
@@ -30,6 +36,7 @@ import { useFeaturePlugins } from '../plugins/useFeaturePlugins';
 import { ProjectRailSection, type UnifiedProject, type UnifiedItem } from './rail/ProjectRailSection';
 import { useSurfaceAgentModeEnabled } from '../lib/agents/surface-agent-context';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
+import { useBrowserStore } from '../capsules/browser/browser.store';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import type { ModeSession } from '../lib/agents/mode-session-store';
@@ -41,10 +48,32 @@ import {
 } from '../lib/agents/session-metadata';
 import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 
-import { useSidecarStore } from '../stores/sidecar-store';
 import { SettingsDrilldown } from './SettingsDrilldown';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
+import { cn } from '@/lib/utils';
+
+const MINI_APP_CATEGORY_ICONS: Record<string, Icon> = {
+  runtime:       Cpu,
+  connector:     Plugs,
+  communication: Globe,
+  data:          Globe,
+  tool:          Gear,
+  custom:        AppWindow,
+};
+
+function usePinnedMiniApps(): InstalledMiniApp[] {
+  const [pinned, setPinned] = useState<InstalledMiniApp[]>(() => {
+    seedDefaultMiniApps();
+    return getPinnedMiniApps();
+  });
+  useEffect(() => {
+    const sync = () => setPinned(getPinnedMiniApps());
+    window.addEventListener('allternit:mini-apps-changed', sync);
+    return () => window.removeEventListener('allternit:mini-apps-changed', sync);
+  }, []);
+  return pinned;
+}
 
 interface ShellRailProps {
   activeViewType?: string;
@@ -65,10 +94,15 @@ const BROWSER_MODE_VIEW_TYPES = new Set<string>([
   'browser',
   'browserview',
   'mini-apps-store',
+  'browser-extensions',
   'mini-app',
   'addin-word',
   'addin-excel',
   'addin-ppt',
+  'hermes',
+  'openclaw',
+  'openclaw-chat',
+  'openclaw-sessions',
 ]);
 
 export function ShellRail({
@@ -78,7 +112,7 @@ export function ShellRail({
   mode = 'chat',
   isCollapsed,
   onModeChange,
-}: ShellRailProps): JSX.Element | null {
+}: ShellRailProps): React.ReactNode | null {
   const [foldedCategories, setFoldedCategories] = useState<Set<string>>(new Set(['workspace', 'ai_vision', 'infrastructure', 'security', 'execution', 'observability', 'services']));
 
   const isBrowser = activeViewType ? BROWSER_MODE_VIEW_TYPES.has(activeViewType) : false;
@@ -124,6 +158,9 @@ export function ShellRail({
   const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
 
   const { enabledPlugins } = useFeaturePlugins();
+
+  // Pinned mini-apps (browser mode dynamic rail)
+  const pinnedMiniApps = usePinnedMiniApps();
 
   // Unified data mapping
   const unifiedData = useMemo(() => {
@@ -201,7 +238,7 @@ export function ShellRail({
 
   // Build active config, then inject any enabled-plugin rail items
   let activeConfig: RailConfigSection[];
-  if (isBrowser) activeConfig = BROWSER_RAIL_CONFIG;
+  if (isBrowser || mode === 'browser') activeConfig = BROWSER_RAIL_CONFIG;
   else if (mode === 'cowork') activeConfig = COWORK_RAIL_CONFIG;
   else if (mode === 'code') activeConfig = CODE_RAIL_CONFIG;
   else if (mode === 'design') activeConfig = DESIGN_RAIL_CONFIG;
@@ -304,41 +341,33 @@ export function ShellRail({
   if (isCollapsed) return null;
 
   return (
-    <div style={{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      background: useBlendedRail ? '#ffffff' : 'var(--shell-panel-bg)',
-      borderRadius: 0,
-      border: 'none',
-      boxShadow: 'none',
-      position: 'relative',
-      overflow: 'hidden',
-      outline: 'none',
-      /* Mode-aware CSS custom properties scoped to this rail */
-      ['--shell-item-active-bg' as string]: `color-mix(in srgb, ${surfaceTheme?.accent ?? 'var(--accent-primary)'} 16%, var(--surface-panel))`,
-      ['--shell-item-active-fg' as string]: surfaceTheme?.accent ?? 'var(--accent-primary)',
-      ['--accent-primary' as string]: surfaceTheme?.accent ?? 'var(--accent-primary)',
-      /* Blended rail for chat, cowork, code, browser, and design modes */
-      ...(useBlendedRail ? {
-        ['--shell-panel-bg' as string]: 'var(--bg-primary)',
-        ['--shell-item-fg' as string]: 'var(--text-primary)',
-        ['--shell-item-muted' as string]: 'var(--text-tertiary)',
-        ['--shell-item-hover' as string]: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-        ['--shell-floating-bg' as string]: 'var(--glass-bg-thick)',
-        ['--shell-floating-border' as string]: 'var(--glass-border)',
-        ['--shell-menu-bg' as string]: 'var(--surface-floating)',
-        ['--shell-menu-border' as string]: 'var(--border-default)',
-        ['--border-subtle' as string]: 'var(--ui-border-muted)',
-      } : {}),
-    }}>
+    <div 
+      className="size-full flex flex-col bg-[var(--shell-panel-bg)] relative overflow-hidden outline-none"
+      style={{
+        /* Mode-aware CSS custom properties scoped to this rail */
+        ['--shell-item-active-bg' as string]: `color-mix(in srgb, ${surfaceTheme?.accent ?? 'var(--accent-primary)'} 16%, var(--surface-panel))`,
+        ['--shell-item-active-fg' as string]: surfaceTheme?.accent ?? 'var(--accent-primary)',
+        ['--accent-primary' as string]: surfaceTheme?.accent ?? 'var(--accent-primary)',
+        /* Blended rail for chat, cowork, code, browser, and design modes */
+        ...(useBlendedRail ? {
+          ['--shell-panel-bg' as string]: 'var(--bg-primary)',
+          ['--shell-item-fg' as string]: 'var(--text-primary)',
+          ['--shell-item-muted' as string]: 'var(--text-tertiary)',
+          ['--shell-item-hover' as string]: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
+          ['--shell-floating-bg' as string]: 'var(--glass-bg-thick)',
+          ['--shell-floating-border' as string]: 'var(--glass-border)',
+          ['--shell-menu-bg' as string]: 'var(--surface-floating)',
+          ['--shell-menu-border' as string]: 'var(--border-default)',
+          ['--border-subtle' as string]: 'var(--ui-border-muted)',
+        } : {}),
+      }}
+    >
       {/* SPACER FOR FIXED CONTROLS — extra clearance in code mode since New Thread has no section title */}
       <div style={{ height: isCodeMode ? 102 : 86 }} />
 
       {/* MAIN CONTENT */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {activeConfig.map((category, index) => {
+      <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-1">
+        {activeConfig.map((category) => {
           const isFolded = foldedCategories.has(category.id);
           const isCollapsible = category.collapsible !== false;
           
@@ -346,50 +375,24 @@ export function ShellRail({
           const showSeparator = isCodeMode && category.id === 'threads';
 
           return (
-            <div key={category.id} style={{ marginBottom: 4 }}>
+            <div key={category.id} className="mb-1">
               {showSeparator && (
-                <div style={{ 
-                  padding: '8px 12px', 
-                  color: 'var(--accent-secondary)', 
-                  fontSize: 12, 
-                  fontWeight: 800,
-                  letterSpacing: '0.08em'
-                }}>
+                <div className="p-[8px_12px] text-[var(--accent-secondary)] text-[12px] font-extrabold tracking-[0.08em]">
                   &gt; THREADS
                 </div>
               )}
               {isCollapsible ? (
-                <button 
+                <button type="button" 
                   onClick={() => toggleFold(category.id)}
-                  style={{ 
-                    width: '100%', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 6, 
-                    padding: '8px 12px', 
-                    background: 'transparent', 
-                    border: 'none', 
-                    cursor: 'pointer', 
-                    color: 'var(--accent-secondary)',
-                    borderRadius: 12,
-                    transition: 'background 0.2s, color 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--shell-item-hover)';
-                    e.currentTarget.style.color = 'var(--accent-primary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--accent-secondary)';
-                  }}
+                  className="w-full flex items-center gap-1.5 p-[8px_12px] rounded-xl border-none bg-transparent cursor-pointer text-[var(--accent-secondary)] transition-all duration-200 hover:bg-[var(--shell-item-hover)] hover:text-[var(--accent-primary)]"
                 >
                   {isFolded ? <CaretRight size={10} weight="bold" /> : <CaretDown size={10} weight="bold" />}
-                  <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{category.title}</span>
+                  <span className="text-[12px] font-extrabold uppercase tracking-[0.08em]">{category.title}</span>
                 </button>
               ) : null}
 
               {!isFolded && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2 }}>
+                <div className="flex flex-col gap-0.5 mt-0.5">
                   {category.id === 'sessions' || category.id === 'tasks' || category.id === 'threads' ? (
                     <ProjectRailSection
                       projects={unifiedData.projects}
@@ -441,7 +444,13 @@ export function ShellRail({
                           if (session) openNativeSessionSurface(session);
                         } else if (mode === 'cowork') {
                           coworkStore.setActiveTask(id);
-                          openCoworkSurface();
+                          const coworkTask = coworkStore.tasks.find(t => t.id === id);
+                          useCoworkSessionStore.getState().setActiveSession(coworkTask?.sessionId ?? null);
+                          if (onModeChange) {
+                            onModeChange('cowork');
+                          } else {
+                            onOpen?.('workspace');
+                          }
                         } else if (mode === 'code') {
                           if (codeStore.sessions.some(s => s.session_id === id)) {
                             codeStore.setActiveSession(id);
@@ -487,23 +496,23 @@ export function ShellRail({
                         isBrowser ? {
                           icon: ChatTeardropText as any,
                           title: "No browser sessions",
-                          description: "Start a browser agent session to see it here.",
+                          description: "Start a computer agent session to see it here.",
                           actionLabel: "Open Browser",
                           onAction: () => onOpen?.('browser')
                         } : mode === 'chat' ? {
-                          icon: ChatTeardropText,
+                          icon: ChatTeardropText as any,
                           title: "No sessions yet",
                           description: "Start a chat or create an agent session.",
                           actionLabel: "Open chat",
                           onAction: () => onOpen?.('chat')
                         } : mode === 'cowork' ? {
-                          icon: CheckSquare,
+                          icon: CheckSquare as any,
                           title: "No tasks yet",
                           description: "Create a task to get started.",
                           actionLabel: "New Task",
                           onAction: () => onOpen?.('cowork-new-task')
                         } : {
-                          icon: Cpu,
+                          icon: Cpu as any,
                           title: "No workspace",
                           description: "Create a workspace to start coding.",
                           actionLabel: "New Workspace",
@@ -514,46 +523,77 @@ export function ShellRail({
                         }
                       }
                     />
+                  ) : category.id === 'mini-apps' && (isBrowser || mode === 'browser') ? (
+                    <div className="flex flex-col gap-1">
+                      {/* Static store entry */}
+                      {category.items.map((item: { id: string; icon: Icon; label: string; isAction?: boolean; payload: string }) => (
+                        <RailItem
+                          key={item.id}
+                          id={item.id}
+                          icon={item.icon}
+                          label={item.label}
+                          isActive={activeViewType === item.payload}
+                          onClick={() => onOpen?.(item.payload)}
+                        />
+                      ))}
+                      {/* Dynamic pinned apps */}
+                      {pinnedMiniApps.map((app) => (
+                        <PinnedMiniAppItem
+                          key={app.id}
+                          app={app}
+                          isActive={activeViewType === app.id}
+                          onOpen={() => {
+                            if (app.id === 'hermes' || app.id === 'openclaw') {
+                              onOpen?.(app.id);
+                            } else {
+                              window.dispatchEvent(new CustomEvent('allternit:open-view', {
+                                detail: { viewType: 'mini-app', context: { url: app.url, name: app.name, category: app.category, version: app.version } },
+                              }));
+                            }
+                          }}
+                          onUnpin={() => unpinMiniApp(app.id)}
+                        />
+                      ))}
+                    </div>
                   ) : (
-                    category.items.map((item: { id: string; icon: Icon; label: string; isAction?: boolean; payload: string }) => (
-                      <RailItem
-                        key={item.id}
-                        id={item.id}
-                        icon={item.icon}
-                        label={item.label}
-                        isActive={!item.isAction && activeViewType === item.payload}
-                        onClick={() => {
-                          if (item.id === 'new-chat') {
-                            chatStore.setActiveThread(null);
-                          }
-                          if (item.id === 'br-new-session') {
-                            useChatSessionStore.getState().createSession({
-                              name: 'New Browser Session',
-                              metadata: { surface: 'browser' }
-                            }).then((sessionId) => {
-                              useChatSessionStore.getState().setActiveSession(sessionId);
-                              onOpen?.('browser');
-                            });
-                            return;
-                          }
-                          if (item.payload === 'browser-extensions') {
-                            onOpen?.('browser');
-                            return;
-                          }
-                          onOpen?.(item.payload);
-                          if (item.payload === 'chat') onModeChange?.('chat');
-                          else if (item.payload === 'workspace') onModeChange?.('cowork');
-                          else if (item.payload === 'code') onModeChange?.('code');
-                          else if (
-                            item.payload === 'design' ||
-                            item.payload === 'design-marketplace' ||
-                            item.payload.startsWith('design-view-')
-                          ) {
-                            onModeChange?.('design');
-                          }
-                        }}
-                      />
-                    ))
+                    <div className="flex flex-col gap-1">
+                      {category.items.map((item: { id: string; icon: Icon; label: string; isAction?: boolean; payload: string }) => (
+                        <div key={item.id} className="flex flex-col gap-0.5">
+                          <RailItem
+                            id={item.id}
+                            icon={item.icon}
+                            label={item.label}
+                            isActive={!item.isAction && activeViewType === item.payload}
+                            onClick={() => {
+                              if (item.id === 'new-chat' || item.id === 'chat') {
+                                chatStore.setActiveThread(null);
+                                useChatSessionStore.getState().setActiveSession(null);
+                              }
+                              if (item.id === 'br-new-session') {
+                                useBrowserStore.getState().closeAllTabs();
+                                onOpen?.('browser');
+                                return;
+                              }
+                              if (item.payload === 'browser-extensions') {
+                                onOpen?.('browser-extensions');
+                                return;
+                              }
+                              onOpen?.(item.payload);
+                              if (item.payload === 'chat') onModeChange?.('chat');
+                              else if (item.payload === 'workspace') onModeChange?.('cowork');
+                              else if (item.payload === 'code') onModeChange?.('code');
+                              else if (
+                                item.payload === 'design' ||
+                                item.payload === 'design-marketplace' ||
+                                item.payload.startsWith('design-view-')
+                              ) {
+                                onModeChange?.('design');
+                              }
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   )}
 
                 </div>
@@ -564,140 +604,41 @@ export function ShellRail({
       </div>
 
       {/* FOOTER */}
-      <div style={{ 
-        padding: '16px 20px', 
-        borderTop: '1px solid var(--shell-divider)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 12,
-        background: useBlendedRail ? '#ffffff' : 'var(--shell-panel-bg)'
-      }}>
-        <div style={{ 
-          width: 32, 
-          height: 32, 
-          borderRadius: 10, 
-          background: 'linear-gradient(135deg, var(--accent-chat) 0%, var(--accent-primary) 100%)', 
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--bg-primary)',
-          fontSize: 14,
-          fontWeight: 'bold'
-        }}>U</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: 'var(--shell-item-fg)', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>User Name</div>
-          <div style={{ color: 'var(--shell-item-muted)', fontSize: 12, fontWeight: 500 }}>Pro Plan</div>
+      <div className="p-[16px_20px] border-t border-solid border-[var(--shell-divider)] flex items-center gap-3 bg-[var(--shell-panel-bg)] shrink-0">
+        <div className="size-8 rounded-[10px] bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">U</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[var(--shell-item-fg)] text-[13px] font-semibold overflow-hidden text-ellipsis whitespace-nowrap">User Name</div>
+          <div className="text-[var(--shell-item-muted)] text-[12px] font-medium">Pro Plan</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
+        <div className="flex items-center gap-2">
+          <button type="button"
             onClick={() => onOpen?.('labs')}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--accent-primary)';
-              e.currentTarget.style.background = 'var(--shell-item-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--shell-item-muted)';
-              e.currentTarget.style.background = 'transparent';
-            }}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--shell-item-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-            }}
+            className="size-8 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
             title="A://Labs - Learning Portal"
           >
             <GraduationCap size={18} weight="bold" />
           </button>
-          <button
+          <button type="button"
             onClick={() => {
               onOpen?.('labs');
               // Dispatch event to switch to research tab inside Labs
               window.dispatchEvent(new CustomEvent('allternit:open-labs-research', { detail: {} }));
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--accent-primary)';
-              e.currentTarget.style.background = 'var(--shell-item-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--shell-item-muted)';
-              e.currentTarget.style.background = 'transparent';
-            }}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--shell-item-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-            }}
+            className="size-8 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
             title="Open Notebook"
           >
             <BookOpen size={18} weight="bold" />
           </button>
-          <button
+          <button type="button"
             onClick={() => onOpen?.('products')}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--accent-primary)';
-              e.currentTarget.style.background = 'var(--shell-item-hover)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--shell-item-muted)';
-              e.currentTarget.style.background = 'transparent';
-            }}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--shell-item-muted)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-            }}
+            className="size-8 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
             title="Allternit Products"
           >
             <Sparkle size={18} weight="bold" />
           </button>
           <SettingsDrilldown>
-            <button
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'var(--accent-primary)';
-                e.currentTarget.style.background = 'var(--shell-item-hover)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'var(--shell-item-muted)';
-                e.currentTarget.style.background = 'transparent';
-              }}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--shell-item-muted)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s',
-              }}
+            <button type="button"
+              className="size-8 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
               title="Settings"
             >
               <Gear size={18} weight="bold" />
@@ -715,46 +656,60 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
   label: string;
   isActive?: boolean;
   onClick?: () => void;
-}): JSX.Element {
+}): React.ReactNode {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       data-rail-item={id}
-      onMouseEnter={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.color = 'var(--accent-primary)';
-          e.currentTarget.style.background = 'var(--shell-item-hover)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.color = 'var(--shell-item-fg)';
-          e.currentTarget.style.background = 'transparent';
-        }
-      }}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '9px 12px',
-        borderRadius: 14,
-        border: 'none',
-        background: isActive
-          ? 'var(--shell-item-active-bg)'
-          : 'transparent',
-        color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.2s',
-        fontWeight: isActive ? 700 : 500,
-        boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
-      }}
+      className={cn(
+        "w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium",
+        isActive
+          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-bold shadow-[var(--shadow-sm)]"
+          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+      )}
     >
       {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
-      <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{label}</span>
+      <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>
     </button>
   );
 }
 
-// Project item with ellipsis menu for actions
+function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
+  app: InstalledMiniApp;
+  isActive?: boolean;
+  onOpen: () => void;
+  onUnpin: () => void;
+}): React.ReactNode {
+  const [hovered, setHovered] = useState(false);
+  const AppIcon = (MINI_APP_CATEGORY_ICONS[app.category] ?? AppWindow) as Icon;
+  return (
+    <div
+      className="relative flex items-center"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <button type="button"
+        onClick={onOpen}
+        data-rail-item={app.id}
+        className={cn(
+          "w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium pr-8",
+          isActive
+            ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-bold shadow-[var(--shadow-sm)]"
+            : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+        )}
+      >
+        <AppIcon size={18} weight={isActive ? 'fill' : 'bold'} />
+        <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{app.name}</span>
+      </button>
+      {hovered && (
+        <button type="button"
+          onClick={(e) => { e.stopPropagation(); onUnpin(); }}
+          title="Unpin from rail"
+          className="absolute right-2 size-5 flex items-center justify-center rounded border-none bg-transparent cursor-pointer text-[var(--shell-item-muted)] hover:text-[var(--status-error)] transition-colors"
+        >
+          <PushPinSlash size={12} />
+        </button>
+      )}
+    </div>
+  );
+}

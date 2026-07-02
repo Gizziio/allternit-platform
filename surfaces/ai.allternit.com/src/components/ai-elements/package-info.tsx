@@ -1,16 +1,14 @@
 "use client";
 
-import type { HTMLAttributes } from "react";
-
-import { Badge } from "@/components/ui/badge";
+import React, { createContext, useContext, type HTMLAttributes } from "react";
+import { 
+  Package as PackageIcon, 
+  Plus as PlusIcon, 
+  ArrowRight as ArrowRightIcon, 
+  Minus as MinusIcon 
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import {
-  ArrowRight as ArrowRightIcon,
-  Minus as MinusIcon,
-  Package as PackageIcon,
-  Plus as PlusIcon,
-} from '@phosphor-icons/react';
-import { createContext, useContext } from "react";
+import { Badge } from "@/components/ui/badge";
 
 type ChangeType = "major" | "minor" | "patch" | "added" | "removed";
 

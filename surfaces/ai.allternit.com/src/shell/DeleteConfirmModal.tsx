@@ -40,7 +40,7 @@ export function DeleteConfirmModal({
     <Modal isOpen onClose={onCancel} size="small" usePortal>
       <ModalHeader title={title} onClose={onCancel} />
       <ModalBody>
-        <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)', margin: 0 }}>
+        <p className="text-[14px] leading-relaxed text-[var(--text-secondary)] m-0">
           {getDeleteMessage()}
         </p>
       </ModalBody>

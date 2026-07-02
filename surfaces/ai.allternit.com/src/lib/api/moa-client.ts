@@ -34,7 +34,7 @@ export interface MoAProgressEvent {
   tasks: MoATaskStatus[];
 }
 
-export interface MoATaskStatus {
+interface MoATaskStatus {
   id: string;
   status: string;
   progress?: number;
@@ -158,7 +158,7 @@ export class MoAClient {
 /**
  * Hook for using MoA in React components
  */
-export function useMoA() {
+function useMoA() {
   const submitJob = async (prompt: string) => {
     return await MoAClient.submit(prompt);
   };

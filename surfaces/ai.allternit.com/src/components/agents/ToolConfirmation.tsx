@@ -12,8 +12,6 @@ import {
   X,
   Terminal,
   FileText,
-  Globe,
-  Database,
   GearSix,
 } from '@phosphor-icons/react';
 import {
@@ -36,7 +34,7 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   default: <GearSix size={18} />,
 };
 
-export function ToolConfirmation({
+function ToolConfirmation({
   sessionId,
   accentColor = "#D4956A",
 }: ToolConfirmationProps) {
@@ -191,7 +189,7 @@ export function ToolConfirmation({
           borderTop: "1px solid var(--ui-border-muted)",
         }}
       >
-        <button
+        <button type="button"
           onClick={() => denyTool(confirmation.toolCallId, "User denied")}
           style={{
             flex: 1,
@@ -212,7 +210,7 @@ export function ToolConfirmation({
           <X size={16} />
           Deny
         </button>
-        <button
+        <button type="button"
           onClick={() => confirmTool(confirmation.toolCallId)}
           style={{
             flex: 2,
@@ -241,7 +239,7 @@ export function ToolConfirmation({
 /**
  * Inline tool confirmation for embedding in chat
  */
-export function InlineToolConfirmation({
+function InlineToolConfirmation({
   confirmation,
   onConfirm,
   onDeny,
@@ -315,7 +313,7 @@ export function InlineToolConfirmation({
       </div>
 
       <div style={{ display: "flex", gap: 8 }}>
-        <button
+        <button type="button"
           onClick={onDeny}
           style={{
             flex: 1,
@@ -331,7 +329,7 @@ export function InlineToolConfirmation({
         >
           Deny
         </button>
-        <button
+        <button type="button"
           onClick={onConfirm}
           style={{
             flex: 1,

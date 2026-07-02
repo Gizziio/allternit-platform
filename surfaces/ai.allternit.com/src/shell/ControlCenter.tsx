@@ -17,7 +17,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   X,
   GearSix,
@@ -103,7 +103,7 @@ export function ControlCenter({
   onRemoveAllowedHost,
   isDevMode = false,
   onOpenView,
-}: ControlCenterProps): JSX.Element | null {
+}: ControlCenterProps): React.ReactNode | null {
   const [activeSection, setActiveSection] = useState<string>('browser-pairing');
   
   // Internal state for services
@@ -155,11 +155,11 @@ export function ControlCenter({
 
   // Handle pairing
   const handlePair = useCallback(() => {
-    if (pairingCode.trim()) {
+if (pairingCode.trim()) {
       const endpoint: PairedEndpoint = {
         id: 'endpoint_' + Date.now(),
         type: 'extension',
-        name: `Chrome Extension (${pairingCode.trim()})`,
+        name: `Chrome Extension (${pairingCode.trim()}`,
         pairedAt: new Date().toISOString(),
         status: 'connected',
         tabId: Math.floor(Math.random() * 1000),
@@ -255,33 +255,33 @@ export function ControlCenter({
   const endpoints = pairedEndpoints.length > 0 ? pairedEndpoints : internalEndpoints;
   const hosts = allowedHosts.length > 0 ? allowedHosts : internalHosts;
 
-  // Default section: general in Electron, browser-pairing on web
-  useEffect(() => {
+  // Inline state adjustment for default section on open
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen && activeSection === 'browser-pairing') {
       const isElectron = typeof window !== 'undefined' && !!window.allternit?.tunnel;
       if (isElectron) setActiveSection('general');
     }
-  // Only run on open
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }
 
   if (!isOpen) {
     return null;
   }
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       className="fixed inset-0 z-[1000] flex items-center justify-center"
       onClick={onClose}
     >
       {/* Backdrop */}
-      <div
+      <div role="button" tabIndex={0}
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div
+      <div role="button" tabIndex={0}
         className="relative w-full max-w-5xl h-[80vh] z-10"
         onClick={(e) => e.stopPropagation()}
       >
@@ -303,7 +303,7 @@ export function ControlCenter({
                 Platform Wiring
               </span>
             </div>
-            <button
+            <button type="button"
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-secondary transition-colors"
             >
@@ -394,20 +394,22 @@ import { usePlatformHardSignOut, usePlatformUser } from '@/lib/platform-auth-cli
 // General Section
 // ============================================================================
 
-function GeneralSection(): JSX.Element {
+function GeneralSection(): React.ReactNode {
   const { user, isSignedIn } = usePlatformUser();
   const hardSignOut = usePlatformHardSignOut();
   const [isRestarting, setIsRestarting] = useState(false);
   const [startingSignIn, setStartingSignIn] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const isElectron = typeof window !== 'undefined' && !!window.allternit?.backend;
 
   const handleRestartBackend = async (): Promise<void> => {
     if (!isElectron) return;
     setIsRestarting(true);
+    setActionError(null);
     try {
       await window.allternit?.backend?.restart();
     } catch (err) {
-      console.error('Failed to restart backend:', err);
+      setActionError(err instanceof Error ? err.message : 'Failed to restart backend');
     } finally {
       setIsRestarting(false);
     }
@@ -415,6 +417,7 @@ function GeneralSection(): JSX.Element {
 
   const handleSignIn = async (): Promise<void> => {
     setStartingSignIn(true);
+    setActionError(null);
     try {
       if (isElectron) {
         await window.allternit?.auth?.startLogin?.();
@@ -422,7 +425,7 @@ function GeneralSection(): JSX.Element {
         window.location.href = '/sign-in';
       }
     } catch (err) {
-      console.error('Sign in failed', err);
+      setActionError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
       setStartingSignIn(false);
     }
@@ -459,14 +462,14 @@ function GeneralSection(): JSX.Element {
             </div>
           </div>
           {isSignedIn && user ? (
-            <button
+            <button type="button"
               onClick={() => void hardSignOut()}
               className="px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-sm font-semibold"
             >
               Sign Out
             </button>
           ) : (
-            <button
+            <button type="button"
               onClick={() => void handleSignIn()}
               disabled={startingSignIn}
               className="px-4 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors text-sm font-semibold disabled:opacity-50"
@@ -479,6 +482,9 @@ function GeneralSection(): JSX.Element {
           <p className="text-xs text-muted-foreground px-1">
             Sign Out will clear all local session data, stop backend services, and relaunch the application.
           </p>
+        )}
+        {actionError && (
+          <p className="text-xs text-red-400 px-1">{actionError}</p>
         )}
       </div>
 
@@ -502,7 +508,7 @@ function GeneralSection(): JSX.Element {
                 <p className="text-xs text-muted-foreground">Restart local services without signing out.</p>
               </div>
             </div>
-            <button
+            <button type="button"
               onClick={handleRestartBackend}
               disabled={isRestarting}
               className="px-4 py-2 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors text-sm font-semibold disabled:opacity-50"
@@ -523,7 +529,7 @@ function GeneralSection(): JSX.Element {
 type TunnelStatus = 'stopped' | 'starting' | 'running' | 'error';
 type TunnelState = { status: TunnelStatus; url?: string; error?: string };
 
-function WebAccessSection(): JSX.Element {
+function WebAccessSection(): React.ReactNode {
   const [state, setState] = useState<TunnelState>({ status: 'stopped' });
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -636,7 +642,7 @@ function WebAccessSection(): JSX.Element {
           </div>
 
           {state.status === 'stopped' || state.status === 'error' ? (
-            <button
+            <button type="button"
               onClick={handleEnable}
               disabled={busy}
               className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 disabled:opacity-50 transition-colors text-sm font-medium"
@@ -645,7 +651,7 @@ function WebAccessSection(): JSX.Element {
               {busy ? 'Starting…' : 'Enable Web Access'}
             </button>
           ) : (
-            <button
+            <button type="button"
               onClick={handleDisable}
               disabled={busy || state.status === 'starting'}
               className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50 transition-colors text-sm font-medium"
@@ -663,7 +669,7 @@ function WebAccessSection(): JSX.Element {
               <code className="flex-1 text-xs bg-primary px-3 py-2 rounded-lg text-green-400 truncate">
                 https://{state.url}
               </code>
-              <button
+              <button type="button"
                 onClick={handleCopy}
                 className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
                 title="Copy URL"
@@ -712,7 +718,7 @@ interface SectionNavProps {
   isDevMode: boolean;
 }
 
-function SectionNav({ activeSection, onSectionChange, isDevMode }: SectionNavProps): JSX.Element {
+function SectionNav({ activeSection, onSectionChange, isDevMode }: SectionNavProps): React.ReactNode {
   const sections = [
     { id: 'general', label: 'General', icon: GearSix },
     { id: 'models', label: 'Models', icon: Cpu },
@@ -731,7 +737,7 @@ function SectionNav({ activeSection, onSectionChange, isDevMode }: SectionNavPro
       {sections.map((section) => {
         const Icon = section.icon;
         return (
-          <button
+          <button type="button"
             key={section.id}
             onClick={() => onSectionChange(section.id)}
             className={`
@@ -776,7 +782,7 @@ function BrowserPairingSection({
   setIsPairing,
   pairingCode,
   setPairingCode,
-}: BrowserPairingSectionProps): JSX.Element {
+}: BrowserPairingSectionProps): React.ReactNode {
   const handlePair = useCallback(() => {
     if (onPairEndpoint && pairingCode.trim()) {
       onPairEndpoint({
@@ -805,7 +811,7 @@ function BrowserPairingSection({
       {/* Pairing Form */}
       <div className="p-4 rounded-lg bg-secondary/30 border border-border">
         {!isPairing ? (
-          <button
+          <button type="button"
             onClick={() => setIsPairing(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
           >
@@ -815,11 +821,10 @@ function BrowserPairingSection({
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium mb-1 block">
+              <div className="text-sm font-medium mb-1 block">
                 Enter Pairing Code
-              </label>
-              <input
-                type="text"
+              </div>
+              <input aria-label="Pairing code" type="text"
                 value={pairingCode}
                 onChange={(e) => setPairingCode(e.target.value)}
                 placeholder="e.g., Allternit-XXXX"
@@ -827,14 +832,14 @@ function BrowserPairingSection({
               />
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <button type="button"
                 onClick={handlePair}
                 disabled={!pairingCode.trim()}
                 className="px-4 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 disabled:opacity-50 transition-colors text-sm"
               >
                 Complete Pairing
               </button>
-              <button
+              <button type="button"
                 onClick={() => setIsPairing(false)}
                 className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors text-sm"
               >
@@ -877,7 +882,7 @@ function BrowserPairingSection({
                     </p>
                   </div>
                 </div>
-                <button
+                <button type="button"
                   onClick={() => onUnpairEndpoint?.(endpoint.id)}
                   className="p-2 rounded-lg hover:bg-red-500/20 text-red-500 transition-colors"
                 >
@@ -896,7 +901,7 @@ function BrowserPairingSection({
           <div className="text-sm">
             <p className="font-medium text-blue-500 mb-1">Extension Setup</p>
             <p className="text-muted-foreground">
-              Install the Allternit Browser Extension from the Chrome Web Store.
+              Install the Allternit Computer Extension from the Chrome Web Store.
               Open the extension and enter the pairing code shown in your ShellUI.
             </p>
           </div>
@@ -924,7 +929,7 @@ function PolicySection({
   onRemoveAllowedHost,
   newHost,
   setNewHost,
-}: PolicySectionProps): JSX.Element {
+}: PolicySectionProps): React.ReactNode {
   const handleAdd = useCallback(() => {
     if (onAddAllowedHost && newHost.trim()) {
       onAddAllowedHost(newHost.trim());
@@ -973,15 +978,14 @@ function PolicySection({
       <div>
         <h4 className="text-sm font-medium mb-3">Host Allowlist</h4>
         <div className="flex items-center gap-2 mb-3">
-          <input
-            type="text"
+          <input aria-label="Host URL" type="text"
             value={newHost}
             onChange={(e) => setNewHost(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="e.g., example.com"
             className="flex-1 px-3 py-2 rounded-lg bg-primary border border-border focus:border-accent/50 focus:outline-none text-sm"
           />
-          <button
+          <button type="button"
             onClick={handleAdd}
             disabled={!newHost.trim()}
             className="px-4 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 disabled:opacity-50 transition-colors text-sm"
@@ -1004,7 +1008,7 @@ function PolicySection({
               >
                 <CheckCircle className="size-3  text-green-500" />
                 <span className="text-sm">{host}</span>
-                <button
+                <button type="button"
                   onClick={() => onRemoveAllowedHost?.(host)}
                   className="p-0.5 rounded hover:bg-red-500/20 text-red-500 transition-colors"
                 >
@@ -1041,7 +1045,7 @@ interface RuntimeEnvironmentSectionProps {
   onOpenView?: (viewType: string) => void;
 }
 
-function RuntimeEnvironmentSection({ onOpenView }: RuntimeEnvironmentSectionProps): JSX.Element {
+function RuntimeEnvironmentSection({ onOpenView }: RuntimeEnvironmentSectionProps): React.ReactNode {
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -1094,7 +1098,7 @@ function PlaceholderSection({
   description,
   icon: Icon,
   linkTo,
-}: PlaceholderSectionProps): JSX.Element {
+}: PlaceholderSectionProps): React.ReactNode {
   return (
     <div className="p-6 flex items-center justify-center h-full">
       <div className="text-center max-w-md">

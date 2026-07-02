@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useAgentMetricsStore } from '@/lib/agents/agent-metrics.store';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +12,7 @@ export function PerformanceAnalyticsView() {
 
   useEffect(() => {
     fetchMetrics();
-  }, [timeRange]);
-
+  }, [timeRange, fetchMetrics]);
   const timeRangeOptions: { label: string; value: typeof timeRange }[] = [
     { label: '1H', value: '1h' },
     { label: '24H', value: '24h' },
@@ -43,7 +42,7 @@ export function PerformanceAnalyticsView() {
         </div>
         <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
           {timeRangeOptions.map((opt) => (
-            <button
+            <button type="button"
               key={opt.value}
               onClick={() => setTimeRange(opt.value)}
               className={cn(

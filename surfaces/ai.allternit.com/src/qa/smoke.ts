@@ -10,7 +10,6 @@ import { AllternitPanelGroup, AllternitPanel, AllternitResizeHandle } from '../v
 import { FlexLayoutHost, useFlexLayoutModel, ensureSingletonTab } from '../vendor/flexlayout';
 import * as Radix from '../vendor/radix';
 import { navReducer, createInitialNavState } from '../nav/nav.store';
-import { canGoBack, canGoForward } from '../nav/nav.selectors';
 import { useRunnerStore } from '../runner/runner.store';
 import { useDrawerStore } from '../drawers/drawer.store';
 

@@ -1,8 +1,7 @@
-"use client";
+import React, { useCallback, useState } from "react";
 
-import React, { useState, useCallback } from "react";
+"use client";
 import {
-  GameController,
   Wrench,
   ChartBar,
   Sparkle,
@@ -10,8 +9,7 @@ import {
   Layout,
   Timer,
   ArrowSquareOut,
-  MagicWand,
-} from "@phosphor-icons/react";
+  MagicWand, GameController, Record } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import {
   ARTIFACT_TEMPLATES,
@@ -19,7 +17,6 @@ import {
   type ArtifactTemplate,
   type ArtifactCategory,
 } from "@/lib/ai/tools/templates/artifact-templates";
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -172,7 +169,7 @@ function ActionButton({
   primary?: boolean;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className={cn(
         "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold",
@@ -210,7 +207,7 @@ function CategoryTabs({
   return (
     <div className="flex gap-1.5 flex-wrap">
       {tabs.map(tab => (
-        <button
+        <button type="button"
           key={tab.id}
           onClick={() => onChange(tab.id)}
           className={cn(

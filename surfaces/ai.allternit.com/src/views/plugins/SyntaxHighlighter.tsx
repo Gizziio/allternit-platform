@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 const THEME = {
   bg: '#0c0a09',
@@ -44,38 +45,22 @@ export function SyntaxHighlighter({
 
   return (
     <pre
-      style={{
-        margin: 0,
-        padding: '16px 0',
-        backgroundColor: THEME.bg,
-        fontFamily: 'var(--font-mono)',
-        fontSize: 13,
-        lineHeight: 1.6,
-        overflow: 'auto',
-        whiteSpace: wrapLines ? 'pre-wrap' : 'pre',
-        wordWrap: wrapLines ? 'break-word' : 'normal',
-      }}
+      className={cn(
+        "m-0 py-4 bg-[#0c0a09] font-mono text-[13px] leading-[1.6] overflow-auto",
+        wrapLines ? "whitespace-pre-wrap break-words" : "whitespace-pre overflow-x-auto"
+      )}
     >
       <code>
         {highlightedLines.map(({ lineNumber, tokens }) => (
-          <div key={lineNumber} style={{ display: 'flex' }}>
+          <div key={lineNumber} className="flex">
             {showLineNumbers && (
-              <span
-                style={{
-                  width: 48,
-                  paddingRight: 16,
-                  textAlign: 'right',
-                  color: THEME.lineNumber,
-                  userSelect: 'none',
-                  flexShrink: 0,
-                }}
-              >
+              <span className="w-12 pr-4 text-right text-[#4b5563] select-none shrink-0">
                 {lineNumber}
               </span>
             )}
-            <span style={{ flex: 1 }}>
+            <span className="flex-1">
               {tokens.map((token, i) => (
-                <span key={i} style={{ color: token.color }}>
+                <span key={`syntax-line-${i}`} style={{ color: token.color }}>
                   {token.text}
                 </span>
               ))}
@@ -630,26 +615,26 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   const lines = content.split('\n');
   
   return (
-    <div style={{ fontSize: 14, color: '#e7e5e4', lineHeight: 1.7 }}>
+    <div className="text-[14px] text-[#e7e5e4] leading-[1.7]">
       {lines.map((line, i) => {
         // Headers
         if (line.startsWith('# ')) {
           return (
-            <h1 key={i} style={{ fontSize: 28, color: 'var(--accent-primary)', margin: '24px 0 16px', fontWeight: 600 }}>
+            <h1 key={`syntax-line-${i}`} className="text-[28px] text-[var(--accent-primary)] my-6 mt-6 mb-4 font-semibold">
               {parseInlineMarkdown(line.slice(2))}
             </h1>
           );
         }
         if (line.startsWith('## ')) {
           return (
-            <h2 key={i} style={{ fontSize: 22, color: 'var(--accent-primary)', margin: '20px 0 12px', fontWeight: 600 }}>
+            <h2 key={`syntax-line-${i}`} className="text-[22px] text-[var(--accent-primary)] my-5 mt-5 mb-3 font-semibold">
               {parseInlineMarkdown(line.slice(3))}
             </h2>
           );
         }
         if (line.startsWith('### ')) {
           return (
-            <h3 key={i} style={{ fontSize: 18, color: 'var(--accent-primary)', margin: '16px 0 10px', fontWeight: 600 }}>
+            <h3 key={`syntax-line-${i}`} className="text-[18px] text-[var(--accent-primary)] my-4 mt-4 mb-2.5 font-semibold">
               {parseInlineMarkdown(line.slice(4))}
             </h3>
           );
@@ -658,15 +643,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
         // Code block start/end
         if (line.startsWith('```')) {
           return (
-            <div key={i} style={{ 
-              backgroundColor: 'var(--surface-panel)', 
-              padding: '8px 12px',
-              borderRadius: 6,
-              fontFamily: 'var(--font-mono)',
-              fontSize: 12,
-              color: '#78716c',
-              margin: '8px 0'
-            }}>
+            <div key={`syntax-line-${i}`} className="bg-[var(--surface-panel)] px-3 py-2 rounded-md font-mono text-[12px] text-[#78716c] my-2">
               {line}
             </div>
           );
@@ -675,13 +652,8 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
         // Blockquote
         if (line.startsWith('> ')) {
           return (
-            <blockquote key={i} style={{
-              borderLeft: '3px solid #d4b08c',
-              paddingLeft: 16,
-              margin: '12px 0',
-              color: '#a8a29e',
-              fontStyle: 'italic'
-            }}>
+            <blockquote key={`syntax-line-${i}`} className="relative pl-4 my-3 text-[#a8a29e] italic overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#d4b08c]" />
               {parseInlineMarkdown(line.slice(2))}
             </blockquote>
           );
@@ -689,13 +661,13 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 
         // Horizontal rule
         if (line.match(/^-{3,}$/)) {
-          return <hr key={i} style={{ border: 'none', borderTop: '1px solid var(--ui-border-default)', margin: '24px 0' }} />;
+          return <hr key={`syntax-line-${i}`} className="border-none border-t border-[var(--ui-border-default)] my-6" />;
         }
 
         // Unordered list
         if (line.match(/^[-*]\s/)) {
           return (
-            <li key={i} style={{ marginLeft: 20, marginBottom: 4, listStyleType: 'disc' }}>
+            <li key={`syntax-line-${i}`} className="ml-5 mb-1 list-disc">
               {parseInlineMarkdown(line.replace(/^[-*]\s/, ''))}
             </li>
           );
@@ -705,7 +677,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
         const orderedMatch = line.match(/^(\d+)\.\s/);
         if (orderedMatch) {
           return (
-            <li key={i} style={{ marginLeft: 20, marginBottom: 4, listStyleType: 'decimal' }}>
+            <li key={`syntax-line-${i}`} className="ml-5 mb-1 list-decimal">
               {parseInlineMarkdown(line.replace(/^\d+\.\s/, ''))}
             </li>
           );
@@ -713,12 +685,12 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 
         // Empty line
         if (line.trim() === '') {
-          return <div key={i} style={{ height: 8 }} />;
+          return <div key={`syntax-line-${i}`} className="h-2" />;
         }
 
         // Regular paragraph
         return (
-          <p key={i} style={{ margin: '8px 0' }}>
+          <p key={`syntax-line-${i}`} className="my-2">
             {parseInlineMarkdown(line)}
           </p>
         );
@@ -739,14 +711,7 @@ function parseInlineMarkdown(text: string): React.ReactNode {
     if (codeMatch) {
       parts.push(remaining.slice(0, codeMatch.index));
       parts.push(
-        <code key={key++} style={{
-          backgroundColor: 'var(--surface-panel)',
-          padding: '2px 6px',
-          borderRadius: 4,
-          fontFamily: 'var(--font-mono)',
-          fontSize: 12,
-          color: 'var(--accent-primary)'
-        }}>
+        <code key={`part-${parts.length}`} className="bg-[var(--surface-panel)] px-1.5 py-0.5 rounded font-mono text-[12px] text-[var(--accent-primary)]">
           {codeMatch[1]}
         </code>
       );
@@ -758,7 +723,7 @@ function parseInlineMarkdown(text: string): React.ReactNode {
     const boldMatch = remaining.match(/^\*\*([^*]+)\*\*|^__([^_]+)__/);
     if (boldMatch) {
       parts.push(remaining.slice(0, boldMatch.index));
-      parts.push(<strong key={key++} style={{ fontWeight: 600, color: '#e7e5e4' }}>{boldMatch[1] || boldMatch[2]}</strong>);
+      parts.push(<strong key={`part-${parts.length}`} className="font-semibold text-[#e7e5e4]">{boldMatch[1] || boldMatch[2]}</strong>);
       remaining = remaining.slice((boldMatch.index || 0) + boldMatch[0].length);
       continue;
     }
@@ -767,7 +732,7 @@ function parseInlineMarkdown(text: string): React.ReactNode {
     const italicMatch = remaining.match(/^\*([^*]+)\*|^_([^_]+)_/);
     if (italicMatch) {
       parts.push(remaining.slice(0, italicMatch.index));
-      parts.push(<em key={key++} style={{ fontStyle: 'italic', color: '#a8a29e' }}>{italicMatch[1] || italicMatch[2]}</em>);
+      parts.push(<em key={`part-${parts.length}`} className="italic text-[#a8a29e]">{italicMatch[1] || italicMatch[2]}</em>);
       remaining = remaining.slice((italicMatch.index || 0) + italicMatch[0].length);
       continue;
     }
@@ -778,11 +743,11 @@ function parseInlineMarkdown(text: string): React.ReactNode {
       parts.push(remaining.slice(0, linkMatch.index));
       parts.push(
         <a 
-          key={key++} 
+          key={`part-${parts.length}`} 
           href={linkMatch[2]} 
           target="_blank" 
           rel="noopener noreferrer"
-          style={{ color: 'var(--status-info)', textDecoration: 'none' }}
+          className="text-[var(--status-info)] no-underline"
         >
           {linkMatch[1]}
         </a>

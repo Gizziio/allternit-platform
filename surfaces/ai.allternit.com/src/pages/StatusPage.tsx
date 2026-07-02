@@ -243,7 +243,7 @@ export default function StatusPage() {
               : "Checking…"
             }
           </p>
-          <button
+          <button type="button"
             onClick={() => { setLoading(true); fetchStatus() }}
             style={{
               fontSize: 12,

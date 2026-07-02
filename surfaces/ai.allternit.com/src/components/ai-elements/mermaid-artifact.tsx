@@ -99,7 +99,7 @@ export const MermaidArtifact = memo(function MermaidArtifact({
           Mermaid Diagram
         </span>
         <div className="flex items-center gap-1">
-          <button
+          <button type="button"
             onClick={handleCopy}
             className="p-1.5 rounded-md hover:bg-muted transition-colors"
             title="Copy source"
@@ -110,7 +110,7 @@ export const MermaidArtifact = memo(function MermaidArtifact({
               <IconCopy className="size-3.5  text-muted-foreground" />
             )}
           </button>
-          <button
+          <button type="button"
             onClick={handleDownloadSvg}
             disabled={!svg}
             className="p-1.5 rounded-md hover:bg-muted transition-colors disabled:opacity-30"
@@ -118,7 +118,7 @@ export const MermaidArtifact = memo(function MermaidArtifact({
           >
             <IconDownload className="size-3.5  text-muted-foreground" />
           </button>
-          <button
+          <button type="button"
             onClick={() => setIsFullscreen((f) => !f)}
             className="p-1.5 rounded-md hover:bg-muted transition-colors"
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}

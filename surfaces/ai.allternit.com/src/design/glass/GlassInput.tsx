@@ -24,7 +24,7 @@ import {
 // Props Interface
 // ============================================================================
 
-export interface GlassInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+interface GlassInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /** Visual variant */
   variant?: GlassVariant;
   
@@ -268,7 +268,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
         style={containerStyles}
         data-backdrop-support={hasBackdropFilter}
       >
-        {label && <label style={labelStyles}>{label}</label>}
+        {label && <div style={labelStyles}>{label}</div>}
         <div style={wrapperStyles}>
           {leftElement && (
             <span style={elementWrapperStyles('left')}>
@@ -282,6 +282,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
             disabled={disabled}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            aria-label={inputProps['aria-label'] || (typeof label === 'string' ? label : undefined)}
             {...inputProps}
           />
           {rightElement && (
@@ -303,21 +304,21 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
 /**
  * Small glass input
  */
-export function GlassInputSmall(props: Omit<GlassInputProps, 'size'>) {
+function GlassInputSmall(props: Omit<GlassInputProps, 'size'>) {
   return <GlassInput {...props} size="sm" />;
 }
 
 /**
  * Large glass input
  */
-export function GlassInputLarge(props: Omit<GlassInputProps, 'size'>) {
+function GlassInputLarge(props: Omit<GlassInputProps, 'size'>) {
   return <GlassInput {...props} size="lg" />;
 }
 
 /**
  * Glass input with search icon
  */
-export function GlassSearchInput(props: Omit<GlassInputProps, 'leftElement' | 'type'>) {
+function GlassSearchInput(props: Omit<GlassInputProps, 'leftElement' | 'type'>) {
   return (
     <GlassInput
       {...props}

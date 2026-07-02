@@ -57,14 +57,14 @@ export function isPluginEnabled(id: string): boolean {
   return readEnabled().has(id);
 }
 
-export function enablePlugin(id: string): void {
+function enablePlugin(id: string): void {
   const s = readEnabled();
   s.add(id);
   writeEnabled(s);
   notifyAll();
 }
 
-export function disablePlugin(id: string): void {
+function disablePlugin(id: string): void {
   const s = readEnabled();
   s.delete(id);
   writeEnabled(s);

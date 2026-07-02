@@ -1,0 +1,88 @@
+import React from "react";
+import { ChatComposer } from "@/views/chat/ChatComposer";
+import { THEME } from "./ChatView.constants";
+import type { GizziEmotion, GizziAttention } from "@/components/ai-elements/GizziMascot";
+import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
+
+interface ChatBottomBarProps {
+  mode: 'chat' | 'cowork' | 'code';
+  isChatEmpty: boolean;
+  hideEmptyState: boolean;
+  handleSend: (text: string) => void;
+  onOpenAgentSession?: (text: string, surface: any) => void;
+  agentSurface: AgentModeSurface;
+  setMentionAgentId: (id: string | null) => void;
+  mentionAgentId: string | null;
+  activeIsLoading: boolean;
+  handleStop: () => void;
+  selectedModel: string;
+  modelSelection: any;
+  startSelection: () => void;
+  selectModel: (model: any) => void;
+  composerTopInfoBar: React.ReactNode;
+  composerQuestionBar: React.ReactNode;
+  composerBottomInfoBar: React.ReactNode;
+  useMonolithLogo: boolean;
+  pulseMascot: (emotion: GizziEmotion) => void;
+  setLaunchMascotAttention: (attention: GizziAttention | null) => void;
+}
+
+export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
+  mode,
+  isChatEmpty,
+  hideEmptyState,
+  handleSend,
+  onOpenAgentSession,
+  agentSurface,
+  setMentionAgentId,
+  mentionAgentId,
+  activeIsLoading,
+  handleStop,
+  selectedModel,
+  modelSelection,
+  startSelection,
+  selectModel,
+  composerTopInfoBar,
+  composerQuestionBar,
+  composerBottomInfoBar,
+  useMonolithLogo,
+  pulseMascot,
+  setLaunchMascotAttention,
+}) => {
+  if (!(mode === 'cowork' || !isChatEmpty || hideEmptyState)) return null;
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 w-full flex flex-col items-center pointer-events-none pb-3 z-40"
+      style={{
+        background: hideEmptyState || mode === 'cowork' || mode === 'chat' ? 'transparent' : THEME.bgGradient,
+      }}
+    >
+      <div className="w-full max-w-[760px] pointer-events-auto px-5 box-border">
+        <ChatComposer
+          onSend={handleSend}
+          onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
+          onMentionAgentChange={setMentionAgentId}
+          mentionAgentId={mentionAgentId}
+          isLoading={activeIsLoading}
+          onStop={handleStop}
+          selectedModel={selectedModel}
+          selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
+          onOpenModelPicker={startSelection}
+          onSelectModel={selectModel}
+          placeholder="Reply…"
+          showTopActions={false}
+          agentModeSurface={agentSurface}
+          topInfoBarContent={composerTopInfoBar}
+          questionBarContent={composerQuestionBar}
+          bottomInfoBarContent={composerBottomInfoBar}
+          onInteractionSignal={useMonolithLogo ? undefined : pulseMascot}
+          onAttentionChange={useMonolithLogo ? undefined : setLaunchMascotAttention}
+        />
+      </div>
+      {/* Disclaimer */}
+      <div className="mt-2 text-[12px] text-[var(--ui-text-muted)] text-center pointer-events-auto">
+        Allternit is AI and can make mistakes. Please double-check responses.
+      </div>
+    </div>
+  );
+};

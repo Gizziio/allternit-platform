@@ -1,11 +1,11 @@
-export type AssistantBlockKind =
+type AssistantBlockKind =
   | "text"
   | "reasoning"
   | "tool"
   | "artifact"
   | "citation";
 
-export type StreamEvent =
+type StreamEvent =
   | {
       type: "run.started";
       runId: string;
@@ -122,24 +122,24 @@ export type StreamEvent =
       ts: number;
     };
 
-export type ToolLifecycleState = "queued" | "running" | "done" | "error";
-export type RunStatus = "streaming" | "complete" | "error";
+type ToolLifecycleState = "queued" | "running" | "done" | "error";
+type RunStatus = "streaming" | "complete" | "error";
 
-export interface TimelineCitation {
+interface TimelineCitation {
   id: string;
   title: string;
   url?: string;
   snippet?: string;
 }
 
-export interface TextTimelineBlock {
+interface TextTimelineBlock {
   kind: "text";
   id: string;
   text: string;
   isOpen: boolean;
 }
 
-export interface ReasoningTimelineBlock {
+interface ReasoningTimelineBlock {
   kind: "reasoning";
   id: string;
   text: string;
@@ -147,7 +147,7 @@ export interface ReasoningTimelineBlock {
   isOpen: boolean;
 }
 
-export interface ToolTimelineBlock {
+interface ToolTimelineBlock {
   kind: "tool";
   id: string;
   toolCallId: string;
@@ -164,7 +164,7 @@ export interface ToolTimelineBlock {
   endedAt?: number;
 }
 
-export interface ArtifactTimelineBlock {
+interface ArtifactTimelineBlock {
   kind: "artifact";
   id: string;
   artifactId: string;
@@ -176,21 +176,21 @@ export interface ArtifactTimelineBlock {
   isOpen: boolean;
 }
 
-export interface CitationTimelineBlock {
+interface CitationTimelineBlock {
   kind: "citation";
   id: string;
   items: TimelineCitation[];
   isOpen: boolean;
 }
 
-export type AssistantTimelineBlock =
+type AssistantTimelineBlock =
   | TextTimelineBlock
   | ReasoningTimelineBlock
   | ToolTimelineBlock
   | ArtifactTimelineBlock
   | CitationTimelineBlock;
 
-export interface AssistantTurn {
+interface AssistantTurn {
   id: string;
   runId: string;
   sessionId?: string;
@@ -201,17 +201,17 @@ export interface AssistantTurn {
   blocks: AssistantTimelineBlock[];
 }
 
-export interface ConversationTimelineState {
+interface ConversationTimelineState {
   runs: Record<string, AssistantTurn>;
   messageToRunId: Record<string, string>;
   orderedRunIds: string[];
 }
 
-export interface ProviderStreamAdapter<TChunk> {
+interface ProviderStreamAdapter<TChunk> {
   mapChunkToEvents(chunk: TChunk): StreamEvent[];
 }
 
-export function createConversationTimelineState(): ConversationTimelineState {
+function createConversationTimelineState(): ConversationTimelineState {
   return {
     runs: {},
     messageToRunId: {},
@@ -219,7 +219,7 @@ export function createConversationTimelineState(): ConversationTimelineState {
   };
 }
 
-export function reduceStreamEvent(
+function reduceStreamEvent(
   state: ConversationTimelineState,
   event: StreamEvent,
 ): ConversationTimelineState {

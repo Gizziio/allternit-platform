@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { ShieldCheck, ShieldWarning, Shield, X } from '@phosphor-icons/react';
 import { fetchH5iVibe, initH5i, fetchH5iStatus } from '@/lib/h5i/client';
+import { cn } from '@/lib/utils';
 
 interface H5iAuditPanelProps {
   workspacePath: string;
@@ -79,116 +80,50 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
     : 'var(--ui-text-muted)';
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 180,
-        width: 480,
-        maxHeight: '80vh',
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: 16,
-        border: '1px solid var(--ui-border-muted)',
-        background: 'rgba(11,14,16,0.96)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 20px 50px var(--shell-overlay-backdrop)',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[180] w-[480px] max-h-[80vh] flex flex-col rounded-2xl border border-solid border-[var(--ui-border-muted)] bg-[rgba(11,14,16,0.96)] backdrop-blur-md shadow-[0_20px_50px_var(--shell-overlay-backdrop)] overflow-hidden">
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '14px 16px',
-          borderBottom: '1px solid var(--ui-border-muted)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Shield size={18} color="var(--accent-code)" />
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+      <div className="flex items-center justify-between p-[14px_16px] border-b border-solid border-[var(--ui-border-muted)]">
+        <div className="flex items-center gap-2.5">
+          <Shield size={18} className="text-[var(--accent-code)]" />
+          <span className="text-[14px] font-bold text-[var(--text-primary)]">
             Workspace Audit
           </span>
           {status && (
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                padding: '2px 8px',
-                borderRadius: 10,
-                background: status.initialized
-                  ? 'rgba(16,185,129,0.15)'
-                  : 'rgba(245,158,11,0.15)',
-                color: status.initialized
-                  ? 'var(--status-success)'
-                  : 'var(--status-warning)',
-              }}
-            >
+            <span className={cn(
+              "text-[12px] font-semibold px-2 py-0.5 rounded-full",
+              status.initialized ? "bg-green-500/15 text-[var(--status-success)]" : "bg-amber-500/15 text-[var(--status-warning)]"
+            )}>
               {status.initialized ? 'Active' : 'Not Initialized'}
             </span>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={onClose}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            padding: 4,
-          }}
+          className="bg-transparent border-none text-[var(--text-muted)] cursor-pointer p-1 transition-colors hover:text-[var(--text-primary)]"
         >
           <X size={16} />
         </button>
       </div>
 
       {/* Body */}
-      <div style={{ padding: 16, overflow: 'auto', flex: 1 }}>
+      <div className="p-4 overflow-auto flex-1">
         {status && !status.initialized && (
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 10,
-              background: 'rgba(245,158,11,0.08)',
-              border: '1px solid rgba(245,158,11,0.2)',
-              fontSize: 13,
-              color: 'var(--status-warning)',
-              marginBottom: 12,
-            }}
-          >
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-solid border-amber-500/20 text-[13px] text-[var(--status-warning)] mb-3">
             h5i is not initialized in this workspace.
           </div>
         )}
 
-        <button
+        <button type="button"
           onClick={handleAudit}
           disabled={loading}
-          style={{
-            width: '100%',
-            padding: '10px 14px',
-            borderRadius: 10,
-            border: 'none',
-            background: loading ? 'var(--ui-border-muted)' : 'var(--accent-code)',
-            color: '#fff',
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: loading ? 'default' : 'pointer',
-            opacity: loading ? 0.5 : 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            marginBottom: 16,
-          }}
+          className={cn(
+            "w-full p-[10px_14px] rounded-xl border-none text-white text-[13px] font-bold flex items-center justify-center gap-2 mb-4 transition-all duration-200",
+            loading ? "bg-[var(--ui-border-muted)] opacity-50 cursor-default" : "bg-[var(--accent-code)] cursor-pointer hover:opacity-90"
+          )}
         >
           {loading ? (
             <>
-              <span className="animate-spin" style={{ display: 'inline-block' }}>⟳</span>
+              <span className="animate-spin inline-block">⟳</span>
               Auditing...
             </>
           ) : (
@@ -200,54 +135,30 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
         </button>
 
         {error && (
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 10,
-              background: 'var(--status-error-bg)',
-              border: '1px solid rgba(239,68,68,0.2)',
-              fontSize: 12,
-              color: 'var(--status-error)',
-              marginBottom: 12,
-            }}
-          >
+          <div className="p-3 rounded-xl bg-[var(--status-error-bg)] border border-solid border-red-500/20 text-[12px] text-[var(--status-error)] mb-3">
             {error}
           </div>
         )}
 
         {result && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="flex flex-col gap-3.5">
             {/* AI Ratio */}
-            <div
-              style={{
-                padding: 14,
-                borderRadius: 12,
-                background: 'var(--surface-hover)',
-                border: '1px solid var(--ui-border-muted)',
-              }}
-            >
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
+            <div className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)]">
+              <div className="text-[12px] font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wider">
                 AI FOOTPRINT
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: '50%',
-                    background: `${riskColor}20`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: `${riskColor}20` }}
                 >
-                  <ShieldWarning size={24} color={riskColor} />
+                  <ShieldWarning size={24} style={{ color: riskColor }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: riskColor }}>
+                  <div className="text-[24px] font-black leading-none" style={{ color: riskColor }}>
                     {result.aiRatio.toFixed(1)}%
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  <div className="text-[12px] text-[var(--text-muted)] mt-1">
                     AI-generated code ratio
                   </div>
                 </div>
@@ -257,114 +168,80 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
             {/* Riskiest Files */}
             {result.riskiestFiles.length > 0 && (
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+                <div className="text-[12px] font-semibold text-[var(--text-muted)] mb-1.5 uppercase tracking-wider">
                   RISKIEST FILES
                 </div>
-                {result.riskiestFiles.map((f, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      background: 'var(--surface-hover)',
-                      fontSize: 12,
-                      color: 'var(--text-secondary)',
-                      fontFamily: 'var(--font-mono)',
-                      marginBottom: 4,
-                    }}
-                  >
-                    {f}
-                  </div>
-                ))}
+                <div className="flex flex-col gap-1">
+                  {result.riskiestFiles.map((f) => (
+                    <div
+                      key={`${f}-${workspacePath}`}
+                      className="p-[6px_10px] rounded-lg bg-[var(--surface-hover)] text-[12px] text-[var(--text-secondary)] font-mono border border-solid border-white/5"
+                    >
+                      {f}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Leaked Tokens */}
             {result.leakedTokens.length > 0 && (
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  background: 'var(--status-error-bg)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--status-error)', marginBottom: 6 }}>
+              <div className="p-3 rounded-xl bg-[var(--status-error-bg)] border border-solid border-red-500/20">
+                <div className="text-[12px] font-semibold text-[var(--status-error)] mb-1.5 uppercase tracking-wider">
                   LEAKED TOKENS DETECTED
                 </div>
-                {result.leakedTokens.map((t, i) => (
-                  <div key={i} style={{ fontSize: 12, color: 'var(--status-error)', fontFamily: 'var(--font-mono)' }}>
-                    {t}
-                  </div>
-                ))}
+                <div className="flex flex-col gap-1">
+                  {result.leakedTokens.map((t) => (
+                    <div key={`${t}-${workspacePath}`} className="text-[12px] text-[var(--status-error)] font-mono">
+                      {t}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Prompt Injection Hits */}
             {result.promptInjectionHits.length > 0 && (
-              <div
-                style={{
-                  padding: 12,
-                  borderRadius: 10,
-                  background: 'rgba(245,158,11,0.08)',
-                  border: '1px solid rgba(245,158,11,0.2)',
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--status-warning)', marginBottom: 6 }}>
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-solid border-amber-500/20">
+                <div className="text-[12px] font-semibold text-[var(--status-warning)] mb-1.5 uppercase tracking-wider">
                   PROMPT INJECTION HITS
                 </div>
-                {result.promptInjectionHits.map((h, i) => (
-                  <div key={i} style={{ fontSize: 12, color: 'var(--status-warning)', fontFamily: 'var(--font-mono)' }}>
-                    {h}
-                  </div>
-                ))}
+                <div className="flex flex-col gap-1">
+                  {result.promptInjectionHits.map((h) => (
+                    <div key={`${h}-${workspacePath}`} className="text-[12px] text-[var(--status-warning)] font-mono">
+                      {h}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* AI Directories */}
             {result.aiDirectories.length > 0 && (
               <div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+                <div className="text-[12px] font-semibold text-[var(--text-muted)] mb-1.5 uppercase tracking-wider">
                   AI-WRITTEN DIRECTORIES
                 </div>
-                {result.aiDirectories.map((d, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      background: 'var(--surface-hover)',
-                      fontSize: 12,
-                      color: 'var(--text-secondary)',
-                      fontFamily: 'var(--font-mono)',
-                      marginBottom: 4,
-                    }}
-                  >
-                    {d}
-                  </div>
-                ))}
+                <div className="flex flex-col gap-1">
+                  {result.aiDirectories.map((d) => (
+                    <div
+                      key={`${d}-${workspacePath}`}
+                      className="p-[6px_10px] rounded-lg bg-[var(--surface-hover)] text-[12px] text-[var(--text-secondary)] font-mono border border-solid border-white/5"
+                    >
+                      {d}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Raw output toggle */}
             {raw && (
-              <details>
-                <summary style={{ fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <details className="group">
+                <summary className="text-[12px] text-[var(--text-muted)] cursor-pointer select-none outline-none group-open:mb-2">
                   Raw h5i output
                 </summary>
-                <pre
-                  style={{
-                    marginTop: 8,
-                    padding: 10,
-                    borderRadius: 8,
-                    background: 'var(--surface-hover)',
-                    fontSize: 12,
-                    fontFamily: 'var(--font-mono)',
-                    color: 'var(--text-secondary)',
-                    overflow: 'auto',
-                    maxHeight: 200,
-                  }}
-                >
+                <pre className="p-2.5 rounded-lg bg-[var(--surface-hover)] text-[12px] font-mono text-[var(--text-secondary)] overflow-auto max-h-[200px] border border-solid border-white/5">
                   {raw}
                 </pre>
               </details>

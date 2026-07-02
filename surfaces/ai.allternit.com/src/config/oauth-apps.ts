@@ -5,7 +5,7 @@
  * In production this should be backed by a database; this file is the seed/fallback.
  */
 
-export interface OAuthAppConfig {
+interface OAuthAppConfig {
   clientId: string;
   name: string;
   /** Allowed redirect URI prefixes (exact match or prefix) */
@@ -53,11 +53,11 @@ const OAUTH_APPS: OAuthAppConfig[] = [
 
 const APP_MAP = new Map(OAUTH_APPS.map((a) => [a.clientId, a]));
 
-export function getOAuthApp(clientId: string): OAuthAppConfig | null {
+function getOAuthApp(clientId: string): OAuthAppConfig | null {
   return APP_MAP.get(clientId) ?? null;
 }
 
-export function isAllowedRedirectUri(app: OAuthAppConfig, redirectUri: string): boolean {
+function isAllowedRedirectUri(app: OAuthAppConfig, redirectUri: string): boolean {
   return app.allowedRedirectUris.some(
     (allowed) => redirectUri === allowed || redirectUri.startsWith(allowed),
   );

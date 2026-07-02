@@ -3,7 +3,7 @@ import { Globe } from '@phosphor-icons/react';
 import { GizziMascot } from '@/components/ai-elements/GizziMascot';
 import { getActiveSession, useCodeModeStore } from './CodeModeStore';
 
-export function CodePreviewPane(): JSX.Element {
+export function CodePreviewPane(): React.ReactNode {
   const workspaces = useCodeModeStore((state) => state.workspaces);
   const sessions = useCodeModeStore((state) => state.sessions);
   const activeWorkspaceId = useCodeModeStore((state) => state.activeWorkspaceId);
@@ -79,6 +79,7 @@ export function CodePreviewPane(): JSX.Element {
               borderRadius: 14,
               background: 'rgba(10,12,14,0.5)',
             }}
+            sandbox="allow-scripts"
           />
         ) : (
           <>

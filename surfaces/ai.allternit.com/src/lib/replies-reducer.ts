@@ -7,11 +7,9 @@ import type {
   ReplyEvent,
   ConversationReplyState,
   Reply,
-  ReplyItem,
   TextReplyItem,
   ReasoningReplyItem,
   ToolCallReplyItem,
-  ReplyStatus,
 } from '@/types/replies-contract';
 
 export function createConversationReplyState(): ConversationReplyState {

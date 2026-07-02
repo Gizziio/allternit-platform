@@ -5,7 +5,7 @@
  *
  * Shows a real-time visual feed from the computer-use service while
  * the agent is executing. Screenshot is pushed via SSE stream from
- * /api/aci/stream/[id] and held in the browser agent store — no polling.
+ * /api/aci/stream/[id] and held in the computer agent store — no polling.
  * Overlays step progress, action labels, and element highlight boxes.
  *
  * Layout (mirrors Kimi Computer reference):
@@ -100,61 +100,27 @@ function TopStrip({
 
   return (
     <div
-      style={{
-        position: 'absolute',
-        top: 0, left: 0, right: 0,
-        height: 34,
-        background: 'rgba(14,12,10,0.85)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        borderBottom: '1px solid rgba(212,176,140,0.09)',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 12px',
-        gap: 8,
-        zIndex: 20,
-        flexShrink: 0,
-      }}
+      className="absolute top-0 left-0 right-0 h-[34px] bg-[rgba(14,12,10,0.85)] backdrop-blur-[10px] border-b border-solid border-[rgba(212,176,140,0.09)] flex items-center px-3 gap-2 z-[20] shrink-0"
     >
       {/* Status dot */}
       <div
+        className={`size-[7px] rounded-full shrink-0 ${isRunning || isApproval ? 'animate-[aci-cv-pulse_1.8s_ease-in-out_infinite]' : ''} bg-[var(--dot-color)] shadow-[var(--dot-shadow)]`}
         style={{
-          width: 7, height: 7, borderRadius: '50%',
-          background: dotColor,
-          flexShrink: 0,
-          boxShadow: isRunning ? `0 0 6px ${dotColor}aa` : 'none',
-          animation: isRunning || isApproval ? 'aci-cv-pulse 1.8s ease-in-out infinite' : 'none',
-        }}
+          '--dot-color': dotColor,
+          '--dot-shadow': isRunning ? `0 0 6px ${dotColor}aa` : 'none',
+        } as React.CSSProperties}
       />
 
       {/* Label */}
-      <span
-        style={{
-          fontSize: 12,
-          fontWeight: 700,
-          color: 'rgba(212,176,140,0.45)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.12em',
-          fontFamily: 'var(--font-mono)',
-          flexShrink: 0,
-        }}
-      >
+      <span className="text-[12px] font-bold text-[rgba(212,176,140,0.45)] uppercase tracking-[0.12em] font-mono shrink-0">
         COMPUTER USE
       </span>
 
-      <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
+      <div className="w-px h-3 bg-[var(--ui-border-muted)] shrink-0" />
 
       {/* Active message */}
       <span
-        style={{
-          fontSize: 12,
-          color: isApproval ? '#fde68a' : 'var(--ui-text-muted)',
-          flex: 1,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          fontWeight: isApproval ? 600 : 400,
-        }}
+        className={`text-[12px] flex-1 overflow-hidden text-ellipsis whitespace-nowrap ${isApproval ? 'text-[#fde68a] font-semibold' : 'text-[var(--ui-text-muted)] font-normal'}`}
       >
         {lastEventMessage || goal || (isDone ? 'Task complete' : 'Waiting…')}
       </span>
@@ -162,16 +128,8 @@ function TopStrip({
       {/* Step counter */}
       {stepIndex != null && totalSteps != null && totalSteps > 1 && (
         <>
-          <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
-          <span
-            style={{
-              fontSize: 12,
-              color: 'rgba(212,176,140,0.65)',
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
+          <div className="w-px h-3 bg-[var(--ui-border-muted)] shrink-0" />
+          <span className="text-[12px] text-[rgba(212,176,140,0.65)] font-mono font-bold shrink-0">
             {stepIndex}/{totalSteps}
           </span>
         </>
@@ -180,16 +138,8 @@ function TopStrip({
       {/* Adapter / layer chip */}
       {adapterLabel && (
         <>
-          <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
-          <span
-            style={{
-              fontSize: 12,
-              color: 'rgba(255,255,255,0.25)',
-              fontFamily: 'var(--font-mono)',
-              letterSpacing: '0.05em',
-              flexShrink: 0,
-            }}
-          >
+          <div className="w-px h-3 bg-[var(--ui-border-muted)] shrink-0" />
+          <span className="text-[12px] text-[rgba(255,255,255,0.25)] font-mono tracking-[0.05em] shrink-0">
             {adapterLabel}{layer ? ` · ${layer}` : ''}
           </span>
         </>
@@ -233,35 +183,21 @@ function ElementHighlight({
 
   return (
     <div
+      className="absolute border-2 border-solid rounded-[4px] pointer-events-none z-[40] transition-all duration-[0.18s] ease-[ease] border-[var(--box-color)] bg-[var(--box-bg)] shadow-[var(--box-shadow)]"
       style={{
-        position: 'absolute',
         left, top, width, height,
-        border: `2px solid ${color}`,
-        borderRadius: 4,
-        background: color.replace('0.85)', '0.07)'),
-        boxShadow: `0 0 0 1px ${color.replace('0.85)', '0.25)')}, 0 0 12px ${color.replace('0.85)', '0.15)')}`,
-        pointerEvents: 'none',
-        zIndex: 40,
-        transition: 'all 0.18s ease',
-      }}
+        '--box-color': color,
+        '--box-bg': color.replace('0.85)', '0.07)'),
+        '--box-shadow': `0 0 0 1px ${color.replace('0.85)', '0.25)')}, 0 0 12px ${color.replace('0.85)', '0.15)')}`,
+      } as React.CSSProperties}
     >
       {box.label && (
         <div
+          className="absolute -top-5 left-0 px-1.5 py-0.5 bg-[rgba(10,9,8,0.92)] border border-solid border-[var(--label-border)] rounded-[4px] text-[12px] font-bold font-mono uppercase tracking-[0.06em] whitespace-nowrap text-[var(--label-color)]"
           style={{
-            position: 'absolute',
-            top: -20, left: 0,
-            padding: '2px 6px',
-            background: 'rgba(10,9,8,0.92)',
-            border: `1px solid ${color.replace('0.85)', '0.4)')}`,
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 700,
-            color,
-            fontFamily: 'var(--font-mono)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            whiteSpace: 'nowrap',
-          }}
+            '--label-border': color.replace('0.85)', '0.4)'),
+            '--label-color': color,
+          } as React.CSSProperties}
         >
           {box.kind ? `${box.kind.toUpperCase()} · ` : ''}{box.label}
         </div>
@@ -360,17 +296,7 @@ export function ACIComputerUseView({
         }
       `}</style>
 
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'var(--bg-primary)',
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 5,
-          overflow: 'hidden',
-        }}
-      >
+      <div className="absolute inset-0 bg-[var(--bg-primary)] flex flex-col z-[5] overflow-hidden">
         {/* ── Top status strip ── */}
         <TopStrip
           goal={goal}
@@ -385,45 +311,14 @@ export function ACIComputerUseView({
         {/* ── Screenshot + overlays ── */}
         <div
           ref={containerRef}
-          style={{
-            position: 'absolute',
-            top: 34,
-            left: 0,
-            right: 0,
-            bottom: agentBarHeight,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 8,
-            overflow: 'hidden',
-          }}
+          className="absolute top-[34px] left-0 right-0 flex items-center justify-center p-2 overflow-hidden"
+          style={{ bottom: agentBarHeight }}
         >
           {/* Loading state */}
           {isConnecting && !serviceError && (
-            <div
-              style={{
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: 16, opacity: 0.45,
-              }}
-            >
-              <div
-                style={{
-                  width: 28, height: 28,
-                  border: '2px solid var(--ui-border-default)',
-                  borderTop: '2px solid var(--accent-primary)',
-                  borderRadius: '50%',
-                  animation: 'aci-cv-spin 1s linear infinite',
-                }}
-              />
-              <div
-                style={{
-                  fontSize: 12,
-                  fontFamily: 'var(--font-mono)',
-                  color: '#555',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5em',
-                }}
-              >
+            <div className="flex flex-col items-center gap-4 opacity-[0.45]">
+              <div className="size-7 border-2 border-solid border-[var(--ui-border-default)] border-t-[var(--accent-primary)] rounded-full animate-[aci-cv-spin_1s_linear_infinite]" />
+              <div className="text-[12px] font-mono text-[#555] uppercase tracking-[0.5em]">
                 CONNECTING
               </div>
             </div>
@@ -431,22 +326,12 @@ export function ACIComputerUseView({
 
           {/* Error state */}
           {serviceError && (
-            <div
-              style={{
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', gap: 10, maxWidth: 320, textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: 28, opacity: 0.4 }}>⚡</div>
-              <div
-                style={{
-                  fontSize: 12, fontFamily: 'var(--font-mono)',
-                  color: 'var(--status-error)', letterSpacing: '0.08em',
-                }}
-              >
+            <div className="flex flex-col items-center gap-2.5 max-w-[320px] text-center">
+              <div className="text-[28px] opacity-40">⚡</div>
+              <div className="text-[12px] font-mono text-[var(--status-error)] tracking-[0.08em]">
                 {serviceError}
               </div>
-              <div style={{ fontSize: 12, color: '#444', lineHeight: 1.5 }}>
+              <div className="text-[12px] text-[#444] leading-[1.5]">
                 Check the agent logs for details.
               </div>
             </div>
@@ -461,16 +346,7 @@ export function ACIComputerUseView({
                 alt="Computer use live view"
                 onLoad={recalcImgMetrics}
                 draggable={false}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain',
-                  border: '1px solid rgba(212,176,140,0.08)',
-                  borderRadius: 3,
-                  boxShadow: '0 0 48px var(--shell-overlay-backdrop)',
-                  userSelect: 'none',
-                  display: 'block',
-                }}
+                className="max-w-full max-h-full object-contain border border-solid border-[rgba(212,176,140,0.08)] rounded-[3px] shadow-[0_0_48px_var(--shell-overlay-backdrop)] select-none block"
               />
 
               {/* Element highlights — positioned relative to displayed image */}
@@ -495,14 +371,7 @@ export function ACIComputerUseView({
         {/* ── Scan-line texture overlay (dark glass aesthetic) ── */}
         <div
           aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage:
-              'repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px)',
-            pointerEvents: 'none',
-            zIndex: 6,
-          }}
+          className="absolute inset-0 bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0)_0px,rgba(0,0,0,0)_3px,rgba(0,0,0,0.06)_3px,rgba(0,0,0,0.06)_4px)] pointer-events-none z-[6]"
         />
       </div>
     </>

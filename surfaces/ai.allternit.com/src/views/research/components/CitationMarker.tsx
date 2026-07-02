@@ -18,19 +18,21 @@ export function CitationMarker({ citation, onClick }: CitationMarkerProps) {
 
   return (
     <span className="relative inline-block">
-      <sup
+      <button
+        type="button"
         onClick={handleClick}
-        className="cursor-pointer font-semibold text-[12px] ml-0.5 select-none"
+        className="cursor-pointer font-semibold text-[12px] ml-0.5 select-none bg-transparent border-none p-0 align-super"
         style={{ color: '#a78bfa' }}
         title={`Source ${citation.index}${citation.page_number ? `, Page ${citation.page_number}` : ''}`}
       >
         [{citation.index}]
-      </sup>
+      </button>
       {open && (
         <>
-          <div
+          <button type="button"
             onClick={() => setOpen(false)}
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 bg-transparent border-none w-full h-full cursor-default"
+            aria-label="Close"
           />
           <div className="research-citation-popover">
             <div className="flex items-center gap-2 mb-2">
@@ -47,7 +49,7 @@ export function CitationMarker({ citation, onClick }: CitationMarkerProps) {
               &ldquo;{citation.excerpt}&rdquo;
             </p>
             {onClick && (
-              <button
+              <button type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onClick(citation.source_id);

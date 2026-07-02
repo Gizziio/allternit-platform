@@ -1,4 +1,4 @@
-export interface ConnectorEnvVar {
+interface ConnectorEnvVar {
   key: string;
   label: string;
   required: boolean;
@@ -16,7 +16,7 @@ export interface ConnectorDefinition {
   entrypoint: string;
 }
 
-export const CONNECTOR_MANIFEST: ConnectorDefinition[] = [
+const CONNECTOR_MANIFEST: ConnectorDefinition[] = [
   {
     id: 'slack',
     name: 'Slack',
@@ -199,7 +199,7 @@ export const CONNECTOR_MANIFEST: ConnectorDefinition[] = [
   },
 ];
 
-export function getConnectorById(id: string): ConnectorDefinition | undefined {
+function getConnectorById(id: string): ConnectorDefinition | undefined {
   return CONNECTOR_MANIFEST.find((c) => c.id === id);
 }
 

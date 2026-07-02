@@ -1,5 +1,5 @@
 /**
- * Browser Agent Store - State management for agentic browsing
+ * Computer Agent Store - State management for agentic computer use
  * 
  * Manages:
  * - Agent status (Idle/Running/Waiting/Blocked/Done)
@@ -12,6 +12,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { getPlatformComputerUseBaseUrl } from '@/integration/computer-use-engine';
+import { useDrawerStore } from '@/drawers/drawer.store';
 import {
   BrowserAgentStatus,
   BrowserAgentMode,
@@ -35,9 +36,9 @@ export type PageAgentStatus = 'idle' | 'running' | 'completed' | 'error';
 
 // ── Computer-Use types ────────────────────────────────────────
 
-export type CursorEffect = 'ripple' | 'glow' | 'spark' | 'none';
+type CursorEffect = 'ripple' | 'glow' | 'spark' | 'none';
 
-export interface RefEntry {
+interface RefEntry {
   ref_id: string;
   role: string;
   name: string;
@@ -47,7 +48,7 @@ export interface RefEntry {
   app_name: string;
 }
 
-export interface WindowEntry {
+interface WindowEntry {
   window_id: number;
   title: string;
   app_name: string;
@@ -57,7 +58,7 @@ export interface WindowEntry {
   is_minimized: boolean;
 }
 
-export interface AppEntry {
+interface AppEntry {
   pid: number;
   name: string;
   bundle_id: string;
@@ -73,7 +74,7 @@ export interface NotificationEntry {
   actions: string[];
 }
 
-export interface CoordinateContract {
+interface CoordinateContract {
   scale_factor: number;
   offset_x: number;
   offset_y: number;
@@ -93,7 +94,7 @@ export interface AXTreeNode {
   children?: AXTreeNode[];
 }
 
-export interface VerificationEvidence {
+interface VerificationEvidence {
   verified_success: boolean;
   confidence: number;
   changed: boolean;
@@ -917,19 +918,20 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       }
     },
     
-    // Capture screenshot
     captureScreenshot: () => {
-      console.debug('Capturing screenshot...');
-      // @placeholder APPROVED - Browser runtime integration pending
-      // @ticket GAP-56
+      const { currentRunId } = get();
+      if (!currentRunId) return;
+      const baseUrl = getPlatformComputerUseBaseUrl();
+      fetch(`${baseUrl}/v1/computer-use/runs/${currentRunId}/screenshot`, { method: 'POST' })
+        .then((r) => r.json())
+        .then((data: { screenshot_b64?: string }) => {
+          if (data.screenshot_b64) set({ screenshot: data.screenshot_b64 });
+        })
+        .catch(() => {});
     },
 
-    // Open drawer
     openDrawer: () => {
-      console.debug('Opening drawer...');
-      // @placeholder APPROVED - Drawer event dispatch pending
-      // @ticket GAP-56
-      // Stub: dispatch drawer open event
+      useDrawerStore.getState().openDrawer('console');
     },
     
     // Set mode
@@ -1048,11 +1050,11 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
 // Selectors
 // ============================================================================
 
-export const selectStatus = (state: BrowserAgentState) => state.status;
-export const selectMode = (state: BrowserAgentState) => state.mode;
-export const selectCurrentAction = (state: BrowserAgentState) => state.currentAction;
-export const selectRequiresApproval = (state: BrowserAgentState) => state.requiresApproval;
-export const selectGoal = (state: BrowserAgentState) => state.goal;
-export const selectReceipts = (state: BrowserAgentState) => state.receipts;
+const selectStatus = (state: BrowserAgentState) => state.status;
+const selectMode = (state: BrowserAgentState) => state.mode;
+const selectCurrentAction = (state: BrowserAgentState) => state.currentAction;
+const selectRequiresApproval = (state: BrowserAgentState) => state.requiresApproval;
+const selectGoal = (state: BrowserAgentState) => state.goal;
+const selectReceipts = (state: BrowserAgentState) => state.receipts;
 
 export default useBrowserAgentStore;

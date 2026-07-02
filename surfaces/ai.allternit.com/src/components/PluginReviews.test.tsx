@@ -41,7 +41,7 @@ vi.mock('./StarRating', () => ({
   }) => (
     <div data-testid="star-rating" data-rating={rating} data-interactive={interactive} data-size={size}>
       {interactive && (
-        <button data-testid="set-rating" onClick={() => onChange?.(4)}>
+        <button type="button" data-testid="set-rating" onClick={() => onChange?.(4)}>
           Set 4 Stars
         </button>
       )}

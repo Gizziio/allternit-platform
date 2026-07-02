@@ -161,8 +161,7 @@ export function BrowserNewTabPage({ onNavigate }: { onNavigate: (url: string) =>
           }}
         >
           <MagnifyingGlass style={{ width: 18, height: 18, color: TEXT.tertiary, flexShrink: 0 }} />
-          <input
-            type="text"
+          <input aria-label="Input" type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search or type a URL"

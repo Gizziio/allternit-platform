@@ -1,6 +1,6 @@
 import React from 'react';
 import { Renderer } from '@openuidev/react-lang';
-import { componentRegistry, schemas } from './registry';
+import { componentRegistry } from './registry';
 
 interface AllternitOpenUIRendererProps {
   stream: string;

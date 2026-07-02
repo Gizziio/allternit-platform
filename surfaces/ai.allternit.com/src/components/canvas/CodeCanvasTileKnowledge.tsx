@@ -51,7 +51,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
           flexShrink: 0,
         }}
       >
-        <button
+        <button type="button"
           onClick={() => setTab('claims')}
           style={{
             flex: 1,
@@ -72,7 +72,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
           <BookBookmark size={12} />
           Claims ({claims.length})
         </button>
-        <button
+        <button type="button"
           onClick={() => setTab('summaries')}
           style={{
             flex: 1,

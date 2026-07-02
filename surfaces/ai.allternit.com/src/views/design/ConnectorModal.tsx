@@ -151,14 +151,14 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
               <div style={{ fontSize: "11px", color: "var(--text-secondary, #666)", marginTop: "1px" }}>Choose your connection method</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ width: "28px", height: "28px", borderRadius: "8px", background: "rgba(0,0,0,0.05)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <button type="button" onClick={onClose} style={{ width: "28px", height: "28px", borderRadius: "8px", background: "rgba(0,0,0,0.05)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <X size={14} />
           </button>
         </div>
 
         {/* Tabs */}
         <div style={{ display: "flex", borderBottom: "1px solid var(--border-subtle, rgba(0,0,0,0.08))" }}>
-          <button
+          <button type="button"
             onClick={() => setActiveTab("direct")}
             style={{
               flex: 1, padding: "12px", border: "none", background: activeTab === "direct" ? "var(--bg-secondary, #f9f9f9)" : "transparent",
@@ -168,7 +168,7 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
           >
             <Key size={12} style={{ marginRight: 4, verticalAlign: "middle" }} /> Direct Tokens
           </button>
-          <button
+          <button type="button"
             onClick={() => setActiveTab("composio")}
             style={{
               flex: 1, padding: "12px", border: "none", background: activeTab === "composio" ? "var(--bg-secondary, #f9f9f9)" : "transparent",
@@ -200,23 +200,22 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
                       )}
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <input
-                        type="password"
+                      <input aria-label="Input" type="password"
                         value={tokens[app.id]}
                         onChange={(e) => setTokens((prev) => ({ ...prev, [app.id]: e.target.value }))}
                         placeholder={app.placeholder}
                         style={{ flex: 1, padding: "8px 10px", borderRadius: "8px", border: "1px solid var(--border-default, rgba(0,0,0,0.12))", fontSize: "12px", outline: "none", fontFamily: "var(--font-mono, monospace)", background: "var(--bg-secondary, #f9f9f9)" }}
                       />
                       {connectedDirect.has(app.id) ? (
-                        <button onClick={() => handleRemove(app.id)} style={{ padding: "8px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center" }} title="Disconnect">
+                        <button type="button" onClick={() => handleRemove(app.id)} style={{ padding: "8px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center" }} title="Disconnect">
                           <Trash size={14} />
                         </button>
                       ) : (
                         <>
-                          <button onClick={() => handleTest(app.id)} disabled={!tokens[app.id] || testing === app.id} style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-default, rgba(0,0,0,0.12))", background: "transparent", fontSize: "11px", fontWeight: 700, cursor: "pointer", opacity: !tokens[app.id] ? 0.4 : 1 }}>
+                          <button type="button" onClick={() => handleTest(app.id)} disabled={!tokens[app.id] || testing === app.id} style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-default, rgba(0,0,0,0.12))", background: "transparent", fontSize: "11px", fontWeight: 700, cursor: "pointer", opacity: !tokens[app.id] ? 0.4 : 1 }}>
                             {testing === app.id ? "…" : testResult[app.id] === "ok" ? "✓" : testResult[app.id] === "error" ? "✗" : "Test"}
                           </button>
-                          <button onClick={() => handleSave(app.id)} disabled={!tokens[app.id] || testResult[app.id] === "error"} style={{ padding: "8px 12px", borderRadius: "8px", border: "none", background: "var(--accent-primary, #e27c59)", color: "#fff", fontSize: "11px", fontWeight: 700, cursor: "pointer", opacity: !tokens[app.id] || testResult[app.id] === "error" ? 0.4 : 1 }}>
+                          <button type="button" onClick={() => handleSave(app.id)} disabled={!tokens[app.id] || testResult[app.id] === "error"} style={{ padding: "8px 12px", borderRadius: "8px", border: "none", background: "var(--accent-primary, #e27c59)", color: "#fff", fontSize: "11px", fontWeight: 700, cursor: "pointer", opacity: !tokens[app.id] || testResult[app.id] === "error" ? 0.4 : 1 }}>
                             <ArrowRight size={12} />
                           </button>
                         </>
@@ -248,7 +247,7 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
                         <CheckCircle size={14} weight="fill" /> Connected
                       </div>
                     ) : (
-                      <button
+                      <button type="button"
                         onClick={() => handleComposioConnect(app.id)}
                         disabled={composioLoading === app.id || composioAvailable === false}
                         style={{ padding: "5px 12px", borderRadius: "6px", border: "1px solid var(--border-default, rgba(0,0,0,0.12))", background: "transparent", fontSize: "11px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, opacity: composioAvailable === false ? 0.4 : 1 }}
@@ -262,7 +261,7 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
             )}
           </AnimatePresence>
 
-          <button onClick={onClose} style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid var(--border-default, rgba(0,0,0,0.12))", background: "transparent", fontSize: "13px", fontWeight: 600, cursor: "pointer", color: "var(--text-secondary, #666)" }}>
+          <button type="button" onClick={onClose} style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid var(--border-default, rgba(0,0,0,0.12))", background: "transparent", fontSize: "13px", fontWeight: 600, cursor: "pointer", color: "var(--text-secondary, #666)" }}>
             Done
           </button>
         </div>

@@ -9,6 +9,10 @@ import { create } from "zustand";
 import type { RunnerRun, RunnerTraceEntry } from "./runner.types";
 import { api } from "../integration/api-client";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Runner');
+
 // Storage key for session persistence
 const STORAGE_KEY = 'allternit-agent-runner-session';
 
@@ -248,7 +252,7 @@ export const useRunnerStore = create<{
       }
     } catch (error) {
       // Gracefully handle JSON parse errors
-      console.warn('Failed to load agent runner session:', error);
+      logger.warn({ err: error }, 'Failed to load agent runner session:');
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch {
@@ -280,7 +284,7 @@ export const useRunnerStore = create<{
       localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     } catch (error) {
       // Gracefully handle storage errors (e.g., quota exceeded)
-      console.warn('Failed to save agent runner session:', error);
+      logger.warn({ err: error }, 'Failed to save agent runner session:');
     }
   },
 
@@ -296,7 +300,7 @@ export const useRunnerStore = create<{
         capturedContext = { ...capturedContext, ...freshContext };
         set({ context: capturedContext });
       } catch (err) {
-        console.warn('Failed to capture fresh context:', err);
+        logger.warn({ err: err }, 'Failed to capture fresh context:');
       }
     }
 

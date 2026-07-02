@@ -23,7 +23,7 @@ export function SegmentedControl({ options, value, onChange }: SegmentedControlP
       border: '1px solid rgba(255, 255, 255, 0.1)',
     }}>
       {options.map((opt) => (
-        <button
+        <button type="button"
           key={opt.value}
           onClick={() => onChange(opt.value)}
           style={{

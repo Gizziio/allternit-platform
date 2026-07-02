@@ -22,6 +22,7 @@ export const VerificationView: React.FC<VerificationViewProps> = ({
 }) => {
   const [wihId, setWihId] = useState(initialWihId || '');
   const [inputValue, setInputValue] = useState(initialWihId || '');
+  const [bypassReason, setBypassReason] = useState<string | null>(null);
   
   const { 
     result, 
@@ -93,8 +94,7 @@ export const VerificationView: React.FC<VerificationViewProps> = ({
         marginBottom: '24px',
       }}>
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '12px' }}>
-          <input
-            type="text"
+          <input aria-label="Input" type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Enter WIH ID (e.g., wih_abc123)"
@@ -160,6 +160,31 @@ export const VerificationView: React.FC<VerificationViewProps> = ({
         </div>
       )}
 
+      {/* Bypass reason input */}
+      {bypassReason !== null && (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', padding: '12px', background: 'var(--surface-panel)', border: '1px solid var(--ui-border-default)', borderRadius: '8px' }}>
+          <input aria-label="Input" autoFocus
+            type="text"
+            value={bypassReason}
+            onChange={(e) => setBypassReason(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && bypassReason.trim()) { handleBypass(bypassReason.trim()); setBypassReason(null); }
+              else if (e.key === 'Escape') setBypassReason(null);
+            }}
+            placeholder="Bypass reason…"
+            style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--ui-border-default)', background: 'var(--surface-input)', color: 'var(--ui-text-primary)', fontSize: '14px', outline: 'none' }}
+          />
+          <button type="button"
+            onClick={() => { if (bypassReason.trim()) { handleBypass(bypassReason.trim()); } setBypassReason(null); }}
+            style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--status-warning)', color: '#fff', fontSize: '13px', border: 'none', cursor: 'pointer' }}
+          >Submit</button>
+          <button type="button"
+            onClick={() => setBypassReason(null)}
+            style={{ padding: '6px 14px', borderRadius: '6px', background: 'transparent', color: 'var(--ui-text-muted)', fontSize: '13px', border: '1px solid var(--ui-border-default)', cursor: 'pointer' }}
+          >Cancel</button>
+        </div>
+      )}
+
       {/* Verification Panel */}
       {wihId && (
         <VisualVerificationPanel
@@ -167,10 +192,7 @@ export const VerificationView: React.FC<VerificationViewProps> = ({
           status={result || undefined}
           trendData={trendData}
           onRefresh={handleRefresh}
-          onRequestBypass={() => {
-            const reason = prompt('Enter bypass reason:');
-            if (reason) handleBypass(reason);
-          }}
+          onRequestBypass={() => setBypassReason('')}
         />
       )}
 

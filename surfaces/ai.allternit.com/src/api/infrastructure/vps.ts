@@ -2,7 +2,7 @@
  * VPS API - Types and API client for VPS connections
  */
 
-export interface VPSResources {
+interface VPSResources {
   cpu?: number;
   memory?: string;
   disk?: string;

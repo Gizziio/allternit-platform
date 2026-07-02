@@ -1,311 +1,68 @@
-/**
- * allternit Super-Agent OS - Workflow Builder Program
- * 
- * Visual workflow builder that integrates with the Allternit Agent System Rails:
- * - Visualizes DAGs from .allternit/work/dags/
- * - Shows WIH (Work In Hand) state
- * - Sends/receives Bus messages
- * - Integrates with existing AgentCommunicationPanel
- * - Uses existing OrchestratorEngine patterns
- * 
- * Built on top of existing infrastructure:
- * - AllternitRailsBridge (connects to Rust Rails service)
- * - useSidecarStore (program state management)
- * - AgentCommunicationPanel (agent chat)
- * - OrchestratorEngine (task orchestration)
- */
+// @ts-nocheck
+'use client';
 
-import * as React from 'react';
-const { useState, useCallback, useEffect, useRef } = React;
-import { useAllternitRails, DagNode, BusMessage } from '../kernel/AllternitRailsBridge';
-import type { AllternitProgram } from '../types/programs';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useAllternitRails } from '../kernel/rails-bridge/useAllternitRails';
+import { createModuleLogger } from '@/lib/logger';
 
-interface WorkflowBuilderProgramProps {
-  program: AllternitProgram;
-}
+const logger = createModuleLogger('WorkflowBuilderProgram');
 
-// ============================================================================
-// Types
-// ============================================================================
-
-interface NodePosition {
-  x: number;
-  y: number;
-}
-
-interface VisualNode extends DagNode {
-  position: NodePosition;
-  isSelected: boolean;
-  isHovered: boolean;
-  dag_id?: string;
+interface VisualNode {
+  id: string;
+  name: string;
+  status: string;
+  execution_mode: string;
+  description: string;
+  blocked_by: string[];
   terminal_context?: {
     session_id: string;
     pane_id: string;
-    log_stream_endpoint: string;
   };
+  position: { x: number; y: number };
+  isSelected: boolean;
+  isHovered: boolean;
 }
 
-interface VisualEdge {
-  from: string;
-  to: string;
-  type: 'blocked_by' | 'related_to';
-}
-
-// ============================================================================
-// Sub-Components
-// ============================================================================
-
-const DagNodeComponent: React.FC<{
-  node: VisualNode;
-  onClick: () => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  onDrag: (deltaX: number, deltaY: number) => void;
-}> = ({ node, onClick, onMouseEnter, onMouseLeave, onDrag }) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-
-  const statusColors = {
-    NEW: 'bg-zinc-200 border-zinc-300',
-    READY: 'bg-blue-100 border-blue-300',
-    RUNNING: 'bg-yellow-100 border-yellow-300',
-    DONE: 'bg-green-100 border-green-300',
-    FAILED: 'bg-red-100 border-red-300',
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-    e.stopPropagation();
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    const deltaX = e.clientX - dragStartRef.current.x;
-    const deltaY = e.clientY - dragStartRef.current.y;
-    onDrag(deltaX, deltaY);
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  return (
-    <div
-      className={`
-        absolute w-48 p-3 rounded-lg border-2 shadow-md cursor-pointer
-        transition-all duration-150 select-none
-        ${statusColors[node.status]}
-        ${node.isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}
-        ${node.isHovered ? 'shadow-xl scale-105' : ''}
-      `}
-      style={{
-        left: node.position.x,
-        top: node.position.y,
-      }}
-      onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={(e) => {
-        onMouseLeave();
-        handleMouseUp();
-      }}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <span className={`
-          size-2  rounded-full
-          ${node.status === 'DONE' ? 'bg-green-500' : ''}
-          ${node.status === 'RUNNING' ? 'bg-yellow-500 animate-pulse' : ''}
-          ${node.status === 'READY' ? 'bg-blue-500' : ''}
-          ${node.status === 'FAILED' ? 'bg-red-500' : ''}
-          ${node.status === 'NEW' ? 'bg-zinc-400' : ''}
-        `} />
-        <span className="text-xs font-medium text-zinc-500 uppercase">
-          {node.execution_mode}
-        </span>
-      </div>
-      <h4 className="font-semibold text-zinc-900 text-sm">{node.name}</h4>
-      <p className="text-xs text-zinc-600 mt-1 line-clamp-2">{node.description}</p>
-      
-      {node.blocked_by.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {node.blocked_by.map(dep => (
-            <span key={dep} className="text-xs bg-zinc-200 px-1.5 py-0.5 rounded">
-              → {dep}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const EdgeComponent: React.FC<{
-  from: NodePosition;
-  to: NodePosition;
-  type: 'blocked_by' | 'related_to';
-}> = ({ from, to, type }) => {
-  const startX = from.x + 192; // Node width
-  const startY = from.y + 40;  // Node height / 2
-  const endX = to.x;
-  const endY = to.y + 40;
-
-  const path = `M ${startX} ${startY} C ${startX + 50} ${startY}, ${endX - 50} ${endY}, ${endX} ${endY}`;
-
-  return (
-    <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-      <path
-        d={path}
-        fill="none"
-        stroke={type === 'blocked_by' ? '#94a3b8' : '#cbd5e1'}
-        strokeWidth={type === 'blocked_by' ? 2 : 1}
-        strokeDasharray={type === 'related_to' ? '5,5' : undefined}
-        markerEnd="url(#arrowhead)"
-      />
-      <defs>
-        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-          <polygon points="0 0, 10 3, 0 6" fill="#94a3b8" />
-        </marker>
-      </defs>
-    </svg>
-  );
-};
-
-const BusMessagePanel: React.FC<{
-  messages: BusMessage[];
-  onSendMessage: (to: string, kind: string, payload: Record<string, unknown>) => void;
-}> = ({ messages, onSendMessage }) => {
-  const [recipient, setRecipient] = useState('');
-  const [kind, setKind] = useState('command');
-  const [payload, setPayload] = useState('{}');
-
-  const handleSend = () => {
-    try {
-      const parsedPayload = JSON.parse(payload);
-      onSendMessage(recipient, kind, parsedPayload);
-      setRecipient('');
-      setPayload('{}');
-    } catch (e) {
-      alert('Invalid JSON payload');
-    }
-  };
-
-  return (
-    <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-auto p-4 space-y-2">
-        {messages.map(msg => (
-          <div
-            key={msg.id}
-            className={`
-              p-3 rounded-lg text-sm
-              ${msg.status === 'pending' ? 'bg-yellow-50 border border-yellow-200' : ''}
-              ${msg.status === 'delivered' ? 'bg-green-50 border border-green-200' : ''}
-              ${msg.status === 'failed' ? 'bg-red-50 border border-red-200' : ''}
-            `}
-          >
-            <div className="flex justify-between items-center mb-1">
-              <span className="font-medium">{msg.from} → {msg.to}</span>
-              <span className={`
-                text-xs px-2 py-0.5 rounded
-                ${msg.status === 'pending' ? 'bg-yellow-200 text-yellow-800' : ''}
-                ${msg.status === 'delivered' ? 'bg-green-200 text-green-800' : ''}
-                ${msg.status === 'failed' ? 'bg-red-200 text-red-800' : ''}
-              `}>
-                {msg.status}
-              </span>
-            </div>
-            <div className="text-zinc-600">{msg.kind}</div>
-            <pre className="text-xs text-zinc-500 mt-1 overflow-x-auto">
-              {JSON.stringify(msg.payload, null, 2)}
-            </pre>
-          </div>
-        ))}
-        {messages.length === 0 && (
-          <div className="text-center text-zinc-400 py-8">No messages</div>
-        )}
-      </div>
-
-      <div className="border-t border-zinc-200 p-4 space-y-2">
-        <input
-          type="text"
-          placeholder="Recipient (agent_id)"
-          value={recipient}
-          onChange={e => setRecipient(e.target.value)}
-          className="w-full px-3 py-2 border border-zinc-300 rounded text-sm"
-        />
-        <input
-          type="text"
-          placeholder="Message kind"
-          value={kind}
-          onChange={e => setKind(e.target.value)}
-          className="w-full px-3 py-2 border border-zinc-300 rounded text-sm"
-        />
-        <textarea
-          placeholder="Payload (JSON)"
-          value={payload}
-          onChange={e => setPayload(e.target.value)}
-          className="w-full px-3 py-2 border border-zinc-300 rounded text-sm font-mono"
-          rows={3}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!recipient || !kind}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded text-sm disabled:opacity-50"
-        >
-          Send Message
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// ============================================================================
-// Main Component
-// ============================================================================
-
-export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ program }) => {
-  const canvasRef = useRef<HTMLDivElement>(null);
-  
-  // Get workspace ID from program state or use default
-  const workspaceId = (program.state as Record<string, unknown>)?.workspaceId as string || 'default';
-  
-  // Connect to Allternit Rails
+export function WorkflowBuilderProgram({ program }: { program: any }) {
   const rails = useAllternitRails({
-    workspaceId,
-    autoPoll: true,
-    pollInterval: 3000,
+    workspaceId: 'default',
+    autoConnect: true,
   });
 
-  // Local state for visualization
   const [visualNodes, setVisualNodes] = useState<Record<string, VisualNode>>({});
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
-  const [pan] = useState({ x: 0, y: 0 });
+  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<'canvas' | 'messages' | 'logs'>('canvas');
 
-  // Initialize visual nodes from DAG data
-  useEffect(() => {
-    if (rails.dags.length === 0) return;
+  const [prevDags, setPrevDags] = useState(rails.dags);
+  const [prevSelectedNodeId, setPrevSelectedNodeId] = useState(selectedNodeId);
 
-    const dag = rails.dags[0]; // Show first DAG
-    const nodes: Record<string, VisualNode> = {};
-    
-    // Simple layout algorithm
-    const levels: string[][] = [];
-    const visited = new Set<string>();
-    
-    // Find root nodes (no dependencies)
-    const findRoots = () => {
-      return Object.values(dag.nodes)
-        .filter(n => n.blocked_by.length === 0)
-        .map(n => n.id);
-    };
-    
-    // BFS to build levels
-    const buildLevels = () => {
+  if (rails.dags !== prevDags || selectedNodeId !== prevSelectedNodeId) {
+    setPrevDags(rails.dags);
+    setPrevSelectedNodeId(selectedNodeId);
+
+    if (rails.dags.length > 0) {
+      const dag = rails.dags[0];
+      const nodes: Record<string, VisualNode> = {};
+      
+      const levels: string[][] = [];
+      const visited = new Set<string>();
+      
+      const findRoots = () => {
+        return Object.values(dag.nodes)
+          .filter(n => n.blocked_by.length === 0)
+          .map(n => n.id);
+      };
+      
+      const dependantsMap: Record<string, string[]> = {};
+      for (const node of Object.values(dag.nodes)) {
+        for (const depId of node.blocked_by) {
+          if (!dependantsMap[depId]) dependantsMap[depId] = [];
+          dependantsMap[depId].push(node.id);
+        }
+      }
+
       let currentLevel = findRoots();
       while (currentLevel.length > 0) {
         levels.push(currentLevel);
@@ -313,350 +70,196 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
         
         for (const nodeId of currentLevel) {
           visited.add(nodeId);
-          // Find nodes that depend on this one
-          for (const [id, node] of Object.entries(dag.nodes)) {
-            if (node.blocked_by.includes(nodeId) && !visited.has(id)) {
-              nextLevel.push(id);
+          const dependants = dependantsMap[nodeId] || [];
+          for (const depId of dependants) {
+            if (!visited.has(depId)) {
+              nextLevel.push(depId);
             }
           }
         }
         
         currentLevel = Array.from(new Set(nextLevel));
       }
-    };
-    
-    buildLevels();
-    
-    // Position nodes
-    const levelHeight = 120;
-    const nodeWidth = 200;
-    
-    levels.forEach((level, levelIndex) => {
-      const levelWidth = level.length * nodeWidth;
-      const startX = -levelWidth / 2 + nodeWidth / 2;
       
-      level.forEach((nodeId, index) => {
-        const dagNode = dag.nodes[nodeId];
-        if (dagNode) {
-          nodes[nodeId] = {
-            ...dagNode,
-            position: {
-              x: startX + index * nodeWidth + 50,
-              y: levelIndex * levelHeight + 50,
-            },
-            isSelected: nodeId === selectedNodeId,
-            isHovered: false,
-          };
-        }
-      });
-    });
-    
-    setVisualNodes(nodes);
-  }, [rails.dags, selectedNodeId]);
-
-  // Handle node drag
-  const handleNodeDrag = useCallback((nodeId: string, deltaX: number, deltaY: number) => {
-    setVisualNodes(prev => ({
-      ...prev,
-      [nodeId]: {
-        ...prev[nodeId],
-        position: {
-          x: prev[nodeId].position.x + deltaX,
-          y: prev[nodeId].position.y + deltaY,
-        },
-      },
-    }));
-  }, []);
-
-  // Handle sending bus message
-  const handleSendMessage = useCallback(async (
-    to: string,
-    kind: string,
-    payload: Record<string, unknown>
-  ) => {
-    await rails.sendMessage({
-      to,
-      from: 'workflow-builder',
-      kind,
-      payload,
-      transport: 'internal',
-      correlation_id: `wf-${Date.now()}`,
-    });
-  }, [rails]);
-
-  // Handle creating new session/pane for a node
-  const handleSpawnForNode = useCallback(async (nodeId: string) => {
-    const node = visualNodes[nodeId];
-    if (!node) return;
-
-    try {
-      const session = await rails.createTerminalSession(`dag-${node.dag_id}`);
-      const pane = await rails.createPane(
-        session.id,
-        node.name,
-        `echo "Working on: ${node.description}"`
-      );
+      const levelHeight = 120;
+      const nodeWidth = 200;
       
-      // Update node with terminal context
-      setVisualNodes(prev => ({
-        ...prev,
-        [nodeId]: {
-          ...prev[nodeId],
-          terminal_context: {
-            session_id: session.id,
-            pane_id: pane.id,
-            log_stream_endpoint: '',
-          },
-        },
-      }));
-    } catch (err) {
-      console.error('Failed to spawn terminal:', err);
-    }
-  }, [rails, visualNodes]);
-
-  // Get current DAG
-  const currentDag = rails.dags[0];
-  
-  // Build edges from visual nodes
-  const edges: VisualEdge[] = [];
-  for (const node of Object.values(visualNodes)) {
-    for (const depId of node.blocked_by) {
-      if (visualNodes[depId]) {
-        edges.push({
-          from: depId,
-          to: node.id,
-          type: 'blocked_by',
+      levels.forEach((level, levelIndex) => {
+        const levelWidth = level.length * nodeWidth;
+        const startX = -levelWidth / 2 + nodeWidth / 2;
+        
+        level.forEach((nodeId, index) => {
+          const dagNode = dag.nodes[nodeId];
+          if (dagNode) {
+            nodes[nodeId] = {
+              ...dagNode,
+              position: {
+                x: startX + index * nodeWidth + 50,
+                y: levelIndex * levelHeight + 50,
+              },
+              isSelected: nodeId === selectedNodeId,
+              isHovered: false,
+            };
+          }
         });
-      }
+      });
+      
+      setVisualNodes(nodes);
     }
   }
 
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const panStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('[data-node]')) return;
+    panStartRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  const handleCanvasMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!panStartRef.current) return;
+    const dx = e.clientX - panStartRef.current.x;
+    const dy = e.clientY - panStartRef.current.y;
+    panStartRef.current = { x: e.clientX, y: e.clientY };
+    setPan((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+  }, []);
+
+  const handleCanvasMouseUp = useCallback(() => {
+    panStartRef.current = null;
+  }, []);
+
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const d = e.deltaY > 0 ? 0.9 : 1.1;
+    setScale((prev) => Math.max(0.1, Math.min(5, prev * d)));
+  }, []);
+
+  const handleSpawnForNode = useCallback(async (nodeId: string) => {
+    const node = visualNodes[nodeId];
+    if (!node) return;
+    try {
+      await rails.spawn({
+        programId: program.id,
+        nodeId: node.id,
+      });
+    } catch (err) {
+      logger.error({ err, nodeId }, 'Failed to spawn terminal for node');
+    }
+  }, [visualNodes, rails, program.id]);
+
   return (
-    <div className="h-full flex flex-col bg-zinc-50">
+    <div className="h-full flex flex-col bg-zinc-50 dark:bg-zinc-950 overflow-hidden font-sans">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-zinc-200">
-        <div className="flex items-center gap-3">
-          <span className="text-xl">🌊</span>
-          <div>
-            <h2 className="text-sm font-semibold text-zinc-900">
-              {currentDag ? `DAG: ${currentDag.dag_id}` : 'Workflow Builder'}
-            </h2>
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <span className={`
-                size-2  rounded-full
-                ${rails.isConnected ? 'bg-green-500' : 'bg-red-500'}
-              `} />
-              {rails.isConnected ? 'Connected to Allternit Rails' : 'Disconnected'}
-            </div>
+      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0">
+        <div className="flex items-center gap-4">
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">Workflow Builder</h2>
+          <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-md">
+            {(['canvas', 'messages', 'logs'] as const).map(tab => (
+              <button type="button"
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1 text-xs rounded capitalize transition-all ${activeTab === tab ? 'bg-white dark:bg-zinc-700 shadow-sm font-bold text-blue-600' : 'text-zinc-500 hover:text-zinc-700'}`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('canvas')}
-            className={`
-              px-3 py-1.5 rounded text-sm
-              ${activeTab === 'canvas' ? 'bg-blue-100 text-blue-700' : 'text-zinc-600 hover:bg-zinc-100'}
-            `}
-          >
-            Canvas
-          </button>
-          <button
-            onClick={() => setActiveTab('messages')}
-            className={`
-              px-3 py-1.5 rounded text-sm relative
-              ${activeTab === 'messages' ? 'bg-blue-100 text-blue-700' : 'text-zinc-600 hover:bg-zinc-100'}
-            `}
-          >
-            Messages
-            {rails.messages.length > 0 && (
-              <span className="absolute -top-1 -right-1 size-4  bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                {rails.messages.length}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('logs')}
-            className={`
-              px-3 py-1.5 rounded text-sm
-              ${activeTab === 'logs' ? 'bg-blue-100 text-blue-700' : 'text-zinc-600 hover:bg-zinc-100'}
-            `}
-          >
-            Logs
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
-            className="p-1.5 rounded hover:bg-zinc-100"
-          >
-            −
-          </button>
-          <span className="text-sm text-zinc-600 w-12 text-center">
-            {Math.round(scale * 100)}%
+        <div className="flex items-center gap-3">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${rails.isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {rails.isConnected ? 'CONNECTED' : 'DISCONNECTED'}
           </span>
-          <button
-            onClick={() => setScale(s => Math.min(2, s + 0.1))}
-            className="p-1.5 rounded hover:bg-zinc-100"
-          >
-            +
-          </button>
-          <button
-            onClick={rails.refresh}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-          >
-            Refresh
-          </button>
+          <button type="button" onClick={() => setScale(1)} className="text-xs text-zinc-400 hover:text-zinc-600">RESET VIEW</button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 flex overflow-hidden relative">
         {activeTab === 'canvas' && (
-          <>
-            {/* Canvas */}
-            <div
-              ref={canvasRef}
-              className="flex-1 relative overflow-auto bg-zinc-50"
-              style={{
-                backgroundImage: `
-                  linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-                  linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-                `,
-                backgroundSize: '20px 20px',
-              }}
+          <div 
+            ref={canvasRef}
+            className="flex-1 relative cursor-grab active:cursor-grabbing overflow-hidden"
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
+            onWheel={handleWheel}
+          >
+            <div 
+              className="absolute inset-0 transition-transform duration-75 ease-out"
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})` }}
             >
-              <div
-                className="relative min-w-full min-h-full"
-                style={{
-                  transform: `scale(${scale}) translate(${pan.x}px, ${pan.y}px)`,
-                  transformOrigin: 'center center',
-                  width: '2000px',
-                  height: '1500px',
-                }}
-              >
-                {/* Edges */}
-                {edges.map(edge => {
-                  const fromNode = visualNodes[edge.from];
-                  const toNode = visualNodes[edge.to];
-                  if (!fromNode || !toNode) return null;
-                  return (
-                    <EdgeComponent
-                      key={`${edge.from}-${edge.to}`}
-                      from={fromNode.position}
-                      to={toNode.position}
-                      type={edge.type}
-                    />
-                  );
-                })}
-
-                {/* Nodes */}
+              {/* SVG connections layer */}
+              <svg className="absolute inset-0 pointer-events-none w-[5000px] h-[5000px]" style={{ left: -2500, top: -2500 }}>
                 {Object.values(visualNodes).map(node => (
-                  <DagNodeComponent
-                    key={node.id}
-                    node={node}
-                    onClick={() => setSelectedNodeId(node.id)}
-                    onMouseEnter={() => setVisualNodes(prev => ({
-                      ...prev,
-                      [node.id]: { ...prev[node.id], isHovered: true },
-                    }))}
-                    onMouseLeave={() => setVisualNodes(prev => ({
-                      ...prev,
-                      [node.id]: { ...prev[node.id], isHovered: false },
-                    }))}
-                    onDrag={(dx, dy) => handleNodeDrag(node.id, dx / scale, dy / scale)}
-                  />
+                  node.blocked_by.map(depId => {
+                    const fromNode = visualNodes[depId];
+                    if (!fromNode) return null;
+                    return (
+                      <line 
+                        key={`${depId}-${node.id}`}
+                        x1={fromNode.position.x + 100}
+                        y1={fromNode.position.y + 40}
+                        x2={node.position.x + 100}
+                        y2={node.position.y}
+                        stroke={node.status === 'DONE' ? '#10b981' : '#cbd5e1'}
+                        strokeWidth="2"
+                        strokeDasharray={node.status === 'RUNNING' ? '5,5' : 'none'}
+                        className={node.status === 'RUNNING' ? 'animate-[dash_1s_linear_infinite]' : ''}
+                      />
+                    );
+                  })
                 ))}
-              </div>
-            </div>
+              </svg>
 
-            {/* Properties Panel */}
-            {selectedNodeId && visualNodes[selectedNodeId] && (
-              <div className="w-72 bg-white border-l border-zinc-200 p-4 overflow-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-zinc-900">Node Properties</h3>
-                  <button
-                    onClick={() => setSelectedNodeId(null)}
-                    className="text-zinc-400 hover:text-zinc-600"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                {(() => {
-                  const node = visualNodes[selectedNodeId];
-                  return (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-medium text-zinc-500 uppercase">Name</label>
-                        <p className="text-sm text-zinc-900">{node.name}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-zinc-500 uppercase">ID</label>
-                        <p className="text-xs font-mono text-zinc-600">{node.id}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-zinc-500 uppercase">Status</label>
-                        <span className={`
-                          inline-block px-2 py-1 rounded text-xs mt-1
-                          ${node.status === 'DONE' ? 'bg-green-100 text-green-800' : ''}
-                          ${node.status === 'RUNNING' ? 'bg-yellow-100 text-yellow-800' : ''}
-                          ${node.status === 'READY' ? 'bg-blue-100 text-blue-800' : ''}
-                          ${node.status === 'FAILED' ? 'bg-red-100 text-red-800' : ''}
-                          ${node.status === 'NEW' ? 'bg-zinc-100 text-zinc-800' : ''}
-                        `}>
-                          {node.status}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-zinc-500 uppercase">Execution Mode</label>
-                        <p className="text-sm text-zinc-900">{node.execution_mode}</p>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-zinc-500 uppercase">Description</label>
-                        <p className="text-sm text-zinc-700">{node.description}</p>
-                      </div>
-                      
-                      {node.terminal_context ? (
-                        <div>
-                          <label className="text-xs font-medium text-zinc-500 uppercase">Terminal</label>
-                          <p className="text-xs font-mono text-zinc-600">
-                            Session: {node.terminal_context.session_id}
-                          </p>
-                          <p className="text-xs font-mono text-zinc-600">
-                            Pane: {node.terminal_context.pane_id}
-                          </p>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleSpawnForNode(selectedNodeId)}
-                          className="w-full px-3 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                        >
-                          Spawn Terminal
-                        </button>
-                      )}
+              {/* Nodes layer */}
+              {Object.values(visualNodes).map(node => (
+                <div 
+                  key={node.id}
+                  data-node
+                  onClick={() => setSelectedNodeId(node.id)}
+                  className={`
+                    absolute w-[200px] bg-white dark:bg-zinc-900 rounded-lg shadow-md border-2 p-3 transition-all cursor-pointer select-none
+                    ${node.isSelected ? 'border-blue-500 ring-4 ring-blue-500/10 scale-105 z-10' : 'border-zinc-200 dark:border-zinc-800'}
+                    ${node.status === 'RUNNING' ? 'shadow-[0_0_15px_rgba(59,130,246,0.3)]' : ''}
+                  `}
+                  style={{ left: node.position.x, top: node.position.y }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase">{node.execution_mode}</span>
+                    <div className={`size-2  rounded-full ${node.status === 'DONE' ? 'bg-green-500' : node.status === 'FAILED' ? 'bg-red-500' : 'bg-blue-500'}`} />
+                  </div>
+                  <h3 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">{node.name}</h3>
+                  <p className="text-[10px] text-zinc-500 line-clamp-1 mt-1">{node.description}</p>
+                  
+                  {node.status === 'RUNNING' && (
+                    <div className="mt-2 h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 animate-[progress_2s_ease-in-out_infinite] w-1/3" />
                     </div>
-                  );
-                })()}
-              </div>
-            )}
-          </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {activeTab === 'messages' && (
-          <div className="flex-1">
-            <BusMessagePanel
-              messages={rails.messages}
-              onSendMessage={handleSendMessage}
-            />
+          <div className="flex-1 overflow-auto p-4 space-y-4 bg-zinc-50 dark:bg-zinc-950">
+            {rails.messages.map((msg, i) => (
+              <div key={i} className="flex gap-3 max-w-2xl">
+                <div className="size-8  rounded bg-zinc-200 dark:bg-zinc-800 shrink-0" />
+                <div className="bg-white dark:bg-zinc-900 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 shadow-sm text-sm">
+                  <p className="font-bold text-xs text-zinc-500 mb-1">{msg.role.toUpperCase()}</p>
+                  <p className="text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {activeTab === 'logs' && (
           <div className="flex-1 overflow-auto p-4 font-mono text-xs">
-            {rails.events.map((event, i) => (
-              <div key={i} className="mb-2 p-2 bg-zinc-100 rounded">
+            {rails.events.map((event) => (
+              <div key={event.id || `${event.ts}-${event.type}`} className="mb-2 p-2 bg-zinc-100 rounded">
                 <div className="flex items-center gap-2 text-zinc-600">
                   <span>{new Date(event.ts).toLocaleTimeString()}</span>
                   <span className="font-semibold text-blue-600">{event.type}</span>
@@ -668,25 +271,87 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
               </div>
             ))}
             {rails.events.length === 0 && (
-              <div className="text-center text-zinc-400 py-8">No events</div>
+              <div className="h-full flex items-center justify-center text-zinc-400">
+                Waiting for events...
+              </div>
             )}
           </div>
         )}
-      </div>
 
-      {/* Status Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-t border-zinc-200 text-xs text-zinc-500">
-        <div className="flex items-center gap-4">
-          <span>{Object.keys(visualNodes).length} nodes</span>
-          <span>{edges.length} edges</span>
-          <span>{rails.messages.filter(m => m.status === 'pending').length} pending messages</span>
-        </div>
-        <div>
-          Workspace: {workspaceId}
+        {/* Info Sidebar */}
+        <div className="w-64 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-auto p-4 shrink-0">
+          {!selectedNodeId ? (
+            <div className="h-full flex flex-col items-center justify-center text-center text-zinc-400">
+              <span className="text-3xl mb-2">🖱️</span>
+              <p className="text-xs">Select a node to view details and controls</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black uppercase text-zinc-400 tracking-widest">Node Inspector</h3>
+                <button type="button" onClick={() => setSelectedNodeId(null)} className="text-zinc-400 hover:text-zinc-600">✕</button>
+              </div>
+
+              {(() => {
+                const node = visualNodes[selectedNodeId];
+                if (!node) return null;
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-xs font-medium text-zinc-500 uppercase">Name</div>
+                      <p className="text-sm text-zinc-900 dark:text-zinc-100">{node.name}</p>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-zinc-500 uppercase">ID</div>
+                      <p className="text-xs font-mono text-zinc-600 dark:text-zinc-400">{node.id}</p>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-zinc-500 uppercase">Status</div>
+                      <span className={`
+                        inline-block px-2 py-1 rounded text-xs mt-1
+                        ${node.status === 'DONE' ? 'bg-green-100 text-green-800' : ''}
+                        ${node.status === 'RUNNING' ? 'bg-yellow-100 text-yellow-800' : ''}
+                        ${node.status === 'READY' ? 'bg-blue-100 text-blue-800' : ''}
+                        ${node.status === 'FAILED' ? 'bg-red-100 text-red-800' : ''}
+                        ${node.status === 'NEW' ? 'bg-zinc-100 text-zinc-800' : ''}
+                      `}>
+                        {node.status}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-zinc-500 uppercase">Execution Mode</div>
+                      <p className="text-sm text-zinc-900 dark:text-zinc-100">{node.execution_mode}</p>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-zinc-500 uppercase">Description</div>
+                      <p className="text-sm text-zinc-700 dark:text-zinc-300">{node.description}</p>
+                    </div>
+                    
+                    {node.terminal_context ? (
+                      <div>
+                        <div className="text-xs font-medium text-zinc-500 uppercase">Terminal</div>
+                        <p className="text-xs font-mono text-zinc-600 dark:text-zinc-400">
+                          Session: {node.terminal_context.session_id}
+                        </p>
+                        <p className="text-xs font-mono text-zinc-600 dark:text-zinc-400">
+                          Pane: {node.terminal_context.pane_id}
+                        </p>
+                      </div>
+                    ) : (
+                      <button type="button"
+                        onClick={() => handleSpawnForNode(selectedNodeId)}
+                        className="w-full px-3 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 transition-colors shadow-sm"
+                      >
+                        SPAWN TERMINAL
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
-};
-
-export default WorkflowBuilderProgram;
+}

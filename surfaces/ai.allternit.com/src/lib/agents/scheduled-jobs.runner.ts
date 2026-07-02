@@ -168,7 +168,7 @@ async function pollJobs(): Promise<void> {
     }
 
     if (jobsToRun.length > 0) {
-      console.debug(`[JobRunner] Executed ${jobsToRun.length} scheduled jobs`);
+      logger.debug(`Executed ${jobsToRun.length} scheduled jobs`);
     }
   } catch (error) {
     console.error("[JobRunner] Poll failed:", error);
@@ -201,7 +201,7 @@ async function executeJob(job: ScheduledJobConfig): Promise<void> {
   runnerState.activeExecutions.set(jobId, execution);
 
   try {
-    console.debug(`[JobRunner] Executing job: ${job.name}`);
+    logger.debug(`Executing job: ${job.name}`);
 
     // Execute the job via the service
     const result = await executeScheduledJob(job);
@@ -239,7 +239,7 @@ async function executeJob(job: ScheduledJobConfig): Promise<void> {
 // ============================================================================
 
 function handleJobSuccess(job: ScheduledJobConfig, result: JobExecution): void {
-  console.debug(`[JobRunner] Job succeeded: ${job.name}`);
+  logger.debug(`Job succeeded: ${job.name}`);
 
   if (runnerState.enableNotifications && job.notifyOnSuccess) {
     sendNotification(`✅ ${job.name}`, `Scheduled job completed successfully`, "success");
@@ -247,7 +247,7 @@ function handleJobSuccess(job: ScheduledJobConfig, result: JobExecution): void {
 }
 
 function handleJobError(job: ScheduledJobConfig, error: string): void {
-  console.error(`[JobRunner] Job failed: ${job.name}`, error);
+  logger.error({ err: error }, 'Job failed: ${job.name}');
 
   // Track error
   runnerState.recentErrors.unshift({
@@ -349,6 +349,10 @@ function calculateNextRun(schedule: string, lastRunAt?: string): Date {
 // ============================================================================
 
 import { useState, useEffect, useCallback } from "react";
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ScheduledJobs.runner');
 
 // Execution history (in-memory only - backend should provide this)
 const executionHistory: JobExecution[] = [];

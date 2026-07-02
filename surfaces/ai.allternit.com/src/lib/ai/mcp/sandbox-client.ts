@@ -9,6 +9,10 @@
 
 import type { McpAppResourceCsp, McpAppResourcePermissions } from "./apps";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('SandboxClient');
+
 const SANDBOX_API_ROUTE = "/api/mcp/sandbox";
 
 export interface SandboxConfig {

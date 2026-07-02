@@ -78,7 +78,7 @@ export function CodeFocusView({ tile, workspace, onExit }: CodeFocusViewProps) {
           </span>
         </div>
 
-        <button
+        <button type="button"
           onClick={onExit}
           title="Back to canvas"
           style={{

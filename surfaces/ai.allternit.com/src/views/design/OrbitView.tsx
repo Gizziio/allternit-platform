@@ -133,6 +133,13 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
   const pendingDigestId = useRef<string | null>(null);
   const lastMessageCount = useRef(messages.length);
 
+  // Inline state adjustment for projectName change
+  const [prevProjectName, setPrevProjectName] = useState(projectName);
+  if (projectName !== prevProjectName) {
+    setPrevProjectName(projectName);
+    setConfig((prev) => ({ ...prev, projectName }));
+  }
+
   // Backfill pending digest HTML when the agent responds with an artifact
   useEffect(() => {
     if (!pendingDigestId.current) return;
@@ -152,13 +159,9 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
     });
   }, [messages, projectName]);
 
-  useEffect(() => {
-    setConfig((prev) => ({ ...prev, projectName }));
-  }, [projectName]);
-
   // Auto-generate scheduler
   useOrbitScheduler(async () => {
-    if (!sessionSendMessage || config.sources.length === 0) return;
+if (!sessionSendMessage || config.sources.length === 0) return;
     setGenerating(true);
     setFetchError(null);
     try {
@@ -210,7 +213,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
   };
 
   const handleGenerate = useCallback(async () => {
-    if (!sessionSendMessage || config.sources.length === 0) return;
+if (!sessionSendMessage || config.sources.length === 0) return;
     setGenerating(true);
     setFetchError(null);
 
@@ -287,7 +290,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
             title="Auto-generate daily digest at scheduled time"
           >
             <Bell size={12} color={schedule.enabled ? "var(--accent-primary)" : "var(--text-tertiary)"} />
-            <button
+            <button type="button"
               onClick={() => toggleSchedule(!schedule.enabled)}
               style={{
                 fontSize: 12,
@@ -304,8 +307,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
             {schedule.enabled && (
               <>
                 <span style={{ color: "var(--border-subtle)", fontSize: 12 }}>|</span>
-                <input
-                  type="time"
+                <input aria-label="Input" type="time"
                   value={`${String(schedule.hour).padStart(2, "0")}:${String(schedule.minute).padStart(2, "0")}`}
                   onChange={(e) => {
                     const [h, m] = e.target.value.split(":").map(Number);
@@ -325,7 +327,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
               </>
             )}
           </div>
-          <button
+          <button type="button"
             onClick={() => setShowSetup(true)}
             style={{
               display: "flex",
@@ -343,7 +345,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
           >
             <Key size={12} /> Connections
           </button>
-          <button
+          <button type="button"
             onClick={handleGenerate}
             disabled={generating || config.sources.length === 0 || !sessionSendMessage}
             style={{
@@ -390,7 +392,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
         {(["github", "linear", "notion", "slack"] as const).map((s) => {
           const connected = connectedApps.has(s);
           return (
-            <button
+            <button type="button"
               key={s}
               onClick={() => connected && toggleSource(s)}
               disabled={!connected}
@@ -463,7 +465,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
       {/* Digests */}
       {selectedDigest ? (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
-          <button
+          <button type="button"
             onClick={() => setSelectedDigest(null)}
             style={{
               alignSelf: "flex-start",
@@ -501,7 +503,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
             </div>
           ) : (
             digests.map((d) => (
-              <button
+              <button type="button"
                 key={d.id}
                 onClick={() => setSelectedDigest(d)}
                 style={{

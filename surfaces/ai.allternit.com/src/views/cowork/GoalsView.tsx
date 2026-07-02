@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Target,
   Plus,
 } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
+import { useTaskStore } from './useTaskStore';
 
 interface Goal {
   id: string;
@@ -17,49 +18,25 @@ interface Goal {
 }
 
 const GoalsView: React.FC = () => {
-  // Mock goals data
-  const goals: Goal[] = [
-    {
-      id: '1',
-      title: 'Q1 Product Launch',
-      description: 'Complete development and launch of new product features',
-      progress: 85,
-      tasksCompleted: 17,
-      tasksTotal: 20,
-      status: 'active',
-      dueDate: 'Mar 31, 2026',
-    },
-    {
-      id: '2',
-      title: 'Market Research Initiative',
-      description: 'Conduct comprehensive market analysis and competitor review',
-      progress: 45,
-      tasksCompleted: 9,
-      tasksTotal: 20,
-      status: 'active',
-      dueDate: 'Apr 15, 2026',
-    },
-    {
-      id: '3',
-      title: 'Q4 Performance Review',
-      description: 'Complete all performance evaluations and feedback sessions',
-      progress: 100,
-      tasksCompleted: 15,
-      tasksTotal: 15,
-      status: 'completed',
-      dueDate: 'Jan 31, 2026',
-    },
-    {
-      id: '4',
-      title: 'Infrastructure Optimization',
-      description: 'Reduce system latency and improve resource utilization',
-      progress: 30,
-      tasksCompleted: 3,
-      tasksTotal: 10,
-      status: 'paused',
-      dueDate: 'May 30, 2026',
-    },
-  ];
+  const { tasks, fetchTasks } = useTaskStore();
+  const [showForm, setShowForm] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // Map real tasks from the database into Goals format
+  const goals: Goal[] = tasks.map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description || 'Task created via Allternit / Gizzi',
+    progress: task.status === 'completed' ? 100 : task.status === 'in_progress' ? 50 : 0,
+    tasksCompleted: task.status === 'completed' ? 1 : 0,
+    tasksTotal: 1,
+    status: task.status === 'completed' ? 'completed' : task.status === 'in_progress' ? 'active' : 'paused',
+    dueDate: task.deadline || 'No deadline set',
+  }));
 
   const getStatusColor = (status: Goal['status']): string => {
     switch (status) {
@@ -108,7 +85,8 @@ const GoalsView: React.FC = () => {
             </p>
           </div>
         </div>
-        <button
+        <button type="button"
+          onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors"
           style={{
             backgroundColor: 'var(--accent-primary)',
@@ -125,6 +103,47 @@ const GoalsView: React.FC = () => {
           New Goal
         </button>
       </div>
+
+      {showForm && (
+        <GlassSurface className="p-4 rounded-lg flex flex-col gap-3">
+          <h3 style={{ color: 'var(--text-primary)' }} className="text-sm font-semibold">Create New Goal</h3>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (newTitle.trim()) {
+                useTaskStore.getState().createTask(newTitle, 'agent');
+                setNewTitle('');
+                setShowForm(false);
+              }
+            }}
+            className="flex gap-2"
+          >
+            <input
+              type="text"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              placeholder="Goal title..."
+              className="flex-1 px-3 py-2 rounded-lg text-sm border focus:outline-none"
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                borderColor: 'var(--border-primary)',
+              }}
+              required
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: 'var(--accent-primary)',
+                color: 'var(--ui-text-inverse)',
+              }}
+            >
+              Create
+            </button>
+          </form>
+        </GlassSurface>
+      )}
 
       {/* Goals List */}
       <div className="flex flex-col gap-4">

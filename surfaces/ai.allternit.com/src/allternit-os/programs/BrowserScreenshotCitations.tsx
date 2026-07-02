@@ -1,573 +1,279 @@
-/**
- * allternit Super-Agent OS - Browser Screenshot Citations
- * 
- * Production-ready citation system with browser automation:
- * - Real webpage screenshots via browser-use agent
- * - Visual evidence in research documents
- * - Screenshot annotation and highlighting
- * - Citation verification and archiving
- */
+import React, { useCallback, useRef, useState } from "react";
 
-import * as React from 'react';
-const { useState, useCallback, useRef } = React;
+"use client";
+import { useToast } from '@/hooks/use-toast';
 import { useSidecarStore } from '../stores/useSidecarStore';
-import type { ResearchDocEvidence, ResearchDocCitation, ResearchDocState } from '../types/programs';
+import type { AllternitProgram, ResearchDocEvidence, ResearchDocCitation, ResearchDocState } from '../types/programs';
+import { ProgramErrorBoundary } from '../components/ProgramErrorBoundary';
 
-// ============================================================================
-// Types
-// ============================================================================
+// Modularized Citation Manager components
+import { browserScreenshotService } from './citation-manager/BrowserScreenshotService';
+import { AnnotationCanvas } from './citation-manager/AnnotationCanvas';
+import type { BrowserScreenshotOptions, ScreenshotResult, Annotation, AnnotatedScreenshot } from './citation-manager/citation-manager.types';
 
-interface BrowserScreenshotOptions {
-  url: string;
-  fullPage?: boolean;
-  selector?: string;
-  width?: number;
-  height?: number;
-  waitFor?: number;
-  hideSelectors?: string[]; // Elements to hide (cookies banners, etc)
+// Icons
+import {
+  Camera,
+  Link as LinkIcon,
+  Trash,
+  CheckCircle,
+  Warning,
+  Plus,
+  X,
+  NotePencil,
+  Eye,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
+
+interface BrowserScreenshotCitationsProps {
+  program: AllternitProgram;
 }
 
-interface ScreenshotResult {
-  id: string;
-  url: string;
-  screenshot: string; // base64 data URL or blob URL
-  timestamp: string;
-  title?: string;
-  selector?: string;
-  metadata?: {
-    viewport: { width: number; height: number };
-    userAgent: string;
-    captureTime: number;
-  };
-}
-
-interface Annotation {
-  id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  text: string;
-  color: string;
-}
-
-interface AnnotatedScreenshot extends ScreenshotResult {
-  annotations: Annotation[];
-}
-
-// ============================================================================
-// Browser Screenshot Service
-// ============================================================================
-
-class BrowserScreenshotService {
-  isCaptureAvailable(): boolean {
-    return typeof window !== 'undefined' && !!window.electron?.browser;
-  }
-
-  async capture(options: BrowserScreenshotOptions): Promise<ScreenshotResult> {
-    if (!this.isCaptureAvailable()) {
-      throw new Error('Browser screenshot capture is unavailable. Start the desktop browser bridge.');
-    }
-    return this.captureViaBrowserUse(options);
-  }
-
-  private async captureViaBrowserUse(options: BrowserScreenshotOptions): Promise<ScreenshotResult> {
-    if (!window.electron?.browser) {
-      throw new Error('Browser automation not available');
-    }
-
-    const result = await window.electron.browser.capture({
-      url: options.url,
-      fullPage: options.fullPage,
-      selector: options.selector,
-      viewport: options.width && options.height 
-        ? { width: options.width, height: options.height }
-        : undefined,
-      hideSelectors: options.hideSelectors,
-    });
-
-    return {
-      id: `screenshot-${Date.now()}`,
-      url: options.url,
-      screenshot: result.screenshot, // base64 from browser-use
-      timestamp: new Date().toISOString(),
-      title: result.title,
-      selector: options.selector,
-      metadata: {
-        viewport: result.viewport,
-        userAgent: result.userAgent,
-        captureTime: result.captureTime,
-      },
-    };
-  }
-
-  async verifyUrl(url: string): Promise<{ accessible: boolean; statusCode?: number; error?: string }> {
-    if (!this.isCaptureAvailable()) {
-      return {
-        accessible: false,
-        error: 'Browser verification is unavailable. Start the desktop browser bridge.',
-      };
-    }
-    return window.electron!.browser.verify(url);
-  }
-}
-
-// ============================================================================
-// Annotation Canvas Component
-// ============================================================================
-
-const AnnotationCanvas: React.FC<{
-  screenshot: string;
-  annotations: Annotation[];
-  onAddAnnotation: (annotation: Annotation) => void;
-  readOnly?: boolean;
-}> = ({ screenshot, annotations, onAddAnnotation, readOnly }) => {
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [currentRect, setCurrentRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (readOnly) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    
-    setIsDrawing(true);
-    setStartPos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || readOnly) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    const currentX = e.clientX - rect.left;
-    const currentY = e.clientY - rect.top;
-
-    setCurrentRect({
-      x: Math.min(startPos.x, currentX),
-      y: Math.min(startPos.y, currentY),
-      width: Math.abs(currentX - startPos.x),
-      height: Math.abs(currentY - startPos.y),
-    });
-  };
-
-  const handleMouseUp = () => {
-    if (!isDrawing || !currentRect || readOnly) return;
-    
-    if (currentRect.width > 20 && currentRect.height > 20) {
-      const annotation: Annotation = {
-        id: `anno-${Date.now()}`,
-        x: currentRect.x,
-        y: currentRect.y,
-        width: currentRect.width,
-        height: currentRect.height,
-        text: '',
-        color: '#ffeb3b',
-      };
-      onAddAnnotation(annotation);
-    }
-
-    setIsDrawing(false);
-    setCurrentRect(null);
-  };
-
-  return (
-    <div 
-      ref={canvasRef}
-      className="relative select-none"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
-      <img 
-        src={screenshot} 
-        alt="Screenshot"
-        className="w-full"
-        draggable={false}
-      />
-      
-      {/* Existing annotations */}
-      {annotations.map(anno => (
-        <div
-          key={anno.id}
-          className="absolute border-2 cursor-pointer group"
-          style={{
-            left: anno.x,
-            top: anno.y,
-            width: anno.width,
-            height: anno.height,
-            borderColor: anno.color,
-            backgroundColor: `${anno.color}40`,
-          }}
-          title={anno.text}
-        >
-          {anno.text && (
-            <div className="absolute -top-6 left-0 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
-              {anno.text}
-            </div>
-          )}
-        </div>
-      ))}
-      
-      {/* Current drawing rectangle */}
-      {currentRect && (
-        <div
-          className="absolute border-2 border-dashed border-blue-500 bg-blue-500/20"
-          style={{
-            left: currentRect.x,
-            top: currentRect.y,
-            width: currentRect.width,
-            height: currentRect.height,
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
-// ============================================================================
-// Citation Manager Component
-// ============================================================================
-
-interface CitationManagerProps {
-  programId: string;
-}
-
-export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) => {
-  const store = useSidecarStore();
-  const screenshotService = useRef(new BrowserScreenshotService());
-  const captureAvailable = screenshotService.current.isCaptureAvailable();
+export const BrowserScreenshotCitations: React.FC<BrowserScreenshotCitationsProps> = ({ program }) => {
+  const { addToast } = useToast();
+  const { updateProgramState } = useSidecarStore();
+  const state = program.state as ResearchDocState;
   
-  const [activeTab, setActiveTab] = useState<'capture' | 'library' | 'verify'>('capture');
   const [url, setUrl] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
-  const [captureProgress, setCaptureProgress] = useState(0);
-  const [capturedScreenshots, setCapturedScreenshots] = useState<ScreenshotResult[]>([]);
-  const [selectedScreenshot, setSelectedScreenshot] = useState<ScreenshotResult | null>(null);
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [annotationMode, setAnnotationMode] = useState(false);
-  const [fullPage, setFullPage] = useState(true);
-  const [hideCookieBanners, setHideCookieBanners] = useState(true);
-  const [verificationResults, setVerificationResults] = useState<Record<string, { accessible: boolean; checking: boolean }>>({});
+  const [currentScreenshot, setCurrentScreenshot] = useState<AnnotatedScreenshot | null>(null);
+  const [showCitationList, setShowCitationList] = useState(true);
+
+  const citations = state?.citations || [];
+  const evidence = state?.evidence || [];
 
   const handleCapture = useCallback(async () => {
-    if (!url) return;
-    
+    if (!url.trim()) return;
     setIsCapturing(true);
-    setCaptureProgress(0);
-    
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setCaptureProgress(p => Math.min(90, p + 10));
-    }, 200);
-    
     try {
-      const screenshot = await screenshotService.current.capture({
-        url,
-        fullPage,
-        hideSelectors: hideCookieBanners ? ['[class*="cookie"]', '[id*="cookie"]', '[class*="consent"]'] : undefined,
-      });
-      
-      clearInterval(progressInterval);
-      setCaptureProgress(100);
-      
-      setCapturedScreenshots(prev => [screenshot, ...prev]);
-      setSelectedScreenshot(screenshot);
-      setAnnotations([]);
-      
-      // Add as evidence to research document
-      const evidence: ResearchDocEvidence = {
-        id: screenshot.id,
-        type: 'screenshot',
-        src: screenshot.screenshot,
-        caption: `Screenshot of ${screenshot.title || url}`,
-        timestamp: screenshot.timestamp,
-        sourceUrl: screenshot.url,
-      };
-      
-      store.updateProgramState<ResearchDocState>(programId, (prev) => ({
-        ...prev,
-        evidence: [...(prev.evidence || []), evidence],
-      }));
-      
-      // Reset progress after a moment
-      setTimeout(() => setCaptureProgress(0), 1000);
-    } catch (error) {
-      console.error('Failed to capture screenshot:', error);
-      alert(`Failed to capture: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const result = await browserScreenshotService.capture({ url: url.trim(), fullPage: false });
+      setCurrentScreenshot({ ...result, annotations: [] });
+      addToast({ title: 'Screenshot captured', type: 'success' });
+    } catch (err: any) {
+      addToast({ title: 'Capture failed', description: err.message, type: 'error' });
     } finally {
-      clearInterval(progressInterval);
       setIsCapturing(false);
     }
-  }, [url, fullPage, hideCookieBanners, programId, store]);
+  }, [url, addToast]);
 
-  const handleAddAnnotation = useCallback((annotation: Annotation) => {
-    const text = prompt('Annotation text (optional):');
-    setAnnotations(prev => [...prev, { ...annotation, text: text || '' }]);
-  }, []);
+  const handleAddAnnotation = (anno: Annotation) => {
+    if (!currentScreenshot) return;
+    setCurrentScreenshot({
+      ...currentScreenshot,
+      annotations: [...currentScreenshot.annotations, anno],
+    });
+  };
 
-  const createCitation = useCallback((screenshot: ScreenshotResult) => {
-    const citation: ResearchDocCitation = {
-      id: `citation-${Date.now()}`,
-      number: 0,
-      source: screenshot.title || screenshot.url,
-      url: screenshot.url,
-      snippet: `Visual evidence captured on ${new Date(screenshot.timestamp).toLocaleDateString()}${annotations.length > 0 ? ` with ${annotations.length} annotation(s)` : ''}`,
-      timestamp: screenshot.timestamp,
+  const handleRemoveAnnotation = (id: string) => {
+    if (!currentScreenshot) return;
+    setCurrentScreenshot({
+      ...currentScreenshot,
+      annotations: currentScreenshot.annotations.filter(a => a.id !== id),
+    });
+  };
+
+  const handleSaveCitation = useCallback(() => {
+    if (!currentScreenshot) return;
+
+    const newEvidence: ResearchDocEvidence = {
+      id: `ev-${Date.now()}`,
+      type: 'screenshot',
+      src: currentScreenshot.screenshot,
+      caption: currentScreenshot.title || 'Browser Screenshot',
+      sourceUrl: currentScreenshot.url,
+      timestamp: currentScreenshot.timestamp,
     };
 
-    store.updateProgramState<ResearchDocState>(programId, (prev) => ({
-      ...prev,
-      citations: [...(prev.citations || []), citation],
-    }));
-    
-    alert('Citation added to document!');
-  }, [annotations, programId, store]);
+    const newCitation: ResearchDocCitation = {
+      id: `cit-${Date.now()}`,
+      number: citations.length + 1,
+      source: currentScreenshot.title || new URL(currentScreenshot.url).hostname,
+      url: currentScreenshot.url,
+      timestamp: currentScreenshot.timestamp,
+      snippet: currentScreenshot.annotations[0]?.text || 'Visual evidence from webpage',
+    };
 
-  const verifyUrl = useCallback(async (screenshot: ScreenshotResult) => {
-    setVerificationResults(prev => ({
+    updateProgramState<ResearchDocState>(program.id, (prev) => ({
       ...prev,
-      [screenshot.id]: { accessible: false, checking: true },
+      evidence: [...(prev.evidence || []), newEvidence],
+      citations: [...(prev.citations || []), newCitation],
     }));
-    
-    const result = await screenshotService.current.verifyUrl(screenshot.url);
-    
-    setVerificationResults(prev => ({
-      ...prev,
-      [screenshot.id]: { accessible: result.accessible, checking: false },
-    }));
-  }, []);
+
+    setCurrentScreenshot(null);
+    setUrl('');
+    addToast({ title: 'Citation saved to document', type: 'success' });
+  }, [currentScreenshot, citations.length, program.id, updateProgramState, addToast]);
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-zinc-900">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2">
-          <span className="text-xl">📸</span>
-          <h2 className="text-lg font-semibold">Citation Manager</h2>
+          <span className="text-xl">🔖</span>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Citation Manager</h2>
         </div>
-        <div className="flex gap-2">
-          {(['capture', 'library', 'verify'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 rounded-lg text-sm ${
-                activeTab === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
-              }`}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
-        </div>
+        <button type="button"
+          onClick={() => setShowCitationList(!showCitationList)}
+          className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"
+        >
+          {showCitationList ? <X size={20} /> : <Eye size={20} />}
+        </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-4">
-        {activeTab === 'capture' && (
-          <div className="space-y-4">
-            {/* URL Input */}
-            {!captureAvailable && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
-                Browser screenshot capture is unavailable in this environment. Start the desktop browser bridge to capture citation evidence.
-              </div>
-            )}
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={url}
-                onChange={e => setUrl(e.target.value)}
-                placeholder="https://example.com/article"
-                className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800"
-              />
-              <button
-                onClick={handleCapture}
-                disabled={isCapturing || !url || !captureAvailable}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
-              >
-                {isCapturing ? (
-                  <>
-                    <span className="size-4  border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Capturing...
-                  </>
-                ) : (
-                  <>
-                    <span>📸</span> Capture
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Progress bar */}
-            {isCapturing && captureProgress > 0 && (
-              <div className="w-full h-2 bg-zinc-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-blue-600 transition-all duration-300"
-                  style={{ width: `${captureProgress}%` }}
-                />
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="rounded"
-                  checked={fullPage}
-                  onChange={e => setFullPage(e.target.checked)}
-                />
-                Full page screenshot
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  className="rounded"
-                  checked={hideCookieBanners}
-                  onChange={e => setHideCookieBanners(e.target.checked)}
-                />
-                Hide cookie banners
-              </label>
-            </div>
-
-            {/* Preview */}
-            {selectedScreenshot && (
-              <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
-                  <div>
-                    <span className="font-medium">{selectedScreenshot.title}</span>
-                    <span className="text-xs text-zinc-500 ml-2">
-                      {new Date(selectedScreenshot.timestamp).toLocaleTimeString()}
-                    </span>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Main Workspace */}
+        <div className="flex-1 flex flex-col overflow-y-auto p-6">
+          <ProgramErrorBoundary programName="Citation Manager">
+            {!currentScreenshot ? (
+              <div className="max-w-xl mx-auto w-full space-y-8 py-12">
+                <div className="text-center">
+                  <div className="size-16 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Camera size={32} weight="duotone" />
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setAnnotationMode(!annotationMode)}
-                      className={`px-3 py-1 text-sm rounded ${
-                        annotationMode ? 'bg-blue-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700'
-                      }`}
-                    >
-                      ✏️ Annotate{annotations.length > 0 && ` (${annotations.length})`}
-                    </button>
-                    <button
-                      onClick={() => createCitation(selectedScreenshot)}
-                      className="px-3 py-1 text-sm bg-green-600 text-white rounded"
-                    >
-                      ➕ Add Citation
-                    </button>
+                  <h3 className="text-xl font-semibold mb-2">Capture Visual Evidence</h3>
+                  <p className="text-zinc-500">Enter a URL to capture a verified screenshot and add it as a citation.</p>
+                </div>
+
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <LinkIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    <input aria-label="Input" type="text"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="https://example.com/article"
+                      className="w-full pl-10 pr-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    />
+                  </div>
+                  <button type="button"
+                    onClick={handleCapture}
+                    disabled={!url.trim() || isCapturing}
+                    className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all flex items-center gap-2 shadow-lg"
+                  >
+                    {isCapturing ? (
+                      <>
+                        <ArrowsClockwise size={18} className="animate-spin" />
+                        Capturing...
+                      </>
+                    ) : (
+                      <>
+                        <Camera size={18} />
+                        Capture
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <div className="p-4 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 text-center">
+                    <CheckCircle size={24} className="mx-auto mb-2 text-green-500" />
+                    <div className="text-sm font-medium">Verified Source</div>
+                    <p className="text-xs text-zinc-500 mt-1">Automatic provenance and archival</p>
+                  </div>
+                  <div className="p-4 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 text-center">
+                    <NotePencil size={24} className="mx-auto mb-2 text-yellow-500" />
+                    <div className="text-sm font-medium">Visual Annotations</div>
+                    <p className="text-xs text-zinc-500 mt-1">Highlight key evidence on the page</p>
                   </div>
                 </div>
-                <AnnotationCanvas
-                  screenshot={selectedScreenshot.screenshot}
-                  annotations={annotations}
-                  onAddAnnotation={handleAddAnnotation}
-                  readOnly={!annotationMode}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'library' && (
-          <div className="grid grid-cols-2 gap-4">
-            {capturedScreenshots.length === 0 ? (
-              <div className="col-span-2 text-center text-zinc-400 py-8">
-                No screenshots captured yet. Go to the Capture tab to add some.
               </div>
             ) : (
-              capturedScreenshots.map(screenshot => (
-                <div
-                  key={screenshot.id}
-                  onClick={() => {
-                    setSelectedScreenshot(screenshot);
-                    setActiveTab('capture');
-                  }}
-                  className={`border rounded-lg overflow-hidden cursor-pointer transition-all hover:shadow-lg ${
-                    selectedScreenshot?.id === screenshot.id
-                      ? 'border-blue-500 ring-2 ring-blue-200'
-                      : 'border-zinc-200 dark:border-zinc-700'
-                  }`}
-                >
-                  <img
-                    src={screenshot.screenshot}
-                    alt={screenshot.title}
-                    className="w-full h-40 object-cover"
-                  />
-                  <div className="p-3">
-                    <div className="font-medium text-sm truncate">{screenshot.title}</div>
-                    <div className="text-xs text-zinc-500">
-                      {new Date(screenshot.timestamp).toLocaleDateString()}
-                    </div>
-                    {screenshot.metadata && (
-                      <div className="text-xs text-zinc-400 mt-1">
-                        {screenshot.metadata.viewport.width}×{screenshot.metadata.viewport.height}
-                      </div>
-                    )}
+              <div className="flex flex-col h-full animate-in fade-in zoom-in-95 duration-300">
+                {/* Editor Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-bold text-lg">{currentScreenshot.title || 'New Screenshot'}</h3>
+                    <p className="text-xs text-zinc-500 truncate max-w-md">{currentScreenshot.url}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button"
+                      onClick={() => setCurrentScreenshot(null)}
+                      className="px-4 py-2 text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                    >
+                      Discard
+                    </button>
+                    <button type="button"
+                      onClick={handleSaveCitation}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md"
+                    >
+                      Save Citation
+                    </button>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        )}
 
-        {activeTab === 'verify' && (
-          <div className="space-y-4">
-            <div className="text-zinc-600 dark:text-zinc-400">
-              Verify that your citations are still accessible. Click "Check" to test each URL.
+                {/* Canvas */}
+                <div className="flex-1 overflow-auto bg-zinc-100 dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-inner p-4">
+                  <div className="max-w-3xl mx-auto shadow-2xl">
+                    <AnnotationCanvas
+                      screenshot={currentScreenshot.screenshot}
+                      annotations={currentScreenshot.annotations}
+                      onAddAnnotation={handleAddAnnotation}
+                      onRemoveAnnotation={handleRemoveAnnotation}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                  <div className="size-8 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center shrink-0">
+                    <NotePencil size={18} />
+                  </div>
+                  <p className="text-sm text-blue-800 dark:text-blue-300">
+                    <strong>Tip:</strong> Click and drag on the screenshot to add highlights or notes to specific areas of the page.
+                  </p>
+                </div>
+              </div>
+            )}
+          </ProgramErrorBoundary>
+        </div>
+
+        {/* Side Panel: Existing Citations */}
+        {showCitationList && (
+          <aside className="w-80 border-l border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
+            <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 font-bold text-sm uppercase tracking-wider text-zinc-500 flex justify-between">
+              Citations ({citations.length})
             </div>
-            <div className="space-y-2">
-              {capturedScreenshots.map(screenshot => {
-                const verification = verificationResults[screenshot.id];
-                return (
-                  <div
-                    key={screenshot.id}
-                    className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg"
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {citations.length === 0 ? (
+                <div className="text-center py-12 text-zinc-400">
+                  <LinkIcon size={32} className="mx-auto mb-3 opacity-30" />
+                  <p className="text-xs">No citations added yet.</p>
+                </div>
+              ) : (
+                citations.map((cit) => (
+                  <div 
+                    key={cit.id}
+                    className="p-3 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm hover:shadow-md transition-shadow group"
                   >
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={screenshot.screenshot} 
-                        alt=""
-                        className="w-16 h-12 object-cover rounded"
-                      />
-                      <div>
-                        <div className="font-medium">{screenshot.title}</div>
-                        <div className="text-sm text-zinc-500 truncate max-w-md">
-                          {screenshot.url}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {verification?.checking ? (
-                        <span className="text-zinc-400 text-sm">Checking…</span>
-                      ) : verification ? (
-                        <span className={verification.accessible ? 'text-green-600 text-sm' : 'text-red-600 text-sm'}>
-                          {verification.accessible ? '✓ Accessible' : '✗ Unreachable'}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-400 text-sm">Not checked</span>
-                      )}
-                      <button 
-                        onClick={() => verifyUrl(screenshot)}
-                        disabled={verification?.checking}
-                        className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded disabled:opacity-50"
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-xs font-mono text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                        [{cit.number}]
+                      </span>
+                      <button type="button"
+                        className="text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                        onClick={() => {
+                          updateProgramState<ResearchDocState>(program.id, (prev) => ({
+                            ...prev,
+                            citations: prev.citations.filter(c => c.id !== cit.id),
+                          }));
+                        }}
                       >
-                        🔄
+                        <Trash size={14} />
                       </button>
                     </div>
+                    <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate mb-1">
+                      {cit.source}
+                    </div>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 italic">
+                      "{cit.snippet}"
+                    </p>
                   </div>
-                );
-              })}
+                ))
+              )}
             </div>
-          </div>
+          </aside>
         )}
       </div>
     </div>
   );
 };
 
-export default CitationManager;
+export default BrowserScreenshotCitations;

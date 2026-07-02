@@ -6,7 +6,7 @@
  * interleaved text and artifact segments.
  */
 
-export interface ParsedArtifact {
+interface ParsedArtifact {
   type: string;
   identifier: string;
   title: string;
@@ -70,7 +70,7 @@ export function splitOnArtifacts(input: string): MessageSegment[] {
   return segments;
 }
 
-export function extractFirstArtifact(input: string): ParsedArtifact | null {
+function extractFirstArtifact(input: string): ParsedArtifact | null {
   ARTIFACT_RE.lastIndex = 0;
   const m = ARTIFACT_RE.exec(input);
   if (!m) return null;

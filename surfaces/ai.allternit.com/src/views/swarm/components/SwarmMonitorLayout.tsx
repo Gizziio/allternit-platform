@@ -64,8 +64,7 @@ export function SwarmMonitorLayout({
               color={TEXT_SUBTLE}
               className="absolute left-2.5 top-1/2 -tranzinc-y-1/2 pointer-events-none"
             />
-            <input
-              type="text"
+            <input aria-label="Search agents…" type="text"
               placeholder="Search agents…"
               className="pl-7 pr-3 py-1.5 rounded text-xs outline-none transition-colors"
               style={{
@@ -97,7 +96,7 @@ export function SwarmMonitorLayout({
           </div>
 
           {/* Add Agent Button */}
-          <button
+          <button type="button"
             className="flex items-center justify-center size-7  rounded transition-colors"
             style={{
               background: ACCENT_DIM,
@@ -113,7 +112,7 @@ export function SwarmMonitorLayout({
           <ViewToggle current={viewMode} onChange={onViewModeChange} />
 
           {/* More Actions */}
-          <button
+          <button type="button"
             className="flex items-center justify-center size-7  rounded transition-colors"
             style={{
               background: BG_SURFACE,

@@ -39,9 +39,9 @@ const createPlaceholderProgram = (
 
           {/* Feature list */}
           <div className="grid grid-cols-2 gap-3 max-w-md">
-            {features.map((feature, i) => (
+            {features.map((feature) => (
               <div 
-                key={i}
+                key={feature}
                 className="flex items-center gap-2 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-sm text-zinc-600 dark:text-zinc-400"
               >
                 <span className="size-1.5  bg-blue-500 rounded-full" />

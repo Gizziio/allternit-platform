@@ -17,14 +17,14 @@ export type SessionStatus =
   | "error"
 
 /** Policy check result */
-export interface PolicyCheckResult {
+interface PolicyCheckResult {
   allowed: boolean;
   requires_approval: boolean;
   reason: string | null;
 }
 
 /** Tool policy */
-export interface ToolPolicy {
+interface ToolPolicy {
   tool_id: string;
   tier: 'read_only' | 'write' | 'destructive' | 'network';
   default_action: 'allow' | 'deny' | 'ask';
@@ -32,7 +32,7 @@ export interface ToolPolicy {
 }
 
 /** Boot event */
-export interface BootEvent {
+interface BootEvent {
   phase: 'SystemInit' | 'Identity' | 'Environment' | 'Memory' | 'Capabilities' | 'ContextBuild';
   step: number;
   description: string;
@@ -41,7 +41,7 @@ export interface BootEvent {
 }
 
 /** Workspace metadata */
-export interface WorkspaceMetadata {
+interface WorkspaceMetadata {
   workspace_id: string;
   workspace_version: string;
   agent_name: string;
@@ -56,7 +56,7 @@ export interface WorkspaceMetadata {
 }
 
 /** Skill definition */
-export interface SkillDefinition {
+interface SkillDefinition {
   id: string;
   version: string;
   intent: string;
@@ -64,7 +64,7 @@ export interface SkillDefinition {
 }
 
 /** Context pack summary */
-export interface ContextSummary {
+interface ContextSummary {
   agent_name: string;
   agent_role: string;
   current_focus: string;
@@ -75,10 +75,10 @@ export interface ContextSummary {
 }
 
 /** File operation types */
-export type FileOperation = 'Read' | 'Write' | 'Delete';
+type FileOperation = 'Read' | 'Write' | 'Delete';
 
 /** Workspace interface */
-export interface IWorkspace {
+interface IWorkspace {
   /** Check if this is a valid agent workspace */
   isValid(): boolean;
   
@@ -96,7 +96,7 @@ export interface IWorkspace {
 }
 
 /** Policy engine interface */
-export interface IPolicyEngine {
+interface IPolicyEngine {
   /** Check if a tool call is allowed */
   checkTool(toolId: string): Promise<PolicyCheckResult>;
   
@@ -105,7 +105,7 @@ export interface IPolicyEngine {
 }
 
 /** Skills registry interface */
-export interface ISkillsRegistry {
+interface ISkillsRegistry {
   /** List all skills */
   listSkills(): Promise<SkillDefinition[]>;
   
@@ -117,7 +117,7 @@ export interface ISkillsRegistry {
 }
 
 /** Checkpoint interface */
-export interface ICheckpoint {
+interface ICheckpoint {
   id: string;
   timestamp: string;
   session_id: string;
@@ -138,7 +138,7 @@ export interface ICheckpoint {
 }
 
 /** Checkpoint manager interface */
-export interface ICheckpointManager {
+interface ICheckpointManager {
   /** Create a new checkpoint */
   create(sessionId: string): Promise<ICheckpoint>;
   
@@ -153,7 +153,7 @@ export interface ICheckpointManager {
 }
 
 /** Legacy Workspace API interface - kept for backward compatibility */
-export interface IWorkspaceAPI {
+interface IWorkspaceAPI {
   workspace: IWorkspace;
   policy: IPolicyEngine;
   skills: ISkillsRegistry;
@@ -165,7 +165,7 @@ export interface IWorkspaceAPI {
 // =============================================================================
 
 /** Workspace layers availability */
-export interface WorkspaceLayers {
+interface WorkspaceLayers {
   cognitive: boolean;
   identity: boolean;
   governance: boolean;
@@ -174,13 +174,13 @@ export interface WorkspaceLayers {
 }
 
 /** Task status */
-export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'failed';
+type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'failed';
 
 /** Task priority */
-export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 
 /** Task definition */
-export interface Task {
+interface Task {
   id: string;
   title: string;
   description?: string;
@@ -196,7 +196,7 @@ export interface Task {
 }
 
 /** Create task request */
-export interface CreateTaskRequest {
+interface CreateTaskRequest {
   title: string;
   description?: string;
   priority?: TaskPriority;
@@ -208,13 +208,13 @@ export interface CreateTaskRequest {
 }
 
 /** Policy rule action */
-export type PolicyAction = 'allow' | 'deny' | 'ask';
+type PolicyAction = 'allow' | 'deny' | 'ask';
 
 /** Policy rule tier */
-export type PolicyTier = 'read_only' | 'write' | 'destructive' | 'network';
+type PolicyTier = 'read_only' | 'write' | 'destructive' | 'network';
 
 /** Policy rule definition */
-export interface PolicyRule {
+interface PolicyRule {
   id: string;
   name: string;
   description?: string;
@@ -228,7 +228,7 @@ export interface PolicyRule {
 }
 
 /** Skill definition for unified API */
-export interface Skill {
+interface Skill {
   id: string;
   name: string;
   description?: string;
@@ -247,7 +247,7 @@ export interface Skill {
 }
 
 /** Checkpoint for unified API */
-export interface Checkpoint {
+interface Checkpoint {
   id: string;
   name: string;
   timestamp: string;
@@ -270,10 +270,10 @@ export interface Checkpoint {
 }
 
 /** Memory entry type */
-export type MemoryEntryType = 'note' | 'event' | 'observation' | 'decision' | 'lesson' | 'preference' | 'fact' | 'session' | 'checkpoint';
+type MemoryEntryType = 'note' | 'event' | 'observation' | 'decision' | 'lesson' | 'preference' | 'fact' | 'session' | 'checkpoint';
 
 /** Memory entry */
-export interface MemoryEntry {
+interface MemoryEntry {
   id: string;
   type: MemoryEntryType;
   content: string;
@@ -287,7 +287,7 @@ export interface MemoryEntry {
 }
 
 /** Identity configuration */
-export interface IdentityConfig {
+interface IdentityConfig {
   id: string;
   name: string;
   role: string;

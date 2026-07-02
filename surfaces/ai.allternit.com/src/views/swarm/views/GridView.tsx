@@ -49,7 +49,7 @@ export function GridView({ agents, modeColors, onAgentSelect }: GridViewProps) {
           <span className="font-mono" style={{ color: ACCENT }}>{agents.length}</span> agents in workspace
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <button type="button"
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all"
             style={{
               background: BG_SURFACE,
@@ -59,7 +59,7 @@ export function GridView({ agents, modeColors, onAgentSelect }: GridViewProps) {
           >
             <span>☐</span> Select
           </button>
-          <button
+          <button type="button"
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all"
             style={{
               background: BG_SURFACE,

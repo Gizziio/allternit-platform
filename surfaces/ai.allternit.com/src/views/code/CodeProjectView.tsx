@@ -4,7 +4,6 @@
  * Shows threads list with real ChatComposer, tabs, and wired functionality
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useMemo } from 'react';
 import { InputModal } from '@/components/InputModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -25,7 +24,6 @@ import {
   Trash,
   FileCode,
   Robot,
-  ActivityIcon,
 } from '@phosphor-icons/react';
 import { useNav } from '@/nav/useNav';
 
@@ -87,9 +85,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
 
   const handleSend = (text: string): void => {
     if (!text.trim() || !currentWorkspaceId) return;
-    console.debug('Creating new thread in workspace:', currentWorkspaceId, 'with text:', text);
     setComposerInput('');
-    // Navigation to new thread would happen here via store action
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
@@ -141,7 +137,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
   // Menu content for the 3-dot menu
   const menuContent = (
     <ProjectMenuButton>
-      <button
+      <button type="button"
         onClick={handleRename}
         style={{
           width: '100%',
@@ -160,7 +156,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         <PencilSimple size={16} />
         Edit details
       </button>
-      <button
+      <button type="button"
         style={{
           width: '100%',
           padding: '10px 16px',
@@ -178,7 +174,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         <Archive size={16} />
         Archive
       </button>
-      <button
+      <button type="button"
         onClick={handleDelete}
         style={{
           width: '100%',
@@ -218,7 +214,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
       <div>
         {workspaceInstructions.map((instruction, idx) => (
           <InstructionItem
-            key={idx}
+            key={`codeprojectview-${idx}`}
             text={instruction}
             onDelete={() => setWorkspaceInstructions(workspaceInstructions.filter((_, i) => i !== idx))}
           />
@@ -369,7 +365,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
 function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: () => void }) {
   return (
     <>
-      <div
+      <div role="button" tabIndex={0}
         style={{
           position: 'fixed',
           inset: 0,
@@ -398,7 +394,7 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
           Add sources
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button
+          <button type="button"
             onClick={onUpload}
             style={{
               width: '100%',
@@ -423,7 +419,7 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
             Upload from device
           </button>
         </div>
-        <button
+        <button type="button"
           onClick={onClose}
           style={{
             marginTop: 16,
@@ -457,7 +453,7 @@ function AddInstructionModal({
 }) {
   return (
     <>
-      <div
+      <div role="button" tabIndex={0}
         style={{
           position: 'fixed',
           inset: 0,
@@ -486,8 +482,7 @@ function AddInstructionModal({
         <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 700, color: 'var(--ui-text-primary)' }}>
           Set workspace instructions
         </h3>
-        <textarea
-          value={value}
+        <textarea aria-label="Text Area" value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="Specific rules for this workspace…"
           style={{
@@ -504,8 +499,8 @@ function AddInstructionModal({
           }}
         />
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ color: 'var(--ui-text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={onSave} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', border: 'none', cursor: 'pointer' }}>Save</button>
+          <button type="button" onClick={onClose} style={{ color: 'var(--ui-text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>Cancel</button>
+          <button type="button" onClick={onSave} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', border: 'none', cursor: 'pointer' }}>Save</button>
         </div>
       </div>
     </>

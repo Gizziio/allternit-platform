@@ -69,11 +69,11 @@ export const Default: Story = {
  * Interactive fade toggle
  */
 export const Interactive: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [visible, setVisible] = useState(true);
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setVisible(!visible)}
           style={{
             padding: '8px 16px',
@@ -119,13 +119,13 @@ export const Interactive: Story = {
  * All fade directions
  */
 export const Directions: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [key, setKey] = useState(0);
     const directions: Array<'up' | 'down' | 'left' | 'right'> = ['up', 'down', 'left', 'right'];
     
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setKey(k => k + 1)}
           style={{
             padding: '8px 16px',
@@ -163,7 +163,7 @@ export const Directions: Story = {
  * Fade with different durations
  */
 export const Durations: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [key, setKey] = useState(0);
     const durations = [
       { label: 'Fast (0.14s)', duration: 0.14 },
@@ -174,7 +174,7 @@ export const Durations: Story = {
     
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setKey(k => k + 1)}
           style={{
             padding: '8px 16px',
@@ -211,12 +211,12 @@ export const Durations: Story = {
  * Fade presets demonstration
  */
 export const Presets: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [key, setKey] = useState(0);
     
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setKey(k => k + 1)}
           style={{
             padding: '8px 16px',
@@ -261,13 +261,13 @@ export const Presets: Story = {
  * Staggered children animation
  */
 export const Staggered: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [key, setKey] = useState(0);
     const items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5'];
     
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setKey(k => k + 1)}
           style={{
             padding: '8px 16px',

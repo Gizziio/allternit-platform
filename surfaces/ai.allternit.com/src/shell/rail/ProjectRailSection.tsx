@@ -1,4 +1,5 @@
-import React, { useState, memo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
+import { createPortal } from 'react-dom';
 import type { Icon } from '@phosphor-icons/react';
 import {
   FolderOpen,
@@ -9,6 +10,7 @@ import {
   Plus,
 } from '@phosphor-icons/react';
 import { DeleteConfirmModal } from '../DeleteConfirmModal';
+import { cn } from '@/lib/utils';
 
 export interface UnifiedProject {
   id: string;
@@ -69,7 +71,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
   sectionCaption = 'Shared organizer',
   newButtonLabel = 'New Project',
   recentItemsLabel = 'Recent Sessions',
-}: ProjectRailSectionProps): JSX.Element {
+}: ProjectRailSectionProps): React.ReactNode {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   const toggleProject = (projectId: string): void => {
@@ -92,7 +94,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 6 }}>
+    <div className="flex flex-col gap-1 pb-1.5">
       {/* Section Header */}
       <WorkstreamSectionLabel
         title={sectionTitle}
@@ -101,36 +103,14 @@ export const ProjectRailSection = memo(function ProjectRailSection({
       />
 
       {/* New Project Button */}
-      <div style={{ padding: '4px' }}>
+      <div className="p-1">
         <button
           type="button"
           onClick={onCreateProject}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--accent-primary)';
-            e.currentTarget.style.background = 'var(--shell-item-hover)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--shell-item-fg)';
-            e.currentTarget.style.background = 'transparent';
-          }}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '9px 12px',
-            borderRadius: 14,
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--shell-item-fg)',
-            cursor: 'pointer',
-            textAlign: 'left',
-            transition: 'all 0.2s',
-            fontWeight: 500,
-          }}
+          className="w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl border-none bg-transparent text-[var(--shell-item-fg)] cursor-pointer text-left transition-all duration-200 font-medium hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
         >
-          <FolderPlus size={18} weight="bold" color="var(--accent-primary)" />
-          <div style={{ minWidth: 0, fontSize: 13, fontWeight: 700 }}>{newButtonLabel}</div>
+          <FolderPlus size={18} weight="bold" className="text-[var(--accent-primary)]" />
+          <div className="min-w-0 text-[13px] font-bold">{newButtonLabel}</div>
         </button>
       </div>
 
@@ -156,18 +136,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
             />
 
             {isExpanded && pItems.length > 0 && (
-              <div
-                style={{
-                  marginLeft: 20,
-                  paddingLeft: 8,
-                  borderLeft: '1px solid var(--border-default)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                  marginTop: 2,
-                  marginBottom: 4,
-                }}
-              >
+              <div className="ml-5 pl-2 border-l border-solid border-[var(--border-default)] flex flex-col gap-0.5 mt-0.5 mb-1">
                 {pItems.filter((i): i is typeof i & { id: string } => typeof i.id === 'string' && i.id.length > 0).map((item) => (
                   <ItemRailRow
                     key={item.id}
@@ -186,17 +155,10 @@ export const ProjectRailSection = memo(function ProjectRailSection({
       })}
 
       {/* Root Items List */}
-      <div style={{ padding: '0 8px', marginTop: 8 }}>
+      <div className="px-2 mt-2">
         {rootItems.length > 0 ? (
           <>
-            <div style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: 'var(--text-tertiary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              padding: '8px 4px 4px',
-            }}>
+            <div className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-[0.06em] p-[8px_4px_4px]">
               {recentItemsLabel}
             </div>
             {rootItems.filter((i): i is typeof i & { id: string } => typeof i.id === 'string' && i.id.length > 0).map((item) => (
@@ -233,55 +195,23 @@ function WorkstreamSectionLabel({
   title: string;
   count?: number;
   caption?: string;
-}): JSX.Element {
+}): React.ReactNode {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 10,
-        padding: '0 8px',
-      }}
-    >
-      <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span
-            style={{
-              width: 14,
-              height: 1,
-              borderRadius: 999,
-              background: 'linear-gradient(90deg, var(--accent-primary), transparent)',
-            }}
-          />
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: 'var(--accent-secondary)',
-            }}
-          >
+    <div className="flex items-center justify-between gap-2.5 px-2">
+      <div className="min-w-0 flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="w-3.5 h-px rounded-full bg-[linear-gradient(90deg,var(--accent-primary),transparent)]" />
+          <span className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[var(--accent-secondary)]">
             {title}
           </span>
           {count !== undefined ? (
-            <span
-              style={{
-                borderRadius: 999,
-                border: '1px solid var(--shell-divider)',
-                background: 'var(--shell-item-hover)',
-                padding: '2px 6px',
-                fontSize: 12,
-                color: 'var(--shell-item-muted)',
-              }}
-            >
+            <span className="rounded-full border border-solid border-[var(--shell-divider)] bg-[var(--shell-item-hover)] px-1.5 py-0.5 text-[12px] text-[var(--shell-item-muted)]">
               {count}
             </span>
           ) : null}
         </div>
         {caption ? (
-          <div style={{ fontSize: 12, color: 'var(--shell-item-muted)' }}>{caption}</div>
+          <div className="text-[12px] text-[var(--shell-item-muted)]">{caption}</div>
         ) : null}
       </div>
     </div>
@@ -312,11 +242,29 @@ function ProjectRailItem({
   onRename,
   onDelete,
   badge,
-}: ProjectRailItemProps): JSX.Element {
+}: ProjectRailItemProps): React.ReactNode {
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editTitle, setEditTitle] = useState(label);
+  const dotsButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const close = () => setShowMenu(false);
+    window.addEventListener('scroll', close, true);
+    return () => window.removeEventListener('scroll', close, true);
+  }, [showMenu]);
+
+  const openMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (dotsButtonRef.current) {
+      const rect = dotsButtonRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setShowMenu(v => !v);
+  };
 
   const handleRename = (): void => {
     setIsEditing(true);
@@ -341,34 +289,15 @@ function ProjectRailItem({
 
   if (isEditing) {
     return (
-      <div
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '8px 12px',
-          borderRadius: 10,
-          background: isActive ? 'var(--shell-item-active-bg)' : 'transparent',
-        }}
-      >
+      <div className={cn("w-full flex items-center gap-2.5 p-[8px_12px] rounded-[10px]", isActive ? "bg-[var(--shell-item-active-bg)]" : "bg-transparent")}>
         {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />}
-        <input
-          type="text"
+        <input aria-label="Rename project" type="text"
           value={editTitle}
           onChange={(e) => setEditTitle(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleSaveRename}
           autoFocus
-          style={{
-            flex: 1,
-            fontSize: 13,
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-            fontWeight: isActive ? 700 : 500,
-          }}
+          className={cn("flex-1 text-[13px] bg-transparent border-none outline-none", isActive ? "text-[var(--accent-primary)] font-bold" : "text-[var(--text-tertiary)] font-medium")}
         />
       </div>
     );
@@ -376,153 +305,61 @@ function ProjectRailItem({
 
   return (
     <div
-      onMouseEnter={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.background = 'var(--shell-item-hover)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.background = 'transparent';
-        }
-      }}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '4px',
-        borderRadius: 14,
-        background: isActive
-          ? 'var(--shell-item-active-bg)'
-          : 'transparent',
-        position: 'relative',
-        boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
-        transition: 'all 0.2s',
-      }}
+      className={cn("w-full flex items-center gap-1 p-1 rounded-2xl relative transition-all duration-200 group", isActive ? "bg-[var(--shell-item-active-bg)] shadow-[var(--shadow-sm)]" : "bg-transparent hover:bg-[var(--shell-item-hover)]")}
     >
-      <button
+      <button type="button"
         onClick={onToggle}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          padding: 0,
-          width: 24,
-          height: 24,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-muted)',
-          transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-          transition: 'transform 0.2s',
-        }}
+        className={cn("bg-transparent border-none p-0 w-6 h-6 flex items-center justify-center cursor-pointer transition-transform duration-200", isExpanded ? "rotate-90" : "rotate-0", isActive ? "text-[var(--shell-item-active-fg)]" : "text-[var(--shell-item-muted)]")}
       >
         <Plus size={12} weight="bold" />
       </button>
 
-      <button
+      <button type="button"
         onClick={onClick}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '6px 4px',
-          borderRadius: 6,
-          border: 'none',
-          background: 'transparent',
-          color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
-          cursor: 'pointer',
-          textAlign: 'left',
-          transition: 'all 0.2s',
-          fontWeight: isActive ? 700 : 500,
-        }}
+        className={cn("flex-1 min-w-0 flex items-center gap-2.5 p-[6px_4px] rounded-md border-none bg-transparent cursor-pointer text-left transition-all duration-200", isActive ? "text-[var(--shell-item-active-fg)] font-bold" : "text-[var(--shell-item-fg)] font-medium")}
       >
         {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
-        <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{label}</span>
+        <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>
         {badge !== undefined && (
-          <span style={{
-            fontSize: 12,
-            color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-muted)',
-            background: isActive ? 'var(--surface-hover)' : 'var(--surface-panel-muted)',
-            padding: '2px 6px',
-            borderRadius: 8,
-            fontWeight: 700
-          }}>
+          <span className={cn("text-[12px] px-1.5 py-0.5 rounded-lg font-bold", isActive ? "text-[var(--shell-item-active-fg)] bg-[var(--surface-hover)]" : "text-[var(--shell-item-muted)] bg-[var(--surface-panel-muted)]")}>
             {badge}
           </span>
         )}
       </button>
 
       {/* Ellipsis Menu Button */}
-      <div style={{ position: 'relative' }}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowMenu(!showMenu);
-          }}
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: 6,
-            border: 'none',
-            background: showMenu ? 'var(--shell-item-hover)' : 'transparent',
-            color: 'var(--shell-item-muted)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: 0.6,
-            transition: 'opacity 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+      <div className="relative">
+        <button type="button"
+          ref={dotsButtonRef}
+          onClick={openMenu}
+          className={cn("w-6 h-6 rounded-md border-none cursor-pointer flex items-center justify-center transition-opacity duration-200 opacity-0 group-hover:opacity-100", showMenu ? "bg-[var(--shell-item-hover)] text-[var(--shell-item-muted)] opacity-100" : "bg-transparent text-[var(--shell-item-muted)] hover:opacity-100")}
         >
           <DotsThree size={18} weight="bold" />
         </button>
 
-        {showMenu && (
+        {showMenu && typeof document !== 'undefined' && createPortal(
           <>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 169 }} onClick={() => setShowMenu(false)} />
-            <div 
-              style={{
-                position: 'absolute', top: '100%', right: 0, marginTop: 2,
-                minWidth: 160,
-                background: 'var(--glass-bg-thick)',
-                borderRadius: 14, border: '1px solid var(--border-default)',
-                boxShadow: 'var(--shadow-lg)', zIndex: 160, overflow: 'hidden',
-              }}
-              onMouseEnter={(e) => { e.stopPropagation(); }}
+            <div role="button" tabIndex={0} style={{ position: 'fixed', inset: 0, zIndex: 1200 }} onClick={() => setShowMenu(false)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowMenu(false); }} />
+            <div
+              className="fixed min-w-[160px] bg-[var(--shell-menu-bg)] rounded-xl border border-solid border-[var(--shell-menu-border)] z-[1201] overflow-hidden shadow-[var(--shadow-lg)]"
+              style={{ top: menuPos.top, right: menuPos.right }}
             >
-              <button
-                onClick={(e) => { e.stopPropagation(); handleRename(); }}
-                style={{
-                  width: '100%', padding: '10px 14px', border: 'none', background: 'transparent',
-                  color: 'var(--shell-item-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                  gap: 10, fontSize: 13, textAlign: 'left', transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-item-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              <button type="button"
+                onClick={(e) => { e.stopPropagation(); handleRename(); setShowMenu(false); }}
+                className="w-full p-[10px_14px] border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center gap-2.5 text-[13px] text-left transition-colors hover:bg-[var(--shell-item-hover)]"
               >
                 <Pencil size={16} /> Rename
               </button>
-              <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-              <button
+              <div className="h-px bg-[var(--border-subtle)] my-1" />
+              <button type="button"
                 onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowMenu(false); }}
-                style={{
-                  width: '100%', padding: '10px 14px', border: 'none', background: 'transparent',
-                  color: 'var(--status-error)', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                  gap: 10, fontSize: 13, textAlign: 'left', transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-danger-soft-bg)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                className="w-full p-[10px_14px] border-none bg-transparent text-[var(--status-error)] cursor-pointer flex items-center gap-2.5 text-[13px] text-left transition-colors hover:bg-[var(--shell-danger-soft-bg)]"
               >
                 <Trash size={16} /> Delete
               </button>
             </div>
-          </>
+          </>,
+          document.body
         )}
       </div>
 
@@ -553,12 +390,30 @@ function ItemRailRow({
   onRename: (title: string) => void;
   onDelete: () => void;
   onMoveToProject?: (projectId: string) => void;
-}): JSX.Element {
+}): React.ReactNode {
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const [showProjects, setShowProjects] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const dotsButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const close = () => setShowMenu(false);
+    window.addEventListener('scroll', close, true);
+    return () => window.removeEventListener('scroll', close, true);
+  }, [showMenu]);
+
+  const openMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (dotsButtonRef.current) {
+      const rect = dotsButtonRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setShowMenu(v => !v);
+  };
 
   const handleSaveRename = (): void => {
     if (editTitle.trim() && editTitle !== item.title) {
@@ -569,9 +424,8 @@ function ItemRailRow({
 
   if (isEditing) {
     return (
-      <div style={{ padding: '4px 8px' }}>
-        <input
-          value={editTitle}
+      <div className="p-[4px_8px]">
+        <input aria-label="Edit project title" value={editTitle}
           onChange={(e) => setEditTitle(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSaveRename();
@@ -579,16 +433,7 @@ function ItemRailRow({
           }}
           onBlur={handleSaveRename}
           autoFocus
-          style={{
-            width: '100%',
-            fontSize: 12,
-            background: 'var(--surface-floating-muted)',
-            border: '1px solid var(--shell-dialog-border)',
-            borderRadius: 6,
-            padding: '4px 8px',
-            color: 'var(--shell-item-fg)',
-            outline: 'none',
-          }}
+          className="w-full text-[12px] bg-[var(--surface-floating-muted)] border border-solid border-[var(--shell-dialog-border)] rounded-md p-[4px_8px] text-[var(--shell-item-fg)] outline-none"
         />
       </div>
     );
@@ -596,101 +441,74 @@ function ItemRailRow({
 
   return (
     <div
-      onMouseEnter={(e) => {
-        if (!item.isActive) e.currentTarget.style.background = 'var(--surface-hover)';
-      }}
-      onMouseLeave={(e) => {
-        if (!item.isActive) e.currentTarget.style.background = 'transparent';
-        // Don't close menu on mouse leave - let the overlay handle it
-        // This fixes the bug where hovering over the dropdown makes options go blank
-      }}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '4px 8px',
-        borderRadius: 10,
-        background: item.isActive ? 'var(--shell-item-active-bg)' : 'transparent',
-        cursor: 'pointer',
-        transition: 'background 0.2s',
-      }}
+      role="button" tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
+      className={cn(
+        "w-full flex items-center gap-1 p-[4px_8px] rounded-[10px] cursor-pointer transition-colors duration-200",
+        item.isActive ? "bg-[var(--shell-item-active-bg)]" : "bg-transparent hover:bg-[var(--surface-hover)]"
+      )}
     >
-      <button
-        onClick={onClick}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '4px 0',
-          borderRadius: 6,
-          border: 'none',
-          background: 'transparent',
-          color: item.isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
-          cursor: 'pointer',
-          textAlign: 'left',
-          fontWeight: item.isActive ? 700 : 500,
-        }}
+      <div
+        className={cn(
+          "flex-1 min-w-0 flex items-center gap-2.5 p-[4px_0]",
+          item.isActive ? "text-[var(--shell-item-active-fg)] font-bold" : "text-[var(--shell-item-fg)] font-medium"
+        )}
       >
         <item.icon size={16} weight={item.isActive ? 'fill' : 'bold'} />
-        <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item.title}</span>
+        <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap flex-1">{item.title}</span>
         {item.metaLabel && (
-          <span style={{ fontSize: 12, color: 'var(--shell-item-muted)', opacity: 0.7 }}>{item.metaLabel}</span>
+          <span className="text-[12px] text-[var(--shell-item-muted)] opacity-70">{item.metaLabel}</span>
         )}
-      </button>
+      </div>
 
-      <div style={{ position: 'relative', padding: '4px', margin: '-4px' }}>
-        <button
-          onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
-          style={{
-            width: 22, height: 22, borderRadius: 6, border: 'none', background: 'transparent',
-            color: 'var(--shell-item-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', opacity: 0.6,
-          }}
+      <div
+        role="button" tabIndex={0}
+        className="shrink-0"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <button type="button"
+          ref={dotsButtonRef}
+          onClick={openMenu}
+          className="w-[22px] h-[22px] rounded-md border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center opacity-60 hover:opacity-100 transition-opacity"
         >
           <DotsThree size={16} weight="bold" />
         </button>
 
-        {showMenu && (
+        {showMenu && typeof document !== 'undefined' && createPortal(
           <>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 169 }} onClick={() => setShowMenu(false)} />
-            <div 
-              style={{
-                position: 'absolute', top: '100%', right: 4, marginTop: 0,
-                minWidth: 160, background: 'var(--shell-menu-bg)', borderRadius: 12,
-                border: '1px solid var(--shell-menu-border)', zIndex: 160, overflow: 'hidden',
-              }}
+            <div role="button" tabIndex={0} className="fixed inset-0 z-[1200]" onClick={() => setShowMenu(false)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowMenu(false); }} />
+            <div
+              className="fixed min-w-[160px] bg-[var(--shell-menu-bg)] rounded-xl border border-solid border-[var(--shell-menu-border)] z-[1201] overflow-hidden shadow-[var(--shadow-lg)]"
+              style={{ top: menuPos.top, right: menuPos.right }}
             >
-              <button
-                onClick={() => { setIsEditing(true); setShowMenu(false); }}
-                style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', color: 'var(--shell-item-fg)', textAlign: 'left', cursor: 'pointer', fontSize: 12 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-item-hover)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              <button type="button"
+                onClick={(e) => { e.stopPropagation(); setIsEditing(true); setShowMenu(false); }}
+                className="w-full p-2.5 bg-transparent border-none text-[var(--shell-item-fg)] text-left cursor-pointer text-[12px] hover:bg-[var(--shell-item-hover)]"
               >
                 Rename
               </button>
               {onMoveToProject && (
-                <div onMouseEnter={() => setShowProjects(true)} onMouseLeave={() => setShowProjects(false)} style={{ position: 'relative' }}>
-                  <button
-                    style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', color: 'var(--shell-item-fg)', textAlign: 'left', cursor: 'pointer', fontSize: 12, display: 'flex', justifyContent: 'space-between' }}
+                <div onMouseEnter={() => setShowProjects(true)} onMouseLeave={() => setShowProjects(false)} className="relative">
+                  <button type="button"
+                    className="w-full p-2.5 bg-transparent border-none text-[var(--shell-item-fg)] text-left cursor-pointer text-[12px] flex justify-between items-center hover:bg-[var(--shell-item-hover)]"
                   >
-                    Move to Project <span>&gt;</span>
+                    Move to Project <DotsThree size={14} />
                   </button>
                   {showProjects && (
-                    <div style={{ position: 'absolute', left: '-100%', top: 0, minWidth: 140, background: 'var(--shell-menu-bg)', border: '1px solid var(--shell-menu-border)', borderRadius: 12, overflow: 'hidden' }}>
-                      <button
-                        onClick={() => { onMoveToProject?.(''); setShowMenu(false); }}
-                        style={{ width: '100%', padding: '8px', background: 'transparent', border: 'none', color: 'var(--shell-item-fg)', textAlign: 'left', cursor: 'pointer', fontSize: 12 }}
+                    <div className="absolute left-[-100%] top-0 min-w-[140px] bg-[var(--shell-menu-bg)] border border-solid border-[var(--shell-menu-border)] rounded-xl overflow-hidden z-[1202] shadow-[var(--shadow-lg)]">
+                      <button type="button"
+                        onClick={(e) => { e.stopPropagation(); onMoveToProject?.(''); setShowMenu(false); }}
+                        className="w-full p-2 bg-transparent border-none text-[var(--shell-item-fg)] text-left cursor-pointer text-[12px] hover:bg-[var(--shell-item-hover)]"
                       >
                         (No Project)
                       </button>
                       {projects.filter((p): p is typeof p & { id: string } => typeof p.id === 'string' && p.id.length > 0).map(p => (
-                        <button
+                        <button type="button"
                           key={p.id}
-                          onClick={() => { onMoveToProject?.(p.id); setShowMenu(false); }}
-                          style={{ width: '100%', padding: '8px', background: 'transparent', border: 'none', color: 'var(--shell-item-fg)', textAlign: 'left', cursor: 'pointer', fontSize: 12 }}
+                          onClick={(e) => { e.stopPropagation(); onMoveToProject?.(p.id); setShowMenu(false); }}
+                          className="w-full p-2 bg-transparent border-none text-[var(--shell-item-fg)] text-left cursor-pointer text-[12px] hover:bg-[var(--shell-item-hover)]"
                         >
                           {p.title}
                         </button>
@@ -699,17 +517,16 @@ function ItemRailRow({
                   )}
                 </div>
               )}
-              <div style={{ height: 1, background: 'var(--shell-divider)' }} />
-              <button
-                onClick={() => { setShowDeleteConfirm(true); setShowMenu(false); }}
-                style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', color: 'var(--status-error)', textAlign: 'left', cursor: 'pointer', fontSize: 12 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-danger-soft-bg)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              <div className="h-px bg-[var(--shell-divider)] my-1" />
+              <button type="button"
+                onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); setShowMenu(false); }}
+                className="w-full p-2.5 bg-transparent border-none text-[var(--status-error)] text-left cursor-pointer text-[12px] hover:bg-[var(--shell-danger-soft-bg)]"
               >
                 Delete
               </button>
             </div>
-          </>
+          </>,
+          document.body
         )}
       </div>
 
@@ -732,23 +549,22 @@ function GhostRailNotice({ icon: Icon, title, description, actionLabel, onClick 
   description: string;
   actionLabel: string;
   onClick?: () => void;
-}): JSX.Element {
+}): React.ReactNode {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
-      style={{
-        width: '100%', border: '1px dashed var(--border-default)', background: 'transparent',
-        borderRadius: 14, padding: '12px', textAlign: 'left', cursor: 'pointer'
-      }}
+      className="w-full border border-dashed border-[var(--border-default)] bg-transparent rounded-2xl p-3 text-left cursor-pointer hover:bg-[var(--shell-item-hover)] transition-all"
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Icon size={20} color="var(--accent-primary)" />
+      <div className="flex items-center gap-2.5">
+        <span className="text-[var(--accent-primary)]">
+          <Icon size={20} />
+        </span>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{description}</div>
+          <div className="text-[12px] font-semibold text-[var(--text-primary)]">{title}</div>
+          <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5">{description}</div>
         </div>
       </div>
-      <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>{actionLabel}</div>
+      <div className="mt-2 text-[12px] font-bold text-[var(--accent-primary)] uppercase tracking-wider">{actionLabel}</div>
     </button>
   );
 }

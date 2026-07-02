@@ -28,7 +28,7 @@ export type CapabilityType = 'skill' | 'command' | 'connector' | 'mcp' | 'plugin
 // Base Capability
 // ============================================================================
 
-export interface BaseCapability {
+interface BaseCapability {
   id: string;
   name: string;
   description: string;
@@ -46,7 +46,7 @@ export interface BaseCapability {
 // Skill Types
 // ============================================================================
 
-export interface SkillVariable {
+interface SkillVariable {
   name: string;
   description: string;
   required: boolean;
@@ -54,7 +54,7 @@ export interface SkillVariable {
   type?: string;
 }
 
-export interface SkillExample {
+interface SkillExample {
   title: string;
   description: string;
   input: Record<string, unknown>;
@@ -72,7 +72,7 @@ export interface Skill extends BaseCapability {
 // Command Types
 // ============================================================================
 
-export interface CommandArgument {
+interface CommandArgument {
   name: string;
   description: string;
   required: boolean;
@@ -93,7 +93,7 @@ export interface Command extends BaseCapability {
 // Connector Types
 // ============================================================================
 
-export interface ConnectorAction {
+interface ConnectorAction {
   id: string;
   name: string;
   description: string;
@@ -101,7 +101,7 @@ export interface ConnectorAction {
   outputs: Record<string, unknown>;
 }
 
-export interface ConnectorWebhook {
+interface ConnectorWebhook {
   event: string;
   path: string;
   description: string;
@@ -132,14 +132,14 @@ export interface McpServer extends BaseCapability {
 // Plugin Types
 // ============================================================================
 
-export interface PluginView {
+interface PluginView {
   id: string;
   type: string;
   title: string;
   component: string;
 }
 
-export interface Plugin extends BaseCapability {
+interface Plugin extends BaseCapability {
   type: 'plugin';
   views?: PluginView[];
   activationPoints?: string[];

@@ -57,7 +57,7 @@ export function AgentCard({
   };
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
       className={`p-4 rounded-lg border cursor-pointer transition-all hover:border-white/20 ${className}`}
       style={{

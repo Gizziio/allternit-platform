@@ -3,6 +3,10 @@
 import React from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ErrorBoundary');
+
 interface Props {
   children: React.ReactNode;
   fallback?: React.ReactNode;
@@ -43,7 +47,7 @@ export class ResearchErrorBoundary extends React.Component<Props, State> {
               {this.state.error?.message || 'An unexpected error occurred in the research workspace.'}
             </p>
           </div>
-          <button
+          <button type="button"
             onClick={() => this.setState({ hasError: false })}
             className="research-btn-secondary"
           >

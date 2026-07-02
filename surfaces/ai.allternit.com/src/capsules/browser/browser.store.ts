@@ -144,7 +144,7 @@ export function createComponentTab(
 // Store Interface
 // ============================================================================
 
-export interface RecentVisit {
+interface RecentVisit {
   url: string;
   title: string;
   visitedAt: number;
@@ -152,8 +152,8 @@ export interface RecentVisit {
 
 const MAX_RECENT_VISITS = 12;
 export const BROWSER_CHAT_PANE_MIN_WIDTH = 320;
-export const BROWSER_CHAT_PANE_MAX_WIDTH = 520;
-export const BROWSER_CHAT_PANE_DEFAULT_WIDTH = 392;
+const BROWSER_CHAT_PANE_MAX_WIDTH = 520;
+const BROWSER_CHAT_PANE_DEFAULT_WIDTH = 392;
 
 function clampChatPaneWidth(width: number) {
   return Math.max(BROWSER_CHAT_PANE_MIN_WIDTH, Math.min(BROWSER_CHAT_PANE_MAX_WIDTH, Math.round(width)));
@@ -549,7 +549,7 @@ export function useTabCount(): number {
   return useBrowserStore((state) => state.tabs.length);
 }
 
-export function useRecentVisits(): RecentVisit[] {
+function useRecentVisits(): RecentVisit[] {
   return useBrowserStore((state) => state.recentVisits);
 }
 

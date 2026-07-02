@@ -9,7 +9,7 @@
  * - Call Options: Temperature, maxTokens, toolChoice, etc.
  */
 
-import type { Agent, AgentTask, AgentRun } from './agent.types';
+import type { Agent, AgentRun } from './agent.types';
 
 // ============================================================================
 // Subagent Configuration
@@ -38,7 +38,7 @@ export interface SubagentConfig {
   maxRetries: number;
 }
 
-export interface TriggerCondition {
+interface TriggerCondition {
   /** Type of trigger */
   type: 'tool-call' | 'step-count' | 'state-change' | 'manual' | 'condition';
   /** Tool name if type is 'tool-call' */
@@ -76,7 +76,7 @@ export interface AgentSwarm {
   maxRounds: number;
 }
 
-export interface SwarmAgentConfig {
+interface SwarmAgentConfig {
   /** Agent ID */
   agentId: string;
   /** Role in the swarm */
@@ -91,7 +91,7 @@ export interface SwarmAgentConfig {
   canTerminate: boolean;
 }
 
-export type SwarmRole = 
+type SwarmRole = 
   | 'leader'      // Coordinates other agents
   | 'worker'      // Executes tasks
   | 'critic'      // Reviews and validates
@@ -99,7 +99,7 @@ export type SwarmRole =
   | 'specialist'  // Domain expert
   | 'observer';   // Monitors and reports
 
-export type SwarmStrategy = 
+type SwarmStrategy = 
   | 'round-robin'     // Each agent takes turns
   | 'hierarchical'    // Leader delegates to workers
   | 'democratic'      // Voting-based decisions
@@ -108,7 +108,7 @@ export type SwarmStrategy =
   | 'specialist'      // Route to specialist based on task
   | 'adaptive';       // Dynamic strategy based on context
 
-export interface SwarmCommunication {
+interface SwarmCommunication {
   /** Communication pattern */
   pattern: 'broadcast' | 'direct' | 'mailbox' | 'shared-memory';
   /** Message retention (ms) */
@@ -142,7 +142,7 @@ export interface AgentWorkflow {
   triggers: WorkflowTrigger[];
 }
 
-export interface WorkflowStep {
+interface WorkflowStep {
   /** Step ID */
   id: string;
   /** Step name */
@@ -171,14 +171,14 @@ export interface WorkflowStep {
   branches?: WorkflowBranch[];
 }
 
-export interface ParallelStepConfig {
+interface ParallelStepConfig {
   /** Number of concurrent executions */
   concurrency: number;
   /** Aggregation strategy */
   aggregation: 'collect' | 'merge' | 'vote' | 'first' | 'all';
 }
 
-export interface WorkflowBranch {
+interface WorkflowBranch {
   /** Branch ID */
   id: string;
   /** Branch name */
@@ -189,7 +189,7 @@ export interface WorkflowBranch {
   nextStepId: string;
 }
 
-export type WorkflowExpression = 
+type WorkflowExpression = 
   | string  // Simple expression like "${input.value} > 5"
   | { 
       operator: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'and' | 'or' | 'not' | 'in' | 'contains';
@@ -197,7 +197,7 @@ export type WorkflowExpression =
       right?: string | number | boolean | WorkflowExpression;
     };
 
-export interface WorkflowVariable {
+interface WorkflowVariable {
   /** Variable name */
   name: string;
   /** Variable type */
@@ -210,7 +210,7 @@ export interface WorkflowVariable {
   description?: string;
 }
 
-export interface WorkflowErrorHandling {
+interface WorkflowErrorHandling {
   /** Default retry count */
   defaultRetries: number;
   /** Default retry delay (ms) */
@@ -223,7 +223,7 @@ export interface WorkflowErrorHandling {
   notifyOnError: boolean;
 }
 
-export interface WorkflowTrigger {
+interface WorkflowTrigger {
   /** Trigger type */
   type: 'schedule' | 'webhook' | 'event' | 'manual';
   /** Cron expression for schedule */
@@ -236,7 +236,7 @@ export interface WorkflowTrigger {
   enabled: boolean;
 }
 
-export interface RetryConfig {
+interface RetryConfig {
   /** Max retry attempts */
   maxAttempts: number;
   /** Delay between retries (ms) */
@@ -268,7 +268,7 @@ export interface LoopControlConfig {
   terminationStrategy?: 'first-success' | 'all-complete' | 'condition-met' | 'max-iterations';
 }
 
-export interface AbortCondition {
+interface AbortCondition {
   /** Condition type */
   type: 'condition' | 'tool-result' | 'state-value' | 'time-limit' | 'cost-limit';
   /** Expression to evaluate */
@@ -467,7 +467,7 @@ export interface SafetyConfig {
   sandboxLevel: 'none' | 'light' | 'strict' | 'isolated';
 }
 
-export interface ValidationRule {
+interface ValidationRule {
   /** Field to validate */
   field: string;
   /** Validation type */
@@ -542,7 +542,7 @@ export interface AgentTemplate {
   icon?: string;
 }
 
-export interface AgentExample {
+interface AgentExample {
   /** Example name */
   name: string;
   /** Input */
@@ -593,7 +593,7 @@ export interface WorkflowExecutionState {
   failedSteps: string[];
 }
 
-export interface ExecutionTraceEvent {
+interface ExecutionTraceEvent {
   /** Timestamp */
   timestamp: string;
   /** Event type */
@@ -606,7 +606,7 @@ export interface ExecutionTraceEvent {
   duration?: number;
 }
 
-export interface RunCost {
+interface RunCost {
   /** LLM costs (cents) */
   llmCost: number;
   /** Tool costs (cents) */
@@ -619,7 +619,7 @@ export interface RunCost {
   byTool: Record<string, number>;
 }
 
-export interface TokenUsage {
+interface TokenUsage {
   /** Prompt tokens */
   prompt: number;
   /** Completion tokens */

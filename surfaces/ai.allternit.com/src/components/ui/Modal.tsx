@@ -38,7 +38,7 @@ export function Modal({
   usePortal = true,
   preventBackdropClose = false,
   className = '',
-}: ModalProps): JSX.Element | null {
+}: ModalProps): React.ReactNode | null {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export function Modal({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'var(--shell-overlay-backdrop, rgba(0,0,0,0.65))',
+          background: 'var(--shell-overlay-backdrop, rgba(42,31,22,0.18))',
           backdropFilter: 'blur(4px)',
         }}
       />
@@ -132,7 +132,7 @@ interface ModalHeaderProps {
   showClose?: boolean;
 }
 
-export function ModalHeader({ title, onClose, showClose = true }: ModalHeaderProps): JSX.Element {
+export function ModalHeader({ title, onClose, showClose = true }: ModalHeaderProps): React.ReactNode {
   return (
     <div
       style={{
@@ -154,7 +154,7 @@ export function ModalHeader({ title, onClose, showClose = true }: ModalHeaderPro
         {title}
       </h2>
       {showClose && onClose && (
-        <button
+        <button type="button"
           onClick={onClose}
           style={{
             background: 'none',
@@ -187,7 +187,7 @@ interface ModalBodyProps {
   className?: string;
 }
 
-export function ModalBody({ children, className = '' }: ModalBodyProps): JSX.Element {
+export function ModalBody({ children, className = '' }: ModalBodyProps): React.ReactNode {
   return (
     <div
       className={className}
@@ -211,7 +211,7 @@ interface ModalFooterProps {
   className?: string;
 }
 
-export function ModalFooter({ children, className = '' }: ModalFooterProps): JSX.Element {
+export function ModalFooter({ children, className = '' }: ModalFooterProps): React.ReactNode {
   return (
     <div
       className={className}
@@ -247,7 +247,7 @@ export function ModalButton({
   variant = 'secondary',
   disabled = false,
   type = 'button',
-}: ModalButtonProps): JSX.Element {
+}: ModalButtonProps): React.ReactNode {
   const variants: Record<string, React.CSSProperties> = {
     primary: {
       background: 'var(--accent-primary)',

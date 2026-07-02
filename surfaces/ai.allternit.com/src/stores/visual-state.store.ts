@@ -11,6 +11,10 @@ import type { VisualState, TelemetryEvent, IntensityLevel } from '@allternit/vis
 import { Mood } from '@allternit/visual-state/types';
 import { getMoodDisplayName } from '@allternit/visual-state/types';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('VisualState');
+
 // ============================================================================
 // Store State
 // ============================================================================
@@ -263,7 +267,7 @@ export const useVisualStateStore = create<VisualStateStoreState>()(
       get().setState(agentId, newState);
       
       // Log state transition
-      console.debug(`[VisualState] Agent ${agentId}: ${previousState?.mood ?? 'init'} → ${mood} (${intensity}/10)`);
+      logger.debug(`Agent ${agentId}: ${previousState?.mood ?? 'init'} → ${mood} (${intensity}/10)`);
     },
     
     getState: (agentId) => {
@@ -321,7 +325,7 @@ export function createTelemetryEvent(
 /**
  * Get display text for current agent state
  */
-export function getAgentStateDisplay(state: VisualState | undefined): string {
+function getAgentStateDisplay(state: VisualState | undefined): string {
   if (!state) return 'Agent ready';
   
   const moodName = getMoodDisplayName(state.mood);

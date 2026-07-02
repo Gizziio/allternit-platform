@@ -13,7 +13,6 @@ import {
   PlugsConnected,
   CaretRight,
   CaretDown,
-  Sparkle,
 } from '@phosphor-icons/react';
 import type { Plugin, PluginCommand, PluginSkill, PluginConnector } from '../../plugins/plugin.types';
 import { useCapabilities } from '../../plugins/useCapabilities';
@@ -22,11 +21,11 @@ const THEME = {
   bg: 'var(--surface-canvas)',
   bgElevated: 'var(--surface-panel)',
   accent: 'var(--accent-primary)',
-  accentMuted: 'rgba(212, 176, 140, 0.15)',
+  accentMuted: 'color-mix(in srgb, var(--accent-cowork) 15%, transparent)',
   textPrimary: 'var(--ui-text-primary)',
   textSecondary: 'var(--ui-text-secondary)',
   textTertiary: 'var(--ui-text-muted)',
-  border: 'rgba(212, 176, 140, 0.1)',
+  border: 'color-mix(in srgb, var(--accent-cowork) 10%, transparent)',
 };
 
 interface AgentCapabilitiesPanelProps {
@@ -156,7 +155,7 @@ export function AgentCapabilitiesPanel({
   if (variant === 'compact') {
     return (
       <>
-        <button
+        <button type="button"
           onClick={() => setShowPanel(true)}
           style={{
             display: 'flex',
@@ -276,7 +275,7 @@ function PluginSection({
         overflow: 'hidden',
       }}
     >
-      <button
+      <button type="button"
         onClick={onToggle}
         style={{
           width: '100%',
@@ -371,7 +370,7 @@ function CapabilityTypeSection({
 }) {
   return (
     <div style={{ borderBottom: `1px solid ${THEME.border}` }}>
-      <button
+      <button type="button"
         onClick={onToggle}
         style={{
           width: '100%',
@@ -454,11 +453,11 @@ function CapabilityItem({
           {renderTrigger ? renderTrigger(item) : item.name}
         </div>
         <div style={{ fontSize: 12, color: THEME.textTertiary, marginTop: 2 }}>
-          {item.description.slice(0, 60)}...
+          {item.description.length > 60 ? item.description.slice(0, 60) + '…' : item.description}
         </div>
       </div>
       {onUse && (
-        <button
+        <button type="button"
           onClick={handleUse}
           style={{
             padding: '4px 12px',
@@ -548,7 +547,7 @@ function CapabilitiesOverlay({
           >
             Available Capabilities ({totalEnabled})
           </h3>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{
               background: 'transparent',

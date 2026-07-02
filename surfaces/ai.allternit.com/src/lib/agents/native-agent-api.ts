@@ -176,14 +176,14 @@ export interface SessionStatusChangedEvent {
   active: boolean;
 }
 
-export interface SessionPartUpdatedEvent {
+interface SessionPartUpdatedEvent {
   type: "part_updated";
   session_id: string;
   message_id: string;
   part: Record<string, unknown>;
 }
 
-export interface SessionPartDeltaEvent {
+interface SessionPartDeltaEvent {
   type: "part_delta";
   session_id: string;
   message_id: string;
@@ -192,14 +192,14 @@ export interface SessionPartDeltaEvent {
   delta: string;
 }
 
-export interface SessionPartRemovedEvent {
+interface SessionPartRemovedEvent {
   type: "part_removed";
   session_id: string;
   message_id: string;
   part_id: string;
 }
 
-export interface SessionPermissionAskedEvent {
+interface SessionPermissionAskedEvent {
   type: "permission_asked";
   request_id: string;
   session_id: string;
@@ -210,14 +210,14 @@ export interface SessionPermissionAskedEvent {
   tool?: { messageID: string; callID: string };
 }
 
-export interface SessionPermissionRepliedEvent {
+interface SessionPermissionRepliedEvent {
   type: "permission_replied";
   request_id: string;
   session_id?: string;
   reply?: string;
 }
 
-export interface SessionQuestionAskedEvent {
+interface SessionQuestionAskedEvent {
   type: "question_asked";
   request_id: string;
   session_id: string;
@@ -230,7 +230,7 @@ export interface SessionQuestionAskedEvent {
   }>;
 }
 
-export interface SessionQuestionRepliedEvent {
+interface SessionQuestionRepliedEvent {
   type: "question_replied";
   request_id: string;
   session_id?: string;
@@ -957,7 +957,7 @@ export const sessionLifecycleApi = {
 // Permissions API
 // ============================================================================
 
-export const permissionsApi = {
+const permissionsApi = {
   async replyPermission(
     requestID: string,
     reply: "once" | "always" | "reject",

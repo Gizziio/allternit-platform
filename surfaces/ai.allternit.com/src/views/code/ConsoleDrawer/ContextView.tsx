@@ -22,6 +22,10 @@ import {
 } from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ContextView');
+
 export function ContextView() {
   const {
     contextMode,
@@ -145,7 +149,7 @@ export function ContextView() {
       {/* Header with refresh */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 18 }}>Current Context</h2>
-        <button
+        <button type="button"
           onClick={handleRefresh}
           style={{
             padding: 8,
@@ -262,7 +266,7 @@ export function ContextView() {
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
+                <button type="button"
                   onClick={handleExecuteDag}
                   style={{
                     padding: "8px 16px",
@@ -281,7 +285,7 @@ export function ContextView() {
                   <Play size={14} />
                   Run
                 </button>
-                <button
+                <button type="button"
                   onClick={handleGoToPlan}
                   style={{
                     padding: "8px 16px",
@@ -356,7 +360,7 @@ export function ContextView() {
                   />
                 </div>
                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                  <button
+                  <button type="button"
                     onClick={handleViewExecutions}
                     style={{
                       fontSize: 12,
@@ -424,7 +428,7 @@ export function ContextView() {
                 marginBottom: 12,
               }}
             >
-              <button
+              <button type="button"
                 onClick={handleGoToWork}
                 style={{
                   flex: 1,
@@ -449,7 +453,7 @@ export function ContextView() {
                   gap: 8,
                 }}
               >
-                <button
+                <button type="button"
                   onClick={handleCompleteWih}
                   style={{
                     flex: 1,
@@ -470,7 +474,7 @@ export function ContextView() {
                   <CheckCircle size={14} />
                   Complete
                 </button>
-                <button
+                <button type="button"
                   onClick={handleFailWih}
                   style={{
                     flex: 1,
@@ -666,7 +670,7 @@ function StatBox({
   onClick: () => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         padding: 12,
@@ -696,7 +700,7 @@ function ActionButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         display: 'flex',
@@ -738,7 +742,7 @@ function DrawerTabButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         padding: '10px',

@@ -7,8 +7,7 @@
 
 'use client';
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
   Archive,
@@ -69,7 +68,7 @@ function ArchivedSessionRow({
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={() => onSelect(session.id)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -141,7 +140,7 @@ function ArchivedSessionRow({
 
         {/* Restore button - shown on hover */}
         {isHovered && (
-          <button
+          <button type="button"
             onClick={(e) => {
               e.stopPropagation();
               onRestore(session.id);
@@ -182,6 +181,7 @@ export function ArchivedView() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [restoredSessions, setRestoredSessions] = useState<Set<string>>(new Set());
   const [archivedSessions, setArchivedSessions] = useState<ArchivedSession[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/v1/sessions/archived')
@@ -208,19 +208,30 @@ export function ArchivedView() {
     );
   }, [filteredSessions]);
 
-  const handleRestore = (sessionId: string) => {
+  const handleRestore = useCallback((sessionId: string) => {
     const newRestored = new Set(restoredSessions);
     newRestored.add(sessionId);
     setRestoredSessions(newRestored);
     setSelectedSessionId(null);
 
-    fetch(`/api/v1/sessions/${sessionId}/restore`, { method: 'POST' }).catch(() => {});
-  };
+    fetch(`/api/v1/sessions/${sessionId}/restore`, { method: 'POST' })
+      .then(r => { if (!r.ok) throw new Error(`Restore failed (${r.status})`); })
+      .catch((e: Error) => {
+        setRestoredSessions(prev => { const next = new Set(prev); next.delete(sessionId); return next; });
+        setError(e.message);
+      });
+  }, [restoredSessions]);
 
   const isEmpty = sortedSessions.length === 0;
 
   return (
     <GlassSurface className="h-full w-full flex flex-col">
+      {error && (
+        <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400 flex items-center justify-between">
+          {error}
+          <button type="button" onClick={() => setError(null)} className="ml-2 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
       {/* Header */}
       <div className="p-4 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-3">
@@ -254,8 +265,7 @@ export function ArchivedView() {
               className="size-4  text-[var(--text-tertiary)] flex-shrink-0"
               strokeWidth={2}
             />
-            <input
-              type="text"
+            <input aria-label="Search archived sessions…" type="text"
               placeholder="Search archived sessions…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}

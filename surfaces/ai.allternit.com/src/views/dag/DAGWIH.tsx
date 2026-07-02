@@ -1,6 +1,7 @@
+import React from 'react';
 import { DagWihSurface } from "./DagRuntimeWorkspace";
 
-export function DAGWIH(): JSX.Element {
+export function DAGWIH(): React.ReactNode {
   return <DagWihSurface />;
 }
 

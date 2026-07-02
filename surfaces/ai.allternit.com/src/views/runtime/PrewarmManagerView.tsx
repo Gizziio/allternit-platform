@@ -17,7 +17,7 @@ import { StatCard } from '../components/StatCard';
 import { ProgressBar } from '../components/ProgressBar';
 import { PoolHealth } from '@/types/runtime';
 
-export function PrewarmManagerView(): JSX.Element {
+export function PrewarmManagerView(): React.ReactNode {
   const {
     pools,
     activities,
@@ -77,7 +77,7 @@ export function PrewarmManagerView(): JSX.Element {
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <Warning className="mb-4 size-12  text-red-500" />
         <p className="mb-4">Failed to load prewarm status</p>
-        <button
+        <button type="button"
           onClick={() => void refetch()}
           className="flex items-center gap-2 rounded-2xl bg-accent/15 px-4 py-2 text-accent transition-colors hover:bg-accent/25"
         >
@@ -105,14 +105,14 @@ export function PrewarmManagerView(): JSX.Element {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <button
+              <button type="button"
                 onClick={() => void refetch()}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-foreground transition hover:bg-black/30"
               >
                 <ArrowsClockwise size={16} />
                 Refresh
               </button>
-              <button
+              <button type="button"
                 onClick={() => void handleWarmup(pools[0]?.name)}
                 disabled={isWarming}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
@@ -167,8 +167,7 @@ export function PrewarmManagerView(): JSX.Element {
                 </div>
               </div>
 
-              <input
-                type="range"
+              <input aria-label="Input" type="range"
                 min={1}
                 max={12}
                 step={1}
@@ -184,7 +183,7 @@ export function PrewarmManagerView(): JSX.Element {
               </div>
 
               <div className="mt-6 flex justify-end">
-                <button
+                <button type="button"
                   onClick={() => void handleSavePoolSize()}
                   disabled={isSaving || draftPoolSize === (runtimeStatus?.pool_size || 0)}
                   className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"

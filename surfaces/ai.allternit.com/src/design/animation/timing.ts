@@ -62,7 +62,7 @@ export const animationTiming = {
 } as const;
 
 /** Type for animation timing tokens */
-export type TimingToken = typeof animationTiming;
+type TimingToken = typeof animationTiming;
 
 /** Helper to get duration respecting reduced motion */
 export function getDuration(
@@ -87,7 +87,7 @@ export function getStaggerDelay(
 }
 
 /** Helper to get spring config respecting reduced motion */
-export function getSpringConfig(
+function getSpringConfig(
   config: typeof animationTiming.spring.standard,
   prefersReducedMotion: boolean
 ): typeof animationTiming.spring.standard | { duration: number } {

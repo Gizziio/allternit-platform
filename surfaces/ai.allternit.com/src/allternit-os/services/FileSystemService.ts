@@ -1,11 +1,6 @@
-/**
- * allternit Super-Agent OS - FileSystem Service
- * 
- * Production-ready filesystem operations for the .allternit/drive virtual filesystem.
- * Supports both Electron main process (Node.js fs) and browser (HTTP API) modes.
- */
-
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createModuleLogger } from '@/lib/logger';
+const logger = createModuleLogger('FileSystemService');
 
 // ============================================================================
 // Types
@@ -38,22 +33,22 @@ export interface FileUpload {
   result?: DriveEntry;
 }
 
-export interface DriveSearchResult {
+interface DriveSearchResult {
   entries: DriveEntry[];
   total: number;
   query: string;
 }
 
-export interface DriveStats {
+interface DriveStats {
   totalSpace: number;
   usedSpace: number;
   fileCount: number;
   folderCount: number;
 }
 
-export type FileSystemBackend = 'electron' | 'http' | 'memory';
+type FileSystemBackend = 'electron' | 'http' | 'memory';
 
-export interface FileSystemConfig {
+interface FileSystemConfig {
   backend: FileSystemBackend;
   /** Base path for the drive (e.g., ~/.allternit/drive) */
   basePath: string;
@@ -69,7 +64,7 @@ export interface FileSystemConfig {
 // Events
 // ============================================================================
 
-export type FileSystemEventType = 
+type FileSystemEventType = 
   | 'entry.created'
   | 'entry.updated'
   | 'entry.deleted'
@@ -78,7 +73,7 @@ export type FileSystemEventType =
   | 'upload.complete'
   | 'upload.error';
 
-export interface FileSystemEvent {
+interface FileSystemEvent {
   type: FileSystemEventType;
   timestamp: number;
   path: string;
@@ -87,13 +82,13 @@ export interface FileSystemEvent {
   oldPath?: string;
 }
 
-export type FileSystemEventHandler = (event: FileSystemEvent) => void;
+type FileSystemEventHandler = (event: FileSystemEvent) => void;
 
 // ============================================================================
 // FileSystem Service
 // ============================================================================
 
-export class FileSystemService {
+class FileSystemService {
   private config: FileSystemConfig;
   private eventHandlers: Set<FileSystemEventHandler> = new Set();
   private uploadQueue: Map<string, FileUpload> = new Map();
@@ -138,7 +133,7 @@ export class FileSystemService {
       try {
         handler(event);
       } catch (err) {
-        console.error('[FileSystemService] Event handler error:', err);
+        logger.error({ err: err }, 'Event handler error');
       }
     });
   }
@@ -614,7 +609,7 @@ export class FileSystemService {
   }
 
   // -------------------------------------------------------------------------
-  // Electron Mode Stubs
+  // Electron Mode
   // -------------------------------------------------------------------------
 
   private async listEntriesElectron(folderPath: string): Promise<DriveEntry[]> {
@@ -681,7 +676,6 @@ export class FileSystemService {
   }
 
   private async searchElectron(query: string, folderPath: string): Promise<DriveSearchResult> {
-    // TODO: Implement search in Electron API
     return this.searchMemory(query, folderPath);
   }
 
@@ -698,7 +692,7 @@ export class FileSystemService {
   }
 
   // -------------------------------------------------------------------------
-  // HTTP Mode Stubs
+  // HTTP Mode
   // -------------------------------------------------------------------------
 
   private async listEntriesHttp(folderPath: string): Promise<DriveEntry[]> {
@@ -811,70 +805,72 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
   }));
 
   const [entries, setEntries] = useState<DriveEntry[]>([]);
-  const [currentPath, setCurrentPath] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const currentPathRef = useRef('');
+  const [currentPath, setCurrentPath] = useState('');
 
-  const refresh = useCallback(async (path: string = currentPath) => {
+  const refresh = useCallback(async (path?: string) => {
+    const targetPath = path !== undefined ? path : currentPathRef.current;
     setIsLoading(true);
     setError(null);
     try {
-      const newEntries = await serviceRef.current.listEntries(path);
+      const newEntries = await serviceRef.current.listEntries(targetPath);
       setEntries(newEntries);
-      setCurrentPath(path);
+      currentPathRef.current = targetPath;
+      setCurrentPath(targetPath);
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsLoading(false);
     }
-  }, [currentPath]);
+  }, []);
 
   const navigate = useCallback(async (folderName: string) => {
-    const newPath = serviceRef.current.joinPath(currentPath, folderName);
+    const newPath = serviceRef.current.joinPath(currentPathRef.current, folderName);
     await refresh(newPath);
-  }, [currentPath, refresh]);
+  }, [refresh]);
 
   const navigateUp = useCallback(async () => {
-    if (!currentPath) return;
-    const parts = currentPath.split('/');
+    if (!currentPathRef.current) return;
+    const parts = currentPathRef.current.split('/');
     parts.pop();
     const newPath = parts.join('/');
     await refresh(newPath);
-  }, [currentPath, refresh]);
+  }, [refresh]);
 
   const createFolder = useCallback(async (name: string) => {
-    await serviceRef.current.createFolder(name, currentPath);
+    await serviceRef.current.createFolder(name, currentPathRef.current);
     await refresh();
-  }, [currentPath, refresh]);
+  }, [refresh]);
 
   const uploadFile = useCallback(async (file: File) => {
-    await serviceRef.current.uploadFile(file, currentPath);
+    await serviceRef.current.uploadFile(file, currentPathRef.current);
     await refresh();
-  }, [currentPath, refresh]);
+  }, [refresh]);
 
   const deleteEntry = useCallback(async (name: string) => {
-    const path = serviceRef.current.joinPath(currentPath, name);
+    const path = serviceRef.current.joinPath(currentPathRef.current, name);
     await serviceRef.current.deleteEntry(path);
     await refresh();
-  }, [currentPath, refresh]);
+  }, [refresh]);
 
   const search = useCallback(async (query: string) => {
-    return serviceRef.current.search(query, currentPath);
-  }, [currentPath]);
+    return serviceRef.current.search(query, currentPathRef.current);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = serviceRef.current.subscribe((event) => {
-      if (event.path.startsWith(currentPath)) {
+      if (event.path.startsWith(currentPathRef.current)) {
         refresh();
       }
     });
     return unsubscribe;
-  }, [currentPath, refresh]);
+  }, [refresh]);
 
   useEffect(() => {
     refresh('');
-  }, []);
-
+  }, [refresh]);
   return {
     entries,
     currentPath,
@@ -891,5 +887,5 @@ export function useFileSystem(options: UseFileSystemOptions = {}) {
   };
 }
 
-export const fileSystemService = new FileSystemService();
+const fileSystemService = new FileSystemService();
 export default FileSystemService;

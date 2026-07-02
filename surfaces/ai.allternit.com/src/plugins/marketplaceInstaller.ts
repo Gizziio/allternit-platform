@@ -281,40 +281,42 @@ async function collectGitHubFilesRecursive(
   const payload = await response.json() as GitHubContentItem[] | GitHubContentItem;
   const entries = Array.isArray(payload) ? payload : [payload];
 
-  for (const entry of entries) {
-    if (entry.type === 'dir') {
-      await collectGitHubFilesRecursive(repo, ref, rootPath, entry.path, files, stats);
-      continue;
-    }
-    if (entry.type !== 'file') continue;
-
-    const relativePath = (() => {
-      if (!rootPath) return entry.path;
-      if (entry.path === rootPath) return entry.name;
-      if (entry.path.startsWith(`${rootPath}/`)) {
-        return entry.path.slice(rootPath.length + 1);
+  await Promise.all(
+    entries.map(async (entry) => {
+      if (entry.type === 'dir') {
+        await collectGitHubFilesRecursive(repo, ref, rootPath, entry.path, files, stats);
+        return;
       }
-      return entry.path;
-    })();
-    const safePath = sanitizeRelativePath(relativePath);
-    if (!safePath) continue;
+      if (entry.type !== 'file') return;
 
-    const content = await fetchGitHubFileText(entry);
-    if (typeof content !== 'string') continue;
-    if (!looksLikeText(safePath, content)) continue;
+      const relativePath = (() => {
+        if (!rootPath) return entry.path;
+        if (entry.path === rootPath) return entry.name;
+        if (entry.path.startsWith(`${rootPath}/`)) {
+          return entry.path.slice(rootPath.length + 1);
+        }
+        return entry.path;
+      })();
+      const safePath = sanitizeRelativePath(relativePath);
+      if (!safePath) return;
 
-    stats.totalBytes += content.length;
-    if (stats.totalBytes > MAX_TOTAL_TEXT_BYTES) {
-      throw new Error('Plugin package exceeds text size limit.');
-    }
-    files.push({
-      relativePath: safePath,
-      content,
-    });
-    if (files.length > MAX_FILE_COUNT) {
-      throw new Error('Plugin package has too many files.');
-    }
-  }
+      const content = await fetchGitHubFileText(entry);
+      if (typeof content !== 'string') return;
+      if (!looksLikeText(safePath, content)) return;
+
+      stats.totalBytes += content.length;
+      if (stats.totalBytes > MAX_TOTAL_TEXT_BYTES) {
+        throw new Error('Plugin package exceeds text size limit.');
+      }
+      files.push({
+        relativePath: safePath,
+        content,
+      });
+      if (files.length > MAX_FILE_COUNT) {
+        throw new Error('Plugin package has too many files.');
+      }
+    })
+  );
 }
 
 function buildFallbackManifest(plugin: MarketplacePlugin): Record<string, unknown> {
@@ -422,23 +424,25 @@ async function resolveFromZip(plugin: MarketplacePlugin, sourceUrl: string, buff
     .filter((entry) => !entry.dir)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  for (const entry of entries) {
-    const safePath = sanitizeRelativePath(entry.name);
-    if (!safePath) continue;
-    const content = await entry.async('string');
-    if (!looksLikeText(safePath, content)) continue;
-    totalBytes += content.length;
-    if (totalBytes > MAX_TOTAL_TEXT_BYTES) {
-      throw new Error('Plugin package exceeds text size limit.');
-    }
-    files.push({
-      relativePath: safePath,
-      content,
-    });
-    if (files.length > MAX_FILE_COUNT) {
-      throw new Error('Plugin package has too many files.');
-    }
-  }
+  await Promise.all(
+    entries.map(async (entry) => {
+      const safePath = sanitizeRelativePath(entry.name);
+      if (!safePath) return;
+      const content = await entry.async('string');
+      if (!looksLikeText(safePath, content)) return;
+      totalBytes += content.length;
+      if (totalBytes > MAX_TOTAL_TEXT_BYTES) {
+        throw new Error('Plugin package exceeds text size limit.');
+      }
+      files.push({
+        relativePath: safePath,
+        content,
+      });
+      if (files.length > MAX_FILE_COUNT) {
+        throw new Error('Plugin package has too many files.');
+      }
+    })
+  );
 
   if (files.length === 0) {
     throw new Error('ZIP source does not contain any installable text files.');

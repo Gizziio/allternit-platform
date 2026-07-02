@@ -24,7 +24,7 @@ const getFormatColor = (format: Export['format']) => {
     case 'JSON':
       return { bg: 'rgba(59, 130, 246, 0.1)', color: 'var(--status-info)' };
     case 'XLSX':
-      return { bg: 'rgba(168, 85, 247, 0.1)', color: '#a855f7' };
+      return { bg: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', color: 'var(--accent-primary)' };
     default:
       return { bg: 'var(--bg-secondary)', color: 'var(--text-secondary)' };
   }
@@ -35,7 +35,7 @@ export const ExportsView: React.FC = () => {
   const [exports_, setExports] = useState<Export[]>([]);
 
   useEffect(() => {
-    fetch('/api/v1/workspace/exports').then(r => r.json()).then(setExports).catch(() => {});
+    fetch('/api/v1/workspace/exports').then(r => r.json()).then(setExports).catch(() => setExports([]));
   }, []);
 
   return (
@@ -43,7 +43,7 @@ export const ExportsView: React.FC = () => {
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-xl)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <DownloadSimple size={24} color="#af52de" />
+          <DownloadSimple size={24} color="var(--accent-primary)" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Exports</h1>
         </div>
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Generated and exported files</p>
@@ -51,6 +51,11 @@ export const ExportsView: React.FC = () => {
 
       {/* Exports List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
+        {exports_.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 'var(--spacing-xl)', color: 'var(--text-secondary)' }}>
+            <p style={{ margin: 0, fontSize: '14px' }}>No exports yet.</p>
+          </div>
+        )}
         {exports_.map((exp) => {
           const formatColor = getFormatColor(exp.format);
 
@@ -134,9 +139,9 @@ export const ExportsView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Download Button - appears on hover for ready items */}
-                  {exp.status === 'ready' && hoveredExportId === exp.id && (
-                    <button
+                  {/* Download Button — only for ready items, faded when not hovered */}
+                  {exp.status === 'ready' && (
+                    <button type="button"
                       style={{
                         padding: '8px 12px',
                         borderRadius: '4px',
@@ -146,16 +151,12 @@ export const ExportsView: React.FC = () => {
                         fontSize: '13px',
                         fontWeight: 600,
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '0.9';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = '1';
+                        opacity: hoveredExportId === exp.id ? 1 : 0,
+                        transition: 'opacity 0.15s',
+                        pointerEvents: hoveredExportId === exp.id ? 'auto' : 'none',
                       }}
                     >
                       <DownloadSimple size={16} />

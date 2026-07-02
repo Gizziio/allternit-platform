@@ -24,7 +24,7 @@ export interface LocalPluginSource {
   isDevMode?: boolean;
 }
 
-export interface LocalPluginManifest {
+interface LocalPluginManifest {
   name: string;
   description?: string;
   version?: string;
@@ -43,7 +43,7 @@ export interface LoadedLocalPlugin {
   isDevMode: boolean;
 }
 
-export interface LocalDirectoryValidation {
+interface LocalDirectoryValidation {
   valid: boolean;
   error?: string;
   manifestPath?: string;
@@ -381,7 +381,7 @@ async function findReadme(dirPath: string, fs: FileSystemAPI): Promise<string> {
 
 const LOCAL_SOURCES_STORAGE_KEY = 'allternit:plugin-manager:local-sources:v1';
 
-export function loadLocalSources(): LocalPluginSource[] {
+function loadLocalSources(): LocalPluginSource[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(LOCAL_SOURCES_STORAGE_KEY);
@@ -394,7 +394,7 @@ export function loadLocalSources(): LocalPluginSource[] {
   }
 }
 
-export function saveLocalSources(sources: LocalPluginSource[]): void {
+function saveLocalSources(sources: LocalPluginSource[]): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(LOCAL_SOURCES_STORAGE_KEY, JSON.stringify(sources));
@@ -419,17 +419,17 @@ function isValidLocalSource(value: unknown): value is LocalPluginSource {
 // File Watching (Dev Mode)
 // ============================================================================
 
-export interface FileWatcher {
+interface FileWatcher {
   stop: () => void;
 }
 
-export type FileChangeCallback = (event: { type: 'change' | 'add' | 'delete'; path: string }) => void;
+type FileChangeCallback = (event: { type: 'change' | 'add' | 'delete'; path: string }) => void;
 
 /**
  * Watch a local plugin directory for changes.
  * Uses polling fallback for compatibility.
  */
-export function watchLocalPlugin(
+function watchLocalPlugin(
   sourcePath: string,
   fs: FileSystemAPI,
   callback: FileChangeCallback,

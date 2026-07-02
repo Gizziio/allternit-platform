@@ -39,7 +39,7 @@ function RatingStars({ rating, count }: { rating?: number; count?: number }) {
       <div style={{ display: "flex", gap: 1 }}>
         {Array.from({ length: 5 }).map((_, i) => (
           <Star
-            key={i}
+            key={`agentstorefrontcard-${i}`}
             size={12}
             fill={i < Math.round(rating) ? "#f59e0b" : "transparent"}
             color={i < Math.round(rating) ? "#f59e0b" : "#4b5563"}
@@ -62,7 +62,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
 
   if (compact) {
     return (
-      <div
+      <div role="button" tabIndex={0}
         onClick={() => onClick?.(agent)}
         style={{
           display: "flex",
@@ -104,7 +104,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           <RatingStars rating={agent.rating} count={agent.reviewCount} />
         </div>
         {onMention && (
-          <button
+          <button type="button"
             onClick={(e) => {
               e.stopPropagation();
               onMention(agent);
@@ -129,7 +129,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
   }
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={() => onClick?.(agent)}
       style={{
         display: "flex",
@@ -227,7 +227,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
 
       {/* Mention button */}
       {onMention && (
-        <button
+        <button type="button"
           onClick={(e) => {
             e.stopPropagation();
             onMention(agent);

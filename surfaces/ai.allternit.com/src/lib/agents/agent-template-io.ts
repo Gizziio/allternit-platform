@@ -14,7 +14,7 @@ import type { SpecialistTemplate } from './agent-templates.specialist';
 // Types
 // ============================================================================
 
-export interface AgentExportData {
+interface AgentExportData {
   /** Export format version */
   version: string;
   /** Export timestamp */
@@ -55,7 +55,7 @@ export interface AgentExportData {
   metadata?: Record<string, unknown>;
 }
 
-export interface AgentImportResult {
+interface AgentImportResult {
   success: boolean;
   config: CreateAgentInput | null;
   error?: string;
@@ -76,7 +76,7 @@ const SUPPORTED_VERSIONS = ['1.0'];
 /**
  * Export agent configuration to JSON format
  */
-export function exportAgent(
+function exportAgent(
   config: CreateAgentInput,
   options?: {
     template?: SpecialistTemplate;
@@ -112,7 +112,7 @@ export function exportAgent(
 /**
  * Export agent to JSON string
  */
-export function exportAgentToString(
+function exportAgentToString(
   config: CreateAgentInput,
   options?: {
     template?: SpecialistTemplate;
@@ -127,7 +127,7 @@ export function exportAgentToString(
 /**
  * Download agent configuration as file
  */
-export function downloadAgentFile(
+function downloadAgentFile(
   config: CreateAgentInput,
   options?: {
     template?: SpecialistTemplate;
@@ -154,7 +154,7 @@ export function downloadAgentFile(
 /**
  * Import agent configuration from JSON string
  */
-export function importAgentFromString(jsonString: string): AgentImportResult {
+function importAgentFromString(jsonString: string): AgentImportResult {
   try {
     const data = JSON.parse(jsonString);
     return importAgentFromObject(data);
@@ -170,7 +170,7 @@ export function importAgentFromString(jsonString: string): AgentImportResult {
 /**
  * Import agent configuration from object
  */
-export function importAgentFromObject(data: unknown): AgentImportResult {
+function importAgentFromObject(data: unknown): AgentImportResult {
   const warnings: string[] = [];
 
   // Validate structure
@@ -259,7 +259,7 @@ export function importAgentFromObject(data: unknown): AgentImportResult {
 /**
  * Import agent from file input
  */
-export function importAgentFromFile(file: File): Promise<AgentImportResult> {
+function importAgentFromFile(file: File): Promise<AgentImportResult> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -292,7 +292,7 @@ export function importAgentFromFile(file: File): Promise<AgentImportResult> {
 /**
  * Validate agent configuration
  */
-export function validateAgentConfig(config: CreateAgentInput): {
+function validateAgentConfig(config: CreateAgentInput): {
   valid: boolean;
   errors: string[];
   warnings: string[];
@@ -354,21 +354,21 @@ export function validateAgentConfig(config: CreateAgentInput): {
 /**
  * Get supported export versions
  */
-export function getSupportedVersions(): string[] {
+function getSupportedVersions(): string[] {
   return [...SUPPORTED_VERSIONS];
 }
 
 /**
  * Get current export version
  */
-export function getCurrentVersion(): string {
+function getCurrentVersion(): string {
   return EXPORT_VERSION;
 }
 
 /**
  * Migrate old export format to current format
  */
-export function migrateExportData(data: unknown): AgentExportData | null {
+function migrateExportData(data: unknown): AgentExportData | null {
   if (!data || typeof data !== 'object') {
     return null;
   }

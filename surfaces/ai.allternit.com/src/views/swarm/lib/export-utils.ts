@@ -101,7 +101,7 @@ ${sections.join('\n---\n')}
 /**
  * Export metrics history to CSV
  */
-export function exportMetricsToCSV(data: MetricsDataPoint[]): string {
+function exportMetricsToCSV(data: MetricsDataPoint[]): string {
   const headers = ['Timestamp', 'Active Agents', 'Total Tokens', 'Total Cost', 'Throughput (t/s)', 'Avg Latency (ms)'];
   
   const rows = data.map(d => [
@@ -119,7 +119,7 @@ export function exportMetricsToCSV(data: MetricsDataPoint[]): string {
 /**
  * Export metrics history to JSON
  */
-export function exportMetricsToJSON(data: MetricsDataPoint[]): string {
+function exportMetricsToJSON(data: MetricsDataPoint[]): string {
   return JSON.stringify({
     exportDate: new Date().toISOString(),
     dataPoints: data.length,
@@ -130,7 +130,7 @@ export function exportMetricsToJSON(data: MetricsDataPoint[]): string {
 /**
  * Export current metrics snapshot
  */
-export function exportMetricsSnapshot(metrics: SwarmMetrics): string {
+function exportMetricsSnapshot(metrics: SwarmMetrics): string {
   return JSON.stringify({
     timestamp: new Date().toISOString(),
     metrics,
@@ -140,7 +140,7 @@ export function exportMetricsSnapshot(metrics: SwarmMetrics): string {
 /**
  * Download data as a file
  */
-export function downloadFile(content: string, filename: string, mimeType: string): void {
+function downloadFile(content: string, filename: string, mimeType: string): void {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   

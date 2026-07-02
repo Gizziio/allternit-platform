@@ -37,7 +37,7 @@ export interface VPSProvider {
   url: string;
 }
 
-export interface ConnectionStatus {
+interface ConnectionStatus {
   connected: boolean;
   status: 'idle' | 'connecting' | 'connected' | 'failed' | 'installing' | 'ready';
   message: string;
@@ -79,7 +79,7 @@ interface InstallBackendResult {
 }
 
 // Step descriptions for UI
-export const STEP_DESCRIPTIONS: Record<InstallStep, string> = {
+const STEP_DESCRIPTIONS: Record<InstallStep, string> = {
   connecting: 'Connecting to your VPS over SSH...',
   detecting_os: 'Probing the server and confirming compatibility...',
   preparing: 'Saving this VPS as your backend target...',
@@ -92,7 +92,7 @@ export const STEP_DESCRIPTIONS: Record<InstallStep, string> = {
 };
 
 // Detailed log messages for each step
-export const STEP_DETAILS: Record<InstallStep, string[]> = {
+const STEP_DETAILS: Record<InstallStep, string[]> = {
   connecting: [
     'Opening SSH session...',
     'Authenticating with credentials...',
@@ -388,7 +388,7 @@ export function savePurchaseIntent(providerId: string, purchaseData: {
 /**
  * Get pending VPS purchases
  */
-export function getPendingPurchases(): Array<{
+function getPendingPurchases(): Array<{
   providerId: string;
   orderId?: string;
   expectedIp?: string;
@@ -402,7 +402,7 @@ export function getPendingPurchases(): Array<{
 /**
  * Check for completed purchases and prompt connection
  */
-export function checkCompletedPurchases(): Array<{
+function checkCompletedPurchases(): Array<{
   providerId: string;
   expectedIp: string;
   rootPassword: string;
@@ -410,8 +410,6 @@ export function checkCompletedPurchases(): Array<{
   const purchases = getPendingPurchases();
   const completed: Array<{ providerId: string; expectedIp: string; rootPassword: string }> = [];
   
-  // In production, this would poll the VPS provider API or check email
-  // For now, we just look for purchases older than 5 minutes
   const now = new Date();
   purchases.forEach(purchase => {
     const created = new Date(purchase.createdAt);

@@ -1,20 +1,5 @@
-/**
- * Agent Selector Wizard
- *
- * AskUserQuestion-style step-by-step wizard for selecting and creating agents.
- * Uses the same interaction pattern as AskUserQuestion for consistency.
- *
- * Flow:
- * 1. Select category
- * 2. Select specialty
- * 3. Review template
- * 4. Confirm creation
- *
- * @module AgentSelectorWizard
- */
-
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useCallback, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Robot,
   Code,
@@ -34,12 +19,11 @@ import { MODE_COLORS, TEXT } from '@/design/allternit.tokens';
 import { getTemplatesByCategory } from '@/lib/agents/agent-templates.specialist';
 import type { SpecialistTemplate, AgentCategory } from '@/lib/agents/agent-templates.specialist';
 import { Button } from '@/components/ui/button';
-
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface AgentSelectorWizardProps {
+interface AgentSelectorWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: (template: SpecialistTemplate, agentName: string) => void;
@@ -79,7 +63,7 @@ const CATEGORIES: { id: AgentCategory; label: string; icon: React.ReactNode; des
 // Main Component
 // ============================================================================
 
-export function AgentSelectorWizard({
+function AgentSelectorWizard({
   isOpen,
   onClose,
   onComplete,
@@ -173,7 +157,7 @@ export function AgentSelectorWizard({
                 </p>
               </div>
             </div>
-            <button
+            <button type="button"
               onClick={onClose}
               className="p-2 rounded-lg transition-colors"
               style={{ color: TEXT.tertiary }}
@@ -253,7 +237,7 @@ export function AgentSelectorWizard({
           className="px-6 py-4 border-t flex items-center justify-between"
           style={{ borderColor: theme.border }}
         >
-          <button
+          <button type="button"
             onClick={handleReset}
             className="text-sm font-medium transition-colors"
             style={{ color: TEXT.tertiary }}
@@ -288,7 +272,7 @@ function CategoryStep({ selectedCategory, onSelect, theme }: CategoryStepProps) 
       className="grid grid-cols-1 md:grid-cols-2 gap-4"
     >
       {CATEGORIES.map(cat => (
-        <button
+        <button type="button"
           key={cat.id}
           onClick={() => onSelect(cat.id)}
           className="p-4 rounded-xl border text-left transition-all"
@@ -342,7 +326,7 @@ function TemplateStep({ category, selectedTemplate, onSelect, onBack, theme }: T
 
       <div className="space-y-3 mb-4">
         {templates.map(template => (
-          <button
+          <button type="button"
             key={template.id}
             onClick={() => onSelect(template)}
             className="w-full p-4 rounded-xl border text-left transition-all"
@@ -482,11 +466,10 @@ function NameStep({ template, agentName, onNameChange, onBack, onComplete, theme
       exit={{ opacity: 0, x: -20 }}
     >
       <div className="mb-4">
-        <label className="block text-sm font-medium mb-2" style={{ color: TEXT.primary }}>
+        <div className="block text-sm font-medium mb-2" style={{ color: TEXT.primary }}>
           Agent Name
-        </label>
-        <input
-          type="text"
+        </div>
+        <input aria-label="Input" type="text"
           value={agentName}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder={template.name}

@@ -18,7 +18,7 @@ export function SessionProvider({ children, session }: SessionProviderProps) {
   );
 }
 
-export function useSession() {
+function useSession() {
   const context = useContext(SessionContext);
   if (context === undefined) {
     throw new Error("useSession must be used within a SessionProvider");

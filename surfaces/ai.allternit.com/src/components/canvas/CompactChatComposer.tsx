@@ -54,8 +54,7 @@ export function CompactChatComposer({
         borderTop: '1px solid var(--ui-border-muted)',
       }}
     >
-      <textarea
-        ref={textareaRef}
+      <textarea aria-label="Text Area" ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onInput={handleInput}
@@ -79,7 +78,7 @@ export function CompactChatComposer({
         }}
       />
       {isLoading ? (
-        <button
+        <button type="button"
           onClick={onStop}
           style={{
             width: 32,
@@ -98,7 +97,7 @@ export function CompactChatComposer({
           <Stop size={16} />
         </button>
       ) : (
-        <button
+        <button type="button"
           onClick={handleSubmit}
           disabled={!text.trim()}
           style={{

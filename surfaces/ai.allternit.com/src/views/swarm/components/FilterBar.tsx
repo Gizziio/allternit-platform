@@ -74,8 +74,7 @@ export function FilterBar() {
           color={TEXT_MUTED}
           className="absolute left-3 top-1/2 -tranzinc-y-1/2 pointer-events-none"
         />
-        <input
-          type="text"
+        <input aria-label="Search agents…" type="text"
           value={searchQuery}
           onChange={handleSearchChange}
           placeholder="Search agents…"
@@ -93,7 +92,7 @@ export function FilterBar() {
         {roleOptions.map(({ value, label, color }) => {
           const isActive = roleFilter === value;
           return (
-            <button
+            <button type="button"
               key={value}
               onClick={() => toggleRoleFilter(value)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all"
@@ -118,7 +117,7 @@ export function FilterBar() {
         {statusOptions.map(({ value, label, color }) => {
           const isActive = statusFilter === value;
           return (
-            <button
+            <button type="button"
               key={value}
               onClick={() => toggleStatusFilter(value)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all"

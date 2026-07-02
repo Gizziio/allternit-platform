@@ -16,9 +16,6 @@ import {
   List,
   Lightning,
   CheckSquare,
-  Users,
-  SquaresFour,
-  Briefcase,
 } from '@phosphor-icons/react';
 import { RailConfigSection } from './rail.config';
 
@@ -49,16 +46,16 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
     collapsible: false,
     defaultExpanded: true,
     items: [
-      { 
-        id: 'cw-agent-hub', 
-        label: 'Agent Hub', 
-        icon: Robot, 
+      {
+        id: 'cw-agent-hub',
+        label: 'Agent Hub',
+        icon: Robot,
         payload: 'agent-hub',
         shortcut: '⌘⇧A'
       },
     ]
   },
-  
+
   // Cron - Right underneath Agent Hub
   {
     id: 'cron',
@@ -75,42 +72,6 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
       },
     ]
   },
-  
-  // Team section — directly under Cron
-  {
-    id: 'cowork-team',
-    title: 'Team',
-    icon: Users,
-    collapsible: true,
-    defaultExpanded: false,
-    items: [
-      {
-        id: 'cw-team-dashboard',
-        label: 'Team Dashboard',
-        icon: Users,
-        payload: 'cowork-team',
-      },
-      {
-        id: 'cw-team-board',
-        label: 'Board',
-        icon: SquaresFour,
-        payload: 'cowork-team-board',
-      },
-      {
-        id: 'cw-team-agents',
-        label: 'Agents',
-        icon: Robot,
-        payload: 'cowork-team-agents',
-      },
-      {
-        id: 'cw-team-workspaces',
-        label: 'Workspaces',
-        icon: Briefcase,
-        payload: 'cowork-team-workspaces',
-      },
-    ],
-  },
-
   // Tasks Section
   {
     id: 'tasks',
@@ -124,7 +85,7 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
 ];
 
 // Plugin categories for the full-view overlay
-export const PLUGIN_CATEGORIES = [
+const PLUGIN_CATEGORIES = [
   { id: 'skills', label: 'Skills', icon: Lightning },
   { id: 'commands', label: 'Commands', icon: List },
   { id: 'connectors', label: 'Connectors', icon: Robot },
@@ -132,4 +93,4 @@ export const PLUGIN_CATEGORIES = [
   { id: 'plugins', label: 'Plugins', icon: Plus },
 ] as const;
 
-export type PluginCategory = typeof PLUGIN_CATEGORIES[number]['id'];
+type PluginCategory = typeof PLUGIN_CATEGORIES[number]['id'];

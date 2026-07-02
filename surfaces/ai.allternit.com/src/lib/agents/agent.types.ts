@@ -12,14 +12,87 @@
 import { z } from 'zod';
 import type { AgentProfile } from '@allternit/sdk/ai-runtime';
 import type { AvatarConfig } from './character.types';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Agent');
 export type { AvatarConfig } from './character.types';
 
 // Agent Types
 export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
 
+export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
+
+// Harness configuration (canonical @allternit/sdk/harness shape)
+export interface HarnessBYOKProviderConfig {
+  apiKey: string;
+  baseURL?: string;
+}
+
+export interface HarnessBYOKConfig {
+  anthropic?: HarnessBYOKProviderConfig;
+  openai?: HarnessBYOKProviderConfig;
+  google?: HarnessBYOKProviderConfig;
+}
+
+export interface HarnessCloudConfig {
+  baseURL: string;
+  accessToken: string;
+  refreshToken?: string;
+}
+
+export interface HarnessLocalConfig {
+  baseURL: string;
+}
+
+export interface HarnessSubprocessConfig {
+  command: string;
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
+export interface HarnessConfig {
+  mode: 'byok' | 'cloud' | 'local' | 'subprocess';
+  byok?: HarnessBYOKConfig;
+  cloud?: HarnessCloudConfig;
+  local?: HarnessLocalConfig;
+  subprocess?: HarnessSubprocessConfig;
+}
+
+export const harnessConfigSchema = z.object({
+  mode: z.enum(['byok', 'cloud', 'local', 'subprocess']),
+  byok: z.object({
+    anthropic: z.object({
+      apiKey: z.string(),
+      baseURL: z.string().optional(),
+    }).optional(),
+    openai: z.object({
+      apiKey: z.string(),
+      baseURL: z.string().optional(),
+    }).optional(),
+    google: z.object({
+      apiKey: z.string(),
+      baseURL: z.string().optional(),
+    }).optional(),
+  }).optional(),
+  cloud: z.object({
+    baseURL: z.string(),
+    accessToken: z.string(),
+    refreshToken: z.string().optional(),
+  }).optional(),
+  local: z.object({
+    baseURL: z.string(),
+  }).optional(),
+  subprocess: z.object({
+    command: z.string(),
+    cwd: z.string().optional(),
+    env: z.record(z.string()).optional(),
+  }).optional(),
+});
+
 export type AgentSetup = 'coding' | 'creative' | 'research' | 'operations' | 'generalist';
-export type Temperament = 'precision' | 'exploratory' | 'systemic' | 'balanced';
-export type HardBanCategory = 
+type Temperament = 'precision' | 'exploratory' | 'systemic' | 'balanced';
+type HardBanCategory = 
   | 'publishing' 
   | 'deploy' 
   | 'data_exfil' 
@@ -31,7 +104,7 @@ export type HardBanCategory =
   | 'code_execution'
   | 'other';
 
-export interface RoleHardBan {
+interface RoleHardBan {
   category: HardBanCategory;
   description?: string;
   severity: 'fatal' | 'warning' | 'info';
@@ -104,7 +177,7 @@ export interface VoiceConfig {
 }
 
 // Zod Schema for VoiceConfig
-export const voiceConfigSchema = z.object({
+const voiceConfigSchema = z.object({
   voiceId: z.string().optional(),
   voiceLabel: z.string().optional(),
   engine: z.enum(['chatterbox', 'xtts_v2', 'piper']).optional(),
@@ -117,7 +190,7 @@ export const voiceConfigSchema = z.object({
 export type AgentStatus = 'idle' | 'running' | 'paused' | 'error';
 
 // Agent Configuration
-export type ModelProvider = 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
+type ModelProvider = 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
 
 export interface Agent {
   id: string;
@@ -142,6 +215,19 @@ export interface Agent {
   ownerId?: string; // User who created the agent
   source?: 'personal' | 'vendor' | 'organization'; // Where the agent came from
   profile?: AgentProfile;
+
+  // Canonical schema fields
+  avatar?: AvatarConfig;
+  characterLayer?: CharacterLayerConfig;
+  trustTier?: 'safe' | 'low' | 'standard' | 'elevated' | 'admin' | 'critical';
+  harness?: HarnessConfig;
+  allowedSurfaces?: AppMode[];
+  allowedSkills?: string[];
+  allowedTools?: string[];
+  category?: 'engineering' | 'design' | 'marketing' | 'product' | 'research' | 'operations' | 'creative' | 'general';
+  tags?: string[];
+  dataClassification?: string;
+  writeScope?: string;
 
   // Agent-as-teammate fields (from Multica)
   teammateProfile?: {
@@ -183,22 +269,19 @@ export interface Agent {
   successRate?: number;
   /** Average response time in ms */
   avgResponseTime?: number;
-  /** Searchable tags */
-  tags?: string[];
-  /** Agent category for browsing */
-  category?: 'engineering' | 'design' | 'marketing' | 'product' | 'research' | 'operations' | 'creative' | 'general';
   /** Whether the agent is publicly discoverable */
   isPublic?: boolean;
   /** If this agent represents a swarm, the swarm ID */
   swarmId?: string;
 }
 
+
 // Zod Schema for Agent
 export const agentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker']),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'local', 'custom']),
@@ -216,6 +299,17 @@ export const agentSchema = z.object({
   workspaceId: z.string().optional(),
   ownerId: z.string().optional(),
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
+  avatar: z.any().optional(),
+  characterLayer: z.any().optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  harness: harnessConfigSchema.optional(),
+  allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
+  allowedSkills: z.array(z.string()).optional(),
+  allowedTools: z.array(z.string()).optional(),
+  category: z.enum(['engineering', 'design', 'marketing', 'product', 'research', 'operations', 'creative', 'general']).optional(),
+  tags: z.array(z.string()).optional(),
+  dataClassification: z.string().optional(),
+  writeScope: z.string().optional(),
   teammateProfile: z.object({
     avatar: z.string().optional(),
     bio: z.string().optional(),
@@ -240,14 +334,12 @@ export const agentSchema = z.object({
   totalRuns: z.number().int().nonnegative().optional(),
   successRate: z.number().min(0).max(100).optional(),
   avgResponseTime: z.number().int().nonnegative().optional(),
-  tags: z.array(z.string()).optional(),
-  category: z.enum(['engineering', 'design', 'marketing', 'product', 'research', 'operations', 'creative', 'general']).optional(),
   isPublic: z.boolean().optional(),
   swarmId: z.string().optional(),
 });
 
 // Schema for validating array of agents (API response)
-export const agentArraySchema = z.array(agentSchema);
+const agentArraySchema = z.array(agentSchema);
 
 // Schema for API response wrapper
 export const agentListResponseSchema = z.object({
@@ -313,13 +405,25 @@ export interface CreateAgentInput {
   workspaceId?: string;  // Optional workspace ID
   ownerId?: string;  // User who created the agent
   source?: 'personal' | 'vendor' | 'organization';
+
+  // Canonical schema fields
+  characterLayer?: CharacterLayerConfig;
+  trustTier?: Agent['trustTier'];
+  harness?: HarnessConfig;
+  allowedSurfaces?: AppMode[];
+  allowedSkills?: string[];
+  allowedTools?: string[];
+  category?: Agent['category'];
+  tags?: string[];
+  dataClassification?: string;
+  writeScope?: string;
 }
 
 // Zod Schema for CreateAgentInput
-export const createAgentInputSchema = z.object({
+const createAgentInputSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker']).optional(),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']).optional(),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'local', 'custom']),
@@ -332,15 +436,26 @@ export const createAgentInputSchema = z.object({
   config: z.record(z.unknown()).optional(),
   workspaceId: z.string().optional(),
   ownerId: z.string().optional(),
+  avatar: z.any().optional(),
+  characterLayer: z.any().optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  harness: harnessConfigSchema.optional(),
+  allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
+  allowedSkills: z.array(z.string()).optional(),
+  allowedTools: z.array(z.string()).optional(),
+  category: z.enum(['engineering', 'design', 'marketing', 'product', 'research', 'operations', 'creative', 'general']).optional(),
+  tags: z.array(z.string()).optional(),
+  dataClassification: z.string().optional(),
+  writeScope: z.string().optional(),
 });
 
 // Extended Agent with typed avatar
-export interface AgentWithAvatar extends Agent {
+interface AgentWithAvatar extends Agent {
   avatar?: AvatarConfig;
 }
 
 // Helper to extract avatar from agent config
-export function getAgentAvatar(agent: Agent): AvatarConfig | undefined {
+function getAgentAvatar(agent: Agent): AvatarConfig | undefined {
   const avatar = agent.config?.avatar as AvatarConfig | undefined;
   return avatar;
 }
@@ -366,7 +481,7 @@ export interface AgentTask {
 }
 
 // Zod Schema for AgentTask
-export const agentTaskSchema = z.object({
+const agentTaskSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),
   runId: z.string().min(1),
@@ -400,7 +515,7 @@ export interface AgentRun {
 }
 
 // Zod Schema for AgentRun
-export const agentRunSchema = z.object({
+const agentRunSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),
   status: z.enum(['running', 'completed', 'failed', 'cancelled']),
@@ -426,7 +541,7 @@ export interface AgentTraceEntry {
 }
 
 // Zod Schema for AgentTraceEntry
-export const agentTraceEntrySchema = z.object({
+const agentTraceEntrySchema = z.object({
   id: z.string().min(1),
   timestamp: z.number(),
   kind: z.enum(['info', 'tool', 'error', 'thought', 'plan', 'checkpoint']),
@@ -436,7 +551,7 @@ export const agentTraceEntrySchema = z.object({
 });
 
 // For compatibility with AdvancedAgentRun
-export interface RunnerTraceEntry extends AgentTraceEntry {}
+interface RunnerTraceEntry extends AgentTraceEntry {}
 
 // Checkpoint during execution
 export interface Checkpoint {
@@ -451,7 +566,7 @@ export interface Checkpoint {
 }
 
 // Zod Schema for Checkpoint
-export const checkpointSchema = z.object({
+const checkpointSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),
   runId: z.string().min(1),
@@ -475,7 +590,7 @@ export interface Commit {
 }
 
 // Zod Schema for Commit
-export const commitSchema = z.object({
+const commitSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),
   message: z.string(),
@@ -503,7 +618,7 @@ export interface ExecutionPlan {
 }
 
 // Zod Schema for ExecutionPlan
-export const executionPlanSchema = z.object({
+const executionPlanSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),
   steps: z.array(z.any()), // PlanStep[]
@@ -534,7 +649,7 @@ export interface QueueItem {
 }
 
 // Zod Schema for QueueItem
-export const queueItemSchema = z.object({
+const queueItemSchema = z.object({
   id: z.string().min(1),
   priority: z.number().int(),
   content: z.string(),
@@ -547,7 +662,7 @@ export const queueItemSchema = z.object({
 });
 
 // Agent Event for real-time updates
-export type AgentEventType = 
+type AgentEventType = 
   | 'agent.created'
   | 'agent.updated'
   | 'agent.deleted'
@@ -590,7 +705,7 @@ export interface GateReview {
 }
 
 // Zod Schema for GateReview
-export const gateReviewSchema = z.object({
+const gateReviewSchema = z.object({
   id: z.string().min(1),
   wihId: z.string().min(1),
   dagId: z.string().min(1),
@@ -648,7 +763,7 @@ export interface AgentMailMessage {
 }
 
 // Zod Schema for AgentMailMessage
-export const agentMailMessageSchema = z.object({
+const agentMailMessageSchema = z.object({
   id: z.string().min(1),
   threadId: z.string().min(1),
   fromAgentId: z.string().min(1),
@@ -702,7 +817,7 @@ export interface AgentEvent {
 }
 
 // Available capabilities
-export const AGENT_CAPABILITIES = [
+const AGENT_CAPABILITIES = [
   { id: 'code-generation', name: 'Code Generation', description: 'Generate and edit code' },
   { id: 'file-operations', name: 'File Operations', description: 'Read, write, and manage files' },
   { id: 'web-search', name: 'Web Search', description: 'Search the web for information' },
@@ -757,7 +872,7 @@ export interface VoicesResponse {
  * @returns Validated Agent object
  * @throws ZodError if validation fails
  */
-export function validateAgent(data: unknown): Agent {
+function validateAgent(data: unknown): Agent {
   return agentSchema.parse(data) as Agent;
 }
 
@@ -767,7 +882,7 @@ export function validateAgent(data: unknown): Agent {
  * @returns Validated Agent array
  * @throws ZodError if validation fails
  */
-export function validateAgentArray(data: unknown): Agent[] {
+function validateAgentArray(data: unknown): Agent[] {
   return agentArraySchema.parse(data) as Agent[];
 }
 
@@ -777,7 +892,7 @@ export function validateAgentArray(data: unknown): Agent[] {
  * @returns Validated response with agents and total count
  * @throws ZodError if validation fails
  */
-export function validateAgentListResponse(data: unknown): { agents: Agent[]; total: number } {
+function validateAgentListResponse(data: unknown): { agents: Agent[]; total: number } {
   return agentListResponseSchema.parse(data) as { agents: Agent[]; total: number };
 }
 
@@ -797,7 +912,7 @@ export function validateCreateAgentInput(data: unknown): CreateAgentInput {
  * @returns Validated AgentRun
  * @throws ZodError if validation fails
  */
-export function validateAgentRun(data: unknown): AgentRun {
+function validateAgentRun(data: unknown): AgentRun {
   return agentRunSchema.parse(data) as AgentRun;
 }
 
@@ -807,7 +922,7 @@ export function validateAgentRun(data: unknown): AgentRun {
  * @returns Validated AgentTask
  * @throws ZodError if validation fails
  */
-export function validateAgentTask(data: unknown): AgentTask {
+function validateAgentTask(data: unknown): AgentTask {
   return agentTaskSchema.parse(data) as AgentTask;
 }
 
@@ -817,7 +932,7 @@ export function validateAgentTask(data: unknown): AgentTask {
  * @returns Validated GateReview
  * @throws ZodError if validation fails
  */
-export function validateGateReview(data: unknown): GateReview {
+function validateGateReview(data: unknown): GateReview {
   return gateReviewSchema.parse(data) as GateReview;
 }
 
@@ -834,7 +949,7 @@ export function safeValidate<T>(schema: z.ZodType<T>, data: unknown): T | null {
     // Silent fail - validation errors are expected when backend returns incomplete data
     // Only log in development with verbose flag
     if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_LOG_VALIDATION_ERRORS === 'true') {
-      console.error('[AgentTypes] Validation error:', error);
+      logger.error({ err: error }, 'Validation error');
     }
     return null;
   }

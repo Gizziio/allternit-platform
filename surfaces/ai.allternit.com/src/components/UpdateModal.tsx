@@ -19,30 +19,8 @@ import {
   CaretRight,
   ArrowsClockwise,
   Warning,
-  ArrowSquareOut,
 } from '@phosphor-icons/react';
 import type { UpdateInfo } from '../plugins/updateChecker';
-
-// ============================================================================
-// Theme
-// ============================================================================
-
-const THEME = {
-  bg: 'var(--surface-canvas)',
-  bgElevated: 'var(--surface-panel)',
-  bgGlass: 'rgba(28, 25, 23, 0.95)',
-  accent: 'var(--accent-primary)',
-  accentMuted: 'rgba(212, 176, 140, 0.15)',
-  accentGlow: 'rgba(212, 176, 140, 0.3)',
-  textPrimary: 'var(--ui-text-primary)',
-  textSecondary: 'var(--ui-text-secondary)',
-  textTertiary: 'var(--ui-text-muted)',
-  border: 'rgba(212, 176, 140, 0.1)',
-  borderStrong: 'rgba(212, 176, 140, 0.2)',
-  success: 'var(--status-success)',
-  danger: 'var(--status-error)',
-  warning: 'var(--status-warning)',
-};
 
 // ============================================================================
 // Types
@@ -80,32 +58,20 @@ function Checkbox({
   indeterminate?: boolean;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={() => onChange(!checked)}
-      style={{
-        width: 18,
-        height: 18,
-        borderRadius: 4,
-        border: `1.5px solid ${checked || indeterminate ? THEME.accent : THEME.borderStrong}`,
-        backgroundColor: checked || indeterminate ? THEME.accent : 'transparent',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'all 0.15s',
-      }}
+      className={`
+        w-[18px] h-[18px] rounded-[4px] border-[1.5px] border-solid
+        flex items-center justify-center cursor-pointer transition-all duration-150
+        ${checked || indeterminate ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)]' : 'bg-transparent border-[rgba(212,176,140,0.2)]'}
+      `}
     >
       {checked && (
         <Check size={12} color="#0c0a09" strokeWidth={3} />
       )}
       {indeterminate && (
         <div
-          style={{
-            width: 8,
-            height: 2,
-            backgroundColor: 'var(--surface-canvas)',
-            borderRadius: 1,
-          }}
+          className="w-2 h-[2px] bg-[var(--surface-canvas)] rounded-[1px]"
         />
       )}
     </button>
@@ -137,162 +103,84 @@ function UpdateItem({
 
   return (
     <div
-      style={{
-        padding: 14,
-        backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
-        borderBottom: `1px solid ${THEME.border}`,
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12,
-        opacity: isCompleted ? 0.6 : 1,
-        transition: 'background-color 0.15s',
-      }}
+      className={`
+        p-[14px] border-b border-solid border-[rgba(212,176,140,0.1)] flex items-start gap-3 transition-colors duration-150
+        ${isSelected ? 'bg-[rgba(255,255,255,0.03)]' : 'bg-transparent'}
+        ${isCompleted ? 'opacity-60' : 'opacity-100'}
+      `}
     >
       {/* Checkbox */}
       {!isUpdating && !isCompleted && (
-        <div style={{ paddingTop: 2 }}>
+        <div className="pt-[2px]">
           <Checkbox checked={isSelected} onChange={onSelect} />
         </div>
       )}
 
       {/* Icon */}
       <div
-        style={{
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          backgroundColor: hasError
-            ? 'rgba(239, 68, 68, 0.1)'
-            : isCompleted
-            ? 'rgba(34, 197, 94, 0.1)'
-            : THEME.accentMuted,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
+        className={`
+          w-9 h-9 rounded-[8px] flex items-center justify-center flex-shrink-0
+          ${hasError ? 'bg-[rgba(239,68,68,0.1)]' : isCompleted ? 'bg-[rgba(34,197,94,0.1)]' : 'bg-[rgba(212,176,140,0.15)]'}
+        `}
       >
         {isUpdating ? (
-          <CircleNotch size={16} color={THEME.accent} style={{ animation: 'spin 1s linear infinite' }} />
+          <CircleNotch size={16} className="text-[var(--accent-primary)] animate-spin" />
         ) : isCompleted ? (
-          <Check size={16} color={THEME.success} />
+          <Check size={16} className="text-[var(--status-success)]" />
         ) : hasError ? (
-          <Warning size={16} color={THEME.danger} />
+          <Warning size={16} className="text-[var(--status-error)]" />
         ) : (
-          <Package size={16} color={THEME.accent} />
+          <Package size={16} className="text-[var(--accent-primary)]" />
         )}
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            marginBottom: 4,
-          }}
-        >
-          <span
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: THEME.textPrimary,
-            }}
-          >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[14px] font-semibold text-[var(--ui-text-primary)]">
             {update.pluginName}
           </span>
           {update.isRequired && (
-            <span
-              style={{
-                padding: '2px 6px',
-                backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                borderRadius: 4,
-                fontSize: 12,
-                fontWeight: 600,
-                color: THEME.danger,
-                textTransform: 'uppercase',
-                letterSpacing: '0.03em',
-              }}
-            >
+            <span className="px-1.5 py-0.5 bg-[rgba(239,68,68,0.15)] rounded-[4px] text-[12px] font-semibold text-[var(--status-error)] uppercase tracking-wider">
               Required
             </span>
           )}
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 12,
-            color: THEME.textSecondary,
-            marginBottom: hasError ? 6 : 0,
-          }}
-        >
-          <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>
+        <div className="flex items-center gap-1.5 text-[12px] text-[var(--ui-text-secondary)] mb-0">
+          <span className="line-through opacity-60">
             v{update.currentVersion}
           </span>
-          <CaretRight size={12} color={THEME.textTertiary} />
-          <span style={{ color: THEME.success, fontWeight: 500 }}>
+          <CaretRight size={12} className="text-[var(--ui-text-muted)]" />
+          <span className="text-[var(--status-success)] font-medium">
             v{update.latestVersion}
           </span>
-          <span style={{ marginLeft: 8, color: THEME.textTertiary }}>
+          <span className="ml-2 text-[var(--ui-text-muted)]">
             via {update.source}
           </span>
         </div>
 
         {hasError && state.error && (
-          <div
-            style={{
-              fontSize: 12,
-              color: THEME.danger,
-              marginTop: 4,
-            }}
-          >
+          <div className="text-[12px] text-[var(--status-error)] mt-1">
             {state.error}
           </div>
         )}
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div className="flex gap-1.5">
         {!isUpdating && !isCompleted && (
           <>
-            <button
+            <button type="button"
               onClick={onUpdate}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: THEME.accent,
-                border: 'none',
-                borderRadius: 6,
-                color: THEME.bg,
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                transition: 'opacity 0.15s',
-              }}
+              className="px-3 py-1.5 bg-[var(--accent-primary)] border-none rounded-[6px] text-[var(--surface-canvas)] text-[12px] font-semibold cursor-pointer flex items-center gap-1 transition-opacity duration-150 hover:opacity-90"
             >
               <DownloadSimple size={12} />
               Update
             </button>
-            <button
+            <button type="button"
               onClick={onSkip}
-              style={{
-                padding: '6px',
-                backgroundColor: 'transparent',
-                border: `1px solid ${THEME.border}`,
-                borderRadius: 6,
-                color: THEME.textSecondary,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.15s',
-              }}
+              className="p-1.5 bg-transparent border border-solid border-[rgba(212,176,140,0.1)] rounded-[6px] text-[var(--ui-text-secondary)] cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-[rgba(212,176,140,0.05)]"
               title="Skip this update"
             >
               <SkipForward size={12} />
@@ -300,14 +188,7 @@ function UpdateItem({
           </>
         )}
         {isCompleted && (
-          <span
-            style={{
-              padding: '6px 12px',
-              fontSize: 12,
-              fontWeight: 500,
-              color: THEME.success,
-            }}
-          >
+          <span className="px-3 py-1.5 text-[12px] font-medium text-[var(--status-success)]">
             Updated
           </span>
         )}
@@ -334,12 +215,13 @@ export function UpdateModal({
   const [itemStates, setItemStates] = useState<Record<string, UpdateItemState>>({});
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
 
-  // Initialize all as selected
-  React.useEffect(() => {
-    if (isOpen && updates.length > 0) {
-      setSelectedIds(new Set(updates.map((u) => u.pluginId)));
-    }
-  }, [isOpen, updates]);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen && !prevIsOpen) {
+    setPrevIsOpen(true);
+    setSelectedIds(new Set(updates.map((u) => u.pluginId)));
+  } else if (!isOpen && prevIsOpen) {
+    setPrevIsOpen(false);
+  }
 
   const allSelected = selectedIds.size === updates.length && updates.length > 0;
   const someSelected = selectedIds.size > 0 && selectedIds.size < updates.length;
@@ -442,125 +324,52 @@ export function UpdateModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        backdropFilter: 'blur(8px)',
-        zIndex: 200,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}
+    <div role="button" tabIndex={0}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-6"
       onClick={onClose}
     >
-      <div
-        style={{
-          width: 640,
-          maxHeight: '90vh',
-          backgroundColor: THEME.bgGlass,
-          border: `1px solid ${THEME.borderStrong}`,
-          borderRadius: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 32px 64px rgba(0, 0, 0, 0.5)',
-          animation: 'modalSlideIn 0.2s ease-out',
-        }}
+      <div role="button" tabIndex={0}
+        className="w-full max-w-[640px] max-h-[90vh] bg-[rgba(28,25,23,0.95)] border border-solid border-[rgba(212,176,140,0.2)] rounded-[16px] flex flex-col shadow-[0_32px_64px_rgba(0,0,0,0.5)] animate-[modalSlideIn_0.2s_ease-out]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            padding: '20px 24px',
-            borderBottom: `1px solid ${THEME.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        <div className="px-6 py-5 border-b border-solid border-[rgba(212,176,140,0.1)] flex items-center justify-between">
           <div>
-            <h2
-              style={{
-                fontSize: 18,
-                fontWeight: 600,
-                color: THEME.textPrimary,
-                margin: '0 0 4px 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <Package size={20} color={THEME.accent} />
+            <h2 className="text-[18px] font-semibold text-[var(--ui-text-primary)] m-0 mb-1 flex items-center gap-[10px]">
+              <Package size={20} color="var(--accent-primary)" />
               Plugin Updates
               {updates.length > 0 && (
-                <span
-                  style={{
-                    padding: '2px 10px',
-                    backgroundColor: THEME.accentMuted,
-                    borderRadius: 12,
-                    fontSize: 13,
-                    color: THEME.accent,
-                  }}
-                >
+                <span className="px-2.5 py-0.5 bg-[rgba(212,176,140,0.15)] rounded-[12px] text-[13px] text-[var(--accent-primary)]">
                   {updates.length}
                 </span>
               )}
             </h2>
-            <p
-              style={{
-                fontSize: 13,
-                color: THEME.textSecondary,
-                margin: 0,
-              }}
-            >
+            <p className="text-[13px] text-[var(--ui-text-secondary)] m-0">
               {completedCount > 0
                 ? `${completedCount} of ${updates.length} updates completed`
                 : 'Updates are available for your installed plugins'}
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
+          <div className="flex gap-2">
+            <button type="button"
               onClick={() => void onCheckForUpdates()}
               disabled={isChecking}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: 'transparent',
-                border: `1px solid ${THEME.border}`,
-                borderRadius: 8,
-                color: THEME.textSecondary,
-                fontSize: 12,
-                cursor: isChecking ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                opacity: isChecking ? 0.6 : 1,
-              }}
+              className={`
+                px-3 py-2 bg-transparent border border-solid border-[rgba(212,176,140,0.1)] rounded-[8px]
+                text-[var(--ui-text-secondary)] text-[12px] flex items-center gap-1.5
+                ${isChecking ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}
+              `}
             >
               <ArrowsClockwise
                 size={14}
-                style={{
-                  animation: isChecking ? 'spin 1s linear infinite' : 'none',
-                }}
+                className={isChecking ? 'animate-spin' : ''}
               />
               Check
             </button>
-            <button
+            <button type="button"
               onClick={onClose}
-              style={{
-                padding: 8,
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderRadius: 8,
-                color: THEME.textTertiary,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'color 0.15s',
-              }}
+              className="p-2 bg-transparent border-none rounded-[8px] text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center transition-colors duration-150 hover:text-[var(--ui-text-primary)]"
             >
               <X size={20} />
             </button>
@@ -568,58 +377,30 @@ export function UpdateModal({
         </div>
 
         {/* Content */}
-        <div
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            minHeight: 200,
-          }}
-        >
+        <div className="flex-1 overflow-auto min-h-[200px]">
           {updates.length === 0 ? (
-            <div
-              style={{
-                padding: 48,
-                textAlign: 'center',
-                color: THEME.textSecondary,
-              }}
-            >
+            <div className="p-12 text-center text-[var(--ui-text-secondary)]">
               <Package
                 size={48}
-                color={THEME.textTertiary}
-                style={{ marginBottom: 16, opacity: 0.5 }}
+                className="mx-auto mb-4 opacity-50 text-[var(--ui-text-muted)]"
               />
-              <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>
+              <div className="text-[16px] font-medium mb-2">
                 All plugins are up to date
               </div>
-              <div style={{ fontSize: 13, color: THEME.textTertiary }}>
+              <div className="text-[13px] text-[var(--ui-text-muted)]">
                 Check back later for new updates
               </div>
             </div>
           ) : (
             <>
               {/* Select All Header */}
-              <div
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                  borderBottom: `1px solid ${THEME.border}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                }}
-              >
+              <div className="px-6 py-3 bg-[rgba(255,255,255,0.02)] border-b border-solid border-[rgba(212,176,140,0.1)] flex items-center gap-3">
                 <Checkbox
                   checked={allSelected}
                   onChange={handleToggleAll}
                   indeterminate={someSelected}
                 />
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: THEME.textSecondary,
-                  }}
-                >
+                <span className="text-[13px] font-medium text-[var(--ui-text-secondary)]">
                   {allSelected
                     ? 'Deselect all'
                     : someSelected
@@ -646,24 +427,11 @@ export function UpdateModal({
 
         {/* Footer */}
         {updates.length > 0 && (
-          <div
-            style={{
-              padding: '16px 24px',
-              borderTop: `1px solid ${THEME.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 13,
-                color: THEME.textSecondary,
-              }}
-            >
+          <div className="px-6 py-4 border-t border-solid border-[rgba(212,176,140,0.1)] flex items-center justify-between">
+            <div className="text-[13px] text-[var(--ui-text-secondary)]">
               {selectedIds.size > 0 ? (
                 <>
-                  <span style={{ fontWeight: 600, color: THEME.textPrimary }}>
+                  <span className="font-semibold text-[var(--ui-text-primary)]">
                     {selectedIds.size}
                   </span>{' '}
                   update{selectedIds.size > 1 ? 's' : ''} selected
@@ -673,27 +441,18 @@ export function UpdateModal({
               )}
             </div>
 
-            <button
+            <button type="button"
               onClick={() => void handleUpdateAll()}
               disabled={!hasSelection || isUpdatingAll}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: hasSelection ? THEME.accent : THEME.border,
-                border: 'none',
-                borderRadius: 8,
-                color: hasSelection ? THEME.bg : THEME.textTertiary,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: hasSelection && !isUpdatingAll ? 'pointer' : 'not-allowed',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                opacity: isUpdatingAll ? 0.7 : 1,
-              }}
+              className={`
+                px-5 py-2.5 rounded-[8px] text-[13px] font-semibold flex items-center gap-2 transition-opacity duration-150
+                ${hasSelection ? 'bg-[var(--accent-primary)] text-[var(--surface-canvas)] cursor-pointer' : 'bg-[rgba(212,176,140,0.1)] text-[var(--ui-text-muted)] cursor-not-allowed'}
+                ${isUpdatingAll ? 'opacity-70' : 'opacity-100'}
+              `}
             >
               {isUpdatingAll ? (
                 <>
-                  <CircleNotch size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  <CircleNotch size={14} className="animate-spin" />
                   Updating...
                 </>
               ) : (

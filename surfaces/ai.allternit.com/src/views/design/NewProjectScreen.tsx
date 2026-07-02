@@ -68,8 +68,7 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
 
           {/* Project name */}
           <Section label="Project name">
-            <input
-              autoFocus
+            <input aria-label="Input" autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && canStart) handleStart(); }}
@@ -89,7 +88,7 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
               {PROJECT_TYPES.map(pt => {
                 const active = selectedType === pt.id;
                 return (
-                  <button key={pt.id} onClick={() => setSelectedType(pt.id)} style={{
+                  <button type="button" key={pt.id} onClick={() => setSelectedType(pt.id)} style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6,
                     padding: '14px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
                     border: `1.5px solid ${active ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
@@ -118,7 +117,7 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
               ))}
             </div>
             {!showAllDirections && DESIGN_DIRECTIONS.length > CORE_DIRECTION_IDS.length && (
-              <button
+              <button type="button"
                 onClick={() => setShowAllDirections(true)}
                 style={{
                   marginTop: 10, display: 'flex', alignItems: 'center', gap: 5,
@@ -133,7 +132,7 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
           </Section>
 
           {/* CTA */}
-          <button
+          <button type="button"
             onClick={handleStart}
             disabled={!canStart}
             style={{
@@ -160,9 +159,9 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 28 }}>
-      <label style={{ display: 'block', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 12 }}>
+      <div style={{ display: 'block', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 12 }}>
         {label}
-      </label>
+      </div>
       {children}
     </div>
   );
@@ -174,7 +173,7 @@ function DirectionCard({ direction, active, onSelect }: { direction: DesignDirec
   const swatchKeys: (keyof typeof direction.palette)[] = ['bg', 'surface', 'fg', 'accent'];
 
   return (
-    <button onClick={onSelect} style={{
+    <button type="button" onClick={onSelect} style={{
       display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px',
       borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%',
       border: `1.5px solid ${active ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,

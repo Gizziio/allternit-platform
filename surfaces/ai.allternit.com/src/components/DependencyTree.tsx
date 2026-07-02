@@ -1,24 +1,6 @@
-/**
- * DependencyTree Component
- * 
- * Visual tree view of plugin dependencies with:
- * - Collapsible/expandable nodes
- * - Color coding (green=installed, yellow=optional, red=missing)
- * - Version information on hover
- * - Recursive tree display
- */
-
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  CaretRight,
-  CaretDown,
-  CheckCircle,
-  Warning,
-  Question as HelpCircle,
-  Package,
-} from '@phosphor-icons/react';
+import React, { useCallback, useMemo, useState } from "react";
+import { CaretDown, CaretRight, CheckCircle, Package, Question as HelpCircle, Warning } from "@phosphor-icons/react";
 import type { DependencyTreeNode, DependencyResolutionResult } from '../plugins/dependencies';
-
 // ============================================================================
 // Theme
 // ============================================================================
@@ -180,7 +162,7 @@ function TreeNode({
   return (
     <div>
       {/* Node Row */}
-      <button
+      <button type="button"
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -583,14 +565,14 @@ export function DependencyTree({
 // Compact Version
 // ============================================================================
 
-export interface CompactDependencyTreeProps {
+interface CompactDependencyTreeProps {
   resolution: DependencyResolutionResult;
   showOptional?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
 
-export function CompactDependencyTree({
+function CompactDependencyTree({
   resolution,
   showOptional = false,
   className,

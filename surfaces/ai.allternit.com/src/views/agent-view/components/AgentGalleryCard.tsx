@@ -8,6 +8,7 @@ import { useAgentStore } from "@/lib/agents/agent.store";
 import { STUDIO_THEME } from "../AgentView.constants";
 import { AgentAvatar } from "@/components/Avatar";
 import { MascotPreview } from "./AgentMascotPreview";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 interface AgentGalleryCardProps {
   agent: Agent;
@@ -87,6 +88,7 @@ function AgentCardAvatar({ agent }: { agent: Agent }) {
 export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const { setIsEditing, setIsCreating, deleteAgent, agents } = useAgentStore();
   const initial = agent.name.charAt(0).toUpperCase();
   const source = agent.source || "personal";
@@ -130,9 +132,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(false);
-    if (confirm(`Delete agent "${agent.name}"?`)) {
-      deleteAgent(agent.id);
-    }
+    setConfirmDelete(true);
   };
 
   const handleRun = (e: React.MouseEvent) => {
@@ -194,7 +194,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
 
           {/* 3-dot menu */}
           <div style={{ position: "relative" }}>
-            <button
+            <button type="button"
               onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
               style={{
                 width: "28px",
@@ -289,6 +289,15 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
           </span>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmDelete}
+        title="Delete Agent"
+        message={`Delete agent "${agent.name}"?`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => { setConfirmDelete(false); deleteAgent(agent.id); }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </motion.div>
   );
 }
@@ -305,7 +314,7 @@ function MenuItem({
   onClick: (e: React.MouseEvent) => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         width: "100%",

@@ -12,10 +12,10 @@ import {
   ClockCounterClockwise,
   WifiHigh,
   WifiSlash,
-  ChartLine,
 } from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface AgentRuntimeItem {
   id: string;
@@ -37,6 +37,7 @@ export function AgentRuntimeDashboard() {
   const [editForm, setEditForm] = useState({ name: '', host: '', status: 'offline' as string });
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ name: '', host: '', status: 'offline' as string });
+  const [confirmDialog, setConfirmDialog] = useState<{ id: string } | null>(null);
   const { addToast } = useToast();
 
   const fetchRuntimes = useCallback(async () => {
@@ -56,8 +57,12 @@ export function AgentRuntimeDashboard() {
     fetchRuntimes();
   }, [fetchRuntimes]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this runtime?')) return;
+  const handleDelete = (id: string) => {
+    setConfirmDialog({ id });
+  };
+
+  const commitDelete = async (id: string) => {
+    setConfirmDialog(null);
     try {
       const res = await fetch(`/api/v1/agent-runtimes?id=${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete');
@@ -126,7 +131,7 @@ export function AgentRuntimeDashboard() {
           <Cpu size={24} color="#3b82f6" />
           <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '20px', fontWeight: 600 }}>Agent Runtimes</h2>
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowAdd(!showAdd)}
           style={{
             display: 'inline-flex',
@@ -152,11 +157,11 @@ export function AgentRuntimeDashboard() {
         <GlassSurface style={{ padding: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)' }}>
           <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500, display: 'block', marginBottom: 4 }}>Name</label>
-              <input
-                value={addForm.name}
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500, display: 'block', marginBottom: 4 }}>Name</div>
+              <input aria-label="Input" value={addForm.name}
                 onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                 placeholder="e.g. Production Cluster"
+                className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -165,16 +170,15 @@ export function AgentRuntimeDashboard() {
                   backgroundColor: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   fontSize: '13px',
-                  outline: 'none',
                 }}
               />
             </div>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500, display: 'block', marginBottom: 4 }}>Host</label>
-              <input
-                value={addForm.host}
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500, display: 'block', marginBottom: 4 }}>Host</div>
+              <input aria-label="Input" value={addForm.host}
                 onChange={(e) => setAddForm({ ...addForm, host: e.target.value })}
                 placeholder="e.g. 192.168.1.10"
+                className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -183,15 +187,14 @@ export function AgentRuntimeDashboard() {
                   backgroundColor: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   fontSize: '13px',
-                  outline: 'none',
                 }}
               />
             </div>
             <div style={{ minWidth: 140 }}>
-              <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500, display: 'block', marginBottom: 4 }}>Status</label>
-              <select
-                value={addForm.status}
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500, display: 'block', marginBottom: 4 }}>Status</div>
+              <select aria-label="Selection" value={addForm.status}
                 onChange={(e) => setAddForm({ ...addForm, status: e.target.value })}
+                className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -200,7 +203,6 @@ export function AgentRuntimeDashboard() {
                   backgroundColor: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   fontSize: '13px',
-                  outline: 'none',
                   cursor: 'pointer',
                 }}
               >
@@ -210,10 +212,10 @@ export function AgentRuntimeDashboard() {
               </select>
             </div>
             <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-              <button onClick={handleAdd} style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--status-success)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={handleAdd} style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--status-success)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
                 <Check size={16} weight="bold" />
               </button>
-              <button onClick={() => setShowAdd(false)} style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={() => setShowAdd(false)} style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
                 <X size={16} weight="bold" />
               </button>
             </div>
@@ -235,30 +237,30 @@ export function AgentRuntimeDashboard() {
             <GlassSurface key={rt.id} style={{ padding: 'var(--spacing-md)', position: 'relative' }}>
               {editingId === rt.id ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-                  <input
-                    value={editForm.name}
+                  <input aria-label="Input" value={editForm.name}
                     onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                    style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                    className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
+                    style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px' }}
                   />
-                  <input
-                    value={editForm.host}
+                  <input aria-label="Input" value={editForm.host}
                     onChange={(e) => setEditForm({ ...editForm, host: e.target.value })}
-                    style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
+                    className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
+                    style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px' }}
                   />
-                  <select
-                    value={editForm.status}
+                  <select aria-label="Selection" value={editForm.status}
                     onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                    style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', cursor: 'pointer' }}
+                    className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
+                    style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' }}
                   >
                     <option value="online">Online</option>
                     <option value="busy">Busy</option>
                     <option value="offline">Offline</option>
                   </select>
                   <div style={{ display: 'flex', gap: 'var(--spacing-sm)', justifyContent: 'flex-end' }}>
-                    <button onClick={() => handleSaveEdit(rt.id)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--status-success)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button type="button" onClick={() => handleSaveEdit(rt.id)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--status-success)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
                       <Check size={14} weight="bold" />
                     </button>
-                    <button onClick={() => setEditingId(null)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button type="button" onClick={() => setEditingId(null)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
                       <X size={14} weight="bold" />
                     </button>
                   </div>
@@ -271,14 +273,14 @@ export function AgentRuntimeDashboard() {
                       <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600 }}>{rt.name}</h3>
                     </div>
                     <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
+                      <button type="button"
                         onClick={() => { setEditingId(rt.id); setEditForm({ name: rt.name, host: rt.host, status: rt.status }); }}
                         title="Edit"
                         style={{ padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}
                       >
                         <PencilSimple size={14} />
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => handleDelete(rt.id)}
                         title="Delete"
                         style={{ padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', color: 'var(--status-error)', cursor: 'pointer' }}
@@ -320,6 +322,15 @@ export function AgentRuntimeDashboard() {
           ))}
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmDialog !== null}
+        title="Delete Runtime"
+        message="Delete this runtime?"
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => confirmDialog && commitDelete(confirmDialog.id)}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

@@ -34,7 +34,7 @@ const REVERSE_STATUS_MAP: Record<Task['status'], BoardItemStatus> = {
  * Converts a cowork-team board item into a CoworkStore Task.
  * Use this when an agent picks up a board item to run a cowork session on it.
  */
-export function bridgeToCoworkTask(item: CoworkBoardItem): Omit<Task, 'createdAt' | 'updatedAt'> {
+function bridgeToCoworkTask(item: CoworkBoardItem): Omit<Task, 'createdAt' | 'updatedAt'> {
   return {
     id: `board-${item.id}`,
     title: item.title,
@@ -53,7 +53,7 @@ export function bridgeToCoworkTask(item: CoworkBoardItem): Omit<Task, 'createdAt
  * Maps a completed CoworkStore task status back to a board item status patch.
  * Call this when a session ends to update the board.
  */
-export function bridgeCompletionToBoard(
+function bridgeCompletionToBoard(
   task: Pick<Task, 'id' | 'status'>
 ): { status: BoardItemStatus } {
   return {
@@ -65,7 +65,7 @@ export function bridgeCompletionToBoard(
  * Returns the board item ID from a bridged task ID.
  * Bridged tasks have id prefix "board-".
  */
-export function getBoardItemIdFromTask(taskId: string): string | null {
+function getBoardItemIdFromTask(taskId: string): string | null {
   if (taskId.startsWith('board-')) return taskId.slice(6);
   return null;
 }
@@ -73,7 +73,7 @@ export function getBoardItemIdFromTask(taskId: string): string | null {
 /**
  * Returns true if this task was bridged from a board item.
  */
-export function isBridgedTask(taskId: string): boolean {
+function isBridgedTask(taskId: string): boolean {
   return taskId.startsWith('board-');
 }
 
@@ -135,17 +135,19 @@ export async function bulkCreateFromPRD(
     created.push(board);
   }
 
-  // Second pass: wire resolved dependencies
-  for (const item of sorted) {
-    const realId = tempIdToRealId.get(item.tempId);
-    if (!realId) continue;
-    const resolvedDeps = item.dependencyTempIds
-      .map((tid) => tempIdToRealId.get(tid))
-      .filter((id): id is string => id !== undefined);
-    if (resolvedDeps.length > 0) {
-      await updateItem(realId, { dependencies: resolvedDeps });
-    }
-  }
+  // Second pass: wire resolved dependencies in parallel
+  await Promise.all(
+    sorted.map(async (item) => {
+      const realId = tempIdToRealId.get(item.tempId);
+      if (!realId) return;
+      const resolvedDeps = item.dependencyTempIds
+        .map((tid) => tempIdToRealId.get(tid))
+        .filter((id): id is string => id !== undefined);
+      if (resolvedDeps.length > 0) {
+        await updateItem(realId, { dependencies: resolvedDeps });
+      }
+    })
+  );
 
   return created;
 }

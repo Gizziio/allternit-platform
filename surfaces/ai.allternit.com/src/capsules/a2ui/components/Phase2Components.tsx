@@ -5,9 +5,6 @@
 // ============================================================================
 
 "use client";
-
-import React, { useState, useMemo, useRef, useEffect } from "react";
-import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +44,8 @@ import type {
   RenderContext,
 } from "../a2ui.types.extended";
 import { resolvePath, resolveValue, isVisible } from "../A2UIRenderer";
+import React, { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { format, parseISO } from "date-fns";
 
 // ============================================================================
 // RichText / MarkdownEditor Component
@@ -59,13 +58,13 @@ export function RichTextRenderer({
   props: RichTextProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const value = (resolvePath(context.dataModel, props.valuePath) as string) || "";
   const isDisabled = resolveValue(props.disabled, context.dataModel, false);
 
   const [content, setContent] = useState(value);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const handleChange = (newContent: string) => {
     setContent(newContent);
@@ -208,8 +207,7 @@ export function RichTextRenderer({
         </div>
 
         {/* Editor */}
-        <textarea
-          ref={textareaRef}
+        <textarea aria-label="Text Area" ref={textareaRef}
           value={content}
           onChange={(e) => handleChange(e.target.value)}
           placeholder={props.placeholder}
@@ -287,7 +285,7 @@ function TreeNodeItem({
 
   return (
     <div>
-      <div
+      <div role="button" tabIndex={0}
         className={cn(
           "flex items-center gap-1 py-1 px-2 rounded cursor-pointer transition-colors",
           isSelected && "bg-primary/10 text-primary",
@@ -298,7 +296,7 @@ function TreeNodeItem({
         onClick={() => !node.disabled && onSelect(node.id, node)}
       >
         {hasChildren ? (
-          <button
+          <button type="button"
             onClick={(e) => {
               e.stopPropagation();
               onToggle(node.id);
@@ -358,8 +356,6 @@ export function TreeViewRenderer({
   props: TreeViewProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const items = useMemo(() => {
     const rawItems = typeof props.items === "string"
       ? resolvePath(context.dataModel, props.items)
@@ -372,15 +368,15 @@ export function TreeViewRenderer({
   const [searchQuery, setSearchQuery] = useState("");
 
   // Sync with data model if paths are provided
-  const expandedFromModel = props.expandedPaths
+  const expandedFromModel = useMemo(() => props.expandedPaths
     ? ((typeof props.expandedPaths === "string"
         ? resolvePath(context.dataModel, props.expandedPaths)
         : props.expandedPaths) as string[])
-    : null;
+    : null, [props.expandedPaths, context.dataModel]);
 
-  const selectionFromModel = props.selectionPath
+  const selectionFromModel = useMemo(() => props.selectionPath
     ? (resolvePath(context.dataModel, props.selectionPath) as string | string[])
-    : null;
+    : null, [props.selectionPath, context.dataModel]);
 
   useEffect(() => {
     if (expandedFromModel) {
@@ -396,6 +392,8 @@ export function TreeViewRenderer({
       setSelected(new Set(selections));
     }
   }, [selectionFromModel]);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const handleToggle = (id: string) => {
     const newExpanded = new Set(expanded);
@@ -436,7 +434,7 @@ export function TreeViewRenderer({
       {props.searchable && (
         <div className="p-2 border-b">
           <div className="relative">
-            <MagnifyingGlass className="absolute left-2 top-1/2 -tranzinc-y-1/2 size-4  text-muted-foreground" />
+            <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder={props.searchPlaceholder || "Search..."}
               value={searchQuery}
@@ -478,11 +476,11 @@ export function SplitPaneRenderer({
   props: SplitPaneProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const [sizes, setSizes] = useState(props.sizes);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const handleMouseDown = (index: number) => (e: React.MouseEvent) => {
     if (!props.resizable) return;
@@ -535,7 +533,7 @@ export function SplitPaneRenderer({
       )}
     >
       {props.children.map((child, index) => (
-        <React.Fragment key={index}>
+        <React.Fragment key={`pane-${index}`}>
           <div
             className="overflow-auto"
             style={{ flex: `0 0 ${sizes[index]}%` }}
@@ -566,11 +564,11 @@ export function SplitPaneRenderer({
 // ============================================================================
 
 const statusIcons: Record<string, React.ReactNode> = {
-  pending: <div className="size-3  rounded-full border-2 border-muted-foreground" />,
-  active: <CircleNotch className="size-4  animate-spin text-primary" />,
-  completed: <CheckCircle className="size-4  text-green-500" />,
-  error: <Warning className="size-4  text-destructive" />,
-  warning: <Warning className="size-4  text-yellow-500" />,
+  pending: <div className="size-3 rounded-full border-2 border-muted-foreground" />,
+  active: <CircleNotch className="size-4 animate-spin text-primary" />,
+  completed: <CheckCircle className="size-4 text-green-500" />,
+  error: <Warning className="size-4 text-destructive" />,
+  warning: <Warning className="size-4 text-yellow-500" />,
 };
 
 const statusColors: Record<string, string> = {
@@ -588,8 +586,6 @@ export function TimelineRenderer({
   props: TimelineProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const items = useMemo(() => {
     const rawItems = typeof props.items === "string"
       ? resolvePath(context.dataModel, props.items)
@@ -601,7 +597,9 @@ export function TimelineRenderer({
     return result;
   }, [props.items, props.reverse, context.dataModel]);
 
-  const isLoading = resolveValue(props.loading, context.dataModel, false);
+  const isLoading = useMemo(() => resolveValue(props.loading, context.dataModel, false), [props.loading, context.dataModel]);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const handleItemClick = (item: TimelineItem) => {
     if (props.onItemClick) {
@@ -631,7 +629,7 @@ export function TimelineRenderer({
       )}
 
       {items.map((item, index) => (
-        <div
+        <div role="button" tabIndex={0}
           key={item.id}
           className={cn(
             "relative flex",
@@ -646,7 +644,7 @@ export function TimelineRenderer({
           {/* Icon/Marker */}
           <div
             className={cn(
-              "relative z-10 flex items-center justify-center size-8  rounded-full bg-background border-2",
+              "relative z-10 flex items-center justify-center size-8 rounded-full bg-background border-2",
               isVertical ? "mr-4" : "mb-2"
             )}
             style={{ borderColor: statusColors[item.status || "pending"] }}
@@ -685,7 +683,7 @@ export function TimelineRenderer({
               <div className="flex gap-2 mt-2">
                 {item.actions.map((action, idx) => (
                   <Button
-                    key={idx}
+                    key={`${action.label}-${idx}`}
                     variant="outline"
                     size="sm"
                     onClick={(e) => {
@@ -704,7 +702,7 @@ export function TimelineRenderer({
 
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground">
-          <CircleNotch className="size-4  animate-spin" />
+          <CircleNotch className="size-4 animate-spin" />
           <span className="text-sm">Loading more…</span>
         </div>
       )}

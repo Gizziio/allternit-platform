@@ -8,18 +8,22 @@
  * - Streaming content handling
  */
 
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSidecarStore } from '../stores/useSidecarStore';
 import { useKernelProtocol } from '../kernel/KernelProtocol';
 import { useKernelBridge } from '../kernel/KernelBridge';
 import { useLaunchProtocol } from '../utils/launchProtocol';
 import type { AllternitProgramType } from '../types/programs';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UseAgentRuntime');
+
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface AgentRuntimeOptions {
+interface AgentRuntimeOptions {
   threadId: string;
   kernelEndpoint?: string;
   autoLaunch?: boolean;
@@ -27,7 +31,7 @@ export interface AgentRuntimeOptions {
   onError?: (error: Error) => void;
 }
 
-export interface AgentRuntime {
+interface AgentRuntime {
   isConnected: boolean;
   reconnect: () => void;
   sendToKernel: (message: Record<string, unknown>) => void;
@@ -42,7 +46,7 @@ export interface AgentRuntime {
 // Main Hook
 // ============================================================================
 
-export function useAgentRuntime(options: AgentRuntimeOptions): AgentRuntime {
+function useAgentRuntime(options: AgentRuntimeOptions): AgentRuntime {
   const { threadId, kernelEndpoint = 'ws://localhost:8080/kernel' } = options;
   
   const store = useSidecarStore();
@@ -50,7 +54,7 @@ export function useAgentRuntime(options: AgentRuntimeOptions): AgentRuntime {
   const bridge = useKernelBridge({
     endpoint: kernelEndpoint,
     onConnectionChange: (connected) => {
-      console.debug(`[AgentRuntime] Kernel ${connected ? 'connected' : 'disconnected'}`);
+      logger.debug(`Kernel ${connected ? 'connected' : 'disconnected'}`);
     },
     onError: options.onError,
   });
@@ -140,7 +144,7 @@ export function useAgentRuntime(options: AgentRuntimeOptions): AgentRuntime {
 // Chat Integration Hook
 // ============================================================================
 
-export interface ChatMessage {
+interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -151,7 +155,7 @@ export interface ChatMessage {
   };
 }
 
-export function useChatWithPrograms(threadId: string) {
+function useChatWithPrograms(threadId: string) {
   const runtime = useAgentRuntime({ threadId, autoLaunch: true });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
@@ -199,7 +203,7 @@ export function useChatWithPrograms(threadId: string) {
 // Program Streaming Hook
 // ============================================================================
 
-export function useProgramStreaming(programId: string) {
+function useProgramStreaming(programId: string) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [buffer, setBuffer] = useState('');
   

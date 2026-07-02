@@ -1,6 +1,5 @@
 'use client';
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from 'react';
 import { Zap, ExternalLink, MessageSquare, ArrowUpCircle } from 'lucide-react';
 
@@ -109,7 +108,7 @@ export function LiveFeed() {
         justifyContent: 'center', height: 300, gap: 12,
       }}>
         <p style={{ fontSize: 14, color: 'var(--status-error)', margin: 0 }}>{error}</p>
-        <button onClick={fetchAll} style={{
+        <button type="button" onClick={fetchAll} style={{
           padding: '8px 16px', background: 'rgba(212,176,140,0.08)', border: `1px solid var(--ui-border-default)`,
           borderRadius: 'var(--radius-md, 12px)', color: ACCENT, fontSize: 13, cursor: 'pointer',
           transition: 'all 200ms ease',
@@ -152,7 +151,7 @@ export function LiveFeed() {
               Updated {timeAgo(lastUpdated.toISOString())}
             </span>
           )}
-          <button onClick={fetchAll} style={{
+          <button type="button" onClick={fetchAll} style={{
             padding: '6px 12px', background: 'rgba(212,176,140,0.06)', border: `1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)`,
             borderRadius: 'var(--radius-md, 12px)', color: ACCENT, fontSize: 12, cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 6,

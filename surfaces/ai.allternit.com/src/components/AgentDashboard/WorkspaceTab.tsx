@@ -1,6 +1,7 @@
-"use client";
+import { cn } from "@/lib/utils";
+import React, { useEffect, useMemo, useState } from "react";
 
-import React, { useState, useEffect, useMemo } from 'react';
+"use client";
 import {
   FolderOpen,
   FileText,
@@ -11,23 +12,15 @@ import {
   Clock,
   Package,
   Check,
-  X,
-} from '@phosphor-icons/react';
+  X, Record } from '@phosphor-icons/react';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { SkillBuilderWizard, HeartbeatScheduler, PackageManager } from '@/components/agent-workspace';
 import type { Agent, AgentWorkspaceLayers } from '@/lib/agents/agent.types';
 
-const STUDIO_THEME = {
-  textPrimary: '#ECECEC',
-  textSecondary: '#A0A0A0',
-  textMuted: 'var(--ui-text-muted)',
-  accent: 'var(--accent-primary)',
-  bgCard: '#352F29',
-  bg: '#2B2520',
-  borderSubtle: 'var(--ui-border-muted)',
-};
+import { createModuleLogger } from '@/lib/logger';
+const logger = createModuleLogger('WorkspaceTab');
 
 interface WorkspaceTabProps {
   agent: Agent;
@@ -63,7 +56,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
   const [showHeartbeatScheduler, setShowHeartbeatScheduler] = useState(false);
   const [showPackageManager, setShowPackageManager] = useState(false);
   const [layers, setLayers] = useState<AgentWorkspaceLayers>(DEFAULT_LAYERS);
-  const [isLoadingLayers] = useState(false);
+  const [isLoadingLayers, setIsLoadingLayers] = useState(false);
 
   useEffect(() => {
     loadWorkspaceFiles();
@@ -112,14 +105,16 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
   };
 
   const loadLayerConfig = async () => {
+    setIsLoadingLayers(true);
     try {
       const manifest = await agentWorkspaceService.getManifest(agent.id);
       if (manifest?.layers) {
         setLayers(manifest.layers);
       }
-    } catch (e) {
-      // Use defaults if manifest doesn't exist
-      console.debug('Using default layer config');
+    } catch {
+      // manifest may not exist yet — use defaults
+    } finally {
+      setIsLoadingLayers(false);
     }
   };
 
@@ -131,7 +126,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
     try {
       await agentWorkspaceService.updateManifest(agent.id, { layers: newLayers });
     } catch (e) {
-      console.error('Failed to save layer config:', e);
+      logger.error({ err: e }, 'Failed to save layer config:');
     }
   };
 
@@ -155,153 +150,82 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
   }, [filteredFiles]);
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+    <div className="flex h-full overflow-hidden">
       {/* Left Sidebar - File Tree */}
-      <div style={{
-        width: '320px',
-        minWidth: '320px',
-        borderRight: `1px solid ${STUDIO_THEME.borderSubtle}`,
-        background: STUDIO_THEME.bgCard,
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
+      <div className="w-80 min-w-[320px] border-r border-solid border-studio-border-subtle bg-studio-card flex flex-col">
         {/* Header */}
-        <div style={{
-          padding: '16px',
-          borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <span style={{ fontSize: '15px', fontWeight: 600, color: STUDIO_THEME.textPrimary }}>
+        <div className="p-4 border-b border-solid border-studio-border-subtle">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[15px] font-semibold text-studio-text-primary">
               Files
             </span>
-            <button
+            <button type="button"
               onClick={loadWorkspaceFiles}
               disabled={isLoading}
-              style={{
-                padding: '6px',
-                borderRadius: '6px',
-                background: 'transparent',
-                border: 'none',
-                color: STUDIO_THEME.textSecondary,
-                cursor: 'pointer',
-              }}
+              className="p-1.5 rounded-md bg-transparent border-none text-studio-text-secondary cursor-pointer transition-colors hover:bg-studio-bg"
             >
-              <ArrowsClockwise style={{ width: 16, height: 16, animation: isLoading ? 'spin 1s linear infinite' : undefined }} />
+              <ArrowsClockwise className={cn("size-4", isLoading && "animate-spin")} />
             </button>
           </div>
           
           {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            <button
+          <div className="flex gap-1.5 flex-wrap">
+            <button type="button"
               onClick={() => setShowSkillBuilder(true)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                background: `${STUDIO_THEME.accent}20`,
-                border: `1px solid ${STUDIO_THEME.accent}40`,
-                color: STUDIO_THEME.accent,
-                cursor: 'pointer',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontWeight: 500,
-              }}
+              className="px-2.5 py-1.5 rounded-md bg-[var(--accent-primary)]/10 border border-solid border-[var(--accent-primary)]/30 text-[var(--accent-primary)] cursor-pointer text-[12px] flex items-center gap-1 font-medium transition-all hover:bg-[var(--accent-primary)]/20"
             >
-              <Wrench style={{ width: 12, height: 12 }} />
+              <Wrench size={12} />
               New Skill
             </button>
-            <button
+            <button type="button"
               onClick={() => setShowHeartbeatScheduler(true)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                background: STUDIO_THEME.bg,
-                border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                color: STUDIO_THEME.textSecondary,
-                cursor: 'pointer',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
+              className="px-2.5 py-1.5 rounded-md bg-studio-bg border border-solid border-studio-border-subtle text-studio-text-secondary cursor-pointer text-[12px] flex items-center gap-1 transition-all hover:bg-studio-card"
             >
-              <Clock style={{ width: 12, height: 12 }} />
+              <Clock size={12} />
               Heartbeat
             </button>
-            <button
+            <button type="button"
               onClick={() => setShowPackageManager(true)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                background: STUDIO_THEME.bg,
-                border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                color: STUDIO_THEME.textSecondary,
-                cursor: 'pointer',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
+              className="px-2.5 py-1.5 rounded-md bg-studio-bg border border-solid border-studio-border-subtle text-studio-text-secondary cursor-pointer text-[12px] flex items-center gap-1 transition-all hover:bg-studio-card"
             >
-              <Package style={{ width: 12, height: 12 }} />
+              <Package size={12} />
               Package
             </button>
           </div>
         </div>
 
         {/* File List */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
+        <div className="flex-1 overflow-auto p-2">
           {error && (
-            <div style={{
-              padding: '12px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              borderRadius: '8px',
-              marginBottom: '12px',
-            }}>
-              <span style={{ fontSize: '12px', color: 'var(--status-error)' }}>{error}</span>
+            <div className="p-3 bg-red-500/10 rounded-lg mb-3">
+              <span className="text-[12px] text-red-500">{error}</span>
             </div>
           )}
 
           {filteredFiles.length > 0 ? (
             Object.entries(groupedFiles).map(([dir, dirFiles]) => (
-              <div key={dir} style={{ marginBottom: '16px' }}>
-                <div style={{
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: STUDIO_THEME.textMuted,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  marginBottom: '8px',
-                  paddingLeft: '8px',
-                }}>
+              <div key={dir} className="mb-4">
+                <div className="text-[12px] font-semibold text-studio-text-muted uppercase tracking-wider mb-2 pl-2">
                   {dir.replace(/^agents\/[^/]+/, '').replace(/^\//, '') || 'Root'}
                 </div>
                 {dirFiles.map(file => (
-                  <button
+                  <button type="button"
                     key={file.path}
                     onClick={() => file.type === 'file' && loadFile(file.path)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      width: '100%',
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      border: 'none',
-                      background: selectedFile === file.path ? `${STUDIO_THEME.accent}20` : 'transparent',
-                      color: selectedFile === file.path ? STUDIO_THEME.accent : STUDIO_THEME.textSecondary,
-                      cursor: file.type === 'file' ? 'pointer' : 'default',
-                      fontSize: '12px',
-                      textAlign: 'left',
-                    }}
+                    className={cn(
+                      "flex items-center gap-2 w-full p-1.5 px-3 rounded border-none cursor-pointer text-[12px] text-left transition-colors",
+                      selectedFile === file.path 
+                        ? "bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]" 
+                        : "bg-transparent text-studio-text-secondary hover:bg-studio-bg",
+                      file.type !== 'file' && "cursor-default"
+                    )}
                   >
                     {file.type === 'directory' ? (
-                      <FolderOpen style={{ width: 14, height: 14, flexShrink: 0 }} />
+                      <FolderOpen size={14} className="shrink-0" />
                     ) : (
-                      <FileText style={{ width: 14, height: 14, flexShrink: 0 }} />
+                      <FileText size={14} className="shrink-0" />
                     )}
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span className="truncate">
                       {file.path.replace(/^agents\/[^/]+\//, '')}
                     </span>
                   </button>
@@ -309,117 +233,62 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
               </div>
             ))
           ) : (
-            <div style={{
-              padding: '32px',
-              textAlign: 'center',
-              color: STUDIO_THEME.textMuted,
-            }}>
-              <FolderOpen style={{ width: 40, height: 40, margin: '0 auto 12px', opacity: 0.4 }} />
-              <p style={{ fontSize: '13px', margin: '0 0 4px 0' }}>No files in workspace</p>
-              <p style={{ fontSize: '12px', margin: 0, opacity: 0.7 }}>
+            <div className="p-8 text-center text-studio-text-muted">
+              <FolderOpen size={40} className="mx-auto mb-3 opacity-40" />
+              <p className="text-[13px] mb-1">No files in workspace</p>
+              <p className="text-[12px] opacity-70">
                 Create skills or use the Package Manager to import
               </p>
             </div>
           )}
         </div>
 
-        {/* Layer indicators footer - checkable */}
-        <div style={{
-          padding: '12px 16px',
-          borderTop: `1px solid ${STUDIO_THEME.borderSubtle}`,
-          background: STUDIO_THEME.bg,
-        }}>
-          <div style={{
-            fontSize: '12px',
-            color: STUDIO_THEME.textMuted,
-            marginBottom: '8px',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-          }}>
+        {/* Layer indicators footer */}
+        <div className="p-3 px-4 border-t border-solid border-studio-border-subtle bg-studio-bg">
+          <div className="text-[12px] text-studio-text-muted mb-2 uppercase tracking-wider">
             Workspace Layers
           </div>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '6px',
-          }}>
+          <div className="flex flex-wrap gap-1.5">
             {(Object.keys(layers) as Array<keyof AgentWorkspaceLayers>).map(layer => {
               const isEnabled = layers[layer];
               return (
-                <button
+                <button type="button"
                   key={layer}
                   onClick={() => toggleLayer(layer)}
                   disabled={isLoadingLayers}
-                  style={{
-                    fontSize: '12px',
-                    padding: '4px 8px',
-                    background: isEnabled ? `${STUDIO_THEME.accent}25` : 'var(--surface-hover)',
-                    color: isEnabled ? STUDIO_THEME.accent : STUDIO_THEME.textMuted,
-                    borderRadius: '4px',
-                    border: `1px solid ${isEnabled ? `${STUDIO_THEME.accent}40` : STUDIO_THEME.borderSubtle}`,
-                    textTransform: 'capitalize',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (isEnabled) {
-                      e.currentTarget.style.background = `${STUDIO_THEME.accent}35`;
-                    } else {
-                      e.currentTarget.style.background = 'var(--ui-border-muted)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = isEnabled ? `${STUDIO_THEME.accent}25` : 'var(--surface-hover)';
-                  }}
+                  className={cn(
+                    "text-[12px] px-2 py-1 rounded border border-solid capitalize cursor-pointer flex items-center gap-1 transition-all duration-150",
+                    isEnabled 
+                      ? "bg-[var(--accent-primary)]/20 text-[var(--accent-primary)] border-[var(--accent-primary)]/40 hover:bg-[var(--accent-primary)]/30" 
+                      : "bg-studio-card text-studio-text-muted border-studio-border-subtle hover:bg-studio-border-subtle"
+                  )}
                   title={`${isEnabled ? 'Hide' : 'Show'} ${layer} layer files`}
                 >
                   {isEnabled ? (
-                    <Check style={{ width: 10, height: 10 }} />
+                    <Check size={10} />
                   ) : (
-                    <X style={{ width: 10, height: 10 }} />
+                    <X size={10} />
                   )}
                   {layer}
                 </button>
               );
             })}
           </div>
-          <div style={{
-            fontSize: '12px',
-            color: STUDIO_THEME.textMuted,
-            marginTop: '8px',
-            opacity: 0.7,
-          }}>
+          <div className="text-[12px] text-studio-text-muted mt-2 opacity-70">
             Click to show/hide layer files
           </div>
         </div>
       </div>
 
       {/* Right Side - File Editor */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="flex-1 flex flex-col overflow-hidden">
         {selectedFile ? (
           <>
             {/* Editor Header */}
-            <div style={{
-              padding: '12px 16px',
-              borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: STUDIO_THEME.bgCard,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-                <FileText style={{ width: 16, height: 16, color: STUDIO_THEME.accent, flexShrink: 0 }} />
-                <span style={{
-                  fontSize: '13px',
-                  fontFamily: 'var(--font-mono)',
-                  color: STUDIO_THEME.textPrimary,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
+            <div className="p-3 px-4 border-b border-solid border-studio-border-subtle flex items-center justify-between bg-studio-card">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <FileText size={16} className="text-[var(--accent-primary)] shrink-0" />
+                <span className="text-[13px] font-mono text-studio-text-primary truncate">
                   {selectedFile.replace(/^agents\/[^/]+\//, '')}
                 </span>
               </div>
@@ -427,13 +296,13 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                 size="sm"
                 onClick={saveFile}
                 disabled={isSaving}
-                style={{ background: STUDIO_THEME.accent, flexShrink: 0 }}
+                className="bg-[var(--accent-primary)] shrink-0"
               >
                 {isSaving ? (
-                  <ArrowsClockwise style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
+                  <ArrowsClockwise size={14} className="animate-spin" />
                 ) : (
                   <>
-                    <FloppyDisk style={{ width: 14, height: 14, marginRight: '6px' }} />
+                    <FloppyDisk size={14} className="mr-1.5" />
                     Save
                   </>
                 )}
@@ -444,38 +313,19 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
             <Textarea
               value={fileContent}
               onChange={(e) => setFileContent(e.target.value)}
-              style={{
-                flex: 1,
-                border: 'none',
-                borderRadius: 0,
-                background: STUDIO_THEME.bg,
-                color: STUDIO_THEME.textPrimary,
-                fontFamily: 'var(--font-mono)',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                resize: 'none',
-                padding: '16px',
-              }}
+              className="flex-1 border-none rounded-none bg-studio-bg text-studio-text-primary font-mono text-[13px] leading-relaxed resize-none p-4 focus:ring-0"
               spellCheck={false}
             />
           </>
         ) : (
           /* Empty State */
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: STUDIO_THEME.textMuted,
-            padding: '32px',
-          }}>
-            <FileCode style={{ width: 64, height: 64, marginBottom: '20px', opacity: 0.2 }} />
-            <p style={{ fontSize: '16px', margin: '0 0 8px 0', color: STUDIO_THEME.textSecondary }}>
+          <div className="flex-1 flex flex-col items-center justify-center text-studio-text-muted p-8">
+            <FileCode size={64} className="mb-5 opacity-20" />
+            <p className="text-[16px] mb-2 text-studio-text-secondary">
               Select a file to edit
             </p>
-            <p style={{ fontSize: '13px', margin: 0, textAlign: 'center', maxWidth: '300px' }}>
-              Browse the workspace files in the sidebar to view and edit your agent&apos;s configuration
+            <p className="text-[13px] text-center max-w-[300px]">
+              Browse the workspace files in the sidebar to view and edit your agent's configuration
             </p>
           </div>
         )}

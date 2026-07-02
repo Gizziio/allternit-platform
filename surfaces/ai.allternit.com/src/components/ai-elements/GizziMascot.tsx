@@ -11,7 +11,7 @@ export type GizziEmotion =
   | 'mischief'
   | 'proud';
 
-export type GizziAttentionState = 'tracking' | 'locked-on' | 'startled';
+type GizziAttentionState = 'tracking' | 'locked-on' | 'startled';
 
 export interface GizziAttention {
   state: GizziAttentionState;
@@ -21,8 +21,8 @@ export interface GizziAttention {
   };
 }
 
-export type GizziLocomotionStyle = 'chat' | 'cowork' | 'code' | 'browser';
-export type GizziLocomotionPhase = 'idle' | 'walk-in' | 'walk-out' | 'crawl';
+type GizziLocomotionStyle = 'chat' | 'cowork' | 'code' | 'browser';
+type GizziLocomotionPhase = 'idle' | 'walk-in' | 'walk-out' | 'crawl';
 
 export interface GizziLocomotion {
   style: GizziLocomotionStyle;
@@ -865,13 +865,14 @@ export function GizziMascot({
       : profile.expressions;
   const [visibleLength, setVisibleLength] = useState(activeExpressions[0]?.length ?? 0);
 
-  useEffect(() => {
+  const [prevActiveExpressions, setPrevActiveExpressions] = useState(activeExpressions);
+  if (activeExpressions !== prevActiveExpressions) {
+    setPrevActiveExpressions(activeExpressions);
     setExpressionIndex(0);
     setVisibleLength(activeExpressions[0]?.length ?? 0);
-  }, [activeExpressions]);
+  }
 
-  useEffect(() => {
-    if (!isTapped) {
+  useEffect(() => {    if (!isTapped) {
       return;
     }
 

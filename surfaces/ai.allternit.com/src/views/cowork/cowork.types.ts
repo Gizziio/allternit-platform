@@ -7,7 +7,7 @@
 // Core Event Types
 // ============================================================================
 
-export type CoworkEventType = 
+type CoworkEventType = 
   | 'cowork.session.start'
   | 'cowork.session.end'
   | 'cowork.observation'
@@ -24,7 +24,7 @@ export type CoworkEventType =
   | 'cowork.takeover'
   | 'status_change';
 
-export interface CoworkEvent {
+interface CoworkEvent {
   id: string;
   type: CoworkEventType;
   timestamp: number;
@@ -35,7 +35,7 @@ export interface CoworkEvent {
 // Session Events
 // ============================================================================
 
-export interface SessionStartEvent extends CoworkEvent {
+interface SessionStartEvent extends CoworkEvent {
   type: 'cowork.session.start';
   viewportType: 'browser' | 'desktop' | 'remote';
   targetUrl?: string;
@@ -45,7 +45,7 @@ export interface SessionStartEvent extends CoworkEvent {
   };
 }
 
-export interface SessionEndEvent extends CoworkEvent {
+interface SessionEndEvent extends CoworkEvent {
   type: 'cowork.session.end';
   reason: 'completed' | 'error' | 'user_terminated' | 'timeout';
   summary?: string;
@@ -88,7 +88,7 @@ export interface ObservationEvent extends CoworkEvent {
 // Action Events (Click, Type, Scroll, etc.)
 // ============================================================================
 
-export type ActionType = 
+type ActionType = 
   | 'click'
   | 'double_click'
   | 'type'
@@ -134,7 +134,7 @@ export interface CommandEvent extends CoworkEvent {
 // File Events (Read/Edit/Create/Delete files)
 // ============================================================================
 
-export type FileOperation = 'read' | 'edit' | 'create' | 'delete';
+type FileOperation = 'read' | 'edit' | 'create' | 'delete';
 
 export interface FileEvent extends CoworkEvent {
   type: 'cowork.file';
@@ -170,9 +170,9 @@ export interface ToolResultEvent extends CoworkEvent {
 // Approval Events (Safety Gates)
 // ============================================================================
 
-export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
-export interface ApprovalRequestEvent extends CoworkEvent {
+interface ApprovalRequestEvent extends CoworkEvent {
   type: 'cowork.approval_request';
   actionId: string;
   riskLevel: RiskLevel;
@@ -186,7 +186,7 @@ export interface ApprovalRequestEvent extends CoworkEvent {
   timeout?: number; // Seconds before auto-reject
 }
 
-export interface ApprovalResultEvent extends CoworkEvent {
+interface ApprovalResultEvent extends CoworkEvent {
   type: 'cowork.approval_result';
   actionId: string;
   approved: boolean;
@@ -210,7 +210,7 @@ export interface CheckpointEvent extends CoworkEvent {
   };
 }
 
-export interface RestoreEvent extends CoworkEvent {
+interface RestoreEvent extends CoworkEvent {
   type: 'cowork.restore';
   checkpointId: string;
 }
@@ -219,7 +219,7 @@ export interface RestoreEvent extends CoworkEvent {
 // Narration Events (Assistant Chat within Cowork)
 // ============================================================================
 
-export interface NarrationEvent extends CoworkEvent {
+interface NarrationEvent extends CoworkEvent {
   type: 'cowork.narration';
   text: string;
   style: 'thinking' | 'action' | 'result' | 'question';
@@ -229,7 +229,7 @@ export interface NarrationEvent extends CoworkEvent {
 // Takeover Events (User Manual Control)
 // ============================================================================
 
-export interface TakeoverEvent extends CoworkEvent {
+interface TakeoverEvent extends CoworkEvent {
   type: 'cowork.takeover';
   userId: string;
   reason?: string;
@@ -240,7 +240,7 @@ export interface TakeoverEvent extends CoworkEvent {
 // Union Type
 // ============================================================================
 
-export interface StatusChangeEvent extends CoworkEvent {
+interface StatusChangeEvent extends CoworkEvent {
   type: 'status_change';
   status: 'running' | 'paused' | 'error' | 'completed';
 }
@@ -266,7 +266,7 @@ export type AnyCoworkEvent =
 // Session State
 // ============================================================================
 
-export type CoworkSessionStatus = 
+type CoworkSessionStatus = 
   | 'idle'
   | 'running'
   | 'paused'
@@ -275,7 +275,7 @@ export type CoworkSessionStatus =
   | 'completed'
   | 'error';
 
-export interface CoworkSession {
+interface CoworkSession {
   id: string;
   status: CoworkSessionStatus;
   viewportType: 'browser' | 'desktop' | 'remote';
@@ -299,7 +299,7 @@ export interface CoworkSession {
 // Controls
 // ============================================================================
 
-export type CoworkControlAction =
+type CoworkControlAction =
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'step' } // Execute one action then pause

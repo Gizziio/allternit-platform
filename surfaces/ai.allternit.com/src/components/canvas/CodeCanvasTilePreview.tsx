@@ -48,8 +48,7 @@ export function CodeCanvasTilePreview({ url, filePath }: CodeCanvasTilePreviewPr
         }}
       >
         <Globe size={12} color="var(--text-tertiary)" />
-        <input
-          type="text"
+        <input aria-label="Input" type="text"
           value={inputUrl}
           onChange={(e) => setInputUrl(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -65,7 +64,7 @@ export function CodeCanvasTilePreview({ url, filePath }: CodeCanvasTilePreviewPr
           }}
           placeholder="Enter URL…"
         />
-        <button
+        <button type="button"
           onClick={handleRefresh}
           title="Refresh"
           style={{

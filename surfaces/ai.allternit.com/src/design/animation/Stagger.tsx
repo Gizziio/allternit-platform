@@ -121,16 +121,19 @@ export function Stagger({
       className={className}
       style={style}
     >
-      {React.Children.map(children, (child, index) => (
-        <motion.div
-          key={index}
-          variants={itemVariants}
-          className={childClassName}
-          style={asList ? undefined : { display: 'contents' }}
-        >
-          {child}
-        </motion.div>
-      ))}
+      {React.Children.map(children, (child, index) => {
+        const childKey = (child as any)?.key || index;
+        return (
+          <motion.div
+            key={childKey}
+            variants={itemVariants}
+            className={childClassName}
+            style={asList ? undefined : { display: 'contents' }}
+          >
+            {child}
+          </motion.div>
+        );
+      })}
     </motion.div>
   );
 }
@@ -224,7 +227,7 @@ Stagger.Item = function StaggerItem({
 };
 
 /** Preset configurations for common stagger patterns */
-export const staggerPresets = {
+const staggerPresets = {
   /** Quick stagger for lists */
   quick: { staggerDelay: animationTiming.stagger.fast },
   

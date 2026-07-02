@@ -11,31 +11,34 @@ interface ModeContextType {
 
 const ModeContext = createContext<ModeContextType | null>(null);
 
-export function ModeProvider({ 
-  children, 
-  defaultMode = 'chat',
-  onModeChange 
-}: { 
+export function ModeProvider({ children, defaultMode = 'chat', onModeChange }: {
   children: React.ReactNode;
   defaultMode?: AppMode;
   onModeChange?: (mode: AppMode) => void;
 }) {
-  const [mode, setModeState] = useState<AppMode>(defaultMode);
+  const [mode, setModeState] = useState<AppMode>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedMode = localStorage.getItem(MODE_STORAGE_KEY) as AppMode | null;
+        if (savedMode && ['chat', 'cowork', 'code', 'design', 'browser'].includes(savedMode)) {
+          return savedMode;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return defaultMode;
+  });
+
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load mode from localStorage on mount
   useEffect(() => {
-    try {
-      const savedMode = localStorage.getItem(MODE_STORAGE_KEY) as AppMode | null;
-      if (savedMode && ['chat', 'cowork', 'code', 'design', 'browser'].includes(savedMode)) {
-        setModeState(savedMode);
-        onModeChange?.(savedMode);
-      }
-    } catch {
-      // localStorage not available
-    }
     setIsLoaded(true);
-  }, [onModeChange]);
+    // Notify onModeChange of initial mode if it's different from default
+    if (mode !== defaultMode) {
+      onModeChange?.(mode);
+    }
+  }, []); // Only once on mount
 
   const setMode = useCallback((newMode: AppMode) => {
     setModeState(newMode);

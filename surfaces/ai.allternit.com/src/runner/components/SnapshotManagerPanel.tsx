@@ -168,7 +168,7 @@ function SnapshotListItem({
   
   return (
     <div className="border rounded-lg overflow-hidden">
-      <div 
+      <div role="button" tabIndex={0} 
         className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
         onClick={() => setShowDetails(!showDetails)}
       >
@@ -197,34 +197,34 @@ function SnapshotListItem({
         <div className="border-t p-4 bg-muted/30">
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium">Snapshot ID</label>
+              <div className="text-sm font-medium">Snapshot ID</div>
               <p className="text-sm font-mono text-muted-foreground break-all">{snapshot.snapshotId}</p>
             </div>
             
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="text-sm text-muted-foreground">Tool</label>
+                <div className="text-sm text-muted-foreground">Tool</div>
                 <p className="text-sm font-medium">{snapshot.toolName}</p>
               </div>
               <div>
-                <label className="text-sm text-muted-foreground">Created</label>
+                <div className="text-sm text-muted-foreground">Created</div>
                 <p className="text-sm">{new Date(snapshot.timestamp).toLocaleString()}</p>
               </div>
               <div>
-                <label className="text-sm text-muted-foreground">Hit Count</label>
+                <div className="text-sm text-muted-foreground">Hit Count</div>
                 <p className="text-sm font-medium">{snapshot.hitCount}</p>
               </div>
             </div>
             
             <div>
-              <label className="text-sm font-medium">Request</label>
+              <div className="text-sm font-medium">Request</div>
               <div className="mt-1 p-2 bg-muted rounded">
                 <pre className="text-xs overflow-auto">{JSON.stringify(snapshot.request, null, 2)}</pre>
               </div>
             </div>
             
             <div>
-              <label className="text-sm font-medium">Response</label>
+              <div className="text-sm font-medium">Response</div>
               <div className="mt-1 p-2 bg-muted rounded">
                 <pre className="text-xs overflow-auto">{JSON.stringify(snapshot.response, null, 2)}</pre>
               </div>

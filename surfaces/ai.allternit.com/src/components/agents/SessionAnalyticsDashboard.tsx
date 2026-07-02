@@ -1,3 +1,6 @@
+import React, { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+
 /**
  * Session Analytics Dashboard
  * 
@@ -10,9 +13,6 @@
  * 
  * @module SessionAnalyticsDashboard
  */
-
-import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import {
   LineChart,
   Line,
@@ -58,7 +58,7 @@ import type { NativeSession } from '@/lib/agents';
 // Types
 // ============================================================================
 
-export interface SessionAnalyticsDashboardProps {
+interface SessionAnalyticsDashboardProps {
   sessions: NativeSession[];
   mode?: AgentMode;
   dateRange?: { start: Date; end: Date };
@@ -171,7 +171,7 @@ function computeAnalytics(sessions: NativeSession[]): AnalyticsData {
 // Main Component
 // ============================================================================
 
-export function SessionAnalyticsDashboard({
+function SessionAnalyticsDashboard({
   sessions,
   mode = 'chat',
   dateRange,
@@ -414,8 +414,7 @@ export function SessionAnalyticsDashboard({
                 >
                   {analytics.modelDistribution.map((entry, index) => (
                     <Cell 
-                      key={`cell-${index}`} 
-                      fill={[
+                      key={`cell-${entry.model}`}                      fill={[
                         modeColors.accent,
                         SAND[600],
                         SAND[700],
@@ -600,7 +599,7 @@ function DashboardHeader({
           {views.map((view) => {
             const Icon = view.icon;
             return (
-              <button
+              <button type="button"
                 key={view.id}
                 onClick={() => setSelectedView(view.id as any)}
                 className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all"
@@ -622,7 +621,7 @@ function DashboardHeader({
           style={{ background: 'var(--surface-panel)' }}
         >
           {(['7d', '30d', '90d'] as const).map((range) => (
-            <button
+            <button type="button"
               key={range}
               onClick={() => setTimeRange(range)}
               className="px-3 py-2 text-sm font-medium transition-all"
@@ -637,7 +636,7 @@ function DashboardHeader({
         </div>
 
         {/* Actions */}
-        <button
+        <button type="button"
           className="p-2 rounded-lg transition-colors"
           style={{
             background: 'var(--surface-hover)',
@@ -646,7 +645,7 @@ function DashboardHeader({
         >
           <DownloadSimple size={18} />
         </button>
-        <button
+        <button type="button"
           className="p-2 rounded-lg transition-colors"
           style={{
             background: 'var(--surface-hover)',

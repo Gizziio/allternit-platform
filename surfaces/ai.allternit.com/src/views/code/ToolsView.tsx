@@ -72,8 +72,7 @@ export function ToolsView() {
         <h2 className="m-0 text-xl font-bold tracking-tight">Available Tools</h2>
         
         <div className="flex gap-3">
-          <select 
-            value={filter}
+          <select aria-label="Selection" value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="p-1.5 px-3 border border-[var(--border-default)] rounded-md bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-[13px] outline-none focus:border-[var(--accent-primary)] transition-colors"
           >
@@ -83,7 +82,7 @@ export function ToolsView() {
             <option value="restricted">Restricted</option>
           </select>
           
-          <button 
+          <button type="button" 
             className="p-1.5 px-3 border border-[var(--border-default)] rounded-md bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
             onClick={() => {
               setLoading(true);
@@ -138,7 +137,7 @@ export function ToolsView() {
             </p>
             
             <div className="flex gap-2">
-              <button 
+              <button type="button" 
                 className={`p-1.5 px-4 border border-[var(--border-default)] rounded-lg bg-[var(--bg-tertiary)] text-[12px] font-bold transition-all ${
                   tool.status === 'disabled' 
                     ? 'cursor-not-allowed opacity-50' 
@@ -148,10 +147,10 @@ export function ToolsView() {
               >
                 Execute
               </button>
-              <button className="p-1.5 px-4 border border-[var(--border-default)] rounded-lg bg-[var(--bg-tertiary)] text-[12px] font-bold cursor-pointer hover:bg-[var(--surface-hover)] transition-all">
+              <button type="button" className="p-1.5 px-4 border border-[var(--border-default)] rounded-lg bg-[var(--bg-tertiary)] text-[12px] font-bold cursor-pointer hover:bg-[var(--surface-hover)] transition-all">
                 View Details
               </button>
-              <button className="p-1.5 px-4 border border-[var(--border-default)] rounded-lg bg-[var(--bg-tertiary)] text-[12px] font-bold cursor-pointer hover:bg-[var(--surface-hover)] transition-all">
+              <button type="button" className="p-1.5 px-4 border border-[var(--border-default)] rounded-lg bg-[var(--bg-tertiary)] text-[12px] font-bold cursor-pointer hover:bg-[var(--surface-hover)] transition-all">
                 Permissions
               </button>
             </div>

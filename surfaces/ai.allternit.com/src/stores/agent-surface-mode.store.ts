@@ -7,7 +7,7 @@ export type AgentModeId =
   // Core content modes (universal)
   | 'research' | 'data' | 'slides' | 'code' | 'assets' | 'agents' | 'flow' | 'web' | 'computer-use'
   // Cowork-specific modes
-  | 'plan' | 'execute' | 'review' | 'report' | 'automate' | 'sync'
+  | 'plan' | 'execute' | 'review' | 'report' | 'automate' | 'sync' | 'routines' | 'loops'
   // Collaborative modes
   | 'team'
   // Additional modes

@@ -6,7 +6,7 @@
  */
 
 import type { FileSystemAPI } from './fileSystem.types';
-import type { SimpleCapability, MarketplacePlugin } from './capability.types';
+import type { SimpleCapability } from './capability.types';
 import {
   buildPluginManifestFromWizard,
   buildMarketplaceManifestForPlugin,
@@ -165,26 +165,29 @@ async function resolveEntryPathBySafeId(
   safeId: string,
   expectedType: 'file' | 'directory'
 ): Promise<string | null> {
-  for (const basePath of basePaths) {
-    try {
-      const entries = await fs.readDir(basePath);
-      for (const entry of entries) {
-        if (entry.type !== expectedType) continue;
-        const normalizedName = entry.name.replace(/\.json$/i, '');
-        const entryIds = new Set([
-          toSafeId(entry.path),
-          toSafeId(entry.name),
-          toSafeId(normalizedName),
-        ]);
-        if (entryIds.has(safeId)) {
-          return entry.path;
+  const results = await Promise.all(
+    basePaths.map(async (basePath) => {
+      try {
+        const entries = await fs.readDir(basePath);
+        for (const entry of entries) {
+          if (entry.type !== expectedType) continue;
+          const normalizedName = entry.name.replace(/\.json$/i, '');
+          const entryIds = new Set([
+            toSafeId(entry.path),
+            toSafeId(entry.name),
+            toSafeId(normalizedName),
+          ]);
+          if (entryIds.has(safeId)) {
+            return entry.path;
+          }
         }
+      } catch {
+        // Ignore missing or unreadable candidate directories.
       }
-    } catch {
-      // Ignore missing or unreadable candidate directories.
-    }
-  }
-  return null;
+      return null;
+    })
+  );
+  return results.find(r => r !== null) || null;
 }
 
 async function resolveToggleConfigPath(
@@ -292,11 +295,8 @@ export async function createSkill(
     
     const now = new Date().toISOString();
     
-    // Write SKILL.md
+    // Write SKILL.md and config.json in parallel
     const skillContent = input.content || `# ${input.name}\n\n${input.description}`;
-    await fs.writeFile(fs.join(skillDir, 'SKILL.md'), skillContent);
-    
-    // Write config.json
     const config = {
       name: input.name,
       description: input.description,
@@ -308,7 +308,11 @@ export async function createSkill(
       createdAt: now,
       updatedAt: now,
     };
-    await fs.writeFile(fs.join(skillDir, 'config.json'), JSON.stringify(config, null, 2));
+
+    await Promise.all([
+      fs.writeFile(fs.join(skillDir, 'SKILL.md'), skillContent),
+      fs.writeFile(fs.join(skillDir, 'config.json'), JSON.stringify(config, null, 2))
+    ]);
     
     const capability: SimpleCapability = {
       id: `skill-${id}`,
@@ -610,14 +614,9 @@ export async function createPlugin(
       source: 'custom',
     };
 
-    // Persist both standard Claude path and legacy root path for compatibility.
-    await fs.writeFile(fs.join(claudePluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2));
-    await fs.writeFile(fs.join(pluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2));
-
     const readme = input.content?.trim()
       ? input.content
       : `# ${input.name}\n\n${input.description}`;
-    await fs.writeFile(fs.join(pluginDir, 'README.md'), readme);
 
     const marketplaceManifest =
       input.marketplaceManifest ||
@@ -626,23 +625,50 @@ export async function createPlugin(
         source: './',
       });
     const marketplaceValidation = validateMarketplaceManifestV1(marketplaceManifest);
+
+    // Persist standard Claude path, legacy root path, README, and marketplace manifest in parallel
+    const writePromises: Promise<void>[] = [
+      fs.writeFile(fs.join(claudePluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2)),
+      fs.writeFile(fs.join(pluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2)),
+      fs.writeFile(fs.join(pluginDir, 'README.md'), readme)
+    ];
+
     if (marketplaceValidation.valid) {
-      await fs.writeFile(
-        fs.join(claudePluginDir, 'marketplace.template.json'),
-        JSON.stringify(marketplaceManifest, null, 2)
+      writePromises.push(
+        fs.writeFile(
+          fs.join(claudePluginDir, 'marketplace.template.json'),
+          JSON.stringify(marketplaceManifest, null, 2)
+        )
       );
     }
 
-    for (const file of input.files || []) {
-      const safePath = sanitizeRelativePath(file.relativePath);
-      if (!safePath) continue;
-      const segments = safePath.split('/');
-      let currentDir = pluginDir;
-      for (let i = 0; i < segments.length - 1; i += 1) {
-        currentDir = fs.join(currentDir, segments[i]);
-        await fs.mkdir(currentDir);
+    await Promise.all(writePromises);
+
+    // Process custom files — parallelize file creation, but ensure directory structure is handled efficiently
+    if (input.files && input.files.length > 0) {
+      const createdDirs = new Set<string>();
+      
+      // Sort files by path depth to help with sequential directory creation if needed
+      const sortedFiles = [...input.files].sort((a, b) => 
+        a.relativePath.split('/').length - b.relativePath.split('/').length
+      );
+
+      for (const file of sortedFiles) {
+        const safePath = sanitizeRelativePath(file.relativePath);
+        if (!safePath) continue;
+        const segments = safePath.split('/');
+        let currentDir = pluginDir;
+        
+        // Create directory segments sequentially for each file, but skip already created ones
+        for (let i = 0; i < segments.length - 1; i += 1) {
+          currentDir = fs.join(currentDir, segments[i]);
+          if (!createdDirs.has(currentDir)) {
+            await fs.mkdir(currentDir);
+            createdDirs.add(currentDir);
+          }
+        }
+        await fs.writeFile(fs.join(pluginDir, safePath), file.content);
       }
-      await fs.writeFile(fs.join(pluginDir, safePath), file.content);
     }
 
     return {

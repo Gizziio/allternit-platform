@@ -187,7 +187,7 @@ export const Antennas: React.FC<AntennasProps> = ({
         
         return (
           <g
-            key={index}
+            key={`antenna-${pos.x}-${index}`}
             className={`avatar-antenna ${animationClass}`}
             transform={`translate(${pos.x}, 20) ${emotionTransform}`}
             style={{
@@ -217,7 +217,7 @@ export const Antennas: React.FC<AntennasProps> = ({
 };
 
 // Export antenna metadata
-export const ANTENNA_STYLE_METADATA: Record<AntennaStyle, {
+const ANTENNA_STYLE_METADATA: Record<AntennaStyle, {
   name: string;
   description: string;
   energy: 'low' | 'medium' | 'high';
@@ -254,7 +254,7 @@ export const ANTENNA_STYLE_METADATA: Record<AntennaStyle, {
   },
 };
 
-export const ANTENNA_ANIMATION_METADATA: Record<string, {
+const ANTENNA_ANIMATION_METADATA: Record<string, {
   name: string;
   description: string;
 }> = {
@@ -265,7 +265,7 @@ export const ANTENNA_ANIMATION_METADATA: Record<string, {
   bounce: { name: 'Bounce', description: 'Vertical bobbing' },
 };
 
-export const TIP_DECORATION_METADATA: Record<string, {
+const TIP_DECORATION_METADATA: Record<string, {
   name: string;
   description: string;
 }> = {

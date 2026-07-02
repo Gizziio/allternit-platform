@@ -563,11 +563,11 @@ Consistency over creativity.
   }
 ];
 
-export function getDesignById(id: string): DesignSystem | undefined {
+function getDesignById(id: string): DesignSystem | undefined {
   return DESIGN_MARKETPLACE.find(d => d.id === id);
 }
 
-export function searchDesigns(query: string): DesignSystem[] {
+function searchDesigns(query: string): DesignSystem[] {
   const lower = query.toLowerCase();
   return DESIGN_MARKETPLACE.filter(d => 
     d.name.toLowerCase().includes(lower) || 

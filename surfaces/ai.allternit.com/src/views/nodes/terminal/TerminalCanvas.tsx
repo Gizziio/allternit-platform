@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -29,6 +30,10 @@ const Grid = SquaresFour;
 import { cn } from '@/lib/utils';
 import 'xterm/css/xterm.css';
 import { openInBrowser } from '@/lib/openInBrowser';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('TerminalCanvas');
 
 // ============================================================================
 // Theme Helper
@@ -258,8 +263,7 @@ function CanvasTerminal({
       {/* Search Bar */}
       {showSearch && (
         <div className="flex items-center gap-2 px-2 py-1.5 bg-zinc-800 border-b border-zinc-700">
-          <input
-            type="text"
+          <input aria-label="Search…" type="text"
             placeholder="Search…"
             className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:outline-none focus:border-blue-500"
             onChange={(e) => {
@@ -306,6 +310,7 @@ export function TerminalCanvas({
   cols = 3, 
   className 
 }: TerminalCanvasProps) {
+  const { addToast } = useToast();
   const [terminals, setTerminals] = useState<TerminalInstance[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [terminalCounter, setTerminalCounter] = useState(1);
@@ -320,7 +325,7 @@ export function TerminalCanvas({
       try {
         const pendingSessions = nodeTerminalService.getPendingRestoredSessions();
         if (pendingSessions.length > 0) {
-          console.debug(`[TerminalCanvas] Restoring ${pendingSessions.length} sessions...`);
+          logger.debug(`Restoring ${pendingSessions.length} sessions...`);
           const restoredTerminals: TerminalInstance[] = [];
           let maxNum = 0;
 
@@ -350,7 +355,7 @@ export function TerminalCanvas({
                 });
               }
             } catch (err) {
-              console.error('[TerminalCanvas] Failed to restore session:', err);
+              logger.error({ err: err }, 'Failed to restore session');
             }
           }
 
@@ -360,7 +365,7 @@ export function TerminalCanvas({
           }
         }
       } catch (err) {
-        console.error('[TerminalCanvas] Error restoring sessions:', err);
+        logger.error({ err: err }, 'Error restoring sessions');
       } finally {
         setIsRestoring(false);
       }
@@ -397,7 +402,7 @@ export function TerminalCanvas({
       return terminal;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Failed to create terminal';
-      console.error('Failed to create terminal:', error);
+      logger.error({ err: error }, 'Failed to create terminal:');
       setError(errMsg);
       return null;
     }
@@ -406,7 +411,7 @@ export function TerminalCanvas({
   // Add terminal
   const addTerminal = useCallback(async () => {
     if (terminals.length >= maxTerminals) {
-      alert(`Maximum ${maxTerminals} terminals reached. Close one to add a new terminal.`);
+      addToast({ title: `Maximum ${maxTerminals} terminals reached`, description: 'Close one to add a new terminal.', type: 'warning' });
       return;
     }
 

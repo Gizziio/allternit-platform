@@ -1,1 +1,0 @@
-export { type ExtractedText, extractTextFromDOCX, extractTextFromFile, extractTextFromPDF, extractTextFromTextFile, formatFileSize, getFileIcon, getTextPreview, supportsTextExtraction } from './extract-text';

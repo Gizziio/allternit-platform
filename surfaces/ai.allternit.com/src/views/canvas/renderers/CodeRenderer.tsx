@@ -24,6 +24,10 @@ import type { MoATask } from '@/lib/api/moa-client';
 import { cn } from '@/lib/utils';
 import { SyntaxHighlighter } from '@/views/plugins/SyntaxHighlighter';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CodeRenderer');
+
 interface CodeRendererProps {
   artifact: ArtifactUIPart;
   sessionId?: string;
@@ -173,7 +177,7 @@ export function CodeRenderer({
   }, []);
 
   // Render code with syntax highlighting
-  const renderCode = (): JSX.Element => {
+  const renderCode = (): React.ReactNode => {
     return (
       <SyntaxHighlighter
         code={code}
@@ -301,7 +305,7 @@ export function CodeRenderer({
                   Console
                 </div>
                 {consoleOutput.map((log, i) => (
-                  <div key={i} className={`text-xs font-mono ${
+                  <div key={`coderenderer-${i}`} className={`text-xs font-mono ${
                     log.includes('ERROR') ? 'text-red-500' :
                     log.includes('WARN') ? 'text-orange-500' :
                     'text-[var(--text-secondary)]'
@@ -343,7 +347,7 @@ export function CodeRenderer({
               {consoleOutput.length > 0 && (
                 <div className="h-24 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-auto p-2">
                   {consoleOutput.map((log, i) => (
-                    <div key={i} className="text-xs font-mono text-[var(--text-secondary)]">
+                    <div key={`coderenderer-${i}`} className="text-xs font-mono text-[var(--text-secondary)]">
                       {log}
                     </div>
                   ))}

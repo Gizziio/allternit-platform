@@ -32,6 +32,7 @@ type ViewMode = 'grid' | 'list';
 export const FilesView: React.FC = () => {
   const [fileTree, setFileTree] = useState<Folder[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [currentPath, setCurrentPath] = useState<string[]>(['workspace']);
   const [droppedFiles, setDroppedFiles] = useState<AttachmentPreviewItem[]>([]);
@@ -80,11 +81,16 @@ export const FilesView: React.FC = () => {
     fetch('/api/v1/workspace/files')
       .then(r => r.json())
       .then((data: Folder[]) => setFileTree(data))
-      .catch(() => {});
+      .catch(() => setFileTree([]));
   }, []);
 
   // Register as drop target for cowork files
   useDropTarget('cowork', handleDroppedFiles);
+
+  // Files shown in right pane — scoped to selected folder, or all if at root
+  const visibleFiles = selectedFolderId
+    ? (fileTree.find(f => f.id === selectedFolderId)?.children ?? [])
+    : fileTree.flatMap(f => f.children);
 
   const getFileIcon = (fileType: string) => {
     return (
@@ -119,7 +125,7 @@ export const FilesView: React.FC = () => {
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <FolderOpen size={24} color="#af52de" />
+          <FolderOpen size={24} color="var(--accent-primary)" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Files</h1>
         </div>
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Workspace file storage — drag and drop files to upload</p>
@@ -130,8 +136,12 @@ export const FilesView: React.FC = () => {
         {currentPath.map((segment, idx) => (
           <React.Fragment key={`${segment}-${idx}`}>
             {idx > 0 && <span>/</span>}
-            <button
-              onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
+            <button type="button"
+              onClick={() => {
+                const next = currentPath.slice(0, idx + 1);
+                setCurrentPath(next);
+                if (next.length === 1) setSelectedFolderId(null);
+              }}
               style={{
                 background: 'none',
                 border: 'none',
@@ -154,32 +164,47 @@ export const FilesView: React.FC = () => {
         {/* LEFT: Folder Tree */}
         <GlassSurface style={{ padding: 'var(--spacing-md)', overflowY: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {fileTree.map((folder) => (
+            {fileTree.map((folder) => {
+              const isSelected = selectedFolderId === folder.id;
+              return (
               <div key={folder.id}>
-                <button
-                  onClick={() => toggleFolder(folder.id)}
+                <button type="button"
+                  onClick={() => {
+                    toggleFolder(folder.id);
+                    if (isSelected) {
+                      setSelectedFolderId(null);
+                      setCurrentPath(['workspace']);
+                    } else {
+                      setSelectedFolderId(folder.id);
+                      setCurrentPath(['workspace', folder.name]);
+                    }
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 8px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    background: 'none',
-                    border: 'none',
+                    background: isSelected ? 'rgba(200,169,110,0.10)' : 'none',
+                    border: isSelected ? '1px solid rgba(200,169,110,0.22)' : '1px solid transparent',
                     cursor: 'pointer',
-                    color: 'var(--text-secondary)',
+                    color: isSelected ? 'var(--accent-cowork)' : 'var(--text-secondary)',
                     fontSize: '13px',
-                    fontWeight: 500,
+                    fontWeight: isSelected ? 600 : 500,
                     borderRadius: '4px',
                     transition: 'all 0.2s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
-                    e.currentTarget.style.color = 'var(--text-primary)';
+                    if (!isSelected) {
+                      e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                      e.currentTarget.style.color = 'var(--text-primary)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    if (!isSelected) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'var(--text-secondary)';
+                    }
                   }}
                 >
                   <CaretRight
@@ -222,7 +247,8 @@ export const FilesView: React.FC = () => {
                   </div>
                 )}
               </div>
-            ))}
+            );
+})}
           </div>
         </GlassSurface>
 
@@ -230,7 +256,7 @@ export const FilesView: React.FC = () => {
         <div>
           {/* View Mode Toggle */}
           <div style={{ marginBottom: 'var(--spacing-md)', display: 'flex', gap: '8px' }}>
-            <button
+            <button type="button"
               onClick={() => setViewMode('list')}
               style={{
                 padding: '6px 12px',
@@ -249,7 +275,7 @@ export const FilesView: React.FC = () => {
               <List size={16} />
               List
             </button>
-            <button
+            <button type="button"
               onClick={() => setViewMode('grid')}
               style={{
                 padding: '6px 12px',
@@ -297,31 +323,29 @@ export const FilesView: React.FC = () => {
           {viewMode === 'list' ? (
             // List View
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {fileTree.flatMap((folder) =>
-                folder.children.map((file) => (
-                  <GlassSurface
-                    key={file.id}
-                    style={{
-                      padding: 'var(--spacing-md)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--spacing-md)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {getFileIcon(file.icon || 'FILE')}
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
-                        {file.name}
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: 'var(--spacing-lg)', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                      <span>{file.size}</span>
-                      <span>{file.modified}</span>
-                    </div>
-                  </GlassSurface>
-                ))
-              )}
+              {visibleFiles.map((file) => (
+                <GlassSurface
+                  key={file.id}
+                  style={{
+                    padding: 'var(--spacing-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--spacing-md)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {getFileIcon(file.icon || 'FILE')}
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
+                      {file.name}
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-lg)', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    <span>{file.size}</span>
+                    <span>{file.modified}</span>
+                  </div>
+                </GlassSurface>
+              ))}
             </div>
           ) : (
             // Grid View
@@ -332,35 +356,33 @@ export const FilesView: React.FC = () => {
                 gap: 'var(--spacing-md)',
               }}
             >
-              {fileTree.flatMap((folder) =>
-                folder.children.map((file) => (
-                  <GlassSurface
-                    key={file.id}
+              {visibleFiles.map((file) => (
+                <GlassSurface
+                  key={file.id}
+                  style={{
+                    padding: 'var(--spacing-md)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                  }}
+                >
+                  {getFileIcon(file.icon || 'FILE')}
+                  <p
                     style={{
-                      padding: 'var(--spacing-md)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '8px',
-                      cursor: 'pointer',
-                      textAlign: 'center',
+                      margin: 0,
+                      color: 'var(--text-primary)',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      wordBreak: 'break-word',
                     }}
                   >
-                    {getFileIcon(file.icon || 'FILE')}
-                    <p
-                      style={{
-                        margin: 0,
-                        color: 'var(--text-primary)',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {file.name}
-                    </p>
-                  </GlassSurface>
-                ))
-              )}
+                    {file.name}
+                  </p>
+                </GlassSurface>
+              ))}
             </div>
           )}
         </div>

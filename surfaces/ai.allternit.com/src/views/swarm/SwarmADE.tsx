@@ -358,7 +358,7 @@ function SwarmMonitorContent({ className }: SwarmMonitorProps) {
         {viewMode !== 'DETAIL' && viewMode !== 'HISTORY' && <FilterBar />}
 
         {/* Export Button */}
-        <button
+        <button type="button"
           onClick={() => setShowExportPanel(!showExportPanel)}
           className="absolute top-2 right-16 flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium z-10 transition-colors hover:bg-white/5"
           style={{

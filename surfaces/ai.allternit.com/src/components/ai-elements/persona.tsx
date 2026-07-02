@@ -1,20 +1,18 @@
 "use client";
 
-import type { RiveParameters } from "@rive-app/react-webgl2";
-import type { FC, ReactNode } from "react";
-
-import { cn } from "@/lib/utils";
-import {
-  useRive,
-  useStateMachineInput,
-  useViewModel,
-  useViewModelInstance,
+import { 
+  useRive, 
+  useStateMachineInput, 
+  useViewModel, 
+  useViewModelInstance, 
   useViewModelInstanceColor,
+  type RiveParameters 
 } from "@rive-app/react-webgl2";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import React, { FC, ReactNode, useState, useEffect, useMemo, useRef, memo } from "react";
 import { voiceService } from "@/services/voice";
 import { RiveErrorBoundary } from "./rive-error-boundary";
 import { MatrixLogo } from "./MatrixLogo";
+import { cn } from "@/lib/utils";
 
 export type PersonaState =
   | "idle"

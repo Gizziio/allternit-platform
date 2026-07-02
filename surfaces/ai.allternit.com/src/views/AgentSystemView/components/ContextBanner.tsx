@@ -66,7 +66,7 @@ export function ContextBanner({ mode, health, error, onDismissError }: ContextBa
           <div className="flex items-center gap-3 rounded-2xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-sm text-red-100 xl:max-w-2xl">
             <Warning className="size-4  shrink-0" />
             <span className="min-w-0 flex-1 truncate">{error}</span>
-            <button
+            <button type="button"
               onClick={onDismissError}
               className="rounded-full p-1 transition hover:bg-white/10"
               aria-label="Dismiss error"

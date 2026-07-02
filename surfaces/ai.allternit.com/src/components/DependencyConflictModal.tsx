@@ -1,22 +1,6 @@
-/**
- * DependencyConflictModal Component
- * 
- * Modal shown when there's a version conflict between plugins.
- * Displays conflict details and provides resolution options.
- */
-
-import React, { useState, useCallback } from 'react';
-import {
-  X,
-  Warning,
-  CheckCircle,
-  ArrowRight,
-  Package,
-  Info,
-  ShieldWarning,
-} from '@phosphor-icons/react';
+import React, { useCallback, useState } from "react";
+import { ArrowRight, CheckCircle, Package, ShieldWarning, Warning, X } from "@phosphor-icons/react";
 import type { DependencyConflict } from '../plugins/dependencies';
-
 // ============================================================================
 // Theme
 // ============================================================================
@@ -129,7 +113,7 @@ function ResolutionCard({
   const riskColor = getRiskColor(risk);
   
   return (
-    <button
+    <button type="button"
       onClick={onSelect}
       style={{
         width: '100%',
@@ -346,7 +330,7 @@ export function DependencyConflictModal({
               </p>
             </div>
           </div>
-          <button
+          <button type="button"
             onClick={onCancel}
             style={{
               width: 32,
@@ -523,8 +507,7 @@ export function DependencyConflictModal({
                       cursor: 'pointer',
                     }}
                   >
-                    <input
-                      type="checkbox"
+                    <input aria-label="Checkbox" type="checkbox"
                       checked={upgradeAll}
                       onChange={(e) => setUpgradeAll(e.target.checked)}
                       style={{ accentColor: THEME.accent }}
@@ -553,8 +536,7 @@ export function DependencyConflictModal({
                     This may break: {otherReqs.map(r => r.requiredBy).join(', ')}
                   </div>
                   {availableVersions && availableVersions.length > 0 && (
-                    <select
-                      value={forceVersion}
+                    <select aria-label="Selection" value={forceVersion}
                       onChange={(e) => setForceVersion(e.target.value)}
                       style={{
                         width: '100%',
@@ -615,7 +597,7 @@ export function DependencyConflictModal({
             gap: 12,
           }}
         >
-          <button
+          <button type="button"
             onClick={onCancel}
             style={{
               padding: '10px 18px',
@@ -630,7 +612,7 @@ export function DependencyConflictModal({
             Cancel Installation
           </button>
           
-          <button
+          <button type="button"
             onClick={handleResolve}
             style={{
               padding: '10px 18px',

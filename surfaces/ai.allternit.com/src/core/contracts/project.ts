@@ -1,6 +1,6 @@
 import { UUID, ISODate } from './base';
 
-export interface Project {
+interface Project {
   readonly id: UUID;
   readonly createdAt: ISODate;
   readonly updatedAt: ISODate;

@@ -207,7 +207,7 @@ class SpeechToTextService {
     return this.useNative;
   }
 
-  on(callback: STTCallback): () => void {
+  subscribe(callback: STTCallback): () => void {
     this.callbacks.add(callback);
     return () => this.callbacks.delete(callback);
   }

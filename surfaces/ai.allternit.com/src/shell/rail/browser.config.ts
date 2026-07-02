@@ -12,9 +12,6 @@ import {
   Robot,
   PuzzlePiece,
   ChatTeardropText,
-  MicrosoftWordLogo,
-  MicrosoftExcelLogo,
-  FilePpt,
   AppWindow,
 } from '@phosphor-icons/react';
 import { RailConfigSection } from './rail.config';
@@ -54,7 +51,7 @@ export const BROWSER_RAIL_CONFIG: RailConfigSection[] = [
     ],
   },
 
-  // Mini-apps
+  // Mini-apps — static entry only; pinned apps injected dynamically by ShellRail
   {
     id: 'mini-apps',
     title: 'Mini-apps',
@@ -80,27 +77,15 @@ export const BROWSER_RAIL_CONFIG: RailConfigSection[] = [
     defaultExpanded: true,
     items: [
       {
-        id: 'br-addin-word',
-        label: 'Word',
-        icon: MicrosoftWordLogo,
-        payload: 'addin-word',
-      },
-      {
-        id: 'br-addin-excel',
-        label: 'Excel',
-        icon: MicrosoftExcelLogo,
-        payload: 'addin-excel',
-      },
-      {
-        id: 'br-addin-ppt',
-        label: 'PowerPoint',
-        icon: FilePpt,
-        payload: 'addin-ppt',
+        id: 'br-extensions-hub',
+        label: 'Office & Extensions',
+        icon: PuzzlePiece,
+        payload: 'browser-extensions',
       },
     ],
   },
 
-  // Sessions — Dynamic browser agent sessions
+  // Sessions — Dynamic computer agent sessions
   {
     id: 'sessions',
     title: 'Sessions',

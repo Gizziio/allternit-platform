@@ -62,9 +62,8 @@ export const Step3Configuration: React.FC<Step3ConfigurationProps> = ({ config, 
       <form onSubmit={handleSubmit}>
         {/* Instance Name */}
         <div className="form-group">
-          <label>Instance Name</label>
-          <input
-            type="text"
+          <div>Instance Name</div>
+          <input aria-label="Input" type="text"
             value={instanceName}
             onChange={(e) => setInstanceName(e.target.value)}
             placeholder="my-allternit-instance"
@@ -74,15 +73,14 @@ export const Step3Configuration: React.FC<Step3ConfigurationProps> = ({ config, 
 
         {/* Region Selection */}
         <div className="form-group">
-          <label>Region</label>
+          <div>Region</div>
           <div className="region-grid">
             {provider.regions.map((region) => (
               <label
                 key={region.id}
                 className={`region-option ${regionId === region.id ? 'selected' : ''}`}
               >
-                <input
-                  type="radio"
+                <input aria-label="Radio" type="radio"
                   name="region"
                   value={region.id}
                   checked={regionId === region.id}
@@ -103,7 +101,7 @@ export const Step3Configuration: React.FC<Step3ConfigurationProps> = ({ config, 
 
         {/* Instance Type */}
         <div className="form-group">
-          <label>Instance Size</label>
+          <div>Instance Size</div>
           <div className="instance-grid">
             {provider.instanceTypes.map((instance) => (
               <label
@@ -111,8 +109,7 @@ export const Step3Configuration: React.FC<Step3ConfigurationProps> = ({ config, 
                 className={`instance-option ${instanceTypeId === instance.id ? 'selected' : ''} ${instance.recommended ? 'recommended' : ''}`}
               >
                 {instance.recommended && <span className="recommended-badge">Recommended</span>}
-                <input
-                  type="radio"
+                <input aria-label="Radio" type="radio"
                   name="instance"
                   value={instance.id}
                   checked={instanceTypeId === instance.id}
@@ -134,9 +131,8 @@ export const Step3Configuration: React.FC<Step3ConfigurationProps> = ({ config, 
 
         {/* Storage */}
         <div className="form-group">
-          <label>Additional Storage: {storageGb} GB</label>
-          <input
-            type="range"
+          <div>Additional Storage: {storageGb} GB</div>
+          <input aria-label="Input" type="range"
             min="0"
             max="1000"
             step="10"

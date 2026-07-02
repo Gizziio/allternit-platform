@@ -5,6 +5,8 @@ import { VPSConnectionModal } from '@/components/vps';
 import { SSHConnectionsList, type SSHConnection } from './SSHConnectionsList';
 import type { SSHConnectionFormData, SSHConnectionTestResult } from './AddSSHConnectionForm';
 import { sshConnectionsApi, SSHConnectionsAPI } from '@/api/infrastructure/ssh';
+import { cn } from '@/lib/utils';
+import { Plus, WarningCircle, ArrowsClockwise } from '@phosphor-icons/react';
 
 export function SSHConnectionsPanel() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,40 +62,57 @@ export function SSHConnectionsPanel() {
   }, []);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">SSH Connections</h1>
+    <div className="p-6 max-w-4xl mx-auto flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-[24px] font-bold text-[var(--ui-text-primary)] m-0">SSH Connections</h1>
         {error && (
-          <span className="text-sm text-red-400 bg-red-400/10 px-3 py-1 rounded-lg">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--status-error-bg)] border border-solid border-red-500/20 rounded-lg text-[var(--status-error)] text-[13px] font-medium">
+            <WarningCircle size={16} />
             {error}
-          </span>
+          </div>
         )}
       </div>
 
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="mb-6 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-      >
-        + Add Environment
-      </button>
+      <div className="flex items-center gap-3">
+        <button type="button"
+          onClick={() => setIsModalOpen(true)}
+          className="px-4 py-2 bg-[var(--accent-primary)] text-[var(--bg-primary)] rounded-lg border-none font-bold text-[14px] cursor-pointer flex items-center gap-2 transition-all hover:opacity-90"
+        >
+          <Plus size={18} weight="bold" />
+          Add Connection
+        </button>
+        <button type="button"
+          onClick={loadConnections}
+          disabled={loading}
+          className="p-2 bg-[var(--surface-hover)] text-[var(--ui-text-secondary)] rounded-lg border border-solid border-[var(--ui-border-muted)] cursor-pointer transition-all hover:text-[var(--ui-text-primary)] disabled:opacity-50"
+          title="Refresh connections"
+        >
+          <ArrowsClockwise size={18} className={cn(loading && "animate-spin")} />
+        </button>
+      </div>
 
-      {loading ? (
-        <div className="text-white/40 text-sm">Loading connections…</div>
-      ) : (
-        <SSHConnectionsList
-          connections={connections}
-          onAddConnection={() => setIsModalOpen(true)}
-          onDeleteConnection={handleDelete}
-        />
-      )}
+      <div className="flex-1">
+        {loading && connections.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-[var(--ui-text-muted)] gap-3">
+            <ArrowsClockwise size={32} className="animate-spin" />
+            <p className="m-0 text-[14px] font-medium">Loading connections…</p>
+          </div>
+        ) : (
+          <SSHConnectionsList
+            connections={connections}
+            onAddConnection={() => setIsModalOpen(true)}
+            onDeleteConnection={handleDelete}
+            isLoading={loading}
+          />
+        )}
+      </div>
 
       <VPSConnectionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onConnectExisting={handleConnectExisting}
         onTestConnection={handleTestConnection}
-        onSelectProvider={(providerId) => {
-          console.debug('Selected provider:', providerId);
+        onSelectProvider={() => {
           setIsModalOpen(false);
         }}
       />

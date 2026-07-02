@@ -12,6 +12,10 @@
 
 import { healthCheck } from './health';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Discovery');
+
 // Common ports to check for local API server.
 // 4096 is the gizzi-code default; others are fallbacks.
 const COMMON_PORTS = [4096, 4097, 4098, 3000, 8080, 8081, 3001, 9000];
@@ -57,7 +61,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
 
   const sidecar = window.allternitSidecar;
   if (!hasSidecarMethods(sidecar, ['getStatus', 'getApiUrl', 'getBasicAuth'])) {
-    console.debug('[Discovery] Electron sidecar API unavailable in this shell');
+    logger.debug('Electron sidecar API unavailable in this shell');
     return null;
   }
 
@@ -65,7 +69,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
     // Check if sidecar is running
     const status = await sidecar.getStatus!();
     if (status !== 'running') {
-      console.debug('[Discovery] Electron sidecar not running');
+      logger.debug('Electron sidecar not running');
       return null;
     }
 
@@ -76,14 +80,14 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
     ]);
 
     if (!apiUrl) {
-      console.debug('[Discovery] Electron sidecar has no API URL');
+      logger.debug('Electron sidecar has no API URL');
       return null;
     }
 
     // Verify health
     const isHealthy = await healthCheck(apiUrl, basicAuth?.header);
     if (!isHealthy) {
-      console.debug('[Discovery] Electron sidecar unhealthy');
+      logger.debug('Electron sidecar unhealthy');
       return null;
     }
 
@@ -95,7 +99,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
       password: basicAuth?.password,
     };
   } catch (error) {
-    console.error('[Discovery] Electron discovery failed:', error);
+    logger.error({ err: error }, 'Electron discovery failed');
     return null;
   }
 }
@@ -110,7 +114,7 @@ async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
 
   const sidecar = window.allternitSidecar;
   if (!hasSidecarMethods(sidecar, ['getPersistedConfig'])) {
-    console.debug('[Discovery] Persisted sidecar config API unavailable in this shell');
+    logger.debug('Persisted sidecar config API unavailable in this shell');
     return null;
   }
 
@@ -123,7 +127,7 @@ async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
     // Verify the persisted server is still running
     const isHealthy = await healthCheck(config.apiUrl);
     if (!isHealthy) {
-      console.debug('[Discovery] Persisted server no longer available');
+      logger.debug('Persisted server no longer available');
       return null;
     }
 
@@ -134,34 +138,36 @@ async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
       password: config.password,
     };
   } catch (error) {
-    console.error('[Discovery] Persisted config discovery failed:', error);
+    logger.error({ err: error }, 'Persisted config discovery failed');
     return null;
   }
 }
 
 /**
- * Discover server by scanning common ports
+ * Discover server by scanning common ports in parallel
  */
 async function discoverFromPortScan(): Promise<DiscoveredServer | null> {
-  for (const port of COMMON_PORTS) {
-    const url = `http://127.0.0.1:${port}`;
-    
-    try {
-      const isHealthy = await healthCheck(url, undefined, 500); // Short timeout for scan
-      if (isHealthy) {
-        console.debug('[Discovery] Found server via port scan:', url);
-        return {
-          url,
-          source: 'port-scan',
-        };
-      }
-    } catch {
-      // Port not available, continue scanning
-    }
+  try {
+    // Check all ports in parallel
+    const result = await Promise.any(
+      COMMON_PORTS.map(async (port) => {
+        const url = `http://127.0.0.1:${port}`;
+        const isHealthy = await healthCheck(url, undefined, 500);
+        if (isHealthy) {
+          console.debug('[Discovery] Found server via port scan:', url);
+          return {
+            url,
+            source: 'port-scan' as const,
+          };
+        }
+        throw new Error('Unhealthy');
+      })
+    );
+    return result;
+  } catch {
+    logger.debug('No server found in port scan');
+    return null;
   }
-
-  console.debug('[Discovery] No server found in port scan');
-  return null;
 }
 
 /**
@@ -183,7 +189,7 @@ export async function discoverServer(
     timeout = 10000 
   } = options;
 
-  console.debug('[Discovery] Starting server discovery...');
+  logger.debug('Starting server discovery...');
 
   // Strategy 1: Electron sidecar (preferred for desktop app)
   if (preferElectron && isElectron()) {
@@ -209,7 +215,7 @@ export async function discoverServer(
     }
   }
 
-  console.debug('[Discovery] No server found, will use WASM fallback');
+  logger.debug('No server found, will use WASM fallback');
   return null;
 }
 
@@ -227,7 +233,7 @@ export async function isServerAvailable(
 /**
  * Get the WebSocket URL for a given HTTP URL
  */
-export function getWebSocketUrl(httpUrl: string): string {
+function getWebSocketUrl(httpUrl: string): string {
   const url = new URL(httpUrl);
   const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${url.host}/ws`;

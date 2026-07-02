@@ -5,7 +5,7 @@
  * Provides centralized theming for status, runtime, and UI elements
  */
 
-import { useContext, createContext } from "react"
+import React, { createContext, useContext } from 'react';
 
 export type AllternitRuntimeState = 
   | "idle"
@@ -36,7 +36,7 @@ export interface AllternitTheme {
 }
 
 /** Default dark theme (matches terminal) */
-export const defaultTheme: AllternitTheme = {
+const defaultTheme: AllternitTheme = {
   fg: "#e0e0e0",
   bg: "#0f0f0f",
   muted: "#666666",
@@ -61,7 +61,7 @@ export const defaultTheme: AllternitTheme = {
 }
 
 /** Light theme variant */
-export const lightTheme: AllternitTheme = {
+const lightTheme: AllternitTheme = {
   fg: "#1a1a1a",
   bg: "#ffffff",
   muted: "#888888",
@@ -91,7 +91,7 @@ export function getStatusColor(state: AllternitRuntimeState, theme: AllternitThe
 }
 
 /** Theme context */
-export const ThemeContext = createContext<AllternitTheme>(defaultTheme)
+const ThemeContext = createContext<AllternitTheme>(defaultTheme)
 
 /** Theme hook for React components */
 export function useAllternitTheme(): AllternitTheme {
@@ -99,7 +99,7 @@ export function useAllternitTheme(): AllternitTheme {
 }
 
 /** Theme provider */
-export function AllternitThemeProvider({ 
+function AllternitThemeProvider({ 
   children, 
   theme = defaultTheme 
 }: { 

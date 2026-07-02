@@ -535,17 +535,17 @@ export function renderDirectionSpecBlock(): string {
   return lines.join('\n');
 }
 
-export function findDirectionByLabel(label: string): DesignDirection | undefined {
+function findDirectionByLabel(label: string): DesignDirection | undefined {
   const trimmed = label.trim();
   return DESIGN_DIRECTIONS.find((d) => d.label === trimmed || d.id === trimmed);
 }
 
-export function findDirectionById(id: string): DesignDirection | undefined {
+function findDirectionById(id: string): DesignDirection | undefined {
   return DESIGN_DIRECTIONS.find((d) => d.id === id);
 }
 
 /** Extract preview color swatches for a given direction (bg → surface → border → muted → fg → accent) */
-export function getDirectionSwatches(id: string): string[] {
+function getDirectionSwatches(id: string): string[] {
   const d = findDirectionById(id);
   if (!d) return [];
   return [d.palette.bg, d.palette.surface, d.palette.border, d.palette.muted, d.palette.fg, d.palette.accent];

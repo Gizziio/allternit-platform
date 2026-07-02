@@ -5,7 +5,7 @@
  * to/from this canonical shape.
  */
 
-export type AllternitArtifactType =
+type AllternitArtifactType =
   | 'document'
   | 'spec'
   | 'research'
@@ -48,7 +48,7 @@ export interface AllternitArtifactSection {
   updatedAt: string;
 }
 
-export interface AllternitArtifactRevision {
+interface AllternitArtifactRevision {
   id: string;
   artifactId: string;
   createdAt: string;
@@ -102,7 +102,7 @@ export interface AllternitArtifact {
   };
 }
 
-export interface AllternitWorkspaceStats {
+interface AllternitWorkspaceStats {
   workspaceId: string;
   total: number;
   drafts: number;

@@ -9,8 +9,10 @@ import { VideoEditorView } from '../../views/design/video/VideoEditorView';
 import { Hyperframe } from '../../views/design/hyperframes/HyperframeRenderer';
 import { OrchestratorProgram } from '../../allternit-os/programs/OrchestratorProgram';
 
-// Stub for missing Evaluator component
-// registry.tsx
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Registry');
+
 const Orchestrator = OrchestratorProgram;
 
 // ============================================================================
@@ -252,6 +254,94 @@ const OpenUICard = ({ title, variant, elevation, children }: any) => (
   </GlassCard>
 );
 
+const Evaluator = ({ title, optionA, optionB, onSelect }: any) => {
+  const options = [
+    { key: 'A', ...optionA },
+    { key: 'B', ...optionB },
+  ].filter((option) => option?.label && option?.content);
+
+  return (
+    <GlassCard
+      variant="default"
+      elevation="raised"
+      className="w-full"
+      style={{
+        borderRadius: 'var(--design-radius-card, 16px)',
+        borderWidth: '1px',
+        borderColor: 'var(--design-color-primary, transparent)30',
+      }}
+    >
+      <div className="flex flex-col gap-4">
+        {title && (
+          <div>
+            <h3
+              className="text-sm font-semibold tracking-tight"
+              style={{ color: 'var(--design-color-text, var(--ui-text-primary))' }}
+            >
+              {title}
+            </h3>
+            <p
+              className="mt-1 text-xs"
+              style={{ color: 'var(--design-color-muted, var(--ui-text-muted))' }}
+            >
+              Compare the options and select the stronger path.
+            </p>
+          </div>
+        )}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {options.map((option) => (
+            <div
+              key={option.key}
+              className="flex flex-col gap-3 rounded-2xl border p-4"
+              style={{
+                backgroundColor: 'var(--design-color-surface, rgba(255, 255, 255, 0.03))',
+                borderColor: 'var(--design-color-primary, transparent)20',
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold"
+                  style={{
+                    backgroundColor: 'var(--design-color-primary, var(--accent-chat))',
+                    color: 'var(--ui-text-on-accent, #111)',
+                  }}
+                >
+                  {option.key}
+                </div>
+                <span
+                  className="text-sm font-semibold"
+                  style={{ color: 'var(--design-color-text, var(--ui-text-primary))' }}
+                >
+                  {option.label}
+                </span>
+              </div>
+
+              <p
+                className="text-sm leading-6 whitespace-pre-wrap"
+                style={{ color: 'var(--design-color-text, var(--ui-text-primary))' }}
+              >
+                {option.content}
+              </p>
+
+              {onSelect && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-auto w-full"
+                  onClick={() => handleUIAction(onSelect, { selected: option.key, label: option.label })}
+                >
+                  Choose {option.label}
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </GlassCard>
+  );
+};
+
 const VideoManifestPreview = ({ template, css, timeline }: any) => (
   <div className="w-full flex flex-col gap-4">
     <div className="text-xs font-bold opacity-40 uppercase tracking-widest">HTML Manifestation Preview</div>
@@ -342,7 +432,7 @@ export const componentRegistry: Record<string, React.ComponentType<any>> = {
   'v:pipeline': Pipeline,
   'v:input': ({ label, name, ...props }: any) => (
     <div className="flex flex-col gap-1.5 w-full">
-      {label && <label className="text-xs font-bold uppercase text-[var(--ui-text-muted)] ml-1">{label}</label>}
+      {label && <div className="text-xs font-bold uppercase text-[var(--ui-text-muted)] ml-1">{label}</div>}
       <Input {...props} name={name} className="bg-white/5 border-white/10" />
     </div>
   ),

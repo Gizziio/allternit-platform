@@ -73,7 +73,7 @@ export interface SpecialistTemplate {
   isBuiltIn: boolean;
 }
 
-export interface AgentWorkflow {
+interface AgentWorkflow {
   id: string;
   name: string;
   description: string;
@@ -81,7 +81,7 @@ export interface AgentWorkflow {
   estimatedDuration: string;
 }
 
-export interface WorkflowStep {
+interface WorkflowStep {
   id: string;
   type: 'analyze' | 'plan' | 'execute' | 'review' | 'deliver';
   name: string;
@@ -89,7 +89,7 @@ export interface WorkflowStep {
   deliverables: string[];
 }
 
-export interface TechnicalDeliverable {
+interface TechnicalDeliverable {
   id: string;
   name: string;
   description: string;
@@ -97,7 +97,7 @@ export interface TechnicalDeliverable {
   template?: string;
 }
 
-export interface SuccessMetric {
+interface SuccessMetric {
   id: string;
   name: string;
   description: string;
@@ -3928,7 +3928,7 @@ You prioritize:
 /**
  * Get template by ID
  */
-export function getTemplateById(id: string): SpecialistTemplate | undefined {
+function getTemplateById(id: string): SpecialistTemplate | undefined {
   return SPECIALIST_TEMPLATES.find(t => t.id === id);
 }
 
@@ -3942,7 +3942,7 @@ export function getTemplatesByCategory(category: AgentCategory): SpecialistTempl
 /**
  * Search templates by query
  */
-export function searchTemplates(query: string): SpecialistTemplate[] {
+function searchTemplates(query: string): SpecialistTemplate[] {
   const lowerQuery = query.toLowerCase();
   return SPECIALIST_TEMPLATES.filter(
     t =>
@@ -3958,14 +3958,14 @@ export function searchTemplates(query: string): SpecialistTemplate[] {
 /**
  * Get built-in templates only
  */
-export function getBuiltInTemplates(): SpecialistTemplate[] {
+function getBuiltInTemplates(): SpecialistTemplate[] {
   return SPECIALIST_TEMPLATES.filter(t => t.isBuiltIn);
 }
 
 /**
  * Create agent from template
  */
-export function createAgentFromTemplate(
+function createAgentFromTemplate(
   templateId: string,
   overrides?: Partial<CreateAgentInput>
 ): CreateAgentInput | null {

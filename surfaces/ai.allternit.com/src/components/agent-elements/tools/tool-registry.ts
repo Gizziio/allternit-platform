@@ -16,7 +16,7 @@ import {
   IconFileText as FileText,
 } from "@tabler/icons-react";
 
-export type ToolVariant = "simple" | "collapsible";
+type ToolVariant = "simple" | "collapsible";
 
 export type ToolMeta = {
   icon: React.ComponentType<{ className?: string }>;

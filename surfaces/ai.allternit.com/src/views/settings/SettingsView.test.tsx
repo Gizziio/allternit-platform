@@ -1,9 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import React from 'react';
+import { describe, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import { SettingsView } from './SettingsView';
 import { MemoryRouter } from 'react-router-dom';
 import { ClerkProvider } from '@clerk/clerk-react';
-import React from 'react';
+import { SettingsView } from './SettingsView';
 
 // Mock Clerk context provider
 vi.mock('@clerk/clerk-react', () => ({

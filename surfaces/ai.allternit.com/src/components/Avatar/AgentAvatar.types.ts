@@ -48,7 +48,7 @@ export interface AgentAvatarProps {
   lookAt?: { x: number; y: number } | null;
 }
 
-export interface BodyPartProps {
+interface BodyPartProps {
   shape: AvatarBodyShape;
   colors: AvatarConfig['colors'];
   size: number;
@@ -56,7 +56,7 @@ export interface BodyPartProps {
   isAnimating?: boolean;
 }
 
-export interface EyesPartProps {
+interface EyesPartProps {
   config: AvatarConfig['eyes'];
   size: number;
   emotion?: AvatarEmotion;
@@ -64,7 +64,7 @@ export interface EyesPartProps {
   lookAt?: { x: number; y: number } | null;
 }
 
-export interface AntennasPartProps {
+interface AntennasPartProps {
   config: AvatarConfig['antennas'];
   colors: AvatarConfig['colors'];
   size: number;
@@ -72,14 +72,14 @@ export interface AntennasPartProps {
   isAnimating?: boolean;
 }
 
-export interface GlowPartProps {
+interface GlowPartProps {
   color: string;
   size: number;
   intensity?: number;
   pulse?: boolean;
 }
 
-export interface AccessoryPartProps {
+interface AccessoryPartProps {
   accessoryId: string;
   size: number;
   colors: AvatarConfig['colors'];
@@ -89,26 +89,26 @@ export interface AccessoryPartProps {
 // Animation Types
 // ============================================================================
 
-export interface AnimationFrame {
+interface AnimationFrame {
   transform?: string;
   opacity?: number;
   scale?: number;
 }
 
-export interface EmotionAnimation {
+interface EmotionAnimation {
   name: string;
   duration: number;
   easing: string;
   keyframes: AnimationFrame[];
 }
 
-export interface IdleAnimationConfig {
+interface IdleAnimationConfig {
   type: 'precision' | 'exploratory' | 'systemic' | 'balanced';
   duration: number;
   easing: string;
 }
 
-export interface ReactiveAnimationConfig {
+interface ReactiveAnimationConfig {
   hover: { scale: number; duration: number };
   active: { scale: number; duration: number };
 }
@@ -117,7 +117,7 @@ export interface ReactiveAnimationConfig {
 // Preset Types
 // ============================================================================
 
-export interface BodyShapeDefinition {
+interface BodyShapeDefinition {
   id: AvatarBodyShape;
   name: string;
   description: string;
@@ -128,7 +128,7 @@ export interface BodyShapeDefinition {
   antennaPosition: { x: number; y: number };
 }
 
-export interface EyePresetDefinition {
+interface EyePresetDefinition {
   id: EyePreset;
   name: string;
   description: string;
@@ -141,7 +141,7 @@ export interface EyePresetDefinition {
   blinkPath?: string;
 }
 
-export interface AntennaStyleDefinition {
+interface AntennaStyleDefinition {
   id: AntennaStyle;
   name: string;
   description: string;
@@ -151,7 +151,7 @@ export interface AntennaStyleDefinition {
   animations: Record<string, string>;
 }
 
-export interface ColorPalette {
+interface ColorPalette {
   name: string;
   colors: {
     primary: string[];
@@ -165,7 +165,7 @@ export interface ColorPalette {
 // Render Context
 // ============================================================================
 
-export interface AvatarRenderContext {
+interface AvatarRenderContext {
   config: AvatarConfig;
   size: number;
   emotion: AvatarEmotion;
@@ -177,7 +177,7 @@ export interface AvatarRenderContext {
 // Event Types
 // ============================================================================
 
-export interface AvatarEventMap {
+interface AvatarEventMap {
   'emotion:change': { from: AvatarEmotion; to: AvatarEmotion };
   'animation:start': { type: string };
   'animation:end': { type: string };
@@ -186,13 +186,13 @@ export interface AvatarEventMap {
   'interaction:click': void;
 }
 
-export type AvatarEventType = keyof AvatarEventMap;
+type AvatarEventType = keyof AvatarEventMap;
 
 // ============================================================================
 // Size Presets
 // ============================================================================
 
-export const AVATAR_SIZE_PRESETS = {
+const AVATAR_SIZE_PRESETS = {
   xs: { size: 24, strokeWidth: 1, eyeScale: 0.6, name: 'Extra Small' },
   sm: { size: 32, strokeWidth: 1.5, eyeScale: 0.7, name: 'Small' },
   md: { size: 44, strokeWidth: 2, eyeScale: 0.8, name: 'Medium' },
@@ -202,9 +202,9 @@ export const AVATAR_SIZE_PRESETS = {
   '3xl': { size: 200, strokeWidth: 6, eyeScale: 1.5, name: '3X Large' },
 } as const;
 
-export type AvatarSizePreset = keyof typeof AVATAR_SIZE_PRESETS;
+type AvatarSizePreset = keyof typeof AVATAR_SIZE_PRESETS;
 
-export function getAvatarSizePreset(preset: AvatarSizePreset) {
+function getAvatarSizePreset(preset: AvatarSizePreset) {
   return AVATAR_SIZE_PRESETS[preset];
 }
 

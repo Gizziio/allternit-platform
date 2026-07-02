@@ -5,8 +5,11 @@
  * and provides subscription-based notifications for available updates.
  */
 
-import type { MarketplacePlugin } from './capability.types';
 import { searchMarketplace } from './marketplaceApi';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UpdateChecker');
 
 // ============================================================================
 // Types
@@ -30,7 +33,7 @@ export interface UpdateCheckResult {
   checkedAt: string;
 }
 
-export interface UpdateCheckerOptions {
+interface UpdateCheckerOptions {
   checkIntervalMs?: number;
   storageKey?: string;
 }
@@ -125,7 +128,7 @@ function parseVersion(version: string): number[] | null {
   return parsed;
 }
 
-export function isVersionGreaterThan(remoteVersion: string, localVersion: string): boolean {
+function isVersionGreaterThan(remoteVersion: string, localVersion: string): boolean {
   const remoteParts = parseVersion(remoteVersion);
   const localParts = parseVersion(localVersion);
   if (!remoteParts || !localParts) return false;
@@ -185,7 +188,7 @@ export async function checkPlugin(
       checkedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error(`[UpdateChecker] Failed to check updates for ${installedPlugin.name}:`, error);
+    logger.error({ err: error }, 'Failed to check updates for ${installedPlugin.name}:');
     return null;
   }
 }
@@ -247,7 +250,7 @@ export async function checkAllPlugins(
 /**
  * Check if an update check is due based on the last check time
  */
-export function isCheckDue(intervalMs: number = DEFAULT_CHECK_INTERVAL_MS): boolean {
+function isCheckDue(intervalMs: number = DEFAULT_CHECK_INTERVAL_MS): boolean {
   const lastCheck = getLastCheckTime();
   if (!lastCheck) return true;
   return Date.now() - lastCheck.getTime() >= intervalMs;
@@ -262,7 +265,7 @@ function notifyListeners(updates: UpdateInfo[]): void {
     try {
       listener(updates);
     } catch (error) {
-      console.error('[UpdateChecker] Listener error:', error);
+      logger.error({ err: error }, 'Listener error');
     }
   });
 }
@@ -299,7 +302,7 @@ export function dismissUpdate(pluginId: string): void {
 /**
  * Restore a dismissed update (for "undo" functionality)
  */
-export function restoreUpdate(update: UpdateInfo): void {
+function restoreUpdate(update: UpdateInfo): void {
   dismissedIds.delete(update.pluginId);
   saveDismissedIds(dismissedIds);
   
@@ -313,7 +316,7 @@ export function restoreUpdate(update: UpdateInfo): void {
 /**
  * Clear all dismissed updates
  */
-export function clearDismissedUpdates(): void {
+function clearDismissedUpdates(): void {
   dismissedIds.clear();
   saveDismissedIds(dismissedIds);
 }
@@ -321,7 +324,7 @@ export function clearDismissedUpdates(): void {
 /**
  * Get all dismissed update IDs
  */
-export function getDismissedIds(): string[] {
+function getDismissedIds(): string[] {
   return Array.from(dismissedIds);
 }
 
@@ -332,7 +335,7 @@ export function getDismissedIds(): string[] {
 /**
  * Start automatic background update checking
  */
-export function startBackgroundChecks(
+function startBackgroundChecks(
   getInstalledPlugins: () => InstalledPlugin[],
   options: UpdateCheckerOptions = {}
 ): void {
@@ -357,7 +360,7 @@ export function startBackgroundChecks(
 /**
  * Stop automatic background update checking
  */
-export function stopBackgroundChecks(): void {
+function stopBackgroundChecks(): void {
   if (checkIntervalId) {
     clearInterval(checkIntervalId);
     checkIntervalId = null;
@@ -368,7 +371,7 @@ export function stopBackgroundChecks(): void {
 /**
  * Check if background checking is active
  */
-export function isBackgroundChecking(): boolean {
+function isBackgroundChecking(): boolean {
   return checkIntervalId !== null;
 }
 
@@ -392,27 +395,27 @@ export async function triggerUpdateCheck(
 /**
  * Get current available updates
  */
-export function getCurrentUpdates(): UpdateInfo[] {
+function getCurrentUpdates(): UpdateInfo[] {
   return [...currentUpdates];
 }
 
 /**
  * Get update count
  */
-export function getUpdateCount(): number {
+function getUpdateCount(): number {
   return currentUpdates.length;
 }
 
 /**
  * Check if a specific plugin has an available update
  */
-export function hasUpdate(pluginId: string): boolean {
+function hasUpdate(pluginId: string): boolean {
   return currentUpdates.some((u) => u.pluginId === pluginId);
 }
 
 /**
  * Get update info for a specific plugin
  */
-export function getUpdateForPlugin(pluginId: string): UpdateInfo | undefined {
+function getUpdateForPlugin(pluginId: string): UpdateInfo | undefined {
   return currentUpdates.find((u) => u.pluginId === pluginId);
 }

@@ -10,6 +10,13 @@
 
 type WindowFetch = typeof window.fetch;
 
+type DesktopSession = {
+  userId: string;
+  userEmail?: string;
+  accessToken: string;
+  expiresAt: number;
+};
+
 export function installFetchInterceptor(): void {
   if (typeof window === 'undefined') return
   if ((window as any).__allternitFetchInterceptorInstalled) return
@@ -44,14 +51,31 @@ export function installFetchInterceptor(): void {
       return originalFetch(input, init)
     }
 
+    const headers = new Headers(init?.headers)
     const token = localStorage.getItem('allternit_token')
-    if (!token) {
-      return originalFetch(input, init)
+    if (token && !headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${token}`)
     }
 
-    const headers = new Headers(init?.headers)
-    if (!headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`)
+    try {
+      const session = await window.allternit?.auth?.getSession?.() as DesktopSession | null | undefined
+      if (session?.accessToken && session?.userId) {
+        if (!headers.has('X-Allternit-Desktop-Access-Token')) {
+          headers.set('X-Allternit-Desktop-Access-Token', session.accessToken)
+        }
+        if (!headers.has('X-Allternit-User-Id')) {
+          headers.set('X-Allternit-User-Id', session.userId)
+        }
+        if (session.userEmail && !headers.has('X-Allternit-User-Email')) {
+          headers.set('X-Allternit-User-Email', session.userEmail)
+        }
+        if (!headers.has('Authorization')) {
+          headers.set('Authorization', `Bearer ${session.accessToken}`)
+        }
+      }
+    } catch {
+      // Ignore desktop session lookup failures and fall back to whatever
+      // browser-local auth context is already present.
     }
 
     return originalFetch(input, {

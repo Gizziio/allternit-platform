@@ -7,6 +7,10 @@
 
 import { GATEWAY_BASE_URL } from '../integration/api-client';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CliTools.api');
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -23,19 +27,19 @@ export interface CliToolApiResponse {
   tags: string[];
 }
 
-export interface ListCliToolsResponse {
+interface ListCliToolsResponse {
   tools: CliToolApiResponse[];
   total: number;
 }
 
-export interface ExecuteCliToolRequest {
+interface ExecuteCliToolRequest {
   args: string[];
   working_dir?: string;
   env?: Record<string, string>;
   timeout?: number;
 }
 
-export interface ExecuteCliToolResponse {
+interface ExecuteCliToolResponse {
   exit_code: number;
   stdout: string;
   stderr: string;
@@ -104,7 +108,7 @@ export async function fetchCliToolDetails(id: string): Promise<CliToolApiRespons
 
     return await response.json();
   } catch (error) {
-    console.error(`[CLI Tools API] Error fetching tool ${id}:`, error);
+    logger.error({ err: error }, 'Error fetching tool ${id}:');
     return null;
   }
 }
@@ -133,7 +137,7 @@ export async function installCliTool(
 
     return { success: true, message: 'Installation started' };
   } catch (error) {
-    console.error(`[CLI Tools API] Error installing tool ${id}:`, error);
+    logger.error({ err: error }, 'Error installing tool ${id}:');
     return { 
       success: false, 
       message: error instanceof Error ? error.message : 'Unknown error' 
@@ -160,7 +164,7 @@ export async function uninstallCliTool(id: string): Promise<{ success: boolean; 
 
     return { success: true, message: 'Uninstallation completed' };
   } catch (error) {
-    console.error(`[CLI Tools API] Error uninstalling tool ${id}:`, error);
+    logger.error({ err: error }, 'Error uninstalling tool ${id}:');
     return { 
       success: false, 
       message: error instanceof Error ? error.message : 'Unknown error' 
@@ -191,7 +195,7 @@ export async function executeCliTool(
 
     return await response.json();
   } catch (error) {
-    console.error(`[CLI Tools API] Error executing tool ${id}:`, error);
+    logger.error({ err: error }, 'Error executing tool ${id}:');
     throw error;
   }
 }
@@ -216,7 +220,7 @@ export async function checkCliToolInstalled(command: string): Promise<{ installe
 
     return await response.json();
   } catch (error) {
-    console.error(`[CLI Tools API] Error checking tool ${command}:`, error);
+    logger.error({ err: error }, 'Error checking tool ${command}:');
     return { installed: false };
   }
 }

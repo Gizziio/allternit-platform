@@ -10,7 +10,7 @@ import { create } from 'zustand';
 
 export type ClipboardItemType = 'css' | 'svg' | 'token' | 'code';
 
-export interface ClipboardItem {
+interface ClipboardItem {
   id: string;
   type: ClipboardItemType;
   title: string;
@@ -43,7 +43,7 @@ interface DesignClipboardState {
   hydrate: () => void;
 }
 
-export const useDesignClipboardStore = create<DesignClipboardState>((set, get) => ({
+const useDesignClipboardStore = create<DesignClipboardState>((set, get) => ({
   items: [],
 
   hydrate() {

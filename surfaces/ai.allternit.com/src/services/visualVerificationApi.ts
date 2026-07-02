@@ -7,6 +7,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('VisualVerificationApi');
+
 export type ArtifactType = 
   | 'ui_state' 
   | 'coverage_map' 
@@ -282,7 +286,7 @@ export class VerificationWebSocketClient {
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
-      console.debug('[VerificationWebSocket] Connected');
+      logger.debug('Connected');
       this.reconnectAttempts = 0;
       this.emit('connected', { wihId });
     };
@@ -292,18 +296,18 @@ export class VerificationWebSocketClient {
         const data = JSON.parse(event.data);
         this.emit(data.type, data.payload);
       } catch (err) {
-        console.error('[VerificationWebSocket] Failed to parse message:', err);
+        logger.error({ err: err }, 'Failed to parse message');
       }
     };
 
     this.ws.onclose = () => {
-      console.debug('[VerificationWebSocket] Disconnected');
+      logger.debug('Disconnected');
       this.emit('disconnected', {});
       this.attemptReconnect();
     };
 
     this.ws.onerror = (error) => {
-      console.error('[VerificationWebSocket] Error:', error);
+      logger.error({ err: error }, 'Error');
       this.emit('error', error);
     };
   }
@@ -321,13 +325,11 @@ export class VerificationWebSocketClient {
   /**
    * Subscribe to an event type
    */
-  on(event: string, callback: (data: unknown) => void): () => void {
+  subscribe(event: string, callback: (data: unknown) => void): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    
     this.listeners.get(event)!.add(callback);
-    
     return () => {
       this.listeners.get(event)?.delete(callback);
     };
@@ -345,14 +347,14 @@ export class VerificationWebSocketClient {
       try {
         callback(data);
       } catch (err) {
-        console.error('[VerificationWebSocket] Listener error:', err);
+        logger.error({ err: err }, 'Listener error');
       }
     });
   }
 
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('[VerificationWebSocket] Max reconnection attempts reached');
+      logger.error('Max reconnection attempts reached');
       return;
     }
 
@@ -360,7 +362,7 @@ export class VerificationWebSocketClient {
     
     setTimeout(() => {
       if (this.wihId) {
-        console.debug(`[VerificationWebSocket] Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+        logger.debug(`Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
         this.connect(this.wihId);
       }
     }, this.reconnectInterval * this.reconnectAttempts);
@@ -378,15 +380,15 @@ export function useVerificationWebSocket(wihId: string | null) {
 
     clientRef.current = new VerificationWebSocketClient();
     
-    const unsubscribeConnected = clientRef.current.on('connected', () => {
+    const unsubscribeConnected = clientRef.current.subscribe('connected', () => {
       setIsConnected(true);
     });
     
-    const unsubscribeDisconnected = clientRef.current.on('disconnected', () => {
+    const unsubscribeDisconnected = clientRef.current.subscribe('disconnected', () => {
       setIsConnected(false);
     });
     
-    const unsubscribeMessage = clientRef.current.on('update', (data) => {
+    const unsubscribeMessage = clientRef.current.subscribe('update', (data) => {
       setLastMessage(data);
     });
 

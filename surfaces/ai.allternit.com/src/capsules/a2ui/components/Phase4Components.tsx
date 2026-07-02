@@ -1,3 +1,6 @@
+import React, { useEffect, useRef, useState } from "react";
+import { motion } from 'framer-motion';
+
 // ============================================================================
 // Phase 4: Layout Components
 // ============================================================================
@@ -5,12 +8,8 @@
 // ============================================================================
 
 "use client";
-
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   CaretLeft,
   CaretRight,
@@ -18,8 +17,7 @@ import {
   CaretDown,
   Sidebar,
   SidebarSimple,
-  Rows,
-} from '@phosphor-icons/react';
+  Rows, Record } from '@phosphor-icons/react';
 
 import type {
   ResponsiveContainerProps,
@@ -28,7 +26,6 @@ import type {
   AnimationConfig,
 } from "../a2ui.types.extended";
 import { isVisible } from "../A2UIRenderer";
-
 // ============================================================================
 // ResponsiveContainer Component
 // ============================================================================
@@ -52,8 +49,6 @@ export function ResponsiveContainerRenderer({
   context: RenderContext;
   children?: React.ReactNode;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const [currentBreakpoint, setCurrentBreakpoint] = useState<BreakpointKey>("xs");
 
   useEffect(() => {
@@ -70,6 +65,8 @@ export function ResponsiveContainerRenderer({
     window.addEventListener("resize", updateBreakpoint);
     return () => window.removeEventListener("resize", updateBreakpoint);
   }, []);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const getConfig = () => {
     // Check breakpoints in order: xl -> lg -> md -> sm -> xs
@@ -117,8 +114,6 @@ export function DockPanelRenderer({
   context: RenderContext;
   children?: React.ReactNode;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const collapsedFromModel = typeof props.collapsed === "string"
     ? (context.dataModel[props.collapsed] as boolean)
     : props.collapsed;
@@ -126,6 +121,9 @@ export function DockPanelRenderer({
   const [isCollapsed, setIsCollapsed] = useState(collapsedFromModel ?? false);
   const [size, setSize] = useState(props.size);
   const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const isHorizontal = props.position === "left" || props.position === "right";
 
@@ -210,6 +208,7 @@ export function DockPanelRenderer({
 
   return (
     <motion.div
+      ref={containerRef}
       className={cn(
         "flex bg-background border",
         isHorizontal ? "flex-row" : "flex-col",
@@ -263,7 +262,7 @@ export function DockPanelRenderer({
       {props.resizable && !isCollapsed && (
         <div
           className={cn(
-            "bg-border hover:bg-primary/50 transition-colors",
+            "bg-border hover:bg-primary/50 transition-colors cursor-col-resize",
             isHorizontal
               ? "w-1 cursor-col-resize"
               : "h-1 cursor-row-resize",
@@ -285,7 +284,7 @@ interface AnimatedComponentProps {
   children: React.ReactNode;
 }
 
-export function AnimatedComponent({ animation, children }: AnimatedComponentProps) {
+function AnimatedComponent({ animation, children }: AnimatedComponentProps) {
   if (!animation || animation.animateIn === "none") {
     return <>{children}</>;
   }

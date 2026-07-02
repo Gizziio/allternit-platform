@@ -13,10 +13,8 @@ import {
   BrowserAction,
   BrowserActionResult,
   CaptureResult,
-  CaptureSize,
   HistoryEntry,
   RendererType,
-  SessionConfig,
   SessionMetadata,
   defaultBrowserConfig,
 } from '@/types/browser';

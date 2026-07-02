@@ -24,10 +24,8 @@ import {
   ArrowsClockwise,
   CheckCircle,
   Warning,
-  CaretRight,
   Radio,
   ArrowSquareOut,
-  Plus,
 } from '@phosphor-icons/react';
 import { useAgentStore, agentWorkspaceService } from '../lib/agents';
 import type { Agent } from '../lib/agents/agent.types';
@@ -215,7 +213,7 @@ function AgentCard({
       {/* Actions */}
       <div className="flex items-center gap-2">
         {!isActive && (
-          <button
+          <button type="button"
             onClick={onActivate}
             disabled={activating}
             style={{
@@ -240,7 +238,7 @@ function AgentCard({
             {activating ? 'Activating…' : 'Set Active'}
           </button>
         )}
-        <button
+        <button type="button"
           onClick={onOpen}
           style={{
             background: 'transparent',

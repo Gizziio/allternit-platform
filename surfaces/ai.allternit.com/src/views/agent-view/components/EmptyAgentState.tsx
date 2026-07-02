@@ -44,7 +44,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
       </p>
       
       <div className="flex flex-col sm:flex-row gap-4 mb-12">
-        <button
+        <button type="button"
           onClick={onCreate}
           className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
           style={{ 
@@ -66,7 +66,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {templates.map(template => (
-            <button
+            <button type="button"
               key={template.id}
               onClick={() => onCreateFromTemplate(template)}
               className="text-left p-6 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors"

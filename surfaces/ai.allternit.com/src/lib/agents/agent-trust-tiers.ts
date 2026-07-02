@@ -9,6 +9,10 @@
 
 import type { AgentWorkspace } from './agent-workspace-files';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentTrustTiers');
+
 export interface TrustTierConfig {
   tier1: string[]; // Autonomous patterns
   tier2: string[]; // Notify-after patterns
@@ -163,7 +167,7 @@ export class AgentTrustTiers {
   ): Promise<boolean> {
     // If no callback set, deny by default for safety
     if (!this.permissionCallback) {
-      console.warn(`[TrustTiers] No permission callback set, denying ${tool}`);
+      logger.warn(`No permission callback set, denying ${tool}`);
       return false;
     }
 
@@ -185,7 +189,7 @@ export class AgentTrustTiers {
       request.approved = approved;
       return approved;
     } catch (error) {
-      console.error(`[TrustTiers] Permission request failed:`, error);
+      logger.error({ err: error }, 'Permission request failed:');
       request.resolved = true;
       request.approved = false;
       return false;
@@ -225,10 +229,8 @@ export class AgentTrustTiers {
     try {
       const result = await executeFn();
       
-      // Check if we should notify
       if (this.shouldNotify(tool, args)) {
-        // TODO: Send notification
-        console.debug(`[TrustTiers] Action completed: ${tool}`);
+        logger.debug(`Action completed: ${tool}`);
       }
 
       return { success: true, result };
@@ -310,4 +312,4 @@ export class AgentTrustTiers {
 }
 
 // Export singleton for UI integration
-export const trustTierManager = new AgentTrustTiers();
+const trustTierManager = new AgentTrustTiers();

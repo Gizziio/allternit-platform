@@ -2,7 +2,7 @@ import { applyRuntimeBackendSnapshot } from '@/lib/runtime-backend-client';
 
 export type RuntimeBackendMode = 'local' | 'byoc-vps' | 'cloud' | 'hybrid';
 
-export interface RuntimeBackendTargetResponse {
+interface RuntimeBackendTargetResponse {
   id: string;
   ssh_connection_id: string;
   name: string;

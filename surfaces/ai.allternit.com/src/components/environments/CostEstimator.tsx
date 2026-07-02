@@ -231,7 +231,7 @@ export function CostEstimator({
       {/* Cost Breakdown */}
       {target !== 'local' && (
         <div className="space-y-2">
-          <button
+          <button type="button"
             onClick={() => setShowDetails(!showDetails)}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >

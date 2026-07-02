@@ -42,6 +42,10 @@ import type { McpAppUIPart } from "@/lib/ai/rust-stream-adapter-extended";
 import { cn } from "@/lib/utils";
 import { openInBrowser } from '@/lib/openInBrowser';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('McpAppFrame');
+
 const BLANK_DOCUMENT = "<!doctype html><html><head></head><body></body></html>";
 const DEFAULT_FRAME_HEIGHT = 420;
 const MIN_FRAME_HEIGHT = 320;
@@ -186,6 +190,17 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [useSandbox, setUseSandbox] = useState(false);
 
+  const [prevPartIdOC, setPrevPartIdOC] = useState(part.toolCallId);
+  if (part.toolCallId !== prevPartIdOC) {
+    setPrevPartIdOC(part.toolCallId);
+    setIsDismissed(false);
+    setHasError(false);
+    setIsLoaded(false);
+    setDisplayMode("inline");
+    setFrameHeight(DEFAULT_FRAME_HEIGHT);
+    setFrameHtml(BLANK_DOCUMENT);
+  }
+
   // MCP App host integration hooks
   const { sendMessage } = useMcpAppMessenger();
   const { updateContext } = useMcpAppModelContext();
@@ -239,13 +254,6 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
     }
 
     let disposed = false;
-
-    setIsDismissed(false);
-    setHasError(false);
-    setIsLoaded(false);
-    setDisplayMode("inline");
-    setFrameHeight(DEFAULT_FRAME_HEIGHT);
-    setFrameHtml(BLANK_DOCUMENT);
 
     const bridge = new AppBridge(
       null,
@@ -423,12 +431,6 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
 
     let disposed = false;
     let sandboxInstance: SandboxInstance | null = null;
-
-    setIsDismissed(false);
-    setHasError(false);
-    setIsLoaded(false);
-    setDisplayMode("inline");
-    setFrameHeight(DEFAULT_FRAME_HEIGHT);
 
     // Create sandbox
     createSandbox(
@@ -612,9 +614,6 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
           // (This is a simplified version - full implementation would need proper MCP protocol forwarding)
         });
 
-        // Connect bridge
-        // Note: In sandbox mode, we need a custom transport that goes through the sandbox
-        // For now, we set the HTML directly after sandbox is ready
         setFrameHtml(part.html);
         setIsLoaded(true);
 

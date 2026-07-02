@@ -20,11 +20,9 @@ import type {
   ResearchDocState,
   DataGridState,
   PresentationState,
-  CodePreviewState,
   OrchestratorState,
   StreamingChunk,
   ResearchDocSection,
-  ResearchDocCitation,
   DataGridRow,
   PresentationSlide,
 } from '../types/programs';
@@ -33,7 +31,7 @@ import type {
 // Kernel Message Types
 // ============================================================================
 
-export type KernelMessageType = 
+type KernelMessageType = 
   | 'program.launch'
   | 'program.update'
   | 'program.stream'
@@ -60,7 +58,7 @@ export interface KernelMessage {
 // Protocol Handler
 // ============================================================================
 
-export class KernelProtocolHandler {
+class KernelProtocolHandler {
   private messageQueue: KernelMessage[] = [];
   private processing = false;
   private handlers: Map<KernelMessageType, (msg: KernelMessage) => void>;
@@ -97,7 +95,7 @@ export class KernelProtocolHandler {
       const message: KernelMessage = JSON.parse(jsonString);
       this.processMessage(message);
     } catch (err) {
-      console.error('[KernelProtocol] Failed to parse message:', err);
+      logger.error({ err: err }, 'Failed to parse message');
     }
   }
 
@@ -114,10 +112,10 @@ export class KernelProtocolHandler {
         try {
           handler(message);
         } catch (err) {
-          console.error(`[KernelProtocol] Handler failed for ${message.type}:`, err);
+          logger.error({ err: err }, 'Handler failed for ${message.type}:');
         }
       } else {
-        console.warn(`[KernelProtocol] No handler for message type: ${message.type}`);
+        logger.warn(`No handler for message type: ${message.type}`);
       }
     }
     
@@ -145,7 +143,7 @@ export class KernelProtocolHandler {
       launchOptions: payload.options,
     });
 
-    console.debug(`[KernelProtocol] Launched ${payload.type}: ${programId}`);
+    logger.debug(`Launched ${payload.type}: ${programId}`);
   }
 
   private handleProgramUpdate(msg: KernelMessage): void {
@@ -389,7 +387,7 @@ interface LaunchDirective {
 /**
  * Detect if an agent message contains implicit program launch directives
  */
-export function detectLaunchDirectives(content: string): LaunchDirective[] {
+function detectLaunchDirectives(content: string): LaunchDirective[] {
   const directives: LaunchDirective[] = [];
   const lower = content.toLowerCase();
 
@@ -459,7 +457,11 @@ function extractTitle(content: string): string | null {
 // React Hook
 // ============================================================================
 
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef } from 'react';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('KernelProtocol');
 
 export function useKernelProtocol(threadId: string) {
   const handlerRef = useRef(new KernelProtocolHandler());
@@ -524,4 +526,4 @@ export function useKernelProtocol(threadId: string) {
 }
 
 // Singleton for non-React usage
-export const kernelProtocol = new KernelProtocolHandler();
+const kernelProtocol = new KernelProtocolHandler();

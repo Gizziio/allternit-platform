@@ -7,7 +7,7 @@
 
 import type { CreateAgentInput } from './agent.types';
 
-export interface TemplateVariable {
+interface TemplateVariable {
   name: string;
   defaultValue: string | (() => string);
   description: string;
@@ -28,7 +28,7 @@ export interface WorkspaceTemplate {
 }
 
 // Template variables that get substituted when creating an agent
-export const TEMPLATE_VARIABLES: Record<string, TemplateVariable> = {
+const TEMPLATE_VARIABLES: Record<string, TemplateVariable> = {
   // Identity variables
   '{{agent_name}}': {
     name: 'agent_name',
@@ -219,7 +219,7 @@ export const TEMPLATE_VARIABLES: Record<string, TemplateVariable> = {
 };
 
 // The Gizzi platform agent template
-export const GIZZI_TEMPLATE: WorkspaceTemplate = {
+const GIZZI_TEMPLATE: WorkspaceTemplate = {
   id: 'gizzi-platform',
   name: 'Gizzi Platform Assistant',
   description: 'Allternit Platform Assistant with full 5-layer workspace',
@@ -267,7 +267,7 @@ export const GIZZI_TEMPLATE: WorkspaceTemplate = {
 };
 
 // Allternit Standard template (for user-created agents)
-export const ALLTERNIT_STANDARD_TEMPLATE: WorkspaceTemplate = {
+const ALLTERNIT_STANDARD_TEMPLATE: WorkspaceTemplate = {
   id: 'allternit-standard',
   name: 'Allternit Standard Workspace',
   description: 'Standard 5-layer workspace for custom agents',
@@ -294,7 +294,7 @@ export const ALLTERNIT_STANDARD_TEMPLATE: WorkspaceTemplate = {
 };
 
 // Minimal template (lightweight agents)
-export const ALLTERNIT_MINIMAL_TEMPLATE: WorkspaceTemplate = {
+const ALLTERNIT_MINIMAL_TEMPLATE: WorkspaceTemplate = {
   id: 'allternit-minimal',
   name: 'Allternit Minimal Workspace',
   description: 'Lightweight workspace with essential files only',
@@ -312,7 +312,7 @@ export const ALLTERNIT_MINIMAL_TEMPLATE: WorkspaceTemplate = {
 };
 
 // All available templates
-export const WORKSPACE_TEMPLATES: Record<string, WorkspaceTemplate> = {
+const WORKSPACE_TEMPLATES: Record<string, WorkspaceTemplate> = {
   'gizzi-platform': GIZZI_TEMPLATE,
   'allternit-standard': ALLTERNIT_STANDARD_TEMPLATE,
   'allternit-minimal': ALLTERNIT_MINIMAL_TEMPLATE

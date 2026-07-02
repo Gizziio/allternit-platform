@@ -11,24 +11,9 @@
  * Unlike ACIComputerUseView (which is a full-screen overlay *inside* the
  * BrowserCapsule), this component renders as a React Portal directly on
  * document.body — it is mode-agnostic and always floats above the shell grid.
- *
- * Suppressed automatically when the BrowserCapsule is mounted (it has its own
- * full-screen viewport via ACIComputerUseView).
- *
- * Layout:
- *   ┌────────────────────────────────┐
- *   │  [COMPUTER USE] · step · msg   │   ← TopStrip
- *   │  [─] [↗]                      │   ← collapse / popout
- *   ├────────────────────────────────┤
- *   │                                │
- *   │   Live screenshot              │
- *   │   + element highlight overlay  │
- *   │                                │
- *   ├────────────────────────────────┤
- *   │  approval card (conditional)   │
- *   └────────────────────────────────┘
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, {
   useCallback,
   useEffect,
@@ -43,6 +28,7 @@ import { CursorOverlay } from './CursorOverlay';
 import { executeGatewayAction } from '../../integration/computer-use-engine';
 import { ConformanceDashboard } from './ConformanceDashboard';
 import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
+import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────
 // Constants
@@ -118,30 +104,23 @@ function ElementHighlight({
   const color  = kindColor(box.kind);
 
   return (
-    <div style={{
-      position: 'absolute', left, top, width, height,
-      border: `2px solid ${color}`,
-      borderRadius: 4,
-      background: color.replace('0.85)', '0.07)'),
-      boxShadow: `0 0 0 1px ${color.replace('0.85)', '0.2)')}, 0 0 10px ${color.replace('0.85)', '0.12)')}`,
-      pointerEvents: 'none',
-      zIndex: 10,
-      transition: 'all 0.18s ease',
-    }}>
+    <div 
+      className="absolute border-2 border-solid rounded z-10 transition-all duration-[180ms] pointer-events-none"
+      style={{ 
+        left, top, width, height,
+        borderColor: color,
+        backgroundColor: color.replace('0.85)', '0.07)'),
+        boxShadow: `0 0 0 1px ${color.replace('0.85)', '0.2)')}, 0 0 10px ${color.replace('0.85)', '0.12)')}`,
+      }}
+    >
       {box.label && (
-        <div style={{
-          position: 'absolute', top: -20, left: 0,
-          padding: '2px 6px',
-          background: 'rgba(10,9,8,0.92)',
-          border: `1px solid ${color.replace('0.85)', '0.4)')}`,
-          borderRadius: 4,
-          fontSize: 12, fontWeight: 700,
-          color,
-          fontFamily: 'var(--font-mono)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          whiteSpace: 'nowrap',
-        }}>
+        <div 
+          className="absolute -top-5 left-0 px-1.5 py-0.5 bg-[rgba(10,9,8,0.92)] border border-solid rounded text-[12px] font-bold font-mono uppercase tracking-[0.06em] whitespace-nowrap"
+          style={{ 
+            color,
+            borderColor: color.replace('0.85)', '0.4)'),
+          }}
+        >
           {box.kind ? `${box.kind.toUpperCase()} · ` : ''}{box.label}
         </div>
       )}
@@ -165,68 +144,33 @@ function ApprovalCard() {
                   : 'var(--status-info)';
 
   return (
-    <div style={{
-      margin: '0 12px 12px',
-      padding: '14px 16px',
-      background: 'var(--surface-floating)',
-      border: '1px solid var(--ui-border-default)',
-      borderRadius: 10,
-      boxShadow: 'var(--shadow-lg)',
-    }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 3 }}>
+    <div className="m-3 p-3.5 px-4 bg-[var(--surface-floating)] border border-solid border-[var(--ui-border-default)] rounded-[10px] shadow-[var(--shadow-lg)]">
+      <div className="text-[12px] font-bold text-[var(--accent-primary)] mb-1">
         Approval Required
       </div>
       {approvalRiskTier && (
-        <div style={{
-          fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.15em',
-          color: riskColor, marginBottom: 10, fontFamily: 'var(--font-mono)',
-        }}>
+        <div 
+          className="text-[12px] uppercase tracking-[0.15em] mb-2.5 font-mono"
+          style={{ color: riskColor }}
+        >
           ⚠ Risk: {approvalRiskTier}
         </div>
       )}
       {approvalActionSummary && (
-        <div style={{
-          background: 'var(--surface-hover)',
-          border: '1px solid var(--ui-border-muted)',
-          borderRadius: 6,
-          padding: '8px 10px',
-          fontSize: 12,
-          color: 'var(--ui-text-muted)',
-          lineHeight: 1.5,
-          marginBottom: 12,
-          fontFamily: 'var(--font-mono)',
-        }}>
+        <div className="bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded-md p-2 px-2.5 text-[12px] text-[var(--ui-text-muted)] leading-relaxed mb-3 font-mono">
           {approvalActionSummary}
         </div>
       )}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button
+      <div className="flex gap-2">
+        <button type="button"
           onClick={() => approveAction?.()}
-          style={{
-            flex: 1, height: 32,
-            background: 'color-mix(in srgb, var(--accent-primary) 12%, var(--surface-panel))',
-            border: '1px solid color-mix(in srgb, var(--accent-primary) 28%, transparent)',
-            borderRadius: 6,
-            fontSize: 12, fontWeight: 700,
-            color: 'var(--accent-primary)',
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-            cursor: 'pointer',
-          }}
+          className="flex-1 h-8 bg-[color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-panel))] border border-solid border-[color-mix(in_srgb,var(--accent-primary)_28%,transparent)] rounded-md text-[12px] font-bold text-[var(--accent-primary)] tracking-[0.08em] uppercase cursor-pointer transition-colors hover:opacity-90"
         >
           Approve
         </button>
-        <button
+        <button type="button"
           onClick={() => denyAction?.()}
-          style={{
-            height: 32, padding: '0 14px',
-            background: 'var(--status-error-bg)',
-            border: '1px solid color-mix(in srgb, var(--status-error) 30%, transparent)',
-            borderRadius: 6,
-            fontSize: 12, fontWeight: 700,
-            color: 'var(--status-error)',
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-            cursor: 'pointer',
-          }}
+          className="h-8 px-3.5 bg-[var(--status-error-bg)] border border-solid border-[color-mix(in_srgb,var(--status-error)_30%,transparent)] rounded-md text-[12px] font-bold text-[var(--status-error)] tracking-[0.08em] uppercase cursor-pointer transition-colors hover:opacity-90"
         >
           Deny
         </button>
@@ -473,129 +417,73 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
       {expanded && viewMode === 'standard' && (
         <div
           onMouseDown={onResizeStart}
-          style={{
-            position: 'fixed',
-            top: 0, bottom: 0,
-            right: panelWidth - 3,
-            width: 6,
-            cursor: 'col-resize',
-            zIndex: 1001,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className="fixed top-0 bottom-0 right-[var(--resizer-right)] w-1.5 cursor-col-resize z-[1001] flex items-center justify-center"
+          style={{ '--resizer-right': `${panelWidth - 3}px` } as React.CSSProperties}
         >
-          <div style={{ width: 3, height: 40, borderRadius: 2, background: 'var(--ui-border-default)' }} />
+          <div className="w-[3px] h-10 rounded-full bg-[var(--ui-border-default)]" />
         </div>
       )}
 
       {/* Main panel — standard (right panel) or full (viewport overlay) */}
       <div
-        style={viewMode === 'full' ? {
-          position: 'fixed',
-          inset: 0,
-          zIndex: 120,
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--surface-canvas)',
-          animation: 'aci-sidecar-slide-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both',
-          overflow: 'hidden',
-        } : {
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: panelWidth,
-          zIndex: 120,
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'var(--surface-canvas)',
-          borderLeft: '1px solid var(--ui-border-muted)',
-          boxShadow: 'var(--shadow-xl)',
-          animation: 'aci-sidecar-slide-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both',
-          overflow: 'hidden',
-        }}
+        className={cn(
+          "fixed flex flex-col bg-[var(--surface-canvas)] z-[120] overflow-hidden",
+          viewMode === 'full' ? "inset-0 animate-[aci-sidecar-slide-in_0.18s_cubic-bezier(0.22,1,0.36,1)_both]" : "top-0 right-0 bottom-0 border-l border-solid border-[var(--ui-border-muted)] shadow-[var(--shadow-xl)] animate-[aci-sidecar-slide-in_0.22s_cubic-bezier(0.22,1,0.36,1)_both]"
+        )}
+        style={viewMode === 'standard' ? { width: panelWidth } : {}}
       >
         {/* ── Header ── */}
-        <div style={{
-          height: 42,
-          background: 'rgba(12,11,10,0.96)',
-          borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 12px',
-          gap: 8,
-          flexShrink: 0,
-        }}>
+        <div className="h-[42px] bg-[rgba(12,11,10,0.96)] border-b border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] flex items-center p-0 px-3 gap-2 shrink-0">
           {/* Status dot */}
-          <div style={{
-            width: 7, height: 7, borderRadius: '50%',
-            background: statusColor,
-            boxShadow: isBusy ? `0 0 6px ${statusColor}aa` : 'none',
-            animation: isBusy ? 'aci-sidecar-pulse 1.8s ease-in-out infinite' : 'none',
-            flexShrink: 0,
-          }} />
+          <div 
+            className={cn(
+              "size-1.5 rounded-full shrink-0",
+              isBusy && "animate-[aci-sidecar-pulse_1.8s_ease-in-out_infinite]"
+            )}
+            style={{ 
+              background: statusColor,
+              boxShadow: isBusy ? `0 0 6px ${statusColor}aa` : 'none',
+            }}
+          />
 
           <ContextWindowCard>
-            <button style={{
-              background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
-              fontSize: 12, fontWeight: 700,
-              color: 'rgba(212,176,140,0.45)',
-              textTransform: 'uppercase', letterSpacing: '0.12em',
-              fontFamily: 'var(--font-mono)', flexShrink: 0,
-            }}>
+            <button type="button" className="bg-transparent border-none p-0 cursor-pointer text-[12px] font-bold text-[rgba(212,176,140,0.45)] uppercase tracking-[0.12em] font-mono shrink-0">
               COMPUTER USE
             </button>
           </ContextWindowCard>
 
-          <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
+          <div className="w-px h-3 bg-[var(--ui-border-muted)] shrink-0" />
 
           {/* Message */}
-          <span style={{
-            flex: 1,
-            fontSize: 12,
-            color: status === 'WaitingApproval' ? 'var(--status-warning)' : 'rgba(212,176,140,0.7)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            fontWeight: status === 'WaitingApproval' ? 600 : 400,
-          }}>
+          <span className={cn(
+            "flex-1 text-[12px] overflow-hidden text-ellipsis whitespace-nowrap",
+            status === 'WaitingApproval' ? "text-[var(--status-warning)] font-semibold" : "text-[rgba(212,176,140,0.7)] font-normal"
+          )}>
             {lastEventMessage || goal || (status === 'Done' ? 'Task complete' : 'Waiting…')}
           </span>
 
           {/* Step counter */}
           {currentAction?.stepIndex != null && currentAction?.totalSteps != null && currentAction.totalSteps > 1 && (
-            <span style={{
-              fontSize: 12, color: 'rgba(212,176,140,0.5)',
-              fontFamily: 'var(--font-mono)', fontWeight: 700, flexShrink: 0,
-            }}>
+            <span className="text-[12px] text-[rgba(212,176,140,0.5)] font-mono font-bold shrink-0">
               {currentAction.stepIndex}/{currentAction.totalSteps}
             </span>
           )}
 
           {/* Adapter chip */}
           {adapterLabel && (
-            <span style={{
-              fontSize: 12, color: 'rgba(255,255,255,0.22)',
-              fontFamily: 'var(--font-mono)', flexShrink: 0,
-            }}>
+            <span className="text-[12px] text-[rgba(255,255,255,0.22)] font-mono shrink-0">
               {adapterLabel}{currentLayer ? ` · ${currentLayer}` : ''}
             </span>
           )}
 
           {/* View mode toggle — Standard ↔ Full */}
-          <button
+          <button type="button"
             onClick={() => setViewMode((v) => v === 'standard' ? 'full' : 'standard')}
             title={viewMode === 'standard' ? 'Fit to viewport (fullscreen)' : 'Back to standard view'}
-            style={{
-              width: 22, height: 22,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: viewMode === 'full' ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'rgba(212,176,140,0.06)',
-              border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
-              borderRadius: 5,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            className={cn(
+              "size-[22px] flex items-center justify-center border border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] rounded-[5px] cursor-pointer shrink-0 transition-colors",
+              viewMode === 'full' ? "bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)]" : "bg-[rgba(212,176,140,0.06)]"
+            )}
           >
             {viewMode === 'standard' ? (
               /* expand icon */
@@ -611,56 +499,55 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           </button>
 
           {/* AX Tree toggle */}
-          <button onClick={() => setShowAxTree((v) => !v)} title="Accessibility Tree"
-            style={{ padding: '2px 5px', fontSize: 12, background: showAxTree ? 'rgba(168,85,247,0.2)' : 'var(--surface-hover)', border: `1px solid ${showAxTree ? 'rgba(168,85,247,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showAxTree ? '#a855f7' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+          <button type="button" onClick={() => setShowAxTree((v) => !v)} title="Accessibility Tree"
+            className={cn(
+              "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
+              showAxTree ? "bg-[rgba(168,85,247,0.2)] border-[rgba(168,85,247,0.4)] text-[#a855f7]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+            )}>
             AX
           </button>
 
           {/* Windows toggle */}
-          <button onClick={() => { setShowWindows((v) => !v); if (!showWindows) void fetchWindows(); }} title="Open Windows"
-            style={{ padding: '2px 5px', fontSize: 12, background: showWindows ? 'rgba(59,130,246,0.2)' : 'var(--surface-hover)', border: `1px solid ${showWindows ? 'rgba(59,130,246,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showWindows ? 'var(--status-info)' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+          <button type="button" onClick={() => { setShowWindows((v) => !v); if (!showWindows) void fetchWindows(); }} title="Open Windows"
+            className={cn(
+              "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
+              showWindows ? "bg-[rgba(59,130,246,0.2)] border-[rgba(59,130,246,0.4)] text-[var(--status-info)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+            )}>
             ⊞
           </button>
 
           {/* Notifications toggle */}
-          <button onClick={() => { setShowNotifications((v) => !v); if (!showNotifications) void fetchNotifications(); }} title="Notifications"
-            style={{ padding: '2px 5px', fontSize: 12, background: showNotifications ? 'rgba(251,191,36,0.2)' : 'var(--surface-hover)', border: `1px solid ${showNotifications ? 'rgba(251,191,36,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showNotifications ? 'var(--status-warning)' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+          <button type="button" onClick={() => { setShowNotifications((v) => !v); if (!showNotifications) void fetchNotifications(); }} title="Notifications"
+            className={cn(
+              "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
+              showNotifications ? "bg-[rgba(251,191,36,0.2)] border-[rgba(251,191,36,0.4)] text-[var(--status-warning)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+            )}>
             🔔
           </button>
 
           {/* Direct control toggle */}
-          <button onClick={() => setDirectControlMode((v) => !v)} title="Direct click control"
-            style={{ padding: '2px 5px', fontSize: 12,
-              background: directControlMode ? 'rgba(99,252,241,0.2)' : 'var(--surface-hover)',
-              border: `1px solid ${directControlMode ? 'rgba(99,252,241,0.4)' : 'var(--ui-border-muted)'}`,
-              borderRadius: 4, color: directControlMode ? '#63fcf1' : 'rgba(255,255,255,0.3)',
-              cursor: 'pointer', flexShrink: 0 }}>
+          <button type="button" onClick={() => setDirectControlMode((v) => !v)} title="Direct click control"
+            className={cn(
+              "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
+              directControlMode ? "bg-[rgba(99,252,241,0.2)] border-[rgba(99,252,241,0.4)] text-[#63fcf1]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+            )}>
             ⊕ Direct
           </button>
 
           {/* Conformance dashboard toggle */}
-          <button onClick={() => setShowConformance((v) => !v)} title="Conformance Dashboard"
-            style={{ padding: '2px 5px', fontSize: 12,
-              background: showConformance ? 'rgba(34,197,94,0.2)' : 'var(--surface-hover)',
-              border: `1px solid ${showConformance ? 'rgba(34,197,94,0.4)' : 'var(--ui-border-muted)'}`,
-              borderRadius: 4, color: showConformance ? 'var(--status-success)' : 'rgba(255,255,255,0.3)',
-              cursor: 'pointer', flexShrink: 0 }}>
+          <button type="button" onClick={() => setShowConformance((v) => !v)} title="Conformance Dashboard"
+            className={cn(
+              "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
+              showConformance ? "bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.4)] text-[var(--status-success)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+            )}>
             ✓ Conf
           </button>
 
           {/* Collapse → minimizes to ACIComputerUseBar above chat input */}
-          <button
+          <button type="button"
             onClick={toggleAciSidecar}
             title="Minimize to input bar"
-            style={{
-              width: 22, height: 22,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(212,176,140,0.06)',
-              border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
-              borderRadius: 5,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            className="size-[22px] flex items-center justify-center bg-[rgba(212,176,140,0.06)] border border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] rounded-[5px] cursor-pointer shrink-0 transition-colors hover:bg-[rgba(212,176,140,0.12)]"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
               <path d="M3 5h4M7 5L5 3M7 5L5 7" stroke="rgba(212,176,140,0.6)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -673,16 +560,17 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           <>
             <div
               ref={containerRef}
-              style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#000', minHeight: 0 }}
+              className="flex-1 relative overflow-hidden bg-black min-h-0"
             >
               {/* Live screenshot + overlays */}
-              <div
+              <div role="button" tabIndex={0}
                 ref={imgContainerRef}
                 onClick={handleScreenshotClick}
-                style={{
-                  position: 'relative', width: '100%', height: '100%',
-                  cursor: directControlMode ? 'crosshair' : 'default',
-                }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleScreenshotClick(e as any); }}
+                className={cn(
+                  "relative size-full transition-all",
+                  directControlMode ? "cursor-crosshair" : "cursor-default"
+                )}
               >
                 {screenshot ? (
                   <img
@@ -690,54 +578,27 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                     src={screenshot}
                     alt="Live screen"
                     onLoad={recalcImgMetrics}
-                    style={{
-                      display: 'block',
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      objectPosition: 'center',
-                    }}
+                    className="block max-w-full max-h-full size-full object-contain object-center"
                   />
                 ) : isConnecting ? (
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center',
-                    gap: 12,
-                  }}>
-                    <div style={{
-                      width: 32, height: 32, border: '2px solid rgba(212,176,140,0.15)',
-                      borderTopColor: 'rgba(212,176,140,0.6)',
-                      borderRadius: '50%',
-                      animation: 'aci-sidecar-spin 0.9s linear infinite',
-                    }} />
-                    <span style={{ fontSize: 12, color: 'rgba(212,176,140,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                    <div className="size-8 border-2 border-solid border-[rgba(212,176,140,0.15)] border-t-[rgba(212,176,140,0.6)] rounded-full animate-[aci-sidecar-spin_0.9s_linear_infinite]" />
+                    <span className="text-[12px] text-[rgba(212,176,140,0.3)] font-mono tracking-[0.1em]">
                       CONNECTING…
                     </span>
                   </div>
                 ) : serviceError ? (
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 8,
-                    padding: 20,
-                  }}>
-                    <span style={{ fontSize: 12, color: 'rgba(239,68,68,0.7)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-5">
+                    <span className="text-[12px] text-[rgba(239,68,68,0.7)] font-mono text-center">
                       {serviceError}
                     </span>
-                    <span style={{ fontSize: 12, color: 'rgba(212,176,140,0.3)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+                    <span className="text-[12px] text-[rgba(212,176,140,0.3)] font-mono text-center">
                       Check the agent logs for details.
                     </span>
                   </div>
                 ) : (
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    background: 'linear-gradient(135deg, #0a0908 0%, #111010 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <span style={{ fontSize: 12, color: 'var(--ui-border-default)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                  <div className="absolute inset-0 bg-[linear-gradient(135deg,#0a0908_0%,#111010_100%)] flex items-center justify-center">
+                    <span className="text-[12px] text-[var(--ui-border-default)] font-mono tracking-[0.1em]">
                       NO SIGNAL
                     </span>
                   </div>
@@ -754,14 +615,12 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
                 {/* Verification badge */}
                 {lastVerification && (
-                  <div style={{
-                    position: 'absolute', bottom: 8, right: 8,
-                    padding: '2px 8px', borderRadius: 4,
-                    background: lastVerification.verified_success ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
-                    border: `1px solid ${lastVerification.verified_success ? 'var(--status-success)' : 'var(--status-error)'}`,
-                    fontSize: 12, color: lastVerification.verified_success ? 'var(--status-success)' : 'var(--status-error)',
-                    fontWeight: 600, pointerEvents: 'none', zIndex: 10,
-                  }}>
+                  <div 
+                    className={cn(
+                      "absolute bottom-2 right-2 px-2 py-0.5 rounded border border-solid text-[12px] font-semibold z-10 pointer-events-none transition-colors",
+                      lastVerification.verified_success ? "bg-[#22c55e]/20 border-[var(--status-success)] text-[var(--status-success)]" : "bg-[#ef4444]/20 border-[var(--status-error)] text-[var(--status-error)]"
+                    )}
+                  >
                     {lastVerification.verified_success ? '✓ Verified' : '✗ Unverified'} {Math.round(lastVerification.confidence * 100)}%
                   </div>
                 )}
@@ -782,22 +641,17 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
                 {/* Click-to-target flash ripple */}
                 {clickFlash && (
-                  <div key={clickFlash.id} style={{
-                    position: 'absolute',
-                    left: clickFlash.x - 12,
-                    top: clickFlash.y - 12,
-                    width: 24, height: 24, borderRadius: '50%',
-                    border: '2px solid rgba(99,252,241,0.8)',
-                    animation: 'aci-sidecar-click-flash 0.4s ease-out forwards',
-                    pointerEvents: 'none', zIndex: 20,
-                  }} />
+                  <div key={clickFlash.id} 
+                    className="absolute size-6 rounded-full border-2 border-solid border-[rgba(99,252,241,0.8)] animate-[aci-sidecar-click-flash_0.4s_ease-out_forwards] z-20 pointer-events-none"
+                    style={{
+                      left: clickFlash.x - 12,
+                      top: clickFlash.y - 12,
+                    }}
+                  />
                 )}
 
                 {/* Scan-line texture */}
-                <div style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5,
-                  background: 'repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.035) 1px, rgba(0,0,0,0.035) 2px)',
-                }} />
+                <div className="absolute inset-0 pointer-events-none z-[5] bg-[repeating-linear-gradient(0deg,transparent_0px,transparent_1px,rgba(0,0,0,0.035)_1px,rgba(0,0,0,0.035)_2px)]" />
               </div>
             </div>
 
@@ -806,22 +660,22 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
             {/* AX Tree panel */}
             {showAxTree && axTree && (
-              <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 200, overflowY: 'auto', flexShrink: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4, fontFamily: 'var(--font-mono)' }}>
+              <div className="border-t border-solid border-[var(--surface-hover)] p-2 max-h-[200px] overflow-y-auto shrink-0">
+                <div className="text-[12px] font-bold text-white/60 mb-1 font-mono">
                   AX · {(axSurface ?? 'WINDOW').toUpperCase()}
                 </div>
                 {axDiff.size > 0 && (
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-success)', display: 'inline-block', flexShrink: 0 }} />
+                  <div className="flex gap-2 mb-1.5 flex-wrap">
+                    <span className="flex items-center gap-1 text-[12px] text-white/40 font-mono">
+                      <span className="size-2 rounded-full bg-[var(--status-success)] inline-block shrink-0" />
                       Added
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-error)', display: 'inline-block', flexShrink: 0 }} />
+                    <span className="flex items-center gap-1 text-[12px] text-white/40 font-mono">
+                      <span className="size-2 rounded-full bg-[var(--status-error)] inline-block shrink-0" />
                       Removed
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-warning)', display: 'inline-block', flexShrink: 0 }} />
+                    <span className="flex items-center gap-1 text-[12px] text-white/40 font-mono">
+                      <span className="size-2 rounded-full bg-[var(--status-warning)] inline-block shrink-0" />
                       Modified
                     </span>
                   </div>
@@ -832,17 +686,17 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
             {/* Windows panel */}
             {showWindows && (
-              <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>OPEN WINDOWS</div>
+              <div className="border-t border-solid border-[var(--surface-hover)] p-2 max-h-[150px] overflow-y-auto shrink-0">
+                <div className="text-[12px] font-bold text-white/60 mb-1">OPEN WINDOWS</div>
                 {windows.length === 0
-                  ? <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>None found</div>
+                  ? <div className="text-[12px] text-white/25 italic">None found</div>
                   : windows.map((w) => (
-                    <div key={w.window_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0', fontSize: 12 }}>
-                      <span style={{ color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+                    <div key={w.window_id} className="flex items-center justify-between py-0.5 text-[12px]">
+                      <span className="text-white/50 truncate max-w-[70%]">
                         {w.app_name} — {w.title}
                       </span>
-                      <button onClick={() => useBrowserAgentStore.getState().focusWindow(w.window_id)}
-                        style={{ fontSize: 12, padding: '1px 6px', background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 3, color: '#a855f7', cursor: 'pointer' }}>
+                      <button type="button" onClick={() => useBrowserAgentStore.getState().focusWindow(w.window_id)}
+                        className="text-[12px] px-1.5 py-0.5 bg-[#a855f7]/15 border border-solid border-[#a855f7]/30 rounded-[3px] text-[#a855f7] cursor-pointer hover:bg-[#a855f7]/25 transition-colors">
                         Focus
                       </button>
                     </div>
@@ -853,16 +707,16 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
             {/* Notifications panel */}
             {showNotifications && (
-              <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>NOTIFICATIONS</div>
+              <div className="border-t border-solid border-[var(--surface-hover)] p-2 max-h-[150px] overflow-y-auto shrink-0">
+                <div className="text-[12px] font-bold text-white/60 mb-1">NOTIFICATIONS</div>
                 {notifications.length === 0
-                  ? <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>None</div>
+                  ? <div className="text-[12px] text-white/25 italic">None</div>
                   : notifications.map((n: NotificationEntry) => (
-                    <div key={n.notification_id} style={{ marginBottom: 6, padding: '4px 6px', background: 'var(--surface-hover)', borderRadius: 4 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{n.title}</div>
-                      {n.body && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{n.body}</div>}
-                      <button onClick={() => void dismissNotification(n.notification_id)}
-                        style={{ fontSize: 12, padding: '1px 6px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 3, color: 'var(--status-error)', cursor: 'pointer' }}>
+                    <div key={n.notification_id} className="mb-1.5 p-1 px-1.5 bg-[var(--surface-hover)] rounded">
+                      <div className="text-[12px] font-semibold text-white/75">{n.title}</div>
+                      {n.body && <div className="text-[12px] text-white/40 mb-0.5">{n.body}</div>}
+                      <button type="button" onClick={() => void dismissNotification(n.notification_id)}
+                        className="text-[12px] px-1.5 py-0.5 bg-[var(--status-error-bg)] border border-solid border-[#ef4444]/30 rounded-[3px] text-[var(--status-error)] cursor-pointer hover:opacity-80 transition-opacity">
                         Dismiss
                       </button>
                     </div>
@@ -873,28 +727,20 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
             {/* Conformance dashboard panel */}
             {showConformance && (
-              <div style={{ borderTop: '1px solid var(--surface-hover)', flexShrink: 0, maxHeight: 300, overflowY: 'auto' }}>
+              <div className="border-t border-solid border-[var(--surface-hover)] shrink-0 max-h-[300px] overflow-y-auto">
                 <ConformanceDashboard />
               </div>
             )}
 
             {/* Done banner */}
             {status === 'Done' && (
-              <div style={{
-                margin: '0 12px 12px',
-                padding: '12px 14px',
-                background: 'rgba(16,185,129,0.06)',
-                border: '1px solid rgba(16,185,129,0.18)',
-                borderRadius: 8,
-                display: 'flex', alignItems: 'center', gap: 8,
-                flexShrink: 0,
-              }}>
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <div className="m-3 p-3 px-3.5 bg-[#10b981]/10 border border-solid border-[#10b981]/20 rounded-lg flex items-center gap-2 shrink-0 animate-[aci-sidecar-pulse_2s_ease-in-out_infinite]">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0">
                   <path d="M3 8l3 3 7-7" stroke="rgba(16,185,129,0.8)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(16,185,129,0.85)', marginBottom: 1 }}>Task Complete</div>
-                  <div style={{ fontSize: 12, color: 'rgba(16,185,129,0.5)', fontFamily: 'var(--font-mono)' }}>
+                <div className="min-w-0">
+                  <div className="text-[12px] font-bold text-[#10b981]/90 mb-0.5">Task Complete</div>
+                  <div className="text-[12px] text-[#10b981]/50 font-mono truncate">
                     {lastEventMessage || goal}
                   </div>
                 </div>
@@ -924,27 +770,27 @@ function AXTreeDisplay({
   depth: number;
   axDiff?: Map<string, 'added' | 'removed' | 'modified'>;
 }) {
-  const indent = depth * 10;
   const refLabel = node.ref_id ? `[${node.ref_id}] ` : '';
   const nameLabel = node.name ?? node.value ?? '';
   const key = `${node.role}:${node.name ?? ''}`;
   const change = axDiff?.get(key);
 
-  const diffStyle: React.CSSProperties = change === 'added'
-    ? { borderLeft: '2px solid #22c55e', background: 'rgba(34,197,94,0.07)', paddingLeft: indent + 4 }
-    : change === 'removed'
-    ? { borderLeft: '2px solid #ef4444', opacity: 0.4, textDecoration: 'line-through', paddingLeft: indent + 4 }
-    : change === 'modified'
-    ? { borderLeft: '2px solid #f59e0b', background: 'rgba(245,158,11,0.07)', paddingLeft: indent + 4 }
-    : { paddingLeft: indent };
-
   return (
-    <div style={diffStyle}>
-      <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: node.is_interactive ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
-        {refLabel}<span style={{ color: 'rgba(255,255,255,0.5)' }}>{node.role}</span>
+    <div 
+      className={cn(
+        "border-l-2 border-solid transition-colors duration-200",
+        change === 'added' ? "border-[#22c55e] bg-[#22c55e]/10" :
+        change === 'removed' ? "border-[#ef4444] opacity-40 line-through" :
+        change === 'modified' ? "border-[#f59e0b] bg-[#f59e0b]/10" :
+        "border-transparent"
+      )}
+      style={{ paddingLeft: `${depth * 10 + (change ? 4 : 0)}px` }}
+    >
+      <span className={cn("text-[12px] font-mono", node.is_interactive ? "text-[#a855f7]" : "text-white/30")}>
+        {refLabel}<span className="text-white/50">{node.role}</span>
       </span>
       {nameLabel && (
-        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.55)', marginLeft: 4 }}>
+        <span className="text-[12px] font-mono text-white/60 ml-1">
           {nameLabel.slice(0, 40)}
         </span>
       )}
@@ -960,10 +806,6 @@ function AXTreeDisplay({
 //
 // Compact row that mounts ABOVE the chat input bar when the
 // ACI sidecar is collapsed (aciSidecarExpanded === false).
-// Clicking the expand button re-opens the full right panel.
-//
-// Usage: render directly above <ChatComposer> in ChatView.tsx.
-// Same store state, same suppress logic — just a different shape.
 // ─────────────────────────────────────────────────────────────
 
 export interface ACIComputerUseBarProps {
@@ -998,7 +840,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
 
   const isBusy  = status === 'Running' || status === 'WaitingApproval';
   const message = lastEventMessage
-    || (requiresApproval ? 'Awaiting approval...' : null)
+    || (requiresApproval ? 'Awaiting approval…' : null)
     || currentAction?.label
     || goal
     || (status === 'Done' ? 'Task complete' : 'Waiting…');
@@ -1014,90 +856,59 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
     <>
       <style>{STYLES}</style>
       <div
-        className={className}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '6px 12px',
-          background: 'rgba(12, 11, 10, 0.88)',
-          borderTop: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
-          borderRadius: '8px 8px 0 0',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          animation: 'aci-sidecar-slide-in 0.18s ease both',
-        }}
+        className={cn(
+          "flex items-center gap-2 p-1.5 px-3 bg-[rgba(12,11,10,0.88)] border-t border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] rounded-t-lg backdrop-blur-md animate-[aci-sidecar-slide-in_0.18s_ease_both]",
+          className
+        )}
       >
         {/* Status dot */}
-        <div style={{
-          width: 6, height: 6, borderRadius: '50%',
-          background: statusColor,
-          boxShadow: isBusy ? `0 0 5px ${statusColor}99` : 'none',
-          animation: isBusy ? 'aci-sidecar-pulse 1.8s ease-in-out infinite' : 'none',
-          flexShrink: 0,
-        }} />
+        <div 
+          className={cn(
+            "size-1.5 rounded-full shrink-0",
+            isBusy && "animate-[aci-sidecar-pulse_1.8s_ease-in-out_infinite]"
+          )}
+          style={{ 
+            background: statusColor,
+            boxShadow: isBusy ? `0 0 5px ${statusColor}99` : 'none',
+          }}
+        />
 
         {/* Label */}
         <ContextWindowCard>
-          <button style={{
-            background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
-            fontSize: 12, fontWeight: 700,
-            color: 'rgba(212,176,140,0.4)',
-            textTransform: 'uppercase', letterSpacing: '0.12em',
-            fontFamily: 'var(--font-mono)', flexShrink: 0,
-          }}>
+          <button type="button" className="bg-transparent border-none p-0 cursor-pointer text-[12px] font-bold text-[rgba(212,176,140,0.4)] uppercase tracking-[0.12em] font-mono shrink-0">
             Computer Use
           </button>
         </ContextWindowCard>
 
-        <div style={{ width: 1, height: 10, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
+        <div className="w-px h-2.5 bg-[var(--ui-border-muted)] shrink-0" />
 
         {/* Message */}
-        <span style={{
-          flex: 1,
-          fontSize: 12,
-          color: status === 'WaitingApproval' ? 'var(--status-warning)' : 'rgba(212,176,140,0.65)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          fontWeight: status === 'WaitingApproval' ? 600 : 400,
-        }}>
+        <span className={cn(
+          "flex-1 text-[12px] overflow-hidden text-ellipsis whitespace-nowrap",
+          status === 'WaitingApproval' ? "text-[var(--status-warning)] font-semibold" : "text-[rgba(212,176,140,0.65)] font-normal"
+        )}>
           {message}
         </span>
 
         {/* Step counter */}
         {stepIndex != null && totalSteps != null && totalSteps > 1 && (
-          <span style={{
-            fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700,
-            color: 'rgba(212,176,140,0.4)', flexShrink: 0,
-          }}>
+          <span className="text-[12px] font-mono font-bold text-[rgba(212,176,140,0.4)] shrink-0">
             {stepIndex}/{totalSteps}
           </span>
         )}
 
         {/* Adapter */}
         {adapterLabel && (
-          <span style={{
-            fontSize: 12, fontFamily: 'var(--font-mono)',
-            color: 'rgba(255,255,255,0.18)', flexShrink: 0,
-          }}>
+          <span className="text-[12px] font-mono text-white/20 shrink-0">
             {adapterLabel}
           </span>
         )}
 
         {/* Approve button (when waiting) */}
         {status === 'WaitingApproval' && (
-          <button
+          <button type="button"
             onClick={() => approveAction?.()}
-            style={{
-              padding: '3px 9px', borderRadius: 4,
-              background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-              border: '1px solid rgba(212,176,140,0.28)',
-              fontSize: 12, fontWeight: 700,
-              color: 'rgba(212,176,140,0.85)',
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-              cursor: 'pointer', flexShrink: 0,
-            }}
+            className="px-2 py-1 rounded bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] border border-solid border-[rgba(212,176,140,0.28)] text-[12px] font-bold text-[rgba(212,176,140,0.85)] tracking-[0.08em] uppercase cursor-pointer shrink-0 transition-colors hover:opacity-90"
           >
             Approve
           </button>
@@ -1105,34 +916,19 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
 
         {/* Stop */}
         {status === 'Running' && (
-          <button
+          <button type="button"
             onClick={() => stopExecution?.()}
-            style={{
-              padding: '3px 8px', borderRadius: 4,
-              background: 'var(--status-error-bg)',
-              border: '1px solid rgba(239,68,68,0.18)',
-              fontSize: 12, fontWeight: 700,
-              color: 'rgba(239,68,68,0.65)',
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-              cursor: 'pointer', flexShrink: 0,
-            }}
+            className="px-2 py-1 rounded bg-[var(--status-error-bg)] border border-solid border-[#ef4444]/20 text-[12px] font-bold text-[#ef4444]/70 tracking-[0.08em] uppercase cursor-pointer shrink-0 transition-colors hover:opacity-90"
           >
             Stop
           </button>
         )}
 
         {/* Expand → opens full sidecar panel */}
-        <button
+        <button type="button"
           onClick={toggleAciSidecar}
           title="Open live screen"
-          style={{
-            width: 20, height: 20,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(212,176,140,0.06)',
-            border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
-            borderRadius: 4,
-            cursor: 'pointer', flexShrink: 0,
-          }}
+          className="size-5 flex items-center justify-center bg-[rgba(212,176,140,0.06)] border border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] rounded cursor-pointer shrink-0 transition-colors hover:bg-[rgba(212,176,140,0.12)]"
         >
           {/* chevron-left → open panel from right */}
           <svg width="9" height="9" viewBox="0 0 10 10" fill="none">

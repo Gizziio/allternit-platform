@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import { Volume2, FileText, Presentation, HelpCircle, History, Search, Loader2, RefreshCw } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ToolsPanel');
+
 interface ToolsPanelProps {
   notebookId: string;
   onGeneratePodcast: () => Promise<{ audio_url: string; duration: number }>;
@@ -39,7 +43,7 @@ export function ToolsPanel({
       const result = await onGeneratePodcast();
       setPodcastUrl(result.audio_url);
     } catch (e) {
-      console.error('Podcast generation failed:', e);
+      logger.error({ err: e }, 'Podcast generation failed:');
     } finally {
       setPodcastLoading(false);
     }
@@ -50,7 +54,7 @@ export function ToolsPanel({
     try {
       await onTransform(type);
     } catch (e) {
-      console.error('Transform failed:', e);
+      logger.error({ err: e }, 'Transform failed:');
     } finally {
       setTransformLoading(null);
     }
@@ -63,7 +67,7 @@ export function ToolsPanel({
       const result = await onSearchSources(searchQuery);
       setSearchResults(result.results);
     } catch (e) {
-      console.error('Search failed:', e);
+      logger.error({ err: e }, 'Search failed:');
     } finally {
       setSearchLoading(false);
     }
@@ -75,7 +79,7 @@ export function ToolsPanel({
     try {
       await onCanvasSync(canvasCourseId, canvasToken, canvasDomain || 'https://canvas.instructure.com');
     } catch (e) {
-      console.error('Canvas sync failed:', e);
+      logger.error({ err: e }, 'Canvas sync failed:');
     } finally {
       setCanvasSyncLoading(false);
     }
@@ -99,7 +103,7 @@ export function ToolsPanel({
           {podcastUrl ? (
             <AudioPlayer src={podcastUrl} title="Generated Podcast" />
           ) : (
-            <button
+            <button type="button"
               onClick={handlePodcast}
               disabled={podcastLoading}
               className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs cursor-pointer"
@@ -123,7 +127,7 @@ export function ToolsPanel({
             { id: 'faq' as const, icon: HelpCircle, label: 'FAQ' },
             { id: 'timeline' as const, icon: History, label: 'Timeline' },
           ]).map(item => (
-            <button
+            <button type="button"
               key={item.id}
               onClick={() => handleTransform(item.id)}
               disabled={transformLoading === item.id}
@@ -146,7 +150,7 @@ export function ToolsPanel({
               <RefreshCw size={14} color="#34d399" />
               <span className="text-xs font-medium text-[var(--text-primary,#e5e5e5)]">Canvas</span>
             </div>
-            <button
+            <button type="button"
               onClick={handleCanvasSync}
               disabled={canvasSyncLoading}
               className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs cursor-pointer"
@@ -169,14 +173,13 @@ export function ToolsPanel({
             <span className="text-[12px] font-medium text-[var(--text-muted,#a1a1aa)]">Search Sources</span>
           </div>
           <div className="flex gap-1">
-            <input
-              value={searchQuery}
+            <input aria-label="Input" value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
               placeholder="Ask sources…"
               className="research-input"
             />
-            <button
+            <button type="button"
               onClick={handleSearch}
               disabled={searchLoading}
               className="research-btn-secondary px-2 py-1"
@@ -187,7 +190,7 @@ export function ToolsPanel({
           {searchResults.length > 0 && (
             <div className="mt-2 flex flex-col gap-1">
               {searchResults.map((r, i) => (
-                <div key={i} className="text-xs text-[var(--text-muted,#a1a1aa)] px-1.5 py-1 rounded"
+                <div key={`toolspanel-${i}`} className="text-xs text-[var(--text-muted,#a1a1aa)] px-1.5 py-1 rounded"
                   style={{ backgroundColor: 'var(--bg-secondary, #111113)' }}
                 >
                   {r.excerpt?.slice(0, 80)}...
@@ -200,8 +203,7 @@ export function ToolsPanel({
         {/* User Notes */}
         <div className="flex-1 flex flex-col min-h-[100px]">
           <span className="text-[12px] font-medium text-[var(--text-muted,#a1a1aa)] mb-1.5">My Notes</span>
-          <textarea
-            value={userNotes}
+          <textarea aria-label="Text Area" value={userNotes}
             onChange={e => setUserNotes(e.target.value)}
             placeholder="Jot down insights…"
             className="flex-1 p-2 rounded-md text-xs resize-none leading-relaxed outline-none"

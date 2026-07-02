@@ -98,8 +98,7 @@ export function AgentTemplateSelector({
       {/* Search */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <MagnifyingGlass size={16} style={{ color: STUDIO_THEME.textMuted }} />
-        <input
-          type="text"
+        <input aria-label="Input" type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search templates…"
@@ -118,7 +117,7 @@ export function AgentTemplateSelector({
       </div>
 
       {/* Start from scratch card */}
-      <button
+      <button type="button"
         onClick={() => onSelect(null)}
         style={{
           display: "flex",

@@ -55,7 +55,7 @@ export function BranchIndicator({
 
       {/* Navigation */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <button
+        <button type="button"
           onClick={(e) => {
             e.stopPropagation();
             onNavigate('prev');
@@ -98,7 +98,7 @@ export function BranchIndicator({
           {currentIndex + 1} / {siblingCount}
         </span>
 
-        <button
+        <button type="button"
           onClick={(e) => {
             e.stopPropagation();
             onNavigate('next');

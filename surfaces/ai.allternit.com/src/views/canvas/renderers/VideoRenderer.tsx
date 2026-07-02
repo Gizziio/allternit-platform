@@ -20,7 +20,6 @@ import {
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { MoATask } from '@/lib/api/moa-client';
-import { cn } from '@/lib/utils';
 
 interface VideoRendererProps {
   artifact: ArtifactUIPart;
@@ -161,7 +160,7 @@ export function VideoRenderer({
 
           {/* Play button overlay */}
           {!isPlaying && (
-            <div
+            <div role="button" tabIndex={0}
               className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer"
               onClick={togglePlay}
             >
@@ -174,8 +173,7 @@ export function VideoRenderer({
           {/* Controls */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 hover:opacity-100 transition-opacity">
             {/* Progress bar */}
-            <input
-              type="range"
+            <input aria-label="Input" type="range"
               min="0"
               max={duration || 100}
               value={currentTime}
@@ -234,8 +232,7 @@ export function VideoRenderer({
                       <SpeakerHigh size={16} />
                     )}
                   </Button>
-                  <input
-                    type="range"
+                  <input aria-label="Input" type="range"
                     min="0"
                     max="1"
                     step="0.1"

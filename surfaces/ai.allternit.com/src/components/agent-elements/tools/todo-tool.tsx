@@ -15,7 +15,7 @@ export type TodoToolProps = {
   chatStatus?: string;
 };
 
-export type TodoChange = {
+type TodoChange = {
   todo: TodoItem;
   oldStatus?: TodoItem["status"];
   newStatus: TodoItem["status"];
@@ -161,7 +161,7 @@ export const TodoTool = memo(function TodoTool({
     return (
       <div className="space-y-2 text-sm leading-relaxed text-an-foreground/80">
         {newTodos.map((todo, idx) => (
-          <TodoListItem key={idx} todo={todo} isPending={isPending} />
+          <TodoListItem key={todo.content + todo.status} todo={todo} isPending={isPending} />
         ))}
       </div>
     );
@@ -172,7 +172,7 @@ export const TodoTool = memo(function TodoTool({
     return (
       <div className="space-y-2 text-sm leading-relaxed text-an-foreground/80">
         {newTodos.map((todo, idx) => (
-          <TodoListItem key={idx} todo={todo} isPending={isPending} />
+          <TodoListItem key={todo.content + todo.status} todo={todo} isPending={isPending} />
         ))}
       </div>
     );
@@ -182,7 +182,7 @@ export const TodoTool = memo(function TodoTool({
   return (
     <div className="space-y-2 text-sm leading-relaxed text-an-foreground/80">
       {displayTodos.map((todo, idx) => (
-        <TodoListItem key={idx} todo={todo} isPending={isPending} />
+        <TodoListItem key={todo.content + todo.status} todo={todo} isPending={isPending} />
       ))}
     </div>
   );

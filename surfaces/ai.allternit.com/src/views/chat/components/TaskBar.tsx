@@ -83,7 +83,7 @@ function WihItem({
   const statusColor = getStatusColor(wih.status);
 
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className={`flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer text-left w-full transition-all ${
         isSelected ? 'bg-accent-15 border-accent-40' : 'bg-surface-hover border-surface-hover'
@@ -140,7 +140,7 @@ export function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleEx
 
   return (
     <div className="w-full mb-[-1px] z-15">
-      <button
+      <button type="button"
         onClick={onToggleExpand}
         className={`w-full flex items-center justify-between p-4 bg-input text-secondary text-sm cursor-pointer transition-all ${
           expanded ? 'rounded-t-2xl border-b' : 'rounded-2xl'

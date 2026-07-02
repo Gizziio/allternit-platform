@@ -141,7 +141,7 @@ function DependencyItem({
       }}
     >
       {/* Checkbox */}
-      <button
+      <button type="button"
         onClick={disabled ? undefined : onToggle}
         disabled={disabled}
         style={{
@@ -364,7 +364,7 @@ export function DependencyModal({
               {plugin.name} v{plugin.version} requires the following:
             </p>
           </div>
-          <button
+          <button type="button"
             onClick={onCancel}
             disabled={isInstalling}
             style={{
@@ -473,8 +473,7 @@ export function DependencyModal({
                 opacity: isInstalling ? 0.5 : 1,
               }}
             >
-              <input
-                type="checkbox"
+              <input aria-label="Checkbox" type="checkbox"
                 checked={installOptional}
                 onChange={(e) => setInstallOptional(e.target.checked)}
                 disabled={isInstalling}
@@ -540,7 +539,7 @@ export function DependencyModal({
         >
           <div style={{ display: 'flex', gap: 8 }}>
             {onViewTree && (
-              <button
+              <button type="button"
                 onClick={onViewTree}
                 disabled={isInstalling}
                 style={{
@@ -564,7 +563,7 @@ export function DependencyModal({
           </div>
           
           <div style={{ display: 'flex', gap: 10 }}>
-            <button
+            <button type="button"
               onClick={onCancel}
               disabled={isInstalling}
               style={{
@@ -582,7 +581,7 @@ export function DependencyModal({
             </button>
             
             {missingCount > 0 ? (
-              <button
+              <button type="button"
                 onClick={handleInstallAll}
                 disabled={!canInstall || isInstalling}
                 style={{
@@ -604,7 +603,7 @@ export function DependencyModal({
                 Install All ({missingCount})
               </button>
             ) : (
-              <button
+              <button type="button"
                 onClick={handleConfirm}
                 disabled={isInstalling}
                 style={{

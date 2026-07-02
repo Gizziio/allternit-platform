@@ -4,7 +4,7 @@
 // Additional component types for the complete roadmap implementation
 // ============================================================================
 
-import type { BaseComponentProps, ComponentNode, VisibleCondition } from './a2ui.types';
+import type { BaseComponentProps, ComponentNode } from './a2ui.types';
 
 // Re-export base types for convenience
 export type {
@@ -206,7 +206,7 @@ export interface AnimationConfig {
 }
 
 /** Enhanced base props with animation */
-export interface AnimatedBaseProps extends BaseComponentProps {
+interface AnimatedBaseProps extends BaseComponentProps {
   animation?: AnimationConfig;
 }
 
@@ -242,7 +242,7 @@ export interface DataSourceConfig {
 }
 
 /** Component with data source support */
-export interface DataComponentProps extends BaseComponentProps {
+interface DataComponentProps extends BaseComponentProps {
   dataSource?: DataSourceConfig;
 }
 

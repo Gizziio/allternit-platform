@@ -7,6 +7,10 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ErrorBoundary');
+
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
@@ -18,7 +22,7 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-export class VisualVerificationErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class VisualVerificationErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -93,7 +97,7 @@ export class VisualVerificationErrorBoundary extends Component<ErrorBoundaryProp
             </div>
           )}
 
-          <button
+          <button type="button"
             onClick={this.handleReset}
             style={{
               padding: '8px 16px',

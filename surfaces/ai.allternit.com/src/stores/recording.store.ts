@@ -7,6 +7,10 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Recording');
+
 export interface RecordingState {
   // Recording status
   isRecording: boolean;
@@ -79,7 +83,7 @@ export const useRecordingStore = create<RecordingState>()(
           (get() as any)._durationTimer = timer;
         }
       } catch (error) {
-        console.error('Failed to start recording:', error);
+        logger.error({ err: error }, 'Failed to start recording:');
         throw error;
       }
     },
@@ -134,7 +138,7 @@ export const useRecordingStore = create<RecordingState>()(
           frames: output.frames_captured,
         };
       } catch (error) {
-        console.error('Failed to stop recording:', error);
+        logger.error({ err: error }, 'Failed to stop recording:');
         throw error;
       }
     },
@@ -174,7 +178,7 @@ export const useRecordingStore = create<RecordingState>()(
           });
         }
       } catch (error) {
-        console.error('Failed to get recording status:', error);
+        logger.error({ err: error }, 'Failed to get recording status:');
       }
     },
 

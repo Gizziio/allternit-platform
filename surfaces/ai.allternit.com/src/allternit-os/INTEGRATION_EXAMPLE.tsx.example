@@ -6,13 +6,12 @@
  */
 
 import React, { useEffect } from 'react';
-import { 
-  A2rCanvas, 
-  useSidecarStore, 
-  useLaunchProtocol,
-  processAgentMessage,
-  SparkPageState,
-} from './index';
+
+} from ;
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('');
 
 // ============================================================================
 // Example 1: Basic Layout Integration

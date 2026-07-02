@@ -8,7 +8,11 @@
 import { useCoworkStore, Task } from '@/views/cowork/CoworkStore';
 import { HeartbeatTask, TaskExecutionResult } from './agent-heartbeat-executor';
 
-export interface CoworkIntegrationConfig {
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentCoworkIntegration');
+
+interface CoworkIntegrationConfig {
   // Project to assign HEARTBEAT tasks to
   defaultProjectId?: string;
   // Create tasks as 'agent' mode (autonomous) or 'task' mode (supervised)
@@ -28,7 +32,7 @@ const DEFAULT_CONFIG: CoworkIntegrationConfig = {
 /**
  * Sync a HEARTBEAT task to a cowork task
  */
-export function syncHeartbeatToCoworkTask(
+function syncHeartbeatToCoworkTask(
   heartbeatTask: HeartbeatTask,
   agentId: string,
   config: Partial<CoworkIntegrationConfig> = {}
@@ -42,7 +46,7 @@ export function syncHeartbeatToCoworkTask(
   // Check if task already exists
   const existingTask = coworkStore.tasks.find(t => t.id === taskId);
   if (existingTask) {
-    console.debug(`[CoworkIntegration] Task ${taskId} already exists, updating`);
+    logger.debug(`Task ${taskId} already exists, updating`);
     return existingTask;
   }
   
@@ -72,7 +76,7 @@ export function syncHeartbeatToCoworkTask(
     useCoworkStore.setState({ tasks: [...tasks] });
   }
   
-  console.debug(`[CoworkIntegration] Created cowork task ${taskId} for HEARTBEAT task ${heartbeatTask.id}`);
+  logger.debug(`Created cowork task ${taskId} for HEARTBEAT task ${heartbeatTask.id}`);
   
   // Auto-start session if configured
   if (fullConfig.autoStartSession && heartbeatTask.frequency === 'startup') {
@@ -85,7 +89,7 @@ export function syncHeartbeatToCoworkTask(
 /**
  * Update cowork task with execution result
  */
-export function updateCoworkTaskWithResult(
+function updateCoworkTaskWithResult(
   taskId: string,
   result: TaskExecutionResult
 ): void {
@@ -94,7 +98,7 @@ export function updateCoworkTaskWithResult(
   // Find the task
   const task = coworkStore.tasks.find(t => t.id === taskId);
   if (!task) {
-    console.warn(`[CoworkIntegration] Task ${taskId} not found`);
+    logger.warn(`Task ${taskId} not found`);
     return;
   }
 
@@ -134,13 +138,13 @@ export function updateCoworkTaskWithResult(
     }).catch(() => {});
   }
 
-  console.debug(`[CoworkIntegration] Updated task ${taskId} with result: ${result.success ? 'success' : 'failed'}`);
+  logger.debug(`Updated task ${taskId} with result: ${result.success ? 'success' : 'failed'}`);
 }
 
 /**
  * Start a cowork session for a task
  */
-export function startCoworkSessionForTask(
+function startCoworkSessionForTask(
   taskId: string,
   context?: string
 ): string | null {
@@ -152,7 +156,7 @@ export function startCoworkSessionForTask(
   // Start a session
   const sessionId = coworkStore.startSession('desktop', context || 'HEARTBEAT task execution');
   
-  console.debug(`[CoworkIntegration] Started cowork session ${sessionId} for task ${taskId}`);
+  logger.debug(`Started cowork session ${sessionId} for task ${taskId}`);
   
   return sessionId;
 }
@@ -170,7 +174,7 @@ export function getAgentCoworkTasks(agentId: string): Task[] {
 /**
  * Delete all HEARTBEAT tasks for an agent
  */
-export function deleteAgentCoworkTasks(agentId: string): void {
+function deleteAgentCoworkTasks(agentId: string): void {
   const coworkStore = useCoworkStore.getState();
   const tasks = getAgentCoworkTasks(agentId);
   
@@ -178,7 +182,7 @@ export function deleteAgentCoworkTasks(agentId: string): void {
     coworkStore.deleteTask(task.id);
   }
   
-  console.debug(`[CoworkIntegration] Deleted ${tasks.length} cowork tasks for agent ${agentId}`);
+  logger.debug(`Deleted ${tasks.length} cowork tasks for agent ${agentId}`);
 }
 
 /**
@@ -227,7 +231,7 @@ function formatFrequency(frequency: string): string {
  * 
  * Manages the sync between HEARTBEAT tasks and cowork tasks
  */
-export class CoworkIntegrationManager {
+class CoworkIntegrationManager {
   private config: CoworkIntegrationConfig;
   private agentConfigs = new Map<string, Partial<CoworkIntegrationConfig>>();
 
@@ -265,7 +269,7 @@ export class CoworkIntegrationManager {
       createdTasks.push(coworkTask);
     }
 
-    console.debug(`[CoworkIntegration] Synced ${createdTasks.length} tasks for agent ${agentId}`);
+    logger.debug(`Synced ${createdTasks.length} tasks for agent ${agentId}`);
     return createdTasks;
   }
 
@@ -290,7 +294,7 @@ export class CoworkIntegrationManager {
 export const coworkIntegration = new CoworkIntegrationManager();
 
 // React hook for using cowork integration
-export function useCoworkIntegration(agentId?: string) {
+function useCoworkIntegration(agentId?: string) {
   return {
     syncTasks: (tasks: HeartbeatTask[], config?: Partial<CoworkIntegrationConfig>) => {
       if (!agentId) throw new Error('agentId required');

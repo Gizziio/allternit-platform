@@ -1,8 +1,6 @@
 import React from 'react';
 import {
   Sparkle,
-  Robot,
-  Lightning as Zap,
 } from '@phosphor-icons/react';
 
 interface AllternitLogoProps {
@@ -37,37 +35,34 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
 
   const logoIconEl = (
     <div 
-      className="relative flex items-center justify-center"
+      className="relative flex items-center justify-center size-[var(--logo-size)]"
       style={{
-        width: config.icon,
-        height: config.icon,
-      }}
+        '--logo-size': `${config.icon}px`,
+      } as React.CSSProperties}
     >
       {/* Outer ring - gradient */}
       <div
-        className="absolute inset-0 rounded-full"
+        className="absolute inset-0 rounded-full bg-gradient-to-br from-[var(--logo-primary)] to-[var(--logo-accent)] opacity-15"
         style={{
-          background: `linear-gradient(135deg, ${brandColors.primary} 0%, ${brandColors.accent} 100%)`,
-          opacity: 0.15,
-        }}
+          '--logo-primary': brandColors.primary,
+          '--logo-accent': brandColors.accent,
+        } as React.CSSProperties}
       />
       
       {/* Middle ring */}
       <div
-        className="absolute rounded-full"
+        className="absolute rounded-full size-[var(--ring-size)] border-2 border-solid border-[var(--logo-primary)] opacity-40"
         style={{
-          width: config.icon * 0.7,
-          height: config.icon * 0.7,
-          border: `2px solid ${brandColors.primary}`,
-          opacity: 0.4,
-        }}
+          '--ring-size': `${config.icon * 0.7}px`,
+          '--logo-primary': brandColors.primary,
+        } as React.CSSProperties}
       />
       
       {/* Inner core - Sparkles icon */}
       <Sparkle 
         size={config.icon * 0.5} 
-        style={{ color: brandColors.primary }}
-        fill="currentColor"
+        className="text-[var(--logo-primary)] fill-current"
+        style={{ '--logo-primary': brandColors.primary } as React.CSSProperties}
       />
     </div>
   );
@@ -75,15 +70,15 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
   const textEl = (
     <div className="flex flex-col">
       <span 
-        className={`${config.text} font-bold tracking-tight`}
-        style={{ color: brandColors.light }}
+        className={`${config.text} font-bold tracking-tight text-[var(--logo-light)]`}
+        style={{ '--logo-light': brandColors.light } as React.CSSProperties}
       >
         Allternit
       </span>
       {size !== 'sm' && (
         <span 
-          className="text-xs font-medium uppercase tracking-wider"
-          style={{ color: brandColors.primary }}
+          className="text-xs font-medium uppercase tracking-wider text-[var(--logo-primary)]"
+          style={{ '--logo-primary': brandColors.primary } as React.CSSProperties}
         >
           Agent Studio
         </span>
@@ -116,7 +111,7 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
 /**
  * Animated Orb Component for Agent Studio branding
  */
-export function AllternitOrb({ className = '' }: { className?: string }) {
+function AllternitOrb({ className = '' }: { className?: string }) {
   const brandColors = {
     primary: '#B08D6E',
     secondary: 'var(--accent-primary)',
@@ -127,41 +122,30 @@ export function AllternitOrb({ className = '' }: { className?: string }) {
     <div className={`relative ${className}`}>
       {/* Glow effect */}
       <div
-        className="absolute inset-0 rounded-full blur-xl"
-        style={{
-          background: `radial-gradient(circle, ${brandColors.primary} 0%, transparent 70%)`,
-          opacity: 0.3,
-        }}
+        className="absolute inset-0 rounded-full blur-md bg-[radial-gradient(circle,_var(--orb-primary)_0%,_transparent_70%)] opacity-30"
+        style={{ '--orb-primary': brandColors.primary } as React.CSSProperties}
       />
       
       {/* Outer orbit */}
       <div
-        className="absolute inset-0 rounded-full animate-spin"
-        style={{
-          border: `1px solid ${brandColors.primary}`,
-          opacity: 0.2,
-          animationDuration: '8s',
-        }}
+        className="absolute inset-0 rounded-full animate-spin border border-solid border-[var(--orb-primary)] opacity-20 duration-[8s]"
+        style={{ '--orb-primary': brandColors.primary } as React.CSSProperties}
       />
       
       {/* Inner orbit */}
       <div
-        className="absolute inset-2 rounded-full animate-spin"
-        style={{
-          border: `1px solid ${brandColors.secondary}`,
-          opacity: 0.3,
-          animationDirection: 'reverse',
-          animationDuration: '6s',
-        }}
+        className="absolute inset-2 rounded-full animate-spin-reverse border border-solid border-[var(--orb-secondary)] opacity-30 duration-[6s]"
+        style={{ '--orb-secondary': brandColors.secondary } as React.CSSProperties}
       />
       
       {/* Core */}
       <div
-        className="absolute inset-4 rounded-full"
-        style={{
-          background: `linear-gradient(135deg, ${brandColors.primary} 0%, ${brandColors.accent} 100%)`,
-          boxShadow: `0 0 20px ${brandColors.primary}40`,
-        }}
+        className="absolute inset-4 rounded-full bg-gradient-to-br from-[var(--orb-primary)] to-[var(--orb-accent)] shadow-[0_0_20px_var(--orb-primary-40)]"
+        style={{ 
+          '--orb-primary': brandColors.primary,
+          '--orb-accent': brandColors.accent,
+          '--orb-primary-40': `${brandColors.primary}40`
+        } as React.CSSProperties}
       />
     </div>
   );
@@ -178,7 +162,7 @@ interface BrandBadgeProps {
   className?: string;
 }
 
-export function BrandBadge({ 
+function BrandBadge({ 
   children, 
   variant = 'default', 
   size = 'sm',
@@ -223,8 +207,12 @@ export function BrandBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full font-medium border ${config.bg} ${config.border} ${sizeConfig[size].padding} ${sizeConfig[size].text} ${sizeConfig[size].height} ${className}`}
-      style={{ color: config.text }}
+      className={`inline-flex items-center gap-1 rounded-full font-medium border border-solid bg-[var(--badge-bg)] border-[var(--badge-border)] text-[var(--badge-text)] ${sizeConfig[size].padding} ${sizeConfig[size].text} ${sizeConfig[size].height} ${className}`}
+      style={{ 
+        '--badge-bg': config.bg, 
+        '--badge-border': config.border, 
+        '--badge-text': config.text 
+      } as React.CSSProperties}
     >
       {icon}
       {children}

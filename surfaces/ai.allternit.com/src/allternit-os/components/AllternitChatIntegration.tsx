@@ -9,7 +9,7 @@
  */
 
 import * as React from 'react';
-const { useCallback, useEffect, useState } = React;
+const { useCallback, useEffect, useMemo, useState } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
 import { 
   parseLaunchCommands, 
@@ -18,11 +18,15 @@ import {
 } from '../utils/launchProtocol';
 import type { AllternitProgram, AllternitProgramType } from '../types/programs';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AllternitChatIntegration');
+
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface ChatMessage {
+interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -38,7 +42,7 @@ interface LaunchedProgramInfo {
   status: 'launching' | 'active' | 'error';
 }
 
-export interface AllternitChatIntegrationProps {
+interface AllternitChatIntegrationProps {
   messages: ChatMessage[];
   onLaunchProgram?: (program: AllternitProgram) => void;
   enableAutoLaunch?: boolean;
@@ -90,7 +94,7 @@ const ProgramPreviewCard: React.FC<ProgramPreviewCardProps> = ({ programInfo, on
   };
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       onClick={onClick}
       className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all ${getStatusColor(programInfo.status)}`}
     >
@@ -171,15 +175,15 @@ interface MessageRendererProps {
   onProgramClick?: (programId: string) => void;
 }
 
-export const MessageRenderer: React.FC<MessageRendererProps> = ({ message, onProgramClick }) => {
-  const [segments] = useState(() => parseMessageSegments(message.content));
+const MessageRenderer: React.FC<MessageRendererProps> = ({ message, onProgramClick }) => {
+  const segments = useMemo(() => parseMessageSegments(message.content), [message.content]);
 
   return (
     <div className="space-y-3">
       {segments.map((segment, idx) => (
         segment.type === 'launch' ? (
           <ProgramPreviewCard 
-            key={idx}
+            key={`chat-line-${idx}`}
             programInfo={{
               id: `launch-${idx}`,
               type: segment.launchType!,
@@ -189,7 +193,7 @@ export const MessageRenderer: React.FC<MessageRendererProps> = ({ message, onPro
             onClick={() => onProgramClick?.(`launch-${idx}`)}
           />
         ) : (
-          <div key={idx} className="prose dark:prose-invert max-w-none">
+          <div key={`chat-line-${idx}`} className="prose dark:prose-invert max-w-none">
             <FormattedText text={segment.content} />
           </div>
         )
@@ -224,13 +228,13 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
       {lines.map((line, idx) => {
         // Headers
         if (line.startsWith('### ')) {
-          return <h3 key={idx} className="text-lg font-bold mt-4 mb-2">{line.slice(4)}</h3>;
+          return <h3 key={`chat-line-${idx}`} className="text-lg font-bold mt-4 mb-2">{line.slice(4)}</h3>;
         }
         if (line.startsWith('## ')) {
-          return <h2 key={idx} className="text-xl font-bold mt-4 mb-2">{line.slice(3)}</h2>;
+          return <h2 key={`chat-line-${idx}`} className="text-xl font-bold mt-4 mb-2">{line.slice(3)}</h2>;
         }
         if (line.startsWith('# ')) {
-          return <h1 key={idx} className="text-2xl font-bold mt-4 mb-2">{line.slice(2)}</h1>;
+          return <h1 key={`chat-line-${idx}`} className="text-2xl font-bold mt-4 mb-2">{line.slice(2)}</h1>;
         }
         
         // Code blocks
@@ -241,7 +245,7 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
         // Lists
         if (line.match(/^[-*]\s/)) {
           return (
-            <ul key={idx} className="list-disc list-inside my-1">
+            <ul key={`chat-line-${idx}`} className="list-disc list-inside my-1">
               <li>{formatInline(line.slice(2))}</li>
             </ul>
           );
@@ -250,7 +254,7 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
         // Numbered lists
         if (line.match(/^\d+\.\s/)) {
           return (
-            <ol key={idx} className="list-decimal list-inside my-1">
+            <ol key={`chat-line-${idx}`} className="list-decimal list-inside my-1">
               <li>{formatInline(line.replace(/^\d+\.\s/, ''))}</li>
             </ol>
           );
@@ -258,11 +262,11 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
         
         // Empty lines
         if (line.trim() === '') {
-          return <div key={idx} className="h-2" />;
+          return <div key={`chat-line-${idx}`} className="h-2" />;
         }
         
         // Regular paragraph
-        return <p key={idx} className="my-1">{formatInline(line)}</p>;
+        return <p key={`chat-line-${idx}`} className="my-1">{formatInline(line)}</p>;
       })}
     </>
   );
@@ -273,15 +277,15 @@ const formatInline = (text: string): React.ReactNode => {
   let parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, idx) => {
     if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={idx}>{part.slice(2, -2)}</strong>;
+      return <strong key={`chat-line-${idx}`}>{part.slice(2, -2)}</strong>;
     }
     // Italic
     if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
-      return <em key={idx}>{part.slice(1, -1)}</em>;
+      return <em key={`chat-line-${idx}`}>{part.slice(1, -1)}</em>;
     }
     // Inline code
     if (part.startsWith('`') && part.endsWith('`')) {
-      return <code key={idx} className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded text-sm">{part.slice(1, -1)}</code>;
+      return <code key={`chat-line-${idx}`} className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded text-sm">{part.slice(1, -1)}</code>;
     }
     return part;
   });
@@ -291,7 +295,7 @@ const formatInline = (text: string): React.ReactNode => {
 // Main Allternit Chat Integration Hook
 // ============================================================================
 
-export const useAllternitChatIntegration = (options: {
+const useAllternitChatIntegration = (options: {
   threadId: string;
   enableAutoLaunch?: boolean;
   onProgramLaunch?: (programId: string) => void;
@@ -320,7 +324,7 @@ export const useAllternitChatIntegration = (options: {
         launchedProgramIds.push(...programIds);
         programIds.forEach(id => onProgramLaunch?.(id));
       } catch (error) {
-        console.error('Failed to launch program:', error);
+        logger.error({ err: error }, 'Failed to launch program:');
       } finally {
         setPendingLaunches(prev => {
           const next = new Set(prev);
@@ -364,7 +368,7 @@ export const useAllternitChatIntegration = (options: {
 // Main Allternit Chat Integration Component
 // ============================================================================
 
-export const AllternitChatIntegration: React.FC<AllternitChatIntegrationProps> = ({
+const AllternitChatIntegration: React.FC<AllternitChatIntegrationProps> = ({
   messages,
   onLaunchProgram,
   enableAutoLaunch = true,
@@ -475,7 +479,7 @@ export const AllternitChatIntegration: React.FC<AllternitChatIntegrationProps> =
 // Streaming Message Handler
 // ============================================================================
 
-export const useStreamingMessage = () => {
+const useStreamingMessage = () => {
   const [content, setContent] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
 
@@ -511,7 +515,7 @@ interface QuickLaunchButtonsProps {
   className?: string;
 }
 
-export const QuickLaunchButtons: React.FC<QuickLaunchButtonsProps> = ({ onLaunch, className }) => {
+const QuickLaunchButtons: React.FC<QuickLaunchButtonsProps> = ({ onLaunch, className }) => {
   const buttons: { type: AllternitProgramType; icon: string; label: string }[] = [
     { type: 'research-doc', icon: '📄', label: 'Research' },
     { type: 'data-grid', icon: '📊', label: 'Data' },
@@ -523,7 +527,7 @@ export const QuickLaunchButtons: React.FC<QuickLaunchButtonsProps> = ({ onLaunch
   return (
     <div className={`flex gap-2 flex-wrap ${className || ''}`}>
       {buttons.map(({ type, icon, label }) => (
-        <button
+        <button type="button"
           key={type}
           onClick={() => onLaunch(type)}
           className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm transition-colors"

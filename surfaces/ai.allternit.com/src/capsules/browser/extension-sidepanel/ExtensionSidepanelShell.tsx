@@ -1,8 +1,7 @@
-"use client";
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
+"use client";
 import type {
   ExtensionSidepanelActivity,
   ExtensionSidepanelAdapter,
@@ -13,7 +12,6 @@ import type {
   ExtensionSidepanelHistoryDetailViewProps,
   ExtensionSidepanelHistoryListViewProps,
 } from "./ExtensionSidepanelShell.types";
-
 type View = { name: "chat" } | { name: "config" } | { name: "history" } | { name: "history-detail"; sessionId: string };
 
 const EMPTY_STATE_TYPING_WORDS = [
@@ -464,7 +462,7 @@ function MotionOverlay({ active }: { active: boolean }) {
         }}
       />
       <div
-        className="absolute inset-[-14px] rounded-[inherit] blur-2xl"
+        className="absolute inset-[-14px] rounded-[inherit] blur-[10px]"
         style={{
           background:
             "conic-gradient(from 180deg, rgba(92, 136, 255, 0.32), rgba(83, 196, 255, 0.12), rgba(179, 96, 255, 0.26), rgba(92, 136, 255, 0.32))",
@@ -472,7 +470,7 @@ function MotionOverlay({ active }: { active: boolean }) {
         }}
       />
       <div
-        className="absolute inset-[-14px] rounded-[inherit] blur-2xl"
+        className="absolute inset-[-14px] rounded-[inherit] blur-[10px]"
         style={{
           background:
             "conic-gradient(from 0deg, rgba(70, 212, 255, 0.22), rgba(92, 136, 255, 0.12), rgba(74, 208, 157, 0.24), rgba(70, 212, 255, 0.22))",
@@ -611,7 +609,7 @@ function EmptyState({
       <style>{EXTENSION_SIDEPANEL_ANIMATIONS}</style>
       <div className="pointer-events-none relative select-none">
         <div
-          className="absolute inset-0 -m-6 rounded-full blur-2xl"
+          className="absolute inset-0 -m-6 rounded-full blur-[10px]"
           style={{
             background:
               "conic-gradient(from 180deg, oklch(0.55 0.2 280), oklch(0.5 0.15 230), oklch(0.6 0.18 310), oklch(0.55 0.2 280))",
@@ -619,7 +617,7 @@ function EmptyState({
           }}
         />
         <div
-          className="absolute inset-0 -m-6 rounded-full blur-2xl"
+          className="absolute inset-0 -m-6 rounded-full blur-[10px]"
           style={{
             background:
               "conic-gradient(from 0deg, oklch(0.55 0.18 160), oklch(0.5 0.2 200), oklch(0.6 0.15 120), oklch(0.55 0.18 160))",
@@ -867,7 +865,8 @@ function RawSection({ rawRequest, rawResponse }: { rawRequest?: unknown; rawResp
 
 function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent, { type: "step" }> }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2" style={{ borderLeftColor: 'rgba(105,168,200,0.5)' }}>
+    <div className="rounded-lg border border-border bg-muted/40 p-2.5 relative overflow-hidden">
+      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#69A8C8]/50" />
       <div className="mb-2 text-[12px] font-semibold tracking-wide text-foreground">
         Step #{(event.stepIndex ?? 0) + 1}
       </div>
@@ -915,7 +914,8 @@ function ObservationCard({
   event: Extract<ExtensionSidepanelHistoricalEvent, { type: "observation" }>;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2" style={{ borderLeftColor: 'rgba(74,222,128,0.5)' }}>
+    <div className="rounded-lg border border-border bg-muted/40 p-2.5 relative overflow-hidden">
+      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#4ade80]/50" />
       <div className="flex items-start gap-2">
         <span style={{ color: 'var(--status-success)' }}>
           <Eye className="mt-0.5 size-3.5 shrink-0" />
@@ -965,7 +965,7 @@ function UserTakeoverCard({
   );
 }
 
-export function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
+function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
   if (event.type === "step" && event.action?.name === "done") {
     const input = event.action.input as { text?: string; success?: boolean } | undefined;
     return (
@@ -984,7 +984,7 @@ export function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent 
   return null;
 }
 
-export function ActivityCard({ activity }: { activity: ExtensionSidepanelActivity }) {
+function ActivityCard({ activity }: { activity: ExtensionSidepanelActivity }) {
   const info =
     activity.type === "thinking"
       ? { text: "Thinking...", color: "text-blue-500", dot: "bg-blue-500" }
@@ -1124,10 +1124,9 @@ function DefaultHistoryDetailView({ session, onBack }: ExtensionSidepanelHistory
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
-        {session.history.map((event, index) => (
-          <EventCard key={`${session.id}-${index}`} event={event} />
-        ))}
-      </div>
+        {session.history.map((event) => (
+          <EventCard key={event.id || event.timestamp} event={event} />
+        ))}      </div>
     </div>
   );
 }
@@ -1142,10 +1141,13 @@ function DefaultConfigView({
   const [permissionMode, setPermissionMode] = useState(config.permissionMode);
   const [language, setLanguage] = useState(config.language);
 
-  useEffect(() => {
+  // Inline state adjustment for config change
+  const [prevConfig, setPrevConfig] = useState(config);
+  if (config !== prevConfig) {
+    setPrevConfig(config);
     setPermissionMode(config.permissionMode);
     setLanguage(config.language);
-  }, [config.language, config.permissionMode]);
+  }
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -1173,9 +1175,8 @@ function DefaultConfigView({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Permission Mode</label>
-          <select
-            value={permissionMode}
+          <div className="text-xs text-muted-foreground">Permission Mode</div>
+          <select aria-label="Selection" value={permissionMode}
             onChange={(event) => setPermissionMode(event.target.value as "ask" | "act")}
             className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
           >
@@ -1185,9 +1186,8 @@ function DefaultConfigView({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">Language</label>
-          <select
-            value={language}
+          <div className="text-xs text-muted-foreground">Language</div>
+          <select aria-label="Selection" value={language}
             onChange={(event) => setLanguage(event.target.value)}
             className="h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
           >
@@ -1197,14 +1197,14 @@ function DefaultConfigView({
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">{copy.settingsContextLabel}</label>
+          <div className="text-xs text-muted-foreground">{copy.settingsContextLabel}</div>
           <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-foreground">
             {config.runtimeLabel}
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">{copy.contextLabel}</label>
+          <div className="text-xs text-muted-foreground">{copy.contextLabel}</div>
           <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs text-foreground">
             {pageLabel}
           </div>
@@ -1454,12 +1454,11 @@ export function ExtensionSidepanelShell({
                   {showEmptyState && <EmptyState copy={shellCopy} brandIcon={brandIcon} />}
                   {adapter.history.map((event, index) => (
                     <motion.div
-                      key={`extension-event-${index}`}
+                      key={event.id || event.timestamp}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03, duration: 0.2 }}
-                    >
-                      <EventCard event={event} />
+                    >                      <EventCard event={event} />
                     </motion.div>
                   ))}
                   {adapter.activity && (
@@ -1494,8 +1493,7 @@ export function ExtensionSidepanelShell({
                 onSubmit={handleSubmit}
                 className="relative rounded-[14px] border border-input bg-background/80 shadow-sm"
               >
-                <textarea
-                  ref={textareaRef}
+                <textarea aria-label={composerPlaceholder} ref={textareaRef}
                   rows={1}
                   value={inputValue}
                   disabled={isRunning}

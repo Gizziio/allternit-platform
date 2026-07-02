@@ -174,7 +174,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
   return (
     <div className="w-full h-full" style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       {/* Dark overlay */}
-      <div 
+      <div role="button" tabIndex={0} 
         className="absolute inset-0 bg-black/70 transition-opacity duration-300" 
         onClick={onSkip}
       />
@@ -206,7 +206,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
           <div className="text-xs font-semibold text-[#D4B08C] uppercase tracking-wider">
             Step {currentStep + 1} of {tourSteps.length}
           </div>
-          <button 
+          <button type="button" 
             onClick={onSkip}
             className="text-white/40 hover:text-white transition-colors p-1"
           >
@@ -226,7 +226,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
 
         {/* Navigation */}
         <div className="flex items-center justify-between">
-          <button 
+          <button type="button" 
             onClick={prevStep}
             disabled={currentStep === 0}
             className="flex items-center gap-1 text-sm text-white/40 hover:text-white disabled:opacity-30 disabled:hover:text-white/40 transition-colors"
@@ -238,8 +238,8 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
           {/* Progress dots */}
           <div className="flex gap-1.5">
             {tourSteps.map((_, i) => (
-              <button
-                key={i}
+              <button type="button"
+                key={`guidedtour-${i}`}
                 onClick={() => setCurrentStep(i)}
                 className={cn(
                   'size-2  rounded-full transition-all duration-200',
@@ -249,7 +249,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
             ))}
           </div>
 
-          <button
+          <button type="button"
             onClick={nextStep}
             className="flex items-center gap-1 text-sm text-[#D4B08C] hover:text-[#e4c09c] font-medium transition-colors"
           >
@@ -266,7 +266,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
         <div className="flex gap-1">
           {tourSteps.map((_, i) => (
             <div
-              key={i}
+              key={`guidedtour-${i}`}
               className={cn(
                 'size-1.5  rounded-full transition-all duration-200',
                 i === currentStep ? 'bg-[#D4B08C]' : 'bg-white/20'
@@ -274,7 +274,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
             />
           ))}
         </div>
-        <button 
+        <button type="button" 
           onClick={onSkip}
           className="text-xs text-white/40 hover:text-white ml-2"
         >

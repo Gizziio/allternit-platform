@@ -1,4 +1,5 @@
 "use client";
+import React, { useEffect, useRef } from 'react';
 
 /**
  * CursorOverlay
@@ -13,22 +14,19 @@
  * - Coordinate contract mapping (model space → display space)
  */
 
-import React, { useEffect, useRef } from 'react';
-
-// ─────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────
 
-export type CursorEffect = 'ripple' | 'glow' | 'spark' | 'none';
+type CursorEffect = 'ripple' | 'glow' | 'spark' | 'none';
 
-export interface CursorProfile {
+interface CursorProfile {
   agentId: string;
   color: string;   // e.g. '#a855f7'
   size: number;    // cursor dot radius in px
   label?: string;
 }
 
-export interface CursorPosition {
+interface CursorPosition {
   x: number;
   y: number;
   agentId: string;
@@ -233,7 +231,7 @@ export function CursorOverlay({
   containerWidth,
   containerHeight,
   coordinateContract,
-}: CursorOverlayProps): JSX.Element | null {
+}: CursorOverlayProps): React.ReactNode | null {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<AnimState>({
     curX: 0, curY: 0,

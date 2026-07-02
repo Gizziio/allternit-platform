@@ -38,6 +38,7 @@ import {
   clonePolicy,
   listViolations,
 } from '@/lib/governance/policy.service';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import type {
   Policy,
   PolicyViolation,
@@ -87,6 +88,7 @@ export function PolicyManager() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViolationsPanel, setShowViolationsPanel] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
 
   // Fetch policies
@@ -145,14 +147,19 @@ export function PolicyManager() {
     }
   };
 
-  const handleDeletePolicy = async (policyId: string) => {
-    if (!confirm('Are you sure you want to delete this policy?')) return;
-    try {
-      await deletePolicy(policyId);
-      fetchPolicies();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete policy');
-    }
+  const handleDeletePolicy = (policyId: string) => {
+    setConfirmDialog({
+      message: 'Are you sure you want to delete this policy?',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await deletePolicy(policyId);
+          fetchPolicies();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to delete policy');
+        }
+      },
+    });
   };
 
   const handleTogglePolicy = async (policy: Policy) => {
@@ -215,7 +222,7 @@ export function PolicyManager() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button
+          <button type="button"
             onClick={() => setShowViolationsPanel(!showViolationsPanel)}
             style={{
               padding: '8px 16px',
@@ -246,7 +253,7 @@ export function PolicyManager() {
               </span>
             )}
           </button>
-          <button
+          <button type="button"
             onClick={() => setShowCreateModal(true)}
             style={{
               padding: '8px 16px',
@@ -279,8 +286,7 @@ export function PolicyManager() {
       }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
           <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ui-text-muted)' }} />
-          <input
-            type="text"
+          <input aria-label="Search policies…" type="text"
             placeholder="Search policies…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -296,8 +302,7 @@ export function PolicyManager() {
             }}
           />
         </div>
-        <select
-          value={filterType}
+        <select aria-label="Selection" value={filterType}
           onChange={(e) => setFilterType(e.target.value as PolicyType | 'all')}
           style={{
             padding: '8px 12px',
@@ -314,8 +319,7 @@ export function PolicyManager() {
             <option key={type.value} value={type.value}>{type.label}</option>
           ))}
         </select>
-        <select
-          value={filterStatus}
+        <select aria-label="Selection" value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'disabled')}
           style={{
             padding: '8px 12px',
@@ -331,7 +335,7 @@ export function PolicyManager() {
           <option value="active">Active</option>
           <option value="disabled">Disabled</option>
         </select>
-        <button
+        <button type="button"
           onClick={fetchPolicies}
           style={{
             padding: '8px 12px',
@@ -402,7 +406,7 @@ export function PolicyManager() {
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
                 Recent Violations
               </h3>
-              <button 
+              <button type="button" 
                 onClick={() => setShowViolationsPanel(false)}
                 style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-muted)', cursor: 'pointer' }}
               >
@@ -444,6 +448,15 @@ export function PolicyManager() {
           onSubmit={(updates) => handleUpdatePolicy(selectedPolicy.id, updates as any)}
         />
       )}
+      <ConfirmModal
+        isOpen={confirmDialog !== null}
+        title="Delete Policy"
+        message={confirmDialog?.message || ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDialog?.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }
@@ -481,7 +494,7 @@ function PolicyCard({
       border: '1px solid var(--ui-border-muted)',
       overflow: 'hidden',
     }}>
-      <div 
+      <div role="button" tabIndex={0} 
         onClick={onToggleExpand}
         style={{
           padding: '16px 20px',
@@ -491,7 +504,7 @@ function PolicyCard({
           cursor: 'pointer',
         }}
       >
-        <button style={{
+        <button type="button" style={{
           background: 'transparent',
           border: 'none',
           color: 'var(--ui-text-secondary)',
@@ -585,7 +598,7 @@ function PolicyCard({
         </div>
 
         <div style={{ display: 'flex', gap: 4 }}>
-          <button
+          <button type="button"
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
             style={{
               padding: '6px 10px',
@@ -599,7 +612,7 @@ function PolicyCard({
           >
             <Power size={16} />
           </button>
-          <button
+          <button type="button"
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             style={{
               padding: '6px 10px',
@@ -613,7 +626,7 @@ function PolicyCard({
           >
             <PencilSimple size={16} />
           </button>
-          <button
+          <button type="button"
             onClick={(e) => { e.stopPropagation(); onClone(); }}
             style={{
               padding: '6px 10px',
@@ -627,7 +640,7 @@ function PolicyCard({
           >
             <Copy size={16} />
           </button>
-          <button
+          <button type="button"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             style={{
               padding: '6px 10px',
@@ -830,18 +843,17 @@ function PolicyModal({
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             {title}
           </h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
+          <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: 24 }}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+            <div style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Policy Name
-            </label>
-            <input
-              type="text"
+            </div>
+            <input aria-label="Input" type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -858,11 +870,10 @@ function PolicyModal({
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+            <div style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Description
-            </label>
-            <textarea
-              value={formData.description}
+            </div>
+            <textarea aria-label="Text Area" value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
               style={{
@@ -880,11 +891,10 @@ function PolicyModal({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+              <div style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
                 Type
-              </label>
-              <select
-                value={formData.type}
+              </div>
+              <select aria-label="Selection" value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as PolicyType })}
                 style={{
                   width: '100%',
@@ -902,11 +912,10 @@ function PolicyModal({
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+              <div style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
                 Severity
-              </label>
-              <select
-                value={formData.severity}
+              </div>
+              <select aria-label="Selection" value={formData.severity}
                 onChange={(e) => setFormData({ ...formData, severity: e.target.value as PolicySeverity })}
                 style={{
                   width: '100%',
@@ -924,11 +933,10 @@ function PolicyModal({
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+              <div style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
                 Enforcement
-              </label>
-              <select
-                value={formData.enforcementMode}
+              </div>
+              <select aria-label="Selection" value={formData.enforcementMode}
                 onChange={(e) => setFormData({ ...formData, enforcementMode: e.target.value as EnforcementMode })}
                 style={{
                   width: '100%',
@@ -1014,7 +1022,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
     <div style={{ textAlign: 'center', padding: 60 }}>
       <Warning size={32} color="var(--status-error)" />
       <p style={{ color: 'var(--status-error)', marginBottom: 16 }}>{message}</p>
-      <button
+      <button type="button"
         onClick={onRetry}
         style={{
           padding: '8px 16px',
@@ -1037,7 +1045,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       <Shield size={48} style={{ marginBottom: 16 }} />
       <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: 'var(--ui-text-muted)' }}>No policies yet</h3>
       <p style={{ margin: '0 0 16px 0', fontSize: 14 }}>Create your first policy to start enforcing governance rules.</p>
-      <button
+      <button type="button"
         onClick={onCreate}
         style={{
           padding: '10px 20px',

@@ -1,18 +1,6 @@
-/**
- * AllternitSystemPromptEditor.tsx
- * 
- * Professional system prompt editor with:
- * - Monospace font
- * - Line numbers
- * - Variable highlighting (simulated)
- * - Testing integration
- * - Character count and validation
- */
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Play,
-  Eye,
   Copy,
   Check,
   Warning,
@@ -20,7 +8,6 @@ import {
   Question as HelpCircle,
   Code,
 } from '@phosphor-icons/react';
-import { TEXT, GLASS, SAND } from '@/design/allternit.tokens';
 import { api } from '@/integration/api-client';
 
 interface AllternitSystemPromptEditorProps {
@@ -41,12 +28,11 @@ export function AllternitSystemPromptEditor({
   const [testOutput, setTestTestOutput] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [lineCount, setLineCount] = useState(1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
+  const lineCount = useMemo(() => {
     const lines = value.split('\n').length;
-    setLineCount(Math.max(lines, 1));
+    return Math.max(lines, 1);
   }, [value]);
 
   const handleCopy = () => {
@@ -87,7 +73,7 @@ export function AllternitSystemPromptEditor({
           <span className="text-xs text-white/40 font-mono">
             {value.length} chars | {lineCount} lines
           </span>
-          <button
+          <button type="button"
             onClick={handleCopy}
             className="p-1.5 rounded hover:bg-white/10 transition-colors text-white/60"
             title="Copy Prompt"
@@ -104,13 +90,12 @@ export function AllternitSystemPromptEditor({
           style={{ lineHeight: '1.5rem' }}
         >
           {Array.from({ length: lineCount }).map((_, i) => (
-            <div key={i}>{i + 1}</div>
+            <div key={`allternitsystemprompteditor-${i}`}>{i + 1}</div>
           ))}
         </div>
 
         {/* Textarea */}
-        <textarea
-          ref={textareaRef}
+        <textarea aria-label="Text Area" ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -134,7 +119,7 @@ export function AllternitSystemPromptEditor({
         </div>
         
         <div className="flex items-center gap-2">
-          <button
+          <button type="button"
             onClick={handleTest}
             disabled={isTesting || !value.trim()}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-blue-500/20 text-blue-400 disabled:opacity-30 border border-blue-500/30"
@@ -157,7 +142,7 @@ export function AllternitSystemPromptEditor({
               <Sparkle size={12} />
               Simulated Agent Response
             </div>
-            <button 
+            <button type="button" 
               onClick={() => setTestTestOutput(null)}
               className="text-white/40 hover:text-white"
             >

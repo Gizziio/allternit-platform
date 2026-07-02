@@ -20,7 +20,8 @@ import {
   UploadSimple,
   Shield,
 } from '@phosphor-icons/react';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { cn } from '@/lib/utils';
 
 export interface SSHConnectionFormData {
   name: string;
@@ -163,221 +164,54 @@ export function AddSSHConnectionForm({
 
   if (!isOpen) return null;
 
-  // Styles matching the HTML preview exactly
-  const styles: Record<string, React.CSSProperties> = {
-    overlay: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'var(--shell-overlay-backdrop)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1001,
-      padding: '20px',
-    },
-    modal: {
-      width: '100%',
-      maxWidth: '512px',
-      maxHeight: '90vh',
-      background: 'rgba(20,20,20,0.95)',
-      border: '1px solid #333',
-      borderRadius: '16px',
-      overflow: 'hidden',
-      boxShadow: '0 24px 80px var(--shell-overlay-backdrop)',
-      display: 'flex',
-      flexDirection: 'column',
-    },
-    header: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '16px 24px',
-      borderBottom: '1px solid #333',
-    },
-    iconBox: {
-      width: '40px',
-      height: '40px',
-      borderRadius: '12px',
-      background: `linear-gradient(135deg, ${STATUS.info}33, rgba(147,51,234,0.2))`,
-      border: `1px solid ${STATUS.info}4c`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    closeBtn: {
-      width: '32px',
-      height: '32px',
-      borderRadius: '8px',
-      border: 'none',
-      background: 'transparent',
-      color: TEXT.secondary,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    tabs: {
-      display: 'flex',
-      borderBottom: '1px solid #333',
-    },
-    tab: {
-      flex: 1,
-      padding: '12px',
-      textAlign: 'center',
-      fontSize: '13px',
-      fontWeight: 500,
-      background: 'transparent',
-      border: 'none',
-      color: TEXT.secondary,
-      cursor: 'pointer',
-    },
-    tabActive: {
-      color: SAND[500],
-      borderBottom: '2px solid #d4b08c',
-    },
-    body: {
-      padding: '24px',
-      maxHeight: 'calc(90vh - 140px)',
-      overflowY: 'auto',
-    },
-    formGroup: {
-      marginBottom: '20px',
-    },
-    label: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      fontSize: '13px',
-      fontWeight: 500,
-      marginBottom: '6px',
-      color: TEXT.primary,
-    },
-    input: {
-      width: '100%',
-      padding: '10px 12px',
-      borderRadius: '8px',
-      border: '1px solid #444',
-      background: 'var(--surface-panel)',
-      color: TEXT.primary,
-      fontSize: '13px',
-      outline: 'none',
-    },
-    hint: {
-      fontSize: '12px',
-      color: TEXT.tertiary,
-      marginTop: '4px',
-    },
-    row: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: '16px',
-    },
-    authToggle: {
-      display: 'flex',
-      gap: '8px',
-      padding: '4px',
-      background: 'var(--surface-panel)',
-      borderRadius: '8px',
-      border: '1px solid #333',
-    },
-    authOption: {
-      flex: 1,
-      padding: '8px',
-      borderRadius: '6px',
-      border: 'none',
-      background: 'transparent',
-      color: TEXT.secondary,
-      fontSize: '13px',
-      fontWeight: 500,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '6px',
-    },
-    authOptionActive: {
-      background: `${SAND[500]}33`,
-      color: SAND[500],
-    },
-    actions: {
-      display: 'flex',
-      gap: '12px',
-      marginTop: '24px',
-    },
-    btnSecondary: {
-      padding: '10px 16px',
-      borderRadius: '8px',
-      border: 'none',
-      background: 'var(--surface-panel)',
-      color: TEXT.primary,
-      fontSize: '13px',
-      fontWeight: 500,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-    },
-    btnPrimary: {
-      flex: 1,
-      padding: '10px 16px',
-      borderRadius: '8px',
-      border: 'none',
-      background: SAND[500],
-      color: 'var(--ui-text-inverse)',
-      fontSize: '13px',
-      fontWeight: 500,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '6px',
-    },
-    testResult: {
-      padding: '16px',
-      borderRadius: '8px',
-      border: '1px solid',
-      marginTop: '16px',
-    },
-  };
-
   return createPortal(
-    <div style={styles.overlay} onClick={handleClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <div 
+      role="button" tabIndex={0} 
+      className="fixed inset-0 bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm flex items-center justify-center z-[1001] p-5 outline-none" 
+      onClick={handleClose}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClose(); }}
+    >
+      <div 
+        role="button" tabIndex={0} 
+        className="w-full max-w-[512px] max-h-[90vh] bg-[rgba(20,20,20,0.95)] border border-solid border-[#333] rounded-2xl overflow-hidden shadow-[0_24px_80px_var(--shell-overlay-backdrop)] flex flex-col outline-none" 
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div style={styles.header}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={styles.iconBox}>
-              <Terminal size={20} color={STATUS.info} />
+        <div className="flex items-center justify-between p-4 px-6 border-b border-solid border-[#333]">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-gradient-to-br from-[var(--status-info)]/20 to-purple-500/20 border border-solid border-[var(--status-info)]/30 flex items-center justify-center">
+              <Terminal size={20} className="text-[var(--status-info)]" />
             </div>
             <div>
-              <h2 style={{ fontSize: '16px', fontWeight: 600, color: TEXT.primary }}>Add SSH Connection</h2>
-              <p style={{ fontSize: '12px', color: TEXT.secondary }}>Connect to a remote machine to run Allternit</p>
+              <h2 className="text-[16px] font-semibold text-[var(--ui-text-primary)] m-0">Add SSH Connection</h2>
+              <p className="text-[12px] text-[var(--ui-text-secondary)] m-0">Connect to a remote machine to run Allternit</p>
             </div>
           </div>
-          <button 
-            style={styles.closeBtn} 
+          <button type="button" 
             onClick={handleClose}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-panel)'; e.currentTarget.style.color = 'var(--ui-text-primary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ui-text-muted)'; }}
+            className="size-8 rounded-lg border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center transition-all duration-150 hover:bg-[var(--surface-panel)] hover:text-[var(--ui-text-primary)]"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div style={styles.tabs}>
-          <button
-            style={{ ...styles.tab, ...(activeTab === 'form' ? styles.tabActive : {}) }}
+        <div className="flex border-b border-solid border-[#333]">
+          <button type="button"
+            className={cn(
+              "flex-1 p-3 text-center text-[13px] font-medium bg-transparent border-none cursor-pointer transition-colors",
+              activeTab === 'form' ? "text-[var(--accent-primary)] border-b-2 border-solid border-[var(--accent-primary)]" : "text-[var(--ui-text-secondary)] border-b-2 border-transparent"
+            )}
             onClick={() => setActiveTab('form')}
           >
             Connection
           </button>
-          <button
-            style={{ ...styles.tab, ...(activeTab === 'help' ? styles.tabActive : {}) }}
+          <button type="button"
+            className={cn(
+              "flex-1 p-3 text-center text-[13px] font-medium bg-transparent border-none cursor-pointer transition-colors",
+              activeTab === 'help' ? "text-[var(--accent-primary)] border-b-2 border-solid border-[var(--accent-primary)]" : "text-[var(--ui-text-secondary)] border-b-2 border-transparent"
+            )}
             onClick={() => setActiveTab('help')}
           >
             Setup Guide
@@ -385,85 +219,93 @@ export function AddSSHConnectionForm({
         </div>
 
         {/* Content */}
-        <div style={styles.body}>
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
           {activeTab === 'form' ? (
             <form onSubmit={handleSubmit}>
               {/* Name */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  <HardDrives size={14} color="#888" />
+              <div className="mb-5">
+                <div className="flex items-center gap-1.5 text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">
+                  <HardDrives size={14} className="text-[#888]" />
                   Name
-                </label>
-                <input
-                  type="text"
-                  style={{ ...styles.input, borderColor: errors.name ? STATUS.error : 'var(--ui-border-default)' }}
+                </div>
+                <input aria-label="Input" type="text"
+                  className={cn(
+                    "w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none transition-colors focus:border-[var(--accent-primary)]",
+                    errors.name ? "border-[var(--status-error)]" : "border-[#444]"
+                  )}
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="My Server"
                 />
                 {errors.name ? (
-                  <p style={{ ...styles.hint, color: STATUS.error }}>{errors.name}</p>
+                  <p className="text-[12px] text-[var(--status-error)] mt-1 m-0">{errors.name}</p>
                 ) : (
-                  <p style={styles.hint}>A friendly name for this SSH connection</p>
+                  <p className="text-[12px] text-[var(--ui-text-tertiary)] mt-1 m-0">A friendly name for this SSH connection</p>
                 )}
               </div>
 
               {/* SSH Host */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  <Terminal size={14} color="#888" />
+              <div className="mb-5">
+                <div className="flex items-center gap-1.5 text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">
+                  <Terminal size={14} className="text-[#888]" />
                   SSH Host
-                </label>
-                <input
-                  type="text"
-                  style={{ ...styles.input, borderColor: errors.host ? STATUS.error : 'var(--ui-border-default)' }}
+                </div>
+                <input aria-label="Input" type="text"
+                  className={cn(
+                    "w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none transition-colors focus:border-[var(--accent-primary)]",
+                    errors.host ? "border-[var(--status-error)]" : "border-[#444]"
+                  )}
                   value={formData.host}
                   onChange={(e) => handleInputChange('host', e.target.value)}
                   placeholder="user@hostname"
                 />
                 {errors.host ? (
-                  <p style={{ ...styles.hint, color: STATUS.error }}>{errors.host}</p>
+                  <p className="text-[12px] text-[var(--status-error)] mt-1 m-0">{errors.host}</p>
                 ) : (
-                  <p style={styles.hint}>user@myserver.com or a host from ~/.ssh/config</p>
+                  <p className="text-[12px] text-[var(--ui-text-tertiary)] mt-1 m-0">user@myserver.com or a host from ~/.ssh/config</p>
                 )}
               </div>
 
               {/* Port & Username */}
-              <div style={styles.row}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>SSH Port</label>
-                  <input
-                    type="number"
-                    style={styles.input}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="mb-5">
+                  <div className="flex items-center gap-1.5 text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">SSH Port</div>
+                  <input aria-label="Input" type="number"
+                    className="w-full p-[10px_12px] rounded-lg border border-solid border-[#444] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none focus:border-[var(--accent-primary)]"
                     value={formData.port}
                     onChange={(e) => handleInputChange('port', parseInt(e.target.value) || 22)}
                     placeholder="22"
                   />
-                  <p style={styles.hint}>Leave empty for default (22)</p>
+                  <p className="text-[12px] text-[var(--ui-text-tertiary)] mt-1 m-0">Leave empty for 22</p>
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Username</label>
-                  <input
-                    type="text"
-                    style={{ ...styles.input, borderColor: errors.username ? STATUS.error : 'var(--ui-border-default)' }}
+                <div className="mb-5">
+                  <div className="flex items-center gap-1.5 text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Username</div>
+                  <input aria-label="Input" type="text"
+                    className={cn(
+                      "w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none transition-colors focus:border-[var(--accent-primary)]",
+                      errors.username ? "border-[var(--status-error)]" : "border-[#444]"
+                    )}
                     value={formData.username}
                     onChange={(e) => handleInputChange('username', e.target.value)}
                     placeholder="root"
                   />
-                  {errors.username && <p style={{ ...styles.hint, color: STATUS.error }}>{errors.username}</p>}
+                  {errors.username && <p className="text-[12px] text-[var(--status-error)] mt-1 m-0">{errors.username}</p>}
                 </div>
               </div>
 
               {/* Auth Type */}
-              <div style={styles.formGroup}>
-                <label style={styles.label}>
-                  <Key size={14} color="#888" />
+              <div className="mb-5">
+                <div className="flex items-center gap-1.5 text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">
+                  <Key size={14} className="text-[#888]" />
                   Authentication
-                </label>
-                <div style={styles.authToggle}>
+                </div>
+                <div className="flex gap-2 p-1 bg-[var(--surface-panel)] rounded-lg border border-solid border-[#333]">
                   <button
                     type="button"
-                    style={{ ...styles.authOption, ...(formData.authType === 'key' ? styles.authOptionActive : {}) }}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-1.5 p-2 rounded-md border-none text-[13px] font-medium cursor-pointer transition-all",
+                      formData.authType === 'key' ? "bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]" : "bg-transparent text-[var(--ui-text-secondary)]"
+                    )}
                     onClick={() => handleInputChange('authType', 'key')}
                   >
                     <FileKey size={16} />
@@ -471,7 +313,10 @@ export function AddSSHConnectionForm({
                   </button>
                   <button
                     type="button"
-                    style={{ ...styles.authOption, ...(formData.authType === 'password' ? styles.authOptionActive : {}) }}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-1.5 p-2 rounded-md border-none text-[13px] font-medium cursor-pointer transition-all",
+                      formData.authType === 'password' ? "bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]" : "bg-transparent text-[var(--ui-text-secondary)]"
+                    )}
                     onClick={() => handleInputChange('authType', 'password')}
                   >
                     <Shield size={16} />
@@ -483,32 +328,30 @@ export function AddSSHConnectionForm({
               {/* Key Auth */}
               {formData.authType === 'key' && (
                 <>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Identity File (Private Key)</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        style={styles.input}
+                  <div className="mb-5">
+                    <div className="flex items-center gap-1.5 text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Identity File (Private Key)</div>
+                    <div className="flex gap-2">
+                      <input aria-label="Input" type="text"
+                        className="flex-1 p-[10px_12px] rounded-lg border border-solid border-[#444] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none focus:border-[var(--accent-primary)]"
                         value={formData.privateKeyPath}
                         onChange={(e) => handleInputChange('privateKeyPath', e.target.value)}
                         placeholder="~/.ssh/id_rsa"
                       />
-                      <input ref={fileInputRef} type="file" accept=".pem,.key,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
+                      <input aria-label="File upload" ref={fileInputRef} type="file" accept=".pem,.key,.txt" onChange={handleFileUpload} className="hidden" />
                       <button
                         type="button"
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--ui-border-default)', background: 'var(--surface-panel)', color: TEXT.primary, cursor: 'pointer' }}
+                        className="p-2.5 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] cursor-pointer hover:bg-white/5 transition-colors"
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <UploadSimple size={16} />
                       </button>
                     </div>
-                    <p style={styles.hint}>Leave empty to use default SSH key or SSH config</p>
+                    <p className="text-[12px] text-[var(--ui-text-tertiary)] mt-1 m-0">Leave empty to use default SSH key</p>
                   </div>
 
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Or paste private key</label>
-                    <textarea
-                      style={{ ...styles.input, minHeight: '100px', fontFamily: 'var(--font-mono)', fontSize: '12px', resize: 'none' }}
+                  <div className="mb-5">
+                    <div className="flex items-center gap-1.5 text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Or paste private key</div>
+                    <textarea aria-label="Text Area" className="w-full p-[10px_12px] rounded-lg border border-solid border-[#444] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[12px] font-mono outline-none resize-none min-h-[100px] focus:border-[var(--accent-primary)]"
                       value={formData.privateKey}
                       onChange={(e) => handleInputChange('privateKey', e.target.value)}
                       placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
@@ -520,12 +363,14 @@ export function AddSSHConnectionForm({
 
               {/* Password Auth */}
               {formData.authType === 'password' && (
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Password</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      style={{ ...styles.input, borderColor: errors.password ? STATUS.error : 'var(--ui-border-default)', paddingRight: '40px' }}
+                <div className="mb-5">
+                  <div className="flex items-center gap-1.5 text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Password</div>
+                  <div className="relative">
+                    <input aria-label="Input" type={showPassword ? 'text' : 'password'}
+                      className={cn(
+                        "w-full p-[10px_12px] pr-10 rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none transition-colors focus:border-[var(--accent-primary)]",
+                        errors.password ? "border-[var(--status-error)]" : "border-[#444]"
+                      )}
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
                       placeholder="Enter SSH password"
@@ -533,53 +378,56 @@ export function AddSSHConnectionForm({
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: TEXT.secondary, cursor: 'pointer' }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none text-[var(--ui-text-secondary)] cursor-pointer p-1 hover:text-[var(--ui-text-primary)]"
                     >
                       {showPassword ? <EyeSlash size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {errors.password && <p style={{ ...styles.hint, color: STATUS.error }}>{errors.password}</p>}
+                  {errors.password && <p className="text-[12px] text-[var(--status-error)] mt-1 m-0">{errors.password}</p>}
                 </div>
               )}
 
               {/* Test Result */}
               {testResult && (
                 <div
-                  style={{
-                    ...styles.testResult,
-                    background: testResult.success ? `${STATUS.success}1a` : 'var(--status-error-bg)',
-                    borderColor: testResult.success ? `${STATUS.success}4c` : 'color-mix(in srgb, var(--status-error) 30%, transparent)',
-                  }}
+                  className={cn(
+                    "p-4 rounded-lg border border-solid mb-5",
+                    testResult.success ? "bg-green-500/10 border-green-500/30" : "bg-[var(--status-error-bg)] border-red-500/30"
+                  )}
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div className="flex items-start gap-3">
                     {testResult.success ? (
-                      <CheckCircle size={20} color={STATUS.success} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <CheckCircle size={20} className="text-[var(--status-success)] shrink-0 mt-0.5" />
                     ) : (
-                      <Warning size={20} color={STATUS.error} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <Warning size={20} className="text-[var(--status-error)] shrink-0 mt-0.5" />
                     )}
                     <div>
-                      <p style={{ fontSize: '13px', fontWeight: 500, color: testResult.success ? STATUS.success : STATUS.error }}>
+                      <p className={cn("text-[13px] font-semibold m-0", testResult.success ? "text-[var(--status-success)]" : "text-[var(--status-error)]")}>
                         {testResult.success ? 'Connection successful' : 'Connection failed'}
                       </p>
-                      <p style={{ fontSize: '12px', color: TEXT.secondary, marginTop: '4px' }}>{testResult.message}</p>
+                      <p className="text-[12px] text-[var(--ui-text-secondary)] mt-1 m-0">{testResult.message}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* Actions */}
-              <div style={styles.actions}>
+              <div className="flex gap-3 mt-6">
                 {onTest && (
                   <button
                     type="button"
-                    style={{ ...styles.btnSecondary, opacity: isTesting ? 0.6 : 1 }}
+                    className="p-[10px_16px] rounded-lg border-none bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-medium cursor-pointer flex items-center gap-1.5 transition-all hover:bg-white/5 disabled:opacity-50"
                     onClick={handleTest}
                     disabled={isTesting}
                   >
                     {isTesting ? <CircleNotch size={16} className="animate-spin" /> : 'Test Connection'}
                   </button>
                 )}
-                <button type="submit" style={{ ...styles.btnPrimary, opacity: isSubmitting ? 0.6 : 1 }} disabled={isSubmitting}>
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="flex-1 p-[10px_16px] rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:opacity-90 disabled:opacity-50"
+                >
                   {isSubmitting ? <CircleNotch size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                   Add SSH Connection
                 </button>
@@ -587,39 +435,39 @@ export function AddSSHConnectionForm({
             </form>
           ) : (
             /* Help Tab */
-            <div>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px`, background: ${STATUS.info}33, display: `flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: STATUS.info, flexShrink: 0 }}>1</div>
+            <div className="space-y-5">
+              <div className="flex gap-3">
+                <div className="size-8 rounded-lg bg-[var(--status-info)]/20 flex items-center justify-center text-[12px] font-bold text-[var(--status-info)] shrink-0">1</div>
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Get your VPS ready</h4>
-                  <p style={{ fontSize: '12px', color: TEXT.secondary }}>Ensure you have a VPS with SSH access enabled.</p>
+                  <h4 className="text-[13px] font-semibold text-[var(--ui-text-primary)] m-0 mb-1">Get your VPS ready</h4>
+                  <p className="text-[12px] text-[var(--ui-text-secondary)] m-0 leading-relaxed">Ensure you have a VPS with SSH access enabled (Hetzner, DigitalOcean, etc.).</p>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px`, background: ${STATUS.info}33, display: `flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: STATUS.info, flexShrink: 0 }}>2</div>
+              <div className="flex gap-3">
+                <div className="size-8 rounded-lg bg-[var(--status-info)]/20 flex items-center justify-center text-[12px] font-bold text-[var(--status-info)] shrink-0">2</div>
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Generate SSH keys</h4>
-                  <p style={{ fontSize: '12px', color: TEXT.secondary }}>If needed, run:</p>
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: SAND[500] }}>
-                    ssh-keygen -t ed25519 -C "allternit-email.com"
+                  <h4 className="text-[13px] font-semibold text-[var(--ui-text-primary)] m-0 mb-1">Generate SSH keys</h4>
+                  <p className="text-[12px] text-[var(--ui-text-secondary)] m-0 leading-relaxed">If needed, run this on your local machine:</p>
+                  <div className="mt-2 p-[10px_12px] bg-[var(--surface-panel)] rounded-lg border border-solid border-[#333] font-mono text-[12px] text-[var(--accent-primary)] break-all">
+                    ssh-keygen -t ed25519 -C "allternit-ssh"
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px`, background: ${STATUS.info}33, display: `flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: STATUS.info, flexShrink: 0 }}>3</div>
+              <div className="flex gap-3">
+                <div className="size-8 rounded-lg bg-[var(--status-info)]/20 flex items-center justify-center text-[12px] font-bold text-[var(--status-info)] shrink-0">3</div>
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Copy your public key</h4>
-                  <p style={{ fontSize: '12px', color: TEXT.secondary }}>Run this to authorize your key:</p>
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: SAND[500] }}>
+                  <h4 className="text-[13px] font-semibold text-[var(--ui-text-primary)] m-0 mb-1">Copy your public key</h4>
+                  <p className="text-[12px] text-[var(--ui-text-secondary)] m-0 leading-relaxed">Authorize your local key on the remote server:</p>
+                  <div className="mt-2 p-[10px_12px] bg-[var(--surface-panel)] rounded-lg border border-solid border-[#333] font-mono text-[12px] text-[var(--accent-primary)] break-all">
                     ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
                   </div>
                 </div>
               </div>
-              <div style={{ marginTop: '16px', padding: '12px`, background: ${STATUS.warning}1a, border: `1px solid `${STATUS.warning}4c`', borderRadius: '8px', display: 'flex', gap: '10px' }}>
-                <Warning size={20} color={STATUS.warning} style={{ flexShrink: 0 }} />
+              <div className="mt-4 p-3 bg-[var(--status-warning)]/10 border border-solid border-[var(--status-warning)]/30 rounded-xl flex gap-2.5">
+                <Warning size={20} className="text-[var(--status-warning)] shrink-0" />
                 <div>
-                  <p style={{ fontSize: '13px', fontWeight: 500, color: STATUS.warning }}>Security tip</p>
-                  <p style={{ fontSize: '12px', color: TEXT.secondary, marginTop: '2px' }}>Allternit stores keys encrypted and only uses them for SSH connections.</p>
+                  <p className="text-[13px] font-bold text-[var(--status-warning)] m-0">Security tip</p>
+                  <p className="text-[12px] text-[var(--ui-text-secondary)] mt-1 m-0 leading-relaxed">Allternit stores keys locally encrypted and only uses them for authorized SSH sessions.</p>
                 </div>
               </div>
             </div>

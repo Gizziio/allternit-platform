@@ -58,7 +58,7 @@ export const SpeechInput = ({
 }: SpeechInputProps) => {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [mode] = useState<SpeechInputMode>(detectSpeechInputMode);
+  const mode = detectSpeechInputMode();
   const [isRecognitionReady, setIsRecognitionReady] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -76,7 +76,7 @@ export const SpeechInput = ({
 
   // Subscribe to speechToText service events (for integration with VoiceProvider)
   useEffect(() => {
-    const unsubscribe = speechToText.on((event) => {
+    const unsubscribe = speechToText.subscribe((event) => {
       switch (event.type) {
         case 'start':
           setIsListening(true);
@@ -114,7 +114,7 @@ export const SpeechInput = ({
       }
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   // Initialize Speech Recognition when mode is speech-recognition
@@ -307,12 +307,12 @@ export const SpeechInput = ({
     <div className="relative inline-flex items-center justify-center">
       {/* Animated pulse rings */}
       {isListening &&
-        [0, 1, 2].map((index) => (
+        [0, 1, 2].map((i) => (
           <div
             className="absolute inset-0 animate-ping rounded-full border-2 border-red-400/30"
-            key={index}
+            key={`pulse-${i}`}
             style={{
-              animationDelay: `${index * 0.3}s`,
+              animationDelay: `${i * 0.3}s`,
               animationDuration: "2s",
             }}
           />

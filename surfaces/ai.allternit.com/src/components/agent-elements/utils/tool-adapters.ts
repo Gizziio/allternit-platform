@@ -49,7 +49,7 @@ export function mapToolStateToStepState(
   return aiState === "result" ? "complete" : "animating";
 }
 
-export function mapToolNameToVariant(
+function mapToolNameToVariant(
   toolName: string,
 ): "thinking" | "action" | "search" | undefined {
   const lower = toolName.toLowerCase();

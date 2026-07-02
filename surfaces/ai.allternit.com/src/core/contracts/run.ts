@@ -1,6 +1,6 @@
 import { UUID, ISODate } from './base';
 
-export interface Run {
+interface Run {
   readonly id: UUID;
   readonly threadId: UUID;
   readonly projectId: UUID;

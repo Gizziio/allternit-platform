@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   X, Sparkle, ArrowRight, CaretLeft, CaretRight,
   HardDrives, RocketLaunch, Cpu, Stack, Shield, Key, Globe,
-  CheckCircle, Copy, ArrowSquareOut, Wrench, Command,
+  CheckCircle, Check, Copy, ArrowSquareOut, Wrench, Command,
   Cursor, Chat, Camera, FileText, TextT, Lightning,
   PuzzlePiece as Puzzle,
   Laptop, ShoppingBag, GraduationCap,
@@ -13,6 +13,7 @@ import {
 } from '@phosphor-icons/react';
 import { useNav } from '@/nav/useNav';
 import { openInBrowser } from '@/lib/openInBrowser';
+import { cn } from '@/lib/utils';
 
 // ─── Browser SVG icons ────────────────────────────────────────────────────────
 
@@ -51,23 +52,6 @@ const VSCodeIcon = ({ size = 18 }: { size?: number }) => (
     <path d="M17.583.063a1.5 1.5 0 0 0-1.092.46l-8.953 8.952-3.47-2.766a1.2 1.2 0 0 0-1.544.06l-1.15 1.032a.8.8 0 0 0 0 1.197l3.08 2.757-3.08 2.758a.8.8 0 0 0 0 1.197l1.15 1.032a1.2 1.2 0 0 0 1.544.06l3.47-2.767 8.953 8.953a1.5 1.5 0 0 0 1.092.46h1.917a.6.6 0 0 0 .6-.6V.663a.6.6 0 0 0-.6-.6h-1.917zM19.5 3.6v16.8l-7.033-5.625L19.5 3.6z"/>
   </svg>
 );
-
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-
-const T = {
-  bg:          'var(--surface-canvas)',
-  bgCard:      'var(--surface-panel)',
-  bgElevated:  'var(--surface-floating)',
-  border:      'var(--ui-border-muted)',
-  borderMed:   'var(--ui-border-default)',
-  borderStr:   'var(--ui-border-strong)',
-  textPrimary: 'var(--ui-text-primary)',
-  textSec:     'var(--ui-text-secondary)',
-  textTer:     'var(--ui-text-muted)',
-  brand:       'var(--accent-primary)',
-  brandDim:    'color-mix(in srgb, var(--accent-primary) 12%, var(--surface-panel))',
-  brandBorder: 'color-mix(in srgb, var(--accent-primary) 22%, transparent)',
-};
 
 // ─── Global keyframes ─────────────────────────────────────────────────────────
 
@@ -272,7 +256,7 @@ function ChatArt() {
     }
   }, []);
   const ref = useCanvasArt(draw);
-  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />;
+  return <canvas ref={ref} className="absolute inset-0 size-full" />;
 }
 
 // Code art: syntax-colored column rain
@@ -310,7 +294,7 @@ function CodeArt() {
     ctx.restore();
   }, []);
   const ref = useCanvasArt(draw);
-  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />;
+  return <canvas ref={ref} className="absolute inset-0 size-full" />;
 }
 
 // Computer Use art: radar rings + cursor trail
@@ -358,7 +342,7 @@ function ComputerUseArt() {
     ctx.restore();
   }, []);
   const ref = useCanvasArt(draw);
-  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />;
+  return <canvas ref={ref} className="absolute inset-0 size-full" />;
 }
 
 // Swarm art: constellation network
@@ -401,7 +385,7 @@ function SwarmArt() {
     });
   }, []);
   const ref = useCanvasArt(draw);
-  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />;
+  return <canvas ref={ref} className="absolute inset-0 size-full" />;
 }
 
 // Browser Capsule art: concentric rings + puzzle
@@ -442,7 +426,7 @@ function BrowserCapsuleArt() {
     ctx.fillStyle = 'rgba(66,133,244,0.9)'; ctx.fill();
   }, []);
   const ref = useCanvasArt(draw);
-  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />;
+  return <canvas ref={ref} className="absolute inset-0 size-full" />;
 }
 
 // Local Brain art: neural constellation
@@ -489,7 +473,7 @@ function LocalBrainArt() {
     });
   }, []);
   const ref = useCanvasArt(draw);
-  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />;
+  return <canvas ref={ref} className="absolute inset-0 size-full" />;
 }
 
 // Canvas doc art: document layout composition
@@ -539,7 +523,7 @@ function CanvasDocArt() {
     ctx.textBaseline='middle'; ctx.fillText('✦ AI writing', tagX+10, tagY+11);
   }, []);
   const ref = useCanvasArt(draw);
-  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />;
+  return <canvas ref={ref} className="absolute inset-0 size-full" />;
 }
 
 const ART_MAP: Record<ArtType, React.ComponentType> = {
@@ -561,7 +545,7 @@ function makeSpotlight(): SpotlightItem[] {
       id: 'cowork', title: 'Cowork', tagline: 'AI for Your Whole Team',
       description: 'Put Claude to work on tasks while you step away. Collaborate in real-time with AI as a full team member — assign tasks, review outputs, and ship faster together. Available now on Allternit Desktop.',
       gradient: 'linear-gradient(135deg,#06b6d4,#0284c7)', accent: '#06b6d4',
-      icon: <UsersThree size={26} weight="fill" color="var(--ui-text-primary)" />,
+      icon: <UsersThree size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Live', 'macOS'], art: 'chat', videoSrc: '/videos/cowork-demo.mp4',
       ctaPrimary: { label: 'Try Cowork', action: d('chat') },
       ctaSecondary: { label: 'Download Desktop', action: () => openInBrowser('https://allternit.com/download') },
@@ -570,7 +554,7 @@ function makeSpotlight(): SpotlightItem[] {
       id: 'chat', title: 'Allternit Chat', tagline: 'Conversational AI',
       description: 'The thinking layer for everything you do. Stream responses from any model, attach files, search the web, or hand off to an agent — all from one thread.',
       gradient: 'linear-gradient(135deg,#D97757,#B08D6E)', accent: '#D97757',
-      icon: <Chat size={26} weight="fill" color="var(--ui-text-primary)" />,
+      icon: <Chat size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Live', 'All modes'], art: 'chat',
       ctaPrimary: { label: 'Open Chat', action: d('chat') },
     },
@@ -578,7 +562,7 @@ function makeSpotlight(): SpotlightItem[] {
       id: 'code', title: 'Allternit Code', tagline: 'AI-Powered Development',
       description: 'Your AI pair programmer across terminal, VS Code, and JetBrains. Understands full repositories — not just snippets. Aider, Goose, Codex, and Claude in one surface.',
       gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', accent: 'var(--status-warning)',
-      icon: <Code size={26} weight="fill" color="var(--ui-text-primary)" />,
+      icon: <Code size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Live', 'CLI + IDE'], art: 'code',
       ctaPrimary: { label: 'Open Code', action: d('code') },
     },
@@ -586,7 +570,7 @@ function makeSpotlight(): SpotlightItem[] {
       id: 'computer-use', title: 'Computer Use', tagline: 'AI That Sees & Acts',
       description: 'Give AI eyes and hands in the browser. Navigate, click, fill forms, extract data — fully automated, fully observable. 44-route ACU gateway, production-grade.',
       gradient: 'linear-gradient(135deg,#5B8DEF,#3b5bdb)', accent: '#5B8DEF',
-      icon: <Monitor size={26} weight="fill" color="var(--ui-text-primary)" />,
+      icon: <Monitor size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Live', 'ACU Engine'], art: 'computer-use',
       ctaPrimary: { label: 'Open Operator', action: d('operator') },
     },
@@ -594,7 +578,7 @@ function makeSpotlight(): SpotlightItem[] {
       id: 'swarm', title: 'Swarm ADE', tagline: 'Agent Orchestration at Scale',
       description: 'Spin up hundreds of AI agents working in parallel. Route tasks, monitor topology, replay runs, set budgets — all in one real-time dashboard.',
       gradient: 'linear-gradient(135deg,#10b981,#059669)', accent: 'var(--status-success)',
-      icon: <Robot size={26} weight="fill" color="var(--ui-text-primary)" />,
+      icon: <Robot size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Live', 'Multi-agent'], art: 'swarm',
       ctaPrimary: { label: 'Open Swarm', action: d('swarm') },
     },
@@ -602,7 +586,7 @@ function makeSpotlight(): SpotlightItem[] {
       id: 'browser-capsule', title: 'Browser Capsule', tagline: 'AI in Every Tab',
       description: 'A browser extension that brings the full Allternit experience to any webpage. Select, ask, summarize, automate — without ever leaving the page.',
       gradient: 'linear-gradient(135deg,#4285F4,#34A853)', accent: '#4285F4',
-      icon: <Puzzle size={26} weight="fill" color="var(--ui-text-primary)" />,
+      icon: <Puzzle size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Chrome', 'Firefox'], art: 'browser-capsule',
       ctaPrimary: { label: 'Add to Chrome', action: () => openInBrowser('https://chrome.google.com/webstore') },
     },
@@ -610,7 +594,7 @@ function makeSpotlight(): SpotlightItem[] {
       id: 'local-brain', title: 'Local Brain', tagline: 'Private · Offline · Yours',
       description: 'Run AI entirely on your machine. No internet, no API keys, no cloud. Powered by Ollama + Llama 3.2. Every conversation stays on your device — permanently.',
       gradient: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', accent: '#8b5cf6',
-      icon: <Brain size={26} weight="fill" color="var(--ui-text-primary)" />,
+      icon: <Brain size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Offline', '~2 GB'], art: 'local-brain',
       ctaPrimary: { label: 'Set Up Local Brain', action: d('models-manage') },
     },
@@ -618,7 +602,7 @@ function makeSpotlight(): SpotlightItem[] {
       id: 'canvas', title: 'Allternit Canvas', tagline: 'Documents Built with AI',
       description: 'A new kind of document editor. Prompt to draft, refine together, export anywhere. The blank page, replaced.',
       gradient: 'linear-gradient(135deg,#6366f1,#4f46e5)', accent: '#6366f1',
-      icon: <Note size={26} weight="fill" color="var(--ui-text-primary)" />,
+      icon: <Note size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
       badges: ['Beta'], art: 'canvas-doc',
       ctaPrimary: { label: 'Open Canvas', action: d('allternit-canvas') },
     },
@@ -655,107 +639,83 @@ function SpotlightCarousel() {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '45fr 55fr',
-        borderRadius: 28,
-        overflow: 'hidden',
-        border: `1px solid ${T.border}`,
-        background: T.bgCard,
-        minHeight: 460,
-        opacity: show ? 1 : 0,
-        transform: show ? 'translateX(0)' : 'translateX(-14px)',
-        transition: 'opacity .28s cubic-bezier(.4,0,.2,1), transform .28s cubic-bezier(.4,0,.2,1)',
-      }}>
+      <div className={cn(
+        "grid grid-cols-[45fr_55fr] rounded-[28px] overflow-hidden border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] min-h-[460px] transition-[opacity,transform] duration-[280ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
+        show ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-[14px]"
+      )}>
         {/* Info panel */}
-        <div style={{
-          padding: '52px 48px',
-          display: 'flex', flexDirection: 'column',
-          background: `radial-gradient(ellipse at 0% 0%, ${item.accent}10 0%, transparent 65%)`,
-          borderRight: `1px solid ${T.border}`,
-        }}>
+        <div 
+          className="p-[52px_48px] flex flex-col border-r border-solid border-[var(--ui-border-muted)]"
+          style={{
+            background: `radial-gradient(ellipse at 0% 0%, ${item.accent}10 0%, transparent 65%)`,
+          }}
+        >
           {/* Product icon */}
-          <div style={{
-            width: 58, height: 58, borderRadius: 18, flexShrink: 0,
-            background: item.gradient,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: 28,
-            boxShadow: `0 16px 40px ${item.accent}35`,
-            position: 'relative', overflow: 'hidden',
-          }}>
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(135deg,rgba(255,255,255,.18) 0%,transparent 60%)',
-            }}/>
+          <div 
+            className="size-[58px] rounded-[18px] shrink-0 flex items-center justify-center mb-7 relative overflow-hidden"
+            style={{ 
+              background: item.gradient,
+              boxShadow: `0 16px 40px ${item.accent}35`
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-white/18 to-transparent" />
             {item.icon}
           </div>
 
           {/* Tagline chip */}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            fontSize: 12.5, fontWeight: 700, letterSpacing: '.1em',
-            textTransform: 'uppercase',
-            color: item.accent,
-            marginBottom: 10,
-          }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: item.accent, display: 'inline-block' }}/>
+          <span 
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-bold tracking-[0.1em] uppercase mb-2.5"
+            style={{ color: item.accent }}
+          >
+            <span className="size-[5px] rounded-full inline-block" style={{ background: item.accent }} />
             {item.tagline}
           </span>
 
           {/* Title */}
-          <h2 className="pdv-serif" style={{
-            fontSize: 40, fontWeight: 900, fontStyle: 'italic', color: T.textPrimary,
-            margin: '0 0 14px 0', letterSpacing: '-.03em', lineHeight: 1.05,
-          }}>{item.title}</h2>
+          <h2 className="pdv-serif text-[40px] font-900 italic text-[var(--ui-text-primary)] m-[0_0_14px_0] tracking-[-0.03em] leading-[1.05]">
+            {item.title}
+          </h2>
 
           {/* Badges */}
-          <div style={{ display: 'flex', gap: 7, marginBottom: 18, flexWrap: 'wrap' }}>
+          <div className="flex gap-1.5 mb-[18px] flex-wrap">
             {item.badges.map(b => (
-              <span key={b} style={{
-                padding: '3px 9px', borderRadius: 20,
-                background: `${item.accent}14`, border: `1px solid ${item.accent}28`,
-                fontSize: 12.5, fontWeight: 700, color: item.accent, letterSpacing: '.04em',
-              }}>{b}</span>
+              <span key={b} 
+                className="p-[3px_9px] rounded-[20px] border border-solid text-[12.5px] font-bold tracking-[0.04em]"
+                style={{
+                  background: `${item.accent}14`,
+                  borderColor: `${item.accent}28`,
+                  color: item.accent
+                }}
+              >
+                {b}
+              </span>
             ))}
           </div>
 
           {/* Description */}
-          <p style={{
-            fontSize: 14.5, color: T.textSec, lineHeight: 1.7,
-            margin: '0 0 36px 0', flex: 1,
-          }}>{item.description}</p>
+          <p className="text-[14.5px] text-[var(--ui-text-secondary)] leading-[1.7] m-[0_0_36px_0] flex-1">
+            {item.description}
+          </p>
 
           {/* CTAs */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button
+          <div className="flex gap-2.5 flex-wrap">
+            <button type="button"
               onClick={item.ctaPrimary.action}
-              style={{
-                padding: '11px 22px', borderRadius: 12, border: 'none',
-                background: item.gradient, color: 'var(--ui-text-primary)',
-                fontSize: 13.5, fontWeight: 600, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 7,
-                boxShadow: `0 6px 20px ${item.accent}28`,
-                transition: 'all .2s cubic-bezier(.4,0,.2,1)',
-                position: 'relative', overflow: 'hidden',
+              className="p-[11px_22px] rounded-xl border-none text-[var(--ui-text-primary)] text-[13.5px] font-semibold cursor-pointer flex items-center gap-1.5 relative overflow-hidden transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] hover:-translate-y-0.5"
+              style={{ 
+                background: item.gradient,
+                boxShadow: `0 6px 20px ${item.accent}28`
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow=`0 10px 32px ${item.accent}45`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow=`0 6px 20px ${item.accent}28`; }}
+              onMouseEnter={(e) => { e.currentTarget.style.boxShadow = `0 10px 32px ${item.accent}45`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.boxShadow = `0 6px 20px ${item.accent}28`; }}
             >
               {item.ctaPrimary.label}
               <ArrowRight size={14} weight="bold" />
             </button>
             {item.ctaSecondary && (
-              <button
+              <button type="button"
                 onClick={item.ctaSecondary.action}
-                style={{
-                  padding: '11px 20px', borderRadius: 12,
-                  border: `1px solid ${T.border}`,
-                  background: 'transparent', color: T.textSec,
-                  fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
-                  transition: 'all .2s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,.06)'; e.currentTarget.style.color=T.textPrimary; e.currentTarget.style.borderColor=T.borderMed; }}
-                onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color=T.textSec; e.currentTarget.style.borderColor=T.border; }}
+                className="p-[11px_20px] rounded-xl border border-solid border-[var(--ui-border-muted)] bg-transparent text-[var(--ui-text-secondary)] text-[13.5px] font-medium cursor-pointer transition-all duration-200 hover:bg-white/5 hover:text-[var(--ui-text-primary)] hover:border-[var(--ui-border-default)]"
               >
                 {item.ctaSecondary.label}
               </button>
@@ -764,78 +724,65 @@ function SpotlightCarousel() {
         </div>
 
         {/* Art panel */}
-        <div style={{
-          position: 'relative',
-          overflow: 'hidden',
-          background: `radial-gradient(ellipse at 70% 30%, ${item.accent}08 0%, ${T.bg} 70%)`,
-        }}>
+        <div 
+          className="relative overflow-hidden"
+          style={{
+            background: `radial-gradient(ellipse at 70% 30%, ${item.accent}08 0%, var(--surface-canvas) 70%)`,
+          }}
+        >
           {/* Mesh overlay */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 1,
-            backgroundImage: `radial-gradient(circle, ${item.accent}18 1px, transparent 1px)`,
-            backgroundSize: '32px 32px',
-            opacity: 0.35,
-          }}/>
+          <div 
+            className="absolute inset-0 z-[1] opacity-35 bg-[length:32px_32px]"
+            style={{
+              backgroundImage: `radial-gradient(circle, ${item.accent}18 1px, transparent 1px)`,
+            }}
+          />
           {/* Art canvas / video */}
-          <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
+          <div className="absolute inset-0 z-[2]">
             {item.videoSrc ? (
               <video
                 key={item.videoSrc}
                 src={item.videoSrc}
                 autoPlay muted loop playsInline
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                className="size-full object-cover block"
               />
             ) : (
               <ArtComponent />
             )}
           </div>
           {/* Center icon badge */}
-          <div style={{
-            position: 'absolute', top: '50%', left: '50%',
-            transform: 'translate(-50%,-50%)',
-            zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
-            pointerEvents: 'none',
-          }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: 22,
-              background: item.gradient,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: `0 20px 60px ${item.accent}50, 0 0 0 1px rgba(255,255,255,.12)`,
-              animation: 'pdv-float-a 6s ease-in-out infinite',
-              position: 'relative', overflow: 'hidden',
-            }}>
-              <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg,rgba(255,255,255,.2) 0%,transparent 55%)' }}/>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[3] flex flex-col items-center gap-3.5 pointer-events-none">
+            <div 
+              className="size-[72px] rounded-[22px] flex items-center justify-center relative overflow-hidden animate-[pdv-float-a_6s_ease-in-out_infinite] shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
+              style={{ 
+                background: item.gradient,
+                boxShadow: `0 20px 60px ${item.accent}50`
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
               {React.cloneElement(item.icon as React.ReactElement, { size: 32 })}
             </div>
-            <div style={{
-              padding: '5px 14px', borderRadius: 20,
-              background: 'rgba(0,0,0,.6)',
-              border: `1px solid ${T.border}`,
-              fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.5)',
-              letterSpacing: '.04em',
-              backdropFilter: 'blur(12px)',
-            }}>{item.title}</div>
+            <div className="p-[5px_14px] rounded-[20px] bg-black/60 border border-solid border-[var(--ui-border-muted)] text-[12px] font-semibold text-white/50 tracking-[0.04em] backdrop-blur-xl">
+              {item.title}
+            </div>
           </div>
           {/* Edge fade */}
-          <div style={{
-            position: 'absolute', inset: 0, zIndex: 4,
-            background: `linear-gradient(to right, ${T.bgCard}40 0%, transparent 20%, transparent 80%, ${T.bgCard}20 100%)`,
-            pointerEvents: 'none',
-          }}/>
+          <div className="absolute inset-0 z-[4] bg-gradient-to-r from-[var(--surface-panel)]/25 via-transparent to-[var(--surface-panel)]/15 pointer-events-none" />
         </div>
       </div>
 
       {/* Nav row */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:14, marginTop:18 }}>
+      <div className="flex items-center justify-center gap-3.5 mt-[18px]">
         <NavArrow dir="left"  onClick={() => jump((idx-1+ITEMS.length)%ITEMS.length)} />
-        <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+        <div className="flex gap-1.5 items-center">
           {ITEMS.map((it,i) => (
-            <button key={it.id} onClick={() => jump(i)} style={{
-              width: i===idx ? 24 : 7, height: 7, borderRadius: 4,
-              background: i===idx ? item.accent : 'rgba(255,255,255,.12)',
-              border: 'none', cursor: 'pointer', padding: 0,
-              transition: 'all .35s cubic-bezier(.4,0,.2,1)',
-            }}/>
+            <button type="button" key={it.id} onClick={() => jump(i)} 
+              className={cn(
+                "h-[7px] rounded-full border-none cursor-pointer p-0 transition-all duration-[350ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
+                i === idx ? "w-6" : "w-[7px] bg-white/12"
+              )}
+              style={{ background: i === idx ? item.accent : undefined }}
+            />
           ))}
         </div>
         <NavArrow dir="right" onClick={() => jump((idx+1)%ITEMS.length)} />
@@ -843,11 +790,11 @@ function SpotlightCarousel() {
 
       {/* Progress strip */}
       {!paused && (
-        <div style={{ marginTop:10, height:2, background:'rgba(255,255,255,.04)', borderRadius:1, overflow:'hidden' }}>
-          <div key={`${idx}-p`} style={{
-            height:'100%', background:item.accent, borderRadius:1,
-            animation:'pdv-progress 10s linear forwards', width:0,
-          }}/>
+        <div className="mt-2.5 h-[2px] bg-white/5 rounded-full overflow-hidden">
+          <div key={`${idx}-p`} 
+            className="h-full rounded-full animate-[pdv-progress_10s_linear_forwards] w-0"
+            style={{ background: item.accent }}
+          />
         </div>
       )}
     </div>
@@ -855,20 +802,10 @@ function SpotlightCarousel() {
 }
 
 function NavArrow({ dir, onClick }: { dir:'left'|'right'; onClick:()=>void }) {
-  const [hov, setHov] = useState(false);
   return (
-    <button
+    <button type="button"
       onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        width:34, height:34, borderRadius:'50%',
-        background: hov ? 'var(--ui-border-default)' : 'var(--surface-hover)',
-        border: `1px solid ${hov ? T.borderMed : T.border}`,
-        color: hov ? T.textPrimary : T.textSec,
-        cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-        transition:'all .18s',
-      }}
+      className="size-[34px] rounded-full bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] text-[var(--ui-text-secondary)] cursor-pointer flex items-center justify-center transition-all duration-[180ms] hover:bg-[var(--ui-border-default)] hover:border-[var(--ui-border-default)] hover:text-[var(--ui-text-primary)]"
     >
       {dir==='left' ? <CaretLeft size={13} weight="bold"/> : <CaretRight size={13} weight="bold"/>}
     </button>
@@ -905,7 +842,6 @@ const STATUS_STYLE: Record<ProductStatus, { label:string; color:string; bg:strin
 };
 
 function ProductMiniCard({ p }: { p: MiniProduct }) {
-  const [hov, setHov] = useState(false);
   const ss = STATUS_STYLE[p.status];
   const BROWSER_OPEN: Record<string, string> = {
     'browser-ext': 'https://chrome.google.com/webstore',
@@ -919,51 +855,53 @@ function ProductMiniCard({ p }: { p: MiniProduct }) {
     : undefined;
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
+      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick(); }}
+      className={cn(
+        "group rounded-2xl border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] p-5 transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] relative overflow-hidden flex flex-col gap-3 shadow-none hover:bg-[var(--surface-floating)] hover:-translate-y-[3px]",
+        onClick ? "cursor-pointer" : "cursor-default"
+      )}
       style={{
-        borderRadius: 16,
-        background: hov ? T.bgElevated : T.bgCard,
-        border: `1px solid ${hov ? p.accent+'30' : T.border}`,
-        padding: '20px',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'all .2s cubic-bezier(.4,0,.2,1)',
-        transform: hov ? 'translateY(-3px)' : 'none',
-        boxShadow: hov ? `0 12px 32px ${p.accent}14` : 'none',
-        position: 'relative', overflow: 'hidden',
-        display: 'flex', flexDirection: 'column', gap: 12,
-      }}
+        '--item-accent-14' : `${p.accent}14`
+      } as React.CSSProperties}
     >
-      {/* Top accent line */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: 2,
-        background: hov ? p.gradient : 'transparent',
-        transition: 'all .2s',
-        borderRadius: '16px 16px 0 0',
-      }}/>
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: hov ? `${p.accent}22` : `${p.accent}14`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: p.accent, transition: 'all .2s', flexShrink: 0,
-        }}>{p.icon}</div>
-        <span style={{
-          fontSize: 12.5, fontWeight: 700, letterSpacing: '.04em',
-          color: ss.color, background: ss.bg, border: `1px solid ${ss.border}`,
-          padding: '2px 8px', borderRadius: 20,
-        }}>{ss.label}</span>
+      <div 
+        className="absolute top-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-[16px_16px_0_0]"
+        style={{ background: p.gradient }}
+      />
+      <div className="flex items-start justify-between">
+        <div 
+          className="size-9 rounded-[10px] flex items-center justify-center transition-all duration-200"
+          style={{ 
+            color: p.accent,
+            background: `${p.accent}14`,
+          }}
+        >
+          {p.icon}
+        </div>
+        <span 
+          className="text-[12.5px] font-bold tracking-[0.04em] p-[2px_8px] rounded-[20px] border border-solid"
+          style={{ 
+            color: ss.color, 
+            background: ss.bg, 
+            borderColor: ss.border 
+          }}
+        >
+          {ss.label}
+        </span>
       </div>
       <div>
-        <div style={{ fontSize:13.5, fontWeight:600, color: hov ? T.textPrimary : 'var(--ui-text-primary)', marginBottom:4, transition:'color .2s' }}>
+        <div className="text-[13.5px] font-semibold mb-1 transition-colors duration-200 group-hover:text-[var(--ui-text-primary)] text-[var(--ui-text-primary)]">
           {p.name}
         </div>
-        <div style={{ fontSize:12, color:T.textSec, lineHeight:1.55 }}>{p.description}</div>
+        <div className="text-[12px] text-[var(--ui-text-secondary)] leading-[1.55]">{p.description}</div>
       </div>
       {onClick && (
-        <div style={{ display:'flex', alignItems:'center', gap:4, fontSize: 12.5, color: hov ? p.accent : T.textTer, marginTop:'auto', transition:'color .2s', fontWeight:500 }}>
+        <div 
+          className="flex items-center gap-1 text-[12.5px] mt-auto transition-colors duration-200 font-medium text-[var(--ui-text-muted)]"
+          style={{ color: p.accent }}
+        >
           Open <ArrowRight size={11} weight="bold"/>
         </div>
       )}
@@ -980,40 +918,40 @@ function InfraSection() {
     { icon:<Stack size={19} color="#7b68ee"/>, ibg:'rgba(123,104,238,.1)', accent:'#7b68ee', badge:undefined, title:'Environments', desc:'Railway-style setup. Devcontainers, Nix, sandboxes.', cta:'Browse', onClick:()=>window.dispatchEvent(new CustomEvent('allternit:open-settings',{detail:{section:'infrastructure',tab:'environments'}})) },
   ];
   return (
-    <div style={{ borderRadius:24, border:`1px solid ${T.border}`, background:T.bgCard, padding:'40px 44px', position:'relative', overflow:'hidden' }}>
-      <div style={{ position:'absolute', top:-70, right:-70, width:240, height:240, background:'radial-gradient(circle,rgba(212,176,140,.07) 0%,transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }}/>
-      <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:26, position:'relative' }}>
-        <div style={{ width:46, height:46, borderRadius:13, background:'rgba(212,176,140,.1)', border:`1px solid ${T.brandBorder}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <HardDrives size={22} color={T.brand}/>
+    <div className="rounded-3xl border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] p-[40px_44px] relative overflow-hidden">
+      <div className="absolute -top-[70px] -right-[70px] size-[240px] bg-[radial-gradient(circle,rgba(212,176,140,0.07)_0%,transparent_70%)] blur-[40px] pointer-events-none" />
+      <div className="flex items-center gap-3.5 mb-6.5 relative">
+        <div className="size-[46px] rounded-[13px] bg-[rgba(212,176,140,0.1)] border border-solid border-[var(--ui-border-strong)] flex items-center justify-center">
+          <HardDrives size={22} className="text-[var(--accent-primary)]"/>
         </div>
         <div>
-          <h3 style={{ fontSize:20, fontWeight:600, color:T.textPrimary, margin:'0 0 2px 0' }}>Deploy Your Infrastructure</h3>
-          <p style={{ fontSize:13, color:T.textSec, margin:0 }}>BYOC, VPS, or Cloud — your agents, your servers.</p>
+          <h3 className="text-[20px] font-semibold text-[var(--ui-text-primary)] m-0 mb-0.5">Deploy Your Infrastructure</h3>
+          <p className="text-[13px] text-[var(--ui-text-secondary)] m-0">BYOC, VPS, or Cloud — your agents, your servers.</p>
         </div>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:22, position:'relative' }}>
+      <div className="grid grid-cols-3 gap-3.5 mb-5.5 relative">
         {opts.map(o => (
-          <button key={o.title} onClick={o.onClick} style={{ padding:'20px', borderRadius:14, border:`1px solid ${T.border}`, background:'rgba(255,255,255,.02)', cursor:'pointer', textAlign:'left', transition:'all .2s' }}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=`${o.accent}35`;e.currentTarget.style.background=`${o.accent}08`;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.background='rgba(255,255,255,.02)';}}>
-            <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:10 }}>
-              <div style={{ width:34, height:34, borderRadius:9, background:o.ibg, display:'flex', alignItems:'center', justifyContent:'center' }}>{o.icon}</div>
-              {o.badge && <span style={{ fontSize: 12, color:o.accent, fontWeight:700 }}>{o.badge}</span>}
+          <button type="button" key={o.title} onClick={o.onClick} className="group p-5 rounded-[14px] border border-solid border-[var(--ui-border-muted)] bg-white/2 cursor-pointer text-left transition-all duration-200 hover:bg-white/5"
+            style={{
+              borderColor: `${o.accent}35`,
+            }}>
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="size-[34px] rounded-[9px] flex items-center justify-center" style={{ background: o.ibg }}>{o.icon}</div>
+              {o.badge && <span className="text-[12px] font-bold" style={{ color: o.accent }}>{o.badge}</span>}
             </div>
-            <h4 style={{ fontSize:14.5, fontWeight:600, color:T.textPrimary, margin:'0 0 5px 0' }}>{o.title}</h4>
-            <p style={{ fontSize:12, color:T.textSec, margin:'0 0 12px 0', lineHeight:1.5 }}>{o.desc}</p>
-            <div style={{ display:'flex', alignItems:'center', gap:5, color:o.accent, fontSize:12, fontWeight:500 }}>{o.cta} <ArrowRight size={11}/></div>
+            <h4 className="text-[14.5px] font-semibold text-[var(--ui-text-primary)] m-0 mb-1.5">{o.title}</h4>
+            <p className="text-[12px] text-[var(--ui-text-secondary)] m-0 mb-3 leading-[1.5]">{o.desc}</p>
+            <div className="flex items-center gap-1 text-[12px] font-medium" style={{ color: o.accent }}>{o.cta} <ArrowRight size={11}/></div>
           </button>
         ))}
       </div>
-      <div style={{ display:'flex', gap:18, padding:'14px 0 0', borderTop:`1px solid ${T.border}`, flexWrap:'wrap', alignItems:'center' }}>
-        {[{i:<Shield size={12} color={T.textTer}/>,l:'End-to-end encrypted'},{i:<Key size={12} color={T.textTer}/>,l:'SSH key management'},{i:<Globe size={12} color={T.textTer}/>,l:'5 cloud providers'}].map(f=>(
-          <div key={f.l} style={{display:'flex',alignItems:'center',gap:6}}>{f.i}<span style={{fontSize: 12.5,color:T.textTer}}>{f.l}</span></div>
+      <div className="flex gap-4.5 pt-3.5 border-t border-solid border-[var(--ui-border-muted)] flex-wrap items-center">
+        {[{i:<Shield size={12} className="text-[var(--ui-text-muted)]"/>,l:'End-to-end encrypted'},{i:<Key size={12} className="text-[var(--ui-text-muted)]"/>,l:'SSH key management'},{i:<Globe size={12} className="text-[var(--ui-text-muted)]"/>,l:'5 cloud providers'}].map(f=>(
+          <div key={f.l} className="flex items-center gap-1.5">{f.i}<span className="text-[12.5px] text-[var(--ui-text-muted)]">{f.l}</span></div>
         ))}
-        <div style={{flex:1}}/>
-        <button onClick={()=>window.dispatchEvent(new CustomEvent('allternit:open-settings',{detail:{section:'infrastructure'}}))}
-          style={{padding:'7px 14px',borderRadius:8,border:`1px solid ${T.brandBorder}`,background:T.brandDim,color:T.brand,fontSize:12,fontWeight:500,cursor:'pointer',display:'flex',alignItems:'center',gap:5,transition:'all .2s'}}
-          onMouseEnter={e=>{e.currentTarget.style.background='rgba(212,176,140,.18)';}} onMouseLeave={e=>{e.currentTarget.style.background=T.brandDim;}}>
+        <div className="flex-1" />
+        <button type="button" onClick={()=>window.dispatchEvent(new CustomEvent('allternit:open-settings',{detail:{section:'infrastructure'}}))}
+          className="p-[7px_14px] rounded-lg border border-solid border-[var(--ui-border-strong)] bg-[color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-panel))] text-[var(--accent-primary)] text-[12px] font-medium cursor-pointer flex items-center gap-1.5 transition-all duration-200 hover:bg-[rgba(212,176,140,0.18)]">
           Manage Infrastructure <ArrowRight size={11}/>
         </button>
       </div>
@@ -1044,63 +982,84 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
   ];
 
   return (
-    <div style={{ marginTop:24, borderRadius:24, border:`1px solid rgba(66,133,244,.18)`, background:T.bgCard, padding:'40px', position:'relative', overflow:'hidden' }}>
-      <div style={{position:'absolute',top:-60,right:-40,width:240,height:240,background:'radial-gradient(circle,rgba(66,133,244,.08) 0%,transparent 70%)',filter:'blur(50px)',pointerEvents:'none'}}/>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:28,position:'relative'}}>
-        <div style={{display:'flex',alignItems:'center',gap:14}}>
-          <div style={{width:46,height:46,borderRadius:13,background:'linear-gradient(135deg,#4285F4,#34A853)',display:'flex',alignItems:'center',justifyContent:'center'}}><Puzzle size={24} color="var(--ui-text-primary)"/></div>
+    <div className="mt-6 rounded-3xl border border-solid border-blue-500/20 bg-[var(--surface-panel)] p-10 relative overflow-hidden">
+      <div className="absolute -top-[60px] -right-[40px] size-[240px] bg-[radial-gradient(circle,rgba(66,133,244,0.08)_0%,transparent_70%)] blur-[50px] pointer-events-none" />
+      <div className="flex items-center justify-between mb-7 relative">
+        <div className="flex items-center gap-3.5">
+          <div className="size-[46px] rounded-[13px] bg-gradient-to-br from-[#4285F4] to-[#34A853] flex items-center justify-center">
+            <Puzzle size={24} className="text-[var(--ui-text-primary)]" />
+          </div>
           <div>
-            <h3 style={{fontSize:20,fontWeight:600,color:T.textPrimary,margin:'0 0 2px 0'}}>Allternit Browser Capsule</h3>
-            <p style={{fontSize:12.5,color:T.textSec,margin:0}}>Version 1.0.0 · Free · Open Source</p>
+            <h3 className="text-[20px] font-semibold text-[var(--ui-text-primary)] m-0 mb-0.5">Allternit Browser Capsule</h3>
+            <p className="text-[12.5px] text-[var(--ui-text-secondary)] m-0">Version 1.0.0 · Free · Open Source</p>
           </div>
         </div>
-        <button onClick={onClose} style={{width:32,height:32,borderRadius:8,background:'rgba(255,255,255,.04)',border:`1px solid ${T.border}`,color:T.textSec,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s'}}
-          onMouseEnter={e=>{e.currentTarget.style.color=T.textPrimary;e.currentTarget.style.background='rgba(255,255,255,.08)';}} onMouseLeave={e=>{e.currentTarget.style.color=T.textSec;e.currentTarget.style.background='rgba(255,255,255,.04)';}}>
+        <button type="button" onClick={onClose} className="size-8 rounded-lg bg-white/4 border border-solid border-[var(--ui-border-muted)] text-[var(--ui-text-secondary)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--ui-text-primary)] hover:bg-white/10">
           <X size={15}/>
         </button>
       </div>
 
-      <div style={{display:'flex',gap:5,marginBottom:28,padding:4,background:'rgba(255,255,255,.03)',borderRadius:10,width:'fit-content'}}>
-        {([['chrome','Chrome'],[' firefox','Firefox'],['build','Build']] as const).map(([id,label])=>(
-          <button key={id} onClick={()=>setTab(id as any)} style={{padding:'8px 16px',borderRadius:8,border:'none',background:tab===id?'var(--status-info-bg)':'transparent',color:tab===id?'#4285F4':T.textSec,fontSize:13,fontWeight:500,cursor:'pointer',display:'flex',alignItems:'center',gap:6,transition:'all .2s'}}>
-            {id==='chrome'&&<ChromeIcon size={14}/>}{id===' firefox'&&<FirefoxIcon size={14}/>}{id==='build'&&<Wrench size={14}/>}
+      <div className="flex gap-1 mb-7 p-1 bg-white/5 rounded-[10px] w-fit">
+        {([['chrome','Chrome'],['firefox','Firefox'],['build','Build']] as const).map(([id,label])=>(
+          <button type="button" 
+            key={id} 
+            onClick={() => setTab(id)} 
+            className={cn(
+              "px-4 py-2 rounded-lg border-none text-[13px] font-medium cursor-pointer flex items-center gap-1.5 transition-all duration-200",
+              tab === id ? "bg-[var(--status-info-bg)] text-[#4285F4]" : "bg-transparent text-[var(--ui-text-secondary)] hover:bg-white/5"
+            )}
+          >
+            {id === 'chrome' && <ChromeIcon size={14} />}
+            {id === 'firefox' && <FirefoxIcon size={14} />}
+            {id === 'build' && <Wrench size={14} />}
             {label}
           </button>
         ))}
       </div>
 
-      <div style={{marginBottom:32}}>
+      <div className="mb-8">
         {(tab==='chrome'||tab==='firefox') && (
           <div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
+            <div className="grid grid-cols-2 gap-3 mb-3.5">
               {(tab==='chrome'
-                ? [{href:'https://chrome.google.com/webstore',icon:<ChromeIcon size={26}/>,label:'Chrome Web Store',sub:'Official · Auto-updates',accent:'#4285F4'},{href:'https://github.com/allternit/chrome-extension/releases',icon:<span style={{color:'var(--accent-primary)'}}><ArrowSquareOut size={26}/></span>,label:'Download .crx',sub:'Manual · Latest build',accent:'var(--accent-primary)'}]
-                : [{href:'https://addons.mozilla.org',icon:<FirefoxIcon size={26}/>,label:'Firefox Add-ons',sub:'Official · Auto-updates',accent:'#FF7139'},{href:'https://github.com/allternit/firefox-extension/releases',icon:<span style={{color:'var(--accent-primary)'}}><ArrowSquareOut size={26}/></span>,label:'Download .xpi',sub:'Manual · Latest build',accent:'var(--accent-primary)'}]
+                ? [{href:'https://chrome.google.com/webstore',icon:<ChromeIcon size={26}/>,label:'Chrome Web Store',sub:'Official · Auto-updates',accent:'#4285F4'},{href:'https://github.com/allternit/chrome-extension/releases',icon:<ArrowSquareOut size={26} className="text-[var(--accent-primary)]"/>,label:'Download .crx',sub:'Manual · Latest build',accent:'var(--accent-primary)'}]
+                : [{href:'https://addons.mozilla.org',icon:<FirefoxIcon size={26}/>,label:'Firefox Add-ons',sub:'Official · Auto-updates',accent:'#FF7139'},{href:'https://github.com/allternit/firefox-extension/releases',icon:<ArrowSquareOut size={26} className="text-[var(--accent-primary)]"/>,label:'Download .xpi',sub:'Manual · Latest build',accent:'var(--accent-primary)'}]
               ).map(l=>(
-                <button key={l.href} onClick={() => openInBrowser(l.href)} style={{padding:'16px 18px',borderRadius:12,background:`${l.accent}0e`,border:`1px solid ${l.accent}25`,textDecoration:'none',display:'flex',alignItems:'center',gap:12,transition:'all .2s',cursor:'pointer'}}
-                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';}}>
-                  <div style={{color:l.accent}}>{l.icon}</div>
-                  <div><div style={{fontSize:13.5,fontWeight:600,color:T.textPrimary,marginBottom:2}}>{l.label}</div><div style={{fontSize: 12.5,color:T.textSec}}>{l.sub}</div></div>
-                  <ArrowSquareOut size={14} color={l.accent} style={{marginLeft:'auto'}}/>
+                <button type="button" key={l.href} onClick={() => openInBrowser(l.href)} className="p-[16px_18px] rounded-xl border border-solid border-white/5 flex items-center gap-3 transition-all duration-200 cursor-pointer hover:-translate-y-0.5"
+                  style={{ background: `${l.accent}0e`, borderColor: `${l.accent}25` }}>
+                  <div style={{ color: l.accent }}>{l.icon}</div>
+                  <div className="text-left">
+                    <div className="text-[13.5px] font-semibold text-[var(--ui-text-primary)] mb-0.5">{l.label}</div>
+                    <div className="text-[12.5px] text-[var(--ui-text-secondary)]">{l.sub}</div>
+                  </div>
+                  <ArrowSquareOut size={14} className="ml-auto" style={{ color: l.accent }} />
                 </button>
               ))}
             </div>
-            <div style={{padding:'11px 14px',background:'rgba(34,197,94,.07)',borderRadius:9,border:'1px solid rgba(34,197,94,.15)',display:'flex',alignItems:'center',gap:9}}>
-              <CheckCircle size={14} color="var(--status-success)"/>
-              <span style={{fontSize:12,color:'var(--status-success)'}}>{tab==='chrome'?'Compatible with Chrome, Edge, Brave, Opera, and all Chromium-based browsers':'Compatible with Firefox, Waterfox, LibreWolf, and Firefox-based browsers'}</span>
+            <div className="p-[11px_14px] bg-green-500/10 rounded-[9px] border border-solid border-green-500/20 flex items-center gap-2.5">
+              <CheckCircle size={14} className="text-[var(--status-success)]" />
+              <span className="text-[12px] text-[var(--status-success)]">
+                {tab === 'chrome' ? 'Compatible with Chrome, Edge, Brave, Opera, and all Chromium-based browsers' : 'Compatible with Firefox, Waterfox, LibreWolf, and Firefox-based browsers'}
+              </span>
             </div>
           </div>
         )}
         {tab==='build'&&(
           <div>
-            <p style={{fontSize:12.5,color:T.textSec,marginBottom:16}}>Build from source for the latest features and development.</p>
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            <p className="text-[12.5px] text-[var(--ui-text-secondary)] mb-4">Build from source for the latest features and development.</p>
+            <div className="flex flex-col gap-2">
               {cmds.map((c,i)=>(
-                <div key={i} style={{padding:'13px 16px',background:'rgba(0,0,0,.25)',borderRadius:10,border:`1px solid ${T.border}`,display:'flex',alignItems:'center',gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:'50%',background:'var(--status-info-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize: 12,color:'var(--status-info)',fontWeight:700,flexShrink:0}}>{i+1}</div>
-                  <div style={{flex:1}}><div style={{fontSize: 12.5,color:T.textTer,marginBottom:3}}>{c.l}</div><code style={{fontSize:12.5,color:'var(--accent-primary)',fontFamily: 'var(--font-mono)'}}>{c.c}</code></div>
-                  <button onClick={()=>copy(c.c)} style={{padding:6,borderRadius:7,background:copied===c.c?'rgba(34,197,94,.14)':'rgba(255,255,255,.04)',border:'none',cursor:'pointer',color:copied===c.c?'var(--status-success)':T.textSec,transition:'all .2s'}}>
-                    {copied===c.c?<CheckCircle size={13}/>:<Copy size={13}/>}
+                <div key={`${c.l}-${i}`} className="p-[13px_16px] bg-black/25 rounded-[10px] border border-solid border-[var(--ui-border-muted)] flex items-center gap-3">
+                  <div className="size-5.5 rounded-full bg-[var(--status-info-bg)] flex items-center justify-center text-[12px] text-[var(--status-info)] font-bold shrink-0">{i+1}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12.5px] text-[var(--ui-text-muted)] mb-0.5">{c.l}</div>
+                    <code className="text-[12.5px] text-[var(--accent-primary)] font-mono truncate block">{c.c}</code>
+                  </div>
+                  <button type="button" onClick={() => copy(c.c)} className={cn(
+                    "p-1.5 rounded-lg border-none cursor-pointer transition-all duration-200",
+                    copied === c.c ? "bg-green-500/15 text-[var(--status-success)]" : "bg-white/4 text-[var(--ui-text-secondary)] hover:bg-white/10"
+                  )}>
+                    {copied === c.c ? <Check size={13} /> : <Copy size={13} />}
                   </button>
                 </div>
               ))}
@@ -1109,27 +1068,31 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
         )}
       </div>
 
-      <h4 style={{fontSize:15,fontWeight:600,color:T.textPrimary,margin:'0 0 14px 0'}}>Features</h4>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:24}}>
+      <h4 className="text-[15px] font-semibold text-[var(--ui-text-primary)] m-0 mb-3.5">Features</h4>
+      <div className="grid grid-cols-3 gap-3 mb-6">
         {features.map((f,i)=>(
-          <div key={i} style={{padding:'16px',background:'rgba(255,255,255,.02)',borderRadius:12,border:`1px solid ${T.border}`,transition:'all .2s'}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--status-info-bg)';e.currentTarget.style.background='rgba(255,255,255,.04)';}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.background='rgba(255,255,255,.02)';}}>
-            <div style={{marginBottom:9}}>{f.i}</div>
-            <h5 style={{fontSize:12.5,fontWeight:600,color:T.textPrimary,margin:'0 0 5px 0'}}>{f.t}</h5>
-            <p style={{fontSize: 12.5,color:T.textSec,margin:'0 0 10px 0',lineHeight:1.5}}>{f.d}</p>
-            <div style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 7px',background:'var(--surface-hover)',borderRadius:5,fontSize: 12.5,color:T.textTer,fontFamily: 'var(--font-mono)'}}>
+          <div key={`${f.t}-${i}`} className="p-4 bg-white/2 rounded-xl border border-solid border-[var(--ui-border-muted)] transition-all duration-200 hover:border-blue-500/20 hover:bg-white/4">
+            <div className="mb-2">{f.i}</div>
+            <h5 className="text-[12.5px] font-semibold text-[var(--ui-text-primary)] m-0 mb-1">{f.t}</h5>
+            <p className="text-[12.5px] text-[var(--ui-text-secondary)] m-0 mb-2.5 leading-relaxed">{f.d}</p>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--surface-hover)] rounded-[5px] text-[12.5px] text-[var(--ui-text-muted)] font-mono">
               <Command size={9}/> {f.sc}
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{padding:'14px 16px',background:'rgba(255,255,255,.02)',borderRadius:12,border:`1px solid ${T.border}`}}>
-        <p style={{fontSize:12,fontWeight:600,color:T.textPrimary,margin:'0 0 12px 0'}}>Supported Browsers</p>
-        <div style={{display:'flex',gap:18,flexWrap:'wrap'}}>
-          {[{i:<ChromeIcon size={16}/>,n:'Chrome',v:'88+'},{i:<FirefoxIcon size={16}/>,n:'Firefox',v:'109+'},{i:<EdgeIcon size={16}/>,n:'Edge',v:'88+'},{i:<span style={{color:'#FBBC04'}}><ArrowSquareOut size={16}/></span>,n:'Brave',v:'1.20+'},{i:<span style={{color:'#FF1B2D'}}><ArrowSquareOut size={16}/></span>,n:'Opera',v:'74+'}].map((b,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:7}}>{b.i}<div><div style={{fontSize:12,color:T.textPrimary}}>{b.n}</div><div style={{fontSize: 12,color:T.textTer}}>{b.v}</div></div></div>
+      <div className="p-[14px_16px] bg-white/2 rounded-xl border border-solid border-[var(--ui-border-muted)]">
+        <p className="text-[12px] font-semibold text-[var(--ui-text-primary)] m-0 mb-3">Supported Browsers</p>
+        <div className="flex gap-4.5 flex-wrap">
+          {[{i:<ChromeIcon size={16}/>,n:'Chrome',v:'88+'},{i:<FirefoxIcon size={16}/>,n:'Firefox',v:'109+'},{i:<EdgeIcon size={16}/>,n:'Edge',v:'88+'},{i:<ArrowSquareOut size={16} className="text-[#FBBC04]"/>,n:'Brave',v:'1.20+'},{i:<ArrowSquareOut size={16} className="text-[#FF1B2D]"/>,n:'Opera',v:'74+'}].map((b,i)=>(
+            <div key={`${b.n}-${i}`} className="flex items-center gap-1.5">
+              {b.i}
+              <div>
+                <div className="text-[12px] text-[var(--ui-text-primary)]">{b.n}</div>
+                <div className="text-[12px] text-[var(--ui-text-muted)]">{b.v}</div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -1146,22 +1109,20 @@ function DesktopBanner() {
     { icon:<LinuxIcon size={16}/>, label:'Linux', sub:'.deb · .rpm · AppImage' },
   ];
   return (
-    <div style={{borderRadius:24,border:`1px solid ${T.border}`,background:T.bgCard,padding:'36px 44px',display:'flex',alignItems:'center',justifyContent:'space-between',position:'relative',overflow:'hidden'}}>
-      <div style={{position:'absolute',top:-60,left:-60,width:200,height:200,background:`radial-gradient(circle,${T.brandDim} 0%,transparent 70%)`,filter:'blur(40px)',pointerEvents:'none'}}/>
-      <div style={{display:'flex',alignItems:'center',gap:18,position:'relative'}}>
-        <div style={{width:50,height:50,borderRadius:14,background:'linear-gradient(135deg,#D4B08C,#B08D6E)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 10px 30px rgba(212,176,140,.28)'}}>
-          <Laptop size={24} color="var(--ui-text-primary)"/>
+    <div className="rounded-3xl border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] p-[36px_44px] flex items-center justify-between relative overflow-hidden">
+      <div className="absolute -top-[60px] -left-[60px] size-[200px] bg-[radial-gradient(circle,color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-panel))_0%,transparent_70%)] blur-[40px] pointer-events-none" />
+      <div className="flex items-center gap-4.5 relative">
+        <div className="size-[50px] rounded-[14px] bg-gradient-to-br from-[#D4B08C] to-[#B08D6E] flex items-center justify-center shadow-[0_10px_30px_rgba(212,176,140,0.28)]">
+          <Laptop size={24} className="text-[var(--ui-text-primary)]" />
         </div>
         <div>
-          <h3 style={{fontSize:18,fontWeight:600,color:T.textPrimary,margin:'0 0 4px 0'}}>Allternit Desktop</h3>
-          <p style={{fontSize:13,color:T.textSec,margin:0}}>The full platform as a native application.</p>
+          <h3 className="text-[18px] font-semibold text-[var(--ui-text-primary)] m-0 mb-1">Allternit Desktop</h3>
+          <p className="text-[13px] text-[var(--ui-text-secondary)] m-0">The full platform as a native application.</p>
         </div>
       </div>
-      <div style={{display:'flex',gap:10,position:'relative'}}>
+      <div className="flex gap-2.5 relative">
         {platforms.map(pl=>(
-          <button key={pl.label} onClick={() => openInBrowser('https://allternit.com/download')} style={{padding:'9px 16px',borderRadius:10,border:`1px solid ${T.border}`,background:'rgba(255,255,255,.04)',color:T.textSec,fontSize:12,fontWeight:500,cursor:'pointer',display:'flex',alignItems:'center',gap:7,transition:'all .2s'}}
-            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.08)';e.currentTarget.style.color=T.textPrimary;e.currentTarget.style.borderColor=T.borderMed;}}
-            onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.04)';e.currentTarget.style.color=T.textSec;e.currentTarget.style.borderColor=T.border;}}>
+          <button type="button" key={pl.label} onClick={() => openInBrowser('https://allternit.com/download')} className="p-[9px_16px] rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-white/4 text-[var(--ui-text-secondary)] text-[12px] font-medium cursor-pointer flex items-center gap-1.5 transition-all duration-200 hover:bg-white/8 hover:text-[var(--ui-text-primary)] hover:border-[var(--ui-border-default)]">
             {pl.icon} {pl.label}
           </button>
         ))}
@@ -1220,48 +1181,43 @@ function VideoShowcaseSection() {
   ];
 
   return (
-    <div style={{ marginBottom: 80 }}>
-      <div ref={headRef} style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 32 }}>
-        <h2 className="pdv-display" style={{ fontSize: 22, fontWeight: 800, color: T.textPrimary, margin: 0, letterSpacing: '-.01em' }}>Product Highlights</h2>
-        <span style={{ fontSize: 12, color: T.textTer, letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 600 }}>New releases</span>
+    <div className="mb-20">
+      <div ref={headRef} className="flex items-baseline gap-3 mb-8">
+        <h2 className="pdv-display text-[22px] font-extrabold text-[var(--ui-text-primary)] m-0 tracking-tight">Product Highlights</h2>
+        <span className="text-[12px] text-[var(--ui-text-muted)] tracking-wider uppercase font-semibold">New releases</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {cards.map(card => {
           const Art = ART_MAP[card.artType];
           return (
-            <div key={card.title} style={{ borderRadius: 20, border: `1px solid ${T.border}`, background: T.bgCard, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'border-color .22s, box-shadow .22s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = T.borderMed; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 12px 48px rgba(0,0,0,.4)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = T.border; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
-            >
+            <div key={card.title} className="group rounded-[20px] border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] overflow-hidden flex flex-col transition-all duration-200 hover:border-[var(--ui-border-default)] hover:shadow-[0_12px_48px_rgba(0,0,0,0.4)]">
               {/* Video / Art top panel */}
-              <div style={{ position: 'relative', height: 220, background: 'var(--surface-panel)', overflow: 'hidden', flexShrink: 0 }}>
-                <div style={{ position: 'absolute', inset: 0 }}>
+              <div className="relative h-[220px] bg-[var(--surface-panel)] overflow-hidden shrink-0">
+                <div className="absolute inset-0">
                   {card.videoSrc ? (
                     <video
                       key={card.videoSrc}
                       src={card.videoSrc}
                       autoPlay muted loop playsInline
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      className="size-full object-cover block"
                     />
                   ) : (
                     <Art />
                   )}
                 </div>
                 {/* Bottom fade into card */}
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: `linear-gradient(transparent, ${T.bgCard})`, pointerEvents: 'none' }}/>
+                <div className="absolute bottom-0 left-0 right-0 h-[60px] bg-gradient-to-t from-[var(--surface-panel)] to-transparent pointer-events-none" />
               </div>
               {/* Info panel */}
-              <div style={{ padding: '22px 26px 26px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-                <span className="pdv-display" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: card.badgeColor }}>
+              <div className="p-[22px_26px_26px] flex flex-col gap-2.5 flex-1">
+                <span className="pdv-display text-[12px] font-bold tracking-[0.14em] uppercase" style={{ color: card.badgeColor }}>
                   {card.badge}
                 </span>
-                <h3 className="pdv-serif" style={{ fontSize: 22, fontWeight: 900, fontStyle: 'italic', color: T.textPrimary, margin: 0, letterSpacing: '-.02em', lineHeight: 1.15 }}>{card.title}</h3>
-                <p style={{ fontSize: 13, color: T.textSec, margin: 0, lineHeight: 1.65, flex: 1 }}>{card.description}</p>
-                <button
+                <h3 className="pdv-serif text-[22px] font-900 italic text-[var(--ui-text-primary)] m-0 tracking-[-0.02em] leading-[1.15]">{card.title}</h3>
+                <p className="text-[13px] text-[var(--ui-text-secondary)] m-0 leading-[1.65] flex-1">{card.description}</p>
+                <button type="button"
                   onClick={card.onCta}
-                  style={{ marginTop: 6, padding: '8px 16px', borderRadius: 10, border: `1px solid ${T.borderMed}`, background: 'var(--surface-hover)', color: T.textPrimary, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, width: 'fit-content', transition: 'all .18s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--ui-border-default)'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.borderColor = T.borderStr; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-hover)'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = T.borderMed; }}
+                  className="mt-1.5 p-[8px_16px] rounded-[10px] border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)] text-[12.5px] font-semibold cursor-pointer flex items-center gap-1.5 w-fit transition-all duration-150 hover:bg-[var(--ui-border-default)] hover:-translate-y-0.5 hover:border-[var(--ui-border-strong)]"
                 >
                   {card.cta} <ArrowRight size={12} weight="bold" />
                 </button>
@@ -1332,47 +1288,51 @@ function TestimonialCard({ t, featured = false }: { t: typeof TESTIMONIALS[0]; f
   return (
     <div
       ref={ref}
-      style={{
-        borderRadius: 20, border: `1px solid ${T.border}`,
-        background: featured ? T.bgElevated : T.bgCard,
-        padding: featured ? '36px 36px 32px' : '26px 28px 24px',
-        display: 'flex', flexDirection: 'column', gap: 14,
-        position: 'relative', overflow: 'hidden',
-        transition: 'border-color .25s, box-shadow .25s',
-        height: '100%', boxSizing: 'border-box',
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = T.borderMed; (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 40px rgba(0,0,0,.3)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = T.border; (e.currentTarget as HTMLDivElement).style.boxShadow = 'none'; }}
+      className={cn(
+        "group rounded-[20px] border border-solid border-[var(--ui-border-muted)] flex flex-col gap-3.5 relative overflow-hidden transition-all duration-[250ms] hover:border-[var(--ui-border-default)] hover:shadow-[0_8px_40px_rgba(0,0,0,0.3)]",
+        featured ? "bg-[var(--surface-floating)] p-[36px_36px_32px]" : "bg-[var(--surface-panel)] p-[26px_28px_24px]"
+      )}
     >
       {/* Decorative giant quote mark */}
       <div className="pdv-quote-mark">"</div>
 
       {/* Category + X icon */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
-        <span className="pdv-display" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: t.catColor }}>
+      <div className="flex items-center justify-between relative">
+        <span className="pdv-display text-[12px] font-bold tracking-[0.14em] uppercase" style={{ color: t.catColor }}>
           {t.category}
         </span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill={T.textTer}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--ui-text-muted)"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
       </div>
 
       {/* Subject — Fraunces for impact */}
-      <p className="pdv-serif" style={{ fontSize: featured ? 22 : 17, fontWeight: 700, color: T.textPrimary, margin: 0, lineHeight: 1.3, letterSpacing: '-.02em', fontStyle: 'italic', position: 'relative' }}>
+      <p className={cn(
+        "pdv-serif text-[var(--ui-text-primary)] m-0 leading-[1.3] tracking-[-0.02em] italic relative font-bold",
+        featured ? "text-[22px]" : "text-[17px]"
+      )}>
         {t.subject}
       </p>
 
       {/* Content */}
-      <p style={{ fontSize: featured ? 14 : 13, color: T.textSec, margin: 0, lineHeight: 1.72, flex: 1, position: 'relative' }}>
+      <p className={cn(
+        "text-[var(--ui-text-secondary)] m-0 leading-[1.72] flex-1 relative",
+        featured ? "text-[14px]" : "text-[13px]"
+      )}>
         {t.content}
       </p>
 
       {/* Author */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4, borderTop: `1px solid ${T.border}`, position: 'relative' }}>
-        <div style={{ width: 30, height: 30, borderRadius: '50%', background: `${t.catColor}18`, border: `1px solid ${t.catColor}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: t.catColor, flexShrink: 0 }}>
+      <div className="flex items-center gap-2.5 pt-2 border-t border-solid border-[var(--ui-border-muted)] relative">
+        <div className="size-[30px] rounded-full border border-solid flex items-center justify-center text-[12px] font-bold shrink-0"
+             style={{ 
+               background: `${t.catColor}18`, 
+               borderColor: `${t.catColor}25`,
+               color: t.catColor 
+             }}>
           {t.name[0]}
         </div>
         <div>
-          <div className="pdv-display" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ui-text-secondary)' }}>{t.name}</div>
-          <div style={{ fontSize: 12.5, color: T.textTer }}>{t.handle}</div>
+          <div className="pdv-display text-[12.5px] font-semibold text-[var(--ui-text-secondary)]">{t.name}</div>
+          <div className="text-[12.5px] text-[var(--ui-text-muted)]">{t.handle}</div>
         </div>
       </div>
     </div>
@@ -1382,33 +1342,33 @@ function TestimonialCard({ t, featured = false }: { t: typeof TESTIMONIALS[0]; f
 function SocialProofSection() {
   const headRef = useScrollReveal();
   return (
-    <div style={{ marginBottom: 80 }}>
+    <div className="mb-20">
       {/* Editorial header */}
-      <div ref={headRef} style={{ marginBottom: 44 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-          <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, ${T.border}, transparent)` }}/>
-          <span className="pdv-display" style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: T.textTer }}>Builder stories</span>
-          <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, ${T.border}, transparent)` }}/>
+      <div ref={headRef} className="mb-11">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-1 h-px bg-gradient-to-r from-[var(--ui-border-muted)] to-transparent" />
+          <span className="pdv-display text-[12.5px] font-bold tracking-[0.18em] uppercase text-[var(--ui-text-muted)]">Builder stories</span>
+          <div className="flex-1 h-px bg-gradient-to-l from-[var(--ui-border-muted)] to-transparent" />
         </div>
-        <h2 className="pdv-serif" style={{ fontSize: 48, fontWeight: 900, fontStyle: 'italic', color: T.textPrimary, margin: '0 0 10px 0', letterSpacing: '-.03em', lineHeight: 1.05 }}>
+        <h2 className="pdv-serif text-[48px] font-900 italic text-[var(--ui-text-primary)] m-[0_0_10px_0] tracking-[-0.03em] leading-[1.05]">
           See what builders<br/>are shipping
         </h2>
-        <p className="pdv-display" style={{ fontSize: 14, color: T.textSec, margin: 0, letterSpacing: '.01em' }}>Real teams. Real results. Unfiltered.</p>
+        <p className="pdv-display text-[14px] text-[var(--ui-text-secondary)] m-0 tracking-[0.01em]">Real teams. Real results. Unfiltered.</p>
       </div>
 
       {/* Featured + stacked layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
         {/* Featured left */}
         <TestimonialCard t={TESTIMONIALS[0]} featured />
         {/* Right: two stacked */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-3.5">
           <TestimonialCard t={TESTIMONIALS[1]} />
           <TestimonialCard t={TESTIMONIALS[2]} />
         </div>
       </div>
 
       {/* Bottom row: 3 equal */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
         <TestimonialCard t={TESTIMONIALS[3]} />
         <TestimonialCard t={TESTIMONIALS[4]} />
         <TestimonialCard t={TESTIMONIALS[5]} />
@@ -1432,51 +1392,47 @@ function WebsiteLinksSection() {
   ];
 
   return (
-    <div ref={ref} style={{ marginBottom: 80, borderRadius: 24, border: `1px solid ${T.border}`, background: T.bgCard, padding: '48px 52px', position: 'relative', overflow: 'hidden' }}>
+    <div ref={ref} className="mb-20 rounded-3xl border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] p-[48px_52px] relative overflow-hidden">
       {/* Background mesh */}
-      <div style={{ position: 'absolute', top: -80, right: -80, width: 320, height: 320, background: `radial-gradient(circle, ${T.brandDim} 0%, transparent 65%)`, filter: 'blur(60px)', pointerEvents: 'none' }}/>
-      <div style={{ position: 'absolute', bottom: -60, left: -40, width: 220, height: 220, background: 'radial-gradient(circle, rgba(91,141,239,.06) 0%, transparent 70%)', filter: 'blur(40px)', pointerEvents: 'none' }}/>
+      <div className="absolute -top-[80px] -right-[80px] size-[320px] bg-[radial-gradient(circle,color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-panel))_0%,transparent_65%)] blur-[60px] pointer-events-none" />
+      <div className="absolute -bottom-[60px] -left-[40px] size-[220px] bg-[radial-gradient(circle,rgba(91,141,239,0.06)_0%,transparent_70%)] blur-[40px] pointer-events-none" />
 
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 48 }}>
+      <div className="relative flex flex-col md:flex-row items-center gap-12">
         {/* Left: Featured CTA */}
-        <div style={{ flexShrink: 0 }}>
-          <span className="pdv-display" style={{ display: 'block', fontSize: 12.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: T.textTer, marginBottom: 10 }}>
+        <div className="shrink-0">
+          <span className="pdv-display block text-[12.5px] font-bold tracking-[0.16em] uppercase text-[var(--ui-text-muted)] mb-2.5">
             Official website
           </span>
-          <button
+          <button type="button"
             onClick={() => openInBrowser('https://allternit.com')}
-            className="pdv-link-ul"
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+            className="pdv-link-ul bg-transparent border-none p-0 cursor-pointer flex items-center gap-2.5"
           >
-            <span className="pdv-serif" style={{ fontSize: 38, fontWeight: 900, fontStyle: 'italic', color: T.brand, letterSpacing: '-.03em', lineHeight: 1 }}>
+            <span className="pdv-serif text-[38px] font-900 italic text-[var(--accent-primary)] tracking-[-0.03em] leading-none">
               allternit.com
             </span>
-            <ArrowSquareOut size={18} color={T.brand} style={{ opacity: .7, marginTop: 4 }}/>
+            <ArrowSquareOut size={18} className="text-[var(--accent-primary)] opacity-70 mt-1" />
           </button>
         </div>
 
         {/* Divider */}
-        <div style={{ width: 1, height: 64, background: T.border, flexShrink: 0 }}/>
+        <div className="hidden md:block w-px h-16 bg-[var(--ui-border-muted)] shrink-0" />
 
         {/* Right: Link strip */}
-        <div style={{ flex: 1 }}>
-          <span className="pdv-display" style={{ display: 'block', fontSize: 12.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: T.textTer, marginBottom: 14 }}>
+        <div className="flex-1">
+          <span className="pdv-display block text-[12.5px] font-bold tracking-[0.16em] uppercase text-[var(--ui-text-muted)] mb-3.5">
             Resources & community
           </span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 0' }}>
+          <div className="flex flex-wrap gap-2.5 md:gap-0">
             {secondaryLinks.map((lk, i) => (
               <React.Fragment key={lk.label}>
-                <button
+                <button type="button"
                   onClick={() => openInBrowser(lk.href)}
-                  className="pdv-link-ul"
-                  style={{ background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: T.textSec, padding: '0 16px', transition: 'color .18s', cursor: 'pointer' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = T.textPrimary; }}
-                  onMouseLeave={e => { e.currentTarget.style.color = T.textSec; }}
+                  className="pdv-link-ul bg-transparent border-none text-[14px] font-medium text-[var(--ui-text-secondary)] px-4 transition-colors duration-[180ms] cursor-pointer hover:text-[var(--ui-text-primary)]"
                 >
                   {lk.label}
                 </button>
                 {i < secondaryLinks.length - 1 && (
-                  <div style={{ width: 1, height: 16, background: T.border, alignSelf: 'center' }}/>
+                  <div className="hidden md:block w-px h-4 bg-[var(--ui-border-muted)] self-center" />
                 )}
               </React.Fragment>
             ))}
@@ -1493,59 +1449,57 @@ export const ProductsDiscoveryView: React.FC = () => {
   const [showExt, setShowExt] = useState(false);
 
   return (
-    <div className="pdv-root" style={{ height:'100vh', overflowY:'auto', background:T.bg, padding:'60px 80px', color:T.textPrimary }}>
+    <div className="pdv-root h-screen overflow-y-auto bg-[var(--surface-canvas)] p-[60px_80px] text-[var(--ui-text-primary)]">
       <style>{PDV_CSS}</style>
 
       {/* Close */}
-      <button
+      <button type="button"
         onClick={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'chat' })}
-        style={{ position:'fixed', top:18, right:18, width:38, height:38, borderRadius:10, background:'var(--surface-hover)', border:`1px solid ${T.border}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:T.textSec, transition:'all .2s', zIndex:100 }}
-        onMouseEnter={e=>{e.currentTarget.style.background='var(--ui-border-default)';e.currentTarget.style.color=T.textPrimary;}}
-        onMouseLeave={e=>{e.currentTarget.style.background='var(--surface-hover)';e.currentTarget.style.color=T.textSec;}}
+        className="fixed top-[18px] right-[18px] size-[38px] rounded-[10px] bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] flex items-center justify-center cursor-pointer text-[var(--ui-text-secondary)] transition-all duration-200 z-[100] hover:bg-[var(--ui-border-default)] hover:text-[var(--ui-text-primary)]"
       ><X size={16}/></button>
 
-      <div style={{ maxWidth:1160, margin:'0 auto' }}>
+      <div className="max-w-[1160px] mx-auto">
 
         {/* Header */}
-        <div style={{ textAlign:'center', marginBottom:72, position:'relative', paddingTop:12 }}>
+        <div className="text-center mb-[72px] relative pt-3">
           {/* Ambient glow orbs */}
-          <div style={{ position:'absolute', top:-100, left:'50%', transform:'translateX(-50%)', width:600, height:400, background:'radial-gradient(ellipse at 50% 40%, rgba(212,176,140,.10) 0%, rgba(217,119,87,.06) 40%, transparent 70%)', filter:'blur(50px)', pointerEvents:'none' }}/>
-          <div style={{ position:'absolute', top:40, left:'15%', width:180, height:180, background:'radial-gradient(circle, rgba(217,119,87,.06) 0%, transparent 70%)', filter:'blur(30px)', pointerEvents:'none' }}/>
-          <div style={{ position:'absolute', top:20, right:'12%', width:140, height:140, background:'radial-gradient(circle, rgba(212,176,140,.08) 0%, transparent 70%)', filter:'blur(24px)', pointerEvents:'none' }}/>
+          <div className="absolute -top-[100px] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[radial-gradient(ellipse_at_50%_40%,rgba(212,176,140,0.10)_0%,rgba(217,119,87,0.06)_40%,transparent_70%)] blur-[50px] pointer-events-none" />
+          <div className="absolute top-10 left-[15%] size-[180px] bg-[radial-gradient(circle,rgba(217,119,87,0.06)_0%,transparent_70%)] blur-[30px] pointer-events-none" />
+          <div className="absolute top-5 right-[12%] size-[140px] bg-[radial-gradient(circle,rgba(212,176,140,0.08)_0%,transparent_70%)] blur-[24px] pointer-events-none" />
 
-          <div style={{ position:'relative' }}>
+          <div className="relative">
             {/* Eyebrow */}
-            <div style={{ display:'inline-flex', alignItems:'center', gap:8, marginBottom:28 }}>
-              <div style={{ width:24, height:1, background:T.brand, opacity:.5 }}/>
-              <span className="pdv-display" style={{ fontSize: 12, fontWeight:700, letterSpacing:'.2em', textTransform:'uppercase', color:T.brand }}>Allternit Platform</span>
-              <div style={{ width:24, height:1, background:T.brand, opacity:.5 }}/>
+            <div className="inline-flex items-center gap-2 mb-7">
+              <div className="w-6 h-px bg-[var(--accent-primary)] opacity-50" />
+              <span className="pdv-display text-[12px] font-bold tracking-[0.2em] uppercase text-[var(--accent-primary)]">Allternit Platform</span>
+              <div className="w-6 h-px bg-[var(--accent-primary)] opacity-50" />
             </div>
 
             {/* Main headline — Fraunces for the gradient line */}
-            <h1 style={{ margin:'0 0 20px 0', lineHeight:1.03 }}>
-              <span className="pdv-display" style={{ display:'block', fontSize:56, fontWeight:800, color:T.textPrimary, letterSpacing:'-.04em', lineHeight:1.07 }}>
+            <h1 className="m-[0_0_20px_0] leading-[1.03]">
+              <span className="pdv-display block text-[56px] font-bold text-[var(--ui-text-primary)] tracking-[-0.04em] leading-[1.07]">
                 Everything you need
               </span>
-              <span className="pdv-serif" style={{ display:'block', fontSize:62, fontWeight:900, letterSpacing:'-.03em', lineHeight:1.0, fontStyle:'italic', background:'linear-gradient(100deg,#D97757 0%,#D4B08C 45%,#f59e0b 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+              <span className="pdv-serif block text-[62px] font-900 tracking-[-0.03em] leading-none italic bg-gradient-to-r from-[#D97757] via-[#D4B08C] to-[#f59e0b] bg-clip-text text-transparent">
                 to build with AI
               </span>
             </h1>
 
-            <p className="pdv-display" style={{ fontSize:16, color:T.textSec, margin:'0 auto', maxWidth:420, lineHeight:1.7, fontWeight:400, letterSpacing:'.01em' }}>
+            <p className="pdv-display text-[16px] text-[var(--ui-text-secondary)] mx-auto max-w-[420px] leading-[1.7] font-normal tracking-[0.01em]">
               One platform. Every surface. Powered by any model.
             </p>
 
             {/* Decorative rule */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, marginTop:36 }}>
-              <div style={{ width:48, height:1, background:`linear-gradient(to right, transparent, ${T.border})` }}/>
-              <Sparkle size={11} color={T.brand} weight="fill" style={{ opacity:.6 }}/>
-              <div style={{ width:48, height:1, background:`linear-gradient(to left, transparent, ${T.border})` }}/>
+            <div className="flex items-center justify-center gap-3 mt-9">
+              <div className="w-12 h-px bg-gradient-to-r from-transparent to-[var(--ui-border-muted)]" />
+              <Sparkle size={11} className="text-[var(--accent-primary)] opacity-60" weight="fill" />
+              <div className="w-12 h-px bg-gradient-to-l from-transparent to-[var(--ui-border-muted)]" />
             </div>
           </div>
         </div>
 
         {/* Spotlight Carousel */}
-        <div style={{ marginBottom:64 }}>
+        <div className="mb-16">
           <SpotlightCarousel />
         </div>
 
@@ -1559,21 +1513,21 @@ export const ProductsDiscoveryView: React.FC = () => {
         <WebsiteLinksSection />
 
         {/* All Products */}
-        <div style={{ marginBottom:56 }}>
-          <div style={{ display:'flex', alignItems:'baseline', gap:10, marginBottom:32 }}>
-            <h2 className="pdv-display" style={{ fontSize:22, fontWeight:800, color:T.textPrimary, margin:0, letterSpacing:'-.01em' }}>All Products</h2>
-            <span style={{ fontSize:12, color:T.textTer }}>{ALL_PRODUCTS.length} products</span>
+        <div className="mb-[56px]">
+          <div className="flex items-baseline gap-2.5 mb-8">
+            <h2 className="pdv-display text-[22px] font-bold text-[var(--ui-text-primary)] m-0 tracking-[-0.01em]">All Products</h2>
+            <span className="text-[12px] text-[var(--ui-text-muted)]">{ALL_PRODUCTS.length} products</span>
           </div>
           {CATEGORIES.map(cat => {
             const ps = ALL_PRODUCTS.filter(p => p.category === cat);
             if (!ps.length) return null;
             return (
-              <div key={cat} style={{ marginBottom:32 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-                  <span style={{ fontSize: 12, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:T.textTer }}>{cat}</span>
-                  <div style={{ flex:1, height:1, background:T.border }}/>
+              <div key={cat} className="mb-8">
+                <div className="flex items-center gap-2 mb-3.5">
+                  <span className="text-[12px] font-bold tracking-[0.1em] uppercase text-[var(--ui-text-muted)]">{cat}</span>
+                  <div className="flex-1 h-px bg-[var(--ui-border-muted)]" />
                 </div>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                   {ps.map(p => <ProductMiniCard key={p.id} p={p}/>)}
                 </div>
               </div>
@@ -1582,28 +1536,26 @@ export const ProductsDiscoveryView: React.FC = () => {
         </div>
 
         {/* Desktop */}
-        <div style={{ marginBottom:20 }}>
+        <div className="mb-5">
           <DesktopBanner />
         </div>
 
         {/* Browser Capsule */}
-        <div style={{ marginBottom:20 }}>
-          <div style={{ borderRadius:24, border:`1px solid rgba(66,133,244,.16)`, background:T.bgCard, padding:'32px 44px', display:'flex', alignItems:'center', justifyContent:'space-between', position:'relative', overflow:'hidden' }}>
-            <div style={{ position:'absolute', top:-40, right:60, width:120, height:120, background:'radial-gradient(circle,rgba(66,133,244,.12) 0%,transparent 70%)', filter:'blur(24px)', animation:'pdv-float-a 8s ease-in-out infinite', pointerEvents:'none' }}/>
-            <div style={{ display:'flex', alignItems:'center', gap:18, position:'relative' }}>
-              <div style={{ width:50, height:50, borderRadius:14, background:'linear-gradient(135deg,#4285F4,#34A853)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 10px 28px rgba(66,133,244,.28)' }}><Puzzle size={24} color="var(--ui-text-primary)"/></div>
+        <div className="mb-5">
+          <div className="rounded-3xl border border-solid border-blue-500/15 bg-[var(--surface-panel)] p-[32px_44px] flex items-center justify-between relative overflow-hidden">
+            <div className="absolute -top-10 right-[60px] size-[120px] bg-[radial-gradient(circle,rgba(66,133,244,0.12)_0%,transparent_70%)] blur-[24px] animate-[pdv-float-a_8s_ease-in-out_infinite] pointer-events-none" />
+            <div className="flex items-center gap-4.5 relative">
+              <div className="size-[50px] rounded-[14px] bg-gradient-to-br from-[#4285F4] to-[#34A853] flex items-center justify-center shadow-[0_10px_28px_rgba(66,133,244,0.28)]"><Puzzle size={24} className="text-[var(--ui-text-primary)]" /></div>
               <div>
-                <h3 style={{ fontSize:18, fontWeight:600, color:T.textPrimary, margin:'0 0 4px 0' }}>Allternit Browser Capsule</h3>
-                <p style={{ fontSize:13, color:T.textSec, margin:0 }}>AI in every tab. Click, automate, and analyze any webpage.</p>
+                <h3 className="text-[18px] font-semibold text-[var(--ui-text-primary)] m-0 mb-1">Allternit Browser Capsule</h3>
+                <p className="text-[13px] text-[var(--ui-text-secondary)] m-0">AI in every tab. Click, automate, and analyze any webpage.</p>
               </div>
             </div>
-            <div style={{ display:'flex', gap:10, position:'relative' }}>
-              <button onClick={() => openInBrowser('https://chrome.google.com/webstore')} style={{ padding:'9px 16px', borderRadius:10, border:'1px solid #4285F4', background:'rgba(66,133,244,.1)', color:'var(--status-info)', fontSize:13, fontWeight:500, cursor:'pointer', display:'flex', alignItems:'center', gap:6, transition:'all .2s' }}
-                onMouseEnter={e=>{e.currentTarget.style.background='var(--status-info-bg)';e.currentTarget.style.transform='translateY(-2px)';}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(66,133,244,.1)';e.currentTarget.style.transform='translateY(0)';}}>
+            <div className="flex gap-2.5 relative">
+              <button type="button" onClick={() => openInBrowser('https://chrome.google.com/webstore')} className="p-[9px_16px] rounded-[10px] border border-solid border-[#4285F4] bg-blue-500/10 text-[var(--status-info)] text-[13px] font-medium cursor-pointer flex items-center gap-1.5 transition-all duration-200 hover:bg-[var(--status-info-bg)] hover:-translate-y-0.5">
                 <ChromeIcon size={14}/> Add to Chrome
               </button>
-              <button onClick={() => setShowExt(v=>!v)} style={{ padding:'9px 16px', borderRadius:10, border:`1px solid ${T.border}`, background:'rgba(255,255,255,.04)', color:T.textSec, fontSize:13, fontWeight:500, cursor:'pointer', transition:'all .2s' }}
-                onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.08)';e.currentTarget.style.color=T.textPrimary;}} onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.04)';e.currentTarget.style.color=T.textSec;}}>
+              <button type="button" onClick={() => setShowExt(v=>!v)} className="p-[9px_16px] rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-white/4 text-[var(--ui-text-secondary)] text-[13px] font-medium cursor-pointer transition-all duration-200 hover:bg-white/8 hover:text-[var(--ui-text-primary)]">
                 {showExt ? 'Hide details' : 'More browsers'}
               </button>
             </div>
@@ -1612,26 +1564,24 @@ export const ProductsDiscoveryView: React.FC = () => {
         </div>
 
         {/* Infrastructure */}
-        <div style={{ marginBottom:20 }}>
+        <div className="mb-5">
           <InfraSection />
         </div>
 
         {/* Footer CTA */}
-        <div style={{ textAlign:'center', padding:'56px 32px', borderRadius:24, border:`1px solid ${T.border}`, background:T.bgCard, position:'relative', overflow:'hidden', marginBottom:72 }}>
-          <div style={{ position:'absolute', top:0, left:'50%', transform:'translateX(-50%)', width:320, height:2, background:`linear-gradient(90deg,transparent,${T.brand},transparent)` }}/>
-          <div style={{ position:'absolute', top:-60, left:'50%', transform:'translateX(-50%)', width:260, height:160, background:`radial-gradient(ellipse,rgba(212,176,140,.1) 0%,transparent 70%)`, filter:'blur(30px)', pointerEvents:'none' }}/>
-          <div style={{ position:'relative' }}>
-            <div style={{ width:44, height:44, borderRadius:14, background:T.brandDim, border:`1px solid ${T.brandBorder}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px' }}>
-              <Sparkle size={20} color={T.brand} weight="fill"/>
+        <div className="text-center p-[56px_32px] rounded-3xl border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] relative overflow-hidden mb-[72px]">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[320px] h-0.5 bg-gradient-to-r from-transparent via-[var(--accent-primary)] to-transparent" />
+          <div className="absolute -top-[60px] left-1/2 -translate-x-1/2 w-[260px] h-[160px] bg-[radial-gradient(ellipse,rgba(212,176,140,0.1)_0%,transparent_70%)] blur-[30px] pointer-events-none" />
+          <div className="relative">
+            <div className="size-11 rounded-[14px] bg-[color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-panel))] border border-solid border-[color-mix(in_srgb,var(--accent-primary)_22%,transparent)] flex items-center justify-center mx-auto mb-5">
+              <Sparkle size={20} className="text-[var(--accent-primary)]" weight="fill" />
             </div>
-            <h2 style={{ fontSize:28, fontWeight:700, color:T.textPrimary, margin:'0 0 8px 0', letterSpacing:'-.02em' }}>Want early access?</h2>
-            <p style={{ fontSize:15, color:T.textSec, margin:'0 0 28px 0', lineHeight:1.6 }}>
+            <h2 className="text-[28px] font-bold text-[var(--ui-text-primary)] m-[0_0_8px_0] tracking-[-0.02em]">Want early access?</h2>
+            <p className="text-[15px] text-[var(--ui-text-secondary)] m-[0_0_28px_0] leading-[1.6]">
               Join the beta program for exclusive access to new features and products.
             </p>
-            <button
-              style={{ padding:'13px 30px', borderRadius:12, border:'none', background:`linear-gradient(135deg,${T.brand},#B08D6E)`, color:'var(--ui-text-inverse)', fontSize:14, fontWeight:700, cursor:'pointer', transition:'all .25s cubic-bezier(.4,0,.2,1)', letterSpacing:'.01em' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow='0 12px 32px rgba(212,176,140,.3)';}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='none';}}
+            <button type="button"
+              className="p-[13px_30px] rounded-xl border-none bg-gradient-to-br from-[var(--accent-primary)] to-[#B08D6E] text-[var(--ui-text-inverse)] text-[14px] font-bold cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] tracking-[0.01em] hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(212,176,140,0.3)]"
             >
               Join the Beta Program
             </button>

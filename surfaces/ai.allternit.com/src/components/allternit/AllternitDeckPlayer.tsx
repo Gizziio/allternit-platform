@@ -12,13 +12,11 @@ import {
   CaretLeft,
   CaretRight,
   SquaresFour,
-  Play,
   DownloadSimple,
   ShareNetwork,
   DotsThreeOutline,
   MonitorPlay,
   Presentation,
-  Palette,
 } from '@phosphor-icons/react';
 const Grid = SquaresFour;
 import { Button } from '@/components/ui/button';
@@ -121,7 +119,7 @@ export function AllternitDeckPlayer({
       deck.off('slidechanged', handleSlideChange);
       deck.destroy();
     };
-  }, []);
+  }, [onSlideChange]);
 
   // Sync with controlled prop
   useEffect(() => {
@@ -228,8 +226,7 @@ export function AllternitDeckPlayer({
 
           <div className="flex items-center gap-2">
             {/* Theme selector */}
-            <select
-              value={activeTheme}
+            <select aria-label="Selection" value={activeTheme}
               onChange={(e) => setActiveTheme(e.target.value as any)}
               className="bg-[#1a1a1a] border border-[#333] text-[#888] text-xs rounded px-2 py-1 outline-none focus:border-[#D4956A]"
             >
@@ -334,9 +331,9 @@ export function AllternitDeckPlayer({
 
         {/* Slide indicators */}
         <div className="flex items-center gap-1">
-          {slides.map((_, index) => (
-            <button
-              key={index}
+          {slides.map((slide, index) => (
+            <button type="button"
+              key={slide.id || index}
               onClick={() => goToSlide(index)}
               className={cn(
                 "size-2  rounded-full transition-all duration-200",
@@ -369,13 +366,13 @@ export function AllternitDeckPlayer({
 
       {/* Grid view overlay */}
       {showGrid && (
-        <div 
+        <div role="button" tabIndex={0} 
           className="absolute inset-0 z-50 bg-black/90 backdrop-blur-sm p-8 overflow-auto"
           onClick={() => setShowGrid(false)}
         >
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
             {slides.map((slide, index) => (
-              <button
+              <button type="button"
                 key={slide.id}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -447,7 +444,7 @@ function renderSlideContent(slide: Slide) {
             </h2>
             <ul className="space-y-3">
               {slide.content?.map((item, i) => (
-                <li key={i} className="text-[#b8b8b8] flex items-start gap-2">
+                <li key={`${item}-${i}`} className="text-[#b8b8b8] flex items-start gap-2">
                   <span className="size-2  rounded-full bg-[#D4956A] mt-2 flex-shrink-0" />
                   <span>{item}</span>
                 </li>
@@ -492,7 +489,7 @@ function renderSlideContent(slide: Slide) {
           <div className="flex-1">
             <ul className="space-y-4">
               {slide.content?.map((item, i) => (
-                <li key={i} className="text-[#b8b8b8] text-lg flex items-start gap-3">
+                <li key={`${item}-${i}`} className="text-[#b8b8b8] text-lg flex items-start gap-3">
                   <span className="size-2  rounded-full bg-[#D4956A] mt-2.5 flex-shrink-0" />
                   <span>{item}</span>
                 </li>

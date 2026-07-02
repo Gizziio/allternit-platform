@@ -60,7 +60,7 @@ function CopyButton({ text, onCopy }: { text: string; onCopy?: () => void }) {
     });
   };
   return (
-    <button onClick={copy}
+    <button type="button" onClick={copy}
       style={{ padding: '3px 7px', borderRadius: 5, border: '1px solid var(--border-subtle)', background: 'transparent', color: copied ? '#10b981' : 'var(--text-tertiary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, transition: 'all 0.15s' }}>
       {copied ? <Check size={10} weight="bold" /> : <Copy size={10} />}
       {copied ? 'Copied' : 'Copy'}
@@ -298,7 +298,7 @@ export function DesignHandoffView({ projectName = 'Untitled Project' }: { projec
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4, padding: '0 6px' }}>Design Spec</div>
         <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 14, padding: '0 6px', lineHeight: 1.4 }}>{projectName}</div>
         {SECTIONS.map(s => (
-          <button key={s.id} onClick={() => setActive(s.id)}
+          <button type="button" key={s.id} onClick={() => setActive(s.id)}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 8px', borderRadius: 7, border: 'none', background: active === s.id ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', color: active === s.id ? 'var(--accent-primary)' : 'var(--text-secondary)', fontSize: 12, fontWeight: active === s.id ? 700 : 400, cursor: 'pointer', textAlign: 'left', marginBottom: 2, transition: 'all 0.1s', width: '100%' }}>
             <span>{s.icon}</span>
             <span style={{ flex: 1 }}>{s.label}</span>
@@ -320,7 +320,7 @@ export function DesignHandoffView({ projectName = 'Untitled Project' }: { projec
       </div>
 
       {/* Clipboard toggle button */}
-      <button
+      <button type="button"
         onClick={() => setShowClipboard(c => !c)}
         title="Clipboard history"
         style={{

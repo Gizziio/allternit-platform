@@ -47,7 +47,7 @@ const SwarmMonitorComplete = () => {
       {/* Top Strip */}
       <div style={{ height: '64px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button onClick={() => setSidebarExpanded(!sidebarExpanded)} style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+          <button type="button" onClick={() => setSidebarExpanded(!sidebarExpanded)} style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M6 3v12M6 3l6 6M6 3L0 9m12 3v12m0-12l6 6m-6-6l-6 6"/></svg>
           </button>
           <div>
@@ -59,8 +59,7 @@ const SwarmMonitorComplete = () => {
         {/* Search */}
         <div style={{ position: 'relative' }}>
           <svg style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#64748b' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-          <input 
-            type="text" 
+          <input aria-label="Search threads…" type="text" 
             placeholder="Search threads…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -70,10 +69,10 @@ const SwarmMonitorComplete = () => {
 
         {/* Horizontal Scroll Strip */}
         <div style={{ flex: 1, overflowX: 'auto', display: 'flex', gap: '8px', padding: '8px 0' }}>
-          <button style={{ width: '40px', height: '40px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px', cursor: 'pointer', color: 'var(--status-warning)', fontSize: '20px', flexShrink: 0 }}>+</button>
+          <button type="button" style={{ width: '40px', height: '40px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px', cursor: 'pointer', color: 'var(--status-warning)', fontSize: '20px', flexShrink: 0 }}>+</button>
           
           {threads.map(thread => (
-            <div 
+            <div role="button" tabIndex={0} 
               key={thread.id} 
               onClick={() => setSelectedThreadId(thread.id)}
               style={{ 
@@ -116,13 +115,13 @@ const SwarmMonitorComplete = () => {
 
         {/* Right Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <button 
+          <button type="button" 
             onClick={() => setShowHealthPanel(!showHealthPanel)}
             style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-error)' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </button>
-          <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+          <button type="button" style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
           </button>
         </div>
@@ -136,7 +135,7 @@ const SwarmMonitorComplete = () => {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
               Swarm Health
             </h3>
-            <button onClick={() => setShowHealthPanel(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>✕</button>
+            <button type="button" onClick={() => setShowHealthPanel(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>✕</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '12px' }}>
             <div style={{ background: '#0f172a', borderRadius: '6px', padding: '12px' }}>
@@ -176,13 +175,13 @@ const SwarmMonitorComplete = () => {
           <div style={{ width: '256px', borderRight: '1px solid #1e293b', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '12px', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Thread Tree</span>
-              <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
+              <button type="button" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
               </button>
             </div>
             <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
               {threads.filter(t => !t.parentId).map(thread => (
-                <div 
+                <div role="button" tabIndex={0} 
                   key={thread.id}
                   onClick={() => setSelectedThreadId(thread.id)}
                   style={{ 
@@ -228,13 +227,13 @@ const SwarmMonitorComplete = () => {
             </div>
             <div style={{ display: 'flex', gap: '4px' }}>
               {selectedThread.status === 'running' && (
-                <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-warning)' }}>⏸</button>
+                <button type="button" style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-warning)' }}>⏸</button>
               )}
               {selectedThread.status === 'paused' && (
-                <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-success)' }}>▶</button>
+                <button type="button" style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-success)' }}>▶</button>
               )}
-              <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#a855f7' }}>✨</button>
-              <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-error)' }}>■</button>
+              <button type="button" style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#a855f7' }}>✨</button>
+              <button type="button" style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-error)' }}>■</button>
             </div>
           </div>
           
@@ -295,7 +294,7 @@ const SwarmMonitorComplete = () => {
             <span style={{ fontSize: '12px', color: '#64748b', flex: 1 }}>Deployed to staging with zero downtime</span>
             <span style={{ fontSize: '12px', color: '#64748b' }}>3 decisions · 2 artifacts</span>
             <span style={{ fontSize: '12px', padding: '2px 8px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--status-warning)', borderRadius: '4px' }}>85% compressed</span>
-            <button style={{ fontSize: '12px', padding: '4px 12px', background: 'transparent', border: '1px solid #334155', borderRadius: '4px', color: '#cbd5e1', cursor: 'pointer' }}>Use as Context</button>
+            <button type="button" style={{ fontSize: '12px', padding: '4px 12px', background: 'transparent', border: '1px solid #334155', borderRadius: '4px', color: '#cbd5e1', cursor: 'pointer' }}>Use as Context</button>
           </div>
         </div>
       )}

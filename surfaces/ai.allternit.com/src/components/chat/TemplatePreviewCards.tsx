@@ -967,7 +967,7 @@ function TemplateCard({ template, onSelect, index }: TemplateCardProps) {
           <div className="absolute top-3 left-3 z-10">
             <div className={cn(
               "size-10  rounded-xl flex items-center justify-center",
-              "bg-black/40 backdrop-blur-md border border-white/20",
+              "bg-black/40 backdrop-blur-sm border border-white/20",
               "shadow-lg shadow-black/20"
             )}>
               <Icon className="size-5  text-white" strokeWidth={1.5} />
@@ -976,14 +976,14 @@ function TemplateCard({ template, onSelect, index }: TemplateCardProps) {
           
           {/* Arrow - Top Right (appears on hover) */}
           <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="size-8  rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+            <div className="size-8  rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
               <ArrowUpRight className="size-4  text-white" />
             </div>
           </div>
           
           {/* Category Badge - Bottom Left */}
           <div className="absolute bottom-3 left-3 z-10">
-            <span className="px-2.5 py-1 rounded-full text-xs font-medium tracking-wide uppercase bg-black/50 backdrop-blur-md text-white/80 border border-white/10">
+            <span className="px-2.5 py-1 rounded-full text-xs font-medium tracking-wide uppercase bg-black/50 backdrop-blur-sm text-white/80 border border-white/10">
               {template.category}
             </span>
           </div>
@@ -1052,12 +1052,12 @@ function TemplateGrid({ templates, onSelectTemplate, title }: TemplateGridProps)
 // MAIN COMPONENT EXPORTS
 // =============================================================================
 
-export interface TemplatePreviewCardsProps {
+interface TemplatePreviewCardsProps {
   modeId: string;
   onSelectTemplate: (prompt: string) => void;
 }
 
-export function TemplatePreviewCards({ modeId, onSelectTemplate }: TemplatePreviewCardsProps) {
+function TemplatePreviewCards({ modeId, onSelectTemplate }: TemplatePreviewCardsProps) {
   const templates = MODE_TEMPLATES[modeId] || DEFAULT_TEMPLATES;
   
   return (
@@ -1075,11 +1075,11 @@ export function TemplatePreviewCards({ modeId, onSelectTemplate }: TemplatePrevi
 export { MODE_TEMPLATES, DEFAULT_TEMPLATES };
 
 // Helper to get templates for a mode
-export function getTemplatesForMode(modeId: string): TemplatePreview[] {
+function getTemplatesForMode(modeId: string): TemplatePreview[] {
   return MODE_TEMPLATES[modeId] || DEFAULT_TEMPLATES;
 }
 
 // Helper to get all template count
-export function getTotalTemplateCount(): number {
+function getTotalTemplateCount(): number {
   return Object.values(MODE_TEMPLATES).reduce((sum, templates) => sum + templates.length, 0);
 }

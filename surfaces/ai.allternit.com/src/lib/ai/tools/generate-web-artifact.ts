@@ -39,7 +39,7 @@ Rules:
 - Output ONLY the raw JSX. No explanation, no markdown, no code fences.`,
 };
 
-export const generateWebArtifactTool = (_props: { costAccumulator?: CostAccumulator } = {}) =>
+const generateWebArtifactTool = (_props: { costAccumulator?: CostAccumulator } = {}) =>
   tool({
     description: `Generate an interactive web artifact — an HTML app, SVG graphic, Mermaid diagram, \
 or React component — that renders live in a preview panel. Use this when the user wants to see \

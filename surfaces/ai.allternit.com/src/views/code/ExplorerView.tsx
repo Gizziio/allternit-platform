@@ -74,7 +74,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   if (node.type === 'folder') {
     return (
       <div>
-        <div
+        <div role="button" tabIndex={0}
           onClick={() => onToggleExpand(node.path)}
           style={{
             display: 'flex',
@@ -125,7 +125,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   }
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={() => onSelectFile(node.path)}
       style={{
         display: 'flex',
@@ -169,8 +169,10 @@ export const ExplorerView: React.FC = () => {
   const [droppedFiles, setDroppedFiles] = useState<DroppedFile[]>([]);
 
   useEffect(() => {
+    let isMounted = true;
     filesApi.listDirectory({ path: '.' })
       .then((res) => {
+        if (!isMounted) return;
         const items = res.entries ?? [];
         const toNode = (entry: (typeof items)[number]): FileNode => ({
           name: entry.name,
@@ -186,6 +188,9 @@ export const ExplorerView: React.FC = () => {
         setFileTree(items.map(toNode));
       })
       .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
@@ -260,8 +265,7 @@ export const ExplorerView: React.FC = () => {
           </div>
 
           {/* Search Input */}
-          <input
-            type="text"
+          <input aria-label="Search files…" type="text"
             placeholder="Search files…"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}

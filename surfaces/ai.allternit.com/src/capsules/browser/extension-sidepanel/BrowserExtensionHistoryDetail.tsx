@@ -12,7 +12,6 @@ import {
   RADIUS,
   MODE_COLORS,
   TYPOGRAPHY,
-  ANIMATION,
 } from "@/design/allternit.tokens";
 
 const browser = MODE_COLORS.browser;
@@ -235,7 +234,7 @@ export function BrowserExtensionHistoryDetail({
           className="flex items-center gap-2 border-b px-3 py-2"
           style={{ borderColor: BORDER.subtle }}
         >
-          <button
+          <button type="button"
             onClick={onBack}
             className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:opacity-80"
             style={{ color: TEXT.tertiary }}
@@ -270,7 +269,7 @@ export function BrowserExtensionHistoryDetail({
         className="flex items-center gap-2 border-b px-3 py-2"
         style={{ borderColor: BORDER.subtle }}
       >
-        <button
+        <button type="button"
           onClick={onBack}
           className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:opacity-80"
           style={{ color: TEXT.tertiary }}

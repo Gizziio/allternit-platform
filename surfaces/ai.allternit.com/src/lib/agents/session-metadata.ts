@@ -1,9 +1,9 @@
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 
-export type AgentSessionSurface = AgentModeSurface;
-export type AgentSessionMode = "regular" | "agent";
+type AgentSessionSurface = AgentModeSurface;
+type AgentSessionMode = "regular" | "agent";
 
-export interface AgentSessionFeatures {
+interface AgentSessionFeatures {
   workspace?: boolean;
   tools?: boolean;
   automation?: boolean;
@@ -101,7 +101,7 @@ export function getAgentSessionDescriptor(
   };
 }
 
-export function buildAgentSessionMetadata({
+function buildAgentSessionMetadata({
   metadata,
   ...descriptor
 }: AgentSessionDescriptor & {
@@ -144,7 +144,7 @@ export function buildAgentSessionMetadata({
   return Object.keys(next).length > 0 ? next : undefined;
 }
 
-export function formatAgentSessionSurfaceLabel(
+function formatAgentSessionSurfaceLabel(
   surface?: AgentSessionSurface,
 ): string | undefined {
   switch (surface) {

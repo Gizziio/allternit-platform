@@ -1,15 +1,13 @@
 
 "use client";
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 // Stores
 import { useAgentStore } from '@/lib/agents/agent.store';
 
 // Types
-import type { Agent } from '@/lib/agents/agent.types';
 
 // UI Components
 import { DashboardHeader } from './components/DashboardHeader';

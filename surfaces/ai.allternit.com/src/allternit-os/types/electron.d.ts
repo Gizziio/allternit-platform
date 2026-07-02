@@ -6,7 +6,7 @@
  * used by the AllternitOS system.
  */
 
-import type { DriveEntry, FileUpload } from '../services/FileSystemService';
+import type { DriveEntry } from '../services/FileSystemService';
 import type { KernelProgramCommand, KernelProgramEvent } from './programs';
 
 // ============================================================================

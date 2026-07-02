@@ -17,7 +17,7 @@ export interface ImageGenerationConfig {
   seed?: number; // For reproducibility
 }
 
-export interface GeneratedImage {
+interface GeneratedImage {
   id: string;
   url: string;
   prompt: string;
@@ -274,8 +274,6 @@ export async function generateVariations(
     return generateVariationsPollinations(imageId, prompt, n);
   }
 
-  // For OpenAI, use their variations endpoint (DALL-E 2 only)
-  // TODO: Implement OpenAI variations
   return generateVariationsPollinations(imageId, prompt, n);
 }
 
@@ -291,7 +289,7 @@ function parseSize(size: string): { width: number; height: number } {
 /**
  * Get available providers with their setup status
  */
-export function getImageProviders(userSettings?: any) {
+function getImageProviders(userSettings?: any) {
   return [
     {
       id: 'pollinations',

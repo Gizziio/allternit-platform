@@ -8,7 +8,7 @@ const SKILLS = [
   { id: 'p1', name: 'Postgres Connector', version: '2.0.1', desc: 'MCP server for PostgreSQL database access.', type: 'Plugin' },
 ];
 
-export function SkillsView(): JSX.Element {
+export function SkillsView(): React.ReactNode {
   return (
     <div style={{ padding: 32, maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -16,7 +16,7 @@ export function SkillsView(): JSX.Element {
           <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800 }}>Skills & Plugins</h1>
           <p style={{ margin: '8px 0 0 0', opacity: 0.6 }}>Manage your agent's capabilities and tool connections.</p>
         </div>
-        <button style={{ 
+        <button type="button" style={{ 
           padding: '10px 20px', borderRadius: 12, 
           background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', 
           color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer',

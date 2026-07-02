@@ -16,7 +16,7 @@ import { useReplay } from '@/hooks/useReplay';
 import { StatCard } from '../components/StatCard';
 import { StatusBadge } from '../components/StatusBadge';
 
-export function ReplayManagerView(): JSX.Element {
+export function ReplayManagerView(): React.ReactNode {
   const { manifests, isLoading, error, refetch, replayExecution } = useReplay();
   const [searchQuery, setSearchQuery] = useState('');
   const [captureFilter, setCaptureFilter] = useState<'all' | 'minimal' | 'full'>('all');
@@ -61,7 +61,7 @@ export function ReplayManagerView(): JSX.Element {
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
         <Warning className="mb-4 size-12  text-red-500" />
         <p className="mb-4">Failed to load replay sessions</p>
-        <button
+        <button type="button"
           onClick={() => void refetch()}
           className="flex items-center gap-2 rounded-2xl bg-accent/15 px-4 py-2 text-accent transition-colors hover:bg-accent/25"
         >
@@ -91,8 +91,7 @@ export function ReplayManagerView(): JSX.Element {
             <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
                 <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4  -tranzinc-y-1/2 text-muted-foreground" />
-                <input
-                  type="text"
+                <input aria-label="Search by run ID…" type="text"
                   placeholder="Search by run ID…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -101,7 +100,7 @@ export function ReplayManagerView(): JSX.Element {
               </div>
               <div className="flex rounded-2xl border border-white/10 bg-black/20 p-1">
                 {(['all', 'minimal', 'full'] as const).map((value) => (
-                  <button
+                  <button type="button"
                     key={value}
                     onClick={() => setCaptureFilter(value)}
                     className={`rounded-xl px-3 py-2 text-xs uppercase tracking-[0.18em] transition ${
@@ -168,7 +167,7 @@ export function ReplayManagerView(): JSX.Element {
                 </div>
 
                 <div className="flex items-center justify-end">
-                  <button
+                  <button type="button"
                     onClick={() => handleReplay(manifest.run_id)}
                     disabled={replaying === manifest.run_id}
                     className="inline-flex items-center gap-2 rounded-2xl border border-sky-300/20 bg-sky-300/10 px-4 py-3 text-sm font-medium text-sky-100 transition hover:bg-sky-300/20 disabled:cursor-not-allowed disabled:opacity-50"

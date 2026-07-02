@@ -1,6 +1,6 @@
 import { UUID, ISODate } from './base';
 
-export interface Artifact {
+interface Artifact {
   readonly id: UUID;
   readonly threadId: UUID;
   readonly projectId: UUID;

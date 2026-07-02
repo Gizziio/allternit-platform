@@ -8,7 +8,7 @@
  * - error: Always shown
  */
 
-export interface LogContext {
+interface LogContext {
   [key: string]: unknown;
 }
 
@@ -63,4 +63,4 @@ export function createModuleLogger(module: string): Logger {
 }
 
 // Default logger instance
-export const logger = createModuleLogger('app');
+const logger = createModuleLogger('app');

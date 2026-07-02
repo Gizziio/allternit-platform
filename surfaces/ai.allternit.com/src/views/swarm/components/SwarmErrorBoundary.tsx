@@ -9,6 +9,10 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Warning as WarningTriangle } from '@phosphor-icons/react';
 import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/allternit.tokens';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('SwarmErrorBoundary');
+
 interface Props {
   children: ReactNode;
 }
@@ -106,7 +110,7 @@ export class SwarmErrorBoundary extends Component<Props, State> {
 
             {/* Actions */}
             <div className="flex gap-3 justify-center">
-              <button
+              <button type="button"
                 onClick={this.handleReset}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-80"
                 style={{ 
@@ -116,7 +120,7 @@ export class SwarmErrorBoundary extends Component<Props, State> {
               >
                 Try Again
               </button>
-              <button
+              <button type="button"
                 onClick={this.handleReload}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-80"
                 style={{ 

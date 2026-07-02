@@ -7,11 +7,15 @@
 
 import { EventEmitter } from 'events';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Autopilot');
+
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface AutopilotJob {
+interface AutopilotJob {
   id: string;
   type: JobType;
   status: JobStatus;
@@ -26,7 +30,7 @@ export interface AutopilotJob {
   notifyOnComplete: boolean;
 }
 
-export type JobType = 
+type JobType = 
   | 'research'
   | 'generation'
   | 'download'
@@ -36,7 +40,7 @@ export type JobType =
   | 'cowork_session'
   | 'skill_execution';
 
-export type JobStatus = 
+type JobStatus = 
   | 'queued'
   | 'running'
   | 'paused'
@@ -44,7 +48,7 @@ export type JobStatus =
   | 'failed'
   | 'cancelled';
 
-export interface JobProgress {
+interface JobProgress {
   jobId: string;
   progress: number;
   status: JobStatus;
@@ -151,7 +155,7 @@ class JobStorage {
 // Autopilot Service
 // ============================================================================
 
-export class AutopilotService extends EventEmitter {
+class AutopilotService extends EventEmitter {
   private storage = new JobStorage();
   private runningJobs = new Map<string, any>();
   private isInitialized = false;
@@ -183,7 +187,7 @@ export class AutopilotService extends EventEmitter {
           registration.active.postMessage({ type: 'init' }, [channel.port2]);
         }
       } catch (error) {
-        console.warn('Service Worker registration failed:', error);
+        logger.warn({ err: error }, 'Service Worker registration failed:');
       }
     }
     

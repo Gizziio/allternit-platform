@@ -22,7 +22,7 @@ import {
 } from '@phosphor-icons/react';
 import { VPSMarketplace } from './VPSMarketplace';
 import { AddSSHConnectionForm, type SSHConnectionFormData, type SSHConnectionTestResult } from '@/components/ssh';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 export interface VPSConnectionModalProps {
   isOpen: boolean;
@@ -42,12 +42,14 @@ export function VPSConnectionModal({
   onSelectProvider,
 }: VPSConnectionModalProps) {
   const [currentView, setCurrentView] = useState<ModalView>('menu');
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentView('menu');
-    }
-  }, [isOpen]);
+  if (isOpen && !prevIsOpen) {
+    setPrevIsOpen(true);
+    setCurrentView('menu');
+  } else if (!isOpen && prevIsOpen) {
+    setPrevIsOpen(false);
+  }
 
   const handleClose = useCallback(() => {
     if (currentView !== 'menu') {
@@ -77,12 +79,12 @@ export function VPSConnectionModal({
     <>
       {/* Main Modal */}
       {currentView === 'menu' && (
-        <div
+        <div role="button" tabIndex={0}
           className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
           style={{ background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)' }}
           onClick={handleClose}
         >
-          <div
+          <div role="button" tabIndex={0}
             className="relative w-full max-w-[672px] overflow-hidden rounded-2xl"
             style={{
               background: 'rgba(20,20,20,0.95)',
@@ -113,7 +115,7 @@ export function VPSConnectionModal({
                   </p>
                 </div>
               </div>
-              <button
+              <button type="button"
                 onClick={handleClose}
                 className="size-8  rounded-lg flex items-center justify-center transition-colors"
                 style={{ background: 'transparent', color: TEXT.secondary }}
@@ -135,7 +137,7 @@ export function VPSConnectionModal({
               {/* Options Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {/* Option 1: Get New VPS */}
-                <button
+                <button type="button"
                   onClick={() => setCurrentView('marketplace')}
                   className="group relative p-6 rounded-xl text-left transition-all"
                   style={{
@@ -175,19 +177,14 @@ export function VPSConnectionModal({
                       </div>
                     </div>
                     <CaretRight 
-                      className="size-5  absolute right-4 top-1/2 -tranzinc-y-1/2 transition-opacity" 
-                      style={{ color: TEXT.secondary, opacity: 0 }}
+                      className="size-5  chevron absolute right-4 top-1/2 -tranzinc-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" 
+                      style={{ color: TEXT.secondary }}
                     />
                   </div>
-                  <style jsx>{`
-                    button:hover .chevron {
-                      opacity: 1 !important;
-                    }
-                  `}</style>
                 </button>
 
                 {/* Option 2: Connect Existing */}
-                <button
+                <button type="button"
                   onClick={() => setCurrentView('ssh-form')}
                   className="group relative p-6 rounded-xl text-left transition-all"
                   style={{

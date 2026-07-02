@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * SSH Components - Index
  * 

@@ -1,10 +1,11 @@
-"use client";
+import React from "react";
 
-import React from 'react';
+"use client";
 import { ArrowSquareOut, Star } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
-export interface AppRecommendation {
+interface AppRecommendation {
+  id?: string;
   name: string;
   description: string;
   iconUrl?: string;
@@ -30,9 +31,8 @@ export function AppRecommendations({ title = 'Recommended Apps', apps, className
 
       {/* App list */}
       <div className="divide-y divide-border/50">
-        {apps.map((app, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
-            {/* Icon */}
+        {apps.map((app) => (
+          <div key={app.id || app.name} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">            {/* Icon */}
             <div className="flex size-10  flex-shrink-0 items-center justify-center rounded-xl border border-border bg-muted overflow-hidden">
               {app.iconUrl ? (
                 <img src={app.iconUrl} alt={app.name} className="w-full h-full object-cover" />

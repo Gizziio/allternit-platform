@@ -16,6 +16,10 @@ import {
 import { useIsClient } from '@/lib/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ResourceUsageDashboard');
+
 interface UsageData {
   total_requests: number;
   total_tool_calls: number;
@@ -32,7 +36,6 @@ export function ResourceUsageDashboard() {
   const isClient = useIsClient();
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [timeRange, setTimeRange] = useState<'all' | '30d' | '7d'>('30d');
@@ -53,14 +56,13 @@ export function ResourceUsageDashboard() {
         window.URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Export failed', err);
+      logger.error({ err: err }, 'Export failed');
     } finally {
       setExporting(false);
     }
   };
 
   const fetchUsage = async () => {
-    setRefreshing(true);
     try {
       const res = await fetch('/api/v1/usage/aggregate');
       if (res.ok) {
@@ -75,10 +77,9 @@ export function ResourceUsageDashboard() {
         }
       }
     } catch (err) {
-      console.error('Failed to fetch usage data', err);
+      logger.error({ err: err }, 'Failed to fetch usage data');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -124,11 +125,11 @@ export function ResourceUsageDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex bg-[var(--bg-primary)] p-1 rounded-lg border border-[var(--border-subtle)]">
-          <button className="px-4 py-1.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm font-medium">Overview</button>
-          <button className="px-4 py-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors">Models</button>
+          <button type="button" className="px-4 py-1.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm font-medium">Overview</button>
+          <button type="button" className="px-4 py-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors">Models</button>
         </div>
         <div className="flex items-center gap-3">
-          <button 
+          <button type="button" 
             onClick={handleExport}
             disabled={exporting}
             className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors disabled:opacity-50"
@@ -138,7 +139,7 @@ export function ResourceUsageDashboard() {
           </button>
           <div className="flex bg-[var(--bg-primary)] p-1 rounded-lg border border-[var(--border-subtle)]">
             {(['all', '30d', '7d'] as const).map(range => (
-              <button
+              <button type="button"
                 key={range}
                 onClick={() => setTimeRange(range)}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${timeRange === range ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
@@ -176,8 +177,8 @@ export function ResourceUsageDashboard() {
             ];
             return (
               <div 
-                key={i} 
-                className={`w-full aspect-square rounded-sm`}
+                key={`resourceusagedashboard-${i}`} 
+                className="w-full aspect-square rounded-sm"
                 style={{ backgroundColor: isFilled ? intensities[intensity] : intensities[0] }}
               />
             );
@@ -212,7 +213,7 @@ export function ResourceUsageDashboard() {
           </div>
           <div className="flex-1 overflow-y-auto text-xs space-y-1 text-[#666]">
             {logs.map((log, i) => (
-              <div key={i} className={i === 0 ? "text-[var(--accent-primary)]" : ""}>
+              <div key={`resourceusagedashboard-${i}`} className={i === 0 ? "text-[var(--accent-primary)]" : ""}>
                 <span className="opacity-30">❯</span> {log}
               </div>
             ))}

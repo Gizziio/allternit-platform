@@ -61,7 +61,7 @@ export function ViewToggle({ current, onChange }: ViewToggleProps) {
 
   return (
     <div className="relative" ref={ref}>
-      <button
+      <button type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors"
         style={{
@@ -99,7 +99,7 @@ export function ViewToggle({ current, onChange }: ViewToggleProps) {
           {viewModes.map(({ id, label, Icon }) => {
             const isActive = current === id;
             return (
-              <button
+              <button type="button"
                 key={id}
                 onClick={() => { onChange(id); setIsOpen(false); }}
                 className="w-full flex items-center gap-3 px-3 py-2 text-xs transition-colors text-left"

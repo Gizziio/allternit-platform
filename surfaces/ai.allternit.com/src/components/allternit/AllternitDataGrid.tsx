@@ -11,7 +11,6 @@ import {
   type ColDef,
   type GridReadyEvent,
   type CellValueChangedEvent,
-  type RowDataUpdatedEvent,
   ModuleRegistry,
   ClientSideRowModelModule,
   TextFilterModule,
@@ -20,7 +19,6 @@ import {
 } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import {
-  Table as Table2,
   DownloadSimple,
   ShareNetwork,
   Plus,

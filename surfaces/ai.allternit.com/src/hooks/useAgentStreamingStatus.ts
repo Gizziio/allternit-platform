@@ -23,12 +23,17 @@ export function useAgentStreamingStatus(
   intervalMs: number = 1500
 ): string | null {
   const [statusIndex, setStatusIndex] = useState(0);
+  const [prevIsStreaming, setPrevIsStreaming] = useState(isStreaming);
+
+  if (isStreaming !== prevIsStreaming) {
+    setPrevIsStreaming(isStreaming);
+    if (!isStreaming) setStatusIndex(0);
+  }
 
   const statuses = useMemo(() => DEFAULT_STATUS_CYCLE, []);
 
   useEffect(() => {
     if (!isStreaming) {
-      setStatusIndex(0);
       return;
     }
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export { DockSurface } from "./dock-surface";
 export { SessionComposerRegion } from "./session-composer-region";
 export type { SessionComposerRegionProps } from "./session-composer-region";

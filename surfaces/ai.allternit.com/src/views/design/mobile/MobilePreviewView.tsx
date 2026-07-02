@@ -1,7 +1,7 @@
 "use client";
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  DeviceMobile, DeviceTablet, ArrowsOut, ArrowsIn, ArrowCounterClockwise,
+  DeviceMobile, DeviceTablet, ArrowCounterClockwise,
   Globe, WifiHigh, BatteryFull, DotsThreeCircle,
 } from '@phosphor-icons/react';
 
@@ -256,7 +256,7 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
         {/* Mode switcher */}
         <div style={{ display: 'flex', padding: '10px 10px 0', gap: 4, flexShrink: 0 }}>
           {(['preview', 'snack'] as const).map(m => (
-            <button key={m} onClick={() => setMode(m)}
+            <button type="button" key={m} onClick={() => setMode(m)}
               style={{ flex: 1, padding: '6px 0', borderRadius: 7, border: `1px solid ${mode === m ? 'var(--accent-primary)' : 'var(--border-subtle)'}`, background: mode === m ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', color: mode === m ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize' }}>
               {m === 'snack' ? 'Expo IDE' : 'Preview'}
             </button>
@@ -269,7 +269,7 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
             {DEVICES.map(d => {
               const active = d.id === activeDeviceId;
               return (
-                <button key={d.id} onClick={() => setActiveDeviceId(d.id)}
+                <button type="button" key={d.id} onClick={() => setActiveDeviceId(d.id)}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 8, border: `1px solid ${active ? 'var(--accent-primary)' : 'transparent'}`, background: active ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', cursor: 'pointer', textAlign: 'left' }}>
                   {d.brand === 'tablet' ? <DeviceTablet size={13} color={active ? 'var(--accent-primary)' : 'var(--text-tertiary)'} /> : <DeviceMobile size={13} color={active ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />}
                   <span style={{ fontSize: 12, fontWeight: active ? 700 : 400, color: active ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>{d.label}</span>
@@ -284,7 +284,7 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
           <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Scale</div>
           <div style={{ display: 'flex', gap: 4 }}>
             {[0.7, 0.85, 1.0].map(s => (
-              <button key={s} onClick={() => setScale(s)}
+              <button type="button" key={s} onClick={() => setScale(s)}
                 style={{ flex: 1, padding: '5px 0', borderRadius: 6, border: `1px solid ${scale === s ? 'var(--accent-primary)' : 'var(--border-subtle)'}`, background: scale === s ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', color: scale === s ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                 {Math.round(s * 100)}%
               </button>
@@ -295,20 +295,19 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
         {/* URL input */}
         <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
           <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Preview URL</div>
-          <input
-            value={inputUrl}
+          <input aria-label="Input" value={inputUrl}
             onChange={e => setInputUrl(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && loadUrl()}
             placeholder="localhost:3000"
             style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 12, outline: 'none', marginBottom: 6 }}
           />
           <div style={{ display: 'flex', gap: 4 }}>
-            <button onClick={loadUrl}
+            <button type="button" onClick={loadUrl}
               style={{ flex: 1, padding: '5px 0', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
               <Globe size={10} /> Load
             </button>
             {url && (
-              <button onClick={() => { setUrl(''); setInputUrl(''); }}
+              <button type="button" onClick={() => { setUrl(''); setInputUrl(''); }}
                 style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer' }}>
                 <ArrowCounterClockwise size={10} />
               </button>
@@ -349,6 +348,7 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
             style={{ flex: 1, border: 'none', display: 'block' }}
             allow="geolocation; microphone; camera"
             title="Expo Snack IDE"
+            sandbox="allow-scripts"
           />
         </div>
       )}

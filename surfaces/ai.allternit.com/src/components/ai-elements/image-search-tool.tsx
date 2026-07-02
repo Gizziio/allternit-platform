@@ -37,10 +37,9 @@ export function ImageSearchTool({ query, results, className }: ImageSearchToolPr
 
         {/* Grid */}
         <div className="p-3 grid grid-cols-3 gap-2">
-          {results.map((result, i) => (
+          {results.map((result) => (
             <button
-              key={i}
-              type="button"
+              key={result.thumbnailUrl}              type="button"
               onClick={() => setLightbox(result)}
               className="group relative aspect-square overflow-hidden rounded-lg border border-border hover:border-primary/40 transition-all"
             >
@@ -61,11 +60,11 @@ export function ImageSearchTool({ query, results, className }: ImageSearchToolPr
 
       {/* Lightbox */}
       {lightbox && (
-        <div
+        <div role="button" tabIndex={0}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={() => setLightbox(null)}
         >
-          <div
+          <div role="button" tabIndex={0}
             className="relative max-w-2xl w-full"
             onClick={e => e.stopPropagation()}
           >

@@ -602,19 +602,19 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
 // Selectors (for performance)
 // ============================================================================
 
-export const selectActiveProgram = (state: SidecarState & SidecarActions): AllternitProgram | null => {
+const selectActiveProgram = (state: SidecarState & SidecarActions): AllternitProgram | null => {
   return state.activeProgramId ? state.programs[state.activeProgramId] ?? null : null;
 };
 
-export const selectProgramCount = (state: SidecarState & SidecarActions): number => {
+const selectProgramCount = (state: SidecarState & SidecarActions): number => {
   return state.programOrder.length;
 };
 
-export const selectHasPrograms = (state: SidecarState & SidecarActions): boolean => {
+const selectHasPrograms = (state: SidecarState & SidecarActions): boolean => {
   return state.programOrder.length > 0;
 };
 
-export const selectProgramsByThread = (
+const selectProgramsByThread = (
   state: SidecarState & SidecarActions,
   threadId: string
 ): AllternitProgram[] => {
@@ -629,15 +629,15 @@ export function useActiveProgram(): AllternitProgram | null {
   return useSidecarStore(selectActiveProgram);
 }
 
-export function useProgram(programId: string): AllternitProgram | null {
+function useProgram(programId: string): AllternitProgram | null {
   return useSidecarStore(state => state.programs[programId] ?? null);
 }
 
-export function useProgramState<T extends AllternitProgramState>(programId: string): T | null {
+function useProgramState<T extends AllternitProgramState>(programId: string): T | null {
   return useSidecarStore(state => (state.programs[programId]?.state as T) ?? null);
 }
 
-export function useAllPrograms(): AllternitProgram[] {
+function useAllPrograms(): AllternitProgram[] {
   return useSidecarStore(state => 
     state.programOrder.map(id => state.programs[id]).filter(Boolean)
   );

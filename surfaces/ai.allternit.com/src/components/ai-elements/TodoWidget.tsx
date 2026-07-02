@@ -10,7 +10,7 @@
 
 "use client";
 
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle,
@@ -46,7 +46,7 @@ interface TodoWidgetProps {
  *   1. Step label
  *   • Step label
  */
-export function parseTodoSteps(text: string): TodoStep[] | null {
+function parseTodoSteps(text: string): TodoStep[] | null {
   const lines = text.split("\n");
   const steps: TodoStep[] = [];
   let idx = 0;
@@ -125,7 +125,7 @@ export const TodoWidget = memo(function TodoWidget({
       overflow: "hidden",
     }}>
       {/* Header */}
-      <button
+      <button type="button"
         onClick={() => setCollapsed(v => !v)}
         style={{
           width: "100%",

@@ -12,7 +12,6 @@
  * @module AgentTestingPlayground
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -39,11 +38,15 @@ import {
 
 import type { Agent } from '@/lib/agents/agent.types';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentTestingPlayground');
+
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface AgentTestingPlaygroundProps {
+interface AgentTestingPlaygroundProps {
   agent: Agent;
   mode?: AgentMode;
   onSaveTest?: (test: TestResult) => void;
@@ -91,7 +94,7 @@ interface Variable {
 // Main Component
 // ============================================================================
 
-export function AgentTestingPlayground({
+function AgentTestingPlayground({
   agent,
   mode = 'chat',
   onSaveTest,
@@ -197,7 +200,7 @@ export function AgentTestingPlayground({
         toolCalls: m.toolCalls + (data.toolCalls?.length || 0),
       }));
     } catch (error) {
-      console.error('Test failed:', error);
+      logger.error({ err: error }, 'Test failed:');
       setMessages(prev => [...prev, {
         id: `err-${Date.now()}`,
         role: 'system',
@@ -344,7 +347,7 @@ function PlaygroundHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <button
+        <button type="button"
           onClick={onReset}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
           style={{
@@ -356,7 +359,7 @@ function PlaygroundHeader({
           Reset
         </button>
         {onDeploy && (
-          <button
+          <button type="button"
             onClick={onDeploy}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
             style={{
@@ -405,10 +408,9 @@ function EmptyState({
         Monitor tool calls, latency, and token usage in real-time.
       </p>
       <div className="flex flex-col gap-2 w-full max-w-md">
-        {suggestions.map((suggestion, i) => (
-          <button
-            key={i}
-            className="text-left px-4 py-3 rounded-lg text-sm transition-all"
+        {suggestions.map((suggestion) => (
+          <button type="button"
+            key={suggestion}            className="text-left px-4 py-3 rounded-lg text-sm transition-all"
             style={{
               background: 'var(--surface-hover)',
               border: `1px solid ${modeColors.border}`,
@@ -515,7 +517,7 @@ function ToolCallDisplay({
       <div className="flex items-center gap-2">
         <Wrench size={14} style={{ color: modeColors.accent }} />
         <span className="font-medium">{toolCall.name}</span>
-        <button
+        <button type="button"
           onClick={() => setExpanded(!expanded)}
           className="ml-auto"
           style={{ color: TEXT.tertiary }}
@@ -641,8 +643,7 @@ function InputArea({
           border: `1px solid ${modeColors.border}`,
         }}
       >
-        <textarea
-          value={input}
+        <textarea aria-label="Text Area" value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder="Type a message to test your agent…"
@@ -650,7 +651,7 @@ function InputArea({
           className="flex-1 bg-transparent outline-none resize-none text-sm"
           style={{ color: TEXT.primary, minHeight: '20px', maxHeight: '120px' }}
         />
-        <button
+        <button type="button"
           onClick={onSend}
           disabled={!input.trim() || isRunning}
           className="size-9  rounded-lg flex items-center justify-center transition-all disabled:opacity-40"
@@ -712,7 +713,7 @@ function PlaygroundSidebar({
     >
       {/* Metrics Section */}
       <div className="border-b" style={{ borderColor: modeColors.border }}>
-        <button
+        <button type="button"
           onClick={() => setShowMetrics(!showMetrics)}
           className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium"
           style={{ color: TEXT.primary }}
@@ -763,7 +764,7 @@ function PlaygroundSidebar({
 
       {/* Variables Section */}
       <div className="flex-1">
-        <button
+        <button type="button"
           onClick={() => setShowVariables(!showVariables)}
           className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium"
           style={{ color: TEXT.primary }}
@@ -785,7 +786,7 @@ function PlaygroundSidebar({
             >
               {variables.map((variable, index) => (
                 <div 
-                  key={index}
+                  key={`${variable.key}-${index}`}
                   className="p-2 rounded-lg"
                   style={{
                     background: 'var(--surface-hover)',
@@ -798,8 +799,7 @@ function PlaygroundSidebar({
                   >
                     {variable.key}
                   </div>
-                  <input
-                    type="text"
+                  <input aria-label="Input" type="text"
                     value={variable.value}
                     onChange={(e) => {
                       const newVars = [...variables];
@@ -816,7 +816,7 @@ function PlaygroundSidebar({
                   )}
                 </div>
               ))}
-              <button
+              <button type="button"
                 onClick={() => setVariables([...variables, { key: '', value: '' }])}
                 className="w-full py-2 rounded-lg text-xs font-medium transition-colors"
                 style={{

@@ -206,7 +206,7 @@ export async function extendVideo(
  * 
  * Basic video editing capabilities
  */
-export interface VideoEditOperation {
+interface VideoEditOperation {
   type: 'trim' | 'merge' | 'caption' | 'effect';
   params: Record<string, unknown>;
 }
@@ -260,7 +260,7 @@ export const VIDEO_PROVIDERS = {
 };
 
 // Open Source Tools for Video
-export const VIDEO_TOOLS = {
+const VIDEO_TOOLS = {
   animatediff: {
     name: 'AnimateDiff',
     url: 'github.com/guoyww/AnimateDiff',

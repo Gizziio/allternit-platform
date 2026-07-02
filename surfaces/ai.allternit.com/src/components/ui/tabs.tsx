@@ -61,7 +61,7 @@ export const TabsTrigger: React.FC<{
   className?: string;
 }> = ({ children, isActive, onClick, className }) => {
   return (
-    <button
+    <button type="button"
       className={className}
       onClick={onClick}
       style={{

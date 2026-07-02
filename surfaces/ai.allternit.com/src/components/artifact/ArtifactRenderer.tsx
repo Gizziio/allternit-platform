@@ -84,7 +84,6 @@ const SVGRenderer = memo<{ content: string }>(({ content }) => (
 ));
 
 const MarkdownRenderer = memo<{ content: string }>(({ content }) => {
-  // Simple markdown-like renderer for now; can be swapped for react-markdown later
   const html = useMemo(() => {
     return content
       .replace(/^### (.*$)/gim, '<h3 style="margin:12px 0 6px;color:var(--text-primary)">$1</h3>')
@@ -129,7 +128,7 @@ const MermaidRenderer = memo<{ content: string }>(({ content }) => (
   </div>
 ));
 
-export const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, width }) => {
+const ArtifactRenderer = memo<ArtifactRendererProps>(({ content, type, height, width }) => {
   switch (type) {
     case 'application/lobe.artifacts.react':
     case 'code/react': {

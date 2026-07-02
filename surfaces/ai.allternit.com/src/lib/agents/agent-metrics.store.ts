@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-export interface AgentMetric {
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentMetrics');
+
+interface AgentMetric {
   id: string;
   agentId: string;
   runId?: string;
@@ -11,7 +15,7 @@ export interface AgentMetric {
   timestamp: string;
 }
 
-export interface MetricsSummary {
+interface MetricsSummary {
   agentId: string;
   totalRuns: number;
   avgLatency: number;
@@ -52,7 +56,7 @@ export const useAgentMetricsStore = create<AgentMetricsState & AgentMetricsActio
           set({ metrics: data.metrics || [], summary: data.summary || [] });
         }
       } catch (e) {
-        console.error('Failed to fetch metrics', e);
+        logger.error({ err: e }, 'Failed to fetch metrics');
       } finally {
         set({ isLoading: false });
       }

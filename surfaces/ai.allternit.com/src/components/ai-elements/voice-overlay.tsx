@@ -90,7 +90,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {/* Voice Presence - Clickable Persona Avatar */}
-      <button
+      <button type="button"
         onClick={handlePersonaClick}
         disabled={serviceAvailable === false && !isRecording}
         className={cn(
@@ -209,10 +209,10 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
 
           {/* Mic Selector */}
           <div className="space-y-1.5 mb-3">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+            <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <UserCircle size={12} />
               Microphone
-            </label>
+            </div>
             <MicSelector>
               <MicSelectorTrigger className="w-full h-7 text-xs">Select Mic</MicSelectorTrigger>
               <MicSelectorContent>
@@ -235,10 +235,10 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
 
           {/* Voice Selector */}
           <div className="space-y-1.5 mb-3">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+            <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <GearSix size={12} />
               Voice
-            </label>
+            </div>
             <VoiceSelector
               value={currentVoice}
               open={voiceSelectorOpen}
@@ -276,7 +276,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
 
           {/* Auto-play Toggle */}
           <div className="flex items-center justify-between pt-2 border-t">
-            <label className="text-xs text-muted-foreground">Auto-play TTS</label>
+            <div className="text-xs text-muted-foreground">Auto-play TTS</div>
             <Button
               variant={autoPlay ? "default" : "outline"}
               size="sm"

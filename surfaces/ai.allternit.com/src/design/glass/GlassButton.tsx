@@ -301,28 +301,28 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
 /**
  * Primary glass button with accent styling
  */
-export function GlassButtonPrimary(props: Omit<GlassButtonProps, 'variant'>) {
+function GlassButtonPrimary(props: Omit<GlassButtonProps, 'variant'>) {
   return <GlassButton {...props} variant="primary" hover="glow" />;
 }
 
 /**
  * Success glass button
  */
-export function GlassButtonSuccess(props: Omit<GlassButtonProps, 'variant'>) {
+function GlassButtonSuccess(props: Omit<GlassButtonProps, 'variant'>) {
   return <GlassButton {...props} variant="success" />;
 }
 
 /**
  * Danger/Error glass button
  */
-export function GlassButtonDanger(props: Omit<GlassButtonProps, 'variant'>) {
+function GlassButtonDanger(props: Omit<GlassButtonProps, 'variant'>) {
   return <GlassButton {...props} variant="danger" />;
 }
 
 /**
  * Ghost glass button (transparent background)
  */
-export function GlassButtonGhost(props: Omit<GlassButtonProps, 'opacity' | 'elevation'>) {
+function GlassButtonGhost(props: Omit<GlassButtonProps, 'opacity' | 'elevation'>) {
   return <GlassButton {...props} opacity="none" elevation="flat" hover="scale" />;
 }
 
@@ -365,14 +365,14 @@ export function GlassIconButton({
 /**
  * Small glass button
  */
-export function GlassButtonSmall(props: Omit<GlassButtonProps, 'size'>) {
+function GlassButtonSmall(props: Omit<GlassButtonProps, 'size'>) {
   return <GlassButton {...props} size="sm" />;
 }
 
 /**
  * Large glass button
  */
-export function GlassButtonLarge(props: Omit<GlassButtonProps, 'size'>) {
+function GlassButtonLarge(props: Omit<GlassButtonProps, 'size'>) {
   return <GlassButton {...props} size="lg" />;
 }
 

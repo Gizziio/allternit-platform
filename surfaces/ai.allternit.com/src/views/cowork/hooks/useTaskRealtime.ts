@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-export function useTaskRealtime(workspaceId: string): JSX.Element {
+export function useTaskRealtime(workspaceId: string): { isConnected: boolean } {
   const queryClient = useQueryClient();
   const eventSourceRef = useRef<EventSource | null>(null);
 

@@ -7,13 +7,22 @@ import {
   ChatTeardropText,
   Robot,
   Plus,
-  Lightning,
   Palette,
   Code,
   Globe,
+  Target,
+  Clock,
+  ArrowsClockwise,
 } from '@phosphor-icons/react';
 
-export interface RailConfigItem {
+export interface RailSubmenuItem {
+  id: string;
+  label: string;
+  icon?: Icon;
+  payload: string;
+}
+
+interface RailConfigItem {
   id: string;
   label: string;
   icon: Icon;
@@ -22,6 +31,7 @@ export interface RailConfigItem {
   shortcut?: string;
   badge?: number;
   disabled?: boolean;
+  submenu?: RailSubmenuItem[];
 }
 
 export interface RailConfigSection {
@@ -34,7 +44,7 @@ export interface RailConfigSection {
   collapsible?: boolean;
 }
 
-export function MatrixLogo({ size = 20 }: { size?: number | string }) {
+function MatrixLogo({ size = 20 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="4" y="4" width="4" height="4" fill="currentColor" />
@@ -108,10 +118,10 @@ export const RAIL_CONFIG: RailConfigSection[] = [
     collapsible: false,
     defaultExpanded: true,
     items: [
-      { 
-        id: 'agent-hub', 
-        label: 'Agent Hub', 
-        icon: Robot, 
+      {
+        id: 'agent-hub',
+        label: 'Agent Hub',
+        icon: Robot,
         payload: 'agent-hub',
         shortcut: '⌘⇧A'
       },
@@ -126,13 +136,40 @@ export const RAIL_CONFIG: RailConfigSection[] = [
     collapsible: true,
     items: [],
   },
+  {
+    id: 'automation',
+    title: 'Automation',
+    icon: Target,
+    collapsible: true,
+    defaultExpanded: true,
+    items: [
+      {
+        id: 'goals-list',
+        label: 'Goals',
+        icon: Target,
+        payload: 'goals-list',
+      },
+      {
+        id: 'routines-list',
+        label: 'Routines',
+        icon: Clock,
+        payload: 'routines-list',
+      },
+      {
+        id: 'loops-list',
+        label: 'Loops',
+        icon: ArrowsClockwise,
+        payload: 'loops-list',
+      },
+    ],
+  },
 ];
 
-export const getRailSection = (sectionId: string): RailConfigSection | undefined => {
+const getRailSection = (sectionId: string): RailConfigSection | undefined => {
   return RAIL_CONFIG.find((s) => s.id === sectionId);
 };
 
-export const getRailItem = (itemId: string): RailConfigItem | undefined => {
+const getRailItem = (itemId: string): RailConfigItem | undefined => {
   for (const section of RAIL_CONFIG) {
     const item = section.items.find((i) => i.id === itemId);
     if (item) return item;

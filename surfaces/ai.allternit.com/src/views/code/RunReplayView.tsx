@@ -50,7 +50,7 @@ const getStepLabel = (type: StepType): string => {
   }
 };
 
-export function RunReplayView() {
+export function RunReplayView({ sessionId }: { sessionId?: string } = {}) {
   const [steps, setSteps] = useState<ReplayStep[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeStepId, setActiveStepId] = useState(1);
@@ -58,11 +58,11 @@ export function RunReplayView() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    // TODO: wire sessionId from router/store when replay backend is available
-    apiRequest<{ steps: ReplayStep[] }>(`${API_BASE_URL}/sessions/replay`, { method: 'POST', body: JSON.stringify({}) })
+    if (!sessionId) return;
+    apiRequest<{ steps: ReplayStep[] }>(`${API_BASE_URL}/sessions/replay`, { method: 'POST', body: JSON.stringify({ sessionId }) })
       .then(({ steps: loaded }) => { setSteps(loaded); if (loaded.length > 0) setActiveStepId(loaded[0].id); })
       .catch(() => {});
-  }, []);
+  }, [sessionId]);
 
   const activeStep = steps.find(s => s.id === activeStepId);
   const totalDuration = steps.reduce((sum, s) => sum + s.duration, 0);
@@ -92,19 +92,19 @@ export function RunReplayView() {
       {/* Playback Controls */}
       <GlassCard style={{ padding: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <button
+          <button type="button"
             onClick={() => setActiveStepId(Math.max(1, activeStepId - 5))}
             style={{ padding: 6, border: 'none', background: 'var(--bg-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-secondary)' }}
           >
             <CaretLeft size={16} weight="fill" />
           </button>
-          <button
+          <button type="button"
             onClick={() => setActiveStepId(Math.max(1, activeStepId - 1))}
             style={{ padding: 6, border: 'none', background: 'var(--bg-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-secondary)' }}
           >
             <SkipBack size={16} weight="fill" />
           </button>
-          <button
+          <button type="button"
             onClick={() => setIsPlaying(!isPlaying)}
             style={{
               padding: 6,
@@ -118,13 +118,13 @@ export function RunReplayView() {
           >
             {isPlaying ? <Pause size={16} weight="fill" /> : <Play size={16} weight="fill" />}
           </button>
-          <button
+          <button type="button"
             onClick={() => setActiveStepId(Math.min(steps.length, activeStepId + 1))}
             style={{ padding: 6, border: 'none', background: 'var(--bg-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-secondary)' }}
           >
             <SkipForward size={16} weight="fill" />
           </button>
-          <button
+          <button type="button"
             onClick={() => setActiveStepId(Math.min(steps.length, activeStepId + 5))}
             style={{ padding: 6, border: 'none', background: 'var(--bg-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-secondary)' }}
           >
@@ -132,8 +132,7 @@ export function RunReplayView() {
           </button>
 
           {/* Progress Scrubber */}
-          <input
-            type="range"
+          <input aria-label="Input" type="range"
             min="1"
             max={steps.length}
             value={activeStepId}
@@ -217,7 +216,7 @@ export function RunReplayView() {
                             </div>
                           </div>
                         </div>
-                        <button
+                        <button type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleExpanded(step.id);

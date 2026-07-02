@@ -8,8 +8,8 @@
 // DAG Types
 // ============================================================================
 
-export type DagNodeStatus = "pending" | "running" | "completed" | "failed" | "blocked" | "skipped";
-export type DagEdgeType = "hard" | "soft";
+type DagNodeStatus = "pending" | "running" | "completed" | "failed" | "blocked" | "skipped";
+type DagEdgeType = "hard" | "soft";
 
 export interface DagNode {
   id: string;
@@ -31,7 +31,7 @@ export interface DagNode {
   timeoutMs: number;
 }
 
-export interface DagEdge {
+interface DagEdge {
   from: string;
   to: string;
   type: DagEdgeType;
@@ -71,7 +71,7 @@ export interface DagPlanRequest {
   agentId?: string;
 }
 
-export interface DagPlanResponse {
+interface DagPlanResponse {
   dagId: string;
   promptId: string;
   rootNodeId: string;
@@ -85,7 +85,7 @@ export interface DagRefineRequest {
   mutations?: DagMutation[];
 }
 
-export interface DagMutation {
+interface DagMutation {
   action: "add" | "remove" | "modify" | "set_status";
   nodeId?: string;
   parentId?: string;
@@ -99,7 +99,7 @@ export interface DagMutation {
 // WIH (Work In Hand) Types
 // ============================================================================
 
-export type WihStatus = "open" | "signed" | "closed" | "archived";
+type WihStatus = "open" | "signed" | "closed" | "archived";
 
 export interface WihInfo {
   wihId: string;
@@ -127,7 +127,7 @@ export interface WihPickupRequest {
   fresh?: boolean;
 }
 
-export interface WihPickupResponse {
+interface WihPickupResponse {
   wihId: string;
   contextPackPath?: string;
   leaseId?: string;
@@ -144,7 +144,7 @@ export interface WihCloseRequest {
 // Lease Types
 // ============================================================================
 
-export type LeaseStatus = "active" | "expiring" | "expired" | "released";
+type LeaseStatus = "active" | "expiring" | "expired" | "released";
 
 export interface ManagedLease {
   leaseId: string;
@@ -170,7 +170,7 @@ export interface LeaseRequest {
   ttlSeconds?: number;
 }
 
-export interface LeaseResponse {
+interface LeaseResponse {
   leaseId: string;
   granted: boolean;
   expiresAt?: number;
@@ -196,7 +196,7 @@ export interface ContextPack {
   };
 }
 
-export interface ContextPackInputs {
+interface ContextPackInputs {
   wihId: string;
   dagId: string;
   nodeId: string;
@@ -209,20 +209,20 @@ export interface ContextPackInputs {
   leaseInfo?: LeaseInfo;
 }
 
-export interface DagSlice {
+interface DagSlice {
   node: DagNode;
   hardDeps: DagNode[];
   ancestors: DagNode[];
   edges: DagEdge[];
 }
 
-export interface LeaseInfo {
+interface LeaseInfo {
   leaseId: string;
   keys: string[];
   expiresAt: number;
 }
 
-export interface ContextPackSealResponse {
+interface ContextPackSealResponse {
   sealed: boolean;
   contextPackId: string;
   storedAt: string;
@@ -276,7 +276,7 @@ export interface ReceiptQuery {
 // Gate/Policy Types
 // ============================================================================
 
-export type GateDecision = "allow" | "block" | "review";
+type GateDecision = "allow" | "block" | "review";
 
 export interface GateCheck {
   checkId: string;
@@ -293,18 +293,18 @@ export interface GateCheck {
   contextPackId?: string;
 }
 
-export interface ToolCall {
+interface ToolCall {
   tool: string;
   args: Record<string, unknown>;
   intendedPaths?: string[];
 }
 
-export interface GateRules {
+interface GateRules {
   version: string;
   rules: GateRule[];
 }
 
-export interface GateRule {
+interface GateRule {
   id: string;
   name: string;
   pattern: string;  // Regex or glob
@@ -316,9 +316,9 @@ export interface GateRule {
 // Policy Marker Types
 // ============================================================================
 
-export type InjectionPoint = "session_start" | "dag_load" | "node_entry" | "tool_invoke";
+type InjectionPoint = "session_start" | "dag_load" | "node_entry" | "tool_invoke";
 
-export interface PolicyMarker {
+interface PolicyMarker {
   markerId: string;
   bundleId: string;
   injectionPoint: InjectionPoint;
@@ -377,7 +377,7 @@ export interface PromptTemplate {
   tags: string[];
 }
 
-export interface TemplateVariable {
+interface TemplateVariable {
   name: string;
   description: string;
   required: boolean;
@@ -396,7 +396,7 @@ export interface TemplateExecutionRequest {
 // DAK Runner State
 // ============================================================================
 
-export interface DakRunnerState {
+interface DakRunnerState {
   // Connection
   railsConnected: boolean;
   railsUrl: string;
@@ -428,7 +428,7 @@ export interface DakRunnerState {
 // Events
 // ============================================================================
 
-export type DakEventType = 
+type DakEventType = 
   | "dag:started"
   | "dag:completed"
   | "node:started"
@@ -462,7 +462,7 @@ export interface DakEvent {
 // API Response Types
 // ============================================================================
 
-export interface DakApiResponse<T> {
+interface DakApiResponse<T> {
   success: boolean;
   data?: T;
   error?: {

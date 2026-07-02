@@ -37,6 +37,8 @@ export function CodeCanvasTileNotes({ initialContent = '', onChange }: CodeCanva
         <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Notes</span>
       </div>
       <textarea
+        className="focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+        aria-label="Type notes here…"
         value={content}
         onChange={handleChange}
         placeholder="Type notes here…"
@@ -51,7 +53,6 @@ export function CodeCanvasTileNotes({ initialContent = '', onChange }: CodeCanva
           fontSize: 13,
           lineHeight: 1.6,
           resize: 'none',
-          outline: 'none',
           fontFamily: 'inherit',
         }}
       />

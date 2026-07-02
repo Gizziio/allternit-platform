@@ -103,8 +103,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
         <span style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)', minWidth: 32 }}>
           {formatTime(currentTime)}
         </span>
-        <input
-          type="range"
+        <input aria-label="Input" type="range"
           min={0}
           max={duration || 100}
           value={currentTime}
@@ -124,7 +123,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
 
       {/* Controls */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <button
+        <button type="button"
           onClick={() => {
             if (audioRef.current) {
               audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 10);
@@ -141,7 +140,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
           <SkipBack size={16} />
         </button>
 
-        <button
+        <button type="button"
           onClick={togglePlay}
           disabled={!isLoaded}
           style={{
@@ -161,7 +160,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
           {isPlaying ? <Pause size={16} /> : <Play size={16} />}
         </button>
 
-        <button
+        <button type="button"
           onClick={() => {
             if (audioRef.current) {
               audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 10);
@@ -180,8 +179,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
           <Volume2 size={14} color="var(--text-muted, #a1a1aa)" />
-          <input
-            type="range"
+          <input aria-label="Input" type="range"
             min={0}
             max={1}
             step={0.1}

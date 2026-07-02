@@ -1,15 +1,10 @@
 "use client";
 
-import type { ComponentProps } from "react";
-
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
-  ArrowDown as ArrowDownIcon,
-  Download as DownloadIcon,
-} from '@phosphor-icons/react';
-import { useCallback } from "react";
+import React, { useCallback, type ComponentProps } from "react";
+import { ArrowDown as ArrowDownIcon, DownloadSimple as DownloadIcon } from "@phosphor-icons/react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>;
 

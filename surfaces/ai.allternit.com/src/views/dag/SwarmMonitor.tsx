@@ -116,6 +116,7 @@ export function SwarmMonitor() {
   });
   const [showHealthPanel, setShowHealthPanel] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isClient = useIsClient();
 
   // ─── Store Access ───
   // Use CodeSessionStore for swarm threads (they're code-mode sessions)
@@ -767,7 +768,7 @@ function TreeItem({
         style={{ paddingLeft: `${8 + level * 12}px` }}
       >
         {hasChildren ? (
-          <button 
+          <button type="button" 
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
             className="text-zinc-600 hover:text-zinc-400"
           >
@@ -936,7 +937,7 @@ function SessionContent({
       >
         <div className="text-zinc-500 mb-2">$ swarm thread --tactic={thread.tactic} --goal="{thread.goal}"</div>
         {thread.output.map((line, i) => (
-          <div key={i} className={
+          <div key={`swarmmonitor-${i}`} className={
             line.startsWith('✓') ? 'text-emerald-500' :
             line.startsWith('⏸') ? 'text-amber-500' :
             line.startsWith('✗') ? 'text-red-500' :
@@ -1092,7 +1093,7 @@ function EpisodeBar({ episode, thread }: { episode: Episode; thread: SwarmThread
           <div className="text-xs text-zinc-500 mb-2">Original Output ({thread.output.length} lines)</div>
           <div className="bg-zinc-950 rounded p-3 font-mono text-xs text-zinc-400 max-h-32 overflow-auto">
             {thread.output.slice(0, 10).map((line, i) => (
-              <div key={i} className="truncate">{line}</div>
+              <div key={`swarmmonitor-${i}`} className="truncate">{line}</div>
             ))}
             {thread.output.length > 10 && (
               <div className="text-zinc-600">… {thread.output.length - 10} more lines</div>

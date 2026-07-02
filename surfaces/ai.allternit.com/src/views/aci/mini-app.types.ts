@@ -1,6 +1,6 @@
 export type MiniAppCategory = 'runtime' | 'connector' | 'tool' | 'data' | 'communication' | 'custom';
 export type MiniAppSource = 'discovered' | 'connector' | 'url' | 'builtin';
-export type MiniAppStatus = 'available' | 'pinned' | 'running' | 'offline';
+type MiniAppStatus = 'available' | 'pinned' | 'running' | 'offline';
 
 /** Served at /.well-known/allternit-app.json by any allternit-native service */
 export interface MiniAppManifest {
@@ -11,6 +11,12 @@ export interface MiniAppManifest {
   icon?: string;
   category: MiniAppCategory;
   pinnable: boolean;
+  /** GitHub repo in owner/repo format for lazy download and avatar */
+  repo?: string;
+  /** Direct GitHub URL for the project page */
+  githubUrl?: string;
+  /** Whether the mini-app can be downloaded and run locally */
+  downloadable?: boolean;
 }
 
 export interface InstalledMiniApp {
@@ -28,4 +34,10 @@ export interface InstalledMiniApp {
   status: MiniAppStatus;
   pinnedAt?: string;
   lastSeenAt?: string;
+  /** GitHub repo in owner/repo format */
+  repo?: string;
+  /** Direct GitHub URL */
+  githubUrl?: string;
+  /** Whether the mini-app can be downloaded and run locally */
+  downloadable?: boolean;
 }

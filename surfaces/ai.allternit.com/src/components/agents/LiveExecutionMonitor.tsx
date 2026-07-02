@@ -1,18 +1,4 @@
-/**
- * Live Execution Monitor
- * 
- * Real-time monitoring of agent executions, DAGs, and WIHs.
- * Features:
- * - Live log streaming
- * - DAG visualization
- * - WIH status tracking
- * - Execution timeline
- * - Error highlighting
- * 
- * @module LiveExecutionMonitor
- */
-
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from 'framer-motion';
 import {
   Terminal,
@@ -28,18 +14,18 @@ import {
   Cube,
   ArrowCounterClockwise,
 } from '@phosphor-icons/react';
+import { useDakStore } from '@/runner/dak.store';
 
 import {
   MODE_COLORS,
   TEXT,
   type AgentMode,
 } from '@/design/allternit.tokens';
-
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface LiveExecutionMonitorProps {
+interface LiveExecutionMonitorProps {
   executionId?: string;
   dagId?: string;
   mode?: AgentMode;
@@ -47,7 +33,7 @@ export interface LiveExecutionMonitorProps {
   onRestart?: () => void;
 }
 
-export interface LogEntry {
+interface LogEntry {
   id: string;
   timestamp: Date;
   level: 'debug' | 'info' | 'warn' | 'error';
@@ -56,7 +42,7 @@ export interface LogEntry {
   metadata?: Record<string, unknown>;
 }
 
-export interface DagNode {
+interface DagNode {
   id: string;
   name: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
@@ -67,7 +53,7 @@ export interface DagNode {
   agent?: string;
 }
 
-export interface DagExecution {
+interface DagExecution {
   id: string;
   nodes: DagNode[];
   edges: { from: string; to: string }[];
@@ -75,7 +61,7 @@ export interface DagExecution {
   progress: number;
 }
 
-export interface WihInfo {
+interface WihInfo {
   id: string;
   title: string;
   status: 'ready' | 'claimed' | 'in_progress' | 'completed' | 'failed';
@@ -90,7 +76,7 @@ export interface WihInfo {
 // Main Component
 // ============================================================================
 
-export function LiveExecutionMonitor({
+function LiveExecutionMonitor({
   executionId,
   dagId,
   mode = 'code',
@@ -99,9 +85,7 @@ export function LiveExecutionMonitor({
 }: LiveExecutionMonitorProps) {
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
   const [activeTab, setActiveTab] = useState<'logs' | 'dag' | 'wihs'>('logs');
-  const [logs] = useState<LogEntry[]>([]);
-  const [dag] = useState<DagExecution | null>(null);
-  const [wihs] = useState<WihInfo[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLive, setIsLive] = useState(true);
   const [filterLevel, setFilterLevel] = useState<LogEntry['level'] | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,8 +93,115 @@ export function LiveExecutionMonitor({
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Logs, DAG, and WIHs are populated via real streaming once the execution backend
-  // pushes events (handled by parent via executionId/dagId props).
+
+  const storeExecutions = useDakStore((s) => s.activeExecutions);
+  const storeDags = useDakStore((s) => s.dags);
+  const storeWihs = useDakStore((s) => s.wihs);
+  const fetchDags = useDakStore((s) => s.fetchDags);
+  const fetchWihs = useDakStore((s) => s.fetchWihs);
+
+  useEffect(() => {
+    fetchDags();
+    if (dagId) fetchWihs(dagId);
+  }, [fetchDags, fetchWihs, dagId]);
+
+  const dag = useMemo<DagExecution | null>(() => {
+    const exec = storeExecutions.find(
+      (e) => e.runId === executionId || e.dagId === dagId
+    );
+    if (!exec) return null;
+    const def = storeDags.find((d) => d.dagId === exec.dagId);
+    return {
+      id: exec.runId,
+      nodes: (def?.nodes ?? []).map((n) => ({
+        id: n.id,
+        name: n.title,
+        status: exec.completedNodes.includes(n.id) ? 'completed'
+          : exec.failedNodes.includes(n.id) ? 'failed'
+          : exec.blockedNodes.includes(n.id) ? 'skipped'
+          : exec.currentNodeId === n.id ? 'running' : 'pending',
+        dependencies: (def?.edges ?? [])
+          .filter((e) => e.to === n.id)
+          .map((e) => e.from),
+        agent: n.agentId,
+      })),
+      edges: (def?.edges ?? []).map((e) => ({ from: e.from, to: e.to })),
+      status: exec.status === 'cancelled' ? 'failed' : exec.status,
+      progress: exec.progress,
+    };
+  }, [executionId, dagId, storeExecutions, storeDags]);
+
+  const wihs = useMemo<WihInfo[]>(() => {
+    const filtered = dagId
+      ? storeWihs.filter((w) => w.dagId === dagId)
+      : storeWihs;
+    return filtered.map((w) => ({
+      id: w.wihId,
+      title: w.title || w.wihId,
+      status: w.status === 'open' ? 'ready'
+        : w.status === 'signed' ? 'claimed'
+        : w.status === 'closed' ? 'completed'
+        : 'failed',
+      assignee: w.assignedTo,
+      priority: 0,
+      createdAt: new Date(w.createdAt),
+      startedAt: w.signedAt ? new Date(w.signedAt) : undefined,
+      completedAt: w.closedAt ? new Date(w.closedAt) : undefined,
+    }));
+  }, [storeWihs, dagId]);
+
+  const [prevDagOC, setPrevDagOC] = useState(dag);
+  if (dag !== prevDagOC) {
+    setPrevDagOC(dag);
+    const prev = prevDagOC;
+    const newEntries: LogEntry[] = [];
+
+    if (!dag) return;
+
+    if (!prev || prev.status !== dag.status) {
+      newEntries.push({
+        id: `status-${dag.status}-${Date.now()}`,
+        timestamp: new Date(),
+        level: dag.status === 'failed' ? 'error' : 'info',
+        source: 'execution',
+        message: `Execution ${dag.status} (progress: ${dag.progress}%)`,
+      });
+    }
+
+    for (const node of dag.nodes) {
+      const prevNode = prev?.nodes.find((n) => n.id === node.id);
+      if (prevNode?.status === node.status) continue;
+      if (node.status === 'running') {
+        newEntries.push({
+          id: `node-start-${node.id}-${Date.now()}`,
+          timestamp: new Date(),
+          level: 'info',
+          source: node.agent || 'dag',
+          message: `Node "${node.name}" started`,
+        });
+      } else if (node.status === 'completed') {
+        newEntries.push({
+          id: `node-done-${node.id}-${Date.now()}`,
+          timestamp: new Date(),
+          level: 'info',
+          source: node.agent || 'dag',
+          message: `Node "${node.name}" completed`,
+        });
+      } else if (node.status === 'failed') {
+        newEntries.push({
+          id: `node-fail-${node.id}-${Date.now()}`,
+          timestamp: new Date(),
+          level: 'error',
+          source: node.agent || 'dag',
+          message: `Node "${node.name}" failed`,
+        });
+      }
+    }
+
+    if (newEntries.length > 0) {
+      setLogs((prevLogs) => [...prevLogs, ...newEntries]);
+    }
+  }
 
   // Auto-scroll
   useEffect(() => {
@@ -245,7 +336,7 @@ function MonitorHeader({
         </div>
 
         {/* Live Indicator */}
-        <button
+        <button type="button"
           onClick={() => setIsLive(!isLive)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
           style={{
@@ -270,7 +361,7 @@ function MonitorHeader({
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
-            <button
+            <button type="button"
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
@@ -289,7 +380,7 @@ function MonitorHeader({
       {/* Actions */}
       <div className="flex items-center gap-2">
         {onRestart && (
-          <button
+          <button type="button"
             onClick={onRestart}
             className="p-2 rounded-lg transition-colors"
             style={{
@@ -301,7 +392,7 @@ function MonitorHeader({
           </button>
         )}
         {onStop && (
-          <button
+          <button type="button"
             onClick={onStop}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
             style={{
@@ -360,7 +451,7 @@ function LogsPanel({
         {/* Level Filter */}
         <div className="flex items-center gap-1">
           {(['all', 'debug', 'info', 'warn', 'error'] as const).map((level) => (
-            <button
+            <button type="button"
               key={level}
               onClick={() => setFilterLevel(level)}
               className="px-2 py-1 rounded text-xs font-medium capitalize transition-all"
@@ -379,8 +470,7 @@ function LogsPanel({
         {/* Search */}
         <div className="relative">
           <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -tranzinc-y-1/2" style={{ color: TEXT.tertiary }} />
-          <input
-            type="text"
+          <input aria-label="Input" type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search logs…"
@@ -394,7 +484,7 @@ function LogsPanel({
         </div>
 
         {/* Auto-scroll Toggle */}
-        <button
+        <button type="button"
           onClick={() => setAutoScroll(!autoScroll)}
           className="px-2 py-1.5 rounded-lg text-xs font-medium transition-all"
           style={{
@@ -406,7 +496,7 @@ function LogsPanel({
           Auto-scroll
         </button>
 
-        <button
+        <button type="button"
           className="p-1.5 rounded-lg transition-colors"
           style={{
             background: 'var(--surface-hover)',

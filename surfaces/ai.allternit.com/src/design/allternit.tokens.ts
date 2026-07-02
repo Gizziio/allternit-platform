@@ -26,7 +26,7 @@ export const SAND = {
   950: '#2A1F16',
 } as const;
 
-export const NUDE = {
+const NUDE = {
   100: '#FAF0E6',
   200: '#F2E2D2',
   300: '#E6CCB2',
@@ -184,7 +184,7 @@ export const STATUS = {
 // Shadows
 // ============================================================================
 
-export const SHADOW = {
+const SHADOW = {
   xs: '0 2px 8px rgba(0,0,0,0.15)',
   sm: '0 4px 16px rgba(0,0,0,0.18)',
   md: '0 8px 32px rgba(0,0,0,0.2)',
@@ -197,7 +197,7 @@ export const SHADOW = {
 // Spacing (4px base grid)
 // ============================================================================
 
-export const SPACE = {
+const SPACE = {
   0: '0px',
   1: '4px',
   2: '8px',
@@ -280,7 +280,7 @@ export const ANIMATION = {
 // Helper Functions
 // ============================================================================
 
-export function getModeColors(mode: AgentMode) {
+function getModeColors(mode: AgentMode) {
   return MODE_COLORS[mode];
 }
 
@@ -294,7 +294,7 @@ export function createGlassStyle(intensity: keyof typeof GLASS) {
   };
 }
 
-export function createGlowStyle(color: string, intensity: number = 0.25) {
+function createGlowStyle(color: string, intensity: number = 0.25) {
   return {
     boxShadow: `0 0 20px ${color.replace(')', `, ${intensity})`)}`,
   };
@@ -304,7 +304,7 @@ export function createGlowStyle(color: string, intensity: number = 0.25) {
 // Component Presets
 // ============================================================================
 
-export const COMPONENT_PRESETS = {
+const COMPONENT_PRESETS = {
   card: {
     ...createGlassStyle('base'),
     borderRadius: RADIUS.lg,

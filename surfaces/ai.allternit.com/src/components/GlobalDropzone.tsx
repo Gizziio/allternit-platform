@@ -7,6 +7,7 @@ import {
   Chat,
   FolderOpen,
   Code,
+  MagicWand,
 } from '@phosphor-icons/react';
 import { supportsTextExtraction, extractTextFromFile } from '@/lib/attachments/extract-text';
 import { createModuleLogger } from '@/lib/logger';
@@ -17,10 +18,11 @@ const logger = createModuleLogger('GlobalDropzone');
 // Types
 // ============================================================================
 
-export type DropTarget = 
+export type DropTarget =
   | 'chat'        // Chat input/composer
   | 'cowork'      // Cowork files view
   | 'code'        // Code explorer
+  | 'design'      // Design studio chat
   | 'agent'       // Agent runner/command palette
   | 'rail'        // Sidebar projects
   | 'global';     // Anywhere - uses current context
@@ -294,6 +296,7 @@ function GlobalDropzoneOverlay({ target, isReject }: GlobalDropzoneOverlayProps)
     chat: { icon: Chat, label: 'Drop to attach in chat', color: 'var(--accent-primary)' },
     cowork: { icon: FolderOpen, label: 'Drop to upload to files', color: 'var(--accent-cowork)' },
     code: { icon: Code, label: 'Drop to add to project', color: 'var(--status-success)' },
+    design: { icon: MagicWand, label: 'Drop to attach in design studio', color: 'var(--accent-design)' },
     agent: { icon: UploadSimple, label: 'Drop to use with agent', color: 'var(--status-info)' },
     rail: { icon: FolderOpen, label: 'Drop to quick upload', color: 'var(--accent-primary)' },
     global: { icon: UploadSimple, label: 'Drop files anywhere', color: 'var(--accent-primary)' },
@@ -373,17 +376,23 @@ function GlobalDropzoneOverlay({ target, isReject }: GlobalDropzoneOverlayProps)
 // ============================================================================
 
 export function useDropTarget(target: DropTarget, handler: DropHandler) {
-  const { registerDropHandler, setCurrentContext } = useGlobalDropzone();
+  const { registerDropHandler, setCurrentContext, dropTarget: currentTarget } = useGlobalDropzone();
 
   useEffect(() => {
     const unregister = registerDropHandler(target, handler);
     return unregister;
   }, [target, handler, registerDropHandler]);
 
-  // Set this as current context when mounted
+  // Set this as current context when mounted, restore on unmount
   useEffect(() => {
+    const previousTarget = currentTarget;
     setCurrentContext(target);
-  }, [target, setCurrentContext]);
+    return () => {
+      if (previousTarget) {
+        setCurrentContext(previousTarget);
+      }
+    };
+  }, [target, setCurrentContext, currentTarget]);
 }
 
 // ============================================================================
@@ -396,11 +405,17 @@ interface DropzoneContextProps {
 }
 
 export function DropzoneContext({ context, children }: DropzoneContextProps) {
-  const { setCurrentContext } = useGlobalDropzone();
+  const { setCurrentContext, dropTarget: currentTarget } = useGlobalDropzone();
 
   useEffect(() => {
+    const previousTarget = currentTarget;
     setCurrentContext(context);
-  }, [context, setCurrentContext]);
+    return () => {
+      if (previousTarget) {
+        setCurrentContext(previousTarget);
+      }
+    };
+  }, [context, setCurrentContext, currentTarget]);
 
   return <>{children}</>;
 }

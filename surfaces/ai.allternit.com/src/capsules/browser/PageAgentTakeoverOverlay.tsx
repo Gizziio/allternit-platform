@@ -65,34 +65,14 @@ export function PageAgentTakeoverOverlay({
     <div
       aria-hidden="true"
       data-testid="page-agent-takeover-overlay"
-      style={{
-        position: "absolute",
-        inset: 0,
-        zIndex: 16,
-        pointerEvents: "none",
-        overflow: "hidden",
-      }}
+      className="absolute inset-0 z-[16] pointer-events-none overflow-hidden"
     >
       <style>{PAGE_AGENT_TAKEOVER_ANIMATIONS}</style>
       <div
-        style={{
-          position: "absolute",
-          inset: -10,
-          borderRadius: 24,
-          background:
-            "conic-gradient(from 180deg, rgba(92, 136, 255, 0.28), rgba(83, 196, 255, 0.08), rgba(179, 96, 255, 0.2), rgba(92, 136, 255, 0.28))",
-          filter: "blur(18px)",
-          opacity: 0.6,
-          animation: "allternit-page-agent-takeover-glow-a 5s ease-in-out infinite",
-        }}
+        className="absolute -inset-[10px] rounded-[24px] bg-[conic-gradient(from_180deg,rgba(92,136,255,0.28),rgba(83,196,255,0.08),rgba(179,96,255,0.2),rgba(92,136,255,0.28))] blur-[10px] opacity-60 animate-[allternit-page-agent-takeover-glow-a_5s_ease-in-out_infinite]"
       />
       <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          boxShadow: "inset 0 0 0 1px rgba(91, 153, 255, 0.32)",
-          animation: "allternit-page-agent-takeover-border 2.4s ease-in-out infinite",
-        }}
+        className="absolute inset-0 shadow-[inset_0_0_0_1px_rgba(91,153,255,0.32)] animate-[allternit-page-agent-takeover-border_2.4s_ease-in-out_infinite]"
       />
     </div>
   );

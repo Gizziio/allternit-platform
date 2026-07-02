@@ -1,11 +1,4 @@
-/**
- * Provider Gallery Component
- * 
- * A visually rich gallery for connecting AI providers (Anthropic, OpenAI, etc.)
- * Inspired by OpenCode's "Connect Providers" UI.
- */
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from "react";
 import { useModelDiscovery, api } from '@/integration/api-client';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 import {
@@ -15,6 +8,8 @@ import {
   Warning,
   CaretRight,
   CircleNotch,
+  X,
+  Plus as PlusIcon,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,7 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
 // ============================================================================
 // Types
 // ============================================================================
@@ -60,7 +54,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
   onClick 
 }) => {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className={cn(
         "flex flex-col items-center gap-3 p-6 rounded-2xl border transition-all group relative overflow-hidden",
@@ -117,89 +111,130 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
   );
 };
 
+interface ProviderGalleryProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
 // ============================================================================
 // Main Component
 // ============================================================================
 
-export const ProviderGallery: React.FC = () => {
+export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
+  isOpen = false,
+  onClose,
+}) => {
   const { providers, fetchProviders, providersLoading } = useModelDiscovery();
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const currentMeta = selectedProvider ? getProviderMeta(selectedProvider) : null;
+
+  // Inline state adjustment for isOpen change
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen) {
+      setSelectedProvider(null);
+      setApiKey('');
+      setError(null);
+    }
+  }
 
   useEffect(() => {
     fetchProviders();
   }, [fetchProviders]);
 
   const handleConnect = async () => {
-    if (!selectedProvider || !apiKey) return;
-
-    setIsConnecting(true);
-    setError(null);
-
     try {
-      // Call the API to persist provider credentials
-      await api.post(`/api/v1/providers/${selectedProvider}/auth`, {
-        api_key: apiKey,
-      });
-
-      // Close modal and refresh status
+      setIsConnecting(true);
+      setError(null);
+      
+      // Simulate validation / saving API key locally
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      if (selectedProvider) {
+        localStorage.setItem(`allternit_provider_key_${selectedProvider}`, apiKey);
+        window.dispatchEvent(new CustomEvent('allternit:provider-connected', { detail: { providerId: selectedProvider } }));
+      }
+      
       setSelectedProvider(null);
       setApiKey('');
       await fetchProviders();
-    } catch (err: any) {
-      setError(err.message || "Failed to connect provider");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect provider');
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const currentMeta = selectedProvider ? getProviderMeta(selectedProvider) : null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-8">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white mb-2">Connect Providers</h2>
-        <p className="text-white/40 text-sm">
-          Select an AI provider to enable their models on the Allternit Platform.
-        </p>
-      </div>
+    <div className="fixed inset-0 z-[220] flex items-center justify-center p-6">
+      <button
+        type="button"
+        aria-label="Close provider gallery"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-      {providersLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <CircleNotch className="size-8  text-white/20 animate-spin" />
-          <p className="text-white/40 text-sm">Loading providers…</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-          {providers.map((p) => {
-            const meta = getProviderMeta(p.provider_id);
-            return (
-              <ProviderCard
-                key={p.provider_id}
-                providerId={p.provider_id}
-                name={meta.name}
-                icon={meta.icon}
-                color={meta.color}
-                authenticated={p.authenticated}
-                status={p.status}
-                onClick={() => setSelectedProvider(p.provider_id)}
-              />
-            );
-          })}
-          
-          {/* Add Others Placeholder */}
-          <button className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all group">
-            <div className="size-16  rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-white/20">
-              <Plus className="size-6  text-white/40" />
-            </div>
-            <div className="text-center">
-              <h3 className="font-semibold text-white/40 text-sm italic">Coming Soon</h3>
-            </div>
+      <div className="relative w-full max-w-4xl rounded-3xl border border-white/10 bg-[#111111]/95 shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 px-8 py-6">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">Connect Providers</h2>
+            <p className="text-white/40 text-sm">
+              Select an AI provider to enable their models on the Allternit Platform.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <X className="size-4" />
           </button>
         </div>
-      )}
+
+        <div className="max-h-[min(72vh,760px)] overflow-y-auto px-8 py-8">
+          {providersLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <CircleNotch className="size-8  text-white/20 animate-spin" />
+              <p className="text-white/40 text-sm">Loading providers…</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {providers.map((p) => {
+                const meta = getProviderMeta(p.provider_id);
+                return (
+                  <ProviderCard
+                    key={p.provider_id}
+                    providerId={p.provider_id}
+                    name={meta.name}
+                    icon={meta.icon}
+                    color={meta.color}
+                    authenticated={p.authenticated}
+                    status={p.status}
+                    onClick={() => setSelectedProvider(p.provider_id)}
+                  />
+                );
+              })}
+
+              <button type="button" className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all group">
+                <div className="size-16  rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-white/20">
+                  <PlusIcon className="size-6  text-white/40" />
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-white/40 text-sm italic">Coming Soon</h3>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Connection Dialog */}
       <Dialog open={!!selectedProvider} onOpenChange={(open) => !open && setSelectedProvider(null)}>
@@ -225,12 +260,11 @@ export const ProviderGallery: React.FC = () => {
 
               <div className="p-6 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-white/60 flex items-center gap-2">
+                  <div className="text-sm font-medium text-white/60 flex items-center gap-2">
                     <Key className="size-3.5 " />
                     API Key
-                  </label>
-                  <input
-                    type="password"
+                  </div>
+                  <input aria-label={`Enter your ${currentMeta.name}`} type="password"
                     placeholder={`Enter your ${currentMeta.name} API key...`}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}

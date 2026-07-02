@@ -1,6 +1,5 @@
 "use client";
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import {
   Warning,
@@ -9,6 +8,10 @@ import {
   CaretRight,
 } from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ErrorBoundary');
 
 // ============================================================================
 // Types
@@ -133,7 +136,7 @@ function ErrorFallback({
       className={cn(
         "flex flex-col items-center justify-center",
         "min-h-[200px] p-6 m-4",
-        "rounded-2xl border",
+        "rounded-2xl border border-solid",
         "bg-[var(--status-error-bg)] border-[var(--status-error)]/30",
         "animate-fade-in"
       )}
@@ -141,17 +144,17 @@ function ErrorFallback({
       aria-live="assertive"
     >
       {/* Icon */}
-      <div className="size-12  rounded-full bg-[var(--status-error)]/20 flex items-center justify-center mb-4">
-        <Warning className="size-6  text-[var(--status-error)]" />
+      <div className="size-12 rounded-full bg-[var(--status-error)]/20 flex items-center justify-center mb-4">
+        <Warning className="size-6 text-[var(--status-error)]" />
       </div>
 
       {/* Title */}
-      <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
+      <h2 className="text-[18px] font-semibold text-[var(--text-primary)] mb-2">
         Something went wrong
       </h2>
 
       {/* Description */}
-      <p className="text-sm text-[var(--text-secondary)] text-center max-w-md mb-6">
+      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md mb-6">
         {componentName 
           ? `We encountered an error in the ${componentName} component.`
           : "We encountered an unexpected error."
@@ -164,11 +167,11 @@ function ErrorFallback({
 
       {/* Error Message */}
       {error?.message && (
-        <div className="w-full max-w-md mb-4 p-3 rounded-lg bg-[var(--bg-secondary)]/50 border border-[var(--border-subtle)]">
-          <p className="text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider mb-1">
+        <div className="w-full max-w-md mb-4 p-3 rounded-lg bg-[var(--bg-secondary)]/50 border border-solid border-[var(--border-subtle)]">
+          <p className="text-[11px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">
             Error Message
           </p>
-          <p className="text-sm text-[var(--text-primary)] font-mono break-words">
+          <p className="text-[13px] text-[var(--text-primary)] font-mono break-words m-0">
             {error.message}
           </p>
         </div>
@@ -177,15 +180,14 @@ function ErrorFallback({
       {/* Actions */}
       <div className="flex flex-wrap items-center justify-center gap-3">
         {onReset && (
-          <button
+          <button type="button"
             onClick={onReset}
             className={cn(
-              "inline-flex items-center gap-2 px-4 py-2",
-              "rounded-lg text-sm font-medium",
+              "inline-flex items-center gap-2 px-4 py-2 border-none cursor-pointer",
+              "rounded-lg text-[14px] font-semibold",
               "bg-[var(--status-error)] text-white",
-              "hover:bg-[var(--status-error)]/90",
-              "transition-all duration-200",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--status-error)]/50"
+              "hover:opacity-90",
+              "transition-all duration-200"
             )}
           >
             <ArrowsClockwise size={16} />
@@ -193,16 +195,15 @@ function ErrorFallback({
           </button>
         )}
         
-        <button
+        <button type="button"
           onClick={() => window.location.reload()}
           className={cn(
-            "inline-flex items-center gap-2 px-4 py-2",
-            "rounded-lg text-sm font-medium",
+            "inline-flex items-center gap-2 px-4 py-2 cursor-pointer",
+            "rounded-lg text-[14px] font-semibold",
             "bg-[var(--bg-secondary)] text-[var(--text-primary)]",
-            "border border-[var(--border-default)]",
+            "border border-solid border-[var(--border-default)]",
             "hover:bg-[var(--bg-hover)]",
-            "transition-all duration-200",
-            "focus:outline-none focus:ring-2 focus:ring-[var(--accent-chat)]/50"
+            "transition-all duration-200"
           )}
         >
           <House size={16} />
@@ -213,11 +214,11 @@ function ErrorFallback({
       {/* Stack Trace (Development) */}
       {showDetails && errorInfo?.componentStack && (
         <div className="w-full max-w-md mt-6">
-          <button
+          <button type="button"
             onClick={() => setShowStack(!showStack)}
-            className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+            className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] bg-transparent border-none cursor-pointer hover:text-[var(--text-secondary)] transition-colors"
           >
-            <CaretRight className={cn("size-3  transition-transform", showStack && "rotate-90")} />
+            <CaretRight className={cn("size-3 transition-transform", showStack && "rotate-90")} />
             {showStack ? "Hide" : "Show"} Component Stack
           </button>
           
@@ -225,8 +226,8 @@ function ErrorFallback({
             <pre 
               className={cn(
                 "mt-2 p-3 rounded-lg",
-                "bg-[var(--bg-secondary)] border border-[var(--border-subtle)]",
-                "text-xs text-[var(--text-secondary)] font-mono",
+                "bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)]",
+                "text-[12px] text-[var(--text-secondary)] font-mono",
                 "overflow-auto max-h-[200px]"
               )}
             >
@@ -238,7 +239,7 @@ function ErrorFallback({
 
       {/* Component Name Badge */}
       {componentName && (
-        <div className="mt-4 px-2 py-1 rounded text-xs font-mono text-[var(--text-tertiary)] bg-[var(--bg-secondary)]">
+        <div className="mt-4 px-2 py-1 rounded text-[11px] font-mono text-[var(--text-tertiary)] bg-[var(--bg-secondary)]">
           {componentName}
         </div>
       )}
@@ -277,16 +278,11 @@ export function ShellRailErrorBoundary({ children }: { children: ReactNode }) {
       componentName="ShellRail"
       fallback={
         <div 
-          className="w-[284px] h-full flex items-center justify-center p-4"
-          style={{ 
-            background: 'var(--glass-bg-thick)',
-            borderRadius: 24,
-            border: '1px solid var(--border-subtle)'
-          }}
+          className="w-[284px] h-full flex items-center justify-center p-4 rounded-[24px] border border-solid border-[var(--border-subtle)] bg-[var(--glass-bg-thick)]"
         >
           <div className="text-center">
-            <Warning className="size-8  text-[var(--text-tertiary)] mx-auto mb-2" />
-            <p className="text-sm text-[var(--text-secondary)]">Navigation unavailable</p>
+            <Warning className="size-8 text-[var(--text-tertiary)] mx-auto mb-2" />
+            <p className="text-[14px] text-[var(--text-secondary)]">Navigation unavailable</p>
           </div>
         </div>
       }
@@ -368,7 +364,7 @@ export function reportError(error: Error, errorInfo?: ErrorInfo, componentName?:
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
   };
 
-  console.error('[Error Report]', report);
+  logger.error({ err: report }, '[Error Report]');
 
   // Send to error tracking service (e.g., Sentry)
   // if (typeof window !== 'undefined' && window.Sentry) {

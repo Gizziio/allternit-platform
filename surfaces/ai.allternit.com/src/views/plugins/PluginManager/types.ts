@@ -1,7 +1,6 @@
 import type { SimpleCapability, FileNode, MarketplacePlugin } from '../../../plugins/capability.types';
 import type { 
-  ConnectorMarketplaceCatalogItem, 
-  ExternalMarketplaceDirectoryEntry 
+  ConnectorMarketplaceCatalogItem 
 } from '../../../plugins/marketplaceApi';
 
 export type { FileNode, MarketplacePlugin };
@@ -13,7 +12,7 @@ export type ConnectorGroupId = 'desktop' | 'connected' | 'not-connected';
 export type ConnectorMarketplaceTab = 'featured' | 'all';
 export type PluginMarketplaceTab = 'marketplace' | 'personal' | 'directories' | 'publish' | 'cowork';
 export type PersonalMarketplaceType = 'github' | 'url' | 'upload' | 'local';
-export type ConnectorConnectionStatus = 'connected' | 'not-connected' | 'connecting';
+type ConnectorConnectionStatus = 'connected' | 'not-connected' | 'connecting';
 
 export type ConnectorMarketplaceItem = ConnectorMarketplaceCatalogItem;
 
@@ -50,30 +49,30 @@ export interface CreateMenuAction {
   onClick: () => void;
 }
 
-export interface ValidationResult {
+interface ValidationResult {
   ok: boolean;
   message?: string;
   errors?: string[];
 }
 
-export interface PublishTabViewProps {
+interface PublishTabViewProps {
   onPublish: (manifest: any) => Promise<void>;
   isPublishing: boolean;
 }
 
-export interface CreatePluginModalProps {
+interface CreatePluginModalProps {
   onClose: () => void;
   onCreate: (config: any) => Promise<void>;
 }
 
 export type PluginType = 'command' | 'skill' | 'mcp' | 'webhook' | 'full';
 
-export interface ValidatePluginModalProps {
+interface ValidatePluginModalProps {
   onClose: () => void;
   onValidate: (manifest: any) => Promise<ValidationResult>;
 }
 
-export interface SubmitToMarketplaceModalProps {
+interface SubmitToMarketplaceModalProps {
   onClose: () => void;
   onSubmit: (data: any) => Promise<void>;
 }

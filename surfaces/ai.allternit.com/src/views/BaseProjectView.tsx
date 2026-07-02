@@ -21,7 +21,7 @@ import {
   Trash,
 } from '@phosphor-icons/react';
 
-export interface ProjectViewTab {
+interface ProjectViewTab {
   id: string;
   label: string;
   count?: number;
@@ -118,7 +118,8 @@ export function BaseProjectView({
 
           <div className="flex items-center gap-2 w-[120px] justify-end">
             {onNewItem && (
-              <button
+              <button type="button"
+                data-testid="project-view-new-item-btn"
                 onClick={onNewItem}
                 className="px-3 h-8 bg-[var(--accent-primary)] border-none rounded-lg text-[var(--ui-text-inverse)] text-[13px] font-semibold cursor-pointer flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-90 active:scale-95 whitespace-nowrap"
               >
@@ -130,7 +131,7 @@ export function BaseProjectView({
             {menuContent && <div className="relative">{menuContent}</div>}
 
             {onToggleStar && (
-              <button
+              <button type="button"
                 onClick={onToggleStar}
                 className={`size-8 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center transition-colors duration-150 ${
                   isStarred ? 'text-[var(--accent-primary)]' : 'text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)]'
@@ -146,7 +147,7 @@ export function BaseProjectView({
         <div className="flex items-center justify-between mt-5">
           <div className="flex flex-col gap-2">
             {onBack && (
-              <button
+              <button type="button"
                 onClick={onBack}
                 className="flex items-center gap-1.5 p-0 bg-transparent border-none text-[var(--ui-text-muted)] text-[13px] cursor-pointer transition-colors duration-150 mb-1 hover:text-[var(--ui-text-secondary)]"
               >
@@ -155,10 +156,11 @@ export function BaseProjectView({
               </button>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex gap-2" data-testid="project-view-tabs">
               {tabs.map((tab) => (
-                <button
+                <button type="button"
                   key={tab.id}
+                  data-testid={`project-view-tab-${tab.id}`}
                   onClick={() => onTabChange(tab.id)}
                   className={`px-4 py-2 rounded-lg border-none flex items-center gap-1.5 transition-all duration-150 whitespace-nowrap text-[13px] font-semibold cursor-pointer ${
                     activeTab === tab.id 
@@ -225,7 +227,7 @@ export function BaseProjectView({
             title="Instructions"
             isWide={isWide}
             rightElement={
-              <button
+              <button type="button"
                 onClick={sidebarSections.onAddInstruction}
                 className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
               >
@@ -244,7 +246,7 @@ export function BaseProjectView({
             title="Files"
             isWide={isWide}
             rightElement={
-              <button
+              <button type="button"
                 onClick={sidebarSections.onAddFile}
                 className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
               >
@@ -320,7 +322,7 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <button
+      <button type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`size-8 rounded-lg border-none cursor-pointer flex items-center justify-center transition-all duration-150 ${
           isOpen ? 'bg-[var(--surface-active)] text-[var(--ui-text-primary)]' : 'bg-transparent text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)]'
@@ -330,10 +332,11 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
       </button>
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
-          <div
+          <div role="button" tabIndex={0} className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsOpen(false); }} />
+          <div role="button" tabIndex={0}
             className="absolute top-full right-0 mt-2 min-w-[160px] bg-[var(--surface-floating)] rounded-xl border border-[var(--ui-border-default)] shadow-lg z-[9999] overflow-hidden py-2"
             onClick={() => setIsOpen(false)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsOpen(false); }}
           >
             {children}
           </div>
@@ -345,8 +348,9 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
 
 export function ProjectItemCard({ title, subtitle, onClick, isActive = false, icon, actions }: ProjectItemCardProps) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onClick) onClick(); }}
       className={`p-4 px-5 rounded-xl border flex items-center gap-3 transition-all duration-150 mb-2 cursor-pointer ${
         isActive 
           ? 'bg-[var(--surface-active)] border-[var(--ui-border-default)]' 
@@ -369,9 +373,10 @@ export function ProjectItemCard({ title, subtitle, onClick, isActive = false, ic
         )}
       </div>
       {actions && (
-        <div
+        <div role="button" tabIndex={0}
           className="shrink-0"
           onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
         >
           {actions}
         </div>
@@ -393,7 +398,7 @@ export function FileItem({ name, size, onDelete }: FileItemProps) {
         {size && <div className="text-[12px] text-[var(--ui-text-muted)]">{size}</div>}
       </div>
       {onDelete && (
-        <button
+        <button type="button"
           onClick={onDelete}
           className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
         >
@@ -412,7 +417,7 @@ export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps
       </p>
       <div className="flex gap-2 mt-2">
         {onEdit && (
-          <button
+          <button type="button"
             onClick={onEdit}
             className="p-1 px-2 bg-transparent border-none text-[var(--ui-text-muted)] text-[12px] cursor-pointer flex items-center gap-1 hover:text-[var(--ui-text-primary)] transition-colors"
           >
@@ -421,7 +426,7 @@ export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps
           </button>
         )}
         {onDelete && (
-          <button
+          <button type="button"
             onClick={onDelete}
             className="p-1 px-2 bg-transparent border-none text-[var(--status-error)] text-[12px] cursor-pointer flex items-center gap-1 hover:brightness-110 transition-colors"
           >

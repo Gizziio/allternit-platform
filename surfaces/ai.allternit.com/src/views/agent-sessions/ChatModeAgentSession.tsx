@@ -20,7 +20,6 @@ import {
 } from '@/design/allternit.tokens';
 
 import {
-  ToolCallVisualization,
   useToolCallAccent,
 } from '@/components/agents';
 
@@ -69,8 +68,28 @@ export function ChatModeAgentSession({
 
   // ── Local UI state ────────────────────────────────────────────────────────
   const [input, setInput] = useState('');
-  const [canvases] = useState<AgentSessionCanvas[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const canvases = useMemo<AgentSessionCanvas[]>(() => {
+    const result: AgentSessionCanvas[] = [];
+    for (const msg of messages) {
+      if (msg.role !== 'assistant') continue;
+      const parts = (msg.metadata?.agentElementsParts ?? []) as Array<Record<string, unknown>>;
+      for (const part of parts) {
+        const partType = part.type as string;
+        if (partType === 'code' || partType === 'markdown' || partType === 'diagram' || partType === 'browser' || partType === 'image') {
+          result.push({
+            id: (part.id as string) || `canvas-${msg.id}-${result.length}`,
+            type: partType as AgentSessionCanvas['type'],
+            title: (part.title as string) || 'Canvas',
+            content: (part.content as string) || '',
+            language: part.language as string | undefined,
+          });
+        }
+      }
+    }
+    return result;
+  }, [messages]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -110,7 +129,7 @@ export function ChatModeAgentSession({
       computerView={<ChatCanvasPanel mode={mode} canvases={canvases} />}
       headerActions={
         <>
-          <button
+          <button type="button"
             className="p-2 rounded-lg transition-colors"
             style={{ color: TEXT.tertiary }}
             title="Session Settings"
@@ -153,8 +172,8 @@ export function ChatModeAgentSession({
               </div>
               <div className="grid grid-cols-2 gap-3 max-w-lg">
                 {suggestions.map((suggestion, idx) => (
-                  <button
-                    key={idx}
+                  <button type="button"
+                    key={`chatmodeagentsession-${idx}`}
                     onClick={() => setInput(suggestion)}
                     className="p-3 rounded-xl text-left text-sm transition-all"
                     style={{
@@ -201,7 +220,7 @@ export function ChatModeAgentSession({
           style={{ borderColor: modeColors.border, background: 'var(--surface-panel)' }}
         >
           <div className="flex items-end gap-2">
-            <button
+            <button type="button"
               className="p-3 rounded-xl transition-colors shrink-0"
               style={{ background: 'var(--surface-hover)', color: TEXT.tertiary }}
               title="Attach file"
@@ -210,8 +229,7 @@ export function ChatModeAgentSession({
             </button>
 
             <div className="flex-1 relative">
-              <textarea
-                value={input}
+              <textarea aria-label="Text Area" value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -232,7 +250,7 @@ export function ChatModeAgentSession({
               />
             </div>
 
-            <button
+            <button type="button"
               onClick={() => void handleSend()}
               disabled={!input.trim() || isStreaming}
               className="p-3 rounded-xl transition-all disabled:opacity-50 shrink-0"
@@ -312,7 +330,7 @@ function ChatMessage({
             })}
           </span>
           {!isUser && (
-            <button
+            <button type="button"
               className="hover:text-white transition-colors"
               onClick={() => void navigator.clipboard.writeText(message.content)}
             >
@@ -354,7 +372,7 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
       title="Canvas"
       mode={mode}
       actions={
-        <button style={{ color: TEXT.tertiary }}>
+        <button type="button" style={{ color: TEXT.tertiary }}>
           <DotsThreeOutline size={16} />
         </button>
       }

@@ -10,31 +10,9 @@ export default function ShellPage() {
   return (
     <Suspense
       fallback={
-        <div
-          style={{
-            width: '100vw',
-            height: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#0F0C0A',
-            color: 'var(--accent-primary)',
-            gap: 16,
-          }}
-        >
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              border: '2px solid rgba(212, 176, 140, 0.2)',
-              borderTopColor: 'var(--accent-primary)',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-            }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <span style={{ fontSize: 14, fontWeight: 500, letterSpacing: '0.05em' }}>
+        <div className="w-screen h-screen flex flex-col items-center justify-center bg-[#0F0C0A] text-[var(--accent-primary)] gap-4">
+          <div className="size-8 border-2 border-solid border-[rgba(212,176,140,0.2)] border-t-[var(--accent-primary)] rounded-full animate-spin" />
+          <span className="text-[14px] font-medium tracking-wider">
             Loading Allternit…
           </span>
         </div>

@@ -11,11 +11,10 @@ import {
   type AllternitArtifact,
   type AllternitArtifactSection,
   type AllternitArtifactStatus,
-  type AllternitSectionKind,
   type ArtifactAdapter,
 } from '@/lib/artifacts/schema';
 
-export interface DocmostPage {
+interface DocmostPage {
   id: string;
   spaceId: string;
   parentPageId?: string | null;
@@ -28,7 +27,7 @@ export interface DocmostPage {
   updatedAt: string;
 }
 
-export interface DocmostRevision {
+interface DocmostRevision {
   id: string;
   pageId: string;
   data: Record<string, unknown>;
@@ -89,7 +88,7 @@ function proseMirrorToSections(
   ];
 }
 
-export const docmostAdapter: ArtifactAdapter = {
+const docmostAdapter: ArtifactAdapter = {
   toAllternit(raw: unknown): AllternitArtifact {
     const page = raw as DocmostPage;
 

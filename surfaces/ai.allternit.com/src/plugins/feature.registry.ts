@@ -9,6 +9,10 @@ import type { FeaturePlugin, PluginCategory, RailSection, PluginViewEntry } from
 import { OFFICE_PLUGINS } from './office-plugins';
 import { CHROME_PLUGIN } from './chrome-plugin';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Feature.registry');
+
 // Re-export types for convenience
 export type { FeaturePlugin, PluginCategory, RailSection, PluginViewEntry };
 
@@ -37,7 +41,7 @@ export interface FeatureDefinition {
 /**
  * Interface for the feature registry implementation
  */
-export interface FeatureRegistryInterface {
+interface FeatureRegistryInterface {
   register(feature: FeatureDefinition): void;
   unregister(id: string): boolean;
   get(id: string): FeatureDefinition | undefined;
@@ -277,7 +281,7 @@ class FeatureRegistry implements FeatureRegistryInterface {
       try {
         listener(features as FeatureDefinition[]);
       } catch (error) {
-        console.error('Error in feature registry listener:', error);
+        logger.error({ err: error }, 'Error in feature registry listener:');
       }
     });
   }
@@ -343,7 +347,7 @@ export function toFeatureDefinition(plugin: FeaturePlugin): FeatureDefinition {
  * Initialize the registry with the legacy plugins
  * Call this during app initialization to populate the registry
  */
-export function initializeFeatureRegistry(): void {
+function initializeFeatureRegistry(): void {
   FEATURE_PLUGIN_REGISTRY.forEach((plugin) => {
     try {
       featureRegistry.register(toFeatureDefinition(plugin));

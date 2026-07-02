@@ -112,7 +112,7 @@ export function BrowserView() {
             </span>
             
             {(tab.id === activeTabId || isHoveringTab === tab.id) && (
-              <button
+              <button type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(tab.id);
@@ -130,7 +130,7 @@ export function BrowserView() {
           </div>
         ))}
         
-        <button
+        <button type="button"
           onClick={() => addTab('https://www.google.com')}
           className="size-8  flex items-center justify-center rounded-t-lg hover:bg-[color-mix(in_srgb,var(--accent-primary)_5%,transparent)] text-[var(--text-muted)] transition-colors"
         >
@@ -162,8 +162,7 @@ export function BrowserView() {
             className="flex items-center px-3 py-1.5 bg-[color-mix(in_srgb,var(--bg-primary)_40%,transparent)] border-[color-mix(in_srgb,var(--accent-primary)_15%,transparent)] group focus-within:border-[color-mix(in_srgb,var(--accent-primary)_40%,transparent)] transition-all"
           >
             <Lock className="size-3  text-green-500/60 mr-2" />
-            <input
-              type="text"
+            <input aria-label="Input" type="text"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               className="flex-1 bg-transparent text-[12px] font-mono text-[var(--accent-primary)] outline-none placeholder:text-[color-mix(in_srgb,var(--text-muted)_30%,transparent)]"
@@ -220,8 +219,7 @@ export function BrowserView() {
             <AllternitLogo size="lg" variant="stacked" />
             <div className="mt-12 w-full max-w-md p-2 rounded-xl bg-[var(--bg-secondary)] border border-[color-mix(in_srgb,var(--accent-primary)_20%,transparent)] shadow-2xl">
               <form onSubmit={handleNavigate} className="flex items-center gap-2">
-                <input
-                  autoFocus
+                <input aria-label="Input" autoFocus
                   type="text"
                   value={urlInput}
                   onChange={(e) => setUrlInput(e.target.value)}
@@ -258,7 +256,7 @@ export function BrowserView() {
                   <div className="text-xs text-[var(--text-muted)] uppercase font-mono tracking-tighter">Automating substrate sequence…</div>
                 </div>
                 <div className="h-6 w-px bg-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] mx-2" />
-                <button onClick={stopExecution} className="text-red-400 hover:text-red-300 text-xs font-bold uppercase tracking-widest">
+                <button type="button" onClick={stopExecution} className="text-red-400 hover:text-red-300 text-xs font-bold uppercase tracking-widest">
                   Abort
                 </button>
               </div>

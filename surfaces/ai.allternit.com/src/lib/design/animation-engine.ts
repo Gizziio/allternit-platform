@@ -16,7 +16,7 @@
  *   </script>
  */
 
-export const ANIMATION_ENGINE_SCRIPT = `(function() {
+const ANIMATION_ENGINE_SCRIPT = `(function() {
   const { createContext, useContext, useState, useEffect, useRef, useCallback } = React;
 
   const TimeContext = createContext({ time: 0, duration: 10, playing: false });

@@ -10,8 +10,6 @@ import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useMemo } from "react";
 import { format, parseISO, isBefore, isAfter, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDate } from "date-fns";
 
-// Recharts imports - requires: npm install recharts
-// Stub implementation for now - replace with actual recharts when installed
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const LineChart = ({ children }: { children?: React.ReactNode; data?: unknown[]; onClick?: (data: unknown) => void }) => (
   <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -120,17 +118,12 @@ export function ChartRenderer({
   props: ChartProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const data = useMemo(() => {
     const rawData = props.dataPath
       ? (resolvePath(context.dataModel, props.dataPath) as Array<Record<string, unknown>>)
       : props.data;
     return Array.isArray(rawData) ? rawData : [];
   }, [props.data, props.dataPath, context.dataModel]);
-
-  const height = props.height || 300;
-  const animated = props.animated !== false;
 
   const handleClick = useCallback(
     (dataPoint: unknown) => {
@@ -140,6 +133,11 @@ export function ChartRenderer({
     },
     [props.onPointClick, context]
   );
+
+  if (!isVisible(props, context.dataModel)) return null;
+
+  const height = props.height || 300;
+  const animated = props.animated !== false;
 
   const renderChart = () => {
     switch (props.type) {
@@ -303,8 +301,6 @@ export function DatePickerRenderer({
   props: DatePickerProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const value = resolvePath(context.dataModel, props.valuePath) as string;
   const isDisabled = resolveValue(props.disabled, context.dataModel, false);
 
@@ -312,6 +308,8 @@ export function DatePickerRenderer({
   const [selectedDate, setSelectedDate] = useState<Date | null>(
     value ? parseISO(value) : null
   );
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
@@ -378,13 +376,13 @@ function SimpleCalendar({
   onSelect: (date: Date) => void;
   minDate?: Date;
   maxDate?: Date;
-}) {isClient ? 
+}) {
   const [currentMonth, setCurrentMonth] = useState(selected || new Date());
 
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end  : "..."});
+    return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
   const isDisabled = (date: Date) => {
@@ -425,7 +423,7 @@ function SimpleCalendar({
           const isSelected = selected && isSameDay(day, selected);
 
           return (
-            <button
+            <button type="button"
               key={day.toISOString()}
               onClick={() => !disabled && onSelect(day)}
               disabled={disabled}
@@ -455,15 +453,13 @@ export function CalendarRenderer({
 }: {
   props: CalendarProps;
   context: RenderContext;
-}) {isClient ? 
-  if (!isVisible(props, context.dataModel)) return null;
-
+}) {
   const value = resolvePath(context.dataModel, props.valuePath) as string;
-  const events = props.events
+  const events = useMemo(() => props.events
     ? ((typeof props.events === "string"
         ? resolvePath(context.dataModel, props.events)
         : props.events) as CalendarProps["events"])
-    : [];
+    : [], [props.events, context.dataModel]);
 
   const [currentMonth, setCurrentMonth] = useState(
     value ? parseISO(value) : new Date()
@@ -472,8 +468,10 @@ export function CalendarRenderer({
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end  : "..."});
+    return eachDayOfInterval({ start, end });
   }, [currentMonth]);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const getEventsForDay = (day: Date) => {
     if (!events || typeof events === 'string') return [];
@@ -524,7 +522,7 @@ export function CalendarRenderer({
           const isCurrentMonth = isSameMonth(day, currentMonth);
 
           return (
-            <div
+            <div role="button" tabIndex={0}
               key={day.toISOString()}
               onClick={() => handleDateClick(day)}
               className={cn(
@@ -535,7 +533,7 @@ export function CalendarRenderer({
               <div className="text-sm font-medium">{getDate(day)}</div>
               <div className="mt-1 space-y-1">
                 {dayEvents.map((event: { date: string; title: string; color?: string; action?: string }, idx: number) => (
-                  <div
+                  <div role="button" tabIndex={0}
                     key={idx}
                     className="text-xs px-1.5 py-0.5 rounded truncate"
                     style={{ backgroundColor: event.color || "var(--primary)" }}
@@ -569,8 +567,6 @@ export function FileUploadRenderer({
   props: FileUploadProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
   const value = (resolvePath(context.dataModel, props.valuePath) as Array<{
     name: string;
     size: number;
@@ -581,6 +577,8 @@ export function FileUploadRenderer({
   const isDisabled = resolveValue(props.disabled, context.dataModel, false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [isDragging, setIsDragging] = useState(false);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;

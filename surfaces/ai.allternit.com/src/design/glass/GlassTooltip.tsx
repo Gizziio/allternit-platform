@@ -24,7 +24,7 @@ import {
 // Props Interface
 // ============================================================================
 
-export interface GlassTooltipProps {
+interface GlassTooltipProps {
   /** Tooltip content */
   content: React.ReactNode;
   
@@ -295,7 +295,7 @@ export function GlassTooltip({
 /**
  * Quick tooltip with default settings
  */
-export function GlassTooltipSimple({
+function GlassTooltipSimple({
   content,
   children,
 }: {

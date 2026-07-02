@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { TodoWidget, type TodoStep } from "@/components/ai-elements/TodoWidget";
 import type { TodoItem } from "./session-composer-state";
 import { DockSurface } from "./dock-surface";

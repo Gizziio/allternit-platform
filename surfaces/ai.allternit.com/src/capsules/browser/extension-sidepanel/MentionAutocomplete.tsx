@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   BACKGROUND,
   TEXT,
-  BORDER,
   RADIUS,
   MODE_COLORS,
   TYPOGRAPHY,
   ANIMATION,
 } from "@/design/allternit.tokens";
+import { cn } from "@/lib/utils";
 
 const browser = MODE_COLORS.browser;
 
@@ -41,7 +41,7 @@ export const MENTION_OPTIONS: MentionOption[] = [
   },
 ];
 
-export function useMention(text: string, cursorPosition: number) {
+export function getMention(text: string, cursorPosition: number) {
   const beforeCursor = text.slice(0, cursorPosition);
   const lastAtIndex = beforeCursor.lastIndexOf("@");
 
@@ -63,6 +63,8 @@ export function useMention(text: string, cursorPosition: number) {
   };
 }
 
+export const useMention = getMention;
+
 interface MentionAutocompleteProps {
   text: string;
   cursorPosition: number;
@@ -76,7 +78,7 @@ export function MentionAutocomplete({
   onSelect,
   onClose,
 }: MentionAutocompleteProps) {
-  const mention = useMention(text, cursorPosition);
+  const mention = getMention(text, cursorPosition);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -86,9 +88,12 @@ export function MentionAutocomplete({
       opt.description.toLowerCase().includes(mention.query)
   );
 
-  useEffect(() => {
+  const [prevQuery, setPrevQuery] = useState(mention.query);
+  
+  if (mention.query !== prevQuery) {
+    setPrevQuery(mention.query);
     setSelectedIndex(0);
-  }, [mention.query]);
+  }
 
   useEffect(() => {
     if (!mention.isActive) return;
@@ -129,73 +134,38 @@ export function MentionAutocomplete({
   return (
     <div
       ref={containerRef}
+      className="absolute bottom-full left-0 right-0 mb-2 z-50 bg-[var(--bg-secondary)] backdrop-blur-xl border border-solid border-[var(--accent-browser-border)] rounded-md shadow-[0_8px_32px_var(--surface-panel),0_0_0_1px_var(--accent-browser-panel-tint)] py-1 overflow-hidden"
       style={{
-        position: "absolute",
-        bottom: "100%",
-        left: 0,
-        right: 0,
-        marginBottom: 8,
-        zIndex: 50,
-        background: BACKGROUND.secondary,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        border: `1px solid ${browser.border}`,
-        borderRadius: RADIUS.md,
-        boxShadow: `0 8px 32px var(--surface-panel), 0 0 0 1px ${browser.panelTint}`,
-        padding: "4px 0",
-        overflow: "hidden",
+        ['--accent-browser-border' as string]: browser.border,
+        ['--accent-browser-panel-tint' as string]: browser.panelTint,
       }}
     >
       {filtered.map((option, i) => (
-        <button
+        <button type="button"
           key={option.name}
           onClick={() => onSelect(option)}
+          className={cn(
+            "flex items-center gap-2.5 w-full p-[8px_12px] border-none cursor-pointer text-left transition-all duration-150",
+            i === selectedIndex ? "bg-[var(--accent-browser-panel-tint)]" : "bg-transparent"
+          )}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            width: "100%",
-            padding: "8px 12px",
-            border: "none",
-            background: i === selectedIndex ? browser.panelTint : "transparent",
-            cursor: "pointer",
-            textAlign: "left",
-            transition: ANIMATION.fast,
+            ['--accent-browser-panel-tint' as string]: browser.panelTint,
           }}
           onMouseEnter={() => setSelectedIndex(i)}
         >
           <span
+            className="size-7 rounded-md flex items-center justify-center text-[14px] shrink-0"
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: RADIUS.sm,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 14,
               background: `${option.color}20`,
-              flexShrink: 0,
             }}
           >
             {option.icon}
           </span>
           <div>
-            <div
-              style={{
-                fontSize: TYPOGRAPHY.size.sm,
-                fontWeight: TYPOGRAPHY.weight.medium,
-                color: TEXT.primary,
-              }}
-            >
+            <div className="text-[14px] font-medium text-[var(--text-primary)]">
               @{option.name}
             </div>
-            <div
-              style={{
-                fontSize: TYPOGRAPHY.size.xs,
-                color: TEXT.tertiary,
-                marginTop: 1,
-              }}
-            >
+            <div className="text-[12px] text-[var(--text-tertiary)] mt-px">
               {option.description}
             </div>
           </div>

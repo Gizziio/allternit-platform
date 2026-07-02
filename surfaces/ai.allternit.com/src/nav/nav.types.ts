@@ -22,6 +22,7 @@ export type ViewType =
   | "memory"
   // Service views
   | "marketplace"
+  | "hermes"
   | "openclaw"
   | "openclaw-chat"
   | "openclaw-sessions"
@@ -94,6 +95,11 @@ export type ViewType =
   | "activity"
   | "goals"
   | "new-document"
+  // Automation views
+  | "goals-list"
+  | "goal-detail"
+  | "routines-list"
+  | "loops-list"
   // Code views
   | "new-file"
   | "code-project"
@@ -119,6 +125,7 @@ export type ViewType =
   | "chat-agent-session"
   | "cowork-agent-session"
   | "code-agent-session"
+  | "design-agent-session"
   // Product Discovery
   | "products"
   // A://Labs - Course Management
@@ -136,12 +143,6 @@ export type ViewType =
   | "design-view-market"
   | "design-view-compare"
   | "design-marketplace"
-  // Cowork Team (Multica absorption)
-  | "cowork-team"
-  | "cowork-team-board"
-  | "cowork-team-agents"
-  | "cowork-team-workspaces"
-  | "cowork-team-skills"
   // Browser Extensions hub
   | "browser-extensions";
 

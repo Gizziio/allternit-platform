@@ -5,7 +5,7 @@
  * Supports stacked notifications for multiple updates.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   X,
   DownloadSimple,
@@ -170,7 +170,7 @@ function SingleNotification({
             </div>
           </div>
 
-          <button
+          <button type="button"
             onClick={handleDismiss}
             style={{
               background: 'transparent',
@@ -242,7 +242,7 @@ function SingleNotification({
             gap: 8,
           }}
         >
-          <button
+          <button type="button"
             onClick={handleUpdate}
             style={{
               flex: 1,
@@ -265,7 +265,7 @@ function SingleNotification({
             Update Now
           </button>
 
-          <button
+          <button type="button"
             onClick={handleLater}
             style={{
               padding: '10px 14px',
@@ -320,20 +320,16 @@ export function UpdateNotification({
   onShowAll,
   maxVisible = 3,
 }: UpdateNotificationProps) {
-  const [visibleUpdates, setVisibleUpdates] = useState<UpdateInfo[]>([]);
-  const [hiddenCount, setHiddenCount] = useState(0);
-
-  useEffect(() => {
-    // Sort by required first, then by date
-    const sorted = [...updates].sort((a, b) => {
+  const sortedUpdates = useMemo(() => {
+    return [...updates].sort((a, b) => {
       if (a.isRequired && !b.isRequired) return -1;
       if (!a.isRequired && b.isRequired) return 1;
       return new Date(b.checkedAt).getTime() - new Date(a.checkedAt).getTime();
     });
+  }, [updates]);
 
-    setVisibleUpdates(sorted.slice(0, maxVisible));
-    setHiddenCount(Math.max(0, sorted.length - maxVisible));
-  }, [updates, maxVisible]);
+  const visibleUpdates = useMemo(() => sortedUpdates.slice(0, maxVisible), [sortedUpdates, maxVisible]);
+  const hiddenCount = useMemo(() => Math.max(0, sortedUpdates.length - maxVisible), [sortedUpdates, maxVisible]);
 
   const handleDismiss = useCallback(
     (update: UpdateInfo) => {
@@ -387,7 +383,7 @@ export function UpdateNotification({
 
       {/* Show "more updates" indicator */}
       {hiddenCount > 0 && onShowAll && (
-        <button
+        <button type="button"
           onClick={onShowAll}
           style={{
             pointerEvents: 'auto',
@@ -418,16 +414,16 @@ export function UpdateNotification({
 // Compact Notification (for minimal display)
 // ============================================================================
 
-export interface CompactUpdateNotificationProps {
+interface CompactUpdateNotificationProps {
   count: number;
   onClick: () => void;
 }
 
-export function CompactUpdateNotification({ count, onClick }: CompactUpdateNotificationProps) {
+function CompactUpdateNotification({ count, onClick }: CompactUpdateNotificationProps) {
   if (count === 0) return null;
 
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         position: 'fixed',

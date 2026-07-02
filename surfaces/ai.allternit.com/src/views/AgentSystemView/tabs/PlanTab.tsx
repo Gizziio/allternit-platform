@@ -16,7 +16,6 @@ import {
   CaretDown,
   CaretUp,
   Play,
-  DotsThreeOutline,
 } from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 
@@ -128,8 +127,7 @@ export function PlanTab() {
               gap: 8,
             }}
           >
-            <input
-              type="text"
+            <input aria-label="Input" type="text"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={(e) => {
@@ -151,7 +149,7 @@ export function PlanTab() {
                 outline: "none",
               }}
             />
-            <button
+            <button type="button"
               onClick={handleCreateDag}
               disabled={!prompt.trim() || isLoading}
               style={{
@@ -180,7 +178,7 @@ export function PlanTab() {
             padding: 16,
           }}
         >
-          <div
+          <div role="button" tabIndex={0}
             style={{
               display: "flex",
               alignItems: "center",
@@ -313,7 +311,7 @@ export function PlanTab() {
         )}
 
         {/* Editor Toggle */}
-        <button
+        <button type="button"
           onClick={() => setShowEditor(!showEditor)}
           style={{
             padding: "8px 16px",
@@ -366,7 +364,7 @@ function TemplateCard({
   onExecute,
 }: TemplateCardProps) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
       style={{
         padding: 12,
@@ -419,7 +417,7 @@ function TemplateCard({
                 marginBottom: 8,
               }}
             >
-              <label
+              <div
                 style={{
                   display: "block",
                   fontSize: 12,
@@ -429,9 +427,8 @@ function TemplateCard({
               >
                 {variable.name}
                 {variable.required && <span style={{ color: "#ff3b30" }}> *</span>}
-              </label>
-              <input
-                type="text"
+              </div>
+              <input aria-label="Input" type="text"
                 value={variables[variable.name] || ""}
                 onChange={(e) => onVariableChange(variable.name, e.target.value)}
                 onClick={(e) => e.stopPropagation()}
@@ -449,7 +446,7 @@ function TemplateCard({
               />
             </div>
           ))}
-          <button
+          <button type="button"
             onClick={(e) => {
               e.stopPropagation();
               onExecute();
@@ -493,7 +490,7 @@ interface DagCardProps {
 
 function DagCard({ dag, isSelected, onClick, onExecute }: DagCardProps) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
       style={{
         padding: 16,
@@ -548,7 +545,7 @@ function DagCard({ dag, isSelected, onClick, onExecute }: DagCardProps) {
         </div>
       </div>
 
-      <button
+      <button type="button"
         onClick={(e) => {
           e.stopPropagation();
           onExecute();

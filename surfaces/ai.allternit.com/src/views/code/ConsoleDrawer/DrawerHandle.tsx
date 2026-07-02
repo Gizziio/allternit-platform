@@ -11,7 +11,7 @@ interface DrawerHandleProps {
 
 export function DrawerHandle({ isOpen, onToggle, onMouseDown, onTouchStart }: DrawerHandleProps) {
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       style={{
         width: 'fit-content',
         marginLeft: 'auto',

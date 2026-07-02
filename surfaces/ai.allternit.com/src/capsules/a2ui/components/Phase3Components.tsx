@@ -1,3 +1,5 @@
+import React, { useMemo, useState } from "react";
+
 // ============================================================================
 // Phase 3: Agent-Specific Components
 // ============================================================================
@@ -5,10 +7,6 @@
 // ============================================================================
 
 "use client";
-
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,8 +31,7 @@ import {
   Sparkle,
   Clock,
   CheckCircle,
-  Warning,
-} from '@phosphor-icons/react';
+  Warning, Record } from '@phosphor-icons/react';
 import ReactMarkdown from "react-markdown";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SyntaxHighlighter = require("react-syntax-highlighter").Prism as any;
@@ -46,8 +43,8 @@ import type {
   ArtifactPreviewProps,
   RenderContext,
 } from "../a2ui.types.extended";
-import { resolvePath, resolveValue, isVisible } from "../A2UIRenderer";
-
+import { resolvePath, isVisible } from "../A2UIRenderer";
+import { AnimatePresence, motion } from "framer-motion";
 // ============================================================================
 // AgentThinking Component
 // ============================================================================
@@ -66,42 +63,42 @@ const statusConfig: Record<
     color: "var(--muted-foreground)",
   },
   reasoning: {
-    icon: <Brain className="size-5  animate-pulse" />,
+    icon: <Brain className="size-5 animate-pulse" />,
     label: "Thinking",
     color: "var(--primary)",
   },
   searching: {
-    icon: <MagnifyingGlass className="size-5  animate-pulse" />,
+    icon: <MagnifyingGlass className="size-5 animate-pulse" />,
     label: "Searching",
     color: "var(--primary)",
   },
   coding: {
-    icon: <Code className="size-5  animate-pulse" />,
+    icon: <Code className="size-5 animate-pulse" />,
     label: "Coding",
     color: "var(--primary)",
   },
   waiting: {
-    icon: <CircleNotch className="size-5  animate-spin" />,
+    icon: <CircleNotch className="size-5 animate-spin" />,
     label: "Waiting",
     color: "var(--primary)",
   },
   planning: {
-    icon: <Sparkle className="size-5  animate-pulse" />,
+    icon: <Sparkle className="size-5 animate-pulse" />,
     label: "Planning",
     color: "var(--primary)",
   },
   executing: {
-    icon: <Play className="size-5  animate-pulse" />,
+    icon: <Play className="size-5 animate-pulse" />,
     label: "Executing",
     color: "var(--primary)",
   },
 };
 
 const stepStatusIcons = {
-  pending: <div className="size-2  rounded-full bg-muted-foreground/30" />,
-  active: <CircleNotch className="size-3  animate-spin text-primary" />,
-  completed: <CheckCircle className="size-3  text-green-500" />,
-  error: <Warning className="size-3  text-destructive" />,
+  pending: <div className="size-2 rounded-full bg-muted-foreground/30" />,
+  active: <CircleNotch className="size-3 animate-spin text-primary" />,
+  completed: <CheckCircle className="size-3 text-green-500" />,
+  error: <Warning className="size-3 text-destructive" />,
 };
 
 export function AgentThinkingRenderer({
@@ -111,20 +108,21 @@ export function AgentThinkingRenderer({
   props: AgentThinkingProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
-  const config = statusConfig[props.status] || statusConfig.idle;
-  const steps = typeof props.steps === "string"
+  const steps = useMemo(() => typeof props.steps === "string"
     ? (resolvePath(context.dataModel, props.steps) as AgentThinkingProps["steps"])
-    : props.steps;
+    : props.steps, [props.steps, context.dataModel]);
 
-  const expandedFromModel = props.expandedPath
+  const expandedFromModel = useMemo(() => props.expandedPath
     ? (resolvePath(context.dataModel, props.expandedPath) as boolean)
-    : undefined;
+    : undefined, [props.expandedPath, context.dataModel]);
   
   const [isExpanded, setIsExpanded] = useState(
     props.collapsible ? (expandedFromModel ?? true) : true
   );
+
+  if (!isVisible(props, context.dataModel)) return null;
+
+  const config = statusConfig[props.status] || statusConfig.idle;
 
   const handleCancel = () => {
     if (props.onCancel) {
@@ -138,8 +136,8 @@ export function AgentThinkingRenderer({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="p-2 rounded-lg bg-background border"
-              style={{ color: config.color }}
+              className="p-2 rounded-lg bg-background border text-[var(--config-color)]"
+              style={{ '--config-color': config.color } as React.CSSProperties}
             >
               {config.icon}
             </div>
@@ -194,7 +192,7 @@ export function AgentThinkingRenderer({
       </CardHeader>
 
       <AnimatePresence>
-        {isExpanded && steps && steps.length > 0 && (
+        {isExpanded && steps && Array.isArray(steps) && steps.length > 0 && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -202,8 +200,9 @@ export function AgentThinkingRenderer({
             transition={{ duration: 0.2 }}
           >
             <CardContent className="pt-0">
-              <div className="space-y-2 pl-2 border-l-2 border-primary/20">
-                {steps && Array.isArray(steps) && steps.map((step, idx) => (
+              <div className="space-y-2 pl-2 relative">
+                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary/20" />
+                {steps.map((step, idx) => (
                   <motion.div
                     key={step.id}
                     initial={{ opacity: 0, x: -10 }}
@@ -249,7 +248,7 @@ export function AgentThinkingRenderer({
 
       {props.showSparkles && (
         <div className="absolute top-2 right-2 opacity-50">
-          <Sparkle className="size-4  text-primary animate-pulse" />
+          <Sparkle className="size-4 text-primary animate-pulse" />
         </div>
       )}
     </Card>
@@ -267,26 +266,26 @@ export function ToolCallRenderer({
   props: ToolCallProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
-  const input: unknown = typeof props.input === "string"
+  const input: unknown = useMemo(() => typeof props.input === "string"
     ? resolvePath(context.dataModel, props.input)
-    : props.input;
+    : props.input, [props.input, context.dataModel]);
 
-  const output: unknown = props.output
+  const output: unknown = useMemo(() => props.output
     ? typeof props.output === "string"
       ? resolvePath(context.dataModel, props.output)
       : props.output
-    : undefined;
+    : undefined, [props.output, context.dataModel]);
 
-  const error: string | undefined = props.error
+  const error: string | undefined = useMemo(() => props.error
     ? typeof props.error === "string"
       ? String(resolvePath(context.dataModel, props.error))
       : String(props.error)
-    : undefined;
+    : undefined, [props.error, context.dataModel]);
 
   const [isExpanded, setIsExpanded] = useState(props.expanded ?? false);
   const [activeTab, setActiveTab] = useState<"input" | "output">("input");
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const statusColors: Record<string, string> = {
     pending: "var(--muted-foreground)",
@@ -312,14 +311,14 @@ export function ToolCallRenderer({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="size-2  rounded-full"
-              style={{ backgroundColor: statusColors[props.status] }}
+              className="size-2 rounded-full bg-[var(--status-color)]"
+              style={{ '--status-color': statusColors[props.status] } as React.CSSProperties}
             />
             <div className="flex items-center gap-2">
               {props.toolIcon ? (
                 <span>{props.toolIcon}</span>
               ) : (
-                <Code className="size-4  text-muted-foreground" />
+                <Code className="size-4 text-muted-foreground" />
               )}
               <CardTitle className="text-sm font-medium">
                 {props.toolName || props.tool}
@@ -329,7 +328,7 @@ export function ToolCallRenderer({
 
           <div className="flex items-center gap-2">
             {props.status === "running" && (
-              <CircleNotch className="size-4  animate-spin" />
+              <CircleNotch className="size-4 animate-spin" />
             )}
 
             {props.duration && (
@@ -375,7 +374,7 @@ export function ToolCallRenderer({
             <CardContent className="pt-0">
               {/* Tabs */}
               <div className="flex items-center gap-2 mb-3 border-b">
-                <button
+                <button type="button"
                   className={cn(
                     "px-3 py-2 text-sm border-b-2 transition-colors",
                     activeTab === "input"
@@ -387,7 +386,7 @@ export function ToolCallRenderer({
                   Input
                 </button>
                 {output !== undefined && (
-                  <button
+                  <button type="button"
                     className={cn(
                       "px-3 py-2 text-sm border-b-2 transition-colors",
                       activeTab === "output"
@@ -447,13 +446,13 @@ export function ArtifactPreviewRenderer({
   props: ArtifactPreviewProps;
   context: RenderContext;
 }) {
-  if (!isVisible(props, context.dataModel)) return null;
-
-  const content = typeof props.content === "string"
+  const content = useMemo(() => typeof props.content === "string"
     ? props.content
-    : (resolvePath(context.dataModel, props.content as string) as string) || "";
+    : (resolvePath(context.dataModel, props.content as string) as string) || "", [props.content, context.dataModel]);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const handleDownload = () => {
     if (props.downloadAction) {

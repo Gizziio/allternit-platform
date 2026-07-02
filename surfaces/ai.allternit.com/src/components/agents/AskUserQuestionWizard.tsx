@@ -1,16 +1,4 @@
-/**
- * Ask User Question Wizard
- * 
- * An enhanced multi-step question system with:
- * - Visual previews of options
- * - Annotations and explanations
- * - Step-by-step guided flows
- * - Rich media support (images, code samples)
- * - Progress tracking
- * - Review and edit before submit
- */
-
-import React, { useState, useCallback } from "react";
+import React, { useCallback, useReducer, useState } from "react";
 import {
   Question as HelpCircle,
   CaretRight,
@@ -18,22 +6,19 @@ import {
   Check,
   Info,
   Warning,
-  Image,
   Code,
-  FileText,
   Sparkle,
   PencilSimple,
   X,
   CheckCircle,
-  ArrowCounterClockwise,
   Image as ImageIcon,
 } from '@phosphor-icons/react';
-
+import { cn } from "@/lib/utils";
 // ============================================================================
 // Types
 // ============================================================================
 
-export type QuestionInputType = 
+type QuestionInputType = 
   | "text" 
   | "textarea" 
   | "number" 
@@ -44,20 +29,20 @@ export type QuestionInputType =
   | "slider"
   | "radio-card";
 
-export interface QuestionAnnotation {
+interface QuestionAnnotation {
   type: "info" | "warning" | "tip" | "example";
   content: string;
   title?: string;
 }
 
-export interface QuestionOptionPreview {
+interface QuestionOptionPreview {
   type: "image" | "code" | "text" | "component";
   content: string;
   language?: string; // for code
   caption?: string;
 }
 
-export interface QuestionOption {
+interface QuestionOption {
   id: string;
   label: string;
   description?: string;
@@ -68,7 +53,7 @@ export interface QuestionOption {
   disabledReason?: string;
 }
 
-export interface WizardStep {
+interface WizardStep {
   id: string;
   title: string;
   description?: string;
@@ -91,7 +76,7 @@ export interface WizardStep {
   allowSkip?: boolean;
 }
 
-export interface WizardConfig {
+interface WizardConfig {
   id: string;
   title: string;
   description?: string;
@@ -103,11 +88,68 @@ export interface WizardConfig {
   onStepChange?: (stepIndex: number, answers: Record<string, unknown>) => void;
 }
 
+interface WizardState {
+  currentStepIndex: number;
+  answers: Record<string, unknown>;
+  isReviewing: boolean;
+  isComplete: boolean;
+  editingStep: number | null;
+}
+
+type WizardAction =
+  | { type: 'SET_ANSWER'; stepId: string; value: unknown }
+  | { type: 'NEXT_STEP'; isLastStep: boolean; allowReview: boolean }
+  | { type: 'PREVIOUS_STEP'; isFirstStep: boolean }
+  | { type: 'EDIT_STEP'; index: number }
+  | { type: 'SUBMIT' }
+  | { type: 'CANCEL_REVIEW' }
+  | { type: 'CANCEL_EDIT' };
+
+function wizardReducer(state: WizardState, action: WizardAction): WizardState {
+  switch (action.type) {
+    case 'SET_ANSWER':
+      return {
+        ...state,
+        answers: { ...state.answers, [action.stepId]: action.value }
+      };
+    case 'NEXT_STEP':
+      if (action.isLastStep) {
+        return action.allowReview 
+          ? { ...state, isReviewing: true }
+          : { ...state, isComplete: true };
+      }
+      return {
+        ...state,
+        currentStepIndex: state.currentStepIndex + 1
+      };
+    case 'PREVIOUS_STEP':
+      if (state.isReviewing) return { ...state, isReviewing: false };
+      if (state.editingStep !== null) return { ...state, editingStep: null };
+      if (!action.isFirstStep) return { ...state, currentStepIndex: state.currentStepIndex - 1 };
+      return state;
+    case 'EDIT_STEP':
+      return {
+        ...state,
+        editingStep: action.index,
+        isReviewing: false,
+        currentStepIndex: action.index
+      };
+    case 'SUBMIT':
+      return { ...state, isComplete: true };
+    case 'CANCEL_REVIEW':
+      return { ...state, isReviewing: false };
+    case 'CANCEL_EDIT':
+      return { ...state, editingStep: null };
+    default:
+      return state;
+  }
+}
+
 // ============================================================================
 // Main Wizard Component
 // ============================================================================
 
-export function AskUserQuestionWizard({
+function AskUserQuestionWizard({
   config,
 }: {
   config: WizardConfig;
@@ -123,11 +165,15 @@ export function AskUserQuestionWizard({
     onStepChange,
   } = config;
 
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const [isReviewing, setIsReviewing] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-  const [editingStep, setEditingStep] = useState<number | null>(null);
+  const [state, dispatch] = useReducer(wizardReducer, {
+    currentStepIndex: 0,
+    answers: {},
+    isReviewing: false,
+    isComplete: false,
+    editingStep: null,
+  });
+
+  const { currentStepIndex, answers, isReviewing, isComplete, editingStep } = state;
 
   const currentStep = steps[currentStepIndex];
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
@@ -135,33 +181,21 @@ export function AskUserQuestionWizard({
   const isLastStep = currentStepIndex === steps.length - 1;
 
   const handleAnswer = useCallback((stepId: string, value: unknown) => {
-    setAnswers((prev) => ({ ...prev, [stepId]: value }));
+    dispatch({ type: 'SET_ANSWER', stepId, value });
   }, []);
 
   const handleNext = useCallback(() => {
-    if (isLastStep) {
-      if (allowReview) {
-        setIsReviewing(true);
-      } else {
-        setIsComplete(true);
-        onComplete(answers);
-      }
-    } else {
-      const nextIndex = currentStepIndex + 1;
-      setCurrentStepIndex(nextIndex);
-      onStepChange?.(nextIndex, answers);
+    dispatch({ type: 'NEXT_STEP', isLastStep, allowReview });
+    if (isLastStep && !allowReview) {
+      onComplete(answers);
+    } else if (!isLastStep) {
+      onStepChange?.(currentStepIndex + 1, answers);
     }
   }, [isLastStep, allowReview, currentStepIndex, answers, onComplete, onStepChange]);
 
   const handleBack = useCallback(() => {
-    if (isReviewing) {
-      setIsReviewing(false);
-    } else if (editingStep !== null) {
-      setEditingStep(null);
-    } else if (!isFirstStep) {
-      setCurrentStepIndex(currentStepIndex - 1);
-    }
-  }, [isReviewing, editingStep, isFirstStep, currentStepIndex]);
+    dispatch({ type: 'PREVIOUS_STEP', isFirstStep });
+  }, [isFirstStep]);
 
   const handleSkip = useCallback(() => {
     handleAnswer(currentStep.id, null);
@@ -169,13 +203,11 @@ export function AskUserQuestionWizard({
   }, [currentStep.id, handleAnswer, handleNext]);
 
   const handleEditStep = useCallback((index: number) => {
-    setEditingStep(index);
-    setIsReviewing(false);
-    setCurrentStepIndex(index);
+    dispatch({ type: 'EDIT_STEP', index });
   }, []);
 
   const handleSubmit = useCallback(() => {
-    setIsComplete(true);
+    dispatch({ type: 'SUBMIT' });
     onComplete(answers);
   }, [answers, onComplete]);
 
@@ -198,14 +230,11 @@ export function AskUserQuestionWizard({
 
   return (
     <div
+      className="w-full max-w-[640px] rounded-[20px] border border-solid overflow-hidden"
       style={{
-        borderRadius: 20,
-        border: `1px solid ${accentColor}30`,
+        borderColor: `${accentColor}4d`, // 30% opacity
         background: "linear-gradient(180deg, #2B2520 0%, #1a1714 100%)",
-        overflow: "hidden",
-        boxShadow: `0 28px 100px var(--shell-overlay-backdrop), 0 0 0 1px ${accentColor}20`,
-        maxWidth: 640,
-        width: "100%",
+        boxShadow: `0 28px 100px var(--shell-overlay-backdrop), 0 0 0 1px ${accentColor}33`, // 20% opacity
       }}
     >
       {/* Header */}
@@ -220,7 +249,7 @@ export function AskUserQuestionWizard({
       />
 
       {/* Step Content */}
-      <div style={{ padding: "20px 24px" }}>
+      <div className="p-5 px-6">
         <StepContent
           step={currentStep}
           value={answers[currentStep.id]}
@@ -267,33 +296,25 @@ function WizardHeader({
 }) {
   return (
     <div
+      className="p-5 px-6 border-b border-solid border-[var(--ui-border-muted)]"
       style={{
-        padding: "20px 24px",
-        borderBottom: "1px solid var(--ui-border-muted)",
-        background: `linear-gradient(90deg, ${accentColor}08, transparent)`,
+        background: `linear-gradient(90deg, ${accentColor}14, transparent)`, // ~8% opacity
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+      <div className="flex justify-between items-start">
         <div>
-          <div style={{ fontSize: 12, color: accentColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+          <div className="text-[12px] font-semibold uppercase tracking-[0.08em] mb-1" style={{ color: accentColor }}>
             Step {stepNumber} of {totalSteps}
           </div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#f6eee7" }}>{title}</h2>
+          <h2 className="m-0 text-[18px] font-semibold text-[#f6eee7]">{title}</h2>
           {description && (
-            <p style={{ margin: "6px 0 0", fontSize: 13, color: "#a8998c", lineHeight: 1.5 }}>{description}</p>
+            <p className="m-0 mt-1.5 text-[13px] text-[#a8998c] leading-relaxed">{description}</p>
           )}
         </div>
         {onClose && (
-          <button
+          <button type="button"
             onClick={onClose}
-            style={{
-              padding: 6,
-              borderRadius: 8,
-              border: "none",
-              background: "transparent",
-              color: "#7a6b5d",
-              cursor: "pointer",
-            }}
+            className="p-1.5 rounded-lg border-none bg-transparent text-[#7a6b5d] cursor-pointer hover:bg-white/5 transition-colors"
           >
             <X size={18} />
           </button>
@@ -301,14 +322,12 @@ function WizardHeader({
       </div>
 
       {/* Progress Bar */}
-      <div style={{ marginTop: 16, height: 4, background: "var(--ui-border-muted)", borderRadius: 2 }}>
+      <div className="mt-4 h-1 bg-[var(--ui-border-muted)] rounded-full">
         <div
+          className="h-full rounded-full transition-all duration-300"
           style={{
-            height: "100%",
             width: `${progress}%`,
             background: accentColor,
-            borderRadius: 2,
-            transition: "width 0.3s ease",
           }}
         />
       </div>
@@ -330,29 +349,20 @@ function StepContent({
   return (
     <div>
       {/* Question */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+      <div className="mb-4">
+        <div className="flex items-start gap-2.5 mb-2">
           <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 10,
-              background: `${accentColor}20`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: accentColor,
-              flexShrink: 0,
-            }}
+            className="size-8 rounded-[10px] flex items-center justify-center shrink-0"
+            style={{ background: `${accentColor}33` }} // 20% opacity
           >
-            <HelpCircle size={16} />
+            <HelpCircle size={16} style={{ color: accentColor }} />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#f6eee7", lineHeight: 1.4 }}>
+            <h3 className="m-0 text-[15px] font-semibold text-[#f6eee7] leading-snug">
               {step.question}
             </h3>
             {step.description && (
-              <p style={{ margin: "6px 0 0", fontSize: 13, color: "#a8998c" }}>{step.description}</p>
+              <p className="m-0 mt-1.5 text-[13px] text-[#a8998c]">{step.description}</p>
             )}
           </div>
         </div>
@@ -360,31 +370,22 @@ function StepContent({
 
       {/* Annotations */}
       {step.annotations && step.annotations.length > 0 && (
-        <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="mb-4 flex flex-col gap-2">
           {step.annotations.map((annotation, index) => (
-            <Annotation key={index} annotation={annotation} />
+            <Annotation key={`step-ann-${annotation.type}-${index}`} annotation={annotation} />
           ))}
         </div>
       )}
 
       {/* Input */}
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-4">
         <QuestionInput step={step} value={value} onChange={onChange} accentColor={accentColor} />
       </div>
 
       {/* Help Text */}
       {step.helpText && (
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: 10,
-            borderRadius: 8,
-            background: "var(--surface-hover)",
-            fontSize: 12,
-            color: "#7a6b5d",
-          }}
+          className="flex items-center gap-1.5 p-2.5 rounded-lg bg-[var(--surface-hover)] text-[12px] text-[#7a6b5d]"
         >
           <Info size={14} />
           {step.helpText}
@@ -405,75 +406,48 @@ function QuestionInput({
   onChange: (value: unknown) => void;
   accentColor: string;
 }) {
+  const inputBaseClass = "w-full p-[12px_14px] rounded-[10px] border border-solid bg-[var(--surface-panel)] text-[#f6eee7] text-[14px] outline-none transition-colors focus:border-[var(--ui-border-active)]";
+
   switch (step.type) {
     case "text":
     case "password":
       return (
-        <input
-          type={step.type}
+        <input aria-label="Input" type={step.type}
           value={(value as string) || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={step.placeholder}
-          style={{
-            width: "100%",
-            padding: "12px 14px",
-            borderRadius: 10,
-            border: `1px solid ${accentColor}40`,
-            background: "var(--surface-panel)",
-            color: "#f6eee7",
-            fontSize: 14,
-            outline: "none",
-          }}
+          className={inputBaseClass}
+          style={{ borderColor: `${accentColor}66` }} // 40% opacity
         />
       );
 
     case "textarea":
       return (
-        <textarea
-          value={(value as string) || ""}
+        <textarea aria-label="Text Area" value={(value as string) || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={step.placeholder}
           rows={4}
-          style={{
-            width: "100%",
-            padding: "12px 14px",
-            borderRadius: 10,
-            border: `1px solid ${accentColor}40`,
-            background: "var(--surface-panel)",
-            color: "#f6eee7",
-            fontSize: 14,
-            outline: "none",
-            resize: "vertical",
-            fontFamily: "inherit",
-          }}
+          className={cn(inputBaseClass, "resize-y font-inherit")}
+          style={{ borderColor: `${accentColor}66` }} // 40% opacity
         />
       );
 
     case "number":
       return (
-        <input
-          type="number"
+        <input aria-label="Input" type="number"
           value={(value as number) ?? ""}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
           placeholder={step.placeholder}
           min={step.validation?.min}
           max={step.validation?.max}
-          style={{
-            width: "100%",
-            padding: "12px 14px",
-            borderRadius: 10,
-            border: `1px solid ${accentColor}40`,
-            background: "var(--surface-panel)",
-            color: "#f6eee7",
-            fontSize: 14,
-            outline: "none",
-          }}
+          className={inputBaseClass}
+          style={{ borderColor: `${accentColor}66` }} // 40% opacity
         />
       );
 
     case "select":
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {step.options?.map((option) => (
             <SelectOption
               key={option.id}
@@ -489,7 +463,7 @@ function QuestionInput({
     case "multi-select":
       const selectedValues = (value as string[]) || [];
       return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {step.options?.map((option) => (
             <MultiSelectOption
               key={option.id}
@@ -510,45 +484,23 @@ function QuestionInput({
 
     case "confirm":
       return (
-        <div style={{ display: "flex", gap: 12 }}>
-          <button
+        <div className="flex gap-3">
+          <button type="button"
             onClick={() => onChange(true)}
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: "14px 20px",
-              borderRadius: 10,
-              border: `1px solid ${value === true ? "#79C47C" : "var(--ui-border-default)"}`,
-              background: value === true ? "rgba(121,196,124,0.15)" : "var(--surface-hover)",
-              color: value === true ? "#79C47C" : "#a8998c",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 p-[14px_20px] rounded-[10px] border border-solid text-[14px] font-semibold cursor-pointer transition-all",
+              value === true ? "bg-[rgba(121,196,124,0.15)] border-[#79C47C] text-[#79C47C]" : "bg-[var(--surface-hover)] border-[var(--ui-border-default)] text-[#a8998c]"
+            )}
           >
             <Check size={18} />
             Yes
           </button>
-          <button
+          <button type="button"
             onClick={() => onChange(false)}
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              padding: "14px 20px",
-              borderRadius: 10,
-              border: `1px solid ${value === false ? "#ef4444" : "var(--ui-border-default)"}`,
-              background: value === false ? "var(--status-error-bg)" : "var(--surface-hover)",
-              color: value === false ? "#ef4444" : "#a8998c",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 p-[14px_20px] rounded-[10px] border border-solid text-[14px] font-semibold cursor-pointer transition-all",
+              value === false ? "bg-[var(--status-error-bg)] border-[#ef4444] text-[#ef4444]" : "bg-[var(--surface-hover)] border-[var(--ui-border-default)] text-[#a8998c]"
+            )}
           >
             <X size={18} />
             No
@@ -576,56 +528,44 @@ function SelectOption({
 
   return (
     <div>
-      <button
+      <button type="button"
         onClick={onSelect}
         disabled={option.disabled}
+        className={cn(
+          "w-full flex items-start gap-3 p-3.5 rounded-xl border border-solid text-left transition-all",
+          selected ? "bg-[var(--accent-glow)] border-[var(--accent-color)]" : option.disabled ? "bg-black/10 border-[var(--surface-hover)] cursor-not-allowed opacity-50" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] cursor-pointer"
+        )}
         style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 12,
-          padding: 14,
-          borderRadius: 12,
-          border: `1px solid ${selected ? accentColor : option.disabled ? "var(--surface-hover)" : "var(--ui-border-muted)"}`,
-          background: selected ? `${accentColor}10` : option.disabled ? "rgba(0,0,0,0.1)" : "var(--surface-hover)",
-          opacity: option.disabled ? 0.5 : 1,
-          cursor: option.disabled ? "not-allowed" : "pointer",
-          textAlign: "left",
-        }}
+          '--accent-glow': `${accentColor}1a`, // 10% opacity
+          '--accent-color': accentColor,
+        } as React.CSSProperties}
       >
         <div
+          className="size-5 rounded-full border-2 border-solid flex items-center justify-center shrink-0 mt-0.5 transition-colors"
           style={{
-            width: 20,
-            height: 20,
-            borderRadius: "50%",
-            border: `2px solid ${selected ? accentColor : "#666"}`,
+            borderColor: selected ? accentColor : "#666",
             background: selected ? accentColor : "transparent",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            marginTop: 2,
           }}
         >
-          {selected && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#1a1714" }} />}
+          {selected && <div className="size-2 rounded-full bg-[#1a1714]" />}
         </div>
 
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: selected ? "#f6eee7" : "#d1c3b4" }}>
+        <div className="flex-1 min-w-0">
+          <div className={cn("text-[14px] font-semibold truncate", selected ? "text-[#f6eee7]" : "text-[#d1c3b4]")}>
             {option.label}
           </div>
           {option.description && (
-            <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 2 }}>{option.description}</div>
+            <div className="text-[12px] text-[#7a6b5d] mt-0.5 leading-snug">{option.description}</div>
           )}
           {option.disabled && option.disabledReason && (
-            <div style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{option.disabledReason}</div>
+            <div className="text-[12px] text-[#ef4444] mt-1">{option.disabledReason}</div>
           )}
 
           {/* Option Annotations */}
           {option.annotations && option.annotations.length > 0 && (
-            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="mt-2 flex flex-col gap-1.5">
               {option.annotations.map((annotation, index) => (
-                <MiniAnnotation key={index} annotation={annotation} />
+                <MiniAnnotation key={`opt-ann-${annotation.type}-${index}`} annotation={annotation} />
               ))}
             </div>
           )}
@@ -633,23 +573,12 @@ function SelectOption({
 
         {/* Preview Toggle */}
         {option.preview && (
-          <button
+          <button type="button"
             onClick={(e) => {
               e.stopPropagation();
               setShowPreview(!showPreview);
             }}
-            style={{
-              padding: "4px 8px",
-              borderRadius: 6,
-              border: "none",
-              background: "var(--surface-hover)",
-              color: "#7a6b5d",
-              fontSize: 12,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-            }}
+            className="flex items-center gap-1 p-1 px-2 rounded-md border-none bg-[var(--surface-hover)] text-[#7a6b5d] text-[12px] cursor-pointer hover:bg-[var(--surface-active)] transition-colors"
           >
             <ImageIcon size={12} />
             {showPreview ? "Hide" : "Preview"}
@@ -677,46 +606,34 @@ function MultiSelectOption({
   accentColor: string;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onToggle}
       disabled={option.disabled}
+      className={cn(
+        "w-full flex items-start gap-3 p-3 rounded-[10px] border border-solid text-left transition-all",
+        selected ? "bg-[var(--accent-glow)] border-[var(--accent-color)]" : option.disabled ? "bg-black/10 border-[var(--surface-hover)] cursor-not-allowed opacity-50" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] cursor-pointer"
+      )}
       style={{
-        width: "100%",
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 12,
-        padding: 12,
-        borderRadius: 10,
-        border: `1px solid ${selected ? accentColor : option.disabled ? "var(--surface-hover)" : "var(--ui-border-muted)"}`,
-        background: selected ? `${accentColor}10` : option.disabled ? "rgba(0,0,0,0.1)" : "var(--surface-hover)",
-        opacity: option.disabled ? 0.5 : 1,
-        cursor: option.disabled ? "not-allowed" : "pointer",
-        textAlign: "left",
-      }}
+        '--accent-glow': `${accentColor}1a`, // 10% opacity
+        '--accent-color': accentColor,
+      } as React.CSSProperties}
     >
       <div
+        className="size-[18px] rounded border-2 border-solid flex items-center justify-center shrink-0 mt-0.5 transition-colors"
         style={{
-          width: 18,
-          height: 18,
-          borderRadius: 4,
-          border: `2px solid ${selected ? accentColor : "#666"}`,
+          borderColor: selected ? accentColor : "#666",
           background: selected ? accentColor : "transparent",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-          marginTop: 2,
         }}
       >
-        {selected && <Check size={12} style={{ color: "#1a1714" }} />}
+        {selected && <Check size={12} className="text-[#1a1714]" />}
       </div>
 
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: selected ? "#f6eee7" : "#d1c3b4" }}>
+      <div className="flex-1 min-w-0">
+        <div className={cn("text-[13px] font-medium truncate", selected ? "text-[#f6eee7]" : "text-[#d1c3b4]")}>
           {option.label}
         </div>
         {option.description && (
-          <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 1 }}>{option.description}</div>
+          <div className="text-[12px] text-[#7a6b5d] mt-0.5 leading-snug">{option.description}</div>
         )}
       </div>
     </button>
@@ -726,34 +643,18 @@ function MultiSelectOption({
 function OptionPreview({ preview }: { preview: QuestionOptionPreview }) {
   return (
     <div
-      style={{
-        marginTop: 8,
-        marginLeft: 32,
-        padding: 12,
-        borderRadius: 10,
-        background: "var(--surface-panel)",
-        border: "1px solid var(--ui-border-muted)",
-      }}
+      className="mt-2 ml-8 p-3 rounded-[10px] bg-[var(--surface-panel)] border border-solid border-[var(--ui-border-muted)]"
     >
       {preview.type === "code" && (
         <pre
-          style={{
-            margin: 0,
-            padding: 10,
-            borderRadius: 6,
-            background: "rgba(0,0,0,0.4)",
-            fontSize: 12,
-            fontFamily: "var(--font-mono)",
-            color: "#d1c3b4",
-            overflow: "auto",
-          }}
+          className="m-0 p-2.5 rounded-md bg-black/40 text-[12px] font-mono text-[#d1c3b4] overflow-auto"
         >
           <code>{preview.content}</code>
         </pre>
       )}
 
       {preview.type === "text" && (
-        <div style={{ fontSize: 12, color: "#a8998c", lineHeight: 1.5 }}>{preview.content}</div>
+        <div className="text-[12px] text-[#a8998c] leading-relaxed">{preview.content}</div>
       )}
 
       {preview.type === "image" && (
@@ -761,14 +662,10 @@ function OptionPreview({ preview }: { preview: QuestionOptionPreview }) {
           <img
             src={preview.content}
             alt={preview.caption || "Preview"}
-            style={{
-              maxWidth: "100%",
-              borderRadius: 6,
-              display: "block",
-            }}
+            className="max-w-full rounded-md block"
           />
           {preview.caption && (
-            <div style={{ marginTop: 8, fontSize: 12, color: "#7a6b5d", textAlign: "center" }}>
+            <div className="mt-2 text-[12px] text-[#7a6b5d] text-center">
               {preview.caption}
             </div>
           )}
@@ -779,39 +676,27 @@ function OptionPreview({ preview }: { preview: QuestionOptionPreview }) {
 }
 
 function Annotation({ annotation }: { annotation: QuestionAnnotation }) {
-  const colors = {
-    info: { bg: "rgba(105,168,200,0.1)", border: "rgba(105,168,200,0.3)", icon: "#69A8C8" },
-    warning: { bg: "rgba(244,162,97,0.1)", border: "rgba(244,162,97,0.3)", icon: "#f4a261" },
-    tip: { bg: "rgba(121,196,124,0.1)", border: "rgba(121,196,124,0.3)", icon: "#79C47C" },
-    example: { bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.3)", icon: "#A78BFA" },
+  const types = {
+    info: { bg: "bg-[rgba(105,168,200,0.1)]", border: "border-[rgba(105,168,200,0.3)]", iconColor: "text-[#69A8C8]", Icon: Info },
+    warning: { bg: "bg-[rgba(244,162,97,0.1)]", border: "border-[rgba(244,162,97,0.3)]", iconColor: "text-[#f4a261]", Icon: Warning },
+    tip: { bg: "bg-[rgba(121,196,124,0.1)]", border: "border-[rgba(121,196,124,0.3)]", iconColor: "text-[#79C47C]", Icon: Sparkle },
+    example: { bg: "bg-[rgba(167,139,250,0.1)]", border: "border-[rgba(167,139,250,0.3)]", iconColor: "text-[#A78BFA]", Icon: Code },
   };
 
-  const color = colors[annotation.type];
+  const { bg, border, iconColor, Icon } = types[annotation.type];
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 10,
-        padding: 12,
-        borderRadius: 10,
-        background: color.bg,
-        border: `1px solid ${color.border}`,
-      }}
-    >
-      <div style={{ color: color.icon, flexShrink: 0, marginTop: 2 }}>
-        {annotation.type === "info" && <Info size={16} />}
-        {annotation.type === "warning" && <Warning size={16} />}
-        {annotation.type === "tip" && <Sparkle size={16} />}
-        {annotation.type === "example" && <Code size={16} />}
+    <div className={cn("flex gap-2.5 p-3 rounded-[10px] border border-solid", bg, border)}>
+      <div className={cn("shrink-0 mt-0.5", iconColor)}>
+        <Icon size={16} />
       </div>
       <div>
         {annotation.title && (
-          <div style={{ fontSize: 12, fontWeight: 600, color: color.icon, marginBottom: 2 }}>
+          <div className={cn("text-[12px] font-semibold mb-0.5", iconColor)}>
             {annotation.title}
           </div>
         )}
-        <div style={{ fontSize: 12, color: "#d1c3b4", lineHeight: 1.5 }}>{annotation.content}</div>
+        <div className="text-[12px] text-[#d1c3b4] leading-relaxed">{annotation.content}</div>
       </div>
     </div>
   );
@@ -819,18 +704,18 @@ function Annotation({ annotation }: { annotation: QuestionAnnotation }) {
 
 function MiniAnnotation({ annotation }: { annotation: QuestionAnnotation }) {
   const colors = {
-    info: "#69A8C8",
-    warning: "#f4a261",
-    tip: "#79C47C",
-    example: "#A78BFA",
+    info: "text-[#69A8C8]",
+    warning: "text-[#f4a261]",
+    tip: "text-[#79C47C]",
+    example: "text-[#A78BFA]",
   };
 
+  const Icons = { info: Info, warning: Warning, tip: Sparkle, example: Code };
+  const Icon = Icons[annotation.type];
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: colors[annotation.type] }}>
-      {annotation.type === "info" && <Info size={12} />}
-      {annotation.type === "warning" && <Warning size={12} />}
-      {annotation.type === "tip" && <Sparkle size={12} />}
-      {annotation.type === "example" && <Code size={12} />}
+    <div className={cn("flex items-center gap-1.5 text-[12px]", colors[annotation.type])}>
+      <Icon size={12} />
       <span>{annotation.content}</span>
     </div>
   );
@@ -857,71 +742,38 @@ function WizardFooter({
 }) {
   return (
     <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "16px 24px 20px",
-        borderTop: "1px solid var(--ui-border-muted)",
-      }}
+      className="flex justify-between items-center p-4 px-6 pb-5 border-t border-solid border-[var(--ui-border-muted)]"
     >
-      <button
+      <button type="button"
         onClick={onBack}
         disabled={isFirstStep}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "10px 16px",
-          borderRadius: 10,
-          border: "1px solid var(--ui-border-default)",
-          background: "transparent",
-          color: isFirstStep ? "#4a4a4a" : "#d1c3b4",
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: isFirstStep ? "not-allowed" : "pointer",
-        }}
+        className={cn(
+          "flex items-center gap-1.5 p-2.5 px-4 rounded-[10px] border border-solid border-[var(--ui-border-default)] bg-transparent text-[13px] font-semibold transition-colors",
+          isFirstStep ? "text-[#4a4a4a] cursor-not-allowed" : "text-[#d1c3b4] cursor-pointer hover:bg-white/5"
+        )}
       >
         <CaretLeft size={16} />
         Back
       </button>
 
-      <div style={{ display: "flex", gap: 10 }}>
+      <div className="flex gap-2.5">
         {allowSkip && (
-          <button
+          <button type="button"
             onClick={onSkip}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid var(--ui-border-default)",
-              background: "transparent",
-              color: "#7a6b5d",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            className="p-2.5 px-4 rounded-[10px] border border-solid border-[var(--ui-border-default)] bg-transparent text-[#7a6b5d] text-[13px] font-semibold cursor-pointer hover:bg-white/5 transition-colors"
           >
             Skip
           </button>
         )}
 
-        <button
+        <button type="button"
           onClick={onNext}
           disabled={!canProceed}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "10px 20px",
-            borderRadius: 10,
-            border: `1px solid ${accentColor}`,
-            background: accentColor,
-            color: "#1a1714",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: canProceed ? "pointer" : "not-allowed",
-            opacity: canProceed ? 1 : 0.5,
-          }}
+          className={cn(
+            "flex items-center gap-1.5 p-2.5 px-5 rounded-[10px] border border-solid text-[#1a1714] text-[13px] font-bold transition-all",
+            canProceed ? "cursor-pointer hover:opacity-90" : "cursor-not-allowed opacity-50"
+          )}
+          style={{ borderColor: accentColor, background: accentColor }}
         >
           {isLastStep ? "Review" : "Next"}
           {!isLastStep && <CaretRight size={16} />}
@@ -948,82 +800,50 @@ function ReviewView({
 }) {
   return (
     <div
+      className="w-full max-w-[640px] rounded-[20px] border border-solid overflow-hidden"
       style={{
-        borderRadius: 20,
-        border: `1px solid ${accentColor}30`,
+        borderColor: `${accentColor}4d`, // 30% opacity
         background: "linear-gradient(180deg, #2B2520 0%, #1a1714 100%)",
-        overflow: "hidden",
-        boxShadow: `0 28px 100px var(--shell-overlay-backdrop), 0 0 0 1px ${accentColor}20`,
-        maxWidth: 640,
-        width: "100%",
+        boxShadow: `0 28px 100px var(--shell-overlay-backdrop), 0 0 0 1px ${accentColor}33`, // 20% opacity
       }}
     >
       <div
+        className="p-5 px-6 border-b border-solid border-[var(--ui-border-muted)]"
         style={{
-          padding: "20px 24px",
-          borderBottom: "1px solid var(--ui-border-muted)",
-          background: `linear-gradient(90deg, ${accentColor}08, transparent)`,
+          background: `linear-gradient(90deg, ${accentColor}14, transparent)`, // ~8% opacity
         }}
       >
-        <div style={{ fontSize: 12, color: accentColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+        <div className="text-[12px] font-bold uppercase tracking-[0.08em] mb-1" style={{ color: accentColor }}>
           Review Your Answers
         </div>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#f6eee7" }}>Almost Done!</h2>
-        <p style={{ margin: "6px 0 0", fontSize: 13, color: "#a8998c" }}>Review your answers before submitting</p>
+        <h2 className="m-0 text-[18px] font-bold text-[#f6eee7]">Almost Done!</h2>
+        <p className="m-0 mt-1.5 text-[13px] text-[#a8998c]">Review your answers before submitting</p>
       </div>
 
-      <div style={{ padding: "20px 24px", maxHeight: 400, overflow: "auto" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="p-5 px-6 max-h-[400px] overflow-y-auto">
+        <div className="flex flex-col gap-4">
           {steps.map((step, index) => (
-            <div key={step.id} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            <div key={step.id} className="flex gap-3 items-start">
               <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  background: `${accentColor}20`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: accentColor,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  flexShrink: 0,
-                }}
+                className="size-7 rounded-full flex items-center justify-center shrink-0 text-[12px] font-bold"
+                style={{ background: `${accentColor}33`, color: accentColor }}
               >
                 {index + 1}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: "#7a6b5d", marginBottom: 2 }}>{step.title}</div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: "#f6eee7", marginBottom: 4 }}>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] text-[#7a6b5d] mb-0.5">{step.title}</div>
+                <div className="text-[14px] font-medium text-[#f6eee7] mb-1">
                   {step.question}
                 </div>
                 <div
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "var(--surface-panel)",
-                    fontSize: 13,
-                    color: "#d1c3b4",
-                  }}
+                  className="p-2 px-3 rounded-lg bg-[var(--surface-panel)] text-[13px] text-[#d1c3b4] leading-normal"
                 >
                   {formatAnswer(answers[step.id], step)}
                 </div>
               </div>
-              <button
+              <button type="button"
                 onClick={() => onEdit(index)}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 6,
-                  border: "none",
-                  background: "var(--surface-hover)",
-                  color: "#7a6b5d",
-                  fontSize: 12,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
+                className="p-1.5 px-2.5 rounded-md border-none bg-[var(--surface-hover)] text-[#7a6b5d] text-[12px] cursor-pointer flex items-center gap-1 hover:bg-[var(--surface-active)] hover:text-[#a8998c] transition-colors"
               >
                 <PencilSimple size={12} />
                 Edit
@@ -1034,48 +854,20 @@ function ReviewView({
       </div>
 
       <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          padding: "16px 24px 20px",
-          borderTop: "1px solid var(--ui-border-muted)",
-        }}
+        className="flex justify-between p-4 px-6 pb-5 border-t border-solid border-[var(--ui-border-muted)]"
       >
-        <button
+        <button type="button"
           onClick={onBack}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "10px 16px",
-            borderRadius: 10,
-            border: "1px solid var(--ui-border-default)",
-            background: "transparent",
-            color: "#d1c3b4",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
+          className="flex items-center gap-1.5 p-2.5 px-4 rounded-[10px] border border-solid border-[var(--ui-border-default)] bg-transparent text-[#d1c3b4] text-[13px] font-semibold cursor-pointer hover:bg-white/5 transition-colors"
         >
           <CaretLeft size={16} />
           Back
         </button>
 
-        <button
+        <button type="button"
           onClick={onSubmit}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "10px 24px",
-            borderRadius: 10,
-            border: `1px solid ${accentColor}`,
-            background: accentColor,
-            color: "#1a1714",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
+          className="flex items-center gap-1.5 p-2.5 px-6 rounded-[10px] border border-solid text-[#1a1714] text-[13px] font-bold cursor-pointer hover:opacity-90 transition-all"
+          style={{ borderColor: accentColor, background: accentColor }}
         >
           <Check size={16} />
           Submit
@@ -1096,50 +888,29 @@ function CompletionView({
 }) {
   return (
     <div
+      className="w-full max-w-[400px] rounded-[20px] border border-solid p-10 text-center"
       style={{
-        borderRadius: 20,
-        border: `1px solid ${accentColor}30`,
+        borderColor: `${accentColor}4d`,
         background: "linear-gradient(180deg, #2B2520 0%, #1a1714 100%)",
-        padding: 40,
-        textAlign: "center",
-        maxWidth: 400,
-        width: "100%",
       }}
     >
       <div
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: "50%",
-          background: `${accentColor}20`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          margin: "0 auto 20px",
-        }}
+        className="size-16 rounded-full flex items-center justify-center mx-auto mb-5"
+        style={{ background: `${accentColor}33` }}
       >
         <CheckCircle size={32} style={{ color: accentColor }} />
       </div>
 
-      <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#f6eee7" }}>All Set!</h2>
-      <p style={{ margin: 0, fontSize: 14, color: "#a8998c" }}>
+      <h2 className="m-0 mb-2 text-[20px] font-bold text-[#f6eee7]">All Set!</h2>
+      <p className="m-0 text-[14px] text-[#a8998c] leading-relaxed">
         Your responses for "{title}" have been recorded.
       </p>
 
       {onClose && (
-        <button
+        <button type="button"
           onClick={onClose}
-          style={{
-            marginTop: 24,
-            padding: "12px 24px",
-            borderRadius: 10,
-            border: `1px solid ${accentColor}`,
-            background: accentColor,
-            color: "#1a1714",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
+          className="mt-6 p-3 px-6 rounded-[10px] border border-solid text-[#1a1714] text-[14px] font-bold cursor-pointer hover:opacity-90 transition-all"
+          style={{ borderColor: accentColor, background: accentColor }}
         >
           Done
         </button>

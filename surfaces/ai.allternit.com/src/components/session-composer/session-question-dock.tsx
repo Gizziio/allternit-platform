@@ -119,9 +119,10 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
   return (
     <div
       data-component="session-question-dock"
-      className="w-full rounded-[16px] bg-[var(--glass-bg-thick)] border border-[var(--border-strong)] shadow-lg overflow-hidden"
-      style={{ borderLeft: "3px solid var(--accent-chat)" }}
+      className="w-full rounded-[16px] bg-[var(--glass-bg-thick)] border border-[var(--border-strong)] shadow-lg overflow-hidden relative"
     >
+      {/* Side indicator bar */}
+      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--accent-chat)]" />
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-2">
@@ -134,7 +135,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
             </span>
           )}
         </div>
-        <button
+        <button type="button"
           data-slot="dismiss"
           onClick={onReject}
           className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--status-error)] transition-colors"
@@ -151,8 +152,8 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
             const isActive = st.tab === i;
             const isAnswered = (st.answers[i]?.length ?? 0) > 0;
             return (
-              <button
-                key={i}
+              <button type="button"
+                key={`session-question-dock-${i}`}
                 data-slot={`tab-${i}`}
                 onClick={() => setTab(i)}
                 className={cn(
@@ -168,7 +169,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
               </button>
             );
           })}
-          <button
+          <button type="button"
             data-slot="tab-confirm"
             onClick={() => setTab(questions.length)}
             className={cn(
@@ -200,7 +201,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
             {questions.map((q, i) => {
               const answer = st.answers[i]?.join(", ") ?? "";
               return (
-                <div key={i} className="flex flex-col gap-0.5">
+                <div key={`session-question-dock-${i}`} className="flex flex-col gap-0.5">
                   <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">
                     {q.header}
                   </span>
@@ -238,8 +239,8 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
               {options.map((opt, i) => {
                 const isPicked = (st.answers[st.tab] ?? []).includes(opt.label);
                 return (
-                  <button
-                    key={i}
+                  <button type="button"
+                    key={`session-question-dock-${i}`}
                     data-slot={`option-${i}`}
                     onClick={() => (isMulti ? toggleOption(opt.label) : pickOption(opt.label))}
                     className={cn(
@@ -305,8 +306,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                 <div className="rounded-[10px] border border-transparent overflow-hidden">
                   {st.editingCustom ? (
                     <div className="bg-[var(--bg-hover)] border border-[var(--border-default)] rounded-[10px] p-2">
-                      <textarea
-                        ref={customTextareaRef}
+                      <textarea aria-label="Text Area" ref={customTextareaRef}
                         autoFocus
                         value={st.customInputs[st.tab] ?? ""}
                         onChange={(e) =>
@@ -335,13 +335,13 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                         )}
                       />
                       <div className="flex justify-end gap-2 mt-1">
-                        <button
+                        <button type="button"
                           onClick={() => setSt((prev) => ({ ...prev, editingCustom: false }))}
                           className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                         >
                           cancel
                         </button>
-                        <button
+                        <button type="button"
                           onClick={() => confirmCustom(st.customInputs[st.tab] ?? "")}
                           className="text-[12px] text-[var(--accent-chat)] font-medium hover:opacity-80 transition-opacity"
                         >
@@ -350,7 +350,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                       </div>
                     </div>
                   ) : (
-                    <button
+                    <button type="button"
                       data-slot="custom-answer"
                       onClick={() => {
                         setSt((prev) => ({ ...prev, editingCustom: true }));
@@ -400,7 +400,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
           </div>
 
           {(isConfirmTab || isMulti) && (
-            <button
+            <button type="button"
               data-slot="submit"
               onClick={isConfirmTab ? submitAnswers : undefined}
               disabled={isConfirmTab && !allAnswered}

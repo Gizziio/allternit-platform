@@ -10,9 +10,9 @@ const log = createModuleLogger('services/allternit-operator-status');
 
 const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3000';
 
-export type AllternitServiceStatus = 'online' | 'offline' | 'checking' | 'error';
+type AllternitServiceStatus = 'online' | 'offline' | 'checking' | 'error';
 
-export interface AllternitServiceCapabilities {
+interface AllternitServiceCapabilities {
   browserUse: boolean;
   playwright: boolean;
   computerUse: boolean;

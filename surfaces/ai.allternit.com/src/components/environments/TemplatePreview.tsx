@@ -24,6 +24,10 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { EnvironmentTemplate } from '@/api/infrastructure';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('TemplatePreview');
+
 export interface TemplatePreviewProps {
   template: EnvironmentTemplate;
   config?: Record<string, unknown>;
@@ -219,7 +223,7 @@ ${volumes ? `\nvolumes:\n${volumes}` : ''}
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logger.error({ err: err }, 'Failed to copy:');
     }
   };
 

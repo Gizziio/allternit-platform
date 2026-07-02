@@ -115,7 +115,7 @@ function SessionRow({
   const hasError = Boolean(session.last_error);
 
   return (
-    <button
+    <button type="button"
       onClick={onSelect}
       data-testid={`code-session-${session.session_id}`}
       style={{
@@ -364,7 +364,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <section>
-          <button onClick={() => toggle('workspace')} style={sectionButtonStyle(expanded.workspace)}>
+          <button type="button" onClick={() => toggle('workspace')} style={sectionButtonStyle(expanded.workspace)}>
             {expanded.workspace ? <CaretDown size={12} weight="bold" /> : <CaretRight size={12} weight="bold" />}
             <Code size={13} weight="fill" />
             Workspace Snapshot
@@ -398,7 +398,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
         </section>
 
         <section>
-          <button onClick={() => toggle('sessions')} style={sectionButtonStyle(expanded.sessions)}>
+          <button type="button" onClick={() => toggle('sessions')} style={sectionButtonStyle(expanded.sessions)}>
             {expanded.sessions ? <CaretDown size={12} weight="bold" /> : <CaretRight size={12} weight="bold" />}
             <ClockCounterClockwise size={13} weight="fill" />
             Sessions
@@ -426,7 +426,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
         </section>
 
         <section>
-          <button onClick={() => toggle('views')} style={sectionButtonStyle(expanded.views)}>
+          <button type="button" onClick={() => toggle('views')} style={sectionButtonStyle(expanded.views)}>
             {expanded.views ? <CaretDown size={12} weight="bold" /> : <CaretRight size={12} weight="bold" />}
             <Stack size={13} weight="fill" />
             Views
@@ -443,7 +443,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
               {VIEW_ITEMS.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <button
+                  <button type="button"
                     key={item.id}
                     onClick={() => onOpen?.(item.id)}
                     style={{

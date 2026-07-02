@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type DesignCanvasTab =
+type DesignCanvasTab =
   | 'questions'
   | 'mobile'
   | 'video'
@@ -11,13 +11,13 @@ export type DesignCanvasTab =
   | 'team'
   | 'market';
 
-export interface StoredProjectTab {
+interface StoredProjectTab {
   id: string;
   label: string;
   type: string;
 }
 
-export interface StoredProject {
+interface StoredProject {
   id: string;
   name: string;
   type: string;

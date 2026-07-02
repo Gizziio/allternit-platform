@@ -532,7 +532,7 @@ export function TerminalFileBrowser({
                   Error
                 </span>
               )}
-              <button
+              <button type="button"
                 onClick={() => setTransfers(prev => prev.filter(t => t.id !== transfer.id))}
                 className="text-muted-foreground hover:text-foreground"
               >
@@ -544,8 +544,7 @@ export function TerminalFileBrowser({
       )}
 
       {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
+      <input aria-label="File upload" ref={fileInputRef}
         type="file"
         multiple
         className="hidden"

@@ -13,7 +13,7 @@
 import React, { useState, useEffect, useRef, Suspense, lazy, ComponentType } from 'react';
 import { ViewSkeleton } from './ViewSkeleton';
 
-export interface LazyComponentProps {
+interface LazyComponentProps {
   children: React.ReactNode;
   threshold?: number;
   rootMargin?: string;
@@ -101,7 +101,7 @@ export function LazyComponent({
 // Lazy Import Helper
 // ============================================================================
 
-export interface LazyImportOptions {
+interface LazyImportOptions {
   /** Display name for debugging */
   displayName?: string;
   /** Fallback component while loading */
@@ -171,7 +171,7 @@ export function lazyImport<T extends ComponentType<any>>(
 // Suspense Wrapper
 // ============================================================================
 
-export interface LazyBoundaryProps {
+interface LazyBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
   onError?: (error: Error) => void;
@@ -207,7 +207,7 @@ class LazyErrorBoundary extends React.Component<
       return (
         <div className="p-4 text-sm text-red-500 bg-red-50 rounded border border-red-200">
           Failed to load component.{' '}
-          <button
+          <button type="button"
             onClick={() => this.setState({ hasError: false })}
             className="underline hover:text-red-700"
           >
@@ -240,7 +240,7 @@ export function LazyBoundary({
 // Priority Loading
 // ============================================================================
 
-export interface PriorityLoadProps {
+interface PriorityLoadProps {
   children: React.ReactNode;
   priority?: 'high' | 'low' | 'idle';
 }
@@ -275,7 +275,7 @@ export function PriorityLoad({ children, priority = 'low' }: PriorityLoadProps) 
 // Chunk Preloader
 // ============================================================================
 
-export interface ChunkPreloaderProps {
+interface ChunkPreloaderProps {
   /** Factory functions for chunks to preload */
   chunks: Array<() => Promise<unknown>>;
   /** When to start preloading */

@@ -70,7 +70,7 @@ export function mapPublicationToDiscoveryItem(pub: Publication): DiscoveryItem {
   };
 }
 
-export function getHeroPriority(pub: Publication): number {
+function getHeroPriority(pub: Publication): number {
   const TYPE_SCORE: Record<ContentType, number> = {
     annual: 100,
     index: 80,

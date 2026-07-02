@@ -6,7 +6,7 @@
  * - Capability items in the list
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 export interface ContextMenuState {
   visible: boolean;
@@ -110,19 +110,17 @@ export function useContextMenu(actions: ContextMenuActions) {
 // Context Menu Component
 // ============================================================================
 
-import React from 'react';
 import {
   FileText,
   Folder,
   PencilSimple,
-  Trash,
-  Copy,
-  ClipboardText as ClipboardPaste,
   Plus,
   FolderPlus,
   Power,
   ArrowSquareOut,
   FolderOpen,
+  Copy,
+  Trash,
 } from '@phosphor-icons/react';
 
 const THEME = {
@@ -250,7 +248,7 @@ function MenuItem({
   onClick: () => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         width: '100%',

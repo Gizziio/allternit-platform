@@ -89,7 +89,7 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
         <div className="step-timeline">
           {steps.map((step, index) => (
             <div
-              key={index}
+              key={step.label}
               className={`timeline-step ${index <= currentStepIndex ? 'completed' : ''} ${index === currentStepIndex ? 'active' : ''}`}
             >
               <div className="step-dot">

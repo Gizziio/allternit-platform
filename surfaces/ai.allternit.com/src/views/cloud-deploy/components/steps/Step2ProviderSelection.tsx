@@ -23,7 +23,7 @@ export const Step2ProviderSelection: React.FC<Step2ProviderSelectionProps> = ({
   onBack,
   onWizardStart,
 }) => {
-  const [providers] = useState<Provider[]>(PROVIDERS);
+  const providers = PROVIDERS;
   const [justSignedUp, setJustSignedUp] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
 
@@ -59,7 +59,7 @@ export const Step2ProviderSelection: React.FC<Step2ProviderSelectionProps> = ({
 
       {/* Compare Button */}
       <div className="comparison-trigger">
-        <button 
+        <button type="button" 
           className="btn-compare"
           onClick={() => setShowComparison(true)}
         >
@@ -100,7 +100,7 @@ export const Step2ProviderSelection: React.FC<Step2ProviderSelectionProps> = ({
             
             <ul className="provider-features">
               {provider.features.slice(0, 3).map((feature, i) => (
-                <li key={i}>• {feature}</li>
+                <li key={`step2providerselection-${i}`}>• {feature}</li>
               ))}
             </ul>
 

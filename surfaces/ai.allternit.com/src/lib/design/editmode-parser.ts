@@ -12,7 +12,7 @@
  *   { id, label, type: "color"|"range"|"select"|"text", value, min?, max?, options? }
  */
 
-export type EditModeTokenType = 'color' | 'range' | 'select' | 'text';
+type EditModeTokenType = 'color' | 'range' | 'select' | 'text';
 
 export interface EditModeToken {
   id: string;

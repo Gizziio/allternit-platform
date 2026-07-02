@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { GlassSurface, GlassIntensity } from './GlassSurface';
-import { tokens } from './tokens';
 
 /**
  * GlassSurface Component

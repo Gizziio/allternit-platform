@@ -33,6 +33,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('HeartbeatScheduler');
+
 interface HeartbeatTask {
   id: string;
   name: string;
@@ -201,7 +205,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
       const heartbeatJobs = jobs.filter(j => j.parameters?.heartbeatTask === true);
       setSyncedJobs(heartbeatJobs);
     } catch (e) {
-      console.error('Failed to load synced jobs:', e);
+      logger.error({ err: e }, 'Failed to load synced jobs:');
     }
   }, []);
 
@@ -261,7 +265,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
     try {
       await runJobNow(task.id);
     } catch (e) {
-      console.error('Failed to run task:', e);
+      logger.error({ err: e }, 'Failed to run task:');
     }
   };
 
@@ -306,7 +310,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
           </div>
         </div>
         <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
-          <button
+          <button type="button"
             onClick={loadHeartbeat}
             disabled={isLoading}
             title="Refresh"
@@ -324,7 +328,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
           >
             <ArrowsClockwise style={{ width: 16, height: 16, animation: isLoading ? 'spin 1s linear infinite' : undefined }} />
           </button>
-          <button
+          <button type="button"
             onClick={() => setShowAddForm(true)}
             title="Add Task"
             style={{
@@ -345,7 +349,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
             <Plus style={{ width: 14, height: 14 }} />
             <span>Add</span>
           </button>
-          <button
+          <button type="button"
             onClick={saveHeartbeat}
             disabled={isSaving}
             title="Save & Sync"
@@ -367,7 +371,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
             <FloppyDisk style={{ width: 14, height: 14 }} />
             <span>{isSaving ? 'Saving…' : 'Save'}</span>
           </button>
-          <button
+          <button type="button"
             onClick={onClose}
             title="Close"
             style={{
@@ -425,9 +429,9 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                  <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                     Task Name
-                  </label>
+                  </div>
                   <Input
                     value={newTask.name}
                     onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
@@ -436,9 +440,9 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                  <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                     Schedule
-                  </label>
+                  </div>
                   <Input
                     value={newTask.schedule}
                     onChange={(e) => setNewTask({ ...newTask, schedule: e.target.value })}
@@ -448,9 +452,9 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                   Description / Actions
-                </label>
+                </div>
                 <Textarea
                   value={newTask.description}
                   onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
@@ -511,7 +515,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                 overflow: 'hidden',
               }}
             >
-              <div
+              <div role="button" tabIndex={0}
                 style={{
                   padding: '16px',
                   display: 'flex',
@@ -558,7 +562,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button
+                  <button type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       runTaskNow(task);
@@ -575,7 +579,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                   >
                     <Play style={{ width: 14, height: 14 }} />
                   </button>
-                  <button
+                  <button type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       removeTask(task.id);
@@ -607,9 +611,9 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                           <div>
-                            <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                            <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                               Task Name
-                            </label>
+                            </div>
                             <Input
                               value={task.name}
                               onChange={(e) => updateTask(task.id, { name: e.target.value })}
@@ -617,9 +621,9 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                             />
                           </div>
                           <div>
-                            <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                            <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                               Schedule
-                            </label>
+                            </div>
                             <Input
                               value={task.schedule}
                               onChange={(e) => updateTask(task.id, { schedule: e.target.value })}
@@ -628,9 +632,9 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                           </div>
                         </div>
                         <div>
-                          <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                          <div style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                             Description / Actions
-                          </label>
+                          </div>
                           <Textarea
                             value={task.description}
                             onChange={(e) => updateTask(task.id, { description: e.target.value })}

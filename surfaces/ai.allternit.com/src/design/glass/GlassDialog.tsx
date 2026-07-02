@@ -24,7 +24,7 @@ import {
 // Props Interface
 // ============================================================================
 
-export interface GlassDialogProps {
+interface GlassDialogProps {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -248,7 +248,7 @@ export function GlassDialog({
   }
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       style={backdropStyles}
       onClick={handleBackdropClick}
       className="glass-dialog-backdrop"
@@ -265,35 +265,35 @@ export function GlassDialog({
 /**
  * Small dialog for confirmations
  */
-export function GlassDialogSmall(props: Omit<GlassDialogProps, 'size'>) {
+function GlassDialogSmall(props: Omit<GlassDialogProps, 'size'>) {
   return <GlassDialog {...props} size="sm" />;
 }
 
 /**
  * Large dialog for content
  */
-export function GlassDialogLarge(props: Omit<GlassDialogProps, 'size'>) {
+function GlassDialogLarge(props: Omit<GlassDialogProps, 'size'>) {
   return <GlassDialog {...props} size="lg" padding="xl" />;
 }
 
 /**
  * Full-screen dialog
  */
-export function GlassDialogFull(props: Omit<GlassDialogProps, 'size'>) {
+function GlassDialogFull(props: Omit<GlassDialogProps, 'size'>) {
   return <GlassDialog {...props} size="full" rounded="none" padding="none" />;
 }
 
 /**
  * Alert dialog with danger styling
  */
-export function GlassAlertDialog(props: Omit<GlassDialogProps, 'variant' | 'size'>) {
+function GlassAlertDialog(props: Omit<GlassDialogProps, 'variant' | 'size'>) {
   return <GlassDialog {...props} variant="danger" size="sm" />;
 }
 
 /**
  * Confirmation dialog with primary styling
  */
-export function GlassConfirmDialog(props: Omit<GlassDialogProps, 'variant' | 'size'>) {
+function GlassConfirmDialog(props: Omit<GlassDialogProps, 'variant' | 'size'>) {
   return <GlassDialog {...props} variant="primary" size="sm" />;
 }
 

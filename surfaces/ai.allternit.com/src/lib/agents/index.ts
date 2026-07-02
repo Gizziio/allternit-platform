@@ -27,7 +27,6 @@ export type {
   PlanStep,
   QueueItem,
   AgentEvent,
-  AgentEventType,
   TaskStatus,
   VoiceConfig,
   VoicePreset,
@@ -52,29 +51,32 @@ export type {
 
 export type {
   HardBanCategory,
-  EnforcementMode,
   RoleHardBan,
   RoleCardConfig,
-  VoiceConfigLayer,
-  RelationshipPair,
   RelationshipConfig,
-  ProgressionStatRule,
-  ProgressionConfig,
   AvatarConfig,
   CharacterLayerConfig,
   CharacterLintIssue,
   CharacterCompiledConfig,
   CharacterArtifactFile,
-  CharacterTelemetryEventType,
   CharacterTelemetryEvent,
   CharacterStats,
   BanViolation,
 } from "./character.types";
 
-export { AGENT_CAPABILITIES, AGENT_MODELS, AGENT_TYPES } from "./agent.types";
+export { AGENT_MODELS, AGENT_TYPES } from "./agent.types";
 
-export { acknowledgeMail, buildSeedTelemetryEvents, cancelAgentRun, checkGateStatus, connectAgentEventStream, createAgent, createCheckpoint, createCommit, createDefaultAvatarConfig, createExecutionPlan, deleteAgent, dequeueTask, detectPluginConflicts, enqueueTask, formatDuration, generateEnhancedWorkspaceDocuments, getAgent, getAgentInbox, getAgentRun, getAgentTask, getAgentThreads, getCommit, getExecutionPlan, getGateRules, getPendingReviews, getStatusColor, listAgentRuns, listAgentTasks, listAgents, listCheckpoints, listCommits, listQueueItems, mutateViaGate, pauseAgentRun, requestAgentReview, restoreCheckpoint, resumeAgentRun, sendAgentMail, setupSeedDefaults, splitLines, startAgentRun, submitGateDecision, updateAgent, updateTaskStatus } from './agent.service';
-export { CHARACTER_SETUPS, CHARACTER_SPECIALTY_OPTIONS, appendTelemetryEvent, applyRelationshipDrift, buildCharacterArtifacts, compileCharacterLayer, computeCharacterStats, deriveVoiceModifiers, detectBanViolation, getDefaultCharacterLayer, getSetupStatDefinitions, getSpecialtyOptions, loadCharacterArtifacts, loadCharacterLayer, loadCompiledCharacterLayer, loadTelemetryEvents, normalizeCharacterBlueprint, parseCharacterBlueprint, parseCharacterSeed, saveCharacterLayer } from './character.service';
+export { acknowledgeMail, buildSeedTelemetryEvents, cancelAgentRun, checkGateStatus, connectAgentEventStream, createAgent, createCheckpoint, createCommit, createDefaultAvatarConfig, createExecutionPlan, deleteAgent, dequeueTask, detectPluginConflicts, enqueueTask, generateEnhancedWorkspaceDocuments, getAgent, getAgentInbox, getAgentRun, getAgentTask, getAgentThreads, getCommit, getExecutionPlan, getGateRules, getPendingReviews, listAgentRuns, listAgentTasks, listAgents, listCheckpoints, listCommits, listQueueItems, mutateViaGate, pauseAgentRun, requestAgentReview, restoreCheckpoint, resumeAgentRun, sendAgentMail, setupSeedDefaults, splitLines, startAgentRun, submitGateDecision, updateAgent, updateTaskStatus } from './agent.service';
+export {
+  AGENT_CREATION_CHECKLIST,
+  validateAgentCreationChecklist,
+  validateAgent,
+} from './agent-creation-checklist';
+export type {
+  ChecklistItem,
+  ChecklistResult,
+} from './agent-creation-checklist';
+export { CHARACTER_SETUPS, appendTelemetryEvent, applyRelationshipDrift, compileCharacterLayer, computeCharacterStats, detectBanViolation, getDefaultCharacterLayer, getSetupStatDefinitions, getSpecialtyOptions, loadCharacterArtifacts, loadCharacterLayer, loadCompiledCharacterLayer, loadTelemetryEvents, parseCharacterBlueprint, parseCharacterSeed, saveCharacterLayer } from './character.service';
 
 // Workspace Service
 export { agentWorkspaceService } from "./agent-workspace.service";
@@ -83,10 +85,6 @@ export type {
 } from "./agent-templates";
 // Note: TemplateVariable is also exported from unified.store.ts - using that one
 export {
-  GIZZI_TEMPLATE,
-  ALLTERNIT_STANDARD_TEMPLATE,
-  ALLTERNIT_MINIMAL_TEMPLATE,
-  WORKSPACE_TEMPLATES,
   listTemplates,
   getTemplate,
   substituteTemplateVariables,
@@ -120,23 +118,19 @@ export type {
   LeaseResponse,
   ManagedLease,
   LeaseListResponse,
-  LeaseRenewRequest,
   LeaseRenewResponse,
   // Context Packs
   ContextPack,
-  ContextPackInputs,
   ContextPackSealRequest,
   ContextPackSealResponse,
   ContextPackListRequest,
   ContextPackListResponse,
   // Receipts
   Receipt,
-  ReceiptKind,
   ReceiptQueryRequest,
   ReceiptQueryResponse,
   // Ledger
   LedgerEvent,
-  LedgerTailRequest,
   LedgerTraceRequest,
   // Mail
   MailThread,
@@ -159,69 +153,43 @@ export {
   useUnifiedStore,
   startAutoSync,
   stopAutoSync,
-  selectHealth,
-  selectContextMode,
-  selectCurrentDag,
-  selectCurrentWih,
-  selectWihsByStatus,
-  selectActiveExecutions,
   type ContextMode,
   type MainTab,
-  type DrawerTab,
   type DagDefinition,
   type DagNode,
-  type DagEdge,
   type DagExecution,
   type AgentInfo,
   type SystemHealth,
   type PromptTemplate,
   // Note: TemplateVariable is exported from agent-templates.ts
   type ToolSnapshot,
-  type SnapshotStats,
   type LogEntry,
   type SessionAnalytics,
-  type ScheduledJob,
 } from "./unified.store";
 
 export {
   useAgentStore,
-  useSelectedAgent,
-  useAgentRuns,
-  useAgentTasks,
-  useActiveRun,
-  useAgentMail,
-  useAgentMailThreads,
-  useUnreadMailCount,
-  useAgentReviews,
-  usePendingReviewCount,
-  useCharacterLayer,
-  useCharacterCompiled,
-  useCharacterStats,
 } from "./agent.store";
 
-export { useAgentsWithSwarms, useSwarmAgents } from "./use-agents-with-swarms";
+export { useAgent } from "./use-agent";
+
+export { useAgentsWithSwarms } from "./use-agents-with-swarms";
 export { swarmToAgent, isSwarmAgentId, getSwarmIdFromAgent } from "./swarm-as-agent";
-export { useA2ADelegation } from "./use-a2a-delegation";
+// useA2ADelegation is not exported from ./use-a2a-delegation
 
 export type {
   AgentSessionDescriptor,
-  AgentSessionFeatures,
-  AgentSessionMode,
   AgentSessionRuntimeState,
-  AgentSessionSurface,
 } from "./session-metadata";
 
 export {
-  buildAgentSessionMetadata,
   formatAgentSessionMetaLabel,
-  formatAgentSessionSurfaceLabel,
   getAgentSessionDescriptor,
   getAgentSessionStatusLabel,
 } from "./session-metadata";
 export type {
   OpenClawDiscoveredAgent,
   OpenClawDiscoveryResponse,
-  OpenClawDiscoveryFiles,
 } from "./openclaw-discovery";
 export {
   buildOpenClawImportInput,
@@ -237,7 +205,6 @@ export type {
   PermissionDecision,
   Question,
   PendingQuestionRequest,
-  QuestionAnswer,
 } from "./permission-store";
 export {
   usePermissionStore,
@@ -248,38 +215,12 @@ export {
   useQuestionActions,
 } from "./permission-store";
 
-export type {
-  AssistantBlockKind,
-  StreamEvent,
-  ToolLifecycleState,
-  RunStatus,
-  TimelineCitation,
-  TextTimelineBlock,
-  ReasoningTimelineBlock,
-  ToolTimelineBlock,
-  ArtifactTimelineBlock,
-  CitationTimelineBlock,
-  AssistantTimelineBlock,
-  AssistantTurn,
-  ConversationTimelineState,
-  ProviderStreamAdapter,
-} from "./timeline-stream";
-
-export {
-  createConversationTimelineState,
-  reduceStreamEvent,
-} from "./timeline-stream";
+// timeline-stream.ts has no exported members
 export { mapNativeMessagesToStreamMessages } from "./embedded-agent-chat";
 export { AgentContextStrip } from "@/components/agents/AgentContextStrip";
 export { ToolCallVisualization, useToolCallAccent } from "@/components/agents/ToolCallVisualization";
 export { CronJobWizard, type CronJobConfig } from "@/components/agents/CronJobWizard";
 export {
-  AskUserQuestion,
-  QuestionWizard,
-  ToolQuestionDisplay,
-  useAskUserQuestion,
-  useToolQuestions,
-  type AskUserQuestionProps,
   type QuestionType,
 } from "@/components/agents/AskUserQuestion";
 
@@ -292,7 +233,6 @@ export {
   executeAskUserTool,
   ASK_USER_TOOL_DEFINITION,
   validateAnswer,
-  formatQuestionForDisplay,
   type QuestionConfig,
   type QuestionOption,
   type ValidationRule,
@@ -315,17 +255,13 @@ export {
 export {
   useToolHooksStore,
   usePendingToolConfirmations,
-  useToolExecutionHistory,
-  useToolHooks,
   createConfirmationHook,
   createAuditHook,
-  type ToolDecision,
   type ToolContext,
   type ToolRoutingResult,
   type PreToolUseFunction,
   type PostToolUseFunction,
   type PendingToolConfirmation,
-  type ToolExecutionRecord,
 } from "./tools/tool-hooks";
 
 export {
@@ -368,20 +304,13 @@ export {
   executeDeleteFile,
   type SearchResult,
   type FileEntry,
-  FilesApiClientError,
 } from "./tools/file-tools";
 
-export { filesApi, type FilesApiError } from './files-api';
+export { filesApi, FilesApiClientError } from './files-api';
 export {
   useToolRegistryStore,
-  useToolsByCategory,
-  useFilteredTools,
-  useEnabledToolCount,
-  useToolCategories,
   type Tool,
   type ToolRegistryEntry,
-  type ToolCategory,
-  type SessionToolConfig,
 } from "./tool-registry.store";
 
 // ============================================================================
@@ -391,36 +320,23 @@ export {
 export type {
   // Subagents
   SubagentConfig,
-  TriggerCondition,
 
   // Swarms
   AgentSwarm,
-  SwarmAgentConfig,
-  SwarmRole,
-  SwarmStrategy,
-  SwarmCommunication,
   SwarmRun,
   SwarmMessage,
 
   // Note: AgentWorkflow and WorkflowStep are exported from agent-templates.specialist.ts
-  WorkflowBranch,
-  WorkflowExpression,
-  WorkflowVariable,
-  WorkflowErrorHandling,
-  WorkflowTrigger,
-  ParallelStepConfig,
   WorkflowExecutionState,
 
   // Loop Control
   LoopControlConfig,
-  AbortCondition,
 
   // Call Options
   AgentCallOptions,
 
   // Tool Config
   AgentToolConfig,
-  RetryConfig,
 
   // Memory
   AgentMemoryConfig,
@@ -438,23 +354,15 @@ export type {
 
   // Templates
   AgentTemplate,
-  AgentExample,
 
   // Execution
   AdvancedAgentRun,
-  ExecutionTraceEvent,
-  RunCost,
-  TokenUsage,
 } from "./agent-advanced.types";
 
 export { PREDEFINED_AGENT_TEMPLATES } from "./agent-advanced.types";
 
 export {
   useAdvancedAgentStore,
-  useAgentSubagents,
-  useAgentWorkflows,
-  useSelectedTemplate,
-  useSwarmMessages,
 } from "./agent-advanced.store";
 
 export { useAgentRatingsStore } from "@/stores/agent-ratings.store";
@@ -475,11 +383,9 @@ export { useAgentRatingsStore } from "@/stores/agent-ratings.store";
 export type {
   ModeSession,
   ModeSessionMessage,
-  MessageRole,
   CreateModeSessionOptions,
   SendMessageOptions,
   ModeSessionState,
-  StreamingSessionState,
 } from "./mode-session-store";
 
 export {
@@ -539,41 +445,21 @@ export {
 
 export {
   SPECIALIST_TEMPLATES,
-  getTemplateById,
   getTemplatesByCategory,
-  searchTemplates,
-  getBuiltInTemplates,
-  createAgentFromTemplate,
   type SpecialistTemplate,
   type AgentCategory,
-  // Note: AgentWorkflow and WorkflowStep are exported from agent-templates.specialist.ts
-  type TechnicalDeliverable,
-  type SuccessMetric,
 } from './agent-templates.specialist';
 
 // ============================================================================
 // Import/Export Service
 // ============================================================================
 
-export {
-  exportAgent,
-  exportAgentToString,
-  downloadAgentFile,
-  importAgentFromString,
-  importAgentFromObject,
-  importAgentFromFile,
-  validateAgentConfig,
-  getSupportedVersions,
-  getCurrentVersion,
-  migrateExportData,
-  type AgentExportData,
-  type AgentImportResult,
-} from './agent-template-io';
+// agent-template-io has no exported members
 
-export function useConversationReplies(_chatId?: string) {
+function useConversationReplies(_chatId?: string) {
   return { replies: [], isLoading: false, error: null };
 }
 
-export function useUserMessages(_chatId?: string) {
+function useUserMessages(_chatId?: string) {
   return { messages: [], isLoading: false };
 }

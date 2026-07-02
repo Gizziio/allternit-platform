@@ -3,7 +3,7 @@ import type { ChatStatus, UIMessage } from "ai";
 import type { InputBarProps } from "./input-bar";
 import type { QuestionAnswer } from "./question/question-prompt";
 
-export type ModelOption = {
+type ModelOption = {
   id: string;
   name: string;
   version?: string;
@@ -17,13 +17,13 @@ export type CustomToolRendererProps = {
   status: "pending" | "streaming" | "success" | "error";
 };
 
-export type AgentChatClassNames = {
+type AgentChatClassNames = {
   root?: string;
   inputBar?: string;
   userMessage?: string;
 };
 
-export type AgentChatSlots = {
+type AgentChatSlots = {
   InputBar?: ComponentType<InputBarProps>;
   UserMessage?: ComponentType<{
     message: UIMessage;
@@ -38,7 +38,7 @@ export type AgentChatSlots = {
   }>;
 };
 
-export type AgentChatProps = {
+type AgentChatProps = {
   messages: UIMessage[];
   onSend: (message: { role: "user"; content: string }) => void;
   status: ChatStatus;

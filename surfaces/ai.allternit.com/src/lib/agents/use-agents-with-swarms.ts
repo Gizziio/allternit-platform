@@ -27,7 +27,7 @@ export function useAgentsWithSwarms(): Agent[] {
 /**
  * Returns only swarm agents.
  */
-export function useSwarmAgents(): Agent[] {
+function useSwarmAgents(): Agent[] {
   const swarms = useAdvancedAgentStore((state: { swarms: AgentSwarm[] }) => state.swarms);
 
   return useMemo(() => {

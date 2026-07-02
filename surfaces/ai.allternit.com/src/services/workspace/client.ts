@@ -4,7 +4,7 @@
  * Provides TypeScript client for the workspace service API.
  */
 
-export interface Session {
+interface Session {
   id: string;
   name: string;
   status: string;
@@ -22,27 +22,27 @@ export interface Pane {
   current_command?: string;
 }
 
-export interface CreateSessionRequest {
+interface CreateSessionRequest {
   name: string;
   working_dir?: string;
   env?: Record<string, string>;
   metadata?: SessionMetadata;
 }
 
-export interface SessionMetadata {
+interface SessionMetadata {
   dag_id?: string;
   wih_id?: string;
   owner?: string;
   labels?: string[];
 }
 
-export interface CreatePaneRequest {
+interface CreatePaneRequest {
   name: string;
   command?: string;
   metadata?: PaneMetadata;
 }
 
-export interface PaneMetadata {
+interface PaneMetadata {
   agent_id?: string;
   wih_id?: string;
   pane_type?: string;

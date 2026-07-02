@@ -6,9 +6,9 @@
 import { z } from 'zod';
 
 export const CLAUDE_PLUGIN_SCHEMA_URL = 'https://anthropic.com/claude-code/plugin.schema.json';
-export const CLAUDE_MARKETPLACE_SCHEMA_URL = 'https://anthropic.com/claude-code/marketplace.schema.json';
+const CLAUDE_MARKETPLACE_SCHEMA_URL = 'https://anthropic.com/claude-code/marketplace.schema.json';
 
-export type PluginAuthor = string | { name: string; email?: string; url?: string };
+type PluginAuthor = string | { name: string; email?: string; url?: string };
 
 /**
  * Plugin dependencies map
@@ -21,7 +21,7 @@ export type PluginAuthor = string | { name: string; email?: string; url?: string
  * - 1.0.0 - Exact version
  * - * - Any version
  */
-export type PluginDependencies = Record<string, string>;
+type PluginDependencies = Record<string, string>;
 
 export interface PluginManifestV1 {
   $schema?: string;
@@ -58,7 +58,7 @@ export type PluginMarketplaceSource =
       path?: string;
     };
 
-export interface PluginMarketplaceEntryV1 {
+interface PluginMarketplaceEntryV1 {
   name: string;
   description?: string;
   version?: string;
@@ -131,7 +131,7 @@ export function parseCsvList(value: string): string[] {
     .filter(Boolean);
 }
 
-export function uniqueStringList(values: string[] | undefined): string[] {
+function uniqueStringList(values: string[] | undefined): string[] {
   if (!Array.isArray(values)) return [];
   const seen = new Set<string>();
   const out: string[] = [];
@@ -154,7 +154,7 @@ export function authorToDisplayName(author: unknown, fallback = 'Unknown'): stri
   return fallback;
 }
 
-export function normalizeAuthor(authorName?: string, authorEmail?: string): PluginAuthor | undefined {
+function normalizeAuthor(authorName?: string, authorEmail?: string): PluginAuthor | undefined {
   const name = (authorName || '').trim();
   const email = (authorEmail || '').trim();
   if (!name && !email) return undefined;

@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Microphone,
   SpeakerHigh,
   SpeakerSlash,
   Radio,
@@ -63,10 +62,6 @@ export function VoiceToolbar({ className, variant = 'compact' }: VoiceToolbarPro
     )}>
       {/* Speech Input Button */}
       <SpeechInput
-        onTranscriptionChange={(text) => {
-          // Handled by parent through VoiceProvider
-          console.debug('Transcribed:', text);
-        }}
         className={cn(
           "rounded-md",
           isCompact ? "size-6 " : "size-8 "

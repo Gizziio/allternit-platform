@@ -89,7 +89,7 @@ export interface TerminalReplyItem {
   timestamp: number;
 }
 
-export type PlanStepStatus = 'pending' | 'running' | 'completed' | 'error' | 'skipped';
+type PlanStepStatus = 'pending' | 'running' | 'completed' | 'error' | 'skipped';
 
 export interface PlanStep {
   id: string;

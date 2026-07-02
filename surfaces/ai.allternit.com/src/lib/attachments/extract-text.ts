@@ -162,7 +162,7 @@ export function supportsTextExtraction(file: File): boolean {
 /**
  * Get a preview/truncated version of text
  */
-export function getTextPreview(text: string, maxLength: number = 500): string {
+function getTextPreview(text: string, maxLength: number = 500): string {
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '…';
 }
@@ -170,7 +170,7 @@ export function getTextPreview(text: string, maxLength: number = 500): string {
 /**
  * Format file size for display
  */
-export function formatFileSize(bytes: number): string {
+function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -180,7 +180,7 @@ export function formatFileSize(bytes: number): string {
 /**
  * Get icon name based on file type
  */
-export function getFileIcon(file: File): string {
+function getFileIcon(file: File): string {
   const type = file.type.toLowerCase();
   const name = file.name.toLowerCase();
 

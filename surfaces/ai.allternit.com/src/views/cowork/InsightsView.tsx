@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   ChartBar,
   TrendUp,
@@ -49,10 +49,8 @@ const InsightsView: React.FC = () => {
     },
   ];
 
-  // Activity heatmap data: 7 days × 4 weeks
-  const heatmapData = Array.from({ length: 28 }, () =>
-    Math.random()
-  );
+  // Activity heatmap data: 7 days × 4 weeks — stable across renders
+  const heatmapData = useMemo(() => Array.from({ length: 28 }, () => Math.random()), []);
 
   // Document breakdown
   const documentBreakdown: DocumentBreakdown[] = [
@@ -141,7 +139,7 @@ const InsightsView: React.FC = () => {
           {heatmapData.map((intensity, idx) => (
             <div
               key={`heatmap-${idx}`}
-              className="size-4  rounded-sm"
+              className="size-4 rounded-sm"
               style={{
                 backgroundColor: 'var(--accent-cowork)',
                 opacity: Math.max(0.1, intensity),

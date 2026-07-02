@@ -175,7 +175,7 @@ function localAgentId(): string {
     return `local-agent-${crypto.randomUUID()}`;
   }
 
-  return `local-agent-${Date.now().toString(36)}-${Math.random()
+  return `local-agent-${Date.now()}.toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 10)}`;
 }

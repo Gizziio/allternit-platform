@@ -13,6 +13,7 @@ import {
 } from '@phosphor-icons/react';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
+import { cn } from '@/lib/utils';
 
 interface SearchOverlayProps {
   open: boolean;
@@ -38,7 +39,7 @@ const SURFACE_META: Record<string, { icon: React.ElementType; color: string }> =
   design:  { icon: Palette,         color: 'var(--accent-primary)' },
 };
 
-export function SearchOverlay({ open, onClose, onOpenSession }: SearchOverlayProps): JSX.Element | null {
+export function SearchOverlay({ open, onClose, onOpenSession }: SearchOverlayProps): React.ReactNode | null {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +47,22 @@ export function SearchOverlay({ open, onClose, onOpenSession }: SearchOverlayPro
 
   const chatSessions = useChatSessionStore((s) => s.sessions);
   const codeSessions = useCodeSessionStore((s) => s.sessions);
+
+  // Inline state adjustment for query and open changes
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    setActiveIndex(0);
+  }
+
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setQuery('');
+      setActiveIndex(0);
+    }
+  }
 
   const allSessions = useMemo(() => {
     const combined = [
@@ -63,14 +80,14 @@ export function SearchOverlay({ open, onClose, onOpenSession }: SearchOverlayPro
   }, [allSessions, query]);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | undefined;
     if (open) {
-      setQuery('');
-      setActiveIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 40);
+      timeoutId = setTimeout(() => inputRef.current?.focus(), 40);
     }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [open]);
-
-  useEffect(() => { setActiveIndex(0); }, [query]);
 
   useEffect(() => {
     if (!open) return;
@@ -105,76 +122,32 @@ export function SearchOverlay({ open, onClose, onOpenSession }: SearchOverlayPro
   return (
     <>
       {/* Backdrop */}
-      <div
+      <div 
+        role="button" tabIndex={0}
         onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 499,
-          background: 'rgba(0,0,0,0.25)',
-        }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
+        className="fixed inset-0 z-[499] bg-black/25"
       />
 
       {/* Panel */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 56,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 500,
-          width: '100%',
-          maxWidth: 660,
-          margin: '0 12px',
-          borderRadius: 12,
-          background: 'var(--shell-menu-bg, #1a1a1a)',
-          border: '1px solid var(--shell-menu-border, rgba(255,255,255,0.1))',
-          boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: 'calc(100vh - 80px)',
-        }}
-      >
+      <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[500] w-full max-w-[660px] mx-3 rounded-xl bg-[var(--shell-menu-bg,#1a1a1a)] border border-solid border-[var(--shell-menu-border,rgba(255,255,255,0.1))] shadow-[0_24px_60px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[calc(100vh-80px)]">
         {/* Search input */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '12px 16px',
-            borderBottom: '1px solid var(--shell-menu-border, rgba(255,255,255,0.08))',
-            flexShrink: 0,
-          }}
-        >
-          <MagnifyingGlass size={16} weight="bold" style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
-          <input
+        <div className="flex items-center gap-2.5 p-[12px_16px] border-b border-solid border-[var(--shell-menu-border,rgba(255,255,255,0.08))] shrink-0">
+          <label htmlFor="global-search-input">
+            <MagnifyingGlass size={16} weight="bold" className="text-[var(--text-tertiary)] shrink-0" />
+          </label>
+          <input 
+            id="global-search-input"
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search chats and projects"
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              fontSize: 14,
-              fontWeight: 400,
-              color: 'var(--text-primary)',
-            }}
+            aria-label="Search chats and projects"
+            className="flex-1 bg-transparent border-none outline-none text-[14px] font-normal text-[var(--text-primary)] font-inherit"
           />
-          <button
+          <button type="button"
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--text-tertiary)',
-              display: 'flex',
-              padding: 4,
-              borderRadius: 4,
-              flexShrink: 0,
-            }}
+            className="bg-transparent border-none cursor-pointer text-[var(--text-tertiary)] flex p-1 rounded transition-colors hover:bg-white/5"
           >
             <X size={16} />
           </button>
@@ -183,10 +156,10 @@ export function SearchOverlay({ open, onClose, onOpenSession }: SearchOverlayPro
         {/* Results list */}
         <div
           ref={listRef}
-          style={{ overflowY: 'auto', flex: 1 }}
+          className="flex-1 overflow-y-auto"
         >
           {results.length === 0 && (
-            <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+            <div className="p-[24px_16px] text-center text-[var(--text-tertiary)] text-[13px]">
               No results for &ldquo;{query}&rdquo;
             </div>
           )}
@@ -195,36 +168,29 @@ export function SearchOverlay({ open, onClose, onOpenSession }: SearchOverlayPro
             const Icon = meta.icon;
             const isActive = i === activeIndex;
             return (
-              <button
+              <button type="button"
                 key={session.id}
                 onMouseEnter={() => setActiveIndex(i)}
                 onClick={() => { onOpenSession?.(session.id, session.surface); onClose(); }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '9px 16px',
-                  background: isActive ? 'var(--shell-item-hover, rgba(255,255,255,0.06))' : 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  color: 'var(--text-primary)',
-                }}
+                className={cn(
+                  "w-full flex items-center gap-3 p-[9px_16px] border-none cursor-pointer text-left text-[var(--text-primary)] transition-colors duration-75",
+                  isActive ? "bg-[var(--shell-item-hover,rgba(255,255,255,0.06))]" : "bg-transparent"
+                )}
               >
                 <Icon
                   size={16}
                   weight="duotone"
-                  style={{ color: meta.color, flexShrink: 0 }}
+                  className="shrink-0"
+                  style={{ color: meta.color }}
                 />
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span className="flex-1 text-[14px] font-normal overflow-hidden text-ellipsis whitespace-nowrap">
                   {session.name || 'Untitled'}
                 </span>
-                <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0, marginRight: isActive ? 8 : 0 }}>
+                <span className={cn("text-[12px] text-[var(--text-tertiary)] shrink-0", isActive ? "mr-2" : "mr-0")}>
                   {relativeLabel(session.updatedAt)}
                 </span>
                 {isActive && (
-                  <ArrowBendDownLeft size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                  <ArrowBendDownLeft size={14} className="text-[var(--text-tertiary)] shrink-0" />
                 )}
               </button>
             );

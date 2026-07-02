@@ -16,7 +16,6 @@ import type {
   ResearchDocState,
   DataGridState,
   PresentationState,
-  OrchestratorState,
   AllternitProgramState,
 } from '../types/programs';
 
@@ -24,9 +23,9 @@ import type {
 // Types
 // ============================================================================
 
-export type KernelBackend = 'websocket' | 'electron' | 'mock';
+type KernelBackend = 'websocket' | 'electron' | 'mock';
 
-export interface KernelBridgeOptions {
+interface KernelBridgeOptions {
   /** Backend type */
   backend?: KernelBackend;
   /** WebSocket endpoint (for WebSocket backend) */
@@ -39,7 +38,7 @@ export interface KernelBridgeOptions {
   debug?: boolean;
 }
 
-export interface KernelBridge {
+interface KernelBridge {
   connect(): void;
   disconnect(): void;
   sendCommand(command: KernelProgramCommand): void;
@@ -50,7 +49,7 @@ export interface KernelBridge {
 // Electron IPC Bridge
 // ============================================================================
 
-export class KernelElectronBridge implements KernelBridge {
+class KernelElectronBridge implements KernelBridge {
   private connected = false;
   private messageHandler: ((event: KernelProgramEvent) => void) | null = null;
   private options: KernelBridgeOptions;
@@ -61,7 +60,7 @@ export class KernelElectronBridge implements KernelBridge {
 
   connect(): void {
     if (!window.electron?.kernel) {
-      console.error('[KernelElectronBridge] Electron IPC not available');
+      logger.error('Electron IPC not available');
       this.options.onError?.(new Error('Electron IPC not available'));
       return;
     }
@@ -150,7 +149,7 @@ export class KernelElectronBridge implements KernelBridge {
 // WebSocket Implementation
 // ============================================================================
 
-export class KernelWebSocketBridge implements KernelBridge {
+class KernelWebSocketBridge implements KernelBridge {
   private ws: WebSocket | null = null;
   private options: Required<KernelBridgeOptions>;
   private reconnectAttempts = 0;
@@ -191,7 +190,7 @@ export class KernelWebSocketBridge implements KernelBridge {
           const kernelEvent: KernelProgramEvent = JSON.parse(event.data);
           this.handleKernelEvent(kernelEvent);
         } catch (err) {
-          console.error('[KernelWebSocketBridge] Failed to parse message:', err);
+          logger.error({ err: err }, 'Failed to parse message');
         }
       };
 
@@ -202,7 +201,7 @@ export class KernelWebSocketBridge implements KernelBridge {
       };
 
       this.ws.onerror = (error) => {
-        console.error('[KernelWebSocketBridge] WebSocket error:', error);
+        logger.error({ err: error }, 'WebSocket error');
         this.options.onError?.(new Error('WebSocket connection failed'));
       };
     } catch (err) {
@@ -288,7 +287,7 @@ export class KernelWebSocketBridge implements KernelBridge {
 // Explicit unavailable fallback
 // ============================================================================
 
-export class KernelMockBridge implements KernelBridge {
+class KernelMockBridge implements KernelBridge {
   private connected = false;
   private options: KernelBridgeOptions;
 
@@ -329,7 +328,7 @@ export class KernelMockBridge implements KernelBridge {
 // Factory Function
 // ============================================================================
 
-export function createKernelBridge(options: KernelBridgeOptions): KernelBridge {
+function createKernelBridge(options: KernelBridgeOptions): KernelBridge {
   const backend = options.backend ?? detectBackend();
   
   switch (backend) {
@@ -358,6 +357,10 @@ function detectBackend(): KernelBackend {
 // ============================================================================
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('KernelBridge');
 
 export interface UseKernelBridgeOptions extends KernelBridgeOptions {
   autoConnect?: boolean;
@@ -392,7 +395,7 @@ export function useKernelBridge(options: UseKernelBridgeOptions = {}): UseKernel
     return () => {
       bridgeRef.current?.disconnect();
     };
-  }, []);
+  }, [autoConnect, bridgeOptions]);
 
   const connect = useCallback(() => {
     bridgeRef.current?.connect();
@@ -419,5 +422,5 @@ export function useKernelBridge(options: UseKernelBridgeOptions = {}): UseKernel
 // Singleton Export
 // ============================================================================
 
-export const kernelBridge = createKernelBridge({});
+const kernelBridge = createKernelBridge({});
 export default kernelBridge;

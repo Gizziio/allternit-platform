@@ -19,7 +19,7 @@ export type SourceType =
   | 'medical'
   | 'other';
 
-export const SOURCE_LABELS: Record<SourceType, string> = {
+const SOURCE_LABELS: Record<SourceType, string> = {
   web: 'Web',
   news: 'News',
   academic: 'Academic',

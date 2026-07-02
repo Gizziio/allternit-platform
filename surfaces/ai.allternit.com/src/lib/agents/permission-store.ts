@@ -9,6 +9,7 @@
 
 import { create } from 'zustand';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
+import { questionsApi } from './native-agent-api';
 
 export interface PendingPermissionRequest {
   requestId: string;
@@ -174,7 +175,7 @@ export interface PendingQuestionRequest {
   createdAt: string;
 }
 
-export interface QuestionAnswer {
+interface QuestionAnswer {
   questionIndex: number;
   answer: string | string[];
 }
@@ -228,8 +229,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
       };
     });
 
-    // TODO: Call backend API
-    // questionApi.replyQuestion(requestId, answers).catch(console.error);
+    questionsApi.replyQuestion(requestId, answers).catch(() => {});
   },
 
   rejectQuestion: (requestId) => {
@@ -238,6 +238,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
       delete newPending[requestId];
       return { pendingQuestions: newPending };
     });
+    questionsApi.rejectQuestion(requestId).catch(() => {});
   },
 
   clearQuestionRequest: (requestId) => {

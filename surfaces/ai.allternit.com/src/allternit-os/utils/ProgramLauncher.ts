@@ -14,7 +14,7 @@ import type { AllternitProgram, AllternitProgramType, LaunchProgramRequest } fro
 // Types
 // ============================================================================
 
-export interface LaunchOptions {
+interface LaunchOptions {
   /** Focus the program after launch */
   focus?: boolean;
   /** Replace existing program of same type */
@@ -27,14 +27,14 @@ export interface LaunchOptions {
   icon?: string;
 }
 
-export interface ProgramLaunchRequest {
+interface ProgramLaunchRequest {
   type: AllternitProgramType;
   title: string;
   initialState?: Record<string, unknown>;
   options?: LaunchOptions;
 }
 
-export interface LaunchQueueItem extends ProgramLaunchRequest {
+interface LaunchQueueItem extends ProgramLaunchRequest {
   id: string;
   timestamp: number;
   priority: number;
@@ -43,7 +43,7 @@ export interface LaunchQueueItem extends ProgramLaunchRequest {
   result?: AllternitProgram;
 }
 
-export type LaunchHandler = (request: LaunchProgramRequest) => Promise<AllternitProgram>;
+type LaunchHandler = (request: LaunchProgramRequest) => Promise<AllternitProgram>;
 
 // ============================================================================
 // URI Scheme Parser
@@ -51,13 +51,13 @@ export type LaunchHandler = (request: LaunchProgramRequest) => Promise<Allternit
 
 const PROGRAM_URI_SCHEME = 'allternit:';
 
-export interface ParsedAllternitUri {
+interface ParsedAllternitUri {
   type: AllternitProgramType;
   params: Record<string, string>;
   action?: string;
 }
 
-export function parseAllternitUri(uri: string): ParsedAllternitUri | null {
+function parseAllternitUri(uri: string): ParsedAllternitUri | null {
   try {
     // Handle both allternit://type and allternit:type formats
     const normalized = uri.replace(/^allternit:\/\//, 'allternit:/');
@@ -86,12 +86,12 @@ export function parseAllternitUri(uri: string): ParsedAllternitUri | null {
       action: params.action,
     };
   } catch (error) {
-    console.error('Failed to parse Allternit URI:', error);
+    logger.error({ err: error }, 'Failed to parse Allternit URI:');
     return null;
   }
 }
 
-export function buildAllternitUri(
+function buildAllternitUri(
   type: AllternitProgramType, 
   params: Record<string, string> = {}
 ): string {
@@ -197,7 +197,7 @@ class ProgramLauncher {
         const result = await this.launch(request);
         results.push(result);
       } catch (error) {
-        console.error('Failed to launch program:', error);
+        logger.error({ err: error }, 'Failed to launch program:');
         // Continue with other launches
       }
     }
@@ -212,7 +212,7 @@ class ProgramLauncher {
     const parsed = parseAllternitUri(uri);
     
     if (!parsed) {
-      console.error('Invalid Allternit URI:', uri);
+      logger.error({ err: uri }, 'Invalid Allternit URI:');
       return null;
     }
 
@@ -310,7 +310,7 @@ export const programLauncher = new ProgramLauncher();
 // React Hook
 // ============================================================================
 
-export function useProgramLauncher() {
+function useProgramLauncher() {
   const [queue, setQueue] = useState<LaunchQueueItem[]>([]);
   const [isLaunching, setIsLaunching] = useState(false);
 
@@ -355,7 +355,7 @@ export function useProgramLauncher() {
 // Convenience Functions
 // ============================================================================
 
-export function launchResearchDoc(
+function launchResearchDoc(
   topic: string,
   options?: LaunchOptions
 ): Promise<AllternitProgram> {
@@ -367,7 +367,7 @@ export function launchResearchDoc(
   });
 }
 
-export function launchDataGrid(
+function launchDataGrid(
   title: string,
   data?: Record<string, unknown>[],
   options?: LaunchOptions
@@ -386,7 +386,7 @@ export function launchDataGrid(
   });
 }
 
-export function launchPresentation(
+function launchPresentation(
   title: string,
   slides?: { type: string; content: string }[],
   options?: LaunchOptions
@@ -403,7 +403,7 @@ export function launchPresentation(
   });
 }
 
-export function launchCodePreview(
+function launchCodePreview(
   code: string,
   language: string,
   options?: LaunchOptions
@@ -419,7 +419,7 @@ export function launchCodePreview(
   });
 }
 
-export function launchAssetManager(
+function launchAssetManager(
   initialPath?: string,
   options?: LaunchOptions
 ): Promise<AllternitProgram> {
@@ -431,7 +431,7 @@ export function launchAssetManager(
   });
 }
 
-export function launchOrchestrator(
+function launchOrchestrator(
   prompt: string,
   agents?: string[],
   options?: LaunchOptions
@@ -448,7 +448,7 @@ export function launchOrchestrator(
   });
 }
 
-export function launchWorkflowBuilder(
+function launchWorkflowBuilder(
   workflowId?: string,
   options?: LaunchOptions
 ): Promise<AllternitProgram> {
@@ -465,6 +465,10 @@ export function launchWorkflowBuilder(
 // ============================================================================
 
 import * as React from 'react';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ProgramLauncher');
 const { useState, useEffect, useCallback } = React;
 
 export default programLauncher;

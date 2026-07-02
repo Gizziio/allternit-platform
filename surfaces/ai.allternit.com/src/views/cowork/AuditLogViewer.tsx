@@ -57,9 +57,9 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
 
   const actorIcon = (type: string) => {
     switch (type) {
-      case 'agent': return <Robot size={14} color="#3b82f6" />;
-      case 'system': return <Gear size={14} color="#f59e0b" />;
-      default: return <User size={14} color="#10b981" />;
+      case 'agent': return <Robot size={14} color="var(--status-info)" />;
+      case 'system': return <Gear size={14} color="var(--status-warning)" />;
+      default: return <User size={14} color="var(--status-success)" />;
     }
   };
 
@@ -68,7 +68,7 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
       case 'created': return 'var(--status-success)';
       case 'deleted': return 'var(--status-error)';
       case 'status_changed': return 'var(--status-info)';
-      case 'assigned': return '#a855f7';
+      case 'assigned': return 'var(--accent-primary)';
       case 'commented': return 'var(--status-info)';
       case 'time_tracked': return 'var(--status-warning)';
       default: return 'var(--text-secondary)';
@@ -119,13 +119,13 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
           borderBottom: '1px solid var(--border-subtle)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-            <ClockCounterClockwise size={20} color="#6b7280" />
+            <ClockCounterClockwise size={20} color="var(--ui-text-muted)" />
             <div>
               <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600 }}>Audit Log</h3>
               <p style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: '12px' }}>{taskTitle}</p>
             </div>
           </div>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{ padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer' }}
           >
@@ -210,7 +210,7 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
             padding: 'var(--spacing-sm) var(--spacing-lg)',
             borderTop: '1px solid var(--border-subtle)',
           }}>
-            <button
+            <button type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
               style={{
@@ -232,7 +232,7 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
             <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
               Page {page} of {pagination.pages}
             </span>
-            <button
+            <button type="button"
               onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
               disabled={page >= pagination.pages}
               style={{

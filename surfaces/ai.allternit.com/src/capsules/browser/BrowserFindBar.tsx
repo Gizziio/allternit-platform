@@ -180,8 +180,7 @@ export function BrowserFindBar({ iframeRef, onClose }: BrowserFindBarProps) {
         backdropFilter: "blur(12px)",
       }}
     >
-      <input
-        ref={inputRef}
+      <input aria-label="Input" ref={inputRef}
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -208,7 +207,7 @@ export function BrowserFindBar({ iframeRef, onClose }: BrowserFindBarProps) {
           {currentMatch} / {matchCount}
         </span>
       )}
-      <button
+      <button type="button"
         onClick={() => navigateMatch(-1)}
         disabled={matchCount === 0}
         style={{
@@ -224,7 +223,7 @@ export function BrowserFindBar({ iframeRef, onClose }: BrowserFindBarProps) {
       >
         <CaretUp style={{ width: 14, height: 14 }} />
       </button>
-      <button
+      <button type="button"
         onClick={() => navigateMatch(1)}
         disabled={matchCount === 0}
         style={{
@@ -240,7 +239,7 @@ export function BrowserFindBar({ iframeRef, onClose }: BrowserFindBarProps) {
       >
         <CaretDown style={{ width: 14, height: 14 }} />
       </button>
-      <button
+      <button type="button"
         onClick={onClose}
         style={{
           padding: 4,

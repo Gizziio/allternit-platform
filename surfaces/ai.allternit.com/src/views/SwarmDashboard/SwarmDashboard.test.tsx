@@ -32,32 +32,32 @@ const mockFetch = vi.fn((url: string) => {
 global.fetch = mockFetch;
 
 const mockCircuitBreakers = [
-  {isClient ? 
+  {
     agent_id: 'agent_1',
     state: 'closed' as const,
     failure_count: 0,
     success_count: 10,
     last_failure_at: null,
-    last_state_change: new Date().toISOString(),
-   : "..."},
-  {isClient ? 
+    last_state_change: new Date().toISOString()
+    },
+  {
     agent_id: 'agent_2',
     state: 'open' as const,
     failure_count: 5,
     success_count: 0,
     last_failure_at: new Date().toISOString(),
-    last_state_change: new Date().toISOString(),
-   : "..."},
+    last_state_change: new Date().toISOString()
+    },
 ];
 
 const mockQuarantined = [
-  {isClient ? 
+  {
     agent_id: 'agent_3',
     quarantined_at: new Date().toISOString(),
     expires_at: new Date(Date.now() + 3600000).toISOString(),
     reason: 'Circuit breaker opened',
-    remaining_minutes: 60,
-   : "..."},
+    remaining_minutes: 60
+    },
 ];
 
 const mockMessageStats = {

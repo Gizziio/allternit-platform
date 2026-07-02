@@ -24,7 +24,6 @@ import type {
   AgentMailMessage,
   AgentMailThread,
   GateReview,
-  GateDecision,
 } from './agent.types';
 import * as agentService from './agent.service';
 import type {
@@ -35,6 +34,10 @@ import type {
   CharacterTelemetryEvent,
 } from './character.types';
 import * as characterService from './character.service';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Agent');
 
 // ============================================================================
 // Store State
@@ -584,7 +587,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
             checkpoints: { ...state.checkpoints, [agentId]: checkpoints }
           }));
         } catch (err) {
-          console.error('Failed to fetch checkpoints:', err);
+          logger.error({ err: err }, 'Failed to fetch checkpoints:');
         }
       },
 
@@ -632,7 +635,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
             commits: { ...state.commits, [agentId]: commits }
           }));
         } catch (err) {
-          console.error('Failed to fetch commits:', err);
+          logger.error({ err: err }, 'Failed to fetch commits:');
         }
       },
 
@@ -661,7 +664,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
           const items = await agentService.listQueueItems(agentId);
           set({ queue: items });
         } catch (err) {
-          console.error('Failed to fetch queue:', err);
+          logger.error({ err: err }, 'Failed to fetch queue:');
         }
       },
 
@@ -717,7 +720,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
             get().handleAgentEvent(event);
           },
           onError: (error) => {
-            console.error('[AgentStore] Event stream error:', error);
+            logger.error({ err: error }, 'Event stream error');
             set({ eventStreamConnected: false });
           },
         });
@@ -918,7 +921,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
             mailThreads: { ...state.mailThreads, [agentId]: threads }
           }));
         } catch (err) {
-          console.error('[AgentStore] Failed to fetch threads:', err);
+          logger.error({ err: err }, 'Failed to fetch threads');
         }
       },
 
@@ -1211,63 +1214,63 @@ export const useAgentStore = create<AgentState & AgentActions>()(
 // Selectors
 // ============================================================================
 
-export function useSelectedAgent(): Agent | null {
+function useSelectedAgent(): Agent | null {
   const { agents, selectedAgentId } = useAgentStore();
   return agents.find(a => a.id === selectedAgentId) || null;
 }
 
-export function useAgentRuns(agentId: string | null): AgentRun[] {
+function useAgentRuns(agentId: string | null): AgentRun[] {
   const { runs } = useAgentStore();
   return agentId ? runs[agentId] || [] : [];
 }
 
-export function useAgentTasks(agentId: string | null): AgentTask[] {
+function useAgentTasks(agentId: string | null): AgentTask[] {
   const { tasks } = useAgentStore();
   return agentId ? tasks[agentId] || [] : [];
 }
 
-export function useAgentMail(agentId: string | null): AgentMailMessage[] {
+function useAgentMail(agentId: string | null): AgentMailMessage[] {
   const { mail } = useAgentStore();
   return agentId ? mail[agentId] || [] : [];
 }
 
-export function useAgentMailThreads(agentId: string | null): AgentMailThread[] {
+function useAgentMailThreads(agentId: string | null): AgentMailThread[] {
   const { mailThreads } = useAgentStore();
   return agentId ? mailThreads[agentId] || [] : [];
 }
 
-export function useUnreadMailCount(agentId: string | null): number {
+function useUnreadMailCount(agentId: string | null): number {
   const { unreadMailCount } = useAgentStore();
   return agentId ? unreadMailCount[agentId] || 0 : 0;
 }
 
-export function useAgentReviews(agentId: string | null): GateReview[] {
+function useAgentReviews(agentId: string | null): GateReview[] {
   const { reviews } = useAgentStore();
   return agentId ? reviews[agentId] || [] : [];
 }
 
-export function usePendingReviewCount(agentId: string | null): number {
+function usePendingReviewCount(agentId: string | null): number {
   const { pendingReviewCount } = useAgentStore();
   return agentId ? pendingReviewCount[agentId] || 0 : 0;
 }
 
-export function useActiveRun(agentId: string | null, runId: string | null): AgentRun | null {
+function useActiveRun(agentId: string | null, runId: string | null): AgentRun | null {
   const { runs } = useAgentStore();
   if (!agentId || !runId) return null;
   return runs[agentId]?.find(r => r.id === runId) || null;
 }
 
-export function useCharacterLayer(agentId: string | null): CharacterLayerConfig | null {
+function useCharacterLayer(agentId: string | null): CharacterLayerConfig | null {
   const { character } = useAgentStore();
   return agentId ? character[agentId] || null : null;
 }
 
-export function useCharacterCompiled(agentId: string | null): CharacterCompiledConfig | null {
+function useCharacterCompiled(agentId: string | null): CharacterCompiledConfig | null {
   const { compiledCharacter } = useAgentStore();
   return agentId ? compiledCharacter[agentId] || null : null;
 }
 
-export function useCharacterStats(agentId: string | null): CharacterStats | null {
+function useCharacterStats(agentId: string | null): CharacterStats | null {
   const { characterStats } = useAgentStore();
   return agentId ? characterStats[agentId] || null : null;
 }

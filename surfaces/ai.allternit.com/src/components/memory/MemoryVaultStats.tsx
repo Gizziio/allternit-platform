@@ -157,7 +157,7 @@ export function MemoryVaultStats() {
               Consolidation runs automatically in the background, but you can trigger a manual neural-relinking if needed.
             </p>
           </div>
-          <button 
+          <button type="button" 
             onClick={handleConsolidate}
             disabled={consolidating}
             className="w-full py-2.5 rounded-lg bg-[var(--accent-primary)] text-white text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"

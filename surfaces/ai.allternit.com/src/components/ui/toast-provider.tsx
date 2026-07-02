@@ -4,9 +4,11 @@
  * Replaces the dual toast systems (use-toast.ts and ErrorBoundary.tsx)
  */
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { cn } from '@/lib/utils';
+import { X, CheckCircle, Warning, Info, WarningCircle } from '@phosphor-icons/react';
 
-export type ToastType = 'info' | 'success' | 'warning' | 'error';
+type ToastType = 'info' | 'success' | 'warning' | 'error';
 
 export interface Toast {
   id: string;
@@ -81,21 +83,25 @@ function ToastContainer({
   toasts: Toast[]; 
   onRemove: (id: string) => void;
 }) {
+  useEffect(() => {
+    // Inject keyframe animation safely on mount
+    const id = 'toast-animations';
+    if (document.getElementById(id)) return;
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = `
+      @keyframes toast-slide-in {
+        from { opacity: 0; transform: translateX(100%); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+    `;
+    document.head.appendChild(style);
+  }, []);
+
   if (toasts.length === 0) return null;
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        top: '16px',
-        right: '16px',
-        zIndex: 190,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        maxWidth: '400px',
-      }}
-    >
+    <div className="fixed top-4 right-4 z-[190] flex flex-col gap-2 max-w-[400px]">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}
@@ -111,109 +117,62 @@ function ToastItem({
   toast: Toast; 
   onRemove: (id: string) => void;
 }) {
-  const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
-    info: { bg: 'var(--status-info-bg)', border: 'rgba(59,130,246,0.3)', icon: 'var(--status-info)' },
-    success: { bg: 'var(--status-success-bg)', border: 'rgba(34,197,94,0.3)', icon: 'var(--status-success)' },
-    warning: { bg: 'var(--status-warning-bg)', border: 'rgba(245,158,11,0.3)', icon: 'var(--status-warning)' },
-    error: { bg: 'var(--status-error-bg)', border: 'rgba(239,68,68,0.3)', icon: 'var(--status-error)' },
+  const colors: Record<ToastType, { border: string; icon: string }> = {
+    info: { border: 'border-blue-500/30', icon: 'text-blue-500' },
+    success: { border: 'border-green-500/30', icon: 'text-green-500' },
+    warning: { border: 'border-amber-500/30', icon: 'text-amber-500' },
+    error: { border: 'border-red-500/30', icon: 'text-red-500' },
   };
 
-  const { bg, border, icon } = colors[toast.type];
+  const { border, icon } = colors[toast.type];
 
   const icons: Record<ToastType, React.ReactNode> = {
-    info: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={icon} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>,
-    success: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={icon} strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
-    warning: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={icon} strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-    error: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={icon} strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
+    info: <Info size={20} className={icon} />,
+    success: <CheckCircle size={20} className={icon} />,
+    warning: <Warning size={20} className={icon} />,
+    error: <WarningCircle size={20} className={icon} />,
   };
 
   return (
-    <div
-      style={{
-        background: 'var(--surface-panel)',
-        border: `1px solid ${border}`,
-        borderLeft: `4px solid ${icon}`,
-        borderRadius: '8px',
-        padding: '12px 16px',
-        boxShadow: '0 4px 12px var(--surface-panel)',
-        animation: 'toast-slide-in 0.3s ease-out',
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '12px',
-      }}
-    >
-      <div style={{ flexShrink: 0, marginTop: '2px' }}>
+    <div className={cn(
+      "bg-[var(--surface-panel)] border border-solid rounded-lg p-[12px_16px] shadow-[0_4px_12px_var(--surface-panel)] animate-[toast-slide-in_0.3s_ease-out] flex items-start gap-3",
+      border
+    )} style={{ borderLeftWidth: 4, borderLeftColor: `var(--status-${toast.type})` }}>
+      <div className="shrink-0 mt-0.5">
         {icons[toast.type]}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '14px', fontWeight: 500, color: '#fff', marginBottom: toast.description ? '4px' : 0 }}>
+      <div className="flex-1 min-w-0">
+        <div className={cn("text-[14px] font-medium text-white", toast.description ? "mb-1" : "mb-0")}>
           {toast.title}
         </div>
         {toast.description && (
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>
+          <div className="text-[13px] text-white/60 leading-relaxed">
             {toast.description}
           </div>
         )}
         {toast.action && (
-          <button
+          <button type="button"
             onClick={() => {
               toast.action?.onClick();
               onRemove(toast.id);
             }}
-            style={{
-              marginTop: '8px',
-              padding: '4px 12px',
-              background: bg,
-              border: `1px solid ${border}`,
-              borderRadius: '4px',
-              color: icon,
-              fontSize: '12px',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
+            className={cn(
+              "mt-2 px-3 py-1 rounded border border-solid text-[12px] font-medium cursor-pointer transition-all",
+              icon,
+              border,
+              "bg-white/5 hover:bg-white/10"
+            )}
           >
             {toast.action.label}
           </button>
         )}
       </div>
-      <button
+      <button type="button"
         onClick={() => onRemove(toast.id)}
-        style={{
-          flexShrink: 0,
-          background: 'none',
-          border: 'none',
-          color: 'rgba(255,255,255,0.4)',
-          cursor: 'pointer',
-          padding: '4px',
-          fontSize: '16px',
-          lineHeight: 1,
-        }}
+        className="shrink-0 bg-transparent border-none text-white/40 cursor-pointer p-1 text-[16px] leading-none hover:text-white transition-colors"
       >
-        ×
+        <X size={16} />
       </button>
     </div>
   );
-}
-
-// Add keyframe animation - safely for SSR/Electron
-if (typeof document !== 'undefined') {
-  // Check if style already exists to avoid duplicates
-  const existingStyle = document.getElementById('toast-animations');
-  if (!existingStyle) {
-    const style = document.createElement('style');
-    style.id = 'toast-animations';
-    style.textContent = `
-      @keyframes toast-slide-in {
-        from {
-          opacity: 0;
-          transform: translateX(100%);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
 }

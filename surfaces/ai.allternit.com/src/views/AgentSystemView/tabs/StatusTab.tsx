@@ -9,7 +9,7 @@
  * - Agent activity
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect } from 'react';
 import {
   Pulse as Activity,
   CheckCircle,
@@ -431,8 +431,8 @@ function ExecutionCard({ execution, onCancel }: ExecutionCardProps) {
         padding: 16,
         background: "var(--bg-primary, #0a0a0a)",
         border: "1px solid var(--border-subtle, #333)",
-        borderRadius: 8,
-      }}
+        borderRadius: 8
+    }}
     >
       <div
         style={{
@@ -481,7 +481,7 @@ function ExecutionCard({ execution, onCancel }: ExecutionCardProps) {
             <Clock size={12} />
             {durationStr}
           </span>
-          <button
+          <button type="button"
             onClick={onCancel}
             style={{
               padding: "6px 12px",

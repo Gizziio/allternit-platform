@@ -9,7 +9,7 @@
  * - Quick action buttons (Pickup, Complete)
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   CheckCircle,
   XCircle,
@@ -135,8 +135,7 @@ export function WorkTab() {
             }}
           >
             <Funnel size={14} color="#888" />
-            <select
-              value={filter}
+            <select aria-label="Selection" value={filter}
               onChange={(e) => setFilter(e.target.value as any)}
               style={{
                 flex: 1,
@@ -153,7 +152,7 @@ export function WorkTab() {
               <option value="in_progress">In Progress</option>
               <option value="blocked">Blocked</option>
             </select>
-            <button
+            <button type="button"
               onClick={() => fetchWihs()}
               style={{
                 padding: "6px",
@@ -180,8 +179,7 @@ export function WorkTab() {
               cursor: "pointer",
             }}
           >
-            <input
-              type="checkbox"
+            <input aria-label="Checkbox" type="checkbox"
               checked={showMyWorkOnly}
               onChange={(e) => setShowMyWorkOnly(e.target.checked)}
               style={{
@@ -283,7 +281,7 @@ export function WorkTab() {
                   {currentWih.dag_id && (
                     <>
                       <CaretRight size={14} />
-                      <button
+                      <button type="button"
                         onClick={() => currentWih.dag_id && selectDag(currentWih.dag_id)}
                         style={{
                           background: "none",
@@ -314,7 +312,7 @@ export function WorkTab() {
               }}
             >
               {(currentWih.status === "open" || currentWih.status === "ready") && (
-                <button
+                <button type="button"
                   onClick={() => currentWih.dag_id && handlePickup(currentWih.dag_id, currentWih.node_id)}
                   disabled={isLoading}
                   style={{
@@ -339,7 +337,7 @@ export function WorkTab() {
 
               {(currentWih.status === "signed" || currentWih.status === "in_progress") && (
                 <>
-                  <button
+                  <button type="button"
                     onClick={() => handleClose(currentWih.wih_id, "completed")}
                     disabled={isLoading}
                     style={{
@@ -361,7 +359,7 @@ export function WorkTab() {
                     Complete
                   </button>
 
-                  <button
+                  <button type="button"
                     onClick={() => handleClose(currentWih.wih_id, "failed")}
                     disabled={isLoading}
                     style={{
@@ -400,7 +398,7 @@ export function WorkTab() {
                 >
                   <Lock size={24} style={{ marginBottom: 8, opacity: 0.5 }} />
                   <p style={{ margin: 0, fontSize: 13 }}>No active leases for this WIH</p>
-                  <button
+                  <button type="button"
                     onClick={() => handleRequestLease(currentWih.wih_id)}
                     style={{
                       marginTop: 12,
@@ -554,7 +552,7 @@ interface WihCardProps {
 
 function WihCard({ wih, isSelected, onClick, onPickup, onClose }: WihCardProps) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
       style={{
         padding: 12,
@@ -689,7 +687,7 @@ function LeaseCard({ lease, onRenew, onRelease }: LeaseCardProps) {
           gap: 8,
         }}
       >
-        <button
+        <button type="button"
           onClick={onRenew}
           disabled={isExpired}
           style={{
@@ -707,7 +705,7 @@ function LeaseCard({ lease, onRenew, onRelease }: LeaseCardProps) {
         >
           Renew
         </button>
-        <button
+        <button type="button"
           onClick={onRelease}
           style={{
             flex: 1,

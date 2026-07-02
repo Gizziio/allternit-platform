@@ -1,761 +1,374 @@
-/**
- * PlaygroundView
- *
- * Live-rendering AI artifact workbench — Allternit's equivalent of Claude.ai's Artifacts
- * playground. Write a system prompt + messages, hit Run, and see generated
- * HTML / React / SVG / Mermaid outputs rendered live in a sandboxed preview pane.
- *
- * This view is contributed by the "playground" Feature Plugin and only appears
- * in the shell when that plugin is enabled.
- */
+"use client";
 
-import React, {
-  useState,
-  useRef,
-  useCallback,
-  useEffect,
-  useMemo,
-} from 'react';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type ArtifactType = 'html' | 'jsx' | 'svg' | 'mermaid' | 'markdown' | 'none';
-
-interface Artifact {
-  type: ArtifactType;
-  title: string;
-  content: string;
-}
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-type TemplateId =
-  | 'raw'
-  | 'component-variation'
-  | 'data-viz'
-  | 'copy-review'
-  | 'diff-review';
-
-type LeftTab = 'prompt' | 'config' | 'templates';
-type RightTab = 'preview' | 'source' | 'console';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function uid(): string {
-  return Math.random().toString(36).slice(2, 9);
-}
-
-function parseArtifactFromText(text: string): Artifact | null {
-  const htmlMatch = text.match(/```html\s*([\s\S]+?)(?:```|$)/i);
-  if (htmlMatch) return { type: 'html', title: 'Generated HTML', content: htmlMatch[1].trim() };
-  const jsxMatch = text.match(/```(?:jsx?|tsx?)\s*([\s\S]+?)(?:```|$)/i);
-  if (jsxMatch) return { type: 'jsx', title: 'Generated Component', content: jsxMatch[1].trim() };
-  const svgMatch = text.match(/```svg\s*([\s\S]+?)(?:```|$)/i) || text.match(/(<svg[\s\S]+?<\/svg>)/i);
-  if (svgMatch) return { type: 'svg', title: 'Generated SVG', content: svgMatch[1].trim() };
-  const mermaidMatch = text.match(/```mermaid\s*([\s\S]+?)(?:```|$)/i);
-  if (mermaidMatch) return { type: 'mermaid', title: 'Diagram', content: mermaidMatch[1].trim() };
-  return null;
-}
-
-// ─── Template Definitions ─────────────────────────────────────────────────────
-
-interface TemplateDefinition {
-  id: TemplateId;
-  label: string;
-  description: string;
-  systemPrompt: string;
-  starterMessage: string;
-  demoArtifact: Artifact;
-}
-
-const TEMPLATES: TemplateDefinition[] = [
-  {
-    id: 'raw',
-    label: 'Raw',
-    description: 'Blank canvas — no template.',
-    systemPrompt: 'You are a helpful AI assistant. When asked to create UI or visualizations, produce a self-contained HTML document with embedded CSS and JavaScript. Wrap it in ```html fences.',
-    starterMessage: 'Create a beautiful interactive analytics dashboard with charts.',
-    demoArtifact: {
-      type: 'html',
-      title: 'Analytics Dashboard',
-      content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-         background: #0f0f0f; color: #e5e5e5; min-height: 100vh; padding: 24px; }
-  h1 { font-size: 22px; font-weight: 700; margin-bottom: 20px; color: #d4b08c; }
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-  .card { background: #1c1917; border: 1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent); border-radius: 12px; padding: 20px; transition: border-color 0.2s; }
-  .card:hover { border-color: rgba(212,176,140,0.4); }
-  .card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #78716c; margin-bottom: 8px; }
-  .card .value { font-size: 32px; font-weight: 800; color: #d4b08c; }
-  .card .sub { font-size: 12px; color: #57534e; margin-top: 4px; }
-  .chart-area { background: #1c1917; border: 1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent); border-radius: 12px; padding: 20px; }
-  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; margin-top: 16px; }
-  .bar { flex: 1; background: color-mix(in srgb, var(--accent-primary) 15%, transparent); border-radius: 4px 4px 0 0; position: relative; transition: background 0.2s; cursor: pointer; }
-  .bar:hover { background: rgba(212,176,140,0.5); }
-  .bar .tip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #d4b08c; color: #0f0f0f; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; display: none; }
-  .bar:hover .tip { display: block; }
-  .x-labels { display: flex; gap: 8px; margin-top: 8px; }
-  .x-label { flex: 1; text-align: center; font-size: 10px; color: #57534e; }
-</style>
-</head>
-<body>
-  <h1>Analytics Overview</h1>
-  <div class="grid">
-    <div class="card"><div class="label">Total Requests</div><div class="value">48.2k</div><div class="sub">↑ 12% vs last week</div></div>
-    <div class="card"><div class="label">Avg Latency</div><div class="value">142ms</div><div class="sub">↓ 8ms improvement</div></div>
-    <div class="card"><div class="label">Success Rate</div><div class="value">99.4%</div><div class="sub">→ Stable</div></div>
-  </div>
-  <div class="chart-area">
-    <div class="label">Daily Requests — Last 7 Days</div>
-    <div class="bar-chart" id="chart"></div>
-    <div class="x-labels" id="labels"></div>
-  </div>
-  <script>
-    const data = [4200,5800,4900,7200,6100,8400,7600];
-    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    const max = Math.max(...data);
-    const chart = document.getElementById('chart');
-    const labels = document.getElementById('labels');
-    data.forEach((v,i) => {
-      const bar = document.createElement('div'); bar.className='bar';
-      bar.style.height=(v/max*100)+'%';
-      bar.innerHTML='<div class="tip">'+v.toLocaleString()+'</div>';
-      chart.appendChild(bar);
-      const lbl = document.createElement('div'); lbl.className='x-label';
-      lbl.textContent=days[i]; labels.appendChild(lbl);
-    });
-  </script>
-</body>
-</html>`,
-    },
-  },
-  {
-    id: 'component-variation',
-    label: 'Components',
-    description: 'Generate multiple UI component variants side-by-side.',
-    systemPrompt: 'You are a UI designer. Generate multiple visual variations of the requested component as a self-contained HTML file showing all variants side-by-side with labels. Use a dark design system. Wrap in ```html fences.',
-    starterMessage: 'Create 3 variations of a pricing card component.',
-    demoArtifact: {
-      type: 'html',
-      title: 'Pricing Card Variations',
-      content: `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8">
-<style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f0f0f; color:#e5e5e5; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px; }
-  .row { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; }
-  .card { width:210px; border-radius:16px; padding:24px; }
-  .v1 { background:#1c1917; border:1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent); }
-  .v2 { background:linear-gradient(135deg,#d4b08c22,#d4b08c08); border:1px solid #d4b08c; }
-  .v3 { background:#d4b08c; color:#0f0f0f; }
-  .tier { font-size:11px; text-transform:uppercase; letter-spacing:0.1em; opacity:0.6; }
-  .price { font-size:36px; font-weight:800; margin:12px 0 4px; }
-  .price span { font-size:16px; font-weight:400; }
-  .desc { font-size:12px; opacity:0.6; margin-bottom:16px; }
-  .feature { font-size:12px; margin:6px 0; display:flex; align-items:center; gap:6px; }
-  .feature::before { content:'✓'; font-weight:700; color:#d4b08c; }
-  .v3 .feature::before { color:#0f0f0f; }
-  .btn { width:100%; padding:10px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:600; margin-top:20px; }
-  .v1 .btn { background:color-mix(in srgb, var(--accent-primary) 15%, transparent); color:#d4b08c; }
-  .v2 .btn { background:#d4b08c; color:#0f0f0f; }
-  .v3 .btn { background:#0f0f0f; color:#d4b08c; }
-  .lbl { text-align:center; font-size:10px; color:#57534e; margin-top:10px; }
-</style></head>
-<body><div class="row">
-  <div><div class="card v1"><div class="tier">Starter</div><div class="price">$9<span>/mo</span></div><div class="desc">For individuals</div><div class="feature">5 projects</div><div class="feature">10GB storage</div><div class="feature">Basic support</div><button class="btn">Get Started</button></div><div class="lbl">Variant A — Minimal</div></div>
-  <div><div class="card v2"><div class="tier">Pro</div><div class="price">$29<span>/mo</span></div><div class="desc">For teams</div><div class="feature">Unlimited projects</div><div class="feature">100GB storage</div><div class="feature">Priority support</div><button class="btn">Upgrade</button></div><div class="lbl">Variant B — Glow</div></div>
-  <div><div class="card v3"><div class="tier" style="color:#0f0f0f">Enterprise</div><div class="price" style="color:#0f0f0f">$99<span>/mo</span></div><div class="desc" style="color:#0f0f0f">For orgs</div><div class="feature" style="color:#0f0f0f">Everything in Pro</div><div class="feature" style="color:#0f0f0f">SSO &amp; SAML</div><div class="feature" style="color:#0f0f0f">Dedicated support</div><button class="btn">Contact Sales</button></div><div class="lbl">Variant C — Inverted</div></div>
-</div></body></html>`,
-    },
-  },
-  {
-    id: 'data-viz',
-    label: 'Data Viz',
-    description: 'Generate interactive charts from raw data.',
-    systemPrompt: 'You are a data visualization expert. Create beautiful, interactive visualizations as self-contained HTML using Canvas or SVG — no external libraries. Wrap in ```html fences.',
-    starterMessage: 'Visualize monthly revenue: Jan $12k, Feb $18k, Mar $15k, Apr $22k, May $28k, Jun $31k.',
-    demoArtifact: {
-      type: 'html',
-      title: 'Revenue Chart',
-      content: `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.wrap{background:#1c1917;border:1px solid rgba(212,176,140,.15);border-radius:16px;padding:24px}h2{color:#d4b08c;font-size:16px;font-weight:700;margin-bottom:20px}</style>
-</head><body><div class="wrap"><h2>Monthly Revenue</h2><canvas id="c" width="480" height="240"></canvas></div>
-<script>
-const data=[12,18,15,22,28,31],labels=['Jan','Feb','Mar','Apr','May','Jun'];
-const c=document.getElementById('c'),ctx=c.getContext('2d');
-const W=c.width,H=c.height,pad={top:20,right:20,bottom:40,left:50};
-const cw=W-pad.left-pad.right,ch=H-pad.top-pad.bottom,max=Math.max(...data)*1.2;
-const x=i=>pad.left+(i/(data.length-1))*cw,y=v=>pad.top+ch-(v/max)*ch;
-ctx.strokeStyle='rgba(212,176,140,.08)';ctx.lineWidth=1;
-[.25,.5,.75,1].forEach(t=>{ctx.beginPath();ctx.moveTo(pad.left,pad.top+ch*(1-t));ctx.lineTo(W-pad.right,pad.top+ch*(1-t));ctx.stroke();ctx.fillStyle='var(--ui-text-muted)';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText('$'+Math.round(max*t)+'k',pad.left-6,pad.top+ch*(1-t)+4);});
-const grad=ctx.createLinearGradient(0,pad.top,0,pad.top+ch);grad.addColorStop(0,'rgba(212,176,140,.3)');grad.addColorStop(1,'rgba(212,176,140,0)');
-ctx.beginPath();ctx.moveTo(x(0),y(data[0]));data.forEach((v,i)=>{if(i>0)ctx.lineTo(x(i),y(v));});ctx.lineTo(x(data.length-1),pad.top+ch);ctx.lineTo(x(0),pad.top+ch);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
-ctx.beginPath();ctx.strokeStyle='var(--accent-primary)';ctx.lineWidth=2.5;ctx.lineJoin='round';data.forEach((v,i)=>{i===0?ctx.moveTo(x(i),y(v)):ctx.lineTo(x(i),y(v));});ctx.stroke();
-data.forEach((v,i)=>{ctx.beginPath();ctx.arc(x(i),y(v),5,0,Math.PI*2);ctx.fillStyle='var(--accent-primary)';ctx.fill();ctx.fillStyle='var(--accent-primary)';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('$'+v+'k',x(i),y(v)-12);ctx.fillStyle='var(--ui-text-muted)';ctx.font='10px sans-serif';ctx.fillText(labels[i],x(i),H-12);});
-</script></body></html>`,
-    },
-  },
-  {
-    id: 'copy-review',
-    label: 'Copy Review',
-    description: 'AI copy review with before/after suggestions.',
-    systemPrompt: 'You are a UX writer and copy editor. Review the provided copy and return a self-contained HTML document showing original vs. improved versions side-by-side with annotations. Wrap in ```html fences.',
-    starterMessage: 'Review: "Click here to submit your information to proceed to the next step."',
-    demoArtifact: {
-      type: 'html',
-      title: 'Copy Review',
-      content: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#e5e5e5;padding:24px}h2{color:#d4b08c;font-size:18px;margin-bottom:20px;font-weight:700}.row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.box{background:#1c1917;border-radius:10px;padding:16px}.before{border-left:3px solid #ef4444}.after{border-left:3px solid #22c55e}.label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}.before .label{color:#ef4444}.after .label{color:#22c55e}.text{font-size:14px;line-height:1.6}.note{background:rgba(212,176,140,.08);border-radius:8px;padding:12px 16px;border-left:3px solid #d4b08c}.note p{font-size:12px;color:#a8a29e;line-height:1.5}.note strong{color:#d4b08c}</style></head><body><h2>Copy Review</h2><div class="row"><div class="box before"><div class="label">Before</div><div class="text">"Click here to submit your information to proceed to the next step."</div></div><div class="box after"><div class="label">After</div><div class="text">"Continue"</div></div></div><div class="note"><p><strong>Reduction:</strong> 13 words → 1 word (92% shorter)</p><p><strong>Why:</strong> "Click here" is redundant on a button. "Submit your information" is verbose and clinical. "Proceed to the next step" is bureaucratic. "Continue" is friendly, universally understood, and respects the user's intelligence.</p></div></body></html>`,
-    },
-  },
-  {
-    id: 'diff-review',
-    label: 'Diff Review',
-    description: 'Side-by-side code diffs with AI annotations.',
-    systemPrompt: 'You are a senior code reviewer. Produce a self-contained HTML file with a side-by-side diff viewer, line annotations, and a summary of issues. Wrap in ```html fences.',
-    starterMessage: 'Review this change: replaced `var` with `const` throughout a JS module.',
-    demoArtifact: {
-      type: 'html',
-      title: 'Diff Review',
-      content: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;font-family:var(--font-mono);color:#e5e5e5;padding:24px}h2{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#d4b08c;font-size:18px;margin-bottom:20px}.diff{background:#1c1917;border-radius:10px;overflow:hidden;border:1px solid rgba(212,176,140,.1)}.dh{display:grid;grid-template-columns:1fr 1fr;background:#0f0f0f;padding:8px 16px}.dh span{font-size:11px;color:#57534e;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.line{display:grid;grid-template-columns:1fr 1fr}.cell{padding:2px 16px;font-size:12px;line-height:1.7}.del{background:rgba(239,68,68,.1);color:#fca5a5}.add{background:rgba(34,197,94,.1);color:#86efac}.ctx{color:#57534e}.sum{background:rgba(212,176,140,.06);border-radius:10px;padding:16px;margin-top:16px;border:1px solid rgba(212,176,140,.15)}.sum h3{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;color:#d4b08c;margin-bottom:8px}.sum p{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;color:#a8a29e;line-height:1.5}</style></head><body><h2>Diff Review — var → const</h2><div class="diff"><div class="dh"><span>Before</span><span>After</span></div><div class="line"><div class="cell del">- var count = 0;</div><div class="cell add">+ const count = 0;</div></div><div class="line"><div class="cell del">- var name = getUser();</div><div class="cell add">+ const name = getUser();</div></div><div class="line"><div class="cell del">- var items = fetch();</div><div class="cell add">+ const items = fetch();</div></div><div class="line"><div class="cell ctx">  processItems(items);</div><div class="cell ctx">  processItems(items);</div></div><div class="line"><div class="cell del">- var result = compute();</div><div class="cell add">+ const result = compute();</div></div></div><div class="sum"><h3>✓ LGTM — Good change</h3><p>Using <code style="color:#d4b08c">const</code> is correct here since no bindings are reassigned. This prevents accidental mutation and signals intent clearly. If a value needs to change later, upgrade to <code style="color:#d4b08c">let</code> — never back to <code style="color:#ef4444">var</code>.</p></div></body></html>`,
-    },
-  },
-];
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function ToggleSwitch({ on, onChange }: { on: boolean; onChange: () => void }) {
-  return (
-    <button
-      onClick={onChange}
-      style={{
-        width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-        padding: 0, flexShrink: 0, position: 'relative',
-        background: on ? 'rgba(212,176,140,0.9)' : 'var(--ui-border-default)',
-        transition: 'var(--transition-fast)',
-      }}
-    >
-      <span style={{
-        position: 'absolute', top: 3, left: on ? 18 : 3, width: 14, height: 14,
-        borderRadius: '50%', background: on ? 'var(--surface-canvas)' : 'var(--ui-text-muted)', transition: 'left 0.2s',
-      }} />
-    </button>
-  );
-}
-
-function ArtifactPreview({ artifact }: { artifact: Artifact | null }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    if (!artifact || !iframeRef.current) return;
-    const iframe = iframeRef.current;
-    if (artifact.type === 'html') {
-      iframe.srcdoc = artifact.content;
-    } else if (artifact.type === 'svg') {
-      iframe.srcdoc = `<!DOCTYPE html><html><body style="margin:0;background:#0f0f0f;display:flex;align-items:center;justify-content:center;min-height:100vh">${artifact.content}</body></html>`;
-    }
-  }, [artifact]);
-
-  if (!artifact || artifact.type === 'none') {
-    return (
-      <div style={{
-        flex: 1, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', color: 'var(--ui-text-muted)', gap: 12,
-      }}>
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-          <rect x="8" y="8" width="32" height="32" rx="8" stroke="currentColor" strokeWidth="2" />
-          <path d="M16 24h16M24 16v16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-        <p style={{ fontSize: 13, textAlign: 'center', maxWidth: 220, lineHeight: 1.5 }}>
-          Hit <strong style={{ color: 'var(--ui-text-muted)' }}>Run</strong> to generate and preview an artifact here
-        </p>
-      </div>
-    );
-  }
-
-  if (artifact.type === 'mermaid') {
-    return (
-      <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
-        <pre style={{
-          background: 'var(--surface-canvas)', padding: 20, borderRadius: 10, color: 'var(--accent-primary)',
-          fontSize: 12, fontFamily: 'var(--font-mono)', overflowX: 'auto',
-        }}>{artifact.content}</pre>
-      </div>
-    );
-  }
-
-  return (
-    <iframe
-      ref={iframeRef}
-      sandbox="allow-scripts allow-modals"
-      style={{ flex: 1, border: 'none', background: 'var(--surface-canvas)', width: '100%', display: 'block' }}
-      title="Artifact Preview"
-    />
-  );
-}
-
-// ─── Main View ────────────────────────────────────────────────────────────────
+import React, { useCallback, useRef } from "react";
+import { 
+  Play, 
+  Trash, 
+  Plus, 
+  Terminal, 
+  Sparkle, 
+  Code, 
+  Database, 
+  FileText, 
+  Layout, 
+  MonitorPlay, 
+  ChevronDown, 
+  ChevronRight, 
+  X, 
+  Maximize2 
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { usePlaygroundManager } from "./playground/main/usePlaygroundManager";
+import { ArtifactPreview } from "./playground/main/ArtifactPreview";
+import { ToggleSwitch } from "./playground/main/ToggleSwitch";
+import { TEMPLATES } from "./playground/main/PlaygroundView.constants";
+import type { Message, LeftTab, RightTab } from "./playground/main/PlaygroundView.types";
 
 export function PlaygroundView() {
-  const [activeTemplate, setActiveTemplate] = useState<TemplateId>('raw');
-  const currentTemplate = TEMPLATES.find((t) => t.id === activeTemplate) ?? TEMPLATES[0];
+  const {
+    activeTemplate,
+    currentTemplate,
+    systemPrompt,
+    setSystemPrompt,
+    messages,
+    temperature,
+    setTemperature,
+    maxTokens,
+    setMaxTokens,
+    model,
+    setModel,
+    systemExpanded,
+    setSystemExpanded,
+    isStreaming,
+    streamText,
+    artifact,
+    leftTab,
+    setLeftTab,
+    rightTab,
+    setRightTab,
+    splitPos,
+    setSplitPos,
+    applyTemplate,
+    handleRun,
+    addMessage,
+    updateMessage,
+    removeMessage,
+  } = usePlaygroundManager();
 
-  const [systemPrompt, setSystemPrompt] = useState(currentTemplate.systemPrompt);
-  const [messages, setMessages] = useState<Message[]>([
-    { id: uid(), role: 'user', content: currentTemplate.starterMessage },
-  ]);
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(4096);
-  const [model, setModel] = useState('claude-sonnet-4-6');
-  const [systemExpanded, setSystemExpanded] = useState(true);
-
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamText, setStreamText] = useState('');
-  const [artifact, setArtifact] = useState<Artifact | null>(null);
-  const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const [leftTab, setLeftTab] = useState<LeftTab>('prompt');
-  const [rightTab, setRightTab] = useState<RightTab>('preview');
-  const [splitPos, setSplitPos] = useState(42);
   const isDragging = useRef(false);
   const splitRef = useRef<HTMLDivElement>(null);
-
-  const applyTemplate = useCallback((id: TemplateId) => {
-    const t = TEMPLATES.find((tpl) => tpl.id === id);
-    if (!t) return;
-    setActiveTemplate(id);
-    setSystemPrompt(t.systemPrompt);
-    setMessages([{ id: uid(), role: 'user', content: t.starterMessage }]);
-    setStreamText('');
-    setArtifact(null);
-  }, []);
-
-  const handleRun = useCallback(() => {
-    if (isStreaming) {
-      if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
-      setIsStreaming(false);
-      return;
-    }
-    setIsStreaming(true);
-    setStreamText('');
-    setArtifact(null);
-    // Show console tab while streaming so the iframe isn't touched mid-stream
-    setRightTab('console');
-
-    const demo = currentTemplate.demoArtifact;
-    const intro = `I'll create that for you now.\n\n\`\`\`${demo.type}\n`;
-    const full = intro + demo.content + '\n```\n';
-    let i = 0;
-    let accumulated = '';
-    // Use larger chunks + longer interval to avoid flooding React with re-renders.
-    // 60 chars every 30ms ≈ 2 000 chars/sec — fast enough to feel instant,
-    // slow enough that each setState has time to flush before the next one.
-    const CHUNK = 60;
-    const TICK  = 30;
-
-    streamIntervalRef.current = setInterval(() => {
-      if (i >= full.length) {
-        if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
-        setIsStreaming(false);
-        // Set artifact exactly once when stream ends, then flip to preview
-        setArtifact(demo);
-        setRightTab('preview');
-        return;
-      }
-      const chunk = full.slice(i, Math.min(i + CHUNK, full.length));
-      i += CHUNK;
-      accumulated += chunk;
-      setStreamText(accumulated);
-    }, TICK);
-  }, [isStreaming, currentTemplate]);
-
-  useEffect(() => () => {
-    if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
-  }, []);
-
-  const addMessage = useCallback((role: 'user' | 'assistant') => {
-    setMessages((prev) => [...prev, { id: uid(), role, content: '' }]);
-  }, []);
-  const updateMessage = useCallback((id: string, content: string) => {
-    setMessages((prev) => prev.map((m) => m.id === id ? { ...m, content } : m));
-  }, []);
-  const removeMessage = useCallback((id: string) => {
-    setMessages((prev) => prev.filter((m) => m.id !== id));
-  }, []);
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     isDragging.current = true;
-    const container = splitRef.current;
-    if (!container) return;
-    const onMove = (ev: MouseEvent) => {
-      if (!isDragging.current) return;
-      const rect = container.getBoundingClientRect();
-      const pct = ((ev.clientX - rect.left) / rect.width) * 100;
-      setSplitPos(Math.min(70, Math.max(25, pct)));
-    };
-    const onUp = () => {
-      isDragging.current = false;
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  }, []);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
 
-  const tokenCount = useMemo(() => {
-    const text = systemPrompt + messages.map((m) => m.content).join(' ');
-    return Math.round(text.length / 4);
-  }, [systemPrompt, messages]);
+    const handleMouseMove = (em: MouseEvent) => {
+      if (!isDragging.current || !splitRef.current) return;
+      const rect = splitRef.current.getBoundingClientRect();
+      const pos = ((em.clientX - rect.left) / rect.width) * 100;
+      setSplitPos(Math.max(20, Math.min(80, pos)));
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  }, [setSplitPos]);
 
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', height: '100%',
-      background: 'var(--surface-canvas)', color: 'var(--ui-text-primary)',
-      fontFamily: 'var(--font-sans)',
-      overflow: 'hidden',
-    }}>
-      {/* ── Top bar ─────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
-        borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)', background: 'var(--surface-canvas)', flexShrink: 0,
-      }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke="rgba(212,176,140,0.6)" strokeWidth="2" strokeLinecap="round">
-          <path d="M9 3h6M10 3v5l-4 10a1 1 0 0 0 .9 1.4h10.2a1 1 0 0 0 .9-1.4L14 8V3"/>
-        </svg>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-primary)', letterSpacing: '-0.01em' }}>
-          Playground
-        </span>
-
-        {/* Template tabs */}
-        <div style={{ display: 'flex', gap: 2, marginLeft: 10, padding: '2px', background: 'var(--surface-canvas)', borderRadius: 8 }}>
-          {TEMPLATES.map((t) => (
-            <button key={t.id} onClick={() => applyTemplate(t.id)} style={{
-              padding: '3px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-              background: activeTemplate === t.id ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' : 'transparent',
-              color: activeTemplate === t.id ? 'var(--accent-primary)' : 'var(--ui-text-muted)', transition: 'var(--transition-fast)',
-            }}>
-              {t.label}
+    <div 
+      ref={splitRef}
+      className="flex h-full w-full bg-[var(--surface-canvas)] overflow-hidden relative isolate"
+    >
+      {/* ── Left Pane: Prompts & Config ── */}
+      <div 
+        className="flex flex-col border-r border-solid border-[var(--ui-border-muted)] bg-[var(--bg-secondary,#111113)] min-w-0"
+        style={{ width: `${splitPos}%` }}
+      >
+        <div className="flex items-center gap-1 p-2 px-3 border-b border-solid border-[var(--ui-border-muted)] shrink-0">
+          <TabButton active={leftTab === 'prompt'} onClick={() => setLeftTab('prompt')} icon={Terminal} label="Prompt" />
+          <TabButton active={leftTab === 'templates'} onClick={() => setLeftTab('templates')} icon={Layout} label="Templates" />
+          <TabButton active={leftTab === 'config'} onClick={() => setLeftTab('config')} icon={Database} label="Config" />
+          
+          <div className="ml-auto">
+            <button type="button"
+              onClick={handleRun}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-1.5 rounded-lg border-none font-bold text-[13px] cursor-pointer transition-all duration-200 shadow-lg active:scale-95",
+                isStreaming 
+                  ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" 
+                  : "bg-[var(--accent-primary)] text-[var(--surface-canvas)] hover:opacity-90"
+              )}
+            >
+              {isStreaming ? (
+                <>
+                  <div className="size-2 bg-red-500 rounded-full animate-pulse" />
+                  Stop
+                </>
+              ) : (
+                <>
+                  <Play size={14} fill="currentColor" />
+                  Run
+                </>
+              )}
             </button>
-          ))}
-        </div>
-
-        <div style={{ flex: 1 }} />
-
-        <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>~{tokenCount.toLocaleString()} tokens</span>
-
-        <select value={model} onChange={(e) => setModel(e.target.value)} style={{
-          background: 'var(--surface-canvas)', border: '1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-          borderRadius: 6, color: 'var(--ui-text-muted)', fontSize: 12, padding: '4px 8px', cursor: 'pointer',
-        }}>
-          <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-          <option value="claude-opus-4-5">claude-opus-4-5</option>
-          <option value="claude-haiku-4-5">claude-haiku-4-5</option>
-        </select>
-
-        <button onClick={handleRun} style={{
-          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-          borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-          background: isStreaming ? 'var(--status-error-bg)' : 'rgba(212,176,140,0.85)',
-          color: isStreaming ? 'var(--status-error)' : 'var(--surface-canvas)', transition: 'var(--transition-fast)',
-        }}>
-          {isStreaming ? (
-            <><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--status-error)', display: 'inline-block' }} /> Stop</>
-          ) : (
-            <><svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><polygon points="1,0.5 8.5,4.5 1,8.5"/></svg> Run</>
-          )}
-        </button>
-      </div>
-
-      {/* ── Split pane ──────────────────────────────────────────────────── */}
-      <div ref={splitRef} style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-
-        {/* LEFT PANE */}
-        <div style={{
-          width: `${splitPos}%`, display: 'flex', flexDirection: 'column',
-          borderRight: '1px solid color-mix(in srgb, var(--accent-primary) 7%, transparent)', flexShrink: 0, overflow: 'hidden',
-        }}>
-          {/* Left tabs */}
-          <div style={{
-            display: 'flex', borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 7%, transparent)',
-            background: 'var(--surface-canvas)', flexShrink: 0,
-          }}>
-            {(['prompt', 'config', 'templates'] as LeftTab[]).map((tab) => (
-              <button key={tab} onClick={() => setLeftTab(tab)} style={{
-                padding: '7px 13px', border: 'none', background: 'transparent',
-                fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                color: leftTab === tab ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-                borderBottom: leftTab === tab ? '2px solid #d4b08c' : '2px solid transparent',
-                textTransform: 'capitalize',
-              }}>{tab}</button>
-            ))}
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-            {/* PROMPT TAB */}
-            {leftTab === 'prompt' && (
-              <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* System prompt block */}
-                <div style={{ border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)', borderRadius: 8, overflow: 'hidden' }}>
-                  <button onClick={() => setSystemExpanded(v => !v)} style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '7px 10px', background: 'var(--surface-canvas)', border: 'none', cursor: 'pointer',
-                    color: 'var(--ui-text-muted)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-                  }}>
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"
-                      style={{ transform: systemExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
-                      <polygon points="1,0 7,4 1,8"/>
-                    </svg>
-                    System
-                  </button>
-                  {systemExpanded && (
-                    <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={5}
-                      style={{
-                        width: '100%', background: 'var(--surface-canvas)', border: 'none', resize: 'vertical',
-                        color: 'var(--accent-primary)', fontSize: 12, fontFamily: 'var(--font-mono)',
-                        lineHeight: 1.65, padding: '9px 11px', outline: 'none',
-                      }}
-                      placeholder="You are a helpful assistant…"
-                    />
-                  )}
-                </div>
-
-                {/* Messages */}
-                {messages.map((msg) => (
-                  <div key={msg.id} style={{
-                    border: '1px solid color-mix(in srgb, var(--accent-primary) 8%, transparent)', borderRadius: 8,
-                    overflow: 'hidden', background: 'var(--surface-canvas)',
-                  }}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 6, padding: '5px 9px',
-                      background: 'var(--surface-canvas)', borderBottom: '1px solid rgba(212,176,140,0.06)',
-                    }}>
-                      <select value={msg.role}
-                        onChange={(e) => setMessages(prev => prev.map(m =>
-                          m.id === msg.id ? { ...m, role: e.target.value as 'user' | 'assistant' } : m
-                        ))} style={{
-                          background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12,
-                          fontWeight: 700, color: msg.role === 'user' ? 'var(--accent-primary)' : '#86efac',
-                        }}>
-                        <option value="user">user</option>
-                        <option value="assistant">assistant</option>
-                      </select>
-                      <div style={{ flex: 1 }} />
-                      <button onClick={() => removeMessage(msg.id)} style={{
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--ui-text-muted)', fontSize: 14, lineHeight: 1, padding: '0 2px',
-                      }}>×</button>
-                    </div>
-                    <textarea value={msg.content} onChange={(e) => updateMessage(msg.id, e.target.value)} rows={3}
-                      style={{
-                        width: '100%', background: 'transparent', border: 'none', resize: 'vertical',
-                        color: 'var(--ui-text-primary)', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.6,
-                        padding: '9px 11px', outline: 'none',
-                      }}
-                      placeholder={msg.role === 'user' ? 'User message...' : 'Assistant prefill...'}
-                    />
-                  </div>
-                ))}
-
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => addMessage('user')} style={addMsgBtnStyle('var(--accent-primary)')}>+ User</button>
-                  <button onClick={() => addMessage('assistant')} style={addMsgBtnStyle('#86efac')}>+ Assistant</button>
-                </div>
-              </div>
-            )}
-
-            {/* CONFIG TAB */}
-            {leftTab === 'config' && (
-              <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 22 }}>
-                <ConfigSlider label="Temperature" value={temperature} min={0} max={1} step={0.01}
-                  display={temperature.toFixed(2)} onChange={setTemperature}
-                  hint={['Precise', 'Creative']} />
-                <ConfigSlider label="Max tokens" value={maxTokens} min={256} max={8192} step={256}
-                  display={maxTokens.toLocaleString()} onChange={setMaxTokens} />
-                <div style={{ height: 1, background: 'rgba(212,176,140,0.06)' }} />
-                <ConfigToggleRow label="Stream tokens" desc="Render output token-by-token" on={true} />
-                <ConfigToggleRow label="Auto-render artifact" desc="Show preview as soon as artifact is detected" on={true} />
-                <ConfigToggleRow label="Show thinking" desc="Display extended reasoning when available" on={false} />
-              </div>
-            )}
-
-            {/* TEMPLATES TAB */}
-            {leftTab === 'templates' && (
-              <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <p style={{ fontSize: 12, color: 'var(--ui-text-muted)', paddingBottom: 6, lineHeight: 1.5 }}>
-                  Templates pre-configure the system prompt and messages for common use cases.
-                </p>
-                {TEMPLATES.map((t) => (
-                  <button key={t.id} onClick={() => { applyTemplate(t.id); setLeftTab('prompt'); }}
-                    style={{
-                      display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left',
-                      padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      background: activeTemplate === t.id ? 'color-mix(in srgb, var(--accent-primary) 8%, transparent)' : 'var(--surface-canvas)',
-                      outline: activeTemplate === t.id
-                        ? '1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)' : '1px solid var(--surface-hover)',
-                      transition: 'var(--transition-fast)',
-                    }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: activeTemplate === t.id ? 'var(--accent-primary)' : 'var(--ui-text-secondary)' }}>
-                      {t.label}
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--ui-text-muted)', lineHeight: 1.4 }}>{t.description}</span>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* DRAG DIVIDER */}
-        <div onMouseDown={handleDividerMouseDown}
-          style={{ width: 4, cursor: 'col-resize', flexShrink: 0, background: 'transparent', transition: 'var(--transition-fast)' }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-primary) 15%, transparent)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-        />
-
-        {/* RIGHT PANE */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-          {/* Right tabs */}
-          <div style={{
-            display: 'flex', alignItems: 'center', padding: '0 8px',
-            borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 7%, transparent)', background: 'var(--surface-canvas)', flexShrink: 0,
-          }}>
-            {(['preview', 'source', 'console'] as RightTab[]).map((tab) => (
-              <button key={tab} onClick={() => setRightTab(tab)} style={{
-                padding: '7px 11px', border: 'none', background: 'transparent', fontSize: 12,
-                fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-                color: rightTab === tab ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-                borderBottom: rightTab === tab ? '2px solid #d4b08c' : '2px solid transparent',
-              }}>{tab}</button>
-            ))}
-
-            <div style={{ flex: 1 }} />
-
-            {artifact && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingRight: 4 }}>
-                <span style={{
-                  fontSize: 12, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                  background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.08em',
-                }}>{artifact.type}</span>
-                <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{artifact.title}</span>
-              </div>
-            )}
-
-            {isStreaming && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, paddingRight: 8 }}>
-                <span style={{
-                  width: 6, height: 6, borderRadius: '50%', background: 'var(--status-success)',
-                  boxShadow: '0 0 6px #22c55e55',
-                  animation: 'pgPulse 1s ease-in-out infinite',
-                  display: 'inline-block',
-                }} />
-                <span style={{ fontSize: 12, color: 'var(--status-success)' }}>Streaming</span>
-              </div>
-            )}
-          </div>
-
-          {/* Right body */}
-          <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-            {rightTab === 'preview' && <ArtifactPreview artifact={artifact} />}
-
-            {rightTab === 'source' && (
-              <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-                {artifact ? (
-                  <pre style={{
-                    fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent-primary)',
-                    lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                    background: 'var(--surface-canvas)', padding: 16, borderRadius: 8, margin: 0,
-                  }}>{artifact.content}</pre>
-                ) : (
-                  <p style={{ color: 'var(--ui-text-muted)', fontSize: 13 }}>No artifact yet — hit Run.</p>
+        <div className="flex-1 overflow-y-auto">
+          {leftTab === 'prompt' && (
+            <div className="p-5 flex flex-col gap-6 animate-in fade-in slide-in-from-left-2 duration-300">
+              {/* System Prompt */}
+              <div className={cn("flex flex-col rounded-xl border border-solid transition-all duration-200 overflow-hidden", systemExpanded ? "border-[var(--accent-primary)]/30 bg-black/10 shadow-inner" : "border-[var(--ui-border-muted)] bg-transparent")}>
+                <button type="button" 
+                  onClick={() => setSystemExpanded(!systemExpanded)}
+                  className="flex items-center gap-2 p-3 bg-transparent border-none text-[12px] font-bold text-[var(--ui-text-secondary)] uppercase tracking-[0.08em] cursor-pointer hover:bg-white/5 transition-colors"
+                >
+                  <Sparkle size={14} className={systemExpanded ? "text-[var(--accent-primary)]" : "text-[var(--ui-text-muted)]"} />
+                  <span>System Instruction</span>
+                  {systemExpanded ? <ChevronDown size={14} className="ml-auto" /> : <ChevronRight size={14} className="ml-auto" />}
+                </button>
+                {systemExpanded && (
+                  <textarea aria-label="Text Area" value={systemPrompt}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
+                    className="w-full min-h-[140px] p-4 bg-transparent border-none text-[14px] text-[var(--ui-text-primary)] font-mono resize-none focus:outline-none leading-relaxed"
+                    placeholder="Set the context and behavioral guidelines for the AI…"
+                  />
                 )}
               </div>
-            )}
 
-            {rightTab === 'console' && (
-              <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-                <pre style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ui-text-muted)',
-                  lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
-                }}>
-                  {streamText
-                    ? streamText
-                    : <span style={{ color: 'var(--ui-text-muted)' }}>Output will stream here when you Run…</span>
-                  }
-                  {isStreaming && (
-                    <span style={{ color: 'var(--accent-primary)', animation: 'pgBlink 0.6s step-end infinite' }}>▌</span>
-                  )}
-                </pre>
+              {/* Message List */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-bold text-[var(--ui-text-muted)] uppercase tracking-[0.08em]">Messages</span>
+                  <button type="button" 
+                    onClick={() => addMessage('user')}
+                    className="p-1 px-2.5 rounded-lg border border-solid border-[var(--ui-border-muted)] bg-transparent text-[11px] font-bold text-[var(--ui-text-secondary)] cursor-pointer hover:bg-[var(--surface-hover)] transition-all"
+                  >
+                    + Add Message
+                  </button>
+                </div>
+                
+                {messages.map((msg, idx) => (
+                  <MessageCard 
+                    key={msg.id} 
+                    message={msg} 
+                    index={idx}
+                    onUpdate={(val) => updateMessage(msg.id, val)}
+                    onRemove={() => removeMessage(msg.id)}
+                  />
+                ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {leftTab === 'templates' && (
+            <div className="p-5 grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
+              {TEMPLATES.map(tpl => (
+                <button type="button"
+                  key={tpl.id}
+                  onClick={() => applyTemplate(tpl.id)}
+                  className={cn(
+                    "flex flex-col items-start p-4 rounded-xl border border-solid text-left transition-all duration-200 group cursor-pointer",
+                    activeTemplate === tpl.id
+                      ? "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)]/40 shadow-sm"
+                      : "bg-[var(--surface-hover)] border-transparent hover:border-[var(--ui-border-muted)] hover:bg-[var(--surface-active)]"
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-[14px] text-[var(--ui-text-primary)] group-hover:text-[var(--accent-primary)] transition-colors">{tpl.label}</span>
+                    {activeTemplate === tpl.id && <div className="size-1.5 rounded-full bg-[var(--accent-primary)]" />}
+                  </div>
+                  <span className="text-[12px] text-[var(--ui-text-secondary)] leading-relaxed">{tpl.description}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {leftTab === 'config' && (
+            <div className="p-6 flex flex-col gap-8 animate-in fade-in slide-in-from-left-2 duration-300">
+              <ConfigSection title="Model Parameters">
+                <ConfigItem label="Model">
+                  <select aria-label="Selection" value={model} 
+                    onChange={e => setModel(e.target.value)}
+                    className="w-full bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded-lg p-2 text-[13px] text-[var(--ui-text-primary)] outline-none focus:border-[var(--accent-primary)] transition-colors"
+                  >
+                    <option value="claude-sonnet-4-6">Claude 3.5 Sonnet</option>
+                    <option value="gpt-4o">GPT-4o (Omni)</option>
+                    <option value="deepseek-r1">DeepSeek R1</option>
+                  </select>
+                </ConfigItem>
+                <ConfigItem label={`Temperature: ${temperature}`}>
+                  <input aria-label="Input" type="range" min="0" max="1" step="0.1" value={temperature} onChange={e => setTemperature(parseFloat(e.target.value))} className="w-full accent-[var(--accent-primary)]" />
+                </ConfigItem>
+                <ConfigItem label={`Max Tokens: ${maxTokens}`}>
+                  <input aria-label="Input" type="range" min="256" max="16384" step="256" value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value))} className="w-full accent-[var(--accent-primary)]" />
+                </ConfigItem>
+              </ConfigSection>
+
+              <ConfigSection title="Workbench Settings">
+                <div className="flex flex-col gap-4">
+                  <ToggleSwitch on={true} onChange={() => {}} label="Auto-Reload Preview" />
+                  <ToggleSwitch on={true} onChange={() => {}} label="Strict CSP Sandboxing" />
+                  <ToggleSwitch on={false} onChange={() => {}} label="Preserve State on Run" />
+                </div>
+              </ConfigSection>
+            </div>
+          )}
         </div>
       </div>
 
-      <style>{`
-        @keyframes pgBlink { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes pgPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
-      `}</style>
+      {/* ── Split Handle ── */}
+      <div 
+        className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-[var(--accent-primary)]/30 active:bg-[var(--accent-primary)]/50 transition-colors z-10"
+        onMouseDown={handleDividerMouseDown}
+      />
+
+      {/* ── Right Pane: Preview & Tools ── */}
+      <div 
+        className="flex flex-col bg-[var(--surface-canvas)] min-w-0"
+        style={{ width: `${100 - splitPos}%` }}
+      >
+        <div className="flex items-center gap-1 p-2 px-3 border-b border-solid border-[var(--ui-border-muted)] shrink-0">
+          <TabButton active={rightTab === 'preview'} onClick={() => setRightTab('preview')} icon={MonitorPlay} label="Preview" />
+          <TabButton active={rightTab === 'source'} onClick={() => setRightTab('source')} icon={Code} label="Source" />
+          <TabButton active={rightTab === 'console'} onClick={() => setRightTab('console')} icon={Terminal} label="Console" />
+          
+          {artifact && (
+            <div className="ml-auto flex items-center gap-3">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] shadow-sm">
+                <div className="size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ui-text-primary)]">{artifact.type}</span>
+              </div>
+              <button type="button" className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] text-[var(--ui-text-muted)] hover:text-[var(--ui-text-primary)] transition-all">
+                <Maximize2 size={16} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-hidden relative flex flex-col">
+          {rightTab === 'preview' && (
+            <div className="flex-1 flex flex-col animate-in fade-in zoom-in-95 duration-500">
+              <ArtifactPreview artifact={artifact} />
+            </div>
+          )}
+
+          {rightTab === 'source' && (
+            <div className="flex-1 overflow-y-auto p-0 animate-in fade-in slide-in-from-right-4 duration-400">
+              <pre className="m-0 p-6 text-[13px] font-mono text-[#d1c3b4] bg-[#0c0a09] min-h-full leading-relaxed selection:bg-[var(--accent-primary)]/30">
+                <code>{artifact?.content || '// No source code available'}</code>
+              </pre>
+            </div>
+          )}
+
+          {rightTab === 'console' && (
+            <div className="flex-1 flex flex-col bg-black overflow-hidden animate-in fade-in duration-300">
+              <div className="flex-1 overflow-y-auto p-4 font-mono text-[13px] leading-relaxed selection:bg-white/20">
+                <div className="text-zinc-500 mb-2 select-none"># AI Streaming Terminal Output</div>
+                {streamText ? (
+                  <div className="text-zinc-300 whitespace-pre-wrap">
+                    {streamText}
+                    {isStreaming && <span className="inline-block w-2 h-4 bg-[var(--accent-primary)] ml-0.5 animate-pulse align-middle" />}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full opacity-40 grayscale gap-4 text-center">
+                    <Terminal size={48} strokeWidth={1} />
+                    <p className="text-[12px] max-w-[200px]">Waiting for model execution… logs will appear here during run.</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-2.5 px-4 bg-zinc-900 border-t border-solid border-zinc-800 text-[11px] font-bold text-zinc-500 uppercase tracking-widest flex items-center justify-between">
+                <span>Allternit Runtime v2.4</span>
+                <span>{isStreaming ? 'Streaming' : 'Ready'}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── Style helpers ─────────────────────────────────────────────────────────────
+// ─── Internal Sub-components ───
 
-function addMsgBtnStyle(color: string): React.CSSProperties {
-  return {
-    flex: 1, padding: '6px 0', borderRadius: 6, border: `1px solid ${color}20`,
-    background: `${color}0a`, color, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-  };
-}
-
-function ConfigSlider({
-  label, value, min, max, step, display, onChange, hint,
-}: {
-  label: string; value: number; min: number; max: number; step: number;
-  display: string; onChange: (v: number) => void; hint?: [string, string];
-}) {
+function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: any; label: string }) {
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-muted)' }}>{label}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>{display}</span>
-      </div>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        style={{ width: '100%', accentColor: 'var(--accent-primary)' }} />
-      {hint && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{hint[0]}</span>
-          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{hint[1]}</span>
-        </div>
+    <button type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-none text-[12px] font-bold cursor-pointer transition-all duration-150 whitespace-nowrap",
+        active 
+          ? "bg-[var(--surface-hover)] text-[var(--ui-text-primary)] shadow-sm" 
+          : "bg-transparent text-[var(--ui-text-muted)] hover:bg-white/5 hover:text-[var(--ui-text-secondary)]"
       )}
+    >
+      <Icon size={14} className={active ? "text-[var(--accent-primary)]" : "text-inherit"} />
+      {label}
+    </button>
+  );
+}
+
+function MessageCard({ message, index, onUpdate, onRemove }: { message: Message; index: number; onUpdate: (val: string) => void; onRemove: () => void }) {
+  const isAssistant = message.role === 'assistant';
+  return (
+    <div className={cn(
+      "group relative flex flex-col rounded-xl border border-solid transition-all duration-200",
+      isAssistant ? "bg-[var(--surface-hover)] border-transparent" : "bg-transparent border-[var(--ui-border-muted)]"
+    )}>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-solid border-[var(--ui-border-muted)]/50 shrink-0">
+        <span className={cn(
+          "text-[10px] font-black uppercase tracking-[0.12em]",
+          isAssistant ? "text-purple-400" : "text-blue-400"
+        )}>
+          {message.role}
+        </span>
+        <button type="button" 
+          onClick={onRemove}
+          className="size-5 flex items-center justify-center rounded-md bg-transparent border-none text-[var(--ui-text-muted)] opacity-0 group-hover:opacity-100 cursor-pointer hover:bg-red-500/10 hover:text-red-500 transition-all"
+        >
+          <X size={12} />
+        </button>
+      </div>
+      <textarea aria-label="Text Area" value={message.content}
+        onChange={(e) => onUpdate(e.target.value)}
+        className="w-full min-h-[80px] p-3.5 bg-transparent border-none text-[14px] text-[var(--ui-text-primary)] resize-none focus:outline-none leading-relaxed font-sans"
+        placeholder={isAssistant ? "AI response…" : "User message…"}
+      />
     </div>
   );
 }
 
-function ConfigToggleRow({ label, desc, on }: { label: string; desc: string; on: boolean }) {
-  const [enabled, setEnabled] = React.useState(on);
+function ConfigSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-muted)' }}>{label}</div>
-        <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 2 }}>{desc}</div>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <span className="text-[12px] font-bold text-[var(--ui-text-muted)] uppercase tracking-[0.1em] whitespace-nowrap">{title}</span>
+        <div className="flex-1 h-px bg-[var(--ui-border-muted)] opacity-30" />
       </div>
-      <ToggleSwitch on={enabled} onChange={() => setEnabled(v => !v)} />
+      <div className="flex flex-col gap-4">
+        {children}
+      </div>
     </div>
   );
 }
+
+function ConfigItem({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="text-[12px] font-medium text-[var(--ui-text-secondary)]">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+export default PlaygroundView;

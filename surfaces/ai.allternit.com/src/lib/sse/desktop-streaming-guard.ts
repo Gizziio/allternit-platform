@@ -29,7 +29,7 @@ function isStreamingRequest(input: RequestInfo | URL, init?: RequestInit): boole
  * Usage:
  *   const fetch = createDesktopStreamingGuard(nativeFetch, desktopFetch);
  */
-export function createDesktopStreamingGuard(
+function createDesktopStreamingGuard(
   nativeFetch: typeof window.fetch,
   desktopFetch: typeof window.fetch
 ): typeof window.fetch {

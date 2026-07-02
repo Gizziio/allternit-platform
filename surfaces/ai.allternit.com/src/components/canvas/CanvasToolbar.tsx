@@ -27,6 +27,10 @@ import {
 } from '@/views/code/CodeModeStore';
 import { useCodeSessionStore } from '@/views/code/CodeSessionStore';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CanvasToolbar');
+
 interface CanvasToolbarProps {
   workspaceId: string;
   viewport: CodeCanvasViewport;
@@ -77,7 +81,7 @@ export function CanvasToolbar({
           workspaceId,
         });
       } catch (err) {
-        console.error('[CanvasToolbar] Failed to create session:', err);
+        logger.error({ err: err }, 'Failed to create session');
       }
     }
 
@@ -136,17 +140,17 @@ export function CanvasToolbar({
       }}
     >
       {/* Zoom controls */}
-      <button onClick={onZoomOut} style={{ ...buttonStyle, padding: '0 8px', width: 32 }}>
+      <button type="button" onClick={onZoomOut} style={{ ...buttonStyle, padding: '0 8px', width: 32 }}>
         <Minus size={14} />
       </button>
-      <button onClick={onResetZoom} style={{ ...buttonStyle, minWidth: 52, fontVariantNumeric: 'tabular-nums' }}>
+      <button type="button" onClick={onResetZoom} style={{ ...buttonStyle, minWidth: 52, fontVariantNumeric: 'tabular-nums' }}>
         {Math.round(viewport.zoom * 100)}%
       </button>
-      <button onClick={onZoomIn} style={{ ...buttonStyle, padding: '0 8px', width: 32 }}>
+      <button type="button" onClick={onZoomIn} style={{ ...buttonStyle, padding: '0 8px', width: 32 }}>
         <Plus size={14} />
       </button>
       {onFitView && (
-        <button onClick={onFitView} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Fit all tiles">
+        <button type="button" onClick={onFitView} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Fit all tiles">
           <ArrowsOutSimple size={14} />
         </button>
       )}
@@ -154,52 +158,52 @@ export function CanvasToolbar({
       <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
 
       {/* Spawn tiles */}
-      <button onClick={() => void spawnTile('session')} style={buttonStyle}>
+      <button type="button" onClick={() => void spawnTile('session')} style={buttonStyle}>
         <ChatTeardropText size={14} />
         Session
       </button>
-      <button onClick={() => void spawnTile('preview')} style={buttonStyle}>
+      <button type="button" onClick={() => void spawnTile('preview')} style={buttonStyle}>
         <Browser size={14} />
         Preview
       </button>
-      <button onClick={() => void spawnTile('diff')} style={buttonStyle}>
+      <button type="button" onClick={() => void spawnTile('diff')} style={buttonStyle}>
         <GitDiff size={14} />
         Diff
       </button>
-      <button onClick={() => void spawnTile('terminal')} style={buttonStyle}>
+      <button type="button" onClick={() => void spawnTile('terminal')} style={buttonStyle}>
         <TerminalIcon size={14} />
         Terminal
       </button>
-      <button onClick={() => void spawnTile('notes')} style={buttonStyle}>
+      <button type="button" onClick={() => void spawnTile('notes')} style={buttonStyle}>
         <NotePencil size={14} />
         Notes
       </button>
-      <button onClick={() => void spawnTile('knowledge')} style={buttonStyle}>
+      <button type="button" onClick={() => void spawnTile('knowledge')} style={buttonStyle}>
         <BookBookmark size={14} />
         Knowledge
       </button>
-      <button onClick={() => void spawnTile('knowledge-graph')} style={buttonStyle}>
+      <button type="button" onClick={() => void spawnTile('knowledge-graph')} style={buttonStyle}>
         <Graph size={14} />
         Graph
       </button>
 
       <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
 
-      <button onClick={() => autoArrange(workspaceId)} style={buttonStyle}>
+      <button type="button" onClick={() => autoArrange(workspaceId)} style={buttonStyle}>
         <SquaresFour size={14} />
         Arrange
       </button>
 
       <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
 
-      <button onClick={() => setWorkspaceLayoutMode(workspaceId, 'thread')} style={buttonStyle}>
+      <button type="button" onClick={() => setWorkspaceLayoutMode(workspaceId, 'thread')} style={buttonStyle}>
         Thread View
       </button>
 
       {onAudit && (
         <>
           <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
-          <button onClick={onAudit} style={buttonStyle} title="Workspace Audit">
+          <button type="button" onClick={onAudit} style={buttonStyle} title="Workspace Audit">
             <Shield size={14} />
             Audit
           </button>
@@ -207,35 +211,35 @@ export function CanvasToolbar({
       )}
 
       {onCommit && (
-        <button onClick={onCommit} style={buttonStyle} title="Commit with Provenance">
+        <button type="button" onClick={onCommit} style={buttonStyle} title="Commit with Provenance">
           <GitCommit size={14} />
           Commit
         </button>
       )}
 
       {onDiff && (
-        <button onClick={onDiff} style={buttonStyle} title="Reasoning Diff">
+        <button type="button" onClick={onDiff} style={buttonStyle} title="Reasoning Diff">
           <GitDiff size={14} />
           Diff
         </button>
       )}
 
       {onDashboard && (
-        <button onClick={onDashboard} style={buttonStyle} title="h5i Dashboard">
+        <button type="button" onClick={onDashboard} style={buttonStyle} title="h5i Dashboard">
           <Monitor size={14} />
           Dashboard
         </button>
       )}
 
       {onHooks && (
-        <button onClick={onHooks} style={buttonStyle} title="Install Agent Hooks">
+        <button type="button" onClick={onHooks} style={buttonStyle} title="Install Agent Hooks">
           <Plugs size={14} />
           Hooks
         </button>
       )}
 
       {onMcp && (
-        <button onClick={onMcp} style={buttonStyle} title="MCP Server Config">
+        <button type="button" onClick={onMcp} style={buttonStyle} title="MCP Server Config">
           <Plugs size={14} />
           MCP
         </button>
@@ -244,12 +248,12 @@ export function CanvasToolbar({
       <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
 
       {onExport && (
-        <button onClick={onExport} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Export layout">
+        <button type="button" onClick={onExport} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Export layout">
           <DownloadSimple size={14} />
         </button>
       )}
       {onImport && (
-        <button onClick={onImport} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Import layout">
+        <button type="button" onClick={onImport} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Import layout">
           <UploadSimple size={14} />
         </button>
       )}

@@ -3,7 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-export interface BentoItem {
+interface BentoItem {
   id: string;
   title: string;
   description?: string;
@@ -13,7 +13,7 @@ export interface BentoItem {
   children?: React.ReactNode;
 }
 
-export interface BentoLayoutProps {
+interface BentoLayoutProps {
   items: BentoItem[];
   title?: string;
   columns?: 2 | 3 | 4;
@@ -33,7 +33,7 @@ const colClass: Record<2 | 3 | 4, string> = {
   4: 'grid-cols-4',
 };
 
-export function BentoLayout({ items, title, columns = 3, className }: BentoLayoutProps) {
+function BentoLayout({ items, title, columns = 3, className }: BentoLayoutProps) {
   return (
     <div className={cn("space-y-4", className)}>
       {title && (

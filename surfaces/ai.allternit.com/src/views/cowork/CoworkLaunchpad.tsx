@@ -9,7 +9,6 @@ import {
   Code,
   MagnifyingGlass,
   CaretRight,
-  Image as ImageIcon,
 } from '@phosphor-icons/react';
 
 import { ChatComposer } from '../chat/ChatComposer';
@@ -18,8 +17,6 @@ import { ModelPicker } from '@/components/model-picker';
 import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
 import { RecentSessionsStrip } from './RecentSessionsStrip';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
-import { AgentCapabilitiesPanel } from './AgentCapabilitiesPanel';
-import { CoworkAnimatedBackground } from './CoworkAnimatedBackground';
 
 // ============================================================================
 // Animation Keyframes - Each headline gets a unique entrance
@@ -200,47 +197,25 @@ function AnimatedHeadline({ children, animationIndex, delay = 0, as: Component =
 
 // Cowork-specific greetings - platform focused, fun, collaborative
 const COWORK_TITLES = [
-  "Let's knock something off your list",
-  "Ready to build together?",
-  "What are we shipping today?",
-  "Your collaborative workspace awaits",
-  "Time to make things happen",
-  "Let's turn ideas into reality",
-  "What can we accomplish together?",
-  "Your mission, should you choose to accept it...",
-  "Let's orchestrate something great",
-  "What problem are we solving today?",
-  "Ready to deploy some magic?",
-  "Let's architect the future",
-  "Your digital workshop is open",
-  "What shall we create?",
-  "Let's automate the boring stuff",
+  'What are we moving forward today?',
+  'Ready to coordinate the next deliverable?',
+  'Let’s turn this brief into completed work',
+  'What needs a plan, review, or handoff?',
+  'Cowork is ready for the next task',
 ];
 
 const COWORK_TAGLINES = [
-  "Cowork is your collaborative agent playground",
-  "Build, iterate, ship — together with AI",
-  "Your ideas + AI execution = 🚀",
-  "Where human creativity meets machine precision",
-  "Less context switching, more shipping",
-  "Your AI pair programmer is ready",
-  "Let's move faster, together",
-  "Ship smarter, not harder",
-  "Your workspace, amplified",
-  "Build the future, one task at a time",
-  "From idea to deployment, we've got you",
-  "Less meetings, more building",
-  "Your digital teammate is warmed up",
-  "Time to turn caffeine into code",
-  "Ready when you are, Architect",
+  'Start from a concrete task and keep the work, files, and follow-ups in one thread.',
+  'Use Cowork for execution plans, workspace review, and coordinated next steps.',
+  'Launch a task, keep context attached, and work toward a real handoff.',
+  'Cowork is built for shared execution, not a generic chat surface.',
+  'Move from request to deliverable without leaving the workspace.',
 ];
 
 export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpadProps) {
   const agentModeEnabled = useSurfaceAgentModeEnabled('cowork');
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
-  const [composerInput] = useState('');
   const [showPluginsOverlay, setShowPluginsOverlay] = useState(false);
-  const [, setShowPluginInput] = useState('');
   const [greeting, setGreeting] = useState({ title: COWORK_TITLES[0], tagline: COWORK_TAGLINES[0] });
   const [titleAnimation, setTitleAnimation] = useState(0);
   const [taglineAnimation, setTaglineAnimation] = useState(0);
@@ -275,7 +250,6 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
       isolation: 'isolate',
     }}>
       <style>{animationStyles}</style>
-      <CoworkAnimatedBackground />
       <AgentModeBackdrop
         active={agentModeEnabled}
         surface="cowork"
@@ -321,97 +295,127 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
           <ChatComposer 
             onSend={onStartChat}
             variant="large"
-            placeholder="How can I help you today?"
+            placeholder="What should we coordinate, build, or review?"
             selectedModel={modelSelection?.modelId}
             selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
             onOpenModelPicker={startSelection}
             onSelectModel={selectModel}
             showTopActions={false}
-            inputValue={composerInput}
+            inputValue=""
             agentModeSurface="cowork"
           />
         </div>
 
-        {/* Pick a task section - Restored with tailored prompts */}
+        {/* Quick-start flows */}
         <section>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '16px' }}>
-            <SquaresFour size={14} color="var(--ui-text-muted)" />
-            <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ui-text-muted)', textTransform: 'uppercase' }}>Pick a task, any task</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '14px' }}>
+            <SquaresFour size={13} color="var(--ui-text-muted)" />
+            <h2 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>
+              Start with a cowork flow
+            </h2>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
             {[
-              { 
-                label: "Optimize my week", 
-                icon: <Clock size={18} />,
-                prompt: `- Busiest days\n- Where I have gaps of 2+ hours\n\nBefore proposing changes, ask me about:\n- What I'm trying to accomplish this week\n- How much focus time I need and for what\n- Any deadlines or commitments not on my calendar\n- Which types of meetings I should decline or shorten\n- Personal commitments or boundaries I want to protect\n\nThen show me your top 3-5 proposed changes with explanations:\n- Focus blocks to add\n- Meetings to decline or reschedule\n- Time conflicts to resolve\n\nStart with the highest-impact changes first. Once I approve each change, make the edits directly in my calendar one at a time.`
+              {
+                label: 'Plan a deliverable',
+                hint: 'Goals, milestones, blockers',
+                icon: <Clock size={20} weight="duotone" />,
+                accent: 'rgba(200,169,110,0.18)',
+                accentHover: 'rgba(200,169,110,0.28)',
+                iconColor: 'rgba(200,169,110,0.9)',
+                prompt: `Help me plan a deliverable from start to finish.\n1. Clarify the goal, owner, deadline, and dependencies.\n2. Break the work into milestones and concrete next actions.\n3. Call out blockers, missing context, and review points.\n4. End with a short execution plan I can actually run.`,
               },
-              { 
-                label: "Organize my screenshots", 
-                icon: <ImageIcon size={18} />,
-                prompt: `I want to organize my recent screenshots. \n1. Please scan my desktop for screenshot files from the last 24 hours.\n2. Group them by context (e.g., UI design, bugs, research).\n3. Propose a new folder structure and descriptive names for each file.\n4. Once I approve, move the files to the designated folders.`
+              {
+                label: 'Review workspace',
+                hint: 'Files, gaps, next change',
+                icon: <Folder size={20} weight="duotone" />,
+                accent: 'rgba(99,179,237,0.14)',
+                accentHover: 'rgba(99,179,237,0.24)',
+                iconColor: 'rgba(99,179,237,0.9)',
+                prompt: `Review the current workspace with me.\n1. Inspect the relevant files and summarize what exists today.\n2. Identify incomplete work, risky spots, and obvious cleanup.\n3. Point out the next highest-value change.\n4. If needed, ask for one clarification before acting.`,
               },
-              { 
-                label: "Find insights in files", 
-                icon: <FileText size={18} />,
-                prompt: `Help me extract insights from my current project files.\n1. Look for patterns in the codebase or documents.\n2. Summarize the key architectural decisions.\n3. Identify areas that might need refactoring or improved documentation.\n4. Present a high-level report of your findings.`
+              {
+                label: 'Coordinate next steps',
+                hint: 'Status, actions, handoff',
+                icon: <FileText size={20} weight="duotone" />,
+                accent: 'rgba(154,205,132,0.14)',
+                accentHover: 'rgba(154,205,132,0.24)',
+                iconColor: 'rgba(154,205,132,0.85)',
+                prompt: `Help me coordinate the next steps for this task.\n1. Summarize the current state in plain language.\n2. Separate what is done, in progress, and blocked.\n3. Draft the next actions for each person or system involved.\n4. End with a concise handoff note I can share.`,
               },
-            ].map((task, idx) => (
-              <button
+            ].map((task, i) => (
+              <button type="button"
                 key={task.label}
                 onClick={() => handleTaskClick(task.prompt)}
-                style={{ 
-                  background: 'none', 
-                  border: 'none', 
-                  padding: 0, 
-                  textAlign: 'left', 
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  padding: '16px 14px',
+                  background: task.accent,
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 12,
                   cursor: 'pointer',
-                  borderTop: '1px solid var(--ui-border-muted)'
+                  textAlign: 'left',
+                  transition: 'background 0.15s, border-color 0.15s, transform 0.1s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = task.accentHover;
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.13)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = task.accent;
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                  e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 16, 
-                  padding: '16px 0',
-                  transition: 'opacity 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                >
-                  <div style={{ color: 'var(--ui-text-muted)' }}>{task.icon}</div>
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--ui-text-secondary)' }}>{task.label}</span>
+                {/* Key hint */}
+                <span style={{
+                  position: 'absolute', top: 10, right: 10,
+                  fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.2)',
+                  background: 'rgba(255,255,255,0.06)', borderRadius: 4,
+                  padding: '1px 5px', letterSpacing: '0.03em',
+                }}>{i + 1}</span>
+                <span style={{ color: task.iconColor }}>{task.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)', marginBottom: 3 }}>
+                    {task.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', lineHeight: 1.4 }}>
+                    {task.hint}
+                  </div>
                 </div>
               </button>
             ))}
           </div>
-          <button 
+          <button type="button"
             onClick={() => setShowPluginsOverlay(true)}
-            style={{ 
-              marginTop: '24px', 
-              background: 'none', 
-              border: 'none', 
+            style={{
+              marginTop: '20px',
+              background: 'none',
+              border: 'none',
               fontSize: '12px',
               color: 'var(--ui-text-secondary)',
               fontWeight: 700,
               textTransform: 'uppercase',
               cursor: 'pointer',
               padding: 0,
+              letterSpacing: '0.05em',
+              opacity: 0.7,
+              transition: 'opacity 0.15s',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
           >
-            Customize with plugins
+            Open tools
           </button>
         </section>
 
         {/* Recent Sessions */}
         <RecentSessionsStrip onResume={onResumeThread} />
-
-        {/* Agent Capabilities */}
-        <AgentCapabilitiesPanel
-          variant="inline"
-          onUseCapability={(_type, _item, prompt) => {
-            onStartChat(prompt);
-          }}
-        />
 
         <ModelPicker
           open={isSelecting}
@@ -550,7 +554,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
               Ready-to-use workflows and capabilities for your Cowork sessions
             </p>
           </div>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{
               background: 'var(--surface-hover)',
@@ -584,8 +588,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
             marginBottom: 16,
           }}>
             <MagnifyingGlass size={18} color="var(--ui-text-muted)" />
-            <input
-              type="text"
+            <input aria-label="Search plugins…" type="text"
               placeholder="Search plugins…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -604,7 +607,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
             {categories.map(cat => {
               const isActive = selectedCategory === cat || (cat === 'All' && !selectedCategory);
               return (
-                <button
+                <button type="button"
                   key={cat}
                   onClick={() => setSelectedCategory(cat === 'All' ? null : cat)}
                   style={{
@@ -676,7 +679,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
                 <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', margin: '0 0 12px 0', lineHeight: 1.5 }}>
                   {plugin.description}
                 </p>
-                <button
+                <button type="button"
                   onClick={() => handleUsePlugin(plugin.prompt)}
                   style={{
                     display: 'inline-flex',
@@ -720,7 +723,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
           <span style={{ fontSize: '13px', color: 'var(--ui-text-muted)' }}>
             {filteredPlugins.length} plugins available
           </span>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{
               padding: '10px 20px',

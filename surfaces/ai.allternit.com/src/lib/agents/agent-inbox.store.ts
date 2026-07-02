@@ -1,7 +1,11 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-export interface InboxItem {
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentInbox');
+
+interface InboxItem {
   id: string;
   agentId?: string;
   type: 'mail' | 'gate_review' | 'run_complete' | 'system_alert' | 'ban_triggered';
@@ -42,7 +46,7 @@ export const useAgentInboxStore = create<AgentInboxState & AgentInboxActions>()(
           set({ items: data.items || [], unreadCount: data.unreadCount || 0 });
         }
       } catch (e) {
-        console.error('Failed to fetch inbox', e);
+        logger.error({ err: e }, 'Failed to fetch inbox');
       } finally {
         set({ isLoading: false });
       }
@@ -60,7 +64,7 @@ export const useAgentInboxStore = create<AgentInboxState & AgentInboxActions>()(
           unreadCount: Math.max(0, s.unreadCount - 1),
         }));
       } catch (e) {
-        console.error('Failed to mark as read', e);
+        logger.error({ err: e }, 'Failed to mark as read');
       }
     },
 
@@ -78,7 +82,7 @@ export const useAgentInboxStore = create<AgentInboxState & AgentInboxActions>()(
             : s.unreadCount,
         }));
       } catch (e) {
-        console.error('Failed to dismiss item', e);
+        logger.error({ err: e }, 'Failed to dismiss item');
       }
     },
 
@@ -93,7 +97,7 @@ export const useAgentInboxStore = create<AgentInboxState & AgentInboxActions>()(
           items: s.items.map((i) => (i.id === itemId ? { ...i, status: 'acknowledged' as const } : i)),
         }));
       } catch (e) {
-        console.error('Failed to acknowledge item', e);
+        logger.error({ err: e }, 'Failed to acknowledge item');
       }
     },
   }))

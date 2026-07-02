@@ -35,13 +35,16 @@ import {
   buildVariablesFromInput
 } from './agent-templates';
 import JSZip from 'jszip';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentWorkspaceService');
 
 // Helper to safely parse JSON
 function safeJSONParse<T>(text: string, defaultValue: T): T {
   try {
     return JSON.parse(text) as T;
   } catch (error) {
-    console.error('[AgentWorkspaceService] JSON parse error:', error);
+    logger.error({ err: error }, 'JSON parse error');
     return defaultValue;
   }
 }
@@ -231,7 +234,7 @@ async function createWorkspace(
         const response = await filesApi.readFile({ path: templatePath });
         content = substituteTemplateVariables(response.content, variables);
       } catch (e) {
-        console.warn(`Template file not found: ${templatePath}`);
+        logger.warn(`Template file not found: ${templatePath}`);
         content = generateFromInlineTemplate(filePath, variables);
       }
     }
@@ -493,7 +496,7 @@ async function deleteWorkspace(agentId: string): Promise<void> {
     };
     await deleteRecursive(path);
   } catch (e) {
-    console.warn(`Failed to delete workspace at ${path}:`, e);
+    logger.warn({ err: e }, `Failed to delete workspace at ${path}`);
   }
 
   // Clear cache
@@ -539,7 +542,7 @@ async function exportWorkspace(
           const response = await filesApi.readFile({ path: fullPath });
           zipFolder.file(entry.name, response.content);
         } catch (e) {
-          console.warn(`Failed to read ${fullPath}:`, e);
+          logger.warn({ err: e }, `Failed to read ${fullPath}`);
         }
       }
     }
@@ -648,7 +651,7 @@ async function writeWorkspaceFile(
       content: JSON.stringify(manifest, null, 2) 
     });
   } catch (e) {
-    console.warn('Failed to update manifest lastModified:', e);
+    logger.warn({ err: e }, 'Failed to update manifest lastModified');
   }
 
   // Invalidate cache
@@ -693,7 +696,7 @@ async function createSnapshot(agentId: string): Promise<FileSystemSnapshot> {
         const file = await filesApi.readFile({ path: entry.path });
         content = file.content;
       } catch (error) {
-        console.warn(`[WorkspaceService] Failed to snapshot file ${entry.path}:`, error);
+        logger.warn({ err: error }, `Failed to snapshot file ${entry.path}`);
       }
 
       return {
@@ -760,7 +763,7 @@ async function getManifest(agentId: string): Promise<{ layers: import('./agent.t
     const response = await filesApi.readFile({ path: `${path}/.allternit/manifest.json` });
     return JSON.parse(response.content);
   } catch (e) {
-    console.warn('[WorkspaceService] Failed to load manifest:', e);
+    logger.warn({ err: e }, 'Failed to load manifest');
     return null;
   }
 }
@@ -801,7 +804,7 @@ async function updateManifest(
     // Invalidate cache
     workspaceCache.delete(agentId);
   } catch (e) {
-    console.error('[WorkspaceService] Failed to update manifest:', e);
+    logger.error({ err: e }, 'Failed to update manifest');
     throw e;
   }
 }

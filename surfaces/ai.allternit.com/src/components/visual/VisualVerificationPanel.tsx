@@ -32,7 +32,7 @@ interface Artifact {
   };
 }
 
-export interface VerificationStatus {
+interface VerificationStatus {
   wihId: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   overallConfidence: number;
@@ -208,7 +208,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
             </>
           )}
           {onRefresh && (
-            <button 
+            <button type="button" 
               onClick={onRefresh} 
               title="Refresh"
               style={{
@@ -227,7 +227,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
             >🔄</button>
           )}
           {status.status === 'failed' && onRequestBypass && (
-            <button 
+            <button type="button" 
               onClick={onRequestBypass}
               style={{
                 display: 'flex',
@@ -366,7 +366,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                 <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)', fontWeight: 'normal', textTransform: 'none' }}>({filteredArtifacts.length} items)</span>
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
+                <button type="button"
                   onClick={() => setArtifactFilter('all')}
                   style={{
                     padding: '6px 12px',
@@ -380,7 +380,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                   }}
                 >All</button>
                 {(['ui_state', 'coverage_map', 'console_output', 'visual_diff', 'error_state'] as ArtifactType[]).map(type => (
-                  <button
+                  <button type="button"
                     key={type}
                     onClick={() => setArtifactFilter(type)}
                     style={{

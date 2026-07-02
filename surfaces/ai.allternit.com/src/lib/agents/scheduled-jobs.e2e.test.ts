@@ -14,7 +14,6 @@ import {
   getJobRunnerState,
   getExecutionHistory,
   clearExecutionHistory,
-  type JobRunnerConfig,
 } from "./scheduled-jobs.runner";
 import {
   createScheduledJob,

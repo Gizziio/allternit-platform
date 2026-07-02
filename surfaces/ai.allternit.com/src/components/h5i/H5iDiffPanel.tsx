@@ -86,7 +86,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
             Reasoning Diff
           </span>
         </div>
-        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+        <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
           <X size={16} />
         </button>
       </div>
@@ -96,11 +96,10 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
         {/* Session selectors */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, marginBottom: 16, alignItems: 'end' }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
               Session A
-            </label>
-            <select
-              value={sessionA}
+            </div>
+            <select aria-label="Selection" value={sessionA}
               onChange={(e) => setSessionA(e.target.value)}
               style={{
                 width: '100%',
@@ -127,11 +126,10 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
               Session B
-            </label>
-            <select
-              value={sessionB}
+            </div>
+            <select aria-label="Selection" value={sessionB}
               onChange={(e) => setSessionB(e.target.value)}
               style={{
                 width: '100%',
@@ -154,7 +152,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
           </div>
         </div>
 
-        <button
+        <button type="button"
           onClick={handleDiff}
           disabled={loading || !sessionA || !sessionB}
           style={{
@@ -211,7 +209,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
             const typeColor = typeConfig[entry.type].color;
             return (
               <div
-                key={i}
+                key={`h5idiffpanel-${i}`}
                 style={{
                   display: 'flex',
                   gap: 10,

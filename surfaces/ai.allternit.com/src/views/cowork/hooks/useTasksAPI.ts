@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-export interface Task {
+interface Task {
   id: string;
   workspace_id: string;
   title: string;

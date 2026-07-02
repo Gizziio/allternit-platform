@@ -39,7 +39,7 @@ export interface InstanceType {
   recommended?: boolean;
 }
 
-export interface CredentialField {
+interface CredentialField {
   name: string;
   type: 'text' | 'password';
   helpUrl: string;

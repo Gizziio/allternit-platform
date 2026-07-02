@@ -22,7 +22,6 @@ import {
   LIST_DIRECTORY_DEFINITION,
   DELETE_FILE_DEFINITION,
   type SearchResult,
-  type FileEntry,
 } from "./file-tools";
 import type { ToolExecutionContext } from "./index";
 

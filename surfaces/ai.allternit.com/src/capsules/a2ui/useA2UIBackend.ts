@@ -6,8 +6,12 @@
 // ============================================================================
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { a2uiApi, type A2UISession, type A2UIActionResponse } from "@/integration/a2ui-client";
+import { a2uiApi, type A2UIActionResponse } from "@/integration/a2ui-client";
 import type { A2UIPayload } from "./a2ui.types";
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UseA2UIBackend');
 
 export interface UseA2UIBackendOptions {
   /** Initial A2UI payload (for new sessions) */
@@ -196,7 +200,7 @@ export function useA2UIBackend(options: UseA2UIBackendOptions): UseA2UIBackendRe
           clearTimeout(saveTimeoutRef.current);
         }
         saveTimeoutRef.current = setTimeout(() => {
-          a2uiApi.updateDataModel(sessionId, newDataModel).catch(console.error);
+          a2uiApi.updateDataModel(sessionId, newDataModel).catch((err: unknown) => logger.error({ err }, 'Async error'));
         }, 500);
       }
     },
@@ -215,7 +219,7 @@ export function useA2UIBackend(options: UseA2UIBackendOptions): UseA2UIBackendRe
           clearTimeout(saveTimeoutRef.current);
         }
         saveTimeoutRef.current = setTimeout(() => {
-          a2uiApi.updateDataModel(sessionId, newDataModel).catch(console.error);
+          a2uiApi.updateDataModel(sessionId, newDataModel).catch((err: unknown) => logger.error({ err }, 'Async error'));
         }, 500);
       }
     },

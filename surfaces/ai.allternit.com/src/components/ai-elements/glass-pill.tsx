@@ -11,20 +11,20 @@
 
 "use client";
 
-import { cn } from "@/lib/utils";
-import {
-  CheckCircle,
-  CircleDashed,
-  Warning,
-  Terminal,
-  FileText,
-  Globe,
-  CaretRight,
+import React, { memo, useState } from 'react';
+import { 
+  Terminal, 
+  FileText, 
+  Globe, 
+  CheckCircle, 
+  Warning, 
+  CircleDashed, 
+  CaretRight 
 } from '@phosphor-icons/react';
-import { memo, useState } from "react";
+import { cn } from '@/lib/utils';
 
-export type PillState = "pending" | "running" | "completed" | "error";
-export type PillType = "tool" | "file" | "terminal" | "web-search";
+type PillState = "pending" | "running" | "completed" | "error";
+type PillType = "tool" | "file" | "terminal" | "web-search";
 
 interface GlassPillProps {
   type?: PillType;
@@ -136,7 +136,7 @@ export const GlassPill = memo(
         style={{ userSelect: "none" }}
       >
         {/* ── Row ── */}
-        <div
+        <div role="button" tabIndex={0}
           style={{
             display: "flex",
             alignItems: "center",
@@ -191,7 +191,7 @@ export const GlassPill = memo(
           {/* Status label */}
           <span
             style={{
-              fontSize: "11px",
+              fontSize: "12px",
               fontWeight: 600,
               color: stateLabelColor[state],
               letterSpacing: "0.04em",
@@ -252,7 +252,7 @@ interface FilePillProps {
   onClick?: () => void;
 }
 
-export const FilePill = memo(({ filename, path, state = "completed", onClick }: FilePillProps) => {
+const FilePill = memo(({ filename, path, state = "completed", onClick }: FilePillProps) => {
   return (
     <GlassPill
       type="file"
@@ -286,7 +286,7 @@ export const TerminalPill = memo(({ command, output, state = "running", collapsi
       {output && (
         <pre
           style={{
-            fontSize: "11px",
+            fontSize: "12px",
             fontFamily: "var(--font-mono)",
             color: "rgba(236,236,236,0.55)",
             lineHeight: "1.6",
@@ -314,7 +314,7 @@ interface WebSearchPillProps {
   sources?: Array<{ title: string; url: string }>;
 }
 
-export const WebSearchPill = memo(({ query, results, state = "running", sources }: WebSearchPillProps) => {
+const WebSearchPill = memo(({ query, results, state = "running", sources }: WebSearchPillProps) => {
   const resolvedResults = results ?? sources?.length;
   const resultLabel = resolvedResults === 1 ? "result" : "results";
 
@@ -336,17 +336,17 @@ export const WebSearchPill = memo(({ query, results, state = "running", sources 
       {sources && sources.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           {sources.slice(0, 3).map((source, i) => (
-            <div key={i} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            <div key={`glass-pill-${i}`} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               <span style={{ fontSize: "12px", color: "rgba(236,236,236,0.7)", wordBreak: "break-word" }}>
                 {source.title}
               </span>
-              <span style={{ fontSize: "11px", color: "rgba(236,236,236,0.35)", wordBreak: "break-all" }}>
+              <span style={{ fontSize: "12px", color: "rgba(236,236,236,0.35)", wordBreak: "break-all" }}>
                 {source.url}
               </span>
             </div>
           ))}
           {sources.length > 3 && (
-            <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.28)" }}>
+            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.28)" }}>
               +{sources.length - 3} more
             </span>
           )}

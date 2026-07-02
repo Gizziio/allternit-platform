@@ -1,6 +1,6 @@
 "use client";
+import React, { useMemo, useState } from 'react';
 
-import React, { useState, useMemo } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import { Brain, Cpu, ShieldCheck, Database, Wrench } from "@phosphor-icons/react";
@@ -71,7 +71,7 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
-          <span style={{ fontSize: "11px", color: "rgba(212,176,140,0.5)", fontWeight: 700, uppercase: "true", letterSpacing: "0.1em" } as any}>CONTEXT ARCHITECTURE</span>
+          <span style={{ fontSize: "12px", color: "rgba(212,176,140,0.5)", fontWeight: 700, uppercase: "true", letterSpacing: "0.1em" } as any}>CONTEXT ARCHITECTURE</span>
           <span style={{ fontSize: "12px", color: "#fff", fontWeight: 600 }}>
             {formatK(usedContext)} / {formatK(totalContext)}
           </span>
@@ -95,12 +95,12 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
         {/* Sovereignty Metrics */}
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "11px", color: "rgba(212,176,140,0.5)", fontWeight: 700 }}>SOVEREIGNTY</span>
+            <span style={{ fontSize: "12px", color: "rgba(212,176,140,0.5)", fontWeight: 700 }}>SOVEREIGNTY</span>
             <ShieldCheck size={14} className="text-green-500" />
           </div>
           {planUsage.map((plan) => (
             <div key={plan.label}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#aaa", marginBottom: "6px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#aaa", marginBottom: "6px" }}>
                 <span>{plan.label}</span>
                 <span style={{ color: "#fff", fontWeight: 600 }}>{plan.percent}</span>
               </div>

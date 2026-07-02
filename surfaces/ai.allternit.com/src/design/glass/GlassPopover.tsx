@@ -24,7 +24,7 @@ import {
 // Props Interface
 // ============================================================================
 
-export interface GlassPopoverProps {
+interface GlassPopoverProps {
   /** Popover content */
   content: React.ReactNode;
   
@@ -291,7 +291,7 @@ export function GlassPopover({
   ].filter(Boolean).join(' ');
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       ref={triggerRef}
       style={{ position: 'relative', display: 'inline-block', ...style }}
       className={className}
@@ -321,7 +321,7 @@ export function GlassPopover({
 /**
  * Dropdown menu popover
  */
-export function GlassDropdown(props: Omit<GlassPopoverProps, 'trigger' | 'position'>) {
+function GlassDropdown(props: Omit<GlassPopoverProps, 'trigger' | 'position'>) {
   return (
     <GlassPopover
       {...props}
@@ -336,7 +336,7 @@ export function GlassDropdown(props: Omit<GlassPopoverProps, 'trigger' | 'positi
 /**
  * Context menu popover
  */
-export function GlassContextMenu(props: Omit<GlassPopoverProps, 'trigger'>) {
+function GlassContextMenu(props: Omit<GlassPopoverProps, 'trigger'>) {
   return (
     <GlassPopover
       {...props}
@@ -349,7 +349,7 @@ export function GlassContextMenu(props: Omit<GlassPopoverProps, 'trigger'>) {
 /**
  * Hover popover for quick previews
  */
-export function GlassHoverCard(props: Omit<GlassPopoverProps, 'trigger' | 'closeOnClickOutside'>) {
+function GlassHoverCard(props: Omit<GlassPopoverProps, 'trigger' | 'closeOnClickOutside'>) {
   return (
     <GlassPopover
       {...props}

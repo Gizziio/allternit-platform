@@ -27,7 +27,7 @@ function normalizePreviewUrl(url: string): string | null {
   }
 }
 
-export function inferPreviewTitle(url: string, fallback?: string): string {
+function inferPreviewTitle(url: string, fallback?: string): string {
   if (fallback && fallback.trim()) {
     return fallback.trim();
   }

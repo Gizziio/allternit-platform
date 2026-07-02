@@ -5,25 +5,30 @@ import { UniverDocEditor } from './UniverDocEditor';
 import { UniverSheetEditor } from './UniverSheetEditor';
 import { SlidesEditor } from './SlidesEditor';
 import { useNav } from '../../../nav/useNav';
+import { openOfficeWebInBrowser } from '../../aci/open-office-web';
 
 type OfficeDocType = 'slides' | 'spreadsheet' | 'document';
 
 export function OfficeWorkspace({
   projectName = "New Business Blueprint",
   initialDocType = 'slides',
+  projectId = null,
+  workspaceId = null,
 }: {
   projectName?: string;
   initialDocType?: OfficeDocType;
+  projectId?: string | null;
+  workspaceId?: string | null;
 }) {
   const [activeDoc, setActiveDoc] = useState<OfficeDocType>(initialDocType);
   const { dispatch } = useNav();
 
   const hostKey = activeDoc === 'slides' ? 'POWERPOINT' : activeDoc === 'spreadsheet' ? 'EXCEL' : 'WORD';
   const hostData = OFFICE_HOSTS[hostKey];
-  const hostWebUrl = useMemo(() => {
-    if (activeDoc === 'slides') return 'https://powerpoint.office.com';
-    if (activeDoc === 'spreadsheet') return 'https://excel.office.com';
-    return 'https://word.office.com';
+  const officeHost = useMemo(() => {
+    if (activeDoc === 'slides') return 'powerpoint' as const;
+    if (activeDoc === 'spreadsheet') return 'excel' as const;
+    return 'word' as const;
   }, [activeDoc]);
   const addinViewType = activeDoc === 'slides' ? 'addin-ppt' : activeDoc === 'spreadsheet' ? 'addin-excel' : 'addin-word';
 
@@ -45,14 +50,22 @@ export function OfficeWorkspace({
              <p style={{ fontSize: "10px", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 700, margin: "2px 0 0", letterSpacing: "0.08em" }}>Native Workspace Surface</p>
            </div>
            <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                onClick={() => window.open(hostWebUrl, '_blank', 'noopener,noreferrer')}
+              <button type="button"
+                onClick={() => openOfficeWebInBrowser(officeHost)}
                 style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid var(--border-default)", background: "var(--bg-primary)", color: "var(--text-secondary)", fontSize: "11px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
               >
-                 <ShareNetwork size={13} /> Open {hostData.label} Web
+                 <ShareNetwork size={13} /> Open In Browser Mode
               </button>
-              <button
-                onClick={() => dispatch({ type: 'OPEN_VIEW', viewType: addinViewType })}
+              <button type="button"
+                onClick={() => dispatch({
+                  type: 'OPEN_VIEW',
+                  viewType: addinViewType,
+                  context: {
+                    projectId,
+                    workspaceId,
+                    projectName,
+                  },
+                })}
                 style={{ padding: "6px 14px", borderRadius: "6px", background: "var(--accent-primary)", border: "none", color: "#fff", fontSize: "11px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
               >
                  <PlugsConnected size={13} /> Open Real Add-in
@@ -89,13 +102,27 @@ export function OfficeWorkspace({
                 Surface Boundary
               </div>
               <p style={{ margin: 0, fontSize: "11px", lineHeight: 1.5, color: "var(--text-secondary)" }}>
-                This workspace is the platform-native editor surface for {hostData.label}. The actual Microsoft connector and taskpane live in the dedicated add-in view.
+                This workspace is the platform-native editor surface for {hostData.label}. The real Microsoft document surface runs in Office on the web inside Browser mode or in the installed desktop app with the real add-in.
               </p>
-              <button
-                onClick={() => dispatch({ type: 'OPEN_VIEW', viewType: addinViewType })}
+              <button type="button"
+                onClick={() => openOfficeWebInBrowser(officeHost)}
+                style={{ width: "100%", padding: "11px 12px", borderRadius: "10px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", fontWeight: 700, fontSize: "12px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
+              >
+                <ShareNetwork size={14} /> Open {hostData.label} On The Web In Browser Mode
+              </button>
+              <button type="button"
+                onClick={() => dispatch({
+                  type: 'OPEN_VIEW',
+                  viewType: addinViewType,
+                  context: {
+                    projectId,
+                    workspaceId,
+                    projectName,
+                  },
+                })}
                 style={{ marginTop: "4px", width: "100%", padding: "11px 12px", borderRadius: "10px", background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", fontWeight: 700, fontSize: "12px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
               >
-                <ArrowSquareOut size={14} /> Open Microsoft Add-in Connector
+                <ArrowSquareOut size={14} /> Open Desktop Add-in Companion
               </button>
             </div>
 
@@ -147,7 +174,7 @@ function getIcon(name: string) {
 
 function DocTypeBtn({ icon, active, onClick, label, color }: any) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       title={label}
       style={{

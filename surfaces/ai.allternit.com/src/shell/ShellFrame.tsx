@@ -177,8 +177,8 @@ export function ShellFrame({
           padding: '0px',
           zIndex: 1,
           background: isAgentActive
-            ? (useBlendedRail ? 'color-mix(in srgb, #ffffff 88%, transparent)' : 'color-mix(in srgb, var(--shell-panel-bg) 88%, transparent)')
-            : (useBlendedRail ? '#ffffff' : 'var(--shell-panel-bg)'),
+            ? (useBlendedRail ? 'color-mix(in srgb, var(--shell-panel-bg) 88%, transparent)' : 'color-mix(in srgb, var(--shell-panel-bg) 88%, transparent)')
+            : (useBlendedRail ? 'var(--shell-panel-bg)' : 'var(--shell-panel-bg)'),
           borderRight: useBlendedRail ? '1px solid var(--border-subtle)' : '1px solid var(--border-subtle)',
           position: 'relative',
         }}>

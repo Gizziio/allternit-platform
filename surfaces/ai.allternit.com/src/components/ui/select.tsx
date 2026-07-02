@@ -114,7 +114,7 @@ export const SelectItem: React.FC<{ value: string; children: React.ReactNode; on
   onClick,
   disabled
 }) => (
-  <div
+  <div role="button" tabIndex={0}
     onClick={disabled ? undefined : onClick}
     className={className}
     style={{

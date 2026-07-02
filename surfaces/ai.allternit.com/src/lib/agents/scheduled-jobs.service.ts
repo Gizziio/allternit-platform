@@ -9,6 +9,10 @@
 import { CronJobConfig } from "@/components/agents/CronJobWizard";
 import { nativeAgentApi } from "./native-agent-api";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ScheduledJobs');
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -33,7 +37,7 @@ export interface JobExecution {
   error?: string;
 }
 
-export interface CreateJobRequest {
+interface CreateJobRequest {
   name: string;
   description?: string;
   schedule: string;
@@ -525,7 +529,7 @@ async function createJobSessionTemplate(
 /**
  * Get a session template by ID
  */
-export function getJobSessionTemplate(templateId: string): SessionTemplate | null {
+function getJobSessionTemplate(templateId: string): SessionTemplate | null {
   void templateId;
   return null;
 }

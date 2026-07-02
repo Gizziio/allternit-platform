@@ -6,6 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Package, Plus, Trash2 } from 'lucide-react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('TeamSkillsPanel');
+
 interface TeamSkill {
   id: string;
   workspaceId: string;
@@ -37,7 +41,7 @@ export function TeamSkillsPanel() {
       const data = await res.json();
       setSkills(data.skills || []);
     } catch (err) {
-      console.error('Failed to fetch team skills:', err);
+      logger.error({ err: err }, 'Failed to fetch team skills:');
     } finally {
       setLoading(false);
     }
@@ -61,7 +65,7 @@ export function TeamSkillsPanel() {
       setNewDescription('');
       await fetchSkills(activeWorkspaceId);
     } catch (err) {
-      console.error('Failed to install skill:', err);
+      logger.error({ err: err }, 'Failed to install skill:');
     }
   };
 
@@ -70,7 +74,7 @@ export function TeamSkillsPanel() {
       await fetch(`/api/v1/team-skills/${id}`, { method: 'DELETE' });
       setSkills((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
-      console.error('Failed to uninstall skill:', err);
+      logger.error({ err: err }, 'Failed to uninstall skill:');
     }
   };
 
@@ -78,8 +82,7 @@ export function TeamSkillsPanel() {
     <div className="space-y-6">
       {/* Workspace selector */}
       <div className="flex items-center gap-4">
-        <select
-          value={activeWorkspaceId ?? ''}
+        <select aria-label="Selection" value={activeWorkspaceId ?? ''}
           onChange={(e) => setActiveWorkspace(e.target.value || null)}
           className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200"
         >

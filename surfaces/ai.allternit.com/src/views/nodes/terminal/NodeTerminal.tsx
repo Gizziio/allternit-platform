@@ -8,7 +8,6 @@ import { nodeTerminalService, type TerminalSession, type TimeoutWarning, type Te
 import { TerminalFileBrowser, type FileEntry, type FileTransfer } from './TerminalFileBrowser';
 import { Button } from '@/components/ui/button';
 import {
-  Folder,
   X,
   UploadSimple,
   DownloadSimple,
@@ -19,6 +18,10 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import 'xterm/css/xterm.css';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('NodeTerminal');
 
 interface NodeTerminalProps {
   session: TerminalSession;
@@ -131,7 +134,7 @@ export function NodeTerminal({
         const { cols, rows } = term;
         nodeTerminalService.resize(session.id, cols, rows);
       } catch (err) {
-        console.warn('Fit addon error:', err);
+        logger.warn({ err: err }, 'Fit addon error:');
       }
     }, 100);
 
@@ -142,7 +145,7 @@ export function NodeTerminal({
         const { cols, rows } = term;
         nodeTerminalService.resize(session.id, cols, rows);
       } catch (err) {
-        console.warn('Resize error:', err);
+        logger.warn({ err: err }, 'Resize error:');
       }
     };
 
@@ -241,13 +244,13 @@ export function NodeTerminal({
         const isCurrentlyConnected = nodeTerminalService.isConnected(session.id);
         
         if (!isCurrentlyConnected) {
-          console.debug('[NodeTerminal] Page visible but disconnected, attempting reconnection');
+          logger.debug('Page visible but disconnected, attempting reconnection');
           setIsReconnecting(true);
           
           // Try to reconnect
           nodeTerminalService.reconnectSession(session.id, session.nodeId).then((reconnectedSession) => {
             if (reconnectedSession) {
-              console.debug('[NodeTerminal] Reconnected successfully');
+              logger.debug('Reconnected successfully');
               setIsConnected(true);
               setIsReconnecting(false);
               setReconnectionAttempt(0);
@@ -256,7 +259,7 @@ export function NodeTerminal({
                 termRef.current.writeln('\x1b[1;32m[Reconnected]\x1b[0m');
               }
             } else {
-              console.debug('[NodeTerminal] Reconnection failed');
+              logger.debug('Reconnection failed');
               setIsReconnecting(false);
               
               // Call the parent's reconnection handler if provided
@@ -515,14 +518,14 @@ export function NodeTerminal({
             </Button>
           )}
           {!isConnected && !isReconnecting && (
-            <button
+            <button type="button"
               onClick={handleManualReconnect}
               className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
             >
               Reconnect
             </button>
           )}
-          <button
+          <button type="button"
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground text-xs"
           >
@@ -552,7 +555,7 @@ export function NodeTerminal({
               Session expires in {formatRemainingTime(timeoutWarning.remaining_seconds)}
             </span>
           </div>
-          <button
+          <button type="button"
             onClick={handleKeepAlive}
             className="text-xs px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded transition-colors font-medium"
           >
@@ -602,7 +605,7 @@ export function NodeTerminal({
               <div className="text-center">
                 <p className="text-destructive mb-2">{error}</p>
                 <div className="flex gap-2 justify-center">
-                  <button
+                  <button type="button"
                     onClick={() => {
                       setError(null);
                       handleManualReconnect();
@@ -611,7 +614,7 @@ export function NodeTerminal({
                   >
                     Retry
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => setError(null)}
                     className="text-xs text-primary hover:underline"
                   >
@@ -642,7 +645,7 @@ export function NodeTerminal({
                   </svg>
                 </div>
                 <p className="text-muted-foreground mb-3">Disconnected from terminal</p>
-                <button
+                <button type="button"
                   onClick={handleManualReconnect}
                   className="text-xs px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
                 >
@@ -677,7 +680,7 @@ export function NodeTerminal({
                     {transfer.status === 'error' && (
                       <Warning className="size-4  text-destructive" />
                     )}
-                    <button
+                    <button type="button"
                       onClick={() => setTransfers(prev => prev.filter(t => t.id !== transfer.id))}
                       className="text-muted-foreground hover:text-foreground"
                     >

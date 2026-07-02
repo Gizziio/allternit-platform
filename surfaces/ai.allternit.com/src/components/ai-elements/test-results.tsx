@@ -1,22 +1,20 @@
 "use client";
 
-import type { ComponentProps, HTMLAttributes } from "react";
-
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import React, { createContext, useContext, useMemo, memo, type ComponentProps, type HTMLAttributes } from "react";
+import { 
+  CheckCircle as CheckCircle2Icon, 
+  XCircle as XCircleIcon, 
+  Circle as CircleIcon, 
+  CircleDashed as CircleDotIcon, 
+  CaretRight as ChevronRightIcon 
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import {
-  CheckCircle as CheckCircle2Icon,
-  CaretRight as ChevronRightIcon,
-  Circle as CircleDotIcon,
-  Circle as CircleIcon,
-  XCircle as XCircleIcon,
-} from '@phosphor-icons/react';
-import { createContext, useContext, useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Collapsible, 
+  CollapsibleTrigger, 
+  CollapsibleContent 
+} from "@/components/ui/collapsible";
 
 type TestStatus = "passed" | "failed" | "skipped" | "running";
 

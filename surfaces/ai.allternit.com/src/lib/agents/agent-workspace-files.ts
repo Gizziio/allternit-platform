@@ -8,6 +8,10 @@
 // Import with fallback for test environments
 import { realFileSystem as importedRealFileSystem } from '@/plugins/fileSystem.real';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentWorkspaceFiles');
+
 // For tests, we may need to use a direct Node.js fs implementation
 const getFileSystem = () => {
   // In test environment, try to use direct Node.js fs
@@ -55,7 +59,7 @@ const getFileSystem = () => {
 
 const realFileSystem = getFileSystem();
 
-export interface WorkspaceFile {
+interface WorkspaceFile {
   path: string;
   name: string;
   content: string;
@@ -93,7 +97,7 @@ const MEMORY_FILES = [
   'LESSONS.md',
 ];
 
-export class AgentWorkspaceFileSystem {
+class AgentWorkspaceFileSystem {
   private fs = realFileSystem;
   private workspaceCache = new Map<string, AgentWorkspace>();
   private cacheTTL = 5 * 60 * 1000; // 5 minutes
@@ -135,7 +139,7 @@ export class AgentWorkspaceFileSystem {
     try {
       await this.scanDirectory(workspacePath, '', files);
     } catch (error) {
-      console.error(`[AgentWorkspace] Failed to load workspace for ${agentId}:`, error);
+      logger.error({ err: error }, 'Failed to load workspace for ${agentId}:');
       return null;
     }
 
@@ -170,7 +174,7 @@ export class AgentWorkspaceFileSystem {
       } else if (entry.type === 'file') {
         // Skip files that are too large (> 100KB)
         if (entry.size && entry.size > 100_000) {
-          console.warn(`[AgentWorkspace] Skipping large file: ${entryRelPath}`);
+          logger.warn(`Skipping large file: ${entryRelPath}`);
           continue;
         }
 
@@ -186,7 +190,7 @@ export class AgentWorkspaceFileSystem {
             lastModified: entry.modified || new Date(),
           });
         } catch (error) {
-          console.warn(`[AgentWorkspace] Failed to read file: ${entryRelPath}`, error);
+          logger.warn({ err: error }, 'Failed to read file: ${entryRelPath}');
         }
       }
     }
@@ -244,7 +248,7 @@ export class AgentWorkspaceFileSystem {
       this.workspaceCache.delete(agentId);
       return true;
     } catch (error) {
-      console.error(`[AgentWorkspace] Failed to write file: ${filePath}`, error);
+      logger.error({ err: error }, 'Failed to write file: ${filePath}');
       return false;
     }
   }

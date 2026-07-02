@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, Download, Star, Shield, Wrench, Check, ExternalLink } from "lucide-react";
+import { Search, Download, Shield, Wrench, Check } from "lucide-react";
 import { useToolRegistryStore } from "@/lib/agents/tool-registry.store";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +72,7 @@ function McpServerCard({ tool, installed, onInstall }: McpServerCardProps) {
             Installed
           </span>
         ) : (
-          <button
+          <button type="button"
             onClick={onInstall}
             style={{
               display: "flex",
@@ -115,7 +115,7 @@ function McpServerCard({ tool, installed, onInstall }: McpServerCardProps) {
         </div>
       )}
 
-      <button
+      <button type="button"
         onClick={() => setExpanded(!expanded)}
         style={{
           alignSelf: "flex-start",
@@ -186,7 +186,7 @@ export function McpMarketplace({ onInstall }: McpMarketplaceProps) {
           />
         </div>
         {["mcp", "native", "custom"].map((source) => (
-          <button
+          <button type="button"
             key={source}
             onClick={() => setSourceFilter(sourceFilter === source ? null : source)}
             style={{

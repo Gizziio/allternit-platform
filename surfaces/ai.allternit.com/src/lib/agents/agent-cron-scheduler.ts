@@ -10,11 +10,14 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { HeartbeatTask, TaskFrequency, executeTask } from './agent-heartbeat-executor';
-import { AgentTrustTiers } from './agent-trust-tiers';
 
-export interface ScheduledJob {
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentCronScheduler');
+
+interface ScheduledJob {
   id: string;
   taskId: string;
   agentId: string;
@@ -179,7 +182,7 @@ const createCronSchedulerStore = () => create<CronSchedulerState>()(
               return { jobs };
             });
 
-            console.debug(`[CronScheduler] Added job ${jobId}, next run at ${new Date(job.nextRunAt).toISOString()}`);
+            logger.debug(`Added job ${jobId}, next run at ${new Date(job.nextRunAt).toISOString()}`);
             return jobId;
           },
 
@@ -189,7 +192,7 @@ const createCronSchedulerStore = () => create<CronSchedulerState>()(
               jobs.delete(jobId);
               return { jobs };
             });
-            console.debug(`[CronScheduler] Removed job ${jobId}`);
+            logger.debug(`Removed job ${jobId}`);
           },
 
           enableJob: (jobId) => {
@@ -259,27 +262,26 @@ const createCronSchedulerStore = () => create<CronSchedulerState>()(
         }),
         {
           name: 'agent-cron-scheduler',
-          // Custom serialization for Map
-          storage: typeof localStorage !== 'undefined' ? localStorage as any : undefined,
-          serialize: (state) => {
-            return JSON.stringify({
-              state: {
-                ...state.state,
-                jobs: Array.from(state.state.jobs.entries()),
-              },
-              version: state.version,
-            });
-          },
-          deserialize: (str) => {
-            const parsed = JSON.parse(str);
-            return {
-              state: {
-                ...parsed.state,
-                jobs: new Map(parsed.state.jobs),
-              },
-              version: parsed.version,
-            };
-          },
+          storage: createJSONStorage(() => localStorage, {
+            replacer: (_key, value) => {
+              if (value instanceof Map) {
+                return {
+                  __type: 'Map',
+                  entries: Array.from(value.entries()),
+                };
+              }
+              return value;
+            },
+            reviver: (_key, value) => {
+              if (value && typeof value === 'object') {
+                const typed = value as Record<string, unknown>;
+                if (typed.__type === 'Map' && Array.isArray(typed.entries)) {
+                  return new Map(typed.entries as [unknown, unknown][]);
+                }
+              }
+              return value;
+            },
+          }),
         }
       )
 );
@@ -297,14 +299,14 @@ class AgentCronScheduler {
     onPermissionRequest?: (action: string, agentId: string) => Promise<boolean>;
   }) {
     if (this.isRunning) {
-      console.debug('[AgentCronScheduler] Already running');
+      logger.debug('Already running');
       return;
     }
 
     this.onPermissionRequest = options?.onPermissionRequest;
     const checkInterval = options?.checkIntervalMs || 60000;
 
-    console.debug(`[AgentCronScheduler] Starting with ${checkInterval}ms interval`);
+    logger.debug(`Starting with ${checkInterval}ms interval`);
     this.isRunning = true;
 
     this.intervalId = setInterval(() => {
@@ -321,7 +323,7 @@ class AgentCronScheduler {
       this.intervalId = null;
     }
     this.isRunning = false;
-    console.debug('[AgentCronScheduler] Stopped');
+    logger.debug('Stopped');
   }
 
   private async checkAndExecuteJobs() {
@@ -330,23 +332,28 @@ class AgentCronScheduler {
 
     if (dueJobs.length === 0) return;
 
-    console.debug(`[AgentCronScheduler] ${dueJobs.length} jobs due for execution`);
+    logger.debug(`${dueJobs.length} jobs due for execution`);
 
-    for (const job of dueJobs) {
-      await this.executeJob(job);
-    }
+    // Run all due jobs in parallel
+    await Promise.all(dueJobs.map(job => this.executeJob(job)));
   }
 
   private async executeJob(job: ScheduledJob) {
     const store = useCronScheduler.getState();
     
-    console.debug(`[AgentCronScheduler] Executing job ${job.id}`);
+    logger.debug(`Executing job ${job.id}`);
 
     try {
-      // Import dynamically to avoid circular deps
-      const { agentWorkspaceFS } = await import('./agent-workspace-files');
-      const { HeartbeatTaskManager } = await import('./agent-heartbeat-executor');
-      const { AgentTrustTiers } = await import('./agent-trust-tiers');
+      // Import dynamically in parallel to avoid circular deps
+      const [
+        { agentWorkspaceFS },
+        { HeartbeatTaskManager },
+        { AgentTrustTiers }
+      ] = await Promise.all([
+        import('./agent-workspace-files'),
+        import('./agent-heartbeat-executor'),
+        import('./agent-trust-tiers')
+      ]);
 
       // Load workspace and trust tiers
       const workspace = await agentWorkspaceFS.loadWorkspace(job.agentId);
@@ -383,10 +390,10 @@ class AgentCronScheduler {
         error: result.error,
       });
 
-      console.debug(`[AgentCronScheduler] Job ${job.id} completed: ${result.success ? 'success' : 'failed'}`);
+      logger.debug(`Job ${job.id} completed: ${result.success ? 'success' : 'failed'}`);
 
     } catch (error) {
-      console.error(`[AgentCronScheduler] Job ${job.id} failed:`, error);
+      logger.error({ err: error }, 'Job ${job.id} failed:');
       store.recordExecution(job.id, {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -402,7 +409,7 @@ class AgentCronScheduler {
 
     const content = await agentWorkspaceFS.readFile(agentId, 'HEARTBEAT.md');
     if (!content) {
-      console.debug(`[AgentCronScheduler] No HEARTBEAT.md found for agent ${agentId}`);
+      logger.debug(`No HEARTBEAT.md found for agent ${agentId}`);
       return;
     }
 
@@ -420,7 +427,7 @@ class AgentCronScheduler {
       store.addJob(task, agentId);
     }
 
-    console.debug(`[AgentCronScheduler] Registered ${recurringTasks.length} recurring tasks for agent ${agentId}`);
+    logger.debug(`Registered ${recurringTasks.length} recurring tasks for agent ${agentId}`);
   }
 
   // Unregister all tasks for an agent
@@ -432,7 +439,7 @@ class AgentCronScheduler {
       store.removeJob(job.id);
     }
 
-    console.debug(`[AgentCronScheduler] Unregistered ${jobs.length} tasks for agent ${agentId}`);
+    logger.debug(`Unregistered ${jobs.length} tasks for agent ${agentId}`);
   }
 
   // Get scheduler status
@@ -456,7 +463,7 @@ class AgentCronScheduler {
 export const agentCronScheduler = new AgentCronScheduler();
 
 // React hook for using the scheduler
-export function useAgentCronScheduler(agentId?: string) {
+function useAgentCronScheduler(agentId?: string) {
   const store = useCronScheduler();
   
   return {

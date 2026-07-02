@@ -250,8 +250,8 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
   };
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={containerStyle} onClick={e => e.stopPropagation()}>
+    <div role="button" tabIndex={0} style={overlayStyle} onClick={onClose}>
+      <div role="button" tabIndex={0} style={containerStyle} onClick={e => e.stopPropagation()}>
         <div style={headerStyle}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ 
@@ -274,11 +274,11 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {onNavigate && (
               <>
-                <button style={buttonStyle(!hasPrev)} onClick={() => onNavigate('prev')} disabled={!hasPrev}>←</button>
-                <button style={buttonStyle(!hasNext)} onClick={() => onNavigate('next')} disabled={!hasNext}>→</button>
+                <button type="button" style={buttonStyle(!hasPrev)} onClick={() => onNavigate('prev')} disabled={!hasPrev}>←</button>
+                <button type="button" style={buttonStyle(!hasNext)} onClick={() => onNavigate('next')} disabled={!hasNext}>→</button>
               </>
             )}
-            <button style={{...buttonStyle(), fontSize: '20px', color: 'var(--ui-text-muted)'}} onClick={onClose}>×</button>
+            <button type="button" style={{...buttonStyle(), fontSize: '20px', color: 'var(--ui-text-muted)'}} onClick={onClose}>×</button>
           </div>
         </div>
 

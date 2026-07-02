@@ -7,7 +7,6 @@ import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
 import {
   AgentModeBackdrop,
   getAgentModeSurfaceTheme,
-  type AgentModeSurfaceTheme,
 } from './agentModeSurfaceTheme';
 
 describe('getAgentModeSurfaceTheme', () => {

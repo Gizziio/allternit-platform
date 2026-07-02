@@ -4,13 +4,13 @@ import React, { useState } from 'react';
 import { Check, X, Minus } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
-export interface ModelComparisonFeature {
+interface ModelComparisonFeature {
   name: string;
   description?: string;
   values: Record<string, boolean | string | null>;
 }
 
-export interface ModelComparisonModel {
+interface ModelComparisonModel {
   id: string;
   name: string;
   provider?: string;
@@ -18,7 +18,7 @@ export interface ModelComparisonModel {
   highlighted?: boolean;
 }
 
-export type ModelComparisonVariant = 'default' | 'compact' | 'hover';
+type ModelComparisonVariant = 'default' | 'compact' | 'hover';
 
 export interface ModelComparisonProps {
   models: ModelComparisonModel[];

@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   Search, 
   Package, 
-  AlertCircle, 
   Download, 
   Check, 
   HardDrive, 
@@ -33,6 +32,25 @@ import {
 import { TeamSkillsPanel } from './TeamSkillsPanel';
 import { CATEGORY_METADATA } from '@/lib/plugins/marketplace';
 import { openInBrowser } from '@/lib/openInBrowser';
+import { togglePlugin, getEnabledPluginIds, subscribeToPluginChanges } from '@/plugins/feature.store';
+import { useToast } from '@/hooks/use-toast';
+
+const INSTALLED_KEY = 'allternit:plugin-manager:marketplace-installs:v1';
+const DL_ENABLED_KEY = 'allternit:marketplace:downloadable-enabled:v1';
+
+function readInstalledIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(INSTALLED_KEY);
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch { return new Set(); }
+}
+
+function readDownloadableEnabled(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DL_ENABLED_KEY);
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+  } catch { return new Set(); }
+}
 
 // =============================================================================
 // PLUGIN CARD COMPONENT
@@ -243,7 +261,7 @@ function SectionHeader({
   onToggle: () => void;
 }) {
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       className="flex items-center justify-between gap-3 mb-4 pb-2 border-b border-zinc-800 cursor-pointer group"
       onClick={onToggle}
     >
@@ -268,7 +286,21 @@ function SectionHeader({
   );
 }
 
-function PluginGrid({ plugins }: { plugins: UnifiedMarketplacePlugin[] }) {
+function PluginGrid({
+  plugins,
+  installedIds,
+  enabledIds,
+  onInstall,
+  onUninstall,
+  onToggle,
+}: {
+  plugins: UnifiedMarketplacePlugin[];
+  installedIds: Set<string>;
+  enabledIds: Set<string>;
+  onInstall: (plugin: UnifiedMarketplacePlugin) => void;
+  onUninstall: (plugin: UnifiedMarketplacePlugin) => void;
+  onToggle: (plugin: UnifiedMarketplacePlugin) => void;
+}) {
   const safePlugins = plugins || [];
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -276,9 +308,11 @@ function PluginGrid({ plugins }: { plugins: UnifiedMarketplacePlugin[] }) {
         <PluginCard
           key={plugin.id}
           plugin={plugin}
-          onInstall={() => console.debug('Install', plugin.id)}
-          onUninstall={() => console.debug('Uninstall', plugin.id)}
-          onToggle={() => console.debug('Toggle', plugin.id)}
+          installed={plugin.sourceType === 'bundled' || installedIds.has(plugin.id)}
+          enabled={enabledIds.has(plugin.id)}
+          onInstall={() => onInstall(plugin)}
+          onUninstall={() => onUninstall(plugin)}
+          onToggle={() => onToggle(plugin)}
         />
       ))}
     </div>
@@ -290,10 +324,9 @@ function PluginGrid({ plugins }: { plugins: UnifiedMarketplacePlugin[] }) {
 // =============================================================================
 
 export function PluginMarketplace() {
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
-  const [loading] = useState(false);
-  const [error] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     builtin: true,
     vendor: true,
@@ -301,6 +334,53 @@ export function PluginMarketplace() {
     external: false,
     cowork: true,
   });
+
+  const [installedIds, setInstalledIds] = useState<Set<string>>(readInstalledIds);
+  const [downloadableEnabled, setDownloadableEnabled] = useState<Set<string>>(readDownloadableEnabled);
+  const [bundledEnabled, setBundledEnabled] = useState<Set<string>>(() => new Set(getEnabledPluginIds()));
+
+  useEffect(() => subscribeToPluginChanges(() => {
+    setBundledEnabled(new Set(getEnabledPluginIds()));
+  }), []);
+
+  useEffect(() => {
+    localStorage.setItem(INSTALLED_KEY, JSON.stringify([...installedIds]));
+  }, [installedIds]);
+
+  useEffect(() => {
+    localStorage.setItem(DL_ENABLED_KEY, JSON.stringify([...downloadableEnabled]));
+  }, [downloadableEnabled]);
+
+  const enabledIds = useMemo(() => {
+    const all = new Set(bundledEnabled);
+    downloadableEnabled.forEach(id => all.add(id));
+    return all;
+  }, [bundledEnabled, downloadableEnabled]);
+
+  const handleInstall = useCallback((plugin: UnifiedMarketplacePlugin) => {
+    setInstalledIds(prev => new Set([...prev, plugin.id]));
+    setDownloadableEnabled(prev => new Set([...prev, plugin.id]));
+    addToast({ title: `${plugin.name} installed`, type: 'success' });
+  }, [addToast]);
+
+  const handleUninstall = useCallback((plugin: UnifiedMarketplacePlugin) => {
+    setInstalledIds(prev => { const next = new Set(prev); next.delete(plugin.id); return next; });
+    setDownloadableEnabled(prev => { const next = new Set(prev); next.delete(plugin.id); return next; });
+    addToast({ title: `${plugin.name} removed`, type: 'info' });
+  }, [addToast]);
+
+  const handleToggle = useCallback((plugin: UnifiedMarketplacePlugin) => {
+    if (plugin.sourceType === 'bundled') {
+      togglePlugin(plugin.id);
+    } else {
+      setDownloadableEnabled(prev => {
+        const next = new Set(prev);
+        if (next.has(plugin.id)) next.delete(plugin.id);
+        else next.add(plugin.id);
+        return next;
+      });
+    }
+  }, []);
 
   // Get all plugins (with fallbacks for SSR safety)
   const bundledPlugins = useMemo(() => getBundledPlugins() || [], []);
@@ -350,16 +430,6 @@ export function PluginMarketplace() {
         </div>
       </div>
 
-      {/* Error display */}
-      {error && (
-        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="size-4 " />
-            <span>{error}</span>
-          </div>
-        </div>
-      )}
-
       {/* Search and filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-1">
@@ -397,13 +467,7 @@ export function PluginMarketplace() {
       </div>
 
       {/* Content */}
-      {loading ? (
-        <div className="text-center py-20 text-zinc-500">
-          <div className="size-8  border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
-          Loading plugins...
-        </div>
-      ) : (
-        <div className="space-y-8">
+      <div className="space-y-8">
           {/* === BUNDLED PLUGINS SECTION === */}
           {(activeTab === 'all' || activeTab === 'bundled') && (
             <>
@@ -419,7 +483,7 @@ export function PluginMarketplace() {
                     expanded={expandedSections.builtin}
                     onToggle={() => toggleSection('builtin')}
                   />
-                  {expandedSections.builtin && <PluginGrid plugins={filteredBuiltIn} />}
+                  {expandedSections.builtin && <PluginGrid plugins={filteredBuiltIn} installedIds={installedIds} enabledIds={enabledIds} onInstall={handleInstall} onUninstall={handleUninstall} onToggle={handleToggle} />}
                 </section>
               )}
 
@@ -435,7 +499,7 @@ export function PluginMarketplace() {
                     expanded={expandedSections.vendor}
                     onToggle={() => toggleSection('vendor')}
                   />
-                  {expandedSections.vendor && <PluginGrid plugins={filteredVendor} />}
+                  {expandedSections.vendor && <PluginGrid plugins={filteredVendor} installedIds={installedIds} enabledIds={enabledIds} onInstall={handleInstall} onUninstall={handleUninstall} onToggle={handleToggle} />}
                 </section>
               )}
             </>
@@ -456,7 +520,7 @@ export function PluginMarketplace() {
                     expanded={expandedSections.downloadable}
                     onToggle={() => toggleSection('downloadable')}
                   />
-                  {expandedSections.downloadable && <PluginGrid plugins={filteredDownloadable} />}
+                  {expandedSections.downloadable && <PluginGrid plugins={filteredDownloadable} installedIds={installedIds} enabledIds={enabledIds} onInstall={handleInstall} onUninstall={handleUninstall} onToggle={handleToggle} />}
                 </section>
               )}
 
@@ -527,7 +591,7 @@ export function PluginMarketplace() {
                 expanded={expandedSections.cowork}
                 onToggle={() => toggleSection('cowork')}
               />
-              {expandedSections.cowork && <PluginGrid plugins={filteredCowork} />}
+              {expandedSections.cowork && <PluginGrid plugins={filteredCowork} installedIds={installedIds} enabledIds={enabledIds} onInstall={handleInstall} onUninstall={handleUninstall} onToggle={handleToggle} />}
             </section>
           )}
 
@@ -552,7 +616,6 @@ export function PluginMarketplace() {
             </div>
           )}
         </div>
-      )}
     </div>
   );
 }

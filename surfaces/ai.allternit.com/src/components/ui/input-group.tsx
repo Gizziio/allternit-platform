@@ -94,8 +94,7 @@ export const InputGroupTextarea = React.forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
 >(({ className, ...props }, ref) => (
-  <textarea
-    ref={ref}
+  <textarea aria-label="Text Area" ref={ref}
     className={cn("w-full bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground resize-none min-h-[60px]", className)}
     {...props}
   />
@@ -106,8 +105,7 @@ export const InputGroupInput = React.forwardRef<
   HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement>
 >(({ className, ...props }, ref) => (
-  <input
-    ref={ref}
+  <input aria-label="Input" ref={ref}
     className={cn("flex-1 bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground", className)}
     {...props}
   />

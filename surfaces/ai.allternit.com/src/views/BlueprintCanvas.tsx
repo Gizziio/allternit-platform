@@ -56,7 +56,6 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
   const ctx = (context?.context ?? {}) as BlueprintContext;
   const [mode, setMode] = useState<'openui' | 'json'>('openui');
   const [inputText, setInputText] = useState(ctx.stream || DEFAULT_OPENUI);
-  const [, setRenderTime] = useState(0);
   const [activeStream, setActiveStream] = useState(ctx.stream || DEFAULT_OPENUI);
   const [showPrompt, setShowPrompt] = useState(false);
   
@@ -66,8 +65,8 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
   ]);
   const [selectedVersionId, setSelectedVersionId] = useState('1');
 
-  useEffect(() => {isClient ? 
-    if (ctx.stream) {
+  useEffect(() => {
+if (ctx.stream) {
       const newStream = ctx.stream;
       setInputText(newStream);
       setActiveStream(newStream);
@@ -77,8 +76,8 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
         id: Date.now().toString(),
         timestamp: new Date().toLocaleTimeString(),
         content: newStream,
-        summary: 'Incoming Stream Update'
-       : "..."};
+        summary: 'Incoming Stream Update',
+      };
       setVersions(prev => [newVersion, ...prev]);
       setSelectedVersionId(newVersion.id);
     }
@@ -86,19 +85,16 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
 
   const masterPrompt = useMemo(() => getFullArchitectInstructions(), []);
 
-  const handleRender = () => {isClient ? 
-    const start = performance.now();
+  const handleRender = () => {
     setActiveStream(inputText);
-    const end = performance.now();
-    setRenderTime(Math.round((end - start) * 10) / 10);
     
     // Add to versions
     const newVersion: ArtifactVersion = {
       id: Date.now().toString(),
       timestamp: new Date().toLocaleTimeString(),
       content: inputText,
-      summary: 'Manual Edit'
-     : "..."};
+      summary: 'Manual Edit',
+    };
     setVersions(prev => [newVersion, ...prev]);
     setSelectedVersionId(newVersion.id);
   };
@@ -132,7 +128,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
         
         <div className="flex items-center gap-3">
           <div className="flex bg-black/40 p-1 rounded-lg border border-white/5 mr-2">
-            <button
+            <button type="button"
               onClick={() => setMode('openui')}
               className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
                 mode === 'openui' 
@@ -142,7 +138,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
             >
               <Layout size={14} /> OpenUI
             </button>
-            <button
+            <button type="button"
               onClick={() => setMode('json')}
               className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
                 mode === 'json' 
@@ -154,7 +150,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
             </button>
           </div>
           
-          <button 
+          <button type="button" 
             onClick={() => setShowPrompt(!showPrompt)}
             className={`p-2 rounded-lg transition-all ${showPrompt ? 'bg-[var(--accent-primary)] text-black' : 'text-white/40 hover:bg-white/5'}`}
             title="Master Architect Protocol"
@@ -164,7 +160,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
           
           <div className="w-px h-6 bg-white/10 mx-1" />
           
-          <button className="px-4 py-1.5 bg-[var(--accent-primary)] text-black rounded-lg text-xs font-bold hover:opacity-90 transition-opacity flex items-center gap-2">
+          <button type="button" className="px-4 py-1.5 bg-[var(--accent-primary)] text-black rounded-lg text-xs font-bold hover:opacity-90 transition-opacity flex items-center gap-2">
              <ArrowSquareOut size={16} weight="bold" />
              Deploy Blueprint
           </button>
@@ -182,7 +178,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
           </div>
           <div className="flex-1 overflow-auto p-2 space-y-1">
             {versions.map(v => (
-              <button
+              <button type="button"
                 key={v.id}
                 onClick={() => handleVersionSelect(v)}
                 className={`w-full p-3 rounded-xl text-left transition-all border ${
@@ -218,13 +214,12 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
               <Code size={16} className="text-blue-400" />
               <span className="text-xs font-black uppercase tracking-tighter text-white/40">Live Specification</span>
             </div>
-            <button onClick={handleRender} className="p-1 hover:bg-white/10 rounded transition-colors text-[var(--accent-primary)]">
+            <button type="button" onClick={handleRender} className="p-1 hover:bg-white/10 rounded transition-colors text-[var(--accent-primary)]">
                <Play size={16} weight="fill" />
             </button>
           </div>
           
-          <textarea
-            value={inputText}
+          <textarea aria-label="Text Area" value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             className="flex-1 p-4 bg-transparent text-[var(--text-primary)] font-mono text-[12px] leading-relaxed resize-none outline-none border-0 selection:bg-blue-500/30"
             spellCheck="false"
@@ -234,7 +229,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
             <div className="h-1/2 border-t border-white/10 bg-black/40 flex flex-col overflow-hidden">
                <div className="p-3 border-b border-white/5 flex items-center justify-between">
                 <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Architect's Protocol</span>
-                <button 
+                <button type="button" 
                   onClick={() => navigator.clipboard.writeText(masterPrompt)} 
                   className="text-xs text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-bold"
                 >

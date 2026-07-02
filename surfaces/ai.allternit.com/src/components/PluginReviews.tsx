@@ -1,19 +1,20 @@
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  At,
+  CaretDown,
+  Chat,
+  CircleNotch,
+  Star,
+  ThumbsUp,
+  X,
+} from '@phosphor-icons/react';
+
 /**
  * PluginReviews Component
  * 
  * Displays rating summary, review list, and allows users to write reviews.
  * Integrated with the PluginManager UI using Allternit dark theme.
  */
-
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  ThumbsUp,
-  Chat,
-  X,
-  CaretDown,
-  Star,
-  CircleNotch,
-} from '@phosphor-icons/react';
 import {
   getReviews,
   getRatingSummary,
@@ -115,7 +116,7 @@ function Button({
   };
   
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       disabled={disabled || loading}
       style={{ ...baseStyles, ...variantStyles[variant] }}
@@ -143,7 +144,7 @@ function Modal({
   if (!isOpen) return null;
   
   return (
-    <div
+    <div role="button" tabIndex={0}
       style={{
         position: 'fixed',
         inset: 0,
@@ -157,7 +158,7 @@ function Modal({
       }}
       onClick={onClose}
     >
-      <div
+      <div role="button" tabIndex={0}
         style={{
           width: '100%',
           maxWidth,
@@ -174,7 +175,7 @@ function Modal({
           <h3 style={{ margin: 0, fontSize: 18, color: THEME.textPrimary, fontWeight: 600 }}>
             {title}
           </h3>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{
               background: 'transparent',
@@ -299,7 +300,7 @@ function ReviewCard({
       </p>
       
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button
+        <button type="button"
           onClick={() => onHelpfulToggle(review.id, !isHelpful)}
           style={{
             display: 'flex',
@@ -349,15 +350,18 @@ function WriteReviewModal({
   const [review, setReview] = useState(existingReview?.review || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Reset form when modal opens
-  React.useEffect(() => {
+
+  const [prevIsOpenOC, setPrevIsOpenOC] = useState(isOpen);
+  const [prevExistingReviewOC, setPrevExistingReviewOC] = useState(existingReview);
+  if (isOpen !== prevIsOpenOC || existingReview !== prevExistingReviewOC) {
+    setPrevIsOpenOC(isOpen);
+    setPrevExistingReviewOC(existingReview);
     if (isOpen) {
       setRating(existingReview?.rating || 0);
       setReview(existingReview?.review || '');
       setError(null);
     }
-  }, [isOpen, existingReview]);
+  }
   
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -400,7 +404,7 @@ function WriteReviewModal({
       title={existingReview ? 'Edit Your Review' : `Review ${pluginName || 'Plugin'}`}
     >
       <div style={{ marginBottom: 20 }}>
-        <label
+        <div
           style={{
             display: 'block',
             fontSize: 12,
@@ -409,7 +413,7 @@ function WriteReviewModal({
           }}
         >
           Your Rating
-        </label>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <StarRating
             rating={rating}
@@ -426,7 +430,7 @@ function WriteReviewModal({
       </div>
       
       <div style={{ marginBottom: 20 }}>
-        <label
+        <div
           style={{
             display: 'block',
             fontSize: 12,
@@ -435,11 +439,11 @@ function WriteReviewModal({
           }}
         >
           Your Review
-        </label>
-        <textarea
-          value={review}
+        </div>
+        <textarea aria-label="Text Area" value={review}
           onChange={(e) => setReview(e.target.value)}
           placeholder="Share your experience with this plugin…"
+          className="focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
           style={{
             width: '100%',
             minHeight: 120,
@@ -451,7 +455,6 @@ function WriteReviewModal({
             fontSize: 13,
             lineHeight: 1.5,
             resize: 'vertical',
-            outline: 'none',
             boxSizing: 'border-box',
           }}
         />
@@ -650,8 +653,7 @@ export function PluginReviews({ pluginId, pluginName }: PluginReviewsProps) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 12, color: THEME.textTertiary }}>Sort by:</span>
               <div style={{ position: 'relative' }}>
-                <select
-                  value={sortBy}
+                <select aria-label="Selection" value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as ReviewSortOption)}
                   style={{
                     appearance: 'none',

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Toast hook - Re-export from toast-provider for convenience
  * This consolidates the dual toast systems

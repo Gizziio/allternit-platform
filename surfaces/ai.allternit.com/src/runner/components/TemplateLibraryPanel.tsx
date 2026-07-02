@@ -106,12 +106,16 @@ export function TemplateLibraryPanel() {
       <div className="p-4 border-b space-y-4">
         {/* Search */}
         <div className="relative">
-          <MagnifyingGlass className="size-4  absolute left-3 top-1/2 -tranzinc-y-1/2 text-muted-foreground" />
-          <Input
+          <label htmlFor="template-search">
+            <MagnifyingGlass className="size-4  absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          </label>
+          <Input 
+            id="template-search"
             placeholder="Search templates by name, description, or tags…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
+            aria-label="Search templates"
           />
         </div>
         
@@ -151,7 +155,7 @@ export function TemplateLibraryPanel() {
                 {filteredTemplates.map((template) => {
                   const Icon = CATEGORY_ICONS[template.category];
                   return (
-                    <div
+                    <div role="button" tabIndex={0}
                       key={template.id}
                       className={`p-3 rounded-lg border cursor-pointer transition-all ${
                         selectedTemplateId === template.id 
@@ -210,12 +214,13 @@ export function TemplateLibraryPanel() {
                     <div className="space-y-3">
                       {selectedTemplate.variables.map((variable) => (
                         <div key={variable.name}>
-                          <label className="text-sm text-muted-foreground flex items-center gap-2">
+                          <label htmlFor={`var-${variable.name}`} className="text-sm text-muted-foreground flex items-center gap-2">
                             {variable.name}
                             {variable.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
                           </label>
                           {variable.type === "string" && variable.name.length > 50 ? (
                             <Textarea
+                              id={`var-${variable.name}`}
                               value={String(templateVariables[variable.name] || variable.defaultValue || "")}
                               onChange={(e) => setTemplateVariable(variable.name, e.target.value)}
                               placeholder={variable.description}
@@ -224,6 +229,7 @@ export function TemplateLibraryPanel() {
                             />
                           ) : (
                             <Input
+                              id={`var-${variable.name}`}
                               value={String(templateVariables[variable.name] || variable.defaultValue || "")}
                               onChange={(e) => setTemplateVariable(variable.name, e.target.value)}
                               placeholder={variable.description}

@@ -16,8 +16,7 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, onCheckedChan
         ...style,
       }}
     >
-      <input
-        type="checkbox"
+      <input aria-label="Checkbox" type="checkbox"
         checked={checked}
         onChange={(e) => {
           onChange?.(e);

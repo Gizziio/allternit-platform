@@ -30,7 +30,6 @@ import {
 import { Streamdown } from "streamdown";
 
 import { Shimmer } from "./shimmer";
-import { Persona } from "./persona";
 
 interface ReasoningContextValue {
   isStreaming: boolean;

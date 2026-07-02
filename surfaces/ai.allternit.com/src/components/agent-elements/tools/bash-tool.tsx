@@ -17,14 +17,14 @@ function extractCommandSummary(cmd: string): string {
     .join(", ");
 }
 
-export type BashToolTerminalCardProps = {
+type BashToolTerminalCardProps = {
   step: Extract<TimelineStep, { type: "tool-call" }>;
   state: StepState;
   onComplete: () => void;
   approval?: ToolApproval;
 };
 
-export function BashToolTerminalCard({
+function BashToolTerminalCard({
   step,
   state,
   onComplete,

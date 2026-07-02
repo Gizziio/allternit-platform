@@ -1,7 +1,7 @@
 import React from 'react';
 import { useChangeSetStore } from '../../stores/changeset-store';
 import { FileChangeCard } from './FileChangeCard';
-import { GitDiff, CheckCircle, XCircle, Rocket } from '@phosphor-icons/react';
+import { GitDiff, Rocket } from '@phosphor-icons/react';
 
 interface ChangeSetReviewProps {
   changeSetId: string;
@@ -37,7 +37,7 @@ export function ChangeSetReview({ changeSetId }: ChangeSetReviewProps) {
         </div>
         
         <div style={{ display: 'flex', gap: 8 }}>
-          <button style={{ 
+          <button type="button" style={{ 
             padding: '6px 12px', 
             borderRadius: 6, 
             background: 'var(--bg-secondary)', 
@@ -48,7 +48,7 @@ export function ChangeSetReview({ changeSetId }: ChangeSetReviewProps) {
           }}>
             Reject All
           </button>
-          <button style={{ 
+          <button type="button" style={{ 
             padding: '6px 12px', 
             borderRadius: 6, 
             background: 'var(--accent-chat)', 

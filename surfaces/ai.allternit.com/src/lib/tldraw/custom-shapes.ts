@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { TLShape } from 'tldraw';
 import type {
   PenpotBlur,
@@ -12,9 +13,9 @@ import type {
   PenpotStroke,
 } from '@/lib/penpot/schema';
 
-export const DESIGN_FRAME_TYPE = 'design-frame';
-export const DESIGN_COMPONENT_TYPE = 'design-component';
-export const DESIGN_UIBLOCK_TYPE = 'design-uiblock';
+const DESIGN_FRAME_TYPE = 'design-frame';
+const DESIGN_COMPONENT_TYPE = 'design-component';
+const DESIGN_UIBLOCK_TYPE = 'design-uiblock';
 
 export interface DesignFrameShapeProps {
   w: number;

@@ -4,7 +4,7 @@
  * Defines the contract between the UI and the Runtime Bridge.
  */
 
-export type RunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+type RunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
 export interface RunRequest {
   agentId: string;

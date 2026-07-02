@@ -15,7 +15,7 @@ import {
   GitMerge,
 } from '@phosphor-icons/react';
 
-export function AutonomousCodeFactoryView(): JSX.Element {
+export function AutonomousCodeFactoryView(): React.ReactNode {
   return (
     <GlassSurface className="h-full w-full flex flex-col">
       <div className="p-4 border-b border-[var(--border-subtle)]">

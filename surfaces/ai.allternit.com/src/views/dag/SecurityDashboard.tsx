@@ -8,7 +8,6 @@
  * - Alerts and notifications
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield,
@@ -166,7 +165,7 @@ export function SecurityDashboard() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <button
+          <button type="button"
             onClick={fetchData}
             style={{
               padding: '8px 16px',
@@ -200,7 +199,7 @@ export function SecurityDashboard() {
           { id: 'events', label: 'Security Events', count: overview?.activeAlerts },
           { id: 'compliance', label: 'Compliance' },
         ].map(tab => (
-          <button
+          <button type="button"
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
             style={{
@@ -381,7 +380,7 @@ function OverviewTab({
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Recent Security Events
           </h3>
-          <button style={{
+          <button type="button" style={{
             padding: '6px 12px',
             borderRadius: 6,
             border: 'none',
@@ -468,8 +467,7 @@ function EventsTab({
         background: 'var(--surface-panel)',
         borderRadius: 8,
       }}>
-        <select
-          value={filterType}
+        <select aria-label="Selection" value={filterType}
           onChange={(e) => onFilterTypeChange(e.target.value as SecurityEventType | 'all')}
           style={{
             padding: '8px 12px',
@@ -485,8 +483,7 @@ function EventsTab({
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
-        <select
-          value={filterSeverity}
+        <select aria-label="Selection" value={filterSeverity}
           onChange={(e) => onFilterSeverityChange(e.target.value as SecurityEventSeverity | 'all')}
           style={{
             padding: '8px 12px',
@@ -512,8 +509,7 @@ function EventsTab({
           fontSize: 13,
           cursor: 'pointer',
         }}>
-          <input 
-            type="checkbox" 
+          <input aria-label="Checkbox" type="checkbox" 
             checked={showAcknowledged}
             onChange={onToggleAcknowledged}
           />
@@ -610,7 +606,7 @@ function ComplianceTab({
           <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--ui-text-secondary)' }}>
             Last assessment: {new Date(compliance.lastAssessmentAt).toLocaleString()}
           </p>
-          <button
+          <button type="button"
             onClick={onRunAssessment}
             style={{
               padding: '8px 16px',
@@ -725,7 +721,7 @@ function EventCard({ event, onClick }: { event: SecurityEvent; onClick: () => vo
   const severityConfig = SEVERITY_CONFIG[event.severity];
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       onClick={onClick}
       style={{
         padding: '14px 18px',
@@ -868,7 +864,7 @@ function EventDetailModal({
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
+          <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
@@ -934,7 +930,7 @@ function EventDetailModal({
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
             {!event.acknowledgedAt && (
-              <button
+              <button type="button"
                 onClick={onAcknowledge}
                 style={{
                   padding: '10px 20px',
@@ -950,7 +946,7 @@ function EventDetailModal({
               </button>
             )}
             {!event.resolvedAt && (
-              <button
+              <button type="button"
                 onClick={onResolve}
                 style={{
                   padding: '10px 20px',
@@ -1052,7 +1048,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
     <div style={{ textAlign: 'center', padding: 60 }}>
       <Warning size={32} color="var(--status-error)" />
       <p style={{ color: 'var(--status-error)', marginBottom: 16 }}>{message}</p>
-      <button
+      <button type="button"
         onClick={onRetry}
         style={{
           padding: '8px 16px',

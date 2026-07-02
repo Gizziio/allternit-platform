@@ -133,7 +133,7 @@ export async function loadPlugin(id: PluginId): Promise<ModePlugin> {
 /**
  * Get plugin info without loading
  */
-export function getPluginInfo(id: PluginId) {
+function getPluginInfo(id: PluginId) {
   const def = PLUGINS[id];
   if (!def) return null;
   
@@ -151,7 +151,7 @@ export function getPluginInfo(id: PluginId) {
 /**
  * List all available plugins
  */
-export function listPlugins() {
+function listPlugins() {
   return Object.values(PLUGINS).map(p => ({
     id: p.id,
     name: p.name,
@@ -166,7 +166,7 @@ export function listPlugins() {
 /**
  * Check if plugin is loaded
  */
-export function isPluginLoaded(id: PluginId): boolean {
+function isPluginLoaded(id: PluginId): boolean {
   return pluginCache.has(id);
 }
 
@@ -182,4 +182,4 @@ export async function unloadPlugin(id: PluginId): Promise<void> {
 }
 
 // Re-export types
-export { type ExecutionContext, type ModePlugin, type PluginCapability, type PluginConfig, type PluginEvent, type PluginEventHandler, type PluginEventType, type PluginFactory, type PluginInput, type PluginOutput, type PluginRegistryEntry } from './types';
+export type { ModePlugin, PluginCapability, PluginConfig, PluginEvent, PluginEventHandler, PluginInput, PluginOutput } from './types';

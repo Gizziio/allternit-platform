@@ -4,11 +4,54 @@
  * Provides health check functionality for the API server.
  */
 
-export interface HealthStatus {
+interface HealthStatus {
   status: 'healthy' | 'unhealthy';
   version?: string;
   uptime?: number;
   timestamp?: string;
+}
+
+const HEALTH_PATHS = ['/health', '/v1/global/health'] as const;
+
+async function requestHealth(
+  baseUrl: string,
+  authHeader?: string,
+  timeout: number = 2000,
+): Promise<Response | null> {
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
+
+  for (const path of HEALTH_PATHS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+    };
+
+    if (authHeader) {
+      headers.Authorization = authHeader;
+    }
+
+    try {
+      const response = await fetch(`${normalizedBaseUrl}${path}`, {
+        method: 'GET',
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        return response;
+      }
+    } catch {
+      // Try the next known health route.
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -25,27 +68,9 @@ export async function healthCheck(
   timeout: number = 2000
 ): Promise<boolean> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-    };
-
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
-
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/health`, {
-      method: 'GET',
-      headers,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    return response.ok;
-  } catch (error) {
+    const response = await requestHealth(baseUrl, authHeader, timeout);
+    return response?.ok ?? false;
+  } catch {
     // Connection failed or timed out
     return false;
   }
@@ -65,26 +90,9 @@ export async function getHealthStatus(
   timeout: number = 2000
 ): Promise<HealthStatus | null> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    const response = await requestHealth(baseUrl, authHeader, timeout);
 
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-    };
-
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
-
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/health`, {
-      method: 'GET',
-      headers,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
+    if (!response?.ok) {
       return { status: 'unhealthy' };
     }
 

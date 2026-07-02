@@ -24,7 +24,7 @@ import {
 // Props Interface
 // ============================================================================
 
-export interface GlassPanelProps {
+interface GlassPanelProps {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -270,28 +270,28 @@ function ResizeHandle({ resizable, position, zIndex, onResizeStart, onResizeEnd 
 /**
  * Left sidebar panel
  */
-export function GlassSidebar(props: Omit<GlassPanelProps, 'position'>) {
+function GlassSidebar(props: Omit<GlassPanelProps, 'position'>) {
   return <GlassPanel {...props} position="left" rounded="none" />;
 }
 
 /**
  * Right drawer panel
  */
-export function GlassDrawer(props: Omit<GlassPanelProps, 'position'>) {
+function GlassDrawer(props: Omit<GlassPanelProps, 'position'>) {
   return <GlassPanel {...props} position="right" rounded="none" />;
 }
 
 /**
  * Top sheet panel
  */
-export function GlassTopPanel(props: Omit<GlassPanelProps, 'position'>) {
+function GlassTopPanel(props: Omit<GlassPanelProps, 'position'>) {
   return <GlassPanel {...props} position="top" rounded="none" />;
 }
 
 /**
  * Bottom sheet panel
  */
-export function GlassBottomPanel(props: Omit<GlassPanelProps, 'position'>) {
+function GlassBottomPanel(props: Omit<GlassPanelProps, 'position'>) {
   return <GlassPanel {...props} position="bottom" rounded="none" />;
 }
 

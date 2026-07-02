@@ -1,3 +1,4 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useEffect, useState } from 'react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import {
@@ -7,6 +8,10 @@ import {
 } from '@phosphor-icons/react';
 
 import { KanbanDAG } from './KanbanDAG';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('KanbanBoard');
 
 const COLUMNS: { id: string; label: string; color: string }[] = [
   { id: 'open', label: 'Backlog', color: 'var(--ui-text-muted)' },
@@ -99,18 +104,12 @@ export function KanbanBoard() {
         // Fail the WIH (transition to blocked via failure)
         await closeWih(wih.wih_id, 'failed');
       } else if (wih.status === 'blocked' && targetStatus === 'ready') {
-        // Unblock - would need API endpoint for this
-        console.debug('Unblocking WIH:', wih.wih_id);
-        // For now, just refresh to get updated state
         await fetchWihs();
       } else {
-        // For other transitions, just log (would need specific API endpoints)
-        console.debug(`Transitioning WIH ${wih.wih_id} from ${wih.status} to ${targetStatus}`);
-        // Refresh to get current state from server
         await fetchWihs();
       }
     } catch (err) {
-      console.error('Failed to update WIH status:', err);
+      logger.error({ err: err }, 'Failed to update WIH status:');
     } finally {
       setDraggedWih(null);
       setIsUpdating(false);
@@ -130,7 +129,7 @@ export function KanbanBoard() {
         background: 'rgba(0,0,0,0.02)',
         alignItems: 'center'
       }}>
-        <button 
+        <button type="button" 
           onClick={() => setView('board')} 
           style={{ 
             padding: '4px 12px', 
@@ -145,7 +144,7 @@ export function KanbanBoard() {
         >
           BOARD
         </button>
-        <button 
+        <button type="button" 
           onClick={() => setView('dag')} 
           style={{ 
             padding: '4px 12px', 
@@ -161,7 +160,7 @@ export function KanbanBoard() {
           DAG VIEW
         </button>
         <div style={{ flex: 1 }} />
-        <button
+        <button type="button"
           onClick={() => fetchWihs()}
           disabled={isLoading}
           style={{
@@ -318,12 +317,12 @@ export function KanbanBoard() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{selectedWih.title || selectedWih.wih_id}</h3>
-            <button onClick={() => selectWih(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5 }}>✕</button>
+            <button type="button" onClick={() => selectWih(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5 }}>✕</button>
           </div>
           
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {COLUMNS.map(col => (
-              <button
+              <button type="button"
                 key={col.id}
                 onClick={() => {
                   // Status change would go here via API
@@ -390,7 +389,7 @@ export function KanbanBoard() {
             <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.5, marginBottom: 8 }}>ACTIONS</div>
             <div style={{ display: 'flex', gap: 8 }}>
               {(selectedWih.status === 'open' || selectedWih.status === 'ready') && selectedWih.dag_id && (
-                <button
+                <button type="button"
                   onClick={() => selectedWih.dag_id && pickupWih(selectedWih.dag_id, selectedWih.node_id, `agent_${Date.now()}`, 'builder')}
                   style={{
                     flex: 1,
@@ -409,7 +408,7 @@ export function KanbanBoard() {
               )}
               {(selectedWih.status === 'signed' || selectedWih.status === 'in_progress') && (
                 <>
-                  <button
+                  <button type="button"
                     onClick={() => closeWih(selectedWih.wih_id, 'completed')}
                     style={{
                       flex: 1,
@@ -425,7 +424,7 @@ export function KanbanBoard() {
                   >
                     Complete
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => closeWih(selectedWih.wih_id, 'failed')}
                     style={{
                       flex: 1,

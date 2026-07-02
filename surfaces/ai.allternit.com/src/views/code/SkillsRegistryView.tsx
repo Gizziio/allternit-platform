@@ -75,7 +75,7 @@ export function SkillsRegistryView() {
       {/* Mode Filter Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {(['All', 'Network', 'DOM', 'API'] as ModeFilter[]).map(mode => (
-          <button
+          <button type="button"
             key={mode}
             onClick={() => setModeFilter(mode)}
             style={{
@@ -101,8 +101,7 @@ export function SkillsRegistryView() {
           size={16} 
           style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }}
         />
-        <input
-          type="text"
+        <input aria-label="Search skills…" type="text"
           placeholder="Search skills…"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -190,7 +189,7 @@ export function SkillsRegistryView() {
 
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <button
+                  <button type="button"
                     onClick={(e) => { e.stopPropagation(); }}
                     style={{
                       padding: '6px 10px',
@@ -208,7 +207,7 @@ export function SkillsRegistryView() {
                   >
                     <Play size={12} weight="fill" /> Run
                   </button>
-                  <button
+                  <button type="button"
                     onClick={(e) => { e.stopPropagation(); }}
                     style={{
                       padding: '6px 10px',
@@ -226,7 +225,7 @@ export function SkillsRegistryView() {
                   >
                     <PencilSimple size={12} /> Edit
                   </button>
-                  <button
+                  <button type="button"
                     onClick={(e) => { e.stopPropagation(); }}
                     style={{
                       padding: '6px 10px',

@@ -1,7 +1,7 @@
-"use client";
+import React, { useState } from "react";
 
-import React, { useState } from 'react';
-import { GitBranch, Check, Loader2 } from 'lucide-react';
+"use client";
+import { Loader2, Check, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ForkButtonProps {
@@ -46,7 +46,7 @@ export function ForkButton({
   };
 
   return (
-    <button
+    <button type="button"
       onClick={handleFork}
       disabled={disabled || isForking || isForked}
       aria-label={isForking ? 'Forking conversation...' : isForked ? 'Forked!' : 'Fork conversation from here'}
@@ -110,7 +110,7 @@ interface MessageActionsProps {
  * Container for message action buttons (fork, edit, delete, etc.)
  * Shows on message hover
  */
-export function MessageActions({ children, className }: MessageActionsProps) {
+function MessageActions({ children, className }: MessageActionsProps) {
   return (
     <div
       className={className}

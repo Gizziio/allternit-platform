@@ -14,6 +14,10 @@ import { BrowserCapsuleEnhanced } from '../../capsules/browser/BrowserCapsuleEnh
 import { cloudDeployApi, type DeploymentEvent, type WizardState } from './lib/api-client';
 import './CloudDeployView.css';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CloudDeployView');
+
 export type DeploymentPhase =
   | 'wizard'
   | 'agentAssisted'
@@ -77,7 +81,7 @@ export const CloudDeployView: React.FC = () => {
             setCurrentPhase('deploying');
           }
         } catch (err) {
-          console.error('Failed to poll wizard state:', err);
+          logger.error({ err: err }, 'Failed to poll wizard state:');
         }
       }, 2000);
 
@@ -107,7 +111,7 @@ export const CloudDeployView: React.FC = () => {
         setCurrentPhase('wizard');
       }
     } catch (err) {
-      console.error('Failed to start wizard:', err);
+      logger.error({ err: err }, 'Failed to start wizard:');
       setError(err instanceof Error ? err.message : 'Failed to start wizard');
     }
   };
@@ -128,7 +132,7 @@ export const CloudDeployView: React.FC = () => {
         setCurrentPhase('deploying');
       }
     } catch (err) {
-      console.error('Failed to advance wizard:', err);
+      logger.error({ err: err }, 'Failed to advance wizard:');
       setError(err instanceof Error ? err.message : 'Failed to advance wizard');
     }
   };
@@ -152,7 +156,7 @@ export const CloudDeployView: React.FC = () => {
       }
     } catch (err) {
       setIsResuming(false);
-      console.error('Failed to resume wizard:', err);
+      logger.error({ err: err }, 'Failed to resume wizard:');
       setError(err instanceof Error ? err.message : 'Failed to resume wizard');
     }
   };
@@ -213,7 +217,7 @@ export const CloudDeployView: React.FC = () => {
         }
       );
     } catch (error) {
-      console.error('Failed to start deployment:', error);
+      logger.error({ err: error }, 'Failed to start deployment:');
       setError(error instanceof Error ? error.message : 'Failed to start deployment');
     }
   };
@@ -259,7 +263,7 @@ export const CloudDeployView: React.FC = () => {
         <div className="error-banner">
           <span className="error-icon">❌</span>
           <span className="error-message">{error}</span>
-          <button className="error-dismiss" onClick={() => setError(null)}>
+          <button type="button" className="error-dismiss" onClick={() => setError(null)}>
             Dismiss
           </button>
         </div>
@@ -293,7 +297,7 @@ export const CloudDeployView: React.FC = () => {
             </div>
 
             <div className="agent-actions">
-              <button
+              <button type="button"
                 className="btn-secondary"
                 onClick={handleAdvanceWizard}
               >

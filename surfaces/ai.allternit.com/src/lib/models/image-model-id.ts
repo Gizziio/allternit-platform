@@ -2,7 +2,7 @@
  * Image model IDs supported by the application
  */
 
-export const IMAGE_MODEL_IDS = [
+const IMAGE_MODEL_IDS = [
   "openai/dall-e-3",
   "openai/dall-e-2",
   "stability-ai/sd-xl",
@@ -15,14 +15,14 @@ export type ImageModelId = (typeof IMAGE_MODEL_IDS)[number];
 // Alias for compatibility
 export type AnyImageModelId = ImageModelId;
 
-export function isValidImageModelId(modelId: string): modelId is ImageModelId {
+function isValidImageModelId(modelId: string): modelId is ImageModelId {
   return IMAGE_MODEL_IDS.includes(modelId as ImageModelId);
 }
 
-export const DEFAULT_IMAGE_MODEL: ImageModelId = "openai/dall-e-3";
+const DEFAULT_IMAGE_MODEL: ImageModelId = "openai/dall-e-3";
 
 // Multimodal image model IDs
-export const MULTIMODAL_IMAGE_MODEL_IDS = [
+const MULTIMODAL_IMAGE_MODEL_IDS = [
   "openai/gpt-4o",
   "openai/gpt-4o-mini",
   "anthropic/claude-3-opus",
@@ -36,6 +36,6 @@ export type MultimodalImageModelId = (typeof MULTIMODAL_IMAGE_MODEL_IDS)[number]
 /**
  * Check if a model ID is a multimodal image model
  */
-export function isMultimodalImageModel(modelId: string): modelId is MultimodalImageModelId {
+function isMultimodalImageModel(modelId: string): modelId is MultimodalImageModelId {
   return MULTIMODAL_IMAGE_MODEL_IDS.includes(modelId as MultimodalImageModelId);
 }

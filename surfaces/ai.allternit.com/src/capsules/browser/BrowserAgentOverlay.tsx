@@ -1,3 +1,5 @@
+import React, { useCallback, useEffect, useRef } from "react";
+
 /**
  * BrowserAgentOverlay - Execution plane visualization
  * 
@@ -17,8 +19,6 @@
  */
 
 "use client";
-
-import React, { useEffect, useRef, useCallback } from 'react';
 import {
   CursorClick,
   Hand,
@@ -28,7 +28,6 @@ import {
   Camera,
   DownloadSimple,
   Warning,
-  CheckCircle,
   Clock,
 } from '@phosphor-icons/react';
 import {
@@ -37,7 +36,6 @@ import {
   BrowserAgentStatus,
 } from './browserAgent.types';
 import { getObservabilityService } from '@/capsules/browser/observabilityService';
-
 // ============================================================================
 // Props
 // ============================================================================
@@ -127,30 +125,66 @@ export function BrowserAgentOverlay({
     }
   }, []);
 
-  // Get action color
-  const getActionColor = useCallback((actionType: BrowserActionType) => {
+  // Get action configuration
+  const getActionConfig = useCallback((actionType: BrowserActionType) => {
     switch (actionType) {
       case 'Click':
-        return 'bg-blue-500 border-blue-600 text-white';
+        return { 
+          classes: 'bg-blue-500 border-blue-600 text-white', 
+          hex: '#3b82f6',
+          label: 'Clicking...' 
+        };
       case 'Type':
-        return 'bg-purple-500 border-purple-600 text-white';
+        return { 
+          classes: 'bg-purple-500 border-purple-600 text-white', 
+          hex: '#a855f7',
+          label: 'Typing...' 
+        };
       case 'Scroll':
-        return 'bg-green-500 border-green-600 text-white';
+        return { 
+          classes: 'bg-green-500 border-green-600 text-white', 
+          hex: '#22c55e',
+          label: 'Scrolling...' 
+        };
       case 'Navigate':
-        return 'bg-blue-500 border-blue-600 text-white';
+        return { 
+          classes: 'bg-blue-500 border-blue-600 text-white', 
+          hex: '#3b82f6',
+          label: 'Navigating...' 
+        };
       case 'Assert':
       case 'Extract':
-        return 'bg-cyan-500 border-cyan-600 text-white';
+        return { 
+          classes: 'bg-cyan-500 border-cyan-600 text-white', 
+          hex: '#06b6d4',
+          label: actionType === 'Assert' ? 'Checking...' : 'Extracting...' 
+        };
       case 'Screenshot':
-        return 'bg-pink-500 border-pink-600 text-white';
+        return { 
+          classes: 'bg-pink-500 border-pink-600 text-white', 
+          hex: '#ec4899',
+          label: 'Capturing...' 
+        };
       case 'Download':
-        return 'bg-orange-500 border-orange-600 text-white';
+        return { 
+          classes: 'bg-orange-500 border-orange-600 text-white', 
+          hex: '#f97316',
+          label: 'Downloading...' 
+        };
       case 'ConfirmGate':
-        return 'bg-yellow-500 border-yellow-600 text-white animate-pulse';
+        return { 
+          classes: 'bg-yellow-500 border-yellow-600 text-white animate-pulse', 
+          hex: '#eab308',
+          label: 'Requires Approval' 
+        };
       case 'Select':
       case 'Wait':
       default:
-        return 'bg-zinc-500 border-zinc-600 text-white';
+        return { 
+          classes: 'bg-zinc-500 border-zinc-600 text-white', 
+          hex: '#71717a',
+          label: actionType === 'Select' ? 'Selecting...' : 'Waiting...' 
+        };
     }
   }, []);
 
@@ -163,6 +197,7 @@ export function BrowserAgentOverlay({
   // Emit event when highlight changes
   useEffect(() => {
     if (shouldShow && currentAction && onEvent) {
+      const config = getActionConfig(currentAction.type);
       const event: OverlayHighlightEvent = {
         sessionId: 'current', // Would come from context in real implementation
         actionId: 'current', // Would come from context
@@ -172,7 +207,7 @@ export function BrowserAgentOverlay({
         },
         actionType: currentAction.type,
         boundingBox: currentAction.boundingBox || undefined,
-        label: currentAction.label || getActionLabel(currentAction.type),
+        label: currentAction.label || config.label,
         visible: true,
       };
       onEvent(event);
@@ -195,15 +230,15 @@ export function BrowserAgentOverlay({
         },
       });
     }
-  }, [shouldShow, currentAction, onEvent, getActionLabel]);
+  }, [shouldShow, currentAction, onEvent, getActionConfig]);
 
   if (!shouldShow || !currentAction.boundingBox) {
     return null;
   }
 
   const ActionIcon = getActionIcon(currentAction.type);
-  const actionColor = getActionColor(currentAction.type);
-  const label = currentAction.label || getActionLabel(currentAction.type);
+  const actionConfig = getActionConfig(currentAction.type);
+  const label = currentAction.label || actionConfig.label;
 
   const { x, y, width, height } = currentAction.boundingBox;
 
@@ -222,7 +257,7 @@ export function BrowserAgentOverlay({
         ref={highlightRef}
         className={`
           absolute border-2 rounded-lg
-          ${actionColor}
+          ${actionConfig.classes}
           bg-opacity-20
           animate-in fade-in duration-200
         `}
@@ -231,14 +266,35 @@ export function BrowserAgentOverlay({
           top: y,
           width,
           height,
-          boxShadow: `0 0 20px ${actionColor.split(' ')[0].replace('bg-', '')}40`,
+          boxShadow: `0 0 20px ${actionConfig.hex}40`,
         }}
       >
-        {/* Corner accents */}
-        <div className="absolute -top-1 -left-1 size-3  border-t-2 border-l-2 border-current rounded-tl" />
-        <div className="absolute -top-1 -right-1 size-3  border-t-2 border-r-2 border-current rounded-tr" />
-        <div className="absolute -bottom-1 -left-1 size-3  border-b-2 border-l-2 border-current rounded-bl" />
-        <div className="absolute -bottom-1 -right-1 size-3  border-b-2 border-r-2 border-current rounded-br" />
+        {/* Corner accents - Pure CSS mask approach for pixel-perfect scaling */}
+        <div 
+          className="absolute -inset-1 pointer-events-none text-current"
+          style={{
+            border: '2px solid currentColor',
+            borderRadius: '12px',
+            maskImage: `
+              linear-gradient(black, black), 
+              linear-gradient(black, black), 
+              linear-gradient(black, black), 
+              linear-gradient(black, black)
+            `,
+            maskSize: '12px 12px',
+            maskPosition: '0 0, 100% 0, 0 100%, 100% 100%',
+            maskRepeat: 'no-repeat',
+            WebkitMaskImage: `
+              linear-gradient(black, black), 
+              linear-gradient(black, black), 
+              linear-gradient(black, black), 
+              linear-gradient(black, black)
+            `,
+            WebkitMaskSize: '12px 12px',
+            WebkitMaskPosition: '0 0, 100% 0, 0 100%, 100% 100%',
+            WebkitMaskRepeat: 'no-repeat',
+          }}
+        />
       </div>
 
       {/* Action Badge */}
@@ -247,7 +303,7 @@ export function BrowserAgentOverlay({
         className={`
           absolute flex items-center gap-1.5
           px-3 py-1.5 rounded-full
-          ${actionColor}
+          ${actionConfig.classes}
           shadow-lg
           animate-in slide-in-from-top-2 duration-200
         `}
@@ -291,39 +347,6 @@ export function BrowserAgentOverlay({
       )}
     </div>
   );
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-function getActionLabel(actionType: BrowserActionType): string {
-  switch (actionType) {
-    case 'Click':
-      return 'Clicking...';
-    case 'Type':
-      return 'Typing...';
-    case 'Scroll':
-      return 'Scrolling...';
-    case 'Navigate':
-      return 'Navigating...';
-    case 'Assert':
-      return 'Checking...';
-    case 'Extract':
-      return 'Extracting...';
-    case 'Screenshot':
-      return 'Capturing...';
-    case 'Download':
-      return 'Downloading...';
-    case 'ConfirmGate':
-      return 'Requires Approval';
-    case 'Select':
-      return 'Selecting...';
-    case 'Wait':
-      return 'Waiting...';
-    default:
-      return 'Acting...';
-  }
 }
 
 // ============================================================================

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useIsClient } from "@/lib/hooks/use-is-client";
 import { ArtifactTemplateGallery } from '@/components/chat/ArtifactTemplateGallery';
 import type { ArtifactTemplate } from '@/lib/ai/tools/templates/artifact-templates';
 
@@ -14,7 +13,7 @@ export default function GalleryTestPage() {
   const [log, setLog] = useState<string[]>([]);
 
   const addLog = (msg: string) =>
-    setLog(prev => [`${isClient ? new Date().toLocaleTimeString() : "..."} — ${msg}`, ...prev.slice(0, 19)]);
+    setLog(prev => [`${new Date().toLocaleTimeString()} — ${msg}`, ...prev.slice(0, 19)]);
 
   return (
     <div style={{

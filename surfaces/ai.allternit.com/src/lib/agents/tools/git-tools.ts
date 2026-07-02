@@ -46,7 +46,7 @@ Examples:
   },
 };
 
-export interface GitStatus {
+interface GitStatus {
   branch: string;
   ahead: number;
   behind: number;
@@ -131,7 +131,7 @@ Examples:
   },
 };
 
-export interface GitCommit {
+interface GitCommit {
   hash: string;
   shortHash: string;
   message: string;
@@ -213,7 +213,7 @@ Examples:
   },
 };
 
-export interface GitDiff {
+interface GitDiff {
   files: Array<{
     path: string;
     changeType: "added" | "modified" | "deleted" | "renamed";
@@ -278,7 +278,7 @@ Examples:
   },
 };
 
-export interface GitBranch {
+interface GitBranch {
   name: string;
   current: boolean;
   remote?: string;

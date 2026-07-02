@@ -1,3 +1,4 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
 /**
  * allternit Super-Agent OS - File System Watcher
  * 
@@ -11,9 +12,9 @@ import type { AssetManagerState, AssetManagerItem } from '../types/programs';
 // Types
 // ============================================================================
 
-export type FileChangeType = 'created' | 'modified' | 'deleted';
+type FileChangeType = 'created' | 'modified' | 'deleted';
 
-export interface FileChangeEvent {
+interface FileChangeEvent {
   type: FileChangeType;
   path: string;
   name: string;
@@ -22,7 +23,7 @@ export interface FileChangeEvent {
   mimeType?: string;
 }
 
-export interface WatcherOptions {
+interface WatcherOptions {
   /** Folder path to watch (relative or absolute) */
   folderPath: string;
   /** Poll interval in ms (fallback if native watcher unavailable) */
@@ -33,6 +34,8 @@ export interface WatcherOptions {
   onChange?: (event: FileChangeEvent) => void;
   /** Enable recursive watching */
   recursive?: boolean;
+  /** Include file content in change events */
+  includeContent?: boolean;
 }
 
 // ============================================================================
@@ -81,7 +84,7 @@ function getMimeType(filename: string): string {
 // File System Watcher
 // ============================================================================
 
-export class FileSystemWatcher {
+class FileSystemWatcher {
   private options: WatcherOptions;
   private intervalId: NodeJS.Timeout | null = null;
   private fileCache: Map<string, { size: number; mtime: number }> = new Map();
@@ -110,7 +113,7 @@ export class FileSystemWatcher {
       this.performScan();
     }, this.options.pollInterval);
     
-    console.debug(`[FileSystemWatcher] Started watching: ${this.options.folderPath}`);
+    logger.debug(`Started watching: ${this.options.folderPath}`);
   }
 
   /**
@@ -122,16 +125,13 @@ export class FileSystemWatcher {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    console.debug(`[FileSystemWatcher] Stopped watching: ${this.options.folderPath}`);
+    logger.debug(`Stopped watching: ${this.options.folderPath}`);
   }
 
   /**
    * Perform a scan of the folder
    */
   private performScan(): void {
-    // In a real implementation, this would use Node.js fs APIs
-    // For now, we'll simulate with browser APIs if available
-    
     if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
       this.scanWithFileSystemAPI();
     } else {
@@ -177,7 +177,7 @@ export class FileSystemWatcher {
       this.fileCache = newFiles;
       
     } catch (err) {
-      console.warn('[FileSystemWatcher] File System API not available:', err);
+      logger.warn({ err: err }, 'File System API not available');
       this.scanWithFallback();
     }
   }
@@ -185,7 +185,7 @@ export class FileSystemWatcher {
   private scanWithFallback(): void {
     // In Electron or Node environment, use fs module
     // For browser-only, we rely on kernel notifications
-    console.debug('[FileSystemWatcher] Using fallback scan mode');
+    logger.debug('Using fallback scan mode');
   }
 
   private checkForChanges(path: string, name: string, size: number, mtime: number): void {
@@ -230,7 +230,7 @@ export class FileSystemWatcher {
 // AssetManager Sync
 // ============================================================================
 
-export class AssetManagerSync {
+class AssetManagerSync {
   private watcher: FileSystemWatcher;
   private programId: string | null = null;
 
@@ -337,10 +337,10 @@ export class AssetManagerSync {
 // ============================================================================
 // React Hooks
 // ============================================================================
+import { createModuleLogger } from '@/lib/logger';
+const logger = createModuleLogger('FileSystemWatcher');
 
-import { useEffect, useRef, useCallback, useState } from 'react';
-
-export function useFileSystemWatcher(options: WatcherOptions) {
+function useFileSystemWatcher(options: WatcherOptions) {
   const watcherRef = useRef<FileSystemWatcher | null>(null);
   const [events, setEvents] = useState<FileChangeEvent[]>([]);
 
@@ -358,7 +358,7 @@ export function useFileSystemWatcher(options: WatcherOptions) {
     return () => {
       watcherRef.current?.stop();
     };
-  }, [options.folderPath]);
+  }, [options.folderPath, options.onChange, options.recursive, options.includeContent]);
 
   const clearEvents = useCallback(() => {
     setEvents([]);
@@ -371,9 +371,16 @@ export function useFileSystemWatcher(options: WatcherOptions) {
   };
 }
 
-export function useAssetManagerSync(programId: string, folderPath: string = '.allternit/drive') {
+function useAssetManagerSync(programId: string, folderPath: string = '.allternit/drive') {
   const syncRef = useRef<AssetManagerSync | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Inline state adjustment for programId/folderPath change
+  const [prevSyncParams, setPrevSyncParams] = useState({ programId, folderPath });
+  if (programId !== prevSyncParams.programId || folderPath !== prevSyncParams.folderPath) {
+    setPrevSyncParams({ programId, folderPath });
+    setIsSyncing(false); // Reset while new sync starts
+  }
 
   useEffect(() => {
     syncRef.current = new AssetManagerSync(folderPath);

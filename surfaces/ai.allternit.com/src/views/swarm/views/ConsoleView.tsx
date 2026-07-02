@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { Play, Check, X, ArrowsLeftRight, Warning, ChatText } from '@phosphor-icons/react';
-import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/allternit.tokens';
+import { TEXT, STATUS } from '@/design/allternit.tokens';
 import { SwarmAgent, SwarmMetrics, ActivityEvent } from '../types';
 
 interface ConsoleViewProps {
@@ -109,7 +109,7 @@ export function ConsoleView({
           <div className="p-2 space-y-1">
             {/* Orchestrator */}
             {orchestrator && (
-              <button
+              <button type="button"
                 onClick={() => onAgentSelect(orchestrator.id)}
                 className="w-full p-2 rounded border text-left transition-colors hover:bg-white/5"
                 style={{ 
@@ -131,7 +131,7 @@ export function ConsoleView({
 
             {/* Workers */}
             {workers.map((agent, idx) => (
-              <button
+              <button type="button"
                 key={agent.id}
                 onClick={() => onAgentSelect(agent.id)}
                 className="w-full p-2 rounded border text-left transition-colors hover:bg-white/5"

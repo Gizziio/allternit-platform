@@ -97,7 +97,7 @@ function HookRow({ hook, onToggle }: { hook: Hook; onToggle: (id: string) => voi
           P{hook.priority}
         </div>
 
-        <button
+        <button type="button"
           onClick={() => onToggle(hook.id)}
           className={`p-2 rounded-lg transition-colors ${
             hook.enabled
@@ -232,7 +232,7 @@ export function HooksSystemView() {
       {/* Tabs */}
       <div className="px-6 pt-4 border-b border-[var(--border-subtle)] flex gap-8">
         {(['Kernel', 'Workspace', 'Task', 'Human'] as HookCategory[]).map((category) => (
-          <button
+          <button type="button"
             key={category}
             onClick={() => setActiveTab(category)}
             className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
@@ -255,7 +255,7 @@ export function HooksSystemView() {
               <h2 className="text-sm font-semibold text-[var(--text-secondary)]">
                 Registered Hooks
               </h2>
-              <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-xs font-medium hover:opacity-90 transition-opacity">
+              <button type="button" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-xs font-medium hover:opacity-90 transition-opacity">
                 <Plus size={16} />
                 Add Hook
               </button>

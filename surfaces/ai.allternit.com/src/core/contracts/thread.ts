@@ -1,6 +1,6 @@
 import { UUID, ISODate } from './base';
 
-export interface Thread {
+interface Thread {
   readonly id: UUID;
   readonly projectId: UUID;
   readonly createdAt: ISODate;

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { openInBrowser } from '@/lib/openInBrowser';
 
-export interface VPSProvider {
+interface VPSProvider {
   id: string;
   name: string;
   tagline: string;
@@ -277,7 +277,7 @@ export const VPSMarketplace: React.FC<VPSMarketplaceProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       className={cn(
         "fixed inset-0 z-50 flex items-center justify-center",
         "animate-in fade-in duration-300"
@@ -286,7 +286,7 @@ export const VPSMarketplace: React.FC<VPSMarketplaceProps> = ({
       onClick={onClose}
     >
       {/* Modal Content */}
-      <div
+      <div role="button" tabIndex={0}
         className={cn(
           "relative w-full max-w-[900px] max-h-[90vh] mx-4",
           "bg-[#0f0f0f] rounded-2xl border border-[#2a2a2a]",
@@ -297,7 +297,7 @@ export const VPSMarketplace: React.FC<VPSMarketplaceProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
-        <button
+        <button type="button"
           onClick={onClose}
           className={cn(
             "absolute top-4 right-4 z-10",

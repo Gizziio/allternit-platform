@@ -24,7 +24,7 @@ const STATE_TO_EMOTION: Record<string, AvatarEmotion> = {
   error: 'skeptical',
 };
 
-export const AgentMessageAvatar: React.FC<AgentMessageAvatarProps> = ({
+const AgentMessageAvatar: React.FC<AgentMessageAvatarProps> = ({
   avatarConfig,
   size = 32,
   state = 'idle',
@@ -58,3 +58,5 @@ export const AgentMessageAvatar: React.FC<AgentMessageAvatarProps> = ({
 };
 
 AgentMessageAvatar.displayName = 'AgentMessageAvatar';
+
+export { AgentMessageAvatar };

@@ -11,7 +11,7 @@
  * 3. Run: pnpm test src/lib/ai/mcp/__tests__/fixture-server.test.ts
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { 
   isMcpAppTool, 
   getMcpAppResourceUri, 

@@ -25,7 +25,7 @@ export function BatchToolbar({ modeColors }: BatchToolbarProps) {
         <span className="text-xs" style={{ color: TEXT.tertiary }}>
           {agents.length} agents
         </span>
-        <button
+        <button type="button"
           onClick={toggleBatchMode}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70"
           style={{ background: BACKGROUND.tertiary, color: TEXT.secondary }}
@@ -50,14 +50,14 @@ export function BatchToolbar({ modeColors }: BatchToolbarProps) {
           {selectedCount} selected
         </span>
         <div className="flex items-center gap-2">
-          <button
+          <button type="button"
             onClick={selectAll}
             className="px-2.5 py-1 rounded text-xs transition-opacity hover:opacity-70"
             style={{ color: TEXT.secondary }}
           >
             Select All
           </button>
-          <button
+          <button type="button"
             onClick={deselectAll}
             className="px-2.5 py-1 rounded text-xs transition-opacity hover:opacity-70"
             style={{ color: TEXT.secondary }}
@@ -68,7 +68,7 @@ export function BatchToolbar({ modeColors }: BatchToolbarProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <button
+        <button type="button"
           onClick={batchRestart}
           disabled={selectedCount === 0}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-opacity disabled:opacity-40"
@@ -77,7 +77,7 @@ export function BatchToolbar({ modeColors }: BatchToolbarProps) {
           <ArrowsClockwise size={11} weight="bold" />
           Restart
         </button>
-        <button
+        <button type="button"
           onClick={batchStop}
           disabled={selectedCount === 0}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-opacity disabled:opacity-40"
@@ -86,7 +86,7 @@ export function BatchToolbar({ modeColors }: BatchToolbarProps) {
           <Stop size={11} weight="fill" />
           Stop
         </button>
-        <button
+        <button type="button"
           onClick={toggleBatchMode}
           className="flex items-center justify-center size-7  rounded-md transition-opacity hover:opacity-70 ml-2"
           style={{ color: TEXT.tertiary }}

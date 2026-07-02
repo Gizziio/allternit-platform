@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../design/glass/GlassCard';
-import { tokens } from '../design/tokens';
 import {
   Robot,
   Clock,
@@ -72,10 +71,11 @@ function StatusDot({ status }: { status: AgentMetric['status'] }) {
   const cfg = STATUS_CONFIG[status];
   return (
     <span 
-      className="inline-block size-2 rounded-full shrink-0"
+      className={`inline-block size-2 rounded-full shrink-0 ${
+        status === 'active' ? 'shadow-[0_0_6px_var(--status-success)]' : ''
+      } bg-[var(--status-success)]`}
       style={{
         background: cfg.dotColor,
-        boxShadow: status === 'active' ? `0 0 6px ${cfg.dotColor}` : 'none',
       }} 
     />
   );
@@ -159,7 +159,7 @@ export function MonitorView() {
             Live view of all running agents and system activity
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={handleRefresh}
           className="flex items-center gap-2 p-2.5 px-[18px] rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-semibold text-[13px] cursor-pointer transition-all hover:bg-[var(--surface-hover)] active:scale-95"
         >
@@ -180,13 +180,13 @@ export function MonitorView() {
       {/* ── Quick Stats Chips ── */}
       <div className="flex gap-3 mb-7 flex-wrap">
         {[
-          { icon: Robot,      label: `${agents.length} total agents`,    color: 'var(--text-secondary)' },
-          { icon: CheckCircle,label: `${activeCount} active`,            color: 'var(--status-success)' },
-          { icon: Warning,    label: `${errorCount} with errors`,        color: 'var(--status-error)' },
-          { icon: Cpu,        label: `Avg ${avgLatency}ms latency`,      color: 'var(--accent-chat)' },
-          { icon: ChartLine,  label: `${(totalTokens/1000).toFixed(0)}K tokens today`, color: 'var(--accent-primary)' },
+          { icon: Robot,      label: `${agents.length} total agents`,    color: 'text-[var(--text-secondary)]' },
+          { icon: CheckCircle,label: `${activeCount} active`,            color: 'text-[var(--status-success)]' },
+          { icon: Warning,    label: `${errorCount} with errors`,        color: 'text-[var(--status-error)]' },
+          { icon: Cpu,        label: `Avg ${avgLatency}ms latency`,      color: 'text-[var(--accent-chat)]' },
+          { icon: ChartLine,  label: `${(totalTokens/1000).toFixed(0)}K tokens today`, color: 'text-[var(--accent-primary)]' },
         ].map(({ icon: Icon, label, color }) => (
-          <div key={label} className="flex items-center gap-1.5 p-1.5 px-3.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[13px] font-medium" style={{ color }}>
+          <div key={label} className={`flex items-center gap-1.5 p-1.5 px-3.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[13px] font-medium ${color}`}>
             <Icon size={14} weight="bold" />
             {label}
           </div>
@@ -196,7 +196,7 @@ export function MonitorView() {
       {/* ── Tab Bar ── */}
       <div className="flex gap-0 mb-5 border-b border-[var(--border-subtle)]">
         {TABS.map(tab => (
-          <button
+          <button type="button"
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`p-2.5 px-5 bg-transparent border-none cursor-pointer transition-all text-sm ${
@@ -220,11 +220,11 @@ export function MonitorView() {
               <GlassCard
                 key={agent.id}
                 className={`p-4 px-5 cursor-pointer transition-[border-color] duration-150 ${
-                  isSelected ? 'border-solid' : ''
+                  isSelected ? 'border-solid border-[var(--agent-border)]' : ''
                 }`}
                 style={{
-                  borderColor: isSelected ? `${cfg.color}40` : undefined,
-                }}
+                  '--agent-border': isSelected ? `${cfg.color}40` : undefined,
+                } as React.CSSProperties}
                 onClick={() => setSelectedAgent(isSelected ? null : agent.id)}
               >
                 <div className="flex items-center gap-4">
@@ -242,7 +242,13 @@ export function MonitorView() {
                   </div>
 
                   {/* Status Badge */}
-                  <span className="p-1 px-2.5 rounded-full text-[12px] font-bold tracking-wider uppercase" style={{ background: `${cfg.color}18`, color: cfg.color }}>
+                  <span 
+                    className="p-1 px-2.5 rounded-full text-[12px] font-bold tracking-wider uppercase bg-[var(--agent-status-bg)] text-[var(--agent-status-color)]"
+                    style={{ 
+                      '--agent-status-bg': `${cfg.color}18`, 
+                      '--agent-status-color': cfg.color 
+                    } as React.CSSProperties}
+                  >
                     {cfg.label}
                   </span>
 
@@ -308,7 +314,7 @@ export function MonitorView() {
           {/* Log Level Filter */}
           <div className="flex gap-2 mb-4">
             {(['all', 'info', 'warn', 'error'] as const).map(level => (
-              <button
+              <button type="button"
                 key={level}
                 onClick={() => setLogFilter(level)}
                 className={`p-1.5 px-4 rounded-full border border-solid text-[12px] font-semibold cursor-pointer uppercase tracking-wider transition-all ${
@@ -332,15 +338,18 @@ export function MonitorView() {
               return (
                 <div
                   key={entry.id}
-                  className={`grid grid-cols-[80px_50px_140px_1fr] gap-4 p-2.5 px-4 items-center ${
+                  className={`grid grid-cols-[80px_50px_140px_1fr] gap-4 p-2.5 px-4 items-center bg-[var(--log-bg)] ${
                     idx < filteredLogs.length - 1 ? 'border-b border-solid border-[var(--border-subtle)]' : ''
                   }`}
-                  style={{ background: cfg.bg }}
+                  style={{ '--log-bg': cfg.bg } as React.CSSProperties}
                 >
                   <span className="text-[12px] font-mono text-[var(--text-tertiary)]">
                     {entry.time}
                   </span>
-                  <span className="text-[12px] font-bold uppercase tracking-widest" style={{ color: cfg.color }}>
+                  <span 
+                    className="text-[12px] font-bold uppercase tracking-widest text-[var(--log-color)]" 
+                    style={{ '--log-color': cfg.color } as React.CSSProperties}
+                  >
                     {entry.level}
                   </span>
                   <span className="text-[12px] font-mono text-[var(--text-secondary)] truncate">
@@ -373,11 +382,11 @@ function ActionBtn({
   color?: string;
 }) {
   return (
-    <button
+    <button type="button"
       title={title}
       onClick={onClick}
-      className="size-8 rounded-lg border-none bg-[var(--bg-primary)] flex items-center justify-center cursor-pointer transition-colors duration-150 hover:bg-[var(--bg-secondary)]"
-      style={{ color }}
+      className="size-8 rounded-lg border-none bg-[var(--bg-primary)] flex items-center justify-center cursor-pointer transition-colors duration-150 hover:bg-[var(--bg-secondary)] text-[var(--btn-color)]"
+      style={{ '--btn-color': color } as React.CSSProperties}
     >
       <Icon size={15} weight="bold" />
     </button>

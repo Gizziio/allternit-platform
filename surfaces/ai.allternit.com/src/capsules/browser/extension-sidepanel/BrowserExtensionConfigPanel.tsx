@@ -37,7 +37,7 @@ export function BrowserExtensionConfigPanel({
   return (
     <div className="flex flex-col h-full">
       <header className="flex items-center gap-2 border-b px-3 py-2" style={{ borderColor: "var(--border)" }}>
-        <button
+        <button type="button"
           onClick={onBack}
           className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:opacity-80"
           style={{ color: "var(--muted-foreground)" }}
@@ -58,9 +58,8 @@ export function BrowserExtensionConfigPanel({
         <p className="text-xs opacity-60">{copy.settingsDescription}</p>
 
         <div className="space-y-1">
-          <label className="text-xs font-medium">API Key</label>
-          <input
-            type="password"
+          <div className="text-xs font-medium">API Key</div>
+          <input aria-label="Input" type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="sk-…"
@@ -70,9 +69,8 @@ export function BrowserExtensionConfigPanel({
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-medium">Base URL</label>
-          <input
-            type="text"
+          <div className="text-xs font-medium">Base URL</div>
+          <input aria-label="Input" type="text"
             value={baseURL}
             onChange={(e) => setBaseURL(e.target.value)}
             placeholder="https://api.openai.com/v1"
@@ -82,9 +80,8 @@ export function BrowserExtensionConfigPanel({
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-medium">Model</label>
-          <input
-            type="text"
+          <div className="text-xs font-medium">Model</div>
+          <input aria-label="Input" type="text"
             value={model}
             onChange={(e) => setModel(e.target.value)}
             placeholder="gpt-4o"
@@ -94,9 +91,8 @@ export function BrowserExtensionConfigPanel({
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-medium">Language</label>
-          <select
-            value={language}
+          <div className="text-xs font-medium">Language</div>
+          <select aria-label="Selection" value={language}
             onChange={(e) => setLanguage(e.target.value)}
             className="w-full rounded-md px-2.5 py-1.5 text-sm outline-none border"
             style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}
@@ -107,9 +103,8 @@ export function BrowserExtensionConfigPanel({
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-medium">Max Steps</label>
-          <input
-            type="number"
+          <div className="text-xs font-medium">Max Steps</div>
+          <input aria-label="Input" type="number"
             value={maxSteps ?? ""}
             onChange={(e) => setMaxSteps(e.target.value ? Number(e.target.value) : undefined)}
             placeholder="Unlimited"
@@ -119,9 +114,8 @@ export function BrowserExtensionConfigPanel({
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-medium">System Instruction</label>
-          <textarea
-            value={systemInstruction}
+          <div className="text-xs font-medium">System Instruction</div>
+          <textarea aria-label="Text Area" value={systemInstruction}
             onChange={(e) => setSystemInstruction(e.target.value)}
             placeholder="Optional system prompt…"
             rows={3}
@@ -132,7 +126,7 @@ export function BrowserExtensionConfigPanel({
       </div>
 
       <div className="border-t p-3" style={{ borderColor: "var(--border)" }}>
-        <button
+        <button type="button"
           onClick={handleSave}
           disabled={saving}
           className="w-full rounded-md px-3 py-2 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-50"

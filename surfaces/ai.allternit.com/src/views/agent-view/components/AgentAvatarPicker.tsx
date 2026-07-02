@@ -79,7 +79,7 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
 
       {/* Color palette */}
       <div>
-        <label
+        <div
           style={{
             fontSize: "12px",
             fontWeight: 600,
@@ -91,7 +91,7 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
           }}
         >
           Color
-        </label>
+        </div>
         <div
           style={{
             display: "grid",
@@ -100,7 +100,7 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
           }}
         >
           {PALETTE.map((color) => (
-            <button
+            <button type="button"
               key={color.bg}
               onClick={() =>
                 onChange({ ...config, bgColor: color.bg, textColor: color.text })
@@ -138,7 +138,7 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
 
       {/* Shape */}
       <div>
-        <label
+        <div
           style={{
             fontSize: "12px",
             fontWeight: 600,
@@ -150,10 +150,10 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
           }}
         >
           Shape
-        </label>
+        </div>
         <div style={{ display: "flex", gap: "8px" }}>
           {(["square", "rounded", "circle"] as const).map((shape) => (
-            <button
+            <button type="button"
               key={shape}
               onClick={() => onChange({ ...config, shape })}
               style={{
@@ -183,7 +183,7 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
 
       {/* Initial override */}
       <div>
-        <label
+        <div
           style={{
             fontSize: "12px",
             fontWeight: 600,
@@ -195,9 +195,8 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
           }}
         >
           Initial (auto from name)
-        </label>
-        <input
-          type="text"
+        </div>
+        <input aria-label="Input" type="text"
           maxLength={2}
           value={config.initial}
           onChange={(e) =>

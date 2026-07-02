@@ -13,7 +13,6 @@ import {
   PoolActivity,
   PoolHealth,
   PoolCreateForm,
-  PoolResources,
   ActivityType,
   defaultPoolResources,
 } from '@/types/runtime';

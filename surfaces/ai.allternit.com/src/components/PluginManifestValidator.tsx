@@ -1,22 +1,6 @@
-/**
- * Plugin Manifest Validator
- *
- * Validates plugin.json and marketplace.json files against Zod schemas.
- * Supports drag-and-drop, file picker, text paste, and GitHub URL loading.
- *
- * @example
- * ```tsx
- * import PluginManifestValidator from './PluginManifestValidator';
- *
- * function App() {
- *   return <PluginManifestValidator />;
- * }
- * ```
- */
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  UploadSimple,
   FileCode,
   CheckCircle,
   XCircle,
@@ -30,6 +14,7 @@ import {
   Sparkle,
   ArrowsClockwise,
   DownloadSimple,
+  UploadSimple,
   MagicWand,
 } from '@phosphor-icons/react';
 import {
@@ -425,8 +410,7 @@ function UrlInput({ onLoad, loading }: UrlInputProps) {
           color={isGitHubUrl ? THEME.accent : THEME.textTertiary}
           style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}
         />
-        <input
-          type="text"
+        <input aria-label="Input" type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://raw.githubusercontent.com/…/plugin.json"
@@ -476,8 +460,7 @@ interface TextInputProps {
 
 function TextInput({ value, onChange, placeholder }: TextInputProps) {
   return (
-    <textarea
-      value={value}
+    <textarea aria-label="Text Area" value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder || `// Paste your plugin.json or marketplace.json content here\n{\n  "name": "my-plugin",\n  "description": "A great plugin",\n  "version": "1.0.0"\n}`}
       style={{
@@ -577,9 +560,9 @@ function ValidationResultPanel({
           color={THEME.danger}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {errors.map((error, index) => (
+            {errors.map((error) => (
               <div
-                key={index}
+                key={`${error.path}-${error.message}`}
                 style={{
                   padding: 12,
                   borderRadius: 6,
@@ -620,9 +603,9 @@ function ValidationResultPanel({
           color={THEME.warning}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {warnings.map((warning, index) => (
+            {warnings.map((warning) => (
               <div
-                key={index}
+                key={`${warning.path}-${warning.message}`}
                 style={{
                   padding: 12,
                   borderRadius: 6,
@@ -657,7 +640,7 @@ function ValidationResultPanel({
         actions={
           <div style={{ display: 'flex', gap: 8 }}>
             {!valid && (
-              <button
+              <button type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onCopyCorrected();
@@ -679,7 +662,7 @@ function ValidationResultPanel({
                 Copy Fixed
               </button>
             )}
-            <button
+            <button type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onCopyFormatted();
@@ -762,7 +745,7 @@ function CollapsibleSection({
           background: 'transparent',
         }}
       >
-        <button
+        <button type="button"
           onClick={onToggle}
           style={{
             flex: 1,
@@ -821,7 +804,6 @@ export function PluginManifestValidator({
   const [content, setContent] = useState(initialContent || '');
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [validationDetails, setValidationDetails] = useState<ValidationDetails | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     errors: true,
     warnings: true,
@@ -829,24 +811,19 @@ export function PluginManifestValidator({
   });
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  // Validate content when it changes
-  useEffect(() => {
-    if (content.trim()) {
-      const details = validateWithDetails(content, activeTab);
-      setValidationDetails(details);
-      onValidationChange?.(details);
-    } else {
-      setValidationDetails(null);
-      onValidationChange?.(null);
-    }
-  }, [content, activeTab, onValidationChange]);
+  const [prevInitialContent, setPrevInitialContent] = useState(initialContent);
+  if (initialContent !== prevInitialContent) {
+    setPrevInitialContent(initialContent);
+    setContent(initialContent || '');
+  }
 
-  // Load initial content
+  const validationDetails = useMemo(() => {
+    return content.trim() ? validateWithDetails(content, activeTab) : null;
+  }, [content, activeTab]);
+
   useEffect(() => {
-    if (initialContent) {
-      setContent(initialContent);
-    }
-  }, [initialContent]);
+    onValidationChange?.(validationDetails);
+  }, [validationDetails, onValidationChange]);
 
   const handleFileDrop = useCallback(async (file: File) => {
     try {
@@ -906,7 +883,6 @@ export function PluginManifestValidator({
 
   const handleClear = useCallback(() => {
     setContent('');
-    setValidationDetails(null);
   }, []);
 
   const handleFormatJson = useCallback(() => {
@@ -1014,7 +990,7 @@ export function PluginManifestValidator({
             </div>
           </div>
           {content && (
-            <button
+            <button type="button"
               onClick={handleClear}
               style={{
                 padding: '6px 12px',
@@ -1034,7 +1010,7 @@ export function PluginManifestValidator({
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${THEME.border}` }}>
-        <button
+        <button type="button"
           onClick={() => {
             setActiveTab('plugin');
             setContent('');
@@ -1059,7 +1035,7 @@ export function PluginManifestValidator({
           <FileCode size={16} />
           Validate Plugin
         </button>
-        <button
+        <button type="button"
           onClick={() => {
             setActiveTab('marketplace');
             setContent('');
@@ -1127,7 +1103,7 @@ export function PluginManifestValidator({
                 {activeTab === 'plugin' ? 'Plugin Manifest JSON' : 'Marketplace Manifest JSON'}
               </span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
+                <button type="button"
                   onClick={handleFormatJson}
                   disabled={!content.trim()}
                   style={{
@@ -1149,7 +1125,7 @@ export function PluginManifestValidator({
                   <MagicWand size={12} />
                   Format JSON
                 </button>
-                <button
+                <button type="button"
                   onClick={() => handleLoadExample(activeTab)}
                   style={{
                     padding: '4px 8px',

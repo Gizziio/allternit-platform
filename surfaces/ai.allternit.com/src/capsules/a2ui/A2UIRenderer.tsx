@@ -1,3 +1,4 @@
+import React, { useCallback, useMemo, useState } from 'react';
 // ============================================================================
 // A2UI React Renderer
 // ============================================================================
@@ -6,7 +7,6 @@
 // from the 6-apps/ui package.
 // ============================================================================
 
-import React, { useCallback, useMemo, useState } from 'react';
 import * as RadixTooltip from '@radix-ui/react-tooltip';
 import * as RadixTabs from '@radix-ui/react-tabs';
 // Note: Additional Radix components can be added as needed:
@@ -338,7 +338,7 @@ function ButtonRenderer({ node, context }: ComponentRendererProps) {
   };
 
   return (
-    <button
+    <button type="button"
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors',
         'focus:outline-none focus:ring-2 focus:ring-[var(--accent-chat)]/20',
@@ -390,14 +390,13 @@ function TextFieldRenderer({ node, context }: ComponentRendererProps) {
   return (
     <div className={cn('space-y-1.5', props.className)} style={props.style}>
       {props.label && (
-        <label className="text-sm font-medium text-[var(--text-primary)]">
+        <div className="text-sm font-medium text-[var(--text-primary)]">
           {props.label}
           {props.required && <span className="text-red-500 ml-0.5">*</span>}
-        </label>
+        </div>
       )}
       {props.multiline ? (
-        <textarea
-          value={value}
+        <textarea aria-label={props.placeholder} value={value}
           onChange={handleChange}
           placeholder={props.placeholder}
           disabled={isDisabled}
@@ -413,8 +412,7 @@ function TextFieldRenderer({ node, context }: ComponentRendererProps) {
           )}
         />
       ) : (
-        <input
-          type={props.type || 'text'}
+        <input aria-label={props.placeholder} type={props.type || 'text'}
           value={value}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -542,7 +540,7 @@ function AlertRenderer({ node, context }: ComponentRendererProps) {
         <div className="text-sm">{message}</div>
       </div>
       {props.dismissible && (
-        <button
+        <button type="button"
           onClick={() => props.onDismiss && context.onAction(props.onDismiss)}
           className="shrink-0 opacity-60 hover:opacity-100"
         >
@@ -640,9 +638,9 @@ function ImageRenderer({ node, context }: ComponentRendererProps) {
 /** Code component */
 function CodeRenderer({ node, context }: ComponentRendererProps) {
   const props = node.props as CodeProps;
-  if (!isVisible(props, context.dataModel)) return null;
-
   const [copied, setCopied] = React.useState(false);
+
+  if (!isVisible(props, context.dataModel)) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(props.content);
@@ -653,7 +651,7 @@ function CodeRenderer({ node, context }: ComponentRendererProps) {
   return (
     <div className={cn('relative group', props.className)} style={props.style}>
       {props.copyable && (
-        <button
+        <button type="button"
           onClick={handleCopy}
           className="absolute top-2 right-2 p-1.5 rounded-md bg-[var(--glass-bg-elevated)]
                      opacity-0 group-hover:opacity-100 transition-opacity

@@ -9,7 +9,7 @@ import {
 import { CodeThreadView } from './CodeThreadView';
 import { CodeCanvasView } from './CodeCanvasView';
 
-export function CodeSurfaceRouter(): JSX.Element {
+export function CodeSurfaceRouter(): React.ReactNode {
   const state = useCodeModeStore();
   const activeWorkspace = getActiveWorkspace(state);
   const layoutMode = getWorkspaceLayoutMode(activeWorkspace);

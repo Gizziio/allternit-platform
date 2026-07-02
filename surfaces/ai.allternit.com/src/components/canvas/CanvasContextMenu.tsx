@@ -1,18 +1,7 @@
-"use client";
+import React, { Fragment, useEffect, useRef } from "react";
+import { BookBookmark, Browser, ChatTeardropText, GitDiff, Graph, NotePencil, SquaresFour, Target, Terminal, TerminalIcon } from "@phosphor-icons/react";
 
-import React, { useCallback, useEffect, useRef } from 'react';
-import {
-  ChatTeardropText,
-  Browser,
-  GitDiff,
-  Target,
-  SquaresFour,
-  GridFour,
-  Terminal as TerminalIcon,
-  NotePencil,
-  BookBookmark,
-  Graph,
-} from '@phosphor-icons/react';
+"use client";
 import type { CodeCanvasTile } from '@/views/code/CodeModeStore';
 
 interface ContextMenuItem {
@@ -227,7 +216,7 @@ export function CanvasContextMenu({
             </div>
           )}
           {section.items.map((item) => (
-            <button
+            <button type="button"
               key={item.id}
               onClick={item.onClick}
               disabled={item.disabled}

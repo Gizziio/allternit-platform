@@ -33,6 +33,7 @@ import {
   unbindAgentFromPurpose,
   listPurposeViolations,
 } from '@/lib/governance/policy.service';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import type {
   Purpose,
   AgentPurposeBinding,
@@ -62,9 +63,9 @@ export function PurposeBinding() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'purposes' | 'bindings' | 'violations'>('purposes');
-  const [, setSelectedPurpose] = useState<Purpose | null>(null);
-  const [, setShowCreateModal] = useState(false);
   const [showBindModal, setShowBindModal] = useState(false);
+  const [, setSelectedPurpose] = useState<Purpose | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -106,14 +107,19 @@ export function PurposeBinding() {
     }
   };
 
-  const handleUnbindAgent = async (agentId: string, purposeId: string) => {
-    if (!confirm('Are you sure you want to unbind this agent from the purpose?')) return;
-    try {
-      await unbindAgentFromPurpose(agentId, purposeId);
-      fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to unbind agent');
-    }
+  const handleUnbindAgent = (agentId: string, purposeId: string) => {
+    setConfirmDialog({
+      message: 'Are you sure you want to unbind this agent from the purpose?',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await unbindAgentFromPurpose(agentId, purposeId);
+          fetchData();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to unbind agent');
+        }
+      },
+    });
   };
 
   // Filter purposes
@@ -181,7 +187,7 @@ export function PurposeBinding() {
             Align agents with authorized purposes and monitor compliance
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowBindModal(true)}
           style={{
             padding: '8px 16px',
@@ -250,7 +256,7 @@ export function PurposeBinding() {
           { id: 'bindings', label: 'Bindings', count: bindings.length },
           { id: 'violations', label: 'Violations', count: violations.filter(v => !v.resolvedAt).length },
         ].map(tab => (
-          <button
+          <button type="button"
             key={tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
             style={{
@@ -291,8 +297,7 @@ export function PurposeBinding() {
       }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
           <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ui-text-muted)' }} />
-          <input
-            type="text"
+          <input aria-label={`Search ${activeTab}`} type="text"
             placeholder={`Search ${activeTab}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -309,8 +314,7 @@ export function PurposeBinding() {
           />
         </div>
         {activeTab === 'purposes' && (
-          <select
-            value={selectedCategory}
+          <select aria-label="Selection" value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             style={{
               padding: '8px 12px',
@@ -328,7 +332,7 @@ export function PurposeBinding() {
             ))}
           </select>
         )}
-        <button
+        <button type="button"
           onClick={fetchData}
           style={{
             padding: '8px 12px',
@@ -399,6 +403,15 @@ export function PurposeBinding() {
           onBind={handleBindAgent}
         />
       )}
+      <ConfirmModal
+        isOpen={confirmDialog !== null}
+        title="Unbind Agent"
+        message={confirmDialog?.message || ''}
+        confirmLabel="Unbind"
+        destructive
+        onConfirm={confirmDialog?.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }
@@ -419,7 +432,7 @@ function PurposeCard({
   const category = PURPOSE_CATEGORIES.find(c => c.value === purpose.category) || PURPOSE_CATEGORIES[0];
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       onClick={onClick}
       style={{
         background: 'var(--surface-panel)',
@@ -589,7 +602,7 @@ function BindingCard({
           Bound {new Date(binding.boundAt).toLocaleDateString()}
         </span>
         {binding.status === 'active' && (
-          <button
+          <button type="button"
             onClick={onUnbind}
             style={{
               padding: '6px 12px',
@@ -750,18 +763,17 @@ function BindAgentModal({
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Bind Agent to Purpose
           </h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
+          <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: 24 }}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+            <div style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Agent ID
-            </label>
-            <input
-              type="text"
+            </div>
+            <input aria-label="Input" type="text"
               value={agentId}
               onChange={(e) => setAgentId(e.target.value)}
               placeholder="Enter agent ID"
@@ -779,11 +791,10 @@ function BindAgentModal({
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+            <div style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Purpose
-            </label>
-            <select
-              value={purposeId}
+            </div>
+            <select aria-label="Selection" value={purposeId}
               onChange={(e) => setPurposeId(e.target.value)}
               required
               style={{
@@ -806,11 +817,10 @@ function BindAgentModal({
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+            <div style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Confidence Level: {Math.round(confidence * 100)}%
-            </label>
-            <input
-              type="range"
+            </div>
+            <input aria-label="Input" type="range"
               min="0"
               max="1"
               step="0.1"
@@ -918,7 +928,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
     <div style={{ textAlign: 'center', padding: 60 }}>
       <Warning size={32} color="var(--status-error)" />
       <p style={{ color: 'var(--status-error)', marginBottom: 16 }}>{message}</p>
-      <button
+      <button type="button"
         onClick={onRetry}
         style={{
           padding: '8px 16px',

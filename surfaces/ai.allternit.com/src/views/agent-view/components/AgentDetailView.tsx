@@ -22,7 +22,6 @@ import {
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import type { 
-  Agent, 
   AgentRun, 
   AgentTask, 
   Checkpoint as AgentCheckpoint, 
@@ -183,7 +182,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
             }}>
               Agent Profile
             </span>
-            <button
+            <button type="button"
               onClick={() => selectAgent(null)}
               style={{
                 padding: '6px',
@@ -298,10 +297,80 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
               )}
             </div>
 
+            {/* Harness Configuration */}
+            {agent.harness && (
+              <div style={{ marginBottom: '20px', padding: '12px', borderRadius: '10px', background: 'var(--surface-hover)', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+                <div style={{
+                  fontSize: '12px',
+                  color: STUDIO_THEME.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'block',
+                  marginBottom: '10px',
+                }}>
+                  Harness
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Mode</span>
+                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, textTransform: 'capitalize' }}>{agent.harness.mode}</span>
+                  </div>
+                  {agent.harness.mode === 'cloud' && agent.harness.cloud && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Base URL</span>
+                        <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.harness.cloud.baseURL}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Access Token</span>
+                        <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>
+                          {agent.harness.cloud.accessToken ? '••••••••' : 'Not set'}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {agent.harness.mode === 'byok' && agent.harness.byok && (
+                    <>
+                      {(['anthropic', 'openai', 'google'] as const).map((provider) => {
+                        const cfg = agent.harness?.byok?.[provider];
+                        if (!cfg?.apiKey) return null;
+                        return (
+                          <div key={provider} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, textTransform: 'capitalize' }}>{provider} Key</span>
+                            <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>••••••••</span>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                  {agent.harness.mode === 'local' && agent.harness.local && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Base URL</span>
+                      <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.harness.local.baseURL}</span>
+                    </div>
+                  )}
+                  {agent.harness.mode === 'subprocess' && agent.harness.subprocess && (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Command</span>
+                        <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.harness.subprocess.command}</span>
+                      </div>
+                      {agent.harness.subprocess.cwd && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Working Directory</span>
+                          <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.harness.subprocess.cwd}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Agent Card / Storefront Metadata */}
             {agent.agentCard && (
               <div style={{ marginBottom: '20px', padding: '12px', borderRadius: '10px', background: 'var(--surface-hover)', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
-                <label style={{
+                <div style={{
                   fontSize: '12px',
                   color: STUDIO_THEME.textMuted,
                   textTransform: 'uppercase',
@@ -310,7 +379,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   marginBottom: '10px',
                 }}>
                   Agent Card
-                </label>
+                </div>
 
                 {agent.agentCard.tagline && (
                   <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, fontStyle: 'italic', margin: '0 0 10px 0' }}>
@@ -415,7 +484,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Examples</span>
                     {agent.agentCard.examples.slice(0, 3).map((ex, i) => (
-                      <span key={i} style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, fontFamily: 'var(--font-mono)' }}>
+                      <span key={`agentdetailview-${i}`} style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, fontFamily: 'var(--font-mono)' }}>
                         → {ex}
                       </span>
                     ))}
@@ -427,7 +496,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
             {/* Teammate Profile (from Multica) */}
             {agent.teammateProfile && (
               <div style={{ marginBottom: '20px', padding: '12px', borderRadius: '10px', background: 'var(--surface-hover)', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
-                <label style={{
+                <div style={{
                   fontSize: '12px',
                   color: STUDIO_THEME.textMuted,
                   textTransform: 'uppercase',
@@ -436,7 +505,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   marginBottom: '8px',
                 }}>
                   Teammate Profile
-                </label>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Status</span>
@@ -480,7 +549,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
 
             {/* Capabilities */}
             <div style={{ marginBottom: '20px' }}>
-              <label style={{
+              <div style={{
                 fontSize: '12px',
                 color: STUDIO_THEME.textMuted,
                 textTransform: 'uppercase',
@@ -489,7 +558,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                 marginBottom: '8px',
               }}>
                 Capabilities
-              </label>
+              </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {agent.capabilities.map(cap => (
                   <span key={cap} style={{
@@ -508,7 +577,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-              <button
+              <button type="button"
                 onClick={() => setIsEditing(agentId)}
                 style={{
                   flex: 1,
@@ -528,7 +597,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                 <GearSix style={{ width: 16, height: 16 }} />
                 Edit
               </button>
-              <button
+              <button type="button"
                 onClick={() => setShowDeleteConfirm(true)}
                 style={{
                   padding: '10px 16px',
@@ -691,7 +760,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
 
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
-        <div style={{
+        <div role="button" tabIndex={0} style={{
           position: 'fixed',
           inset: 0,
           background: 'rgba(0, 0, 0, 0.9)',
@@ -727,7 +796,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
               Are you sure you want to delete &quot;{agent.name}&quot;? This action cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
+              <button type="button"
                 onClick={() => setShowDeleteConfirm(false)}
                 style={{
                   padding: '10px 16px',
@@ -741,7 +810,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={handleDelete}
                 style={{
                   padding: '10px 16px',
@@ -765,7 +834,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
 
 // Sub-components for AgentDetailView
 
-export function RunCard({ run, isActive, onClick }: { 
+function RunCard({ run, isActive, onClick }: { 
   run: AgentRun;
   isActive: boolean;
   onClick: () => void;
@@ -802,7 +871,7 @@ export function RunCard({ run, isActive, onClick }: {
   );
 }
 
-export function TaskCard({ task }: { task: AgentTask }) {
+function TaskCard({ task }: { task: AgentTask }) {
   const statusColors: Record<TaskStatus, string> = {
     pending: 'bg-white/30',
     'in-progress': 'bg-yellow-500',
@@ -840,7 +909,7 @@ export function TaskCard({ task }: { task: AgentTask }) {
   );
 }
 
-export function CheckpointCard({ checkpoint }: { checkpoint: AgentCheckpoint }) {
+function CheckpointCard({ checkpoint }: { checkpoint: AgentCheckpoint }) {
   return (
     <Checkpoint>
       <Card className="border-0 shadow-none">
@@ -865,7 +934,7 @@ export function CheckpointCard({ checkpoint }: { checkpoint: AgentCheckpoint }) 
   );
 }
 
-export function CommitCard({ commit }: { commit: AgentCommit }) {
+function CommitCard({ commit }: { commit: AgentCommit }) {
   return (
     <Commit>
       <Card className="border-0 shadow-none">

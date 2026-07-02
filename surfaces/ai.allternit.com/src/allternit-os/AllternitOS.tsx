@@ -14,10 +14,15 @@ const { useEffect, useState, useCallback } = React;
 type ReactNode = React.ReactNode;
 import { useSidecarStore } from './stores/useSidecarStore';
 import { programLauncher } from './utils/ProgramLauncher';
-import { initWorkspaceService } from './services/WorkspaceService';
+import { initWorkspaceService, getWorkspaceService } from './services/WorkspaceService';
 import { AllternitCanvas } from './components/AllternitCanvas';
-import { AllternitConsoleToggle } from './components/AllternitConsole';
+import { AllternitConsoleToggle, AllternitConsole } from './components/AllternitConsole';
+import { ToastProvider } from '@/hooks/use-toast';
 import type { AllternitProgram, LaunchProgramRequest } from './types/programs';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AllternitOS');
 
 // ============================================================================
 // Types
@@ -50,7 +55,7 @@ export interface AllternitOSConfig {
   onError?: (error: Error) => void;
 }
 
-export interface AllternitOSProps {
+interface AllternitOSProps {
   config: AllternitOSConfig;
   children?: ReactNode;
   /** Show the console toggle button */
@@ -129,7 +134,7 @@ export const AllternitOSProvider: React.FC<{ config: AllternitOSConfig; children
     const handleUriLaunch = (event: Event) => {
       const customEvent = event as CustomEvent<string>;
       if (customEvent.detail) {
-        programLauncher.launchFromUri(customEvent.detail).catch(console.error);
+        programLauncher.launchFromUri(customEvent.detail).catch((err: unknown) => logger.error({ err }, 'Async error'));
       }
     };
 
@@ -146,7 +151,7 @@ export const AllternitOSProvider: React.FC<{ config: AllternitOSConfig; children
         <div className="text-center">
           <h2 className="text-xl font-bold text-red-600 mb-2">AllternitOS Initialization Failed</h2>
           <p className="text-red-500">{error.message}</p>
-          <button 
+          <button type="button" 
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg"
           >
@@ -168,14 +173,14 @@ export const AllternitOSProvider: React.FC<{ config: AllternitOSConfig; children
     );
   }
 
-  return <>{children}</>;
+  return <ToastProvider>{children}</ToastProvider>;
 };
 
 // ============================================================================
 // AllternitOS Layout Component
 // ============================================================================
 
-export const AllternitOS: React.FC<AllternitOSProps> = ({
+const AllternitOS: React.FC<AllternitOSProps> = ({
   config = {},
   children,
   showConsoleToggle = true,
@@ -185,6 +190,8 @@ export const AllternitOS: React.FC<AllternitOSProps> = ({
   className = '',
 }) => {
   const store = useSidecarStore();
+  const [isConsoleOpen, setIsConsoleOpen] = React.useState(false);
+  const palette = useAllternitCommandPalette(() => setIsConsoleOpen(true));
 
   return (
     <AllternitOSProvider config={config}>
@@ -215,7 +222,38 @@ export const AllternitOS: React.FC<AllternitOSProps> = ({
           {/* Console Toggle */}
           {showConsoleToggle && (
             <div className="absolute bottom-4 right-4 pointer-events-auto">
-              <AllternitConsoleToggle />
+              <AllternitConsoleToggle onClick={() => setIsConsoleOpen(true)} />
+            </div>
+          )}
+          <AllternitConsole isOpen={isConsoleOpen} onClose={() => setIsConsoleOpen(false)} />
+
+          {/* Command Palette (Cmd+K) */}
+          {palette.isOpen && (
+            <div
+              className="absolute inset-0 z-50 flex items-start justify-center pt-24 bg-black/40 backdrop-blur-sm pointer-events-auto"
+              onClick={() => palette.setIsOpen(false)}
+            >
+              <div
+                className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+                  <span className="text-sm text-zinc-500">Commands</span>
+                </div>
+                <ul className="py-2 max-h-80 overflow-y-auto">
+                  {palette.commands.map((cmd) => (
+                    <li key={cmd.id}>
+                      <button type="button"
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        onClick={() => { cmd.action(); palette.setIsOpen(false); }}
+                      >
+                        <span className="text-lg">{cmd.icon}</span>
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{cmd.title}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
         </main>
@@ -235,7 +273,7 @@ export const AllternitOS: React.FC<AllternitOSProps> = ({
 // AllternitOS Header Component
 // ============================================================================
 
-export const AllternitOSHeader: React.FC<{
+const AllternitOSHeader: React.FC<{
   title?: string;
   logo?: ReactNode;
   actions?: ReactNode;
@@ -282,10 +320,13 @@ const ConnectionStatusIndicator: React.FC = () => {
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
 
   useEffect(() => {
-    // Check workspace service connection
     const checkConnection = () => {
-      // This would check actual connection state
-      setStatus('connected');
+      const svc = getWorkspaceService();
+      if (!svc) {
+        setStatus('disconnected');
+        return;
+      }
+      setStatus(svc.isConnectedState ? 'connected' : 'disconnected');
     };
 
     checkConnection();
@@ -313,7 +354,7 @@ const ConnectionStatusIndicator: React.FC = () => {
 // Quick Actions Bar
 // ============================================================================
 
-export const AllternitQuickActions: React.FC = () => {
+const AllternitQuickActions: React.FC = () => {
   const actions = [
     { icon: '📄', label: 'Research', type: 'research-doc' },
     { icon: '📊', label: 'Data', type: 'data-grid' },
@@ -334,7 +375,7 @@ export const AllternitQuickActions: React.FC = () => {
   return (
     <div className="flex items-center gap-2">
       {actions.map(({ icon, label, type }) => (
-        <button
+        <button type="button"
           key={type}
           onClick={() => handleLaunch(type)}
           className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm transition-colors"
@@ -352,7 +393,7 @@ export const AllternitQuickActions: React.FC = () => {
 // AllternitOS Status Bar
 // ============================================================================
 
-export const AllternitOSStatusBar: React.FC = () => {
+const AllternitOSStatusBar: React.FC = () => {
   const store = useSidecarStore();
   const programsArray = Object.values(store.programs);
   const programCount = programsArray.length;
@@ -379,7 +420,7 @@ export const AllternitOSStatusBar: React.FC = () => {
 // Command Palette Integration
 // ============================================================================
 
-export const useAllternitCommandPalette = () => {
+const useAllternitCommandPalette = (onOpenConsole: () => void) => {
   const [isOpen, setIsOpen] = useState(false);
   const store = useSidecarStore();
 
@@ -421,10 +462,7 @@ export const useAllternitCommandPalette = () => {
       id: 'open-console',
       title: 'Open Allternit Console',
       icon: '🤖',
-      action: () => {
-        // This would open the console
-        console.debug('Open console');
-      },
+      action: onOpenConsole,
     },
     ...Object.values(store.programs).map(p => ({
       id: `program-${p.id}`,

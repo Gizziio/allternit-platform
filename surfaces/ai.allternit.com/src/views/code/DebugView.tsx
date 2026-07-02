@@ -44,7 +44,7 @@ const VariableTreeNode: React.FC<{
 
   return (
     <div>
-      <div
+      <div role="button" tabIndex={0}
         className="flex items-center gap-1 py-1 px-2 hover:bg-opacity-50 cursor-pointer"
         style={{
           paddingLeft: `${level * 16 + 8}px`,
@@ -71,7 +71,7 @@ const VariableTreeNode: React.FC<{
         <div>
           {(variable.children ?? []).map((child, idx) => (
             <VariableTreeNode
-              key={idx}
+              key={`debugview-${idx}`}
               variable={child}
               level={level + 1}
             />
@@ -189,7 +189,7 @@ export function DebugView() {
           borderColor: `var(--border-subtle)`,
         }}
       >
-        <button
+        <button type="button"
           className="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all hover:opacity-80"
           style={{
             backgroundColor: `var(--accent-primary)`,
@@ -201,7 +201,7 @@ export function DebugView() {
           <Play size={14} />
           Play
         </button>
-        <button
+        <button type="button"
           className="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all hover:opacity-80"
           style={{
             backgroundColor: `var(--bg-primary)`,
@@ -214,7 +214,7 @@ export function DebugView() {
           <Square size={14} />
           Stop
         </button>
-        <button
+        <button type="button"
           onClick={handleClearConsole}
           className="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all hover:opacity-80"
           style={{
@@ -232,8 +232,7 @@ export function DebugView() {
         {/* Filter Dropdown Spacer */}
         <div className="flex-1" />
 
-        <select
-          value={filterLevel}
+        <select aria-label="Selection" value={filterLevel}
           onChange={(e) => setFilterLevel(e.target.value as FilterLevel)}
           className="px-3 py-1.5 rounded-md text-xs"
           style={{
@@ -285,7 +284,7 @@ export function DebugView() {
             }}
           >
             {([] as DebugVariable[]).map((variable, idx) => (
-              <VariableTreeNode key={idx} variable={variable} level={0} />
+              <VariableTreeNode key={`debugview-${idx}`} variable={variable} level={0} />
             ))}
           </div>
         </GlassSurface>
@@ -405,7 +404,7 @@ export function DebugView() {
                   <span style={{ color: `var(--text-primary)` }}>
                     {bp.file}:{bp.line}
                   </span>
-                  <button
+                  <button type="button"
                     onClick={() => handleToggleBreakpoint(bp.id)}
                     className="size-4  rounded flex-shrink-0 transition-all"
                     style={{
@@ -440,8 +439,7 @@ export function DebugView() {
         >
           &gt;
         </span>
-        <input
-          type="text"
+        <input aria-label="Input" type="text"
           value={consoleInput}
           onChange={(e) => setConsoleInput(e.target.value)}
           placeholder="Enter debug command…"

@@ -1,6 +1,5 @@
 "use client";
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -49,7 +48,7 @@ const DOC_DESCRIPTIONS: Record<string, string> = {
   "memory/active-tasks.md": "Active task tracking",
 };
 
-export function AgentWorkspacePreview({
+function AgentWorkspacePreview({
   agentName,
   description,
   tools,
@@ -111,7 +110,7 @@ export function AgentWorkspacePreview({
               }}
             >
               {/* Row */}
-              <div
+              <div role="button" tabIndex={0}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -185,7 +184,7 @@ export function AgentWorkspacePreview({
                 </div>
 
                 {/* Expand */}
-                <button
+                <button type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setExpandedDoc(isExpanded ? null : doc.path);

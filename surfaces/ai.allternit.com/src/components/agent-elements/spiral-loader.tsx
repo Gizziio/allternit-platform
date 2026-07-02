@@ -1,7 +1,6 @@
 "use client";
 
 import Lottie from "lottie-react";
-import type { ComponentType } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LottieRefCurrentProps } from "lottie-react";
 import { cn } from "./utils/cn";

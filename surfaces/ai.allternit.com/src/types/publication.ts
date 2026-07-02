@@ -1,4 +1,4 @@
-export type PublicationType =
+type PublicationType =
   | 'paper'
   | 'report'
   | 'blog'
@@ -15,7 +15,7 @@ export type ContentType =
   | 'course'
   | 'lesson';
 
-export type PublicationStatus = 'draft' | 'published' | 'archived';
+type PublicationStatus = 'draft' | 'published' | 'archived';
 
 export interface Publication {
   id: string;

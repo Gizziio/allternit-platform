@@ -142,7 +142,7 @@ export function PromptModelSelector({
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <button className={cn(
+        <button type="button" className={cn(
           "flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--rail-hover)] hover:bg-[var(--bg-secondary)] border border-[var(--border-subtle)] transition-all text-xs font-medium text-[var(--text-secondary)] group",
           className
         )}>
@@ -162,8 +162,7 @@ export function PromptModelSelector({
           {/* Search */}
           <div className="flex-none p-2 border-b border-[var(--border-subtle)] flex items-center gap-2">
             <MagnifyingGlass size={14} className="text-[var(--text-tertiary)]" />
-            <input
-              autoFocus
+            <input aria-label="Search…" autoFocus
               placeholder="Search…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -205,7 +204,7 @@ export function PromptModelSelector({
               <div>
                 <p className="text-xs font-semibold text-[var(--text-primary)]">Download failed</p>
                 <p className="text-xs text-[var(--text-tertiary)] mb-2">{pullError}</p>
-                <button
+                <button type="button"
                   onClick={() => setDownloadState('idle')}
                   className="text-xs font-semibold text-[var(--accent-chat)] hover:underline"
                 >
@@ -233,7 +232,7 @@ export function PromptModelSelector({
                         const lbNeedsDownload = isLB && ollamaRunning && !modelReady;
 
                         return (
-                          <button
+                          <button type="button"
                             key={model.id}
                             onClick={() => handleModelClick(model)}
                             disabled={lbNoOllama}
@@ -310,7 +309,7 @@ export function PromptModelSelector({
                 {sandboxMode === "full" ? "FULL WRITE ACCESS" : "READ ONLY (PROTECTED)"}
               </span>
             </div>
-            <button
+            <button type="button"
               onClick={() => setSandboxMode(sandboxMode === "full" ? "read-only" : "full")}
               className={cn(
                 "px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all shadow-sm border",
@@ -326,7 +325,7 @@ export function PromptModelSelector({
 
           {/* Manage link */}
           <div className="flex-none p-1.5 bg-[var(--bg-secondary)]/50 border-t border-[var(--border-subtle)]">
-            <button
+            <button type="button"
               onClick={() => { useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'models-manage' }); setOpen(false); }}
               className="w-full flex items-center justify-center gap-2 py-1.5 rounded-md hover:bg-[var(--rail-hover)] text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all"
             >

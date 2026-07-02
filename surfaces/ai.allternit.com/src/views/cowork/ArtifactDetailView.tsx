@@ -3,7 +3,7 @@ import { ArrowLeft, Eye, FileText, PencilSimple, Plus } from '@phosphor-icons/re
 import GlassSurface from '@/design/GlassSurface';
 import ArtifactRenderer from '@/components/artifact/ArtifactRenderer';
 import BlockSuiteEditor from '@/components/artifact/BlockSuiteEditor';
-import type { AllternitSectionKind, AllternitArtifact } from '@/lib/artifacts/schema';
+import type { AllternitSectionKind } from '@/lib/artifacts/schema';
 import {
   createArtifactSection,
   fetchArtifactById,
@@ -161,7 +161,7 @@ export function ArtifactDetailView({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--spacing-md)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
           {onBack ? (
-            <button
+            <button type="button"
               onClick={onBack}
               style={{
                 display: 'inline-flex',
@@ -183,7 +183,7 @@ export function ArtifactDetailView({
           ) : null}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-              <FileText size={22} color="#af52de" />
+              <FileText size={22} color="var(--accent-primary)" />
               <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>
                 Artifact Detail
               </h1>
@@ -209,7 +209,7 @@ export function ArtifactDetailView({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600 }}>Sections</div>
                 {!isAddingSection && (
-                  <button
+                  <button type="button"
                     onClick={handleAddSection}
                     style={{
                       display: 'inline-flex',
@@ -234,8 +234,7 @@ export function ArtifactDetailView({
               {isAddingSection && (
                 <GlassSurface style={{ padding: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
                   <div style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600 }}>New Section</div>
-                  <input
-                    value={newSectionHeading}
+                  <input aria-label="Input" value={newSectionHeading}
                     onChange={(e) => setNewSectionHeading(e.target.value)}
                     placeholder="Section heading"
                     style={{
@@ -247,8 +246,7 @@ export function ArtifactDetailView({
                       fontSize: 13,
                     }}
                   />
-                  <select
-                    value={newSectionKind}
+                  <select aria-label="Selection" value={newSectionKind}
                     onChange={(e) => setNewSectionKind(e.target.value as AllternitSectionKind)}
                     style={{
                       padding: '8px 10px',
@@ -270,7 +268,7 @@ export function ArtifactDetailView({
                     <option value="data/table">Data / Table</option>
                   </select>
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button
+                    <button type="button"
                       onClick={() => setIsAddingSection(false)}
                       style={{
                         padding: '6px 10px',
@@ -285,7 +283,7 @@ export function ArtifactDetailView({
                     >
                       Cancel
                     </button>
-                    <button
+                    <button type="button"
                       onClick={handleConfirmAddSection}
                       style={{
                         padding: '6px 10px',
@@ -321,8 +319,7 @@ export function ArtifactDetailView({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Title</span>
-                <input
-                  value={detailTitle}
+                <input aria-label="Input" value={detailTitle}
                   onChange={(e) => setDetailTitle(e.target.value)}
                   style={{
                     padding: '10px 12px',
@@ -336,8 +333,7 @@ export function ArtifactDetailView({
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Summary</span>
-                <textarea
-                  value={detailSummary}
+                <textarea aria-label="Text Area" value={detailSummary}
                   onChange={(e) => setDetailSummary(e.target.value)}
                   rows={4}
                   style={{
@@ -353,8 +349,7 @@ export function ArtifactDetailView({
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Status</span>
-                <select
-                  value={detailStatus}
+                <select aria-label="Selection" value={detailStatus}
                   onChange={(e) => setDetailStatus(e.target.value as typeof detailStatus)}
                   style={{
                     padding: '10px 12px',
@@ -371,7 +366,7 @@ export function ArtifactDetailView({
                 </select>
               </label>
 
-              <button
+              <button type="button"
                 onClick={handleSaveArtifactMeta}
                 style={{
                   padding: '9px 12px',
@@ -433,10 +428,18 @@ function ArtifactSectionEditor({
   const [draftBody, setDraftBody] = useState(body);
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
+  // Inline state adjustment for prop changes
+  const [prevHeading, setPrevHeading] = useState(heading);
+  if (heading !== prevHeading) {
+    setPrevHeading(heading);
     setDraftHeading(heading);
+  }
+
+  const [prevBody, setPrevBody] = useState(body);
+  if (body !== prevBody) {
+    setPrevBody(body);
     setDraftBody(body);
-  }, [heading, body]);
+  }
 
   // BlockSuite-powered board sections render the forked editor natively
   if (kind === 'design/board') {
@@ -444,7 +447,7 @@ function ArtifactSectionEditor({
       <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{kind}</div>
-          <button
+          <button type="button"
             onClick={() => onSave(sectionId, draftBody, draftHeading)}
             style={{
               display: 'inline-flex',
@@ -463,8 +466,7 @@ function ArtifactSectionEditor({
             Save Board
           </button>
         </div>
-        <input
-          value={draftHeading}
+        <input aria-label="Input" value={draftHeading}
           onChange={(e) => setDraftHeading(e.target.value)}
           style={{
             width: '100%',
@@ -492,7 +494,7 @@ function ArtifactSectionEditor({
     <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{kind}</div>
-        <button
+        <button type="button"
           onClick={() => {
             if (isEditing) {
               onSave(sectionId, draftBody, draftHeading);
@@ -520,8 +522,7 @@ function ArtifactSectionEditor({
 
       {isEditing ? (
         <>
-          <input
-            value={draftHeading}
+          <input aria-label="Input" value={draftHeading}
             onChange={(e) => setDraftHeading(e.target.value)}
             style={{
               width: '100%',
@@ -533,8 +534,7 @@ function ArtifactSectionEditor({
               marginBottom: 8,
             }}
           />
-          <textarea
-            value={draftBody}
+          <textarea aria-label="Text Area" value={draftBody}
             onChange={(e) => setDraftBody(e.target.value)}
             rows={8}
             style={{
@@ -548,7 +548,7 @@ function ArtifactSectionEditor({
             }}
           />
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
-            <button
+            <button type="button"
               onClick={() => {
                 onSave(sectionId, draftBody, draftHeading);
                 setIsEditing(false);

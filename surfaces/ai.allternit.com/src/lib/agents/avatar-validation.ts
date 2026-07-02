@@ -41,7 +41,7 @@ const HexColorSchema = z.string().regex(
 );
 
 // Eye configuration schema
-export const AvatarEyeConfigSchema = z.object({
+const AvatarEyeConfigSchema = z.object({
   preset: EyePresetSchema,
   size: z.number().min(0.5).max(1.5),
   color: HexColorSchema,
@@ -50,7 +50,7 @@ export const AvatarEyeConfigSchema = z.object({
 });
 
 // Antenna configuration schema
-export const AvatarAntennaConfigSchema = z.object({
+const AvatarAntennaConfigSchema = z.object({
   count: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]),
   style: AntennaStyleSchema,
   animation: AntennaAnimationSchema,
@@ -58,7 +58,7 @@ export const AvatarAntennaConfigSchema = z.object({
 });
 
 // Color scheme schema
-export const AvatarColorSchemeSchema = z.object({
+const AvatarColorSchemeSchema = z.object({
   primary: HexColorSchema,
   secondary: HexColorSchema,
   glow: HexColorSchema,
@@ -66,14 +66,14 @@ export const AvatarColorSchemeSchema = z.object({
 });
 
 // Personality configuration schema
-export const AvatarPersonalityConfigSchema = z.object({
+const AvatarPersonalityConfigSchema = z.object({
   bounce: z.number().min(0).max(1),
   sway: z.number().min(0).max(1),
   breathing: z.boolean()
 });
 
 // Full avatar configuration schema
-export const AvatarConfigSchema = z.object({
+const AvatarConfigSchema = z.object({
   version: z.literal('1.0'),
   baseShape: AvatarBodyShapeSchema,
   eyes: AvatarEyeConfigSchema,
@@ -85,7 +85,7 @@ export const AvatarConfigSchema = z.object({
 });
 
 // Type inference
-export type ValidatedAvatarConfig = z.infer<typeof AvatarConfigSchema>;
+type ValidatedAvatarConfig = z.infer<typeof AvatarConfigSchema>;
 
 /**
  * Validate an avatar configuration object
@@ -114,7 +114,7 @@ export function validateAvatarConfig(config: unknown): {
  * @param config The partial avatar config to validate
  * @returns Validation result
  */
-export function validatePartialAvatarConfig(config: unknown): {
+function validatePartialAvatarConfig(config: unknown): {
   success: boolean;
   data?: Partial<AvatarConfig>;
   errors?: string[];
@@ -137,7 +137,7 @@ export function validatePartialAvatarConfig(config: unknown): {
  * @param config The avatar config to sanitize
  * @returns Sanitized config or null if invalid
  */
-export function sanitizeAvatarConfig(config: unknown): AvatarConfig | null {
+function sanitizeAvatarConfig(config: unknown): AvatarConfig | null {
   const result = validateAvatarConfig(config);
   return result.success ? result.data! : null;
 }
@@ -148,7 +148,7 @@ export function sanitizeAvatarConfig(config: unknown): AvatarConfig | null {
  * @param b Second avatar config
  * @returns True if configs are equal
  */
-export function areAvatarConfigsEqual(a: AvatarConfig, b: AvatarConfig): boolean {
+function areAvatarConfigsEqual(a: AvatarConfig, b: AvatarConfig): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
@@ -167,7 +167,7 @@ export function cloneAvatarConfig(config: AvatarConfig): AvatarConfig {
  * @param config The config to migrate
  * @returns Migrated config or null if unmigratable
  */
-export function migrateAvatarConfig(config: unknown): AvatarConfig | null {
+function migrateAvatarConfig(config: unknown): AvatarConfig | null {
   // Check if it's already a valid new config
   const validation = validateAvatarConfig(config);
   if (validation.success) {
@@ -217,7 +217,7 @@ export function migrateAvatarConfig(config: unknown): AvatarConfig | null {
 /**
  * Default validation error messages
  */
-export const AVATAR_VALIDATION_MESSAGES = {
+const AVATAR_VALIDATION_MESSAGES = {
   INVALID_HEX_COLOR: 'Color must be a valid hex code (e.g., #FF5733)',
   INVALID_SIZE_RANGE: 'Size must be between 0.5 and 1.5',
   INVALID_BOUNCE_RANGE: 'Bounce must be between 0 and 1',

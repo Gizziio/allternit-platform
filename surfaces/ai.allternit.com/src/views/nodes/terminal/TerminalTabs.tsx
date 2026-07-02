@@ -293,7 +293,7 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
               const degraded = !connected && !hasSnapshot;
 
               return (
-                <button
+                <button type="button"
                   key={session.id}
                   onClick={() => setActiveSessionId(session.id)}
                   className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors ${
@@ -325,7 +325,7 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
                       degraded
                     </span>
                   ) : null}
-                  <button
+                  <button type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       closeSession(session.id);
@@ -351,7 +351,7 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
           </span>
         </div>
 
-        <button
+        <button type="button"
           className="size-7  flex items-center justify-center rounded hover:bg-white/10 transition-colors"
           onClick={() => setShowNewDialog(true)}
         >
@@ -461,7 +461,7 @@ function NewTerminalDialog({
             ) : (
               <div className="grid gap-2">
                 {nodes.map((node) => (
-                  <button
+                  <button type="button"
                     key={node.id}
                     onClick={() => onSelect(node.id)}
                     className={`flex items-center justify-between p-3 rounded-md border transition-colors text-left ${
@@ -506,7 +506,7 @@ function NewTerminalDialog({
           </div>
 
           {/* Advanced Options Toggle */}
-          <button
+          <button type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -542,7 +542,7 @@ function NewTerminalDialog({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Environment Variables</Label>
-                  <button
+                  <button type="button"
                     onClick={addEnvVar}
                     className="text-xs text-primary hover:underline"
                   >
@@ -551,7 +551,7 @@ function NewTerminalDialog({
                 </div>
                 <div className="space-y-2">
                   {options.envVars.map((envVar, index) => (
-                    <div key={index} className="flex gap-2">
+                    <div key={`env-${envVar.key || index}`} className="flex gap-2">
                       <Input
                         placeholder="KEY"
                         value={envVar.key}
@@ -564,7 +564,7 @@ function NewTerminalDialog({
                         onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
                         className="flex-1"
                       />
-                      <button
+                      <button type="button"
                         onClick={() => removeEnvVar(index)}
                         className="p-2 hover:bg-muted rounded"
                       >
@@ -702,7 +702,7 @@ function NewTerminalDialog({
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Volume Mounts</Label>
-                        <button
+                        <button type="button"
                           onClick={addVolumeMount}
                           className="text-xs text-primary hover:underline"
                         >
@@ -711,7 +711,7 @@ function NewTerminalDialog({
                       </div>
                       <div className="space-y-2">
                         {options.sandbox.volumes.map((vol, index) => (
-                          <div key={index} className="flex gap-2 items-center">
+                          <div key={`vol-${vol.source}-${vol.target}-${index}`} className="flex gap-2 items-center">
                             <Input
                               placeholder="Host path"
                               value={vol.source}
@@ -737,7 +737,7 @@ function NewTerminalDialog({
                                 RO
                               </Label>
                             </div>
-                            <button
+                            <button type="button"
                               onClick={() => removeVolumeMount?.(index)}
                               className="p-2 hover:bg-muted rounded"
                             >

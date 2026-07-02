@@ -24,7 +24,7 @@ export function BrowserExtensionHistoryList({
   return (
     <div className="flex flex-col h-full">
       <header className="flex items-center gap-2 border-b px-3 py-2" style={{ borderColor: "var(--border)" }}>
-        <button
+        <button type="button"
           onClick={onBack}
           className="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:opacity-80"
           style={{ color: "var(--muted-foreground)" }}
@@ -37,7 +37,7 @@ export function BrowserExtensionHistoryList({
         </button>
         <h2 className="flex-1 text-sm font-medium">Session History</h2>
         {sessions.length > 0 && onClearSessions && (
-          <button
+          <button type="button"
             onClick={onClearSessions}
             className="text-xs opacity-60 hover:opacity-100 transition-opacity"
             style={{ color: "var(--destructive)" }}
@@ -61,7 +61,7 @@ export function BrowserExtensionHistoryList({
         ) : (
           <div className="divide-y" style={{ borderColor: "var(--border)" }}>
             {sessions.map((session) => (
-              <button
+              <button type="button"
                 key={session.id}
                 onClick={() => onSelect(session.id)}
                 className="w-full flex items-start gap-3 px-3 py-2.5 text-left transition-colors hover:opacity-80"
@@ -82,7 +82,7 @@ export function BrowserExtensionHistoryList({
                   </p>
                 </div>
                 {onDeleteSession && (
-                  <button
+                  <button type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDeleteSession(session.id);

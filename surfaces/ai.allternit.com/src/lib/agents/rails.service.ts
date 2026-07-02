@@ -19,6 +19,10 @@
 // Import shared API configuration (avoids circular dependencies with agent.service.ts)
 import { GATEWAY_BASE_URL, apiRequestWithError } from "./api-config";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Rails');
+
 // ============================================================================
 // Types - Matching Rails API
 // ============================================================================
@@ -139,7 +143,7 @@ export interface LeaseListResponse {
   leases: ManagedLease[];
 }
 
-export interface LeaseRenewRequest {
+interface LeaseRenewRequest {
   ttl_seconds: number;
 }
 
@@ -149,7 +153,7 @@ export interface LeaseRenewResponse {
 }
 
 // Context Packs
-export interface ContextPackInputs {
+interface ContextPackInputs {
   wih_id: string;
   dag_id: string;
   node_id: string;
@@ -198,7 +202,7 @@ export interface ContextPackListResponse {
 }
 
 // Receipts
-export type ReceiptKind = 
+type ReceiptKind = 
   | 'tool_call_post' 
   | 'validator_report' 
   | 'build_report'
@@ -235,7 +239,7 @@ export interface ReceiptQueryResponse {
 }
 
 // Ledger - Event history
-export interface LedgerTailRequest {
+interface LedgerTailRequest {
   count?: number;
 }
 
@@ -403,9 +407,9 @@ export const railsApi = {
           { method: "POST", body: JSON.stringify(req) }
         );
       } catch (error: any) {
-        // Silent fail - Rails API may not be running
+        // Silent fail - the Rails surface may be unavailable, unauthorized, or still starting.
         if (process.env.NODE_ENV === 'development') {
-          console.debug(`[Rails API] WIHs not available (backend not running)`);
+          console.debug(`[Rails API] WIHs unavailable`, error);
         }
         throw error;
       }

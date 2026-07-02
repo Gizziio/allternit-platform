@@ -9,7 +9,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "./utils/cn";
 
-export type LightboxImage = {
+type LightboxImage = {
   /** Stable identifier — used for keys and to know which image is active. */
   id: string;
   /** Resolvable image URL (https / data: / blob:). */
@@ -44,10 +44,15 @@ export function ImageLightbox({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const hasMultipleImages = images.length > 1;
 
-  // Sync the active index whenever the consumer re-opens with a new initial.
-  useEffect(() => {
+  // Inline state adjustment for initialIndex change
+  const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
+  const [prevOpen, setPrevOpen] = useState(open);
+  
+  if (open !== prevOpen || initialIndex !== prevInitialIndex) {
+    setPrevOpen(open);
+    setPrevInitialIndex(initialIndex);
     if (open) setCurrentIndex(initialIndex);
-  }, [open, initialIndex]);
+  }
 
   const goToPrevious = useCallback(
     (event?: React.MouseEvent) => {
@@ -155,7 +160,7 @@ export function ImageLightbox({
           <div className="flex gap-2">
             {images.map((_, idx) => (
               <button
-                key={idx}
+                key={`image-lightbox-${idx}`}
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();

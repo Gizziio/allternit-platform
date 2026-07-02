@@ -15,13 +15,13 @@
 // Plugin Metadata
 // ============================================================================
 
-export interface PluginAuthor {
+interface PluginAuthor {
   name: string;
   email?: string;
   url?: string;
 }
 
-export interface PluginSource {
+interface PluginSource {
   type: 'marketplace' | 'github' | 'gitlab' | 'local' | 'builtin';
   url?: string;
   marketplace?: string;
@@ -51,7 +51,7 @@ export interface PluginManifest {
   updatedAt?: string;
 }
 
-export type PluginCategory =
+type PluginCategory =
   | 'legal'
   | 'productivity'
   | 'enterprise-search'
@@ -102,7 +102,7 @@ export interface PluginConnector {
   pluginId: string;
 }
 
-export interface PluginMcp {
+interface PluginMcp {
   id: string;
   name: string;
   description: string;
@@ -111,7 +111,7 @@ export interface PluginMcp {
   pluginId: string;
 }
 
-export interface PluginWebhook {
+interface PluginWebhook {
   id: string;
   name: string;
   description: string;
@@ -136,9 +136,9 @@ export interface Plugin extends PluginManifest {
 // Tab Types for Plugin Detail View
 // ============================================================================
 
-export type PluginTab = 'commands' | 'skills' | 'connectors' | 'mcps' | 'webhooks';
+type PluginTab = 'commands' | 'skills' | 'connectors' | 'mcps' | 'webhooks';
 
-export const PLUGIN_TAB_LABELS: Record<PluginTab, string> = {
+const PLUGIN_TAB_LABELS: Record<PluginTab, string> = {
   commands: 'Commands',
   skills: 'Skills',
   connectors: 'Connectors',
@@ -150,7 +150,7 @@ export const PLUGIN_TAB_LABELS: Record<PluginTab, string> = {
 // Marketplace Plugin (for browse overlay)
 // ============================================================================
 
-export interface MarketplacePlugin {
+interface MarketplacePlugin {
   id: string;
   name: string;
   description: string;
@@ -170,7 +170,7 @@ export interface MarketplacePlugin {
 // File Node for nested file browser
 // ============================================================================
 
-export interface FileNode {
+interface FileNode {
   id: string;
   name: string;
   type: 'file' | 'directory';

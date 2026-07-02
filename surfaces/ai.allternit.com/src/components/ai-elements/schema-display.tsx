@@ -174,11 +174,11 @@ export const SchemaDisplayPath = ({
     <span className={cn("font-mono text-sm", className)} {...props}>
       {pathSegments.map((segment, index) =>
         segment.startsWith("{") && segment.endsWith("}") ? (
-          <span key={index} className="text-blue-600 dark:text-blue-400">
+          <span key={`param-${segment}-${index}`} className="text-blue-600 dark:text-blue-400">
             {segment}
           </span>
         ) : (
-          <span key={index}>{segment}</span>
+          <span key={`path-${segment}-${index}`}>{segment}</span>
         )
       )}
     </span>

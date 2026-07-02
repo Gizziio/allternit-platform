@@ -54,13 +54,12 @@ const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 const AuthorizePage = lazy(() => import('./pages/OAuthAuthorizePage'))
 const SelectAccountPage = lazy(() => import('./pages/OAuthSelectAccountPage'))
 const SuccessPage = lazy(() => import('./pages/OAuthSuccessPage'))
-const CoworkTeamPage = lazy(() => import('./pages/CoworkTeamPage'))
-const CoworkTeamAgentsPage = lazy(() => import('./pages/CoworkTeamAgentsPage'))
-const CoworkTeamBoardPage = lazy(() => import('./pages/CoworkTeamBoardPage'))
-const CoworkTeamWorkspacesPage = lazy(() => import('./pages/CoworkTeamWorkspacesPage'))
-const CoworkTeamWorkspaceDetailPage = lazy(() => import('./pages/CoworkTeamWorkspaceDetailPage'))
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'))
+const GoalsListPage = lazy(() => import('./pages/GoalsListPage'))
+const GoalDetailPage = lazy(() => import('./pages/GoalDetailPage'))
+const RoutinesListPage = lazy(() => import('./pages/RoutinesListPage'))
+const LoopsListPage = lazy(() => import('./pages/LoopsListPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const StatusPage = lazy(() => import('./pages/StatusPage'))
@@ -70,6 +69,7 @@ const GalleryTestPage = lazy(() => import('./pages/GalleryTestPage'))
 const SwarmPreviewPage = lazy(() => import('./pages/SwarmPreviewPage'))
 const TerminalTestPage = lazy(() => import('./pages/TerminalTestPage'))
 const TerminalClerkPage = lazy(() => import('./pages/TerminalClerkPage'))
+const OfficeAuthBridgePage = lazy(() => import('./pages/OfficeAuthBridgePage'))
 
 export default function AppRoutes() {
   return (
@@ -84,13 +84,12 @@ export default function AppRoutes() {
         <Route path="/oauth/authorize" element={<AuthorizePage />} />
         <Route path="/oauth/select-account" element={<SelectAccountPage />} />
         <Route path="/oauth/success" element={<SuccessPage />} />
-        <Route path="/cowork-team" element={<CoworkTeamPage />} />
-        <Route path="/cowork-team/agents" element={<CoworkTeamAgentsPage />} />
-        <Route path="/cowork-team/board" element={<CoworkTeamBoardPage />} />
-        <Route path="/cowork-team/workspaces" element={<CoworkTeamWorkspacesPage />} />
-        <Route path="/cowork-team/workspaces/:id" element={<CoworkTeamWorkspaceDetailPage />} />
         <Route path="/marketplace" element={<MarketplacePage />} />
         <Route path="/workflows" element={<WorkflowsPage />} />
+        <Route path="/automation/goals" element={<GoalsListPage />} />
+        <Route path="/automation/goals/:id" element={<GoalDetailPage />} />
+        <Route path="/automation/routines" element={<RoutinesListPage />} />
+        <Route path="/automation/loops" element={<LoopsListPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/status" element={<StatusPage />} />
@@ -100,6 +99,7 @@ export default function AppRoutes() {
         <Route path="/swarm-preview" element={<SwarmPreviewPage />} />
         <Route path="/terminal-test" element={<TerminalTestPage />} />
         <Route path="/terminal/clerk" element={<TerminalClerkPage />} />
+        <Route path="/office-auth-bridge" element={<OfficeAuthBridgePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 /**
  * Eyes Component
  * 
@@ -9,7 +10,6 @@
  * - Eye tracking
  */
 
-import React, { useMemo } from 'react';
 import type { 
   AvatarConfig, 
   AvatarEmotion, 
@@ -300,7 +300,7 @@ export const Eyes: React.FC<EyesProps> = ({
 };
 
 // Export eye preset metadata
-export const EYE_PRESET_METADATA = Object.entries(EYE_PRESETS).map(([id, def]) => ({
+const EYE_PRESET_METADATA = Object.entries(EYE_PRESETS).map(([id, def]) => ({
   id: id as EyePreset,
   name: def.name,
   description: getEyeDescription(id as EyePreset),
@@ -326,7 +326,7 @@ function getEyeDescription(preset: EyePreset): string {
 }
 
 // Export pupil style metadata
-export const PUPIL_STYLE_METADATA: Record<PupilStyle, { name: string; description: string }> = {
+const PUPIL_STYLE_METADATA: Record<PupilStyle, { name: string; description: string }> = {
   dot: { name: 'Dot', description: 'Classic simple pupil' },
   ring: { name: 'Ring', description: 'Hollow ring design' },
   slit: { name: 'Slit', description: 'Vertical slit' },

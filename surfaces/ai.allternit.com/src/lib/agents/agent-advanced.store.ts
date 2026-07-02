@@ -28,10 +28,12 @@ import type {
   AgentRelationship,
   AdvancedAgentConfig,
   AgentTemplate,
-  AdvancedAgentRun,
 } from './agent-advanced.types';
 import { PREDEFINED_AGENT_TEMPLATES } from './agent-advanced.types';
-import type { Agent, AgentRun } from './agent.types';
+import type { Agent } from './agent.types';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AdvancedAgentStore');
 
 // ============================================================================
 // State
@@ -173,7 +175,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             subagents: { ...state.subagents, [parentAgentId]: data.subagents }
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to fetch subagents:', err);
+          logger.error({ err }, 'Failed to fetch subagents');
         }
       },
 
@@ -193,7 +195,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             }
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to create subagent:', err);
+          logger.error({ err }, 'Failed to create subagent');
           throw err;
         }
       },
@@ -216,7 +218,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             }
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to update subagent:', err);
+          logger.error({ err }, 'Failed to update subagent');
           throw err;
         }
       },
@@ -234,7 +236,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             }
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to delete subagent:', err);
+          logger.error({ err }, 'Failed to delete subagent');
           throw err;
         }
       },
@@ -250,7 +252,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
           const data = await response.json();
           return data.runId;
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to spawn subagent:', err);
+          logger.error({ err }, 'Failed to spawn subagent');
           throw err;
         }
       },
@@ -267,7 +269,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
           const data = await response.json();
           set({ swarms: data.swarms, isLoadingSwarms: false });
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to fetch swarms:', err);
+          logger.error({ err }, 'Failed to fetch swarms');
           set({ isLoadingSwarms: false });
         }
       },
@@ -288,7 +290,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
           }));
           return data.swarm;
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to create swarm:', err);
+          logger.error({ err }, 'Failed to create swarm');
           set({ isCreatingSwarm: false });
           throw err;
         }
@@ -307,7 +309,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             swarms: state.swarms.map(s => s.id === swarmId ? { ...s, ...data.swarm } : s),
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to update swarm:', err);
+          logger.error({ err }, 'Failed to update swarm');
           throw err;
         }
       },
@@ -322,7 +324,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             swarms: state.swarms.filter(s => s.id !== swarmId),
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to delete swarm:', err);
+          logger.error({ err }, 'Failed to delete swarm');
           throw err;
         }
       },
@@ -340,7 +342,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             swarms: state.swarms.map(s => s.id === swarmId ? data.swarm : s),
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to join swarm:', err);
+          logger.error({ err }, 'Failed to join swarm');
           throw err;
         }
       },
@@ -356,7 +358,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             swarms: state.swarms.map(s => s.id === swarmId ? data.swarm : s),
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to leave swarm:', err);
+          logger.error({ err }, 'Failed to leave swarm');
           throw err;
         }
       },
@@ -378,7 +380,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
           }));
           return data.run.id;
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to start swarm run:', err);
+          logger.error({ err }, 'Failed to start swarm run');
           throw err;
         }
       },
@@ -399,7 +401,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             },
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to send message:', err);
+          logger.error({ err }, 'Failed to send message');
           throw err;
         }
       },
@@ -413,7 +415,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             swarmMessages: { ...state.swarmMessages, [swarmRunId]: data.messages },
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to fetch messages:', err);
+          logger.error({ err }, 'Failed to fetch messages');
         }
       },
 
@@ -432,7 +434,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             isLoadingWorkflows: false,
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to fetch workflows:', err);
+          logger.error({ err }, 'Failed to fetch workflows');
           set({ isLoadingWorkflows: false });
         }
       },
@@ -453,7 +455,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             },
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to create workflow:', err);
+          logger.error({ err }, 'Failed to create workflow');
           throw err;
         }
       },
@@ -476,7 +478,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             },
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to update workflow:', err);
+          logger.error({ err }, 'Failed to update workflow');
           throw err;
         }
       },
@@ -494,7 +496,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             },
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to delete workflow:', err);
+          logger.error({ err }, 'Failed to delete workflow');
           throw err;
         }
       },
@@ -518,7 +520,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
           }));
           return data.runId;
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to execute workflow:', err);
+          logger.error({ err }, 'Failed to execute workflow');
           set({ isExecutingWorkflow: false });
           throw err;
         }
@@ -528,7 +530,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
         try {
           await fetch(`/api/v1/workflows/runs/${runId}/pause`, { method: 'POST' });
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to pause workflow:', err);
+          logger.error({ err }, 'Failed to pause workflow');
         }
       },
 
@@ -536,7 +538,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
         try {
           await fetch(`/api/v1/workflows/runs/${runId}/resume`, { method: 'POST' });
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to resume workflow:', err);
+          logger.error({ err }, 'Failed to resume workflow');
         }
       },
 
@@ -545,8 +547,20 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
       // ----------------------------------------------------------------------
       
       fetchTemplates: () => {
-        // Templates are predefined, but we could fetch custom ones from API
-        // For now, just use the predefined ones
+        fetch('/api/v1/agent-templates')
+          .then((r) => r.json())
+          .then((custom: AgentTemplate[]) => {
+            if (!Array.isArray(custom)) return;
+            set((state) => {
+              const predefinedIds = new Set(PREDEFINED_AGENT_TEMPLATES.map((t) => t.id));
+              const merged = [
+                ...PREDEFINED_AGENT_TEMPLATES,
+                ...custom.filter((t) => !predefinedIds.has(t.id)),
+              ];
+              return { templates: merged };
+            });
+          })
+          .catch(() => {});
       },
 
       createTemplate: async (template) => {
@@ -563,7 +577,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
           }));
           return data.template;
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to create template:', err);
+          logger.error({ err }, 'Failed to create template');
           throw err;
         }
       },
@@ -575,7 +589,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             templates: state.templates.filter(t => t.id !== templateId),
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to delete template:', err);
+          logger.error({ err }, 'Failed to delete template');
           throw err;
         }
       },
@@ -594,7 +608,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
           const data = await response.json();
           return data.agent;
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to apply template:', err);
+          logger.error({ err }, 'Failed to apply template');
           throw err;
         }
       },
@@ -623,7 +637,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             advancedConfigs: { ...state.advancedConfigs, [agentId]: data.config },
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to fetch config:', err);
+          logger.error({ err }, 'Failed to fetch config');
         }
       },
 
@@ -640,7 +654,7 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
             advancedConfigs: { ...state.advancedConfigs, [agentId]: data.config },
           }));
         } catch (err) {
-          console.error('[AdvancedAgentStore] Failed to update config:', err);
+          logger.error({ err }, 'Failed to update config');
           throw err;
         }
       },
@@ -769,22 +783,22 @@ export const useAdvancedAgentStore = create<AdvancedAgentState & AdvancedAgentAc
 // Selectors
 // ============================================================================
 
-export function useAgentSubagents(agentId: string | null): SubagentConfig[] {
+function useAgentSubagents(agentId: string | null): SubagentConfig[] {
   const { subagents } = useAdvancedAgentStore();
   return agentId ? subagents[agentId] || [] : [];
 }
 
-export function useAgentWorkflows(agentId: string | null): AgentWorkflow[] {
+function useAgentWorkflows(agentId: string | null): AgentWorkflow[] {
   const { workflows } = useAdvancedAgentStore();
   return agentId ? workflows[agentId] || [] : [];
 }
 
-export function useSelectedTemplate(): AgentTemplate | null {
+function useSelectedTemplate(): AgentTemplate | null {
   const { templates, selectedTemplateId } = useAdvancedAgentStore();
   return templates.find(t => t.id === selectedTemplateId) || null;
 }
 
-export function useSwarmMessages(swarmRunId: string | null): SwarmMessage[] {
+function useSwarmMessages(swarmRunId: string | null): SwarmMessage[] {
   const { swarmMessages } = useAdvancedAgentStore();
   return swarmRunId ? swarmMessages[swarmRunId] || [] : [];
 }

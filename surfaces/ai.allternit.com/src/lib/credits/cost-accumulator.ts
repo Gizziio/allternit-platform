@@ -109,7 +109,7 @@ export class CostAccumulator {
   }
 }
 
-export function createCostAccumulator(model: string): CostAccumulator {
+function createCostAccumulator(model: string): CostAccumulator {
   return new CostAccumulator(model);
 }
 

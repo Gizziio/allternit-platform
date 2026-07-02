@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { LockSimple, Paperclip, Sparkle, StackSimple, X } from "@phosphor-icons/react";
+import { LockSimple, Paperclip, Sparkle, X } from "@phosphor-icons/react";
 import type { PendingPermissionRequest, PendingQuestionRequest } from "@/lib/agents";
 import { usePermissionActions, useQuestionActions } from "@/lib/agents";
 import { QuestionPrompt, type QuestionAnswer, type QuestionConfig } from "@/components/agent-elements/question/question-prompt";
@@ -219,7 +219,7 @@ export function ComposerStatusInfoBar({
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flexWrap: "wrap" }}>
         <ContextWindowCard>
-          <button style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button type="button" style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
             {modelLabel ? (
               <InfoPill icon={<Sparkle size={12} />} label={modelLabel} />
             ) : null}

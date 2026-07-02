@@ -51,5 +51,58 @@ export function manifestToMiniApp(
     source,
     url,
     sourceUrl: url,
+    repo: manifest.repo,
+    githubUrl: manifest.githubUrl,
+    downloadable: manifest.downloadable,
   };
+}
+
+const SEED_KEY = 'allternit-mini-apps-seeded';
+
+export function seedDefaultMiniApps(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (localStorage.getItem(SEED_KEY) === '1') return;
+    localStorage.setItem(SEED_KEY, '1');
+    const existing = getPinnedMiniApps();
+    if (existing.length > 0) return;
+    const defaults: Array<Omit<InstalledMiniApp, 'status' | 'pinnedAt'>> = [
+      {
+        id: 'openclaw',
+        name: 'OpenClaw',
+        description: 'Agent coding runtime and control UI.',
+        category: 'runtime',
+        source: 'builtin',
+        url: 'http://localhost:18789',
+        sourceUrl: 'http://localhost:18789',
+        repo: 'openclaw-sh/openclaw',
+        githubUrl: 'https://github.com/openclaw-sh/openclaw',
+        downloadable: true,
+      },
+      {
+        id: 'hermes',
+        name: 'Hermes',
+        description: 'Connector and messaging runtime.',
+        category: 'connector',
+        source: 'builtin',
+        url: 'http://localhost:18790',
+        sourceUrl: 'http://localhost:18790',
+        repo: 'allternit/hermes',
+        githubUrl: 'https://github.com/allternit/hermes',
+        downloadable: true,
+      },
+    ];
+    for (const app of defaults) pinMiniApp(app);
+  } catch {
+    // private mode / localStorage unavailable
+  }
+}
+
+export function updateMiniAppInstallStatus(id: string, installStatus: 'installing' | 'installed'): void {
+  const pinned = getPinnedMiniApps();
+  const updated = pinned.map((p) =>
+    p.id === id ? { ...p, status: installStatus === 'installed' ? 'pinned' : p.status } : p,
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  window.dispatchEvent(new CustomEvent('allternit:mini-apps-changed'));
 }

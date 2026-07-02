@@ -67,8 +67,30 @@ declare global {
         enable: () => Promise<{ success: boolean; error?: string }>;
         disable: () => Promise<void>;
       };
+      shell?: {
+        openExternal: (url: string) => Promise<void>;
+        getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
+          installed: boolean;
+          running: boolean;
+          bundlePath: string | null;
+        }>>;
+      };
       app?: {
         isFirstLaunch?: () => Promise<boolean>;
+      };
+      miniApps?: {
+        install: (id: string) => Promise<{ success: boolean; error?: string }>;
+        start: (id: string) => Promise<{ success: boolean; error?: string }>;
+        stop: (id: string) => Promise<{ success: boolean }>;
+        getStatus: (id: string) => Promise<{ managed: boolean; running: boolean; port: number | null }>;
+        onProgress: (handler: (p: { id: string; line: string; type: 'stdout' | 'stderr' | 'info' }) => void) => () => void;
+      };
+      findInPage?: {
+        search: (text: string, options?: { forward?: boolean; matchCase?: boolean }) => Promise<void>;
+        next: () => Promise<void>;
+        previous: () => Promise<void>;
+        stop: (keepSelection?: boolean) => Promise<void>;
+        onResult: (handler: (result: { requestId: number; activeMatchOrdinal: number; matches: number; finalUpdate: boolean }) => void) => () => void;
       };
     };
     allternitExtension?: any;
@@ -87,6 +109,7 @@ declare global {
     'allternit:open-settings': CustomEvent<{ section?: string }>;
     'allternit:close-settings': CustomEvent;
     'allternit:open-labs': CustomEvent;
+    'allternit:open-view': CustomEvent<{ viewType: string; allowNew?: boolean; context?: unknown }>;
     'allternit:switch-mode': CustomEvent<{ mode: 'chat' | 'cowork' | 'code' | 'design' | 'browser' }>;
   }
 }

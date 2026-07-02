@@ -9,7 +9,7 @@ export interface ReplayManifest {
   timestamp_count: number;
 }
 
-export interface ReplayResult {
+interface ReplayResult {
   status: string;
   session_id: string;
   can_replay: boolean;

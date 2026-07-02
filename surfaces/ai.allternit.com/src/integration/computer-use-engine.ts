@@ -23,7 +23,7 @@ function readElectronEngineBaseUrl(): string | null {
   }
 }
 
-export function normalizeComputerUseBaseUrl(value?: string | null): string {
+function normalizeComputerUseBaseUrl(value?: string | null): string {
   const trimmed = String(value ?? '').trim();
   if (!trimmed) {
     const electronBaseUrl = readElectronEngineBaseUrl();
@@ -71,7 +71,7 @@ export function getPlatformComputerUseBaseUrl(): string {
   return electronBaseUrl || ACU_GATEWAY_DEFAULT;
 }
 
-export function setPlatformComputerUseBaseUrl(value: string): string {
+function setPlatformComputerUseBaseUrl(value: string): string {
   const normalized = normalizeComputerUseBaseUrl(value);
   if (typeof window !== 'undefined') {
     try {
@@ -106,7 +106,7 @@ export async function getPlatformWebviewTabId(): Promise<number | null> {
   }
 }
 
-export interface PlatformComputerUseRuntime {
+interface PlatformComputerUseRuntime {
   status: 'initializing' | 'starting' | 'running' | 'failed' | 'stopped' | 'external' | 'unknown';
   baseUrl: string;
   managed: boolean;
@@ -146,7 +146,7 @@ let clientFactory: (baseUrl?: string) => PlatformComputerUseClient = (baseUrl?: 
     
   });
 
-export function getPlatformComputerUseClient(baseUrl?: string): PlatformComputerUseClient {
+function getPlatformComputerUseClient(baseUrl?: string): PlatformComputerUseClient {
   return clientFactory(baseUrl);
 }
 
@@ -166,7 +166,7 @@ export type { ComputerUseRequest, ComputerUseResponse, RequestOptions, WatchRunO
 
 // ── Discovery types ──────────────────────────────────────────────────────────
 
-export interface GatewayWindowEntry {
+interface GatewayWindowEntry {
   window_id: number;
   title: string;
   app_name: string;
@@ -176,14 +176,14 @@ export interface GatewayWindowEntry {
   is_minimized: boolean;
 }
 
-export interface GatewayAppEntry {
+interface GatewayAppEntry {
   pid: number;
   name: string;
   bundle_id: string;
   is_active: boolean;
 }
 
-export interface GatewayNotificationEntry {
+interface GatewayNotificationEntry {
   notification_id: string;
   title: string;
   body: string;
@@ -192,7 +192,7 @@ export interface GatewayNotificationEntry {
   actions: string[];
 }
 
-export interface GatewayRoute {
+interface GatewayRoute {
   route_id: string;
   method: string;
   path: string;
@@ -200,7 +200,7 @@ export interface GatewayRoute {
   tags: string[];
 }
 
-export interface GatewayWindowState {
+interface GatewayWindowState {
   window_id?: number;
   title?: string;
   app_name?: string;

@@ -3,9 +3,13 @@
  */
 import { environmentTemplateCatalog } from './catalog';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Environments');
+
 export type EnvironmentType = 'devcontainer' | 'nix' | 'sandbox' | 'platform';
 
-export type EnvironmentStatus = 'pending' | 'provisioning' | 'running' | 'stopped' | 'error' | 'destroying';
+type EnvironmentStatus = 'pending' | 'provisioning' | 'running' | 'stopped' | 'error' | 'destroying';
 
 export interface EnvironmentConfig {
   devcontainer?: {
@@ -31,7 +35,7 @@ export interface EnvironmentConfig {
   };
 }
 
-export interface ResourceRequirements {
+interface ResourceRequirements {
   minCpu: number;
   minMemory: string;
   recommendedDisk: string;
@@ -60,7 +64,7 @@ export interface EnvironmentLogEntry {
   source?: string;
 }
 
-export interface EnvironmentResources {
+interface EnvironmentResources {
   cpu?: string | number;
   cpus?: string | number;
   memory?: string;
@@ -97,16 +101,16 @@ export interface EnvironmentCapabilities {
 }
 
 // Helper type for creating environments with flexible property names
-export type EnvironmentCreateInput = Omit<Environment, 'id' | 'created_at' | 'updated_at' | 'templateId' | 'createdAt'>;
+type EnvironmentCreateInput = Omit<Environment, 'id' | 'created_at' | 'updated_at' | 'templateId' | 'createdAt'>;
 
-export interface ProvisionRequest {
+interface ProvisionRequest {
   template_id: string;
   name: string;
   config?: Partial<EnvironmentConfig>;
   variables?: Record<string, string>;
 }
 
-export interface VPSTestResult {
+interface VPSTestResult {
   success: boolean;
   message: string;
   details?: {
@@ -114,19 +118,19 @@ export interface VPSTestResult {
   };
 }
 
-export interface VPSExecuteResult {
+interface VPSExecuteResult {
   exitCode: number;
   stdout: string;
   stderr: string;
 }
 
-export interface VPSResources {
+interface VPSResources {
   cpu?: number;
   memory?: string;
   disk?: string;
 }
 
-export interface VPSConnection {
+interface VPSConnection {
   id: string;
   name: string;
   host: string;

@@ -60,7 +60,7 @@ Security note: Be careful with sensitive data in URLs or headers.`,
   },
 };
 
-export interface HttpResponse {
+interface HttpResponse {
   status: number;
   statusText: string;
   headers: Record<string, string>;

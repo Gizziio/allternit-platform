@@ -191,7 +191,7 @@ export function CodeCanvasTileKnowledgeGraph({ workspacePath }: CodeCanvasTileKn
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--status-error)', fontSize: 12, gap: 8 }}>
         <div>{error}</div>
-        <button onClick={load} style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>
+        <button type="button" onClick={load} style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>
           Retry
         </button>
       </div>
@@ -218,7 +218,7 @@ export function CodeCanvasTileKnowledgeGraph({ workspacePath }: CodeCanvasTileKn
           if (!src || !tgt) return null;
           return (
             <line
-              key={i}
+              key={`codecanvastileknowledgegraph-${i}`}
               x1={src.x + 60}
               y1={src.y + 20}
               x2={tgt.x + 60}

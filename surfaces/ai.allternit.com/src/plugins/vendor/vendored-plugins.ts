@@ -504,7 +504,7 @@ export const VENDORED_ADDITIONAL_PLUGINS: VendoredPlugin[] = [
 // ALLTERNIT EXTENSION PLUGINS
 // =============================================================================
 
-export const ALLTERNIT_EXTENSION_PLUGINS: VendoredPlugin[] = [
+const ALLTERNIT_EXTENSION_PLUGINS: VendoredPlugin[] = [
   {
     id: 'allternit-office-excel',
     name: 'Allternit for Excel',
@@ -615,7 +615,7 @@ export const ALLTERNIT_EXTENSION_PLUGINS: VendoredPlugin[] = [
 // ALL VENDORED PLUGINS
 // =============================================================================
 
-export const ALL_VENDORED_PLUGINS: VendoredPlugin[] = [
+const ALL_VENDORED_PLUGINS: VendoredPlugin[] = [
   ...VENDORED_ANTHROPIC_PLUGINS,
   ...VENDORED_DOCKER_PLUGINS,
   ...VENDORED_ADDITIONAL_PLUGINS,
@@ -626,13 +626,13 @@ export const ALL_VENDORED_PLUGINS: VendoredPlugin[] = [
 // VENDORED PLUGIN METADATA
 // =============================================================================
 
-export interface VendorMetadata {
+interface VendorMetadata {
   lastSyncDate: string;
   totalPlugins: number;
   bySource: Record<string, number>;
 }
 
-export const VENDOR_METADATA: VendorMetadata = {
+const VENDOR_METADATA: VendorMetadata = {
   lastSyncDate: '2026-04-08',
   totalPlugins: ALL_VENDORED_PLUGINS.length,
   bySource: {
@@ -651,27 +651,27 @@ export const VENDOR_METADATA: VendorMetadata = {
 // HELPER FUNCTIONS
 // =============================================================================
 
-export function getVendoredPluginById(id: string): VendoredPlugin | undefined {
+function getVendoredPluginById(id: string): VendoredPlugin | undefined {
   return ALL_VENDORED_PLUGINS.find(p => p.id === id);
 }
 
-export function getVendoredPluginsByCategory(category: string): VendoredPlugin[] {
+function getVendoredPluginsByCategory(category: string): VendoredPlugin[] {
   return ALL_VENDORED_PLUGINS.filter(p => p.category === category);
 }
 
-export function getVendoredPluginsBySource(sourceRepo: string): VendoredPlugin[] {
+function getVendoredPluginsBySource(sourceRepo: string): VendoredPlugin[] {
   return ALL_VENDORED_PLUGINS.filter(p => p.vendored.sourceRepo === sourceRepo);
 }
 
 // Get the filesystem path for a vendored plugin
-export function getVendoredPluginPath(pluginId: string): string | undefined {
+function getVendoredPluginPath(pluginId: string): string | undefined {
   const plugin = getVendoredPluginById(pluginId);
   if (!plugin) return undefined;
   return `src/plugins/vendor/${plugin.vendored.vendorPath}`;
 }
 
 // Convert vendored plugin to unified plugin format
-export function toUnifiedPlugin(vendored: VendoredPlugin): UnifiedPlugin {
+function toUnifiedPlugin(vendored: VendoredPlugin): UnifiedPlugin {
   return {
     ...vendored,
     marketplaceInfo: {

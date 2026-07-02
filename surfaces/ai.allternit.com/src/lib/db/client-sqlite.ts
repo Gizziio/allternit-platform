@@ -3,6 +3,10 @@ import * as schema from "./schema-sqlite";
 import { mkdirSync } from "fs";
 import { join } from "path";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ClientSqlite');
+
 // Ensure data directory exists
 const dataDir = join(process.cwd(), "data");
 try {
@@ -27,7 +31,7 @@ export const db = new Proxy({} as any, {
         dbPath = join(dataDir, "allternit.db");
       }
       
-      console.debug(`[DB] Using database path: ${dbPath}`);
+      logger.debug(`Using database path: ${dbPath}`);
       const sqlite = new Database(dbPath);
       target._db = drizzle(sqlite, { schema });
       target._initialized = true;

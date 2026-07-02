@@ -203,14 +203,14 @@ export function useModeCanvasBridge({
 /**
  * Get the renderer type for a given mode
  */
-export function getRendererForMode(modeId: AgentModeId): RendererType | null {
+function getRendererForMode(modeId: AgentModeId): RendererType | null {
   return MODE_TO_ARTIFACT[modeId]?.renderer || null;
 }
 
 /**
  * Check if a mode should open the canvas
  */
-export function isCanvasMode(modeId: AgentModeId): boolean {
+function isCanvasMode(modeId: AgentModeId): boolean {
   return CANVAS_MODES.has(modeId);
 }
 

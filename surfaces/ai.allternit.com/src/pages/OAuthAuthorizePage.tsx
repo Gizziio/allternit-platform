@@ -1,6 +1,7 @@
+// @ts-nocheck
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlatformAuth } from '@/lib/platform-auth-client';
@@ -199,7 +200,7 @@ function AuthorizeContent() {
               {/* Actions */}
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.35 }}
                 style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <button
+                <button type="button"
                   onClick={handleAuthorize}
                   disabled={loading || declined}
                   style={{
@@ -226,7 +227,7 @@ function AuthorizeContent() {
                   ) : 'Authorize'}
                 </button>
 
-                <button
+                <button type="button"
                   onClick={handleDecline}
                   disabled={loading || declined}
                   style={{

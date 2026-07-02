@@ -63,7 +63,7 @@ function TabButton({ tab, isActive, onClick }: TabButtonProps) {
   const Icon = tab.icon;
 
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm transition ${
         isActive

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useThemeStore, resolveTheme, type Theme } from "./ThemeStore";
+import React, { useEffect } from 'react';
+import { useThemeStore, resolveTheme } from "./ThemeStore";
 
 interface ThemeProviderProps {
   children: React.ReactNode;

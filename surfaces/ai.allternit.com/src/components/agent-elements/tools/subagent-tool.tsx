@@ -109,7 +109,7 @@ export const SubagentTool = memo(function SubagentTool({
               if (!nestedMeta) {
                 return (
                   <ToolRowBase
-                    key={idx}
+                    key={nestedPart.toolCallId || idx}
                     completeLabel={
                       nestedPart.type?.replace("tool-", "") ?? "Tool"
                     }
@@ -121,7 +121,7 @@ export const SubagentTool = memo(function SubagentTool({
                 getToolStatus(nestedPart, chatStatus);
               return (
                 <GenericTool
-                  key={idx}
+                  key={nestedPart.toolCallId || idx}
                   icon={nestedMeta.icon}
                   title={nestedMeta.title(nestedPart)}
                   subtitle={nestedMeta.subtitle?.(nestedPart)}

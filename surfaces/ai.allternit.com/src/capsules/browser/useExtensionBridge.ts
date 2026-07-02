@@ -1,7 +1,7 @@
 /**
  * Extension Bridge Hook
  * 
- * Bridges Chrome Extension native host messages to the browser agent store.
+ * Bridges Chrome Extension native host messages to the computer agent store.
  * This provides direct communication without going through API routes.
  * 
  * Usage: Call this hook once in the BrowserCapsule or app root.
@@ -10,6 +10,42 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBrowserAgentStore } from './browserAgent.store';
 import { isElectronShell } from '@/lib/platform';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UseExtensionBridge');
+
+type DesktopExtensionBridge = {
+  sendMessage: (msg: { type: string; payload?: unknown }) => Promise<boolean>;
+  getStatus: () => Promise<{ connected: boolean }>;
+  onMessage: (handler: (data: { connectionId: string; message: { type: string; payload?: unknown } }) => void) => () => void;
+  onStatusChange: (handler: (data: { connected: boolean; connectionId?: string }) => void) => () => void;
+};
+
+function getDesktopExtensionBridge(): DesktopExtensionBridge | null {
+  const globalWindow = window as unknown as {
+    allternit?: {
+      extension?: {
+        send: (msg: { type: string; payload?: unknown }) => Promise<boolean>;
+        getStatus: () => Promise<{ connected: boolean }>;
+        onMessage: (handler: (data: { connectionId: string; message: { type: string; payload?: unknown } }) => void) => () => void;
+        onStatusChange: (handler: (data: { connected: boolean }) => void) => () => void;
+      };
+    };
+  };
+
+  const bridge = globalWindow.allternit?.extension;
+  if (!bridge) return null;
+
+  return {
+    sendMessage: bridge.send,
+    getStatus: bridge.getStatus,
+    onMessage: bridge.onMessage,
+    onStatusChange: (handler) =>
+      bridge.onStatusChange((status) =>
+        handler({ connected: status.connected, connectionId: 'desktop-extension' })),
+  };
+}
 
 export function useExtensionBridge() {
   const isSetup = useRef(false);
@@ -21,20 +57,15 @@ export function useExtensionBridge() {
       if (!isElectronShell()) return;
       if (isSetup.current) return;
       
-      const extension = (window as unknown as { allternitExtension?: {
-        sendMessage: (msg: { type: string; payload?: unknown }) => Promise<boolean>;
-        getStatus: () => Promise<{ connected: boolean }>;
-        onMessage: (handler: (data: { connectionId: string; message: { type: string; payload?: unknown } }) => void) => () => void;
-        onStatusChange: (handler: (data: { connected: boolean; connectionId: string }) => void) => () => void;
-      } }).allternitExtension;
+      const extension = getDesktopExtensionBridge();
       
       if (!extension) {
-        console.warn('[ExtensionBridge] allternitExtension API not available');
+        logger.warn('Desktop extension bridge not available');
         return;
       }
 
       isSetup.current = true;
-      console.debug('[ExtensionBridge] Setting up extension message handlers');
+      logger.debug('Setting up extension message handlers');
 
       // Listen for extension messages
       const removeMessageListener = extension.onMessage(({ connectionId, message }) => {
@@ -89,7 +120,7 @@ export function useExtensionBridge() {
               console.debug('[ExtensionBridge] Unknown message type:', message.type);
           }
         } catch (err) {
-          console.error('[ExtensionBridge] Error handling message:', err);
+          logger.error({ err: err }, 'Error handling message');
         }
       });
 
@@ -103,7 +134,7 @@ export function useExtensionBridge() {
       extension.getStatus().then((status: { connected: boolean }) => {
         setIsConnected(status.connected);
       }).catch((err: Error) => {
-        console.warn('[ExtensionBridge] Failed to get status:', err);
+        logger.warn({ err: err }, 'Failed to get status');
       });
 
       return () => {
@@ -111,11 +142,11 @@ export function useExtensionBridge() {
           removeMessageListener();
           removeStatusListener();
         } catch (err) {
-          console.error('[ExtensionBridge] Error cleaning up listeners:', err);
+          logger.error({ err: err }, 'Error cleaning up listeners');
         }
       };
     } catch (err) {
-      console.error('[ExtensionBridge] Fatal error in setup:', err);
+      logger.error({ err: err }, 'Fatal error in setup');
     }
   }, []);
 
@@ -128,7 +159,7 @@ export function useExtensionBridge() {
 export async function isExtensionConnected(): Promise<boolean> {
   if (!isElectronShell()) return false;
   
-  const extension = (window as unknown as { allternitExtension?: { getStatus: () => Promise<{ connected: boolean }> } }).allternitExtension;
+  const extension = getDesktopExtensionBridge();
   if (!extension) return false;
   
   const status = await extension.getStatus();

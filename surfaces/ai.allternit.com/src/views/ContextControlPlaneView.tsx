@@ -128,9 +128,12 @@ const SELECTED_COMMIT_DETAIL: CommitDetail = {
 
 function BranchItem({ branch }: { branch: Branch }) {
   return (
-    <div className={`px-4 py-3 border-b border-[var(--border-subtle)] last:border-0 cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors ${
-      branch.isActive ? 'bg-[var(--bg-secondary)] border-l-2 border-l-[var(--accent-primary)]' : ''
+    <div className={`px-4 py-3 border-b border-[var(--border-subtle)] last:border-0 cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors relative ${
+      branch.isActive ? 'bg-[var(--bg-secondary)]' : ''
     }`}>
+      {branch.isActive && (
+        <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[var(--accent-primary)]" />
+      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-1">
           {branch.isActive && (
@@ -227,11 +230,11 @@ export function ContextControlPlaneView() {
           </div>
 
           <div className="flex gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--bg-primary)] transition-colors">
+            <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-sm font-medium hover:bg-[var(--bg-primary)] transition-colors">
               <Plus size={16} />
               New Branch
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-sm font-medium hover:opacity-90 transition-opacity">
+            <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-sm font-medium hover:opacity-90 transition-opacity">
               <GitCommit size={16} />
               Commit
             </button>
@@ -252,7 +255,7 @@ export function ContextControlPlaneView() {
 
           <div className="flex-1">
             {BRANCHES.map((branch) => (
-              <div
+              <div role="button" tabIndex={0}
                 key={branch.id}
                 onClick={() => setSelectedBranch(branch.id)}
                 className={`cursor-pointer ${selectedBranch === branch.id ? 'bg-[var(--bg-secondary)]' : ''}`}
@@ -263,7 +266,7 @@ export function ContextControlPlaneView() {
           </div>
 
           <div className="p-4 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-            <button className="w-full px-3 py-2 rounded-lg text-xs font-medium text-[var(--accent-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] transition-colors">
+            <button type="button" className="w-full px-3 py-2 rounded-lg text-xs font-medium text-[var(--accent-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] transition-colors">
               <Plus className="size-3  inline mr-2" />
               Add Branch
             </button>
@@ -336,7 +339,7 @@ export function ContextControlPlaneView() {
               </div>
               <div className="space-y-2">
                 {SELECTED_COMMIT_DETAIL.files.map((file, idx) => (
-                  <div key={idx} className="text-xs bg-[var(--bg-primary)] p-2.5 rounded-lg">
+                  <div key={`contextcontrolplaneview-${idx}`} className="text-xs bg-[var(--bg-primary)] p-2.5 rounded-lg">
                     <div className="text-[var(--text-primary)] font-mono mb-1 truncate">
                       {file.path}
                     </div>

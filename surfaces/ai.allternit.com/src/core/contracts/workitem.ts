@@ -1,9 +1,9 @@
 import { UUID, ISODate } from './base';
 
-export type WorkItemStatus = 'backlog' | 'ready' | 'in_progress' | 'blocked' | 'done';
-export type WorkItemPriority = 'low' | 'medium' | 'high' | 'critical';
+type WorkItemStatus = 'backlog' | 'ready' | 'in_progress' | 'blocked' | 'done';
+type WorkItemPriority = 'low' | 'medium' | 'high' | 'critical';
 
-export interface WorkItem {
+interface WorkItem {
   readonly id: UUID;
   readonly projectId: UUID;
   

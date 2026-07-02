@@ -15,7 +15,6 @@ import {
   ExecutableWorkflow,
   ExecutableNode,
   ExecutableEdge,
-  EdgeCondition,
   WorkflowVariable,
   PortType,
   NodeCategory,

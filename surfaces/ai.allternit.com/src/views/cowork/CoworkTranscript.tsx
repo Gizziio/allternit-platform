@@ -3,11 +3,9 @@
  * Renders the unified stream: message → work block → message → work block
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { StreamingChatComposer } from '@/components/chat/StreamingChatComposer';
 import { CoworkWorkBlock } from './CoworkWorkBlock';
-import { MessagePartList } from './CoworkStreamBlock';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { coworkTransitionController } from '@/lib/agents/session-transition-controller';
 import type { ChatMessage } from '@/lib/ai/rust-stream-adapter';
@@ -24,6 +22,63 @@ interface CoworkTranscriptProps {
   conversationId?: string;
   /** Phase 2: agent sub-session IDs to merge into this transcript */
   linkedSessionIds?: string[];
+  onSelectArtifact?: (artifact: any) => void;
+  selectedArtifactTitle?: string;
+}
+
+// Derive the currently-running tool from messages so we can show it inline
+function getCurrentRunningTool(messages: ChatMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== 'assistant' || !Array.isArray(m.content)) continue;
+    const parts = m.content as any[];
+    const running = [...parts].reverse().find(
+      (p: any) => p.type === 'dynamic-tool' && (p.state === 'input-available' || p.state === 'running')
+    );
+    if (running) return running.toolName as string;
+  }
+  return null;
+}
+
+const TOOL_VERB: Record<string, string> = {
+  Bash: 'Running shell command',
+  BashTool: 'Running shell command',
+  Read: 'Reading file',
+  Write: 'Writing file',
+  Edit: 'Editing file',
+  MultiEdit: 'Editing files',
+  NotebookEdit: 'Editing notebook',
+  TodoWrite: 'Updating task list',
+  TaskCreate: 'Creating task',
+  TaskUpdate: 'Updating task',
+  TaskGet: 'Checking tasks',
+  TaskList: 'Listing tasks',
+  ExitPlanMode: 'Approving plan',
+  AskUserQuestion: 'Asking a question',
+};
+
+function LiveToolBadge({ toolName }: { toolName: string }) {
+  const label = TOOL_VERB[toolName] ?? `Using ${toolName}`;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '7px 12px', borderRadius: 8,
+      background: 'rgba(210,185,148,0.05)',
+      border: '1px solid rgba(210,185,148,0.10)',
+      maxWidth: 320,
+    }}>
+      <span style={{
+        width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+        background: 'rgba(210,185,148,0.7)',
+        boxShadow: '0 0 6px rgba(210,185,148,0.5)',
+        animation: 'liveToolPulse 1.4s ease-in-out infinite',
+      }} />
+      <style>{`@keyframes liveToolPulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+      <span style={{ fontSize: 12, color: 'rgba(210,185,148,0.75)', fontStyle: 'italic' }}>
+        {label}…
+      </span>
+    </div>
+  );
 }
 
 // Work event types that should render as inline blocks
@@ -73,6 +128,8 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   sessionId,
   conversationId,
   linkedSessionIds,
+  onSelectArtifact,
+  selectedArtifactTitle,
 }: CoworkTranscriptProps) {
   // When conversationId is provided, pull messages from the chat session store
   const storeSession = useChatSessionStore((state) =>
@@ -99,18 +156,29 @@ export const CoworkTranscript = memo(function CoworkTranscript({
 
   // Convert store messages to ChatMessage shape
   const storeDerivedMessages: ChatMessage[] = (storeSession?.messages ?? []).map((m) => {
-    // If the message has reasoning/thinking content, build a parts array
-    if (m.role === 'assistant' && m.thinking) {
-      const parts: Array<{type: string; text?: string; reasoningId?: string}> = [
-        { type: 'reasoning', text: m.thinking, reasoningId: `${m.id}-thinking` },
-        { type: 'text', text: typeof m.content === 'string' ? m.content : '' },
-      ];
-      return {
-        id: m.id,
-        role: m.role as 'user' | 'assistant',
-        content: parts as any,
-        createdAt: m.timestamp ? new Date(m.timestamp) : new Date(),
-      };
+    if (m.role === 'assistant') {
+      const rawToolParts = (m.metadata?.agentElementsParts as Array<Record<string, unknown>> | undefined) ?? [];
+      const hasThinking = Boolean(m.thinking);
+      const hasTools = rawToolParts.length > 0;
+
+      if (hasThinking || hasTools) {
+        const parts: Array<Record<string, unknown>> = [];
+        if (hasThinking) {
+          parts.push({ type: 'reasoning', text: m.thinking, reasoningId: `${m.id}-thinking` });
+        }
+        for (const tp of rawToolParts) {
+          const rawType = String(tp.type ?? '');
+          const toolName = rawType.startsWith('tool-') ? rawType.slice(5) : rawType;
+          parts.push({ type: 'dynamic-tool', toolName, toolCallId: tp.toolCallId, input: tp.input, state: tp.state ?? 'output-available', result: tp.result ?? tp.output, error: tp.error });
+        }
+        if (m.content) parts.push({ type: 'text', text: typeof m.content === 'string' ? m.content : '' });
+        return {
+          id: m.id,
+          role: m.role as 'user' | 'assistant',
+          content: parts as any,
+          createdAt: m.timestamp ? new Date(m.timestamp) : new Date(),
+        };
+      }
     }
     return {
       id: m.id,
@@ -160,6 +228,11 @@ export const CoworkTranscript = memo(function CoworkTranscript({
     ? ((storeStreaming?.isStreaming ?? false) || (linkedStreaming?.isStreaming ?? false))
     : (isLoadingProp ?? false);
 
+  const currentRunningTool = useMemo(
+    () => (isLoading ? getCurrentRunningTool(messages) : null),
+    [messages, isLoading]
+  );
+
   // Legacy cowork events are no longer stored in CoworkStore.
   // Events come from the active session in CoworkSessionStore or are empty.
   const events: AnyCoworkEvent[] = [];
@@ -186,7 +259,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
       {isTransitioning && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-lg">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="size-4  animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <div className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
             Switching session…
           </div>
         </div>
@@ -196,13 +269,17 @@ export const CoworkTranscript = memo(function CoworkTranscript({
 
         if (item.type === 'message') {
           const msg = item.data as ChatMessage;
+          const isStreamingThis = effectiveIsLoading && isLast;
           return (
             <StreamingChatComposer
               key={item.id}
               message={msg}
-              isLoading={effectiveIsLoading && isLast}
+              isLoading={isStreamingThis}
               isLast={isLast}
               onRegenerate={onRegenerate}
+              viewMode={isStreamingThis ? 'verbose' : 'normal'}
+              onSelectArtifact={onSelectArtifact}
+              selectedArtifactTitle={selectedArtifactTitle}
             />
           );
         }
@@ -218,9 +295,16 @@ export const CoworkTranscript = memo(function CoworkTranscript({
         );
       })}
 
-      {timeline.length === 0 && (
-        <div className="text-center py-12 text-white/20">
-          <p>Session started. Waiting for first observation…</p>
+      {/* Live tool badge — shows inline below the last message while a tool is running */}
+      {currentRunningTool && (
+        <div style={{ paddingLeft: 4 }}>
+          <LiveToolBadge toolName={currentRunningTool} />
+        </div>
+      )}
+
+      {timeline.length === 0 && !effectiveIsLoading && (
+        <div className="text-center py-12" style={{ color: 'var(--ui-text-muted)' }}>
+          <p>Session started. Send a message to begin.</p>
         </div>
       )}
     </div>

@@ -127,7 +127,7 @@ export function DesignLayersPanel({
       overflow: 'hidden',
     }}>
       {/* Header */}
-      <button
+      <button type="button"
         onClick={() => setCollapsed(c => !c)}
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
@@ -167,7 +167,7 @@ export function DesignLayersPanel({
                 const isSelected = shape.id === selectedShapeId;
                 const isHidden = hidden.has(shape.id);
                 return (
-                  <div
+                  <div role="button" tabIndex={0}
                     key={shape.id}
                     onClick={() => onSelectShape(shape.id)}
                     style={{
@@ -207,7 +207,7 @@ export function DesignLayersPanel({
                     >
                       {Math.round(shape.w)}×{Math.round(shape.h)}
                     </span>
-                    <button
+                    <button type="button"
                       onClick={e => toggleHide(shape.id, e)}
                       title={isHidden ? 'Show' : 'Hide'}
                       style={{

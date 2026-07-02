@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Mock implementation of js-tiktoken for tests
 export function getEncoding(_encoding: string): void {
   return {

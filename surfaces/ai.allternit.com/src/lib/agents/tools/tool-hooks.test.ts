@@ -8,13 +8,12 @@
  * - Tool routing decisions (allow/deny/confirm)
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   useToolHooksStore,
   createConfirmationHook,
   createAuditHook,
   type ToolContext,
-  type ToolRoutingResult,
 } from "./tool-hooks";
 
 // Cleanup function to reset store state between tests

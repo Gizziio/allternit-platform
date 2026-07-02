@@ -1,5 +1,5 @@
 /**
- * Allternit Browser Agent Event Stream Types
+ * Allternit Computer Agent Event Stream Types
  * 
  * Unified event model for agentic browser automation.
  * Aligns with:
@@ -32,7 +32,7 @@ export type BrowserActionType =
 
 export type RiskTier = 0 | 1 | 2 | 3 | 4;
 
-export const RISK_TIER_LABELS: Record<RiskTier, string> = {
+const RISK_TIER_LABELS: Record<RiskTier, string> = {
   0: 'Read-only',
   1: 'Low-impact navigation',
   2: 'Form fill (no commit)',
@@ -40,7 +40,7 @@ export const RISK_TIER_LABELS: Record<RiskTier, string> = {
   4: 'Irreversible changes',
 };
 
-export const RISK_TIER_REQUIRES_CONFIRMATION: Record<RiskTier, boolean> = {
+const RISK_TIER_REQUIRES_CONFIRMATION: Record<RiskTier, boolean> = {
   0: false,
   1: false,
   2: false,
@@ -52,9 +52,9 @@ export const RISK_TIER_REQUIRES_CONFIRMATION: Record<RiskTier, boolean> = {
 // Selector Strategies (from ActionContract.json)
 // ============================================================================
 
-export type SelectorStrategy = 'css' | 'xpath' | 'text' | 'aria' | 'role' | 'semantic';
+type SelectorStrategy = 'css' | 'xpath' | 'text' | 'aria' | 'role' | 'semantic';
 
-export interface Selector {
+interface Selector {
   strategy: SelectorStrategy;
   value: string;
   fallbacks?: Selector[];
@@ -83,7 +83,7 @@ export interface PageState {
 // Artifacts (from Receipts.json)
 // ============================================================================
 
-export type ArtifactKind =
+type ArtifactKind =
   | 'screenshot'
   | 'dom_snippet'
   | 'table_json'
@@ -128,7 +128,7 @@ export interface TraceEvent {
 // Policy Decision (from Receipts.json)
 // ============================================================================
 
-export type PolicyDecisionType = 'allow' | 'deny' | 'require_confirm';
+type PolicyDecisionType = 'allow' | 'deny' | 'require_confirm';
 
 export interface PolicyDecision {
   decision: PolicyDecisionType;
@@ -140,7 +140,7 @@ export interface PolicyDecision {
 // Action Contract (from ActionContract.json)
 // ============================================================================
 
-export interface Assertion {
+interface Assertion {
   kind:
     | 'UrlMatches'
     | 'TitleContains'
@@ -159,12 +159,12 @@ export interface Assertion {
   notes?: string;
 }
 
-export interface ActionBudget {
+interface ActionBudget {
   stepBudget?: number;  // Max actions (1-1000)
   timeBudgetMs?: number;  // Max time (1000-3600000ms)
 }
 
-export interface EvidenceCapture {
+interface EvidenceCapture {
   capture: Array<
     | 'screenshot_full'
     | 'screenshot_target'
@@ -198,10 +198,10 @@ export interface BrowserAction {
 }
 
 // ============================================================================
-// Browser Agent Event Stream
+// Computer Agent Event Stream
 // ============================================================================
 
-export type BrowserAgentEvent =
+type BrowserAgentEvent =
   // Session events
   | { type: 'session_created'; payload: SessionCreatedEvent }
   | { type: 'session_resumed'; payload: SessionResumedEvent }
@@ -235,7 +235,7 @@ export type BrowserAgentEvent =
 // Event Payloads
 // ============================================================================
 
-export interface SessionCreatedEvent {
+interface SessionCreatedEvent {
   sessionId: string;
   workspaceId: string;
   renderer: 'HUMAN' | 'AGENT';
@@ -243,18 +243,18 @@ export interface SessionCreatedEvent {
   allowlistHosts: string[];
 }
 
-export interface SessionResumedEvent {
+interface SessionResumedEvent {
   sessionId: string;
   checkpoint: SessionCheckpoint;
 }
 
-export interface SessionSuspendedEvent {
+interface SessionSuspendedEvent {
   sessionId: string;
   reason: 'user_pause' | 'budget_exceeded' | 'error' | 'system';
   checkpoint: SessionCheckpoint;
 }
 
-export interface SessionEndedEvent {
+interface SessionEndedEvent {
   sessionId: string;
   reason: 'completed' | 'cancelled' | 'error' | 'timeout';
   summary: {
@@ -265,7 +265,7 @@ export interface SessionEndedEvent {
   };
 }
 
-export interface SessionCheckpoint {
+interface SessionCheckpoint {
   currentUrl: string;
   stepIndex: number;
   lastDomHash: string;
@@ -273,21 +273,21 @@ export interface SessionCheckpoint {
   sessionIdentifiers?: Record<string, string>;
 }
 
-export interface ActionProposedEvent {
+interface ActionProposedEvent {
   sessionId: string;
   action: BrowserAction;
   planIndex: number;
   totalPlanSteps: number;
 }
 
-export interface ActionStartedEvent {
+interface ActionStartedEvent {
   sessionId: string;
   actionId: string;
   startedAt: string;
   beforeState: PageState;
 }
 
-export interface ActionCompletedEvent {
+interface ActionCompletedEvent {
   sessionId: string;
   actionId: string;
   endedAt: string;
@@ -298,7 +298,7 @@ export interface ActionCompletedEvent {
   };
 }
 
-export interface ActionFailedEvent {
+interface ActionFailedEvent {
   sessionId: string;
   actionId: string;
   endedAt: string;
@@ -310,7 +310,7 @@ export interface ActionFailedEvent {
   retryCount: number;
 }
 
-export interface PolicyCheckEvent {
+interface PolicyCheckEvent {
   sessionId: string;
   actionId: string;
   riskTier: RiskTier;
@@ -318,7 +318,7 @@ export interface PolicyCheckEvent {
   checkedAt: string;
 }
 
-export interface ConfirmationRequiredEvent {
+interface ConfirmationRequiredEvent {
   sessionId: string;
   actionId: string;
   riskTier: RiskTier;
@@ -330,7 +330,7 @@ export interface ConfirmationRequiredEvent {
   requiresSecondaryConfirmation: boolean;  // Tier 4
 }
 
-export interface ConfirmationResultEvent {
+interface ConfirmationResultEvent {
   sessionId: string;
   actionId: string;
   result: 'approved' | 'denied' | 'modified';
@@ -339,7 +339,7 @@ export interface ConfirmationResultEvent {
   confirmationPhrase?: string;  // For Tier 4
 }
 
-export interface ReceiptGeneratedEvent {
+interface ReceiptGeneratedEvent {
   sessionId: string;
   actionId: string;
   receiptId: string;
@@ -348,14 +348,14 @@ export interface ReceiptGeneratedEvent {
   trace: TraceEvent[];
 }
 
-export interface ArtifactCapturedEvent {
+interface ArtifactCapturedEvent {
   sessionId: string;
   actionId: string;
   artifact: Artifact;
   capturedAt: string;
 }
 
-export interface BudgetWarningEvent {
+interface BudgetWarningEvent {
   sessionId: string;
   budgetType: 'step' | 'time';
   remaining: number;
@@ -363,14 +363,14 @@ export interface BudgetWarningEvent {
   percentageUsed: number;
 }
 
-export interface BudgetExceededEvent {
+interface BudgetExceededEvent {
   sessionId: string;
   budgetType: 'step' | 'time';
   limit: number;
   actual: number;
 }
 
-export interface RendererSwitchEvent {
+interface RendererSwitchEvent {
   sessionId: string;
   fromRenderer: 'HUMAN' | 'AGENT';
   toRenderer: 'HUMAN' | 'AGENT';
@@ -394,7 +394,7 @@ export interface OverlayHighlightEvent {
 }
 
 // ============================================================================
-// Browser Agent Status (for UI Status Pill)
+// Computer Agent Status (for UI Status Pill)
 // ============================================================================
 
 export type BrowserAgentStatus =
@@ -404,7 +404,7 @@ export type BrowserAgentStatus =
   | 'Blocked'
   | 'Done';
 
-export const STATUS_TO_RENDERER: Record<BrowserAgentStatus, string> = {
+const STATUS_TO_RENDERER: Record<BrowserAgentStatus, string> = {
   Idle: 'bg-zinc-500',
   Running: 'bg-blue-500 animate-pulse',
   WaitingApproval: 'bg-yellow-500 animate-pulse',
@@ -413,12 +413,12 @@ export const STATUS_TO_RENDERER: Record<BrowserAgentStatus, string> = {
 };
 
 // ============================================================================
-// Browser Agent Mode
+// Computer Agent Mode
 // ============================================================================
 
 export type BrowserAgentMode = 'Human' | 'Assist' | 'Agent';
 
-export const MODE_TO_RISK_LIMIT: Record<BrowserAgentMode, RiskTier> = {
+const MODE_TO_RISK_LIMIT: Record<BrowserAgentMode, RiskTier> = {
   Human: 0,  // Read-only
   Assist: 2,  // Form fill without commit
   Agent: 4,  // Full automation with confirmations
@@ -468,21 +468,21 @@ export interface BrowserReceipt {
 /**
  * Check if an action requires confirmation based on risk tier
  */
-export function requiresConfirmation(riskTier: RiskTier): boolean {
+function requiresConfirmation(riskTier: RiskTier): boolean {
   return RISK_TIER_REQUIRES_CONFIRMATION[riskTier];
 }
 
 /**
  * Get the label for a risk tier
  */
-export function getRiskTierLabel(riskTier: RiskTier): string {
+function getRiskTierLabel(riskTier: RiskTier): string {
   return RISK_TIER_LABELS[riskTier];
 }
 
 /**
  * Get the CSS class for a status pill
  */
-export function getStatusPillClass(status: BrowserAgentStatus): string {
+function getStatusPillClass(status: BrowserAgentStatus): string {
   return STATUS_TO_RENDERER[status] || 'bg-zinc-500';
 }
 
@@ -503,7 +503,7 @@ export function createTraceEvent(
 /**
  * Validate that a BrowserAction conforms to policy constraints
  */
-export function validateActionPolicy(
+function validateActionPolicy(
   action: BrowserAction,
   allowedHosts: string[],
   mode: BrowserAgentMode
@@ -517,8 +517,6 @@ export function validateActionPolicy(
     };
   }
   
-  // Host validation would happen here
-  // For now, just check that allowlist exists
   if (allowedHosts.length === 0) {
     return {
       valid: false,

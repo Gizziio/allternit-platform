@@ -16,7 +16,6 @@ import {
   Chat,
   CheckCircle,
   XCircle,
-  CaretLeft,
   Clock,
   User,
   Warning,
@@ -151,7 +150,7 @@ export function MailTab() {
               </span>
             )}
           </div>
-          <button
+          <button type="button"
             onClick={() => fetchMailThreads()}
             style={{
               padding: 6,
@@ -238,7 +237,7 @@ export function MailTab() {
                   {threadMessages.length} messages
                 </span>
               </div>
-              <button
+              <button type="button"
                 onClick={() => setShowReviewModal(true)}
                 style={{
                   padding: "8px 16px",
@@ -291,7 +290,7 @@ export function MailTab() {
                   justifyContent: "center",
                 }}
               >
-                <button
+                <button type="button"
                   onClick={() => handleDecideReview(true)}
                   style={{
                     padding: "10px 24px",
@@ -310,7 +309,7 @@ export function MailTab() {
                   <CheckCircle size={16} />
                   Approve
                 </button>
-                <button
+                <button type="button"
                   onClick={() => handleDecideReview(false)}
                   style={{
                     padding: "10px 24px",
@@ -341,8 +340,7 @@ export function MailTab() {
                 gap: 12,
               }}
             >
-              <input
-                type="text"
+              <input aria-label="Input" type="text"
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 onKeyDown={(e) => {
@@ -364,7 +362,7 @@ export function MailTab() {
                   outline: "none",
                 }}
               />
-              <button
+              <button type="button"
                 onClick={handleSendMessage}
                 disabled={!messageText.trim() || isLoading}
                 style={{
@@ -447,7 +445,7 @@ export function MailTab() {
               }}
             >
               <div>
-                <label
+                <div
                   style={{
                     display: "block",
                     fontSize: 12,
@@ -456,9 +454,8 @@ export function MailTab() {
                   }}
                 >
                   WIH ID
-                </label>
-                <input
-                  type="text"
+                </div>
+                <input aria-label="Input" type="text"
                   value={reviewWihId}
                   onChange={(e) => setReviewWihId(e.target.value)}
                   placeholder="Enter WIH ID"
@@ -475,7 +472,7 @@ export function MailTab() {
                 />
               </div>
               <div>
-                <label
+                <div
                   style={{
                     display: "block",
                     fontSize: 12,
@@ -484,9 +481,8 @@ export function MailTab() {
                   }}
                 >
                   Diff Reference
-                </label>
-                <input
-                  type="text"
+                </div>
+                <input aria-label="Input" type="text"
                   value={reviewDiffRef}
                   onChange={(e) => setReviewDiffRef(e.target.value)}
                   placeholder="Enter diff reference"
@@ -510,7 +506,7 @@ export function MailTab() {
                 justifyContent: "flex-end",
               }}
             >
-              <button
+              <button type="button"
                 onClick={() => setShowReviewModal(false)}
                 style={{
                   padding: "10px 20px",
@@ -524,7 +520,7 @@ export function MailTab() {
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={handleRequestReview}
                 disabled={!reviewWihId || !reviewDiffRef}
                 style={{
@@ -560,7 +556,7 @@ function ThreadItem({
   onClick: () => void;
 }) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
       style={{
         padding: 12,
@@ -685,7 +681,7 @@ function MessageBubble({
           <Clock size={10} />
           {new Date(message.timestamp).toLocaleTimeString()}
           {!message.acknowledged && !isMe && (
-            <button
+            <button type="button"
               onClick={onAck}
               style={{
                 marginLeft: 8,

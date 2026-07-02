@@ -11,7 +11,7 @@
  */
 
 // Full <deck-stage> web component — ported from alchaincyf/huashu-design
-export const DECK_STAGE_SCRIPT = `(function() {
+const DECK_STAGE_SCRIPT = `(function() {
   const STORAGE_KEY_PREFIX = 'deck-stage-slide-';
 
   class DeckStage extends HTMLElement {
@@ -201,7 +201,7 @@ export const DECK_STAGE_SKELETON_HTML = [
   '</html>',
 ].join('\n');
 
-export const DECK_SKELETON_HTML = `<!DOCTYPE html>
+const DECK_SKELETON_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />

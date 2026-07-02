@@ -435,7 +435,7 @@ export async function runComplianceAssessment(): Promise<ComplianceStatus> {
 
 import { useState, useEffect, useCallback } from 'react';
 
-export function usePolicies(options?: Parameters<typeof listPolicies>[0]) {
+function usePolicies(options?: Parameters<typeof listPolicies>[0]) {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -462,7 +462,7 @@ export function usePolicies(options?: Parameters<typeof listPolicies>[0]) {
   return { policies, loading, error, total, refetch: fetchPolicies };
 }
 
-export function useViolations(options?: Parameters<typeof listViolations>[0]) {
+function useViolations(options?: Parameters<typeof listViolations>[0]) {
   const [violations, setViolations] = useState<PolicyViolation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -489,7 +489,7 @@ export function useViolations(options?: Parameters<typeof listViolations>[0]) {
   return { violations, loading, error, total, refetch: fetchViolations };
 }
 
-export function useApprovals(options?: Parameters<typeof listApprovals>[0]) {
+function useApprovals(options?: Parameters<typeof listApprovals>[0]) {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -516,7 +516,7 @@ export function useApprovals(options?: Parameters<typeof listApprovals>[0]) {
   return { approvals, loading, error, total, refetch: fetchApprovals };
 }
 
-export function useSecurityOverview() {
+function useSecurityOverview() {
   const [overview, setOverview] = useState<SecurityOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

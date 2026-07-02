@@ -28,9 +28,7 @@ import {
   Terminal,
   SquaresFour,
   Chat,
-  X,
   Play,
-  GearSix,
   Pulse as Activity,
   GraduationCap,
 } from '@phosphor-icons/react';
@@ -143,7 +141,7 @@ export function AllternitOSView({ context }: AllternitOSViewProps) {
           {/* Program Dock Sidebar */}
           <aside className="w-16 border-r bg-card flex flex-col items-center py-4 gap-2 shrink-0">
             {programsList.map((program) => (
-              <button
+              <button type="button"
                 key={program.id}
                 onClick={() => launchProgram(program.id)}
                 className={`size-10  rounded-lg flex items-center justify-center text-white hover:scale-105 transition-transform ${program.color}`}
@@ -207,7 +205,7 @@ function ProgramLauncher({ onLaunch }: { onLaunch: (id: string) => void }) {
 
         <div className="grid grid-cols-2 gap-4">
           {programsList.map((program) => (
-            <button
+            <button type="button"
               key={program.id}
               onClick={() => onLaunch(program.id)}
               className="flex items-start gap-4 p-4 rounded-xl border bg-card hover:border-primary hover:shadow-md transition-all text-left"
@@ -314,8 +312,7 @@ function ChatIntegration() {
         </div>
         <div className="h-16 border-t p-2">
           <div className="flex gap-2">
-            <input 
-              type="text" 
+            <input aria-label="Type @ to launch a program…" type="text" 
               placeholder="Type @ to launch a program…"
               className="flex-1 px-4 py-2 rounded-lg border bg-background"
             />

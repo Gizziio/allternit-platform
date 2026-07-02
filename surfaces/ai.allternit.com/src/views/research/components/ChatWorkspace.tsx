@@ -35,7 +35,7 @@ function AssistantContent({
       {parts.map((part, i) => {
         if (part.type === 'text') {
           return (
-            <span key={i}>
+            <span key={`chatworkspace-${i}`}>
               {renderTextWithCitations(part.text, citations, onCitationClick)}
             </span>
           );
@@ -109,7 +109,7 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
       )}
 
       {messages.map((msg, idx) => (
-        <div key={idx} className="flex gap-2.5 items-start">
+        <div key={`chatworkspace-${idx}`} className="flex gap-2.5 items-start">
           {/* Avatar */}
           <div className={msg.role === 'user' ? 'research-message-user' : 'research-message-assistant'}>
             {msg.role === 'user' ? (
@@ -137,7 +137,7 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
             {msg.role === 'assistant' && msg.citations && msg.citations.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-[var(--border-subtle,#27272a)]">
                 {msg.citations.map((cite) => (
-                  <span
+                  <span role="button" tabIndex={0}
                     key={cite.index}
                     onClick={() => onCitationClick?.(cite.source_id)}
                     className="text-xs text-purple-400 bg-purple-400/8 px-1.5 py-0.5 rounded cursor-pointer"

@@ -43,7 +43,7 @@ export interface ValidationResponse {
 /**
  * API service for provider authentication and model discovery
  */
-export class ProviderAuthService {
+class ProviderAuthService {
   private client: AxiosInstance;
 
   constructor(baseURL: string = '/api/v1') {

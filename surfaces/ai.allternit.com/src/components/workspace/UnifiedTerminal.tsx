@@ -10,6 +10,10 @@ import { workspaceClient, Pane } from '../../services/workspace/client';
 import { GlassCard } from '../../design/glass/GlassCard';
 import { SquaresFour, Square, Plus, X } from '@phosphor-icons/react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UnifiedTerminal');
+
 // Dynamically import xterm only on client side
 let Terminal: typeof import('xterm').Terminal | null = null;
 let FitAddon: typeof import('xterm-addon-fit').FitAddon | null = null;
@@ -55,9 +59,9 @@ function TerminalInstance({ pane, isActive }: {
     if (termRef.current) return;
 
     let mounted = true;
+    let fitTimeout: any;
 
-    async function initTerminal() {
-      const loaded = await loadXterm();
+    loadXterm().then((loaded) => {
       if (!loaded || !mounted || !containerRef.current) return;
 
       console.debug('Initializing terminal for pane:', pane.id);
@@ -139,32 +143,28 @@ function TerminalInstance({ pane, isActive }: {
       });
 
       // Fit terminal after mount
-      const fitTimeout = setTimeout(() => {
+      fitTimeout = setTimeout(() => {
         try {
           fitAddon.fit();
           console.debug('Terminal fitted for pane:', pane.id);
         } catch (e) {
-          console.warn('Fit failed:', e);
+          logger.warn({ err: e }, 'Fit failed:');
         }
       }, 100);
-
-      return () => {
-        clearTimeout(fitTimeout);
-        socket.close();
-        term.dispose();
-      };
-    }
-
-    const cleanupPromise = initTerminal();
+    });
 
     return () => {
       mounted = false;
-      cleanupPromise.then((cleanup) => {
-        if (cleanup) cleanup();
-        termRef.current = null;
-        fitAddonRef.current = null;
+      if (fitTimeout) clearTimeout(fitTimeout);
+      if (socketRef.current) {
+        socketRef.current.close();
         socketRef.current = null;
-      });
+      }
+      if (termRef.current) {
+        termRef.current.dispose();
+        termRef.current = null;
+      }
+      fitAddonRef.current = null;
     };
   }, [pane.id, pane.title]);
 
@@ -218,7 +218,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
       }
       return true;
     } catch (err) {
-      console.error('Failed to ensure session:', err);
+      logger.error({ err: err }, 'Failed to ensure session:');
       setError('Failed to create session');
       return false;
     }
@@ -241,7 +241,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
         }
       }
     } catch (err) {
-      console.error('Failed to load panes:', err);
+      logger.error({ err: err }, 'Failed to load panes:');
       setError('Failed to load terminals');
     }
   }, [sessionId, activePaneId]);
@@ -279,7 +279,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
       
       setActivePaneId(newPane.id);
     } catch (err) {
-      console.error('Failed to create pane:', err);
+      logger.error({ err: err }, 'Failed to create pane:');
       setError('Failed to create terminal: ' + (err as Error).message);
     } finally {
       setIsLoading(false);
@@ -297,7 +297,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
         setActivePaneId(remaining.length > 0 ? remaining[0].id : null);
       }
     } catch (err) {
-      console.error('Failed to close pane:', err);
+      logger.error({ err: err }, 'Failed to close pane:');
     }
   };
 
@@ -335,7 +335,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
           
           {/* Mode toggle */}
           <div style={{ display: 'flex', gap: 4, marginLeft: 16 }}>
-            <button
+            <button type="button"
               onClick={() => setMode('single')}
               style={{
                 padding: '4px 8px',
@@ -353,7 +353,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
               <Square size={12} weight={mode === 'single' ? 'fill' : 'regular'} />
               Single
             </button>
-            <button
+            <button type="button"
               onClick={() => setMode('grid')}
               style={{
                 padding: '4px 8px',
@@ -374,7 +374,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
           </div>
         </div>
 
-        <button
+        <button type="button"
           onClick={handleCreatePane}
           disabled={isLoading}
           style={{
@@ -421,7 +421,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
             gap: 16,
           }}>
             <span>No terminals yet</span>
-            <button
+            <button type="button"
               onClick={handleCreatePane}
               style={{
                 padding: '8px 16px',
@@ -451,7 +451,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
                 flexShrink: 0,
               }}>
                 {panes.map(pane => (
-                  <div
+                  <div role="button" tabIndex={0}
                     key={pane.id}
                     onClick={() => setActivePaneId(pane.id)}
                     style={{
@@ -470,7 +470,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
                   >
                     <span>{pane.title || `Terminal ${pane.pane_index}`}</span>
                     {panes.length > 1 && (
-                      <button
+                      <button type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleClosePane(pane.id);
@@ -549,7 +549,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
                   <span style={{ fontSize: 12, color: '#f3f4f6', fontWeight: 500 }}>
                     {pane.title || `Terminal ${pane.pane_index}`}
                   </span>
-                  <button
+                  <button type="button"
                     onClick={() => handleClosePane(pane.id)}
                     style={{
                       background: 'transparent',
@@ -566,7 +566,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
                 </div>
 
                 {/* Terminal */}
-                <div 
+                <div role="button" tabIndex={0} 
                   style={{ flex: 1, minHeight: 0, padding: 4 }}
                   onClick={() => setActivePaneId(pane.id)}
                 >

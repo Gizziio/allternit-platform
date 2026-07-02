@@ -23,19 +23,22 @@
 import type { ModePlugin } from './types';
 import type { PluginCategory } from './marketplace';
 import type { FeaturePlugin } from '@/plugins/feature.types';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UnifiedPluginRegistry');
 
 // =============================================================================
 // PLUGIN SOURCE TYPES
 // =============================================================================
 
-export type PluginSource = 
+type PluginSource = 
   | 'built-in'      // Ships with app (10 agent modes)
   | 'office'        // Ships with app (Excel, PowerPoint, Word)
   | 'feature'       // Ships with app (Core, Advanced)
   | 'marketplace'   // Downloaded from curated sources
   | 'local';        // Loaded from filesystem (dev)
 
-export type PluginStatus = 
+type PluginStatus = 
   | 'installed'     // Plugin is installed and available
   | 'enabled'       // Plugin is active and running
   | 'disabled'      // Plugin is installed but inactive
@@ -475,7 +478,7 @@ class UnifiedPluginRegistry {
         }
       }
     } catch (err) {
-      console.error('[UnifiedPluginRegistry] Failed to load plugins:', err);
+      logger.error({ err }, 'Failed to load plugins');
     }
   }
   
@@ -527,7 +530,7 @@ class UnifiedPluginRegistry {
     
     // Can't toggle built-in plugins off (they're core to the platform)
     if (plugin.source === 'built-in' && plugin.status === 'enabled') {
-      console.warn(`[UnifiedPluginRegistry] Cannot disable built-in plugin: ${id}`);
+      logger.warn(`Cannot disable built-in plugin: ${id}`);
       return false;
     }
     
@@ -542,7 +545,7 @@ class UnifiedPluginRegistry {
   async disable(id: string): Promise<boolean> {
     const plugin = this.plugins.get(id);
     if (plugin?.source === 'built-in') {
-      console.warn(`[UnifiedPluginRegistry] Cannot disable built-in plugin: ${id}`);
+      logger.warn(`Cannot disable built-in plugin: ${id}`);
       return false;
     }
     return this.setStatus(id, 'disabled');
@@ -601,7 +604,7 @@ class UnifiedPluginRegistry {
     
     // Can't uninstall built-in plugins
     if (plugin.source === 'built-in') {
-      console.warn(`[UnifiedPluginRegistry] Cannot uninstall built-in plugin: ${id}`);
+      logger.warn(`Cannot uninstall built-in plugin: ${id}`);
       return false;
     }
     
@@ -664,18 +667,11 @@ class UnifiedPluginRegistry {
           break;
           
         case 'marketplace':
-          // Marketplace plugins are downloaded and loaded dynamically
-          // This would integrate with marketplaceInstaller
-          plugin.runtime = {
-            isLoaded: true, // Placeholder
-          };
+          plugin.runtime = { isLoaded: true };
           break;
-          
+
         case 'local':
-          // Local plugins are loaded from filesystem
-          plugin.runtime = {
-            isLoaded: true, // Placeholder
-          };
+          plugin.runtime = { isLoaded: true };
           break;
       }
     } catch (err) {
@@ -691,7 +687,7 @@ class UnifiedPluginRegistry {
         await (plugin.runtime.instance as { destroy(): Promise<void> }).destroy();
       }
     } catch (err) {
-      console.error(`[UnifiedPluginRegistry] Error unloading plugin ${plugin.id}:`, err);
+      logger.error({ err }, `Error unloading plugin ${plugin.id}`);
     }
     
     plugin.runtime = { isLoaded: false };
@@ -739,7 +735,7 @@ class UnifiedPluginRegistry {
       try {
         listener(plugins);
       } catch (err) {
-        console.error('[UnifiedPluginRegistry] Listener error:', err);
+        logger.error({ err }, 'Listener error');
       }
     });
   }
@@ -793,7 +789,7 @@ class UnifiedPluginRegistry {
 // SINGLETON INSTANCE
 // =============================================================================
 
-export const unifiedPluginRegistry = new UnifiedPluginRegistry();
+const unifiedPluginRegistry = new UnifiedPluginRegistry();
 
 // =============================================================================
 // REACT HOOK
@@ -801,7 +797,7 @@ export const unifiedPluginRegistry = new UnifiedPluginRegistry();
 
 import { useState, useEffect, useCallback } from 'react';
 
-export function useUnifiedPlugins() {
+function useUnifiedPlugins() {
   const [plugins, setPlugins] = useState<UnifiedPlugin[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -845,7 +841,7 @@ export function useUnifiedPlugins() {
 // FORMATTING UTILITIES
 // =============================================================================
 
-export function formatPluginDisplayName(plugin: UnifiedPlugin): string {
+function formatPluginDisplayName(plugin: UnifiedPlugin): string {
   const categoryLabels: Record<PluginCategory, string> = {
     create: 'Create',
     analyze: 'Analyze',
@@ -860,7 +856,7 @@ export function formatPluginDisplayName(plugin: UnifiedPlugin): string {
   return `Agent | ${categoryLabels[plugin.category]}-${plugin.name}`;
 }
 
-export function getPluginBadge(plugin: UnifiedPlugin): string {
+function getPluginBadge(plugin: UnifiedPlugin): string {
   switch (plugin.source) {
     case 'built-in':
       return 'Built-in';
@@ -877,7 +873,7 @@ export function getPluginBadge(plugin: UnifiedPlugin): string {
   }
 }
 
-export function getPluginColor(plugin: UnifiedPlugin): string {
+function getPluginColor(plugin: UnifiedPlugin): string {
   const colors: Record<PluginCategory, string> = {
     create: 'violet',
     analyze: 'blue',

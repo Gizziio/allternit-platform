@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from 'react';
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -167,7 +167,7 @@ function buildMeta(request: PermissionRequest): PermissionMeta {
           <ul className="flex flex-col gap-0.5">
             {patterns.map((p, i) => (
               <li
-                key={i}
+                key={`session-permission-dock-${i}`}
                 className="text-[12px] text-[var(--text-secondary)] font-mono"
               >
                 {p}
@@ -261,9 +261,9 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
   return (
     <DockSurface
       data-component="session-permission-dock"
-      className="shadow-lg"
-      style={{ borderLeft: "3px solid var(--status-warning)" }}
+      className="shadow-lg relative"
     >
+      <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[var(--status-warning)]" />
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border-subtle)]">
         <Warning
@@ -306,14 +306,14 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
               data-slot="permission-actions"
               className="flex items-center gap-2 px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-hover)]"
             >
-              <button
+              <button type="button"
                 data-slot="action-once"
                 onClick={() => onReply("once")}
                 className="flex-1 h-8 text-[12px] font-medium rounded-[10px] bg-[var(--status-warning-bg)] text-[var(--status-warning)] border border-[var(--status-warning)]/30 hover:bg-[var(--status-warning)]/20 transition-colors"
               >
                 Allow once
               </button>
-              <button
+              <button type="button"
                 data-slot="action-always"
                 onClick={handleAlways}
                 className="flex-1 h-8 text-[12px] font-medium rounded-[10px] bg-[var(--bg-hover)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-active)] transition-colors"
@@ -321,7 +321,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
                 Always allow
                 <CaretDown size={11} className="inline ml-1 -mt-0.5 opacity-60" />
               </button>
-              <button
+              <button type="button"
                 data-slot="action-reject"
                 onClick={handleRejectStage}
                 className="flex-1 h-8 text-[12px] font-medium rounded-[10px] bg-[var(--status-error-bg)] text-[var(--status-error)] border border-[var(--status-error)]/30 hover:bg-[var(--status-error)]/20 transition-colors"
@@ -360,7 +360,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
                   <ul className="flex flex-col gap-0.5 ml-2">
                     {request.always.map((pattern, i) => (
                       <li
-                        key={i}
+                        key={`session-permission-dock-${i}`}
                         className="text-[12px] font-mono text-[var(--text-secondary)] bg-[var(--bg-hover)] px-2 py-0.5 rounded-md"
                       >
                         {pattern}
@@ -371,7 +371,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
               )}
             </div>
             <div className="flex items-center gap-2 px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-hover)]">
-              <button
+              <button type="button"
                 data-slot="back"
                 onClick={handleBack}
                 className="flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium rounded-[10px] bg-transparent text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-active)] transition-colors"
@@ -379,7 +379,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
                 <ArrowLeft size={12} />
                 Back
               </button>
-              <button
+              <button type="button"
                 data-slot="confirm-always"
                 onClick={handleAlwaysConfirm}
                 className="flex-1 h-8 text-[12px] font-medium rounded-[10px] bg-[var(--status-warning-bg)] text-[var(--status-warning)] border border-[var(--status-warning)]/30 hover:bg-[var(--status-warning)]/20 transition-colors"
@@ -405,8 +405,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
               <p className="text-[12px] text-[var(--text-secondary)]">
                 Optionally tell the agent what to do differently:
               </p>
-              <textarea
-                ref={textareaRef}
+              <textarea aria-label="Text Area" ref={textareaRef}
                 data-slot="reject-message"
                 value={rejectMessage}
                 onChange={(e) => setRejectMessage(e.target.value)}
@@ -434,7 +433,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
               </p>
             </div>
             <div className="flex items-center gap-2 px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-hover)]">
-              <button
+              <button type="button"
                 data-slot="back"
                 onClick={handleBack}
                 className="flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium rounded-[10px] bg-transparent text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-active)] transition-colors"
@@ -442,7 +441,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
                 <ArrowLeft size={12} />
                 Back
               </button>
-              <button
+              <button type="button"
                 data-slot="confirm-reject"
                 onClick={handleRejectConfirm}
                 className="flex-1 h-8 text-[12px] font-medium rounded-[10px] bg-[var(--status-error-bg)] text-[var(--status-error)] border border-[var(--status-error)]/30 hover:bg-[var(--status-error)]/20 transition-colors"

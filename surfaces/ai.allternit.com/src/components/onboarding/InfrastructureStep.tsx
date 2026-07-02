@@ -93,16 +93,16 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
   const [statusMessage, setStatusMessage] = useState('');
   const [installProgress, setInstallProgress] = useState<InstallProgress | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [, setAbortFn] = useState<(() => void) | null>(null);
+  const abortFnRef = useRef<(() => void) | null>(null);
   const [installLog, setInstallLog] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<InstallStep>('connecting');
 
   // Local backend state
   const [localBackendStatus, setLocalBackendStatus] = useState<'checking' | 'found' | 'not-found'>('checking');
   const [localBackendUrl, setLocalBackendUrl] = useState<string | null>(null);
-  const [isInElectron] = useState(isElectron);
+  const isInElectron = isElectron();
   const [electronTunnelState, setElectronTunnelState] = useState<{ status: string; url?: string } | null>(null);
-  const [os] = useState(detectOS);
+  const os = detectOS();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Manual backend URL state
@@ -161,15 +161,18 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
 
     probeLocalBackends();
     pollRef.current = setInterval(() => {
-      if (localBackendStatus !== 'found') probeLocalBackends();
+      setLocalBackendStatus((current) => {
+        if (current !== 'found') {
+          probeLocalBackends();
+        }
+        return current;
+      });
     }, 3000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.infraType]);
-
+  }, [data.infraType, probeLocalBackends]);
   // Electron tunnel IPC subscription
   useEffect(() => {
     if (!isElectron()) return;
@@ -286,10 +289,10 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
           onStatusChange('error', result.error);
           setCurrentStep('error');
         }
-        setAbortFn(null);
+        abortFnRef.current = null;
       }
     );
-    setAbortFn(() => abort);
+    abortFnRef.current = abort;
   };
 
   const handleManualBackendSubmit = async () => {
@@ -355,7 +358,7 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
       {/* Option cards */}
       <div className="space-y-2">
         {options.map(({ id, label, desc, icon: Icon, color }) => (
-          <button
+          <button type="button"
             key={id}
             onClick={() => onUpdate({ infraType: id })}
             className={cn(
@@ -444,7 +447,7 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
           </p>
           <div className="grid grid-cols-3 gap-3">
             {VPS_PROVIDERS.map((provider) => (
-              <button
+              <button type="button"
                 key={provider.id}
                 onClick={() => { savePurchaseIntent(provider.id, {}); openInBrowser(provider.url); }}
                 className="group p-4 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-[#D4B08C] transition-all text-center"
@@ -513,7 +516,7 @@ function LocalPanel({
             <p className="text-xs text-white/40">
               Your desktop is running as the backend. The platform connects through it automatically.
             </p>
-            <button
+            <button type="button"
               onClick={onActivate}
               disabled={activationStatus === 'connecting' || activationStatus === 'ready'}
               className="w-full py-2.5 rounded-xl bg-[#5B8DEF]/20 hover:bg-[#5B8DEF]/30 text-[#5B8DEF] text-sm font-medium transition-colors disabled:opacity-50"
@@ -526,7 +529,7 @@ function LocalPanel({
             <p className="text-sm text-white/60">
               Enable Web Access to use your desktop as the backend from the browser.
             </p>
-            <button
+            <button type="button"
               onClick={onEnableTunnel}
               disabled={tunnelStarting}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#5B8DEF] hover:bg-[#4a7ddf] text-white text-sm font-medium transition-colors disabled:opacity-70"
@@ -553,7 +556,7 @@ function LocalPanel({
             <div className="text-sm text-white/50 truncate">{localBackendUrl}</div>
           </div>
         </div>
-        <button
+        <button type="button"
           onClick={onActivate}
           disabled={activationStatus === 'connecting' || activationStatus === 'ready'}
           className="w-full py-2.5 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-green-400 text-sm font-medium transition-colors disabled:opacity-50"
@@ -606,7 +609,7 @@ function LocalPanel({
             'Click "Enable Web Access" in the app',
             'This page connects to your desktop automatically',
           ].map((step, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs text-white/60">
+            <div key={`infrastructurestep-${i}`} className="flex items-start gap-2 text-xs text-white/60">
               <span className="size-4  rounded-full bg-[#5B8DEF]/20 text-[#5B8DEF] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                 {i + 1}
               </span>
@@ -621,7 +624,7 @@ function LocalPanel({
         <div className="flex-1">
           <p className="text-xs text-white/60">Already installed? Checking every 3 seconds…</p>
         </div>
-        <button
+        <button type="button"
           onClick={onRetry}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 text-xs transition-colors"
         >
@@ -636,11 +639,10 @@ function LocalPanel({
 // ── Download buttons with OS detection ─────────────────────────────────────
 
 function DownloadButtons({ os }: { os: 'mac' | 'windows' | 'linux' }) {
-  // Placeholder download URLs — replace with real release URLs
   const downloads = {
-    mac:     { label: 'Download for Mac',     icon: AppleLogo,   href: '#download-mac',     hint: 'macOS 12+' },
-    windows: { label: 'Download for Windows', icon: WindowsLogo, href: '#download-windows',  hint: 'Windows 10+' },
-    linux:   { label: 'Download for Linux',   icon: LinuxLogo,   href: '#download-linux',    hint: 'Debian / RPM' },
+    mac:     { label: 'Download for Mac',     icon: AppleLogo,   href: 'https://allternit.com/download?os=mac',     hint: 'macOS 12+' },
+    windows: { label: 'Download for Windows', icon: WindowsLogo, href: 'https://allternit.com/download?os=windows',  hint: 'Windows 10+' },
+    linux:   { label: 'Download for Linux',   icon: LinuxLogo,   href: 'https://allternit.com/download?os=linux',    hint: 'Debian / RPM' },
   };
 
   const primary = downloads[os];
@@ -714,8 +716,7 @@ function ManualBackendPanel({
 
       {/* URL input with live status */}
       <div className="relative">
-        <input
-          type="text"
+        <input aria-label="Backend URL" type="text"
           value={manualBackend.gatewayUrl}
           onChange={(e) => onUrlChange(e.target.value)}
           placeholder="https://your-backend.trycloudflare.com"
@@ -724,11 +725,11 @@ function ManualBackendPanel({
             inputBorderColor
           )}
         />
-        <div className="absolute right-3 top-1/2 -tranzinc-y-1/2">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2">
           {urlTestStatus === 'checking' && <CircleNotch className="size-4  animate-spin text-white/40" />}
           {urlTestStatus === 'ok'       && <CheckCircle size={16} className="text-green-500" />}
           {urlTestStatus === 'fail'     && (
-            <button onClick={onRetryTest} title="Retry">
+            <button type="button" onClick={onRetryTest} title="Retry">
               <ArrowClockwise size={16} className="text-red-400 hover:text-red-300" />
             </button>
           )}
@@ -753,8 +754,7 @@ function ManualBackendPanel({
       )}
 
       {/* Name (collapsible / auto-filled) */}
-      <input
-        type="text"
+      <input aria-label="Backend name" type="text"
         value={manualBackend.name}
         onChange={(e) => onNameChange(e.target.value)}
         placeholder="Label (e.g. My MacBook)"
@@ -766,8 +766,7 @@ function ManualBackendPanel({
         <summary className="text-xs text-white/30 cursor-pointer hover:text-white/50 select-none">
           + Auth token (optional)
         </summary>
-        <input
-          type="text"
+        <input aria-label="Auth token" type="text"
           value={manualBackend.gatewayToken}
           onChange={(e) => onTokenChange(e.target.value)}
           placeholder="Bearer or Basic token"
@@ -776,7 +775,7 @@ function ManualBackendPanel({
       </details>
 
       {/* Submit */}
-      <button
+      <button type="button"
         onClick={onSubmit}
         disabled={submitStatus === 'connecting' || submitStatus === 'ready' || !manualBackend.gatewayUrl.trim()}
         className={cn(
@@ -845,16 +844,16 @@ function SSHPanel({
       </div>
 
       <div className="grid grid-cols-[1fr,80px] gap-2">
-        <input type="text" value={sshConfig.host}
+        <input aria-label="SSH Host" type="text" value={sshConfig.host}
           onChange={(e) => onUpdate({ sshConfig: { ...sshConfig, host: e.target.value } })}
           placeholder="Hostname or IP"
           className="px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#D4B08C]" />
-        <input type="number" value={sshConfig.port}
+        <input aria-label="SSH Port" type="number" value={sshConfig.port}
           onChange={(e) => onUpdate({ sshConfig: { ...sshConfig, port: parseInt(e.target.value) || 22 } })}
           className="px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#D4B08C]" />
       </div>
 
-      <input type="text" value={sshConfig.username}
+      <input aria-label="SSH Username" type="text" value={sshConfig.username}
         onChange={(e) => onUpdate({ sshConfig: { ...sshConfig, username: e.target.value } })}
         placeholder="Username"
         className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#D4B08C]" />
@@ -862,7 +861,7 @@ function SSHPanel({
       <div className="flex gap-2">
         {[{ id: 'key' as const, label: 'SSH Key', icon: Key }, { id: 'password' as const, label: 'Password', icon: Lock }]
           .map(({ id, label, icon: Icon }) => (
-            <button key={id}
+            <button type="button" key={id}
               onClick={() => onUpdate({ sshConfig: { ...sshConfig, authType: id } })}
               className={cn('flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all',
                 sshConfig.authType === id ? 'border-[#D4B08C] bg-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] text-[#D4B08C]' : 'border-white/10 text-white/50')}>
@@ -873,30 +872,30 @@ function SSHPanel({
 
       {sshConfig.authType === 'key' ? (
         <div className="flex gap-2">
-          <input type="text" value={sshConfig.privateKey}
+          <input aria-label="SSH Private Key" type="text" value={sshConfig.privateKey}
             onChange={(e) => onUpdate({ sshConfig: { ...sshConfig, privateKey: e.target.value } })}
             placeholder="Paste private key content"
             className="flex-1 px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#D4B08C]" />
         </div>
       ) : (
         <div className="relative">
-          <input type={showPassword ? 'text' : 'password'} value={sshConfig.password}
+          <input aria-label="SSH Password" type={showPassword ? 'text' : 'password'} value={sshConfig.password}
             onChange={(e) => onUpdate({ sshConfig: { ...sshConfig, password: e.target.value } })}
             placeholder="Password"
             className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#D4B08C]" />
-          <button onClick={onTogglePassword} className="absolute right-3 top-1/2 -tranzinc-y-1/2 text-white/30">
+          <button type="button" onClick={onTogglePassword} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30">
             <Eye size={16} />
           </button>
         </div>
       )}
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onTestConnection} disabled={isBusy}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-white/20 rounded-xl text-sm text-[#D4B08C] hover:bg-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] disabled:opacity-50">
+        <button type="button" onClick={onTestConnection} disabled={isBusy}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-white/20 rounded-xl text-sm text-[#D4B08C] hover:bg-[color-mix(in_srgb, var(--accent-primary) 10%, transparent)] disabled:opacity-50">
           {status === 'testing' ? <CircleNotch className="size-4  animate-spin" /> : <Lightning size={16} />}
           Test Connection
         </button>
-        <button onClick={onConnectAndInstall} disabled={isBusy}
+        <button type="button" onClick={onConnectAndInstall} disabled={isBusy}
           className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#D4B08C] rounded-xl text-sm text-[#0D0B09] font-medium hover:bg-[#c4a07c] disabled:opacity-50">
           {isBusy ? <CircleNotch className="size-4  animate-spin" /> : <HardDrives size={16} />}
           {status === 'installing' ? 'Installing…' : 'Connect & Install'}
@@ -931,7 +930,7 @@ function SSHPanel({
               <div className="text-white/40 mb-1 text-xs uppercase tracking-wider">Live log</div>
               <div className="space-y-1 max-h-28 overflow-y-auto">
                 {installLog.map((log, i) => (
-                  <div key={i} className={cn('flex items-start gap-2', i === installLog.length - 1 ? 'text-[#D4B08C]' : 'text-white/50')}>
+                  <div key={`infrastructurestep-${i}`} className={cn('flex items-start gap-2', i === installLog.length - 1 ? 'text-[#D4B08C]' : 'text-white/50')}>
                     <CaretRight className="size-3  mt-0.5 flex-shrink-0" />
                     <span>{log}</span>
                   </div>
@@ -953,3 +952,5 @@ function SSHPanel({
     </div>
   );
 }
+
+export default InfrastructureStep;

@@ -13,10 +13,10 @@
  * Inspired by OpenWork's GlobalSDKProvider event coalescing.
  */
 
-export type SSEMessageHandler = (data: unknown, event: MessageEvent) => void;
-export type SSEEventHandler = (event: MessageEvent) => void;
-export type SSEErrorHandler = (error: Event) => void;
-export type SSEOpenHandler = () => void;
+type SSEMessageHandler = (data: unknown, event: MessageEvent) => void;
+type SSEEventHandler = (event: MessageEvent) => void;
+type SSEErrorHandler = (error: Event) => void;
+type SSEOpenHandler = () => void;
 
 interface SSEListenerSet {
   message: Set<SSEMessageHandler>;
@@ -170,7 +170,7 @@ export function subscribeSSE(url: string, options: SSESubscriptionOptions = {}):
 /**
  * Get the current connection count for debugging.
  */
-export function getSSEConnectionStats(): { url: string; refCount: number }[] {
+function getSSEConnectionStats(): { url: string; refCount: number }[] {
   return Array.from(connections.entries()).map(([url, conn]) => ({
     url,
     refCount: conn.refCount,
@@ -180,7 +180,7 @@ export function getSSEConnectionStats(): { url: string; refCount: number }[] {
 /**
  * Close all SSE connections. Useful for logout / cleanup.
  */
-export function closeAllSSEConnections(): void {
+function closeAllSSEConnections(): void {
   connections.forEach((conn) => conn.source.close());
   connections.clear();
 }

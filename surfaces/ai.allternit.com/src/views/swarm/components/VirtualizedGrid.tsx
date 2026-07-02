@@ -5,7 +5,7 @@
  * Falls back to regular GridView for smaller datasets (< 50 agents).
  */
 
-import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { TEXT } from '@/design/allternit.tokens';
 import type { SwarmAgent } from '../types';
 import { AgentCard } from './AgentCard';

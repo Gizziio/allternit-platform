@@ -62,7 +62,7 @@ function EventTypeIcon({ type }: { type: string }) {
 function EventRow({ event, onToggle }: { event: MemoryEvent; onToggle: (id: string) => void }) {
   return (
     <div className="border-b border-[var(--border-subtle)] last:border-0">
-      <div
+      <div role="button" tabIndex={0}
         className="px-4 py-3 hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer flex items-center justify-between"
         onClick={() => onToggle(event.id)}
       >
@@ -130,7 +130,7 @@ function EntityCard({ entity }: { entity: Entity }) {
         </div>
       </div>
 
-      <button className="w-full mt-3 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--accent-primary)] hover:bg-[var(--bg-primary)] transition-colors border border-[var(--border-subtle)]">
+      <button type="button" className="w-full mt-3 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--accent-primary)] hover:bg-[var(--bg-primary)] transition-colors border border-[var(--border-subtle)]">
         View Details
       </button>
     </div>
@@ -246,7 +246,7 @@ export function MemoryKernelView() {
       {/* Tabs */}
       <div className="px-6 pt-4 border-b border-[var(--border-subtle)] flex gap-8">
         {(['Events', 'Entities', 'Edges', 'Health'] as MemoryTab[]).map((tab) => (
-          <button
+          <button type="button"
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
@@ -273,16 +273,14 @@ export function MemoryKernelView() {
             <div className="mb-4 flex gap-3">
               <div className="flex-1 relative">
                 <MagnifyingGlass className="absolute left-3 top-1/2 -tranzinc-y-1/2 size-4  text-[var(--text-tertiary)]" />
-                <input
-                  type="text"
+                <input aria-label="Search events…" type="text"
                   placeholder="Search events…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] outline-none focus:border-[var(--accent-primary)]"
                 />
               </div>
-              <select
-                value={filterType}
+              <select aria-label="Selection" value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
                 className="px-4 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
               >

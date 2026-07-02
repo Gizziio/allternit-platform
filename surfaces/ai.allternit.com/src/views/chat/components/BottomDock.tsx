@@ -85,7 +85,7 @@ export function BottomDock({
       {customLeftContent ? (
         <div className="flex items-center">{customLeftContent}</div>
       ) : (
-        <button
+        <button type="button"
           onClick={() => agentModeEnabled && setShowAgentMenu(!showAgentMenu)}
           title={agentModeEnabled ? undefined : 'Enable Agent mode to choose an agent'}
           className={`flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-transparent border-none text-sm font-medium transition-all ${

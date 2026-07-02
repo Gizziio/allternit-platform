@@ -21,7 +21,7 @@ import type {
 // Tool Definitions (for LLM function calling)
 // ============================================================================
 
-export const AGENT_TOOLS = [
+const AGENT_TOOLS = [
   {
     name: 'launch_program',
     description: 'Launch a new program in the Utility Pane',
@@ -177,12 +177,12 @@ export const AGENT_TOOLS = [
 // Tool Handlers
 // ============================================================================
 
-export interface ToolContext {
+interface ToolContext {
   threadId: string;
   programId?: string;
 }
 
-export function handleToolCall(
+function handleToolCall(
   toolName: string,
   args: Record<string, unknown>,
   context: ToolContext
@@ -448,7 +448,7 @@ function handleRunOrchestrator(
     // Updates handled internally
   });
   
-  engine.execute().catch(console.error);
+  engine.execute().catch((err: unknown) => logger.error({ err }, 'Async error'));
 
   return { success: true, result: { programId } };
 }
@@ -481,7 +481,11 @@ function handleVisualizeData(
 
 import { useCallback } from 'react';
 
-export function useAgentTools(threadId: string) {
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentTools');
+
+function useAgentTools(threadId: string) {
   const executeTool = useCallback((
     toolName: string,
     args: Record<string, unknown>

@@ -59,7 +59,7 @@ export function SkillUploadModal({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <h3 style={{ margin: 0, fontSize: 20, color: THEME.textPrimary }}>Upload skill</h3>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{ border: 'none', background: 'transparent', color: THEME.textTertiary, cursor: 'pointer' }}
             aria-label="Close upload skill"
@@ -71,7 +71,7 @@ export function SkillUploadModal({
           Drop a `SKILL.md` file or choose one from disk.
         </p>
 
-        <button
+        <button type="button"
           onClick={() => inputRef.current?.click()}
           style={{
             width: '100%',
@@ -96,8 +96,7 @@ export function SkillUploadModal({
           Include clear instructions and optional `LICENSE` file alongside your skill content.
         </div>
 
-        <input
-          ref={inputRef}
+        <input ref={inputRef}
           type="file"
           accept=".md,.zip"
           style={{ display: 'none' }}

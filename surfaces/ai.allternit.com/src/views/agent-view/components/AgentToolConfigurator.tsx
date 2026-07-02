@@ -181,7 +181,7 @@ export function AgentToolConfigurator({
         <span style={{ fontSize: "12px", color: STUDIO_THEME.textSecondary }}>
           {enabledToolIds.length} tool{enabledToolIds.length !== 1 ? "s" : ""} enabled
         </span>
-        <button
+        <button type="button"
           onClick={() => onChange([])}
           style={{
             fontSize: "11px",

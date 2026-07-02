@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo, useState } from 'react';
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import {
   MagnifyingGlass,
   DownloadSimple,
@@ -23,6 +24,7 @@ import {
   Upload,
 } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { DESIGN_MARKETPLACE, DesignSystem } from "../../lib/design/design-registry";
 import { useNav } from "../../nav/useNav";
 
@@ -232,151 +234,67 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
   );
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100%",
-        width: "100%",
-        background: "var(--bg-primary)",
-        color: "var(--text-primary)",
-        fontFamily: "var(--font-sans)",
-        overflow: "hidden",
-      }}
-    >
+    <div className="flex size-full bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans overflow-hidden">
       {/* ─── Left Sidebar ────────────────────────────────────────────────────── */}
-      <aside
-        style={{
-          width: 240,
-          borderRight: "1px solid var(--border-subtle)",
-          display: "flex",
-          flexDirection: "column",
-          padding: "20px 16px",
-          gap: 24,
-          flexShrink: 0,
-          overflowY: "auto",
-        }}
-      >
+      <aside className="w-[240px] border-r border-solid border-[var(--border-subtle)] flex flex-col p-[20px_16px] gap-6 shrink-0 overflow-y-auto">
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 8 }}>
-          <MagicWand size={20} weight="duotone" color="var(--accent-primary)" />
-          <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.01em" }}>
+        <div className="flex items-center gap-2 pb-2">
+          <MagicWand size={20} weight="duotone" className="text-[var(--accent-primary)]" />
+          <span className="text-[14px] font-extrabold tracking-tight">
             Allternit
           </span>
         </div>
 
         {/* Search */}
-        <div style={{ position: "relative" }}>
+        <div className="relative">
           <MagnifyingGlass
             size={14}
-            style={{
-              position: "absolute",
-              left: 10,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "var(--text-tertiary)",
-            }}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
           />
-          <input
-            type="text"
+          <input aria-label="Search designs…" type="text"
             placeholder="Search designs…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "9px 10px 9px 32px",
-              borderRadius: 10,
-              border: "1px solid var(--border-subtle)",
-              background: "var(--bg-secondary)",
-              color: "var(--text-primary)",
-              fontSize: 12,
-              outline: "none",
-              fontFamily: "inherit",
-            }}
+            className="w-full p-[9px_10px_9px_32px] rounded-[10px] border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-[12px] outline-none font-inherit"
           />
         </div>
 
         {/* Feed Filters */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: "0.1em",
-              color: "var(--text-tertiary)",
-              textTransform: "uppercase",
-              marginBottom: 4,
-            }}
-          >
+        <div className="flex flex-col gap-1">
+          <div className="text-[12px] font-extrabold tracking-[0.1em] text-[var(--text-tertiary)] uppercase mb-1">
             Feed
-          </label>
+          </div>
           {FEED_OPTIONS.map((opt) => (
-            <button
+            <button type="button"
               key={opt.id}
               onClick={() => setActiveFeed(opt.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "7px 10px",
-                borderRadius: 8,
-                border: "none",
-                background: activeFeed === opt.id ? "var(--surface-hover)" : "transparent",
-                color: activeFeed === opt.id ? "var(--text-primary)" : "var(--text-secondary)",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.15s",
-              }}
+              className={cn(
+                "flex items-center gap-2 p-[7px_10px] rounded-lg border-none text-[12px] font-semibold cursor-pointer text-left transition-all duration-150",
+                activeFeed === opt.id ? "bg-[var(--surface-hover)] text-[var(--text-primary)]" : "bg-transparent text-[var(--text-secondary)]"
+              )}
             >
-              <span style={{ opacity: activeFeed === opt.id ? 1 : 0.5 }}>{opt.icon}</span>
+              <span className={cn(activeFeed === opt.id ? "opacity-100" : "opacity-50")}>{opt.icon}</span>
               {opt.label}
             </button>
           ))}
         </div>
 
         {/* Tags */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: "0.1em",
-              color: "var(--text-tertiary)",
-              textTransform: "uppercase",
-              marginBottom: 4,
-            }}
-          >
+        <div className="flex flex-col gap-1">
+          <div className="text-[12px] font-extrabold tracking-[0.1em] text-[var(--text-tertiary)] uppercase mb-1">
             Tags
-          </label>
+          </div>
           {TAG_CATEGORIES.map((tag) => (
-            <button
+            <button type="button"
               key={tag.id}
               onClick={() => setActiveTag(tag.id)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "6px 10px",
-                borderRadius: 8,
-                border: "none",
-                background: activeTag === tag.id ? "rgba(226,124,89,0.12)" : "transparent",
-                color: activeTag === tag.id ? "var(--accent-primary)" : "var(--text-secondary)",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.15s",
-              }}
+              className={cn(
+                "flex items-center justify-between p-[6px_10px] rounded-lg border-none text-[12px] font-semibold cursor-pointer text-left transition-all duration-150",
+                activeTag === tag.id ? "bg-[#e27c591f] text-[var(--accent-primary)]" : "bg-transparent text-[var(--text-secondary)]"
+              )}
             >
               <span>{tag.label}</span>
-              <span
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-tertiary)",
-                  fontWeight: 700,
-                }}
-              >
+              <span className="text-[12px] text-[var(--text-tertiary)] font-bold">
                 {tag.count}
               </span>
             </button>
@@ -384,61 +302,26 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         </div>
 
         {/* Top Creators */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <label
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: "0.1em",
-              color: "var(--text-tertiary)",
-              textTransform: "uppercase",
-            }}
-          >
+        <div className="flex flex-col gap-2">
+          <div className="text-[12px] font-extrabold tracking-[0.1em] text-[var(--text-tertiary)] uppercase">
             Top Creators
-          </label>
+          </div>
           {TOP_CREATORS.map((creator) => (
             <div
               key={creator.handle}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 0",
-              }}
+              className="flex items-center gap-2 py-1.5"
             >
-              <div
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: "50%",
-                  background: "var(--surface-hover)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: "var(--text-secondary)",
-                }}
-              >
+              <div className="size-6 rounded-full bg-[var(--surface-hover)] flex items-center justify-center text-[12px] font-extrabold text-[var(--text-secondary)]">
                 {creator.name[0]}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--text-secondary)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] font-semibold text-[var(--text-secondary)] flex items-center gap-1">
                   {creator.handle}
                   {creator.verified && (
-                    <Check size={10} weight="bold" color="#3b82f6" />
+                    <Check size={10} weight="bold" className="text-blue-500" />
                   )}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+                <div className="text-[12px] text-[var(--text-tertiary)]">
                   {creator.designs} designs
                 </div>
               </div>
@@ -448,37 +331,20 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
       </aside>
 
       {/* ─── Main Content ────────────────────────────────────────────────────── */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header Stats */}
-        <div
-          style={{
-            padding: "24px 28px",
-            borderBottom: "1px solid var(--border-subtle)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 24,
-          }}
-        >
+        <div className="p-[24px_28px] border-b border-solid border-[var(--border-subtle)] flex items-center justify-between gap-6">
           <div>
-            <h1
-              style={{
-                fontSize: 28,
-                fontWeight: 700,
-                color: "var(--text-primary)",
-                letterSpacing: "-0.02em",
-                marginBottom: 4,
-              }}
-            >
+            <h1 className="text-[28px] font-bold text-[var(--text-primary)] tracking-[-0.02em] mb-1 m-0">
               Browse the Hyperdesign marketplace.
             </h1>
-            <p style={{ fontSize: 13, color: "var(--text-tertiary)", maxWidth: 520 }}>
+            <p className="text-[13px] text-[var(--text-tertiary)] max-w-[520px] m-0">
               Browse and install Design.md specifications for your agents. Search by tag, compare
               the most-used entries, and study the building blocks behind the library.
             </p>
           </div>
 
-          <div style={{ display: "flex", gap: 24 }}>
+          <div className="flex gap-6">
             <StatBox label="Active Designs" value={DESIGN_MARKETPLACE.length.toString()} sub="Design systems available" />
             <StatBox label="Tag Groups" value={TAG_CATEGORIES.length.toString()} sub="Curated categories" />
             <StatBox label="Total Installs" value={formatNumber(totalInstalls)} sub="Across all systems" />
@@ -487,518 +353,305 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         </div>
 
         {/* Scrollable Grid Area */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
-          {/* Filter pills */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+        <div className="flex-1 overflow-y-auto p-[24px_28px]">
+        {/* Filter pills */}
+        <div className="flex flex-wrap gap-2 mb-5">
+          <FilterPill
+            active={activeFeed === "featured"}
+            onClick={() => setActiveFeed("featured")}
+            icon={<Star size={12} weight="fill" />}
+            label="Featured"
+          />
+          <FilterPill
+            active={activeFeed === "trending"}
+            onClick={() => setActiveFeed("trending")}
+            icon={<TrendUp size={12} />}
+            label="Trending"
+          />
+          <FilterPill
+            active={activeFeed === "pro"}
+            onClick={() => setActiveFeed("pro")}
+            icon={<Lightning size={12} />}
+            label="Pro"
+          />
+          {activeTag !== "all" && (
             <FilterPill
-              active={activeFeed === "featured"}
-              onClick={() => setActiveFeed("featured")}
-              icon={<Star size={12} weight="fill" />}
-              label="Featured"
+              active
+              onClick={() => setActiveTag("all")}
+              icon={<Sparkle size={12} />}
+              label={TAG_CATEGORIES.find((t) => t.id === activeTag)?.label || activeTag}
             />
-            <FilterPill
-              active={activeFeed === "trending"}
-              onClick={() => setActiveFeed("trending")}
-              icon={<TrendUp size={12} />}
-              label="Trending"
-            />
-            <FilterPill
-              active={activeFeed === "pro"}
-              onClick={() => setActiveFeed("pro")}
-              icon={<Lightning size={12} />}
-              label="Pro"
-            />
-            {activeTag !== "all" && (
-              <FilterPill
-                active
-                onClick={() => setActiveTag("all")}
-                icon={<Sparkle size={12} />}
-                label={TAG_CATEGORIES.find((t) => t.id === activeTag)?.label || activeTag}
-              />
-            )}
-          </div>
-
-          {/* Grid */}
-          {filteredDesigns.length === 0 ? (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "80px 0",
-                color: "var(--text-tertiary)",
-                gap: 12,
-              }}
-            >
-              <MagnifyingGlass size={40} />
-              <p style={{ fontSize: 14, fontWeight: 600 }}>No designs match your filters.</p>
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setActiveTag("all");
-                  setActiveFeed("featured");
-                }}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 8,
-                  background: "var(--surface-hover)",
-                  border: "1px solid var(--border-subtle)",
-                  color: "var(--text-primary)",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                Clear filters
-              </button>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: 16,
-              }}
-            >
-              {filteredDesigns.map((design) => {
-                const isHovered = hoveredCard === design.id;
-                const isLiked = likedDesigns.has(design.id);
-                return (
-                  <motion.div
-                    key={design.id}
-                    onMouseEnter={() => setHoveredCard(design.id)}
-                    onMouseLeave={() => setHoveredCard(null)}
-                    whileHover={{ y: -4 }}
-                    transition={{ duration: 0.2 }}
-                    style={{
-                      background: "var(--bg-secondary)",
-                      border: "1px solid var(--border-subtle)",
-                      borderRadius: 16,
-                      overflow: "hidden",
-                      cursor: "pointer",
-                      display: "flex",
-                      flexDirection: "column",
-                      position: "relative",
-                    }}
-                    onClick={() => setSelectedId(design.id)}
-                  >
-                    {/* Preview */}
-                    <div style={{ height: 180, position: "relative" }}>
-                      <PreviewGradient colors={design.previewColors} />
-
-                      {/* Hover overlay actions */}
-                      <AnimatePresence>
-                        {isHovered && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            style={{
-                              position: "absolute",
-                              inset: 0,
-                              background: "rgba(0,0,0,0.5)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              gap: 10,
-                              padding: 16,
-                            }}
-                          >
-                            <ActionBtn
-                              icon={<DownloadSimple size={16} />}
-                              label="Install"
-                              primary
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleInstall(design);
-                              }}
-                            />
-                            <ActionBtn
-                              icon={remixing === design.id ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}><Sparkle size={16} /></motion.div> : <Copy size={16} />}
-                              label={remixing === design.id ? "Cloning…" : "Remix"}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemix(design);
-                              }}
-                            />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Top-right actions */}
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 10,
-                          right: 10,
-                          display: "flex",
-                          gap: 6,
-                        }}
-                      >
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleLike(design.id);
-                          }}
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: 8,
-                            background: "rgba(0,0,0,0.4)",
-                            border: "none",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer",
-                            color: isLiked ? "#ef4444" : "#fff",
-                            backdropFilter: "blur(4px)",
-                          }}
-                        >
-                          <Heart size={14} weight={isLiked ? "fill" : "regular"} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Info */}
-                    <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10, flex: 1 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 800,
-                              letterSpacing: "0.08em",
-                              color: "var(--accent-primary)",
-                              textTransform: "uppercase",
-                              marginBottom: 4,
-                            }}
-                          >
-                            {design.vibe}
-                          </div>
-                          <h3
-                            style={{
-                              fontSize: 15,
-                              fontWeight: 700,
-                              color: "var(--text-primary)",
-                              margin: 0,
-                              lineHeight: 1.3,
-                            }}
-                          >
-                            {design.name}
-                          </h3>
-                        </div>
-                      </div>
-
-                      <p
-                        style={{
-                          fontSize: 12,
-                          color: "var(--text-tertiary)",
-                          lineHeight: 1.5,
-                          margin: 0,
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {design.description}
-                      </p>
-
-                      {/* Tags */}
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {design.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            style={{
-                              padding: "3px 8px",
-                              borderRadius: 6,
-                              background: "var(--surface-hover)",
-                              border: "1px solid var(--border-subtle)",
-                              fontSize: 12,
-                              fontWeight: 700,
-                              color: "var(--text-tertiary)",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.05em",
-                            }}
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Footer stats */}
-                      <div
-                        style={{
-                          marginTop: "auto",
-                          paddingTop: 12,
-                          borderTop: "1px solid var(--border-subtle)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <div
-                            style={{
-                              width: 20,
-                              height: 20,
-                              borderRadius: "50%",
-                              background: "var(--surface-hover)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 12,
-                              fontWeight: 800,
-                              color: "var(--text-secondary)",
-                            }}
-                          >
-                            {(design.author || "A")[0]}
-                          </div>
-                          <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>
-                            {design.creatorHandle || "@allternit"}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", gap: 10 }}>
-                          <StatBadge icon={<DownloadSimple size={11} />} value={formatNumber(design.installs || 0)} />
-                          <StatBadge icon={<Eye size={11} />} value={formatNumber(design.views || 0)} />
-                          <StatBadge icon={<GitFork size={11} />} value={formatNumber(design.forks || 0)} />
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
           )}
         </div>
 
-        {/* Bottom AI Prompt Bar */}
-        <div
-          style={{
-            padding: "12px 20px",
-            borderTop: "1px solid var(--border-subtle)",
-            background: "var(--bg-secondary)",
-            backdropFilter: "blur(12px)",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "6px 12px",
-              borderRadius: 8,
-              background: "var(--surface-hover)",
-              border: "1px solid var(--border-subtle)",
-              fontSize: 12,
-              fontWeight: 700,
-              color: "var(--text-secondary)",
-              whiteSpace: "nowrap",
-            }}
-          >
-            <Sparkle size={12} color="var(--accent-primary)" />
-            Allternit AI
-          </div>
-
-          <div style={{ flex: 1, position: "relative" }}>
-            <input
-              type="text"
-              placeholder="Describe a design system you want to generate…"
-              value={promptInput}
-              onChange={(e) => setPromptInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && promptInput.trim()) {
-                  dispatch({
-                    type: "PUSH_VIEW",
-                    viewType: "design",
-                    viewId: `design-${Date.now()}`,
-                    context: { prompt: promptInput.trim() },
-                  });
-                }
-              }}
-              style={{
-                width: "100%",
-                padding: "10px 16px",
-                borderRadius: 10,
-                border: "1px solid var(--border-subtle)",
-                background: "var(--bg-secondary)",
-                color: "var(--text-primary)",
-                fontSize: 13,
-                outline: "none",
-                fontFamily: "inherit",
-              }}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: "var(--surface-hover)",
-                border: "1px solid var(--border-subtle)",
-                color: "var(--text-secondary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              <Upload size={14} />
-            </button>
-            <button
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: "var(--surface-hover)",
-                border: "1px solid var(--border-subtle)",
-                color: "var(--text-secondary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-              }}
-            >
-              <Plus size={14} />
-            </button>
-            <button
+        {/* Grid */}
+        {filteredDesigns.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-[var(--text-tertiary)] gap-3">
+            <MagnifyingGlass size={40} />
+            <p className="text-[14px] font-semibold">No designs match your filters.</p>
+            <button type="button"
               onClick={() => {
-                if (promptInput.trim()) {
-                  dispatch({
-                    type: "PUSH_VIEW",
-                    viewType: "design",
-                    viewId: `design-${Date.now()}`,
-                    context: { prompt: promptInput.trim() },
-                  });
-                }
+                setSearchTerm("");
+                setActiveTag("all");
+                setActiveFeed("featured");
               }}
-              style={{
-                padding: "0 18px",
-                height: 32,
-                borderRadius: 8,
-                background: "var(--accent-primary)",
-                border: "none",
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: 800,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
+              className="px-4 py-2 rounded-lg bg-[var(--surface-hover)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer"
             >
-              <MagicWand size={14} />
-              Create
+              Clear filters
             </button>
           </div>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+            {filteredDesigns.map((design) => {
+              const isHovered = hoveredCard === design.id;
+              const isLiked = likedDesigns.has(design.id);
+              return (
+                <motion.div
+                  key={design.id}
+                  onMouseEnter={() => setHoveredCard(design.id)}
+                  onMouseLeave={() => setHoveredCard(null)}
+                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-2xl overflow-hidden cursor-pointer flex flex-col relative"
+                  onClick={() => setSelectedId(design.id)}
+                >
+                  {/* Preview */}
+                  <div className="h-[180px] relative">
+                    <PreviewGradient colors={design.previewColors} />
+
+                    {/* Hover overlay actions */}
+                    <AnimatePresence>
+                      {isHovered && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2.5 p-4"
+                        >
+                          <ActionBtn
+                            icon={<DownloadSimple size={16} />}
+                            label="Install"
+                            primary
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleInstall(design);
+                            }}
+                          />
+                          <ActionBtn
+                            icon={remixing === design.id ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}><Sparkle size={16} /></motion.div> : <Copy size={16} />}
+                            label={remixing === design.id ? "Cloning…" : "Remix"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemix(design);
+                            }}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Top-right actions */}
+                    <div className="absolute top-2.5 right-2.5 flex gap-1.5">
+                      <button type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleLike(design.id);
+                        }}
+                        className={cn(
+                          "size-7 rounded-lg border-none flex items-center justify-center cursor-pointer backdrop-blur-sm",
+                          isLiked ? "bg-black/40 text-red-500" : "bg-black/40 text-white"
+                        )}
+                      >
+                        <Heart size={14} weight={isLiked ? "fill" : "regular"} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-4 flex flex-col gap-2.5 flex-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-[12px] font-extrabold tracking-[0.08em] text-[var(--accent-primary)] uppercase mb-1">
+                          {design.vibe}
+                        </div>
+                        <h3 className="text-[15px] font-bold text-[var(--text-primary)] m-0 leading-tight">
+                          {design.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <p className="text-[12px] text-[var(--text-tertiary)] leading-relaxed m-0 line-clamp-2">
+                      {design.description}
+                    </p>
+
+                    {/* Tags */}
+                    <div className="flex gap-1.5 flex-wrap">
+                      {design.tags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 rounded-md bg-[var(--surface-hover)] border border-solid border-[var(--border-subtle)] text-[12px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Footer stats */}
+                    <div className="mt-auto pt-3 border-t border-solid border-[var(--border-subtle)] flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className="size-5 rounded-full bg-[var(--surface-hover)] flex items-center justify-center text-[12px] font-extrabold text-[var(--text-secondary)]">
+                          {(design.author || "A")[0]}
+                        </div>
+                        <span className="text-[12px] text-[var(--text-secondary)] font-medium">
+                          {design.creatorHandle || "@allternit"}
+                        </span>
+                      </div>
+                      <div className="flex gap-2.5">
+                        <StatBadge icon={<DownloadSimple size={11} />} value={formatNumber(design.installs || 0)} />
+                        <StatBadge icon={<Eye size={11} />} value={formatNumber(design.views || 0)} />
+                        <StatBadge icon={<GitFork size={11} />} value={formatNumber(design.forks || 0)} />
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
         </div>
-      </main>
-    </div>
-  );
-}
 
-// ─── Subcomponents ───────────────────────────────────────────────────────────
+        {/* Bottom AI Prompt Bar */}
+        <div className="p-[12px_20px] border-t border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] backdrop-blur-md flex items-center gap-3">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface-hover)] border border-solid border-[var(--border-subtle)] text-[12px] font-bold text-[var(--text-secondary)] whitespace-nowrap">
+          <Sparkle size={12} className="text-[var(--accent-primary)]" />
+          Allternit AI
+        </div>
 
-function StatBox({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 100 }}>
-      <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.1em", color: "var(--text-tertiary)", textTransform: "uppercase" }}>
+        <div className="flex-1 relative">
+          <input aria-label="Describe a design system you want to generate…" type="text"
+            placeholder="Describe a design system you want to generate…"
+            value={promptInput}
+            onChange={(e) => setPromptInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && promptInput.trim()) {
+                dispatch({
+                  type: "PUSH_VIEW",
+                  viewType: "design",
+                  viewId: `design-${Date.now()}`,
+                  context: { prompt: promptInput.trim() },
+                });
+              }
+            }}
+            className="w-full p-[10px_16px] rounded-[10px] border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-[13px] outline-none font-inherit"
+          />
+        </div>
+
+        <div className="flex gap-1.5">
+          <button type="button" className="size-8 rounded-lg bg-[var(--surface-hover)] border border-solid border-[var(--border-subtle)] text-[var(--text-secondary)] flex items-center justify-center cursor-pointer">
+            <Upload size={14} />
+          </button>
+          <button type="button" className="size-8 rounded-lg bg-[var(--surface-hover)] border border-solid border-[var(--border-subtle)] text-[var(--text-secondary)] flex items-center justify-center cursor-pointer">
+            <Plus size={14} />
+          </button>
+          <button type="button"
+            onClick={() => {
+              if (promptInput.trim()) {
+                dispatch({
+                  type: "PUSH_VIEW",
+                  viewType: "design",
+                  viewId: `design-${Date.now()}`,
+                  context: { prompt: promptInput.trim() },
+                });
+              }
+            }}
+            className="px-4 h-8 rounded-lg bg-[var(--accent-primary)] border-none text-white text-[12px] font-extrabold cursor-pointer flex items-center gap-1"
+          >
+            <MagicWand size={14} />
+            Create
+          </button>
+        </div>
+        </div>
+        </main>
+        </div>
+        );
+        }
+
+        // ─── Subcomponents ───────────────────────────────────────────────────────────
+
+        function StatBox({ label, value, sub }: { label: string; value: string; sub: string }) {
+        return (
+        <div className="flex flex-col gap-0.5 min-w-[100px]">
+        <span className="text-[12px] font-extrabold tracking-[0.1em] text-[var(--text-tertiary)] uppercase">
         {label}
-      </span>
-      <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
+        </span>
+        <span className="text-[20px] font-extrabold text-[var(--text-primary)] tracking-[-0.02em]">
         {value}
-      </span>
-      <span style={{ fontSize: 12, color: "var(--text-tertiary)", fontWeight: 500 }}>{sub}</span>
-    </div>
-  );
-}
+        </span>
+        <span className="text-[12px] text-[var(--text-tertiary)] font-medium">{sub}</span>
+        </div>
+        );
+        }
 
-function StatBadge({ icon, value }: { icon: React.ReactNode; value: string }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--text-tertiary)", fontSize: 12, fontWeight: 700 }}>
-      {icon}
-      {value}
-    </div>
-  );
-}
+        function StatBadge({ icon, value }: { icon: React.ReactNode; value: string }) {
+        return (
+        <div className="flex items-center gap-1 text-[var(--text-tertiary)] text-[12px] font-bold">
+        {icon}
+        {value}
+        </div>
+        );
+        }
 
-function FilterPill({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "6px 12px",
-        borderRadius: 8,
-        border: `1px solid ${active ? "color-mix(in srgb, var(--accent-primary) 30%, transparent)" : "var(--border-subtle)"}`,
-        background: active ? "rgba(226,124,89,0.1)" : "transparent",
-        color: active ? "var(--accent-primary)" : "var(--text-secondary)",
-        fontSize: 12,
-        fontWeight: 700,
-        cursor: "pointer",
-        transition: "all 0.15s",
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
+        function FilterPill({
+        active,
+        onClick,
+        icon,
+        label,
+        }: {
+        active: boolean;
+        onClick: () => void;
+        icon: React.ReactNode;
+        label: string;
+        }) {
+        return (
+        <button type="button"
+        onClick={onClick}
+        className={cn(
+        "flex items-center gap-1.5 p-[6px_12px] rounded-lg border border-solid text-[12px] font-bold cursor-pointer transition-all duration-150",
+        active ? "border-[var(--accent-primary)]/30 bg-[#e27c591a] text-[var(--accent-primary)]" : "border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)]"
+        )}
+        >
+        {icon}
+        {label}
+        </button>
+        );
+        }
 
-function ActionBtn({
-  icon,
-  label,
-  primary,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  primary?: boolean;
-  onClick?: (e: React.MouseEvent) => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "8px 16px",
-        borderRadius: 8,
-        background: primary ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.15)",
-        border: "none",
-        color: primary ? "#111" : "#fff",
-        fontSize: 12,
-        fontWeight: 700,
-        cursor: "pointer",
-        backdropFilter: "blur(4px)",
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
+        function ActionBtn({
+        icon,
+        label,
+        primary,
+        onClick,
+        }: {
+        icon: React.ReactNode;
+        label: string;
+        primary?: boolean;
+        onClick?: (e: React.MouseEvent) => void;
+        }) {
+        return (
+        <button type="button"
+        onClick={onClick}
+        className={cn(
+        "flex items-center gap-1.5 p-[8px_16px] rounded-lg border-none text-[12px] font-bold cursor-pointer backdrop-blur-sm",
+        primary ? "bg-white/90 text-[#111]" : "bg-white/15 text-white"
+        )}
+        >
+        {icon}
+        {label}
+        </button>
+        );
+        }
 
-function formatNumber(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return String(n);
-}
+        function formatNumber(n: number): string {
+        if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+        return String(n);
+        }
+

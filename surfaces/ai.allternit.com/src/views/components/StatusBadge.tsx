@@ -10,7 +10,7 @@ import {
   PauseCircle,
 } from '@phosphor-icons/react';
 
-export type StatusType = 
+type StatusType = 
   | 'pending' 
   | 'running' 
   | 'completed' 

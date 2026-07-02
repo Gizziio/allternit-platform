@@ -1,41 +1,22 @@
-/**
- * Ask User Question Tool
- * 
- * Interactive question component that can be used inline in chat or standalone.
- * Supports multiple question types: text, select, confirm, multi-select.
- * Used by agents to walk users through step-by-step workflows.
- * 
- * Enhanced with tool store integration for native agent tool execution.
- */
-
-import React, { useState, useCallback } from "react";
-import {
-  ChatCircle,
-  Check,
-  X,
-  CaretRight,
-  CircleNotch,
-  Question as HelpCircle,
-} from '@phosphor-icons/react';
+import React, { useCallback, useState } from "react";
+import { CaretRight, ChatCircle, Check, CircleNotch, Question as HelpCircle, X } from "@phosphor-icons/react";
 import {
   useAskUserToolStore,
   type QuestionConfig,
   type QuestionType,
   type QuestionOption,
-  validateAnswer,
 } from "../../lib/agents/tools/ask-user.tool";
-
 // ============================================================================
 // Types
 // ============================================================================
 
 export { QuestionType, QuestionOption, QuestionConfig };
 
-export interface AskUserQuestionOption extends QuestionOption {
+interface AskUserQuestionOption extends QuestionOption {
   icon?: React.ReactNode;
 }
 
-export interface AskUserQuestionProps {
+interface AskUserQuestionProps {
   id: string;
   question: string;
   type: QuestionType;
@@ -56,7 +37,7 @@ export interface AskUserQuestionProps {
   isLoading?: boolean;
 }
 
-export interface QuestionWizardProps {
+interface QuestionWizardProps {
   questions: Omit<AskUserQuestionProps, "onSubmit" | "onCancel">[];
   onComplete: (answers: Record<string, unknown>) => void;
   onCancel?: () => void;
@@ -64,7 +45,7 @@ export interface QuestionWizardProps {
   title?: string;
 }
 
-export interface ToolQuestionDisplayProps {
+interface ToolQuestionDisplayProps {
   sessionId: string;
   accentColor?: string;
   onAnswer?: (questionId: string, answer: unknown) => void;
@@ -74,7 +55,7 @@ export interface ToolQuestionDisplayProps {
 // Single Question Component
 // ============================================================================
 
-export function AskUserQuestion({
+function AskUserQuestion({
   id,
   question,
   type,
@@ -269,7 +250,7 @@ export function AskUserQuestion({
       {/* Actions */}
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         {onCancel && (
-          <button
+          <button type="button"
             onClick={onCancel}
             disabled={isLoading}
             style={{
@@ -286,7 +267,7 @@ export function AskUserQuestion({
             Skip
           </button>
         )}
-        <button
+        <button type="button"
           onClick={handleSubmit}
           disabled={isLoading}
           style={{
@@ -338,8 +319,7 @@ function TextInput({
   type?: "text" | "password";
 }) {
   return (
-    <input
-      type={type}
+    <input aria-label="Input" type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={onKeyDown}
@@ -377,8 +357,7 @@ function NumberInput({
   accentColor: string;
 }) {
   return (
-    <input
-      type="number"
+    <input aria-label="Input" type="number"
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
       onKeyDown={onKeyDown}
@@ -414,7 +393,7 @@ function SelectInput({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {options.map((option) => (
-        <button
+        <button type="button"
           key={option.value}
           onClick={() => onChange(option.value)}
           style={{
@@ -481,7 +460,7 @@ function MultiSelectInput({
       {options.map((option) => {
         const isSelected = value.includes(option.value);
         return (
-          <button
+          <button type="button"
             key={option.value}
             onClick={() => toggleOption(option.value)}
             style={{
@@ -547,7 +526,7 @@ function ConfirmInput({
 }) {
   return (
     <div style={{ display: "flex", gap: 10 }}>
-      <button
+      <button type="button"
         onClick={() => onChange(true)}
         style={{
           flex: 1,
@@ -568,7 +547,7 @@ function ConfirmInput({
         <Check size={18} />
         Yes
       </button>
-      <button
+      <button type="button"
         onClick={() => onChange(false)}
         style={{
           flex: 1,
@@ -597,7 +576,7 @@ function ConfirmInput({
 // Question Wizard (Multi-step)
 // ============================================================================
 
-export function QuestionWizard({
+function QuestionWizard({
   questions,
   onComplete,
   onCancel,
@@ -716,7 +695,7 @@ export function QuestionWizard({
 // Tool Question Display - Renders pending questions from the tool store
 // ============================================================================
 
-export function ToolQuestionDisplay({
+function ToolQuestionDisplay({
   sessionId,
   accentColor = "#D4956A",
   onAnswer,
@@ -775,7 +754,7 @@ export function ToolQuestionDisplay({
 // Hook for using questions in chat
 // ============================================================================
 
-export function useAskUserQuestion() {
+function useAskUserQuestion() {
   const [activeQuestion, setActiveQuestion] = useState<AskUserQuestionProps | null>(null);
   const [pendingQuestions, setPendingQuestions] = useState<AskUserQuestionProps[]>([]);
 
@@ -836,7 +815,7 @@ export function useAskUserQuestion() {
 // Hook for using the tool store
 // ============================================================================
 
-export function useToolQuestions(sessionId?: string) {
+function useToolQuestions(sessionId?: string) {
   const store = useAskUserToolStore();
   
   return {

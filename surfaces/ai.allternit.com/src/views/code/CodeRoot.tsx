@@ -1,6 +1,6 @@
 import React from 'react';
 import { CodeSurfaceRouter } from './CodeSurfaceRouter';
 
-export function CodeRoot(): JSX.Element {
+export function CodeRoot(): React.ReactNode {
   return <CodeSurfaceRouter />;
 }

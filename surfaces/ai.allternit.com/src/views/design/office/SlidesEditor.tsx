@@ -1,6 +1,10 @@
 "use client";
 import React, { useState, useRef } from 'react';
-import { Plus, Trash, DownloadSimple, TextT, Image, Table, CircleNotch, CheckCircle } from '@phosphor-icons/react';
+import { Plus, Trash, DownloadSimple, TextT, CircleNotch, CheckCircle } from '@phosphor-icons/react';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('SlidesEditor');
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -126,7 +130,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
       setExportState('done');
       setTimeout(() => setExportState('idle'), 3000);
     } catch (err) {
-      console.error('[SlidesEditor] export failed', err);
+      logger.error({ err: err }, '[SlidesEditor] export failed');
       setExportState('error');
       setTimeout(() => setExportState('idle'), 3000);
     }
@@ -141,7 +145,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
       <div style={{ width: 130, background: 'var(--bg-primary)', borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '10px 8px', gap: 6, flexShrink: 0 }}>
         {slides.map((sl, i) => (
           <div key={sl.id} style={{ position: 'relative' }}>
-            <button
+            <button type="button"
               onClick={() => { setActiveIdx(i); setEditingBlock(null); }}
               style={{
                 width: '100%', aspectRatio: '16/9', borderRadius: 6, overflow: 'hidden', cursor: 'pointer',
@@ -163,7 +167,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
               ))}
             </button>
             {slides.length > 1 && (
-              <button
+              <button type="button"
                 onClick={e => { e.stopPropagation(); deleteSlide(i); }}
                 style={{ position: 'absolute', top: 3, right: 3, width: 16, height: 16, borderRadius: 4, background: 'rgba(239,68,68,0.85)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: 0, transition: 'opacity 0.1s' }}
                 onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
@@ -175,7 +179,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 2 }}>{i + 1}</div>
           </div>
         ))}
-        <button
+        <button type="button"
           onClick={addSlide}
           style={{ width: '100%', aspectRatio: '16/9', borderRadius: 6, border: '1px dashed var(--border-default)', background: 'transparent', cursor: 'pointer', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
@@ -189,14 +193,14 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
         <div style={{ height: 40, background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 4, marginRight: 8 }}>
             {BG_PRESETS.map(bg => (
-              <button key={bg} onClick={() => setBg(bg)} style={{ width: 16, height: 16, borderRadius: 3, background: bg, border: `2px solid ${activeSlide?.bg === bg ? 'var(--accent-primary)' : 'var(--border-default)'}`, cursor: 'pointer' }} title="Slide background" />
+              <button type="button" key={bg} onClick={() => setBg(bg)} style={{ width: 16, height: 16, borderRadius: 3, background: bg, border: `2px solid ${activeSlide?.bg === bg ? 'var(--accent-primary)' : 'var(--border-default)'}`, cursor: 'pointer' }} title="Slide background" />
             ))}
           </div>
           <div style={{ width: 1, height: 20, background: 'var(--border-subtle)' }} />
           <ToolBtn icon={<TextT size={13} weight="bold" />} label="Add text" onClick={() => addBlock('body')} />
           <ToolBtn icon={<TextT size={13} weight="bold" />} label="Add bullet" onClick={() => addBlock('bullet')} />
           <div style={{ flex: 1 }} />
-          <button
+          <button type="button"
             onClick={exportPptx}
             disabled={exportState === 'working'}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, border: 'none', background: exportState === 'done' ? '#22c55e' : exportState === 'error' ? 'var(--surface-hover)' : 'var(--accent-primary)', color: exportState === 'error' ? 'var(--text-secondary)' : '#fff', fontSize: 12, fontWeight: 700, cursor: exportState === 'working' ? 'default' : 'pointer', opacity: exportState === 'working' ? 0.7 : 1 }}
@@ -210,7 +214,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
 
         {/* Slide canvas */}
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, overflow: 'hidden' }}>
-          <div
+          <div role="button" tabIndex={0}
             style={{
               width: '100%', maxWidth: 800, aspectRatio: '16/9',
               background: activeSlide?.bg ?? '#fff',
@@ -225,7 +229,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
             </div>
 
             {activeSlide?.blocks.map(block => (
-              <div
+              <div role="button" tabIndex={0}
                 key={block.id}
                 style={{
                   position: 'absolute',
@@ -238,8 +242,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
                 onClick={e => { e.stopPropagation(); setEditingBlock(block.id); setTimeout(() => editRef.current?.focus(), 30); }}
               >
                 {editingBlock === block.id ? (
-                  <textarea
-                    ref={editRef}
+                  <textarea aria-label="Text Area" ref={editRef}
                     value={block.text}
                     onChange={e => updateBlock(activeSlide.id, block.id, e.target.value)}
                     onBlur={() => setEditingBlock(null)}
@@ -285,7 +288,7 @@ function isDarkBg(hex: string): boolean {
 
 function ToolBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       title={label}
       style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.1s' }}

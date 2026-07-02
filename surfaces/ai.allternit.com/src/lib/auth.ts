@@ -4,7 +4,7 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "./db/client-sqlite";
 import { schema } from "./db/schema-sqlite";
 
-export const auth = betterAuth({
+const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "sqlite",
     schema,

@@ -57,7 +57,7 @@ export interface ArtifactDto {
   revisions: ArtifactRevisionDto[];
 }
 
-export interface ArtifactWorkspaceStatsDto {
+interface ArtifactWorkspaceStatsDto {
   workspaceId: string;
   total: number;
   drafts: number;

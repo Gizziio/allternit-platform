@@ -104,7 +104,7 @@ function FormWrapper({
   isSubmitDisabled?: boolean;
 }) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       style={{
         position: 'fixed',
         inset: 0,
@@ -116,8 +116,9 @@ function FormWrapper({
         justifyContent: 'center',
       }}
       onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
     >
-      <div
+      <div role="button" tabIndex={0}
         style={{
           width: 560,
           maxHeight: '85vh',
@@ -128,6 +129,7 @@ function FormWrapper({
           boxShadow: '0 25px 50px var(--shell-overlay-backdrop)',
         }}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
@@ -143,7 +145,7 @@ function FormWrapper({
             <h2 style={{ fontSize: 18, fontWeight: 700, color: THEME.textPrimary, margin: 0 }}>{title}</h2>
             <p style={{ fontSize: 13, color: THEME.textSecondary, margin: '4px 0 0 0' }}>{description}</p>
           </div>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{
               padding: 8,
@@ -171,7 +173,7 @@ function FormWrapper({
             borderTop: `1px solid ${THEME.border}`,
           }}
         >
-          <button
+          <button type="button"
             onClick={onClose}
             style={{
               padding: '10px 20px',
@@ -185,7 +187,7 @@ function FormWrapper({
           >
             Cancel
           </button>
-          <button
+          <button type="button"
             onClick={onSubmit}
             disabled={isSubmitDisabled}
             style={{
@@ -214,18 +216,20 @@ function FormWrapper({
 
 function FormField({
   label,
+  id,
   required,
   children,
   hint,
 }: {
   label: string;
+  id?: string;
   required?: boolean;
   children: React.ReactNode;
   hint?: string;
 }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: THEME.textPrimary, marginBottom: 6 }}>
+      <label htmlFor={id} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: THEME.textPrimary, marginBottom: 6 }}>
         {label}
         {required && <span style={{ color: THEME.accent, marginLeft: 4 }}>*</span>}
       </label>
@@ -236,19 +240,20 @@ function FormField({
 }
 
 function TextInput({
+  id,
   value,
   onChange,
   placeholder,
   required,
 }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   required?: boolean;
 }) {
   return (
-    <input
-      type="text"
+    <input id={id} type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
@@ -269,22 +274,26 @@ function TextInput({
 }
 
 function TextArea({
+  id,
   value,
   onChange,
   placeholder,
   rows = 4,
+  readOnly = false,
 }: {
+  id?: string;
   value: string;
-  onChange: (v: string) => void;
+  onChange?: (v: string) => void;
   placeholder?: string;
   rows?: number;
+  readOnly?: boolean;
 }) {
   return (
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+    <textarea id={id} value={value}
+      onChange={(e) => onChange?.(e.target.value)}
       placeholder={placeholder}
       rows={rows}
+      readOnly={readOnly}
       style={{
         width: '100%',
         padding: '10px 14px',
@@ -303,17 +312,18 @@ function TextArea({
 }
 
 function Select({
+  id,
   value,
   onChange,
   options,
 }: {
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
 }) {
   return (
-    <select
-      value={value}
+    <select id={id} value={value}
       onChange={(e) => onChange(e.target.value)}
       style={{
         width: '100%',
@@ -359,8 +369,7 @@ function TagInput({
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <input
-          type="text"
+        <input aria-label="Add tag" type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
@@ -375,7 +384,7 @@ function TagInput({
             fontSize: 13,
           }}
         />
-        <button
+        <button type="button"
           onClick={addTag}
           style={{
             padding: '8px 12px',
@@ -405,7 +414,7 @@ function TagInput({
             }}
           >
             {tag}
-            <button
+            <button type="button"
               onClick={() => removeTag(tag)}
               style={{
                 padding: 2,
@@ -456,12 +465,13 @@ function AddSkillForm({
       onSubmit={handleSubmit}
       isSubmitDisabled={!name.trim()}
     >
-      <FormField label="Name" required>
-        <TextInput value={name} onChange={setName} placeholder="e.g., Deploy Application" required />
+      <FormField label="Name" id="skill-name" required>
+        <TextInput id="skill-name" value={name} onChange={setName} placeholder="e.g., Deploy Application" required />
       </FormField>
 
-      <FormField label="Description" required>
+      <FormField label="Description" id="skill-desc" required>
         <TextArea
+          id="skill-desc"
           value={description}
           onChange={setDescription}
           placeholder="Describe what this skill does…"
@@ -469,8 +479,9 @@ function AddSkillForm({
         />
       </FormField>
 
-      <FormField label="Category">
+      <FormField label="Category" id="skill-category">
         <Select
+          id="skill-category"
           value={category}
           onChange={setCategory}
           options={[
@@ -488,8 +499,8 @@ function AddSkillForm({
         <TagInput tags={tags} onChange={setTags} />
       </FormField>
 
-      <FormField label="Skill Content (Markdown)" hint="Use markdown to document the workflow">
-        <TextArea value={content} onChange={setContent} rows={12} />
+      <FormField label="Skill Content (Markdown)" id="skill-content" hint="Use markdown to document the workflow">
+        <TextArea id="skill-content" value={content} onChange={setContent} rows={12} />
       </FormField>
     </FormWrapper>
   );
@@ -521,17 +532,18 @@ function AddCommandForm({
       onSubmit={handleSubmit}
       isSubmitDisabled={!name.trim() || !trigger.trim()}
     >
-      <FormField label="Name" required>
-        <TextInput value={name} onChange={setName} placeholder="e.g., New Chat" />
+      <FormField label="Name" id="cmd-name" required>
+        <TextInput id="cmd-name" value={name} onChange={setName} placeholder="e.g., New Chat" />
       </FormField>
 
-      <FormField label="Description" required>
-        <TextArea value={description} onChange={setDescription} placeholder="What does this command do?" rows={2} />
+      <FormField label="Description" id="cmd-desc" required>
+        <TextArea id="cmd-desc" value={description} onChange={setDescription} placeholder="What does this command do?" rows={2} />
       </FormField>
 
       <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 12 }}>
-        <FormField label="Type">
+        <FormField label="Type" id="cmd-type">
           <Select
+            id="cmd-type"
             value={triggerType}
             onChange={(v) => setTriggerType(v as 'mention' | 'slash')}
             options={[
@@ -541,8 +553,9 @@ function AddCommandForm({
           />
         </FormField>
 
-        <FormField label="Trigger" required hint={triggerType === 'slash' ? 'e.g., /new-chat' : 'e.g., @agent'}>
+        <FormField label="Trigger" id="cmd-trigger" required hint={triggerType === 'slash' ? 'e.g., /new-chat' : 'e.g., @agent'}>
           <TextInput
+            id="cmd-trigger"
             value={trigger}
             onChange={setTrigger}
             placeholder={triggerType === 'slash' ? '/command-name' : '@agent-name'}
@@ -584,24 +597,25 @@ function AddConnectorForm({
       onSubmit={handleSubmit}
       isSubmitDisabled={!name.trim() || !appName.trim()}
     >
-      <FormField label="Connector Name" required>
-        <TextInput value={name} onChange={setName} placeholder="e.g., GitHub Enterprise" />
+      <FormField label="Connector Name" id="conn-name" required>
+        <TextInput id="conn-name" value={name} onChange={setName} placeholder="e.g., GitHub Enterprise" />
       </FormField>
 
-      <FormField label="App Name" required hint="The official name of the application">
-        <TextInput value={appName} onChange={setAppName} placeholder="e.g., GitHub" />
+      <FormField label="App Name" id="conn-app" required hint="The official name of the application">
+        <TextInput id="conn-app" value={appName} onChange={setAppName} placeholder="e.g., GitHub" />
       </FormField>
 
-      <FormField label="Description" required>
-        <TextArea value={description} onChange={setDescription} placeholder="What can you do with this connector?" rows={2} />
+      <FormField label="Description" id="conn-desc" required>
+        <TextArea id="conn-desc" value={description} onChange={setDescription} placeholder="What can you do with this connector?" rows={2} />
       </FormField>
 
-      <FormField label="App URL">
-        <TextInput value={appUrl} onChange={setAppUrl} placeholder="https://…" />
+      <FormField label="App URL" id="conn-url">
+        <TextInput id="conn-url" value={appUrl} onChange={setAppUrl} placeholder="https://…" />
       </FormField>
 
-      <FormField label="Authentication Type">
+      <FormField label="Authentication Type" id="conn-auth">
         <Select
+          id="conn-auth"
           value={authType}
           onChange={(v) => setAuthType(v as typeof authType)}
           options={[
@@ -652,20 +666,20 @@ function AddMcpForm({
       onSubmit={handleSubmit}
       isSubmitDisabled={!name.trim() || !command.trim()}
     >
-      <FormField label="Name" required>
-        <TextInput value={name} onChange={setName} placeholder="e.g., Filesystem MCP" />
+      <FormField label="Name" id="mcp-name" required>
+        <TextInput id="mcp-name" value={name} onChange={setName} placeholder="e.g., Filesystem MCP" />
       </FormField>
 
-      <FormField label="Description" required>
-        <TextArea value={description} onChange={setDescription} placeholder="What does this MCP server provide?" rows={2} />
+      <FormField label="Description" id="mcp-desc" required>
+        <TextArea id="mcp-desc" value={description} onChange={setDescription} placeholder="What does this MCP server provide?" rows={2} />
       </FormField>
 
-      <FormField label="Command" required hint="The executable command">
-        <TextInput value={command} onChange={setCommand} placeholder="e.g., npx or docker" />
+      <FormField label="Command" id="mcp-cmd" required hint="The executable command">
+        <TextInput id="mcp-cmd" value={command} onChange={setCommand} placeholder="e.g., npx or docker" />
       </FormField>
 
-      <FormField label="Arguments" hint="Space-separated arguments">
-        <TextInput value={args} onChange={setArgs} placeholder="-y @modelcontextprotocol/server-filesystem /path" />
+      <FormField label="Arguments" id="mcp-args" hint="Space-separated arguments">
+        <TextInput id="mcp-args" value={args} onChange={setArgs} placeholder="-y @modelcontextprotocol/server-filesystem /path" />
       </FormField>
 
       <FormField label="Tags">
@@ -701,20 +715,21 @@ function AddCliToolForm({
       onSubmit={handleSubmit}
       isSubmitDisabled={!name.trim() || !command.trim()}
     >
-      <FormField label="Name" required>
-        <TextInput value={name} onChange={setName} placeholder="e.g., Docker" />
+      <FormField label="Name" id="cli-name" required>
+        <TextInput id="cli-name" value={name} onChange={setName} placeholder="e.g., Docker" />
       </FormField>
 
-      <FormField label="Description" required>
-        <TextArea value={description} onChange={setDescription} placeholder="What does this tool do?" rows={2} />
+      <FormField label="Description" id="cli-desc" required>
+        <TextArea id="cli-desc" value={description} onChange={setDescription} placeholder="What does this tool do?" rows={2} />
       </FormField>
 
-      <FormField label="Command" required hint="The executable name">
-        <TextInput value={command} onChange={setCommand} placeholder="e.g., docker" />
+      <FormField label="Command" id="cli-cmd" required hint="The executable name">
+        <TextInput id="cli-cmd" value={command} onChange={setCommand} placeholder="e.g., docker" />
       </FormField>
 
-      <FormField label="Category">
+      <FormField label="Category" id="cli-cat">
         <Select
+          id="cli-cat"
           value={category}
           onChange={setCategory}
           options={[
@@ -773,25 +788,24 @@ function AddWebhookForm({
       onSubmit={handleSubmit}
       isSubmitDisabled={!name.trim() || !path.trim()}
     >
-      <FormField label="Name" required>
-        <TextInput value={name} onChange={setName} placeholder="e.g., GitHub Push" />
+      <FormField label="Name" id="hook-name" required>
+        <TextInput id="hook-name" value={name} onChange={setName} placeholder="e.g., GitHub Push" />
       </FormField>
 
-      <FormField label="Description" required>
-        <TextArea value={description} onChange={setDescription} placeholder="What triggers this webhook?" rows={2} />
+      <FormField label="Description" id="hook-desc" required>
+        <TextArea id="hook-desc" value={description} onChange={setDescription} placeholder="What triggers this webhook?" rows={2} />
       </FormField>
 
-      <FormField label="Path" required hint="URL path for the webhook endpoint">
-        <TextInput value={path} onChange={setPath} placeholder="/webhooks/github/push" />
+      <FormField label="Path" id="hook-path" required hint="URL path for the webhook endpoint">
+        <TextInput id="hook-path" value={path} onChange={setPath} placeholder="/webhooks/github/push" />
       </FormField>
 
-      <FormField label="Event Type" hint="Identifier for the event (e.g., github.push)">
-        <TextInput value={eventType} onChange={setEventType} placeholder="e.g., github.push" />
+      <FormField label="Event Type" id="hook-event" hint="Identifier for the event (e.g., github.push)">
+        <TextInput id="hook-event" value={eventType} onChange={setEventType} placeholder="e.g., github.push" />
       </FormField>
 
-      <FormField label="Connected Skill" hint="Skill to trigger when webhook fires">
-        <select
-          value={connectedSkill}
+      <FormField label="Connected Skill" id="hook-skill" hint="Skill to trigger when webhook fires">
+        <select id="hook-skill" value={connectedSkill}
           onChange={(e) => setConnectedSkill(e.target.value)}
           style={{
             width: '100%',
@@ -801,6 +815,8 @@ function AddWebhookForm({
             background: 'var(--surface-hover)',
             color: THEME.textPrimary,
             fontSize: 14,
+            outline: 'none',
+            cursor: 'pointer',
           }}
         >
           <option value="">None</option>
@@ -1106,42 +1122,42 @@ function AddPluginWizardForm({
 
       {step === 0 && (
         <>
-          <FormField label="Plugin Name" required hint="Shown in UI and used to derive manifest name.">
-            <TextInput value={name} onChange={setName} placeholder="e.g., Agent Rails Toolkit" required />
+          <FormField label="Plugin Name" id="plug-name" required hint="Shown in UI and used to derive manifest name.">
+            <TextInput id="plug-name" value={name} onChange={setName} placeholder="e.g., Agent Rails Toolkit" required />
           </FormField>
-          <FormField label="Description" required>
-            <TextArea value={description} onChange={setDescription} placeholder="What this plugin does" rows={3} />
+          <FormField label="Description" id="plug-desc" required>
+            <TextArea id="plug-desc" value={description} onChange={setDescription} placeholder="What this plugin does" rows={3} />
           </FormField>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Version" required>
-              <TextInput value={version} onChange={setVersion} placeholder="1.0.0" />
+            <FormField label="Version" id="plug-ver" required>
+              <TextInput id="plug-ver" value={version} onChange={setVersion} placeholder="1.0.0" />
             </FormField>
-            <FormField label="Category">
-              <TextInput value={category} onChange={setCategory} placeholder="development" />
-            </FormField>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Author Name">
-              <TextInput value={authorName} onChange={setAuthorName} placeholder="Allternit Team" />
-            </FormField>
-            <FormField label="Author Email">
-              <TextInput value={authorEmail} onChange={setAuthorEmail} placeholder="plugins@allternit.dev" />
+            <FormField label="Category" id="plug-cat">
+              <TextInput id="plug-cat" value={category} onChange={setCategory} placeholder="development" />
             </FormField>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="License">
-              <TextInput value={license} onChange={setLicense} placeholder="MIT" />
+            <FormField label="Author Name" id="plug-auth">
+              <TextInput id="plug-auth" value={authorName} onChange={setAuthorName} placeholder="Allternit Team" />
             </FormField>
-            <FormField label="Tags (comma-separated)">
-              <TextInput value={tagsCsv} onChange={setTagsCsv} placeholder="automation,workflow,agents" />
+            <FormField label="Author Email" id="plug-email">
+              <TextInput id="plug-email" value={authorEmail} onChange={setAuthorEmail} placeholder="plugins@allternit.dev" />
             </FormField>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <FormField label="Repository URL">
-              <TextInput value={repository} onChange={setRepository} placeholder="https://github.com/org/repo" />
+            <FormField label="License" id="plug-lic">
+              <TextInput id="plug-lic" value={license} onChange={setLicense} placeholder="MIT" />
             </FormField>
-            <FormField label="Homepage URL">
-              <TextInput value={homepage} onChange={setHomepage} placeholder="https://example.com" />
+            <FormField label="Tags (comma-separated)" id="plug-tags">
+              <TextInput id="plug-tags" value={tagsCsv} onChange={setTagsCsv} placeholder="automation,workflow,agents" />
+            </FormField>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <FormField label="Repository URL" id="plug-repo">
+              <TextInput id="plug-repo" value={repository} onChange={setRepository} placeholder="https://github.com/org/repo" />
+            </FormField>
+            <FormField label="Homepage URL" id="plug-home">
+              <TextInput id="plug-home" value={homepage} onChange={setHomepage} placeholder="https://example.com" />
             </FormField>
           </div>
         </>
@@ -1149,30 +1165,29 @@ function AddPluginWizardForm({
 
       {step === 1 && (
         <>
-          <FormField label="Commands (comma-separated)" hint="Examples: /brief, /review-pr">
-            <TextInput value={commandsCsv} onChange={setCommandsCsv} placeholder="/brief,/agent-rails" />
+          <FormField label="Commands (comma-separated)" id="plug-cmds" hint="Examples: /brief, /review-pr">
+            <TextInput id="plug-cmds" value={commandsCsv} onChange={setCommandsCsv} placeholder="/brief,/agent-rails" />
           </FormField>
-          <FormField label="Skills (comma-separated)" hint="Skill folder names or references.">
-            <TextInput value={skillsCsv} onChange={setSkillsCsv} placeholder="./skills/agent-rails,./skills/review" />
+          <FormField label="Skills (comma-separated)" id="plug-skills" hint="Skill folder names or references.">
+            <TextInput id="plug-skills" value={skillsCsv} onChange={setSkillsCsv} placeholder="./skills/agent-rails,./skills/review" />
           </FormField>
-          <FormField label="Connectors (comma-separated)">
-            <TextInput value={connectorsCsv} onChange={setConnectorsCsv} placeholder="github,google-drive" />
+          <FormField label="Connectors (comma-separated)" id="plug-conns">
+            <TextInput id="plug-conns" value={connectorsCsv} onChange={setConnectorsCsv} placeholder="github,google-drive" />
           </FormField>
-          <FormField label="Agents (comma-separated)">
-            <TextInput value={agentsCsv} onChange={setAgentsCsv} placeholder="./agents/reviewer,./agents/planner" />
+          <FormField label="Agents (comma-separated)" id="plug-agents">
+            <TextInput id="plug-agents" value={agentsCsv} onChange={setAgentsCsv} placeholder="./agents/reviewer,./agents/planner" />
           </FormField>
-          <FormField label="MCP Servers (comma-separated)" hint="Example: filesystem, browser-tools">
-            <TextInput value={mcpsCsv} onChange={setMcpsCsv} placeholder="filesystem,browser-tools" />
+          <FormField label="MCP Servers (comma-separated)" id="plug-mcps" hint="Example: filesystem, browser-tools">
+            <TextInput id="plug-mcps" value={mcpsCsv} onChange={setMcpsCsv} placeholder="filesystem,browser-tools" />
           </FormField>
-          <FormField label="Webhooks (comma-separated)" hint="Example: build.completed,deploy.failed">
-            <TextInput value={webhooksCsv} onChange={setWebhooksCsv} placeholder="build.completed,deploy.failed" />
+          <FormField label="Webhooks (comma-separated)" id="plug-hooks" hint="Example: build.completed,deploy.failed">
+            <TextInput id="plug-hooks" value={webhooksCsv} onChange={setWebhooksCsv} placeholder="build.completed,deploy.failed" />
           </FormField>
-          <FormField label="Keywords (comma-separated)">
-            <TextInput value={keywordsCsv} onChange={setKeywordsCsv} placeholder="rails,workflow,review" />
+          <FormField label="Keywords (comma-separated)" id="plug-keys">
+            <TextInput id="plug-keys" value={keywordsCsv} onChange={setKeywordsCsv} placeholder="rails,workflow,review" />
           </FormField>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: THEME.textSecondary, fontSize: 13 }}>
-            <input
-              type="checkbox"
+            <input type="checkbox"
               checked={strict}
               onChange={(e) => setStrict(e.target.checked)}
             />
@@ -1202,8 +1217,7 @@ function AddPluginWizardForm({
       {step === 2 && (
         <>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: THEME.textSecondary, fontSize: 13, marginBottom: 12 }}>
-            <input
-              type="checkbox"
+            <input type="checkbox"
               checked={includeMarketplaceTemplate}
               onChange={(e) => setIncludeMarketplaceTemplate(e.target.checked)}
             />
@@ -1213,16 +1227,17 @@ function AddPluginWizardForm({
           {includeMarketplaceTemplate && (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <FormField label="Marketplace Owner">
-                  <TextInput value={marketplaceOwnerName} onChange={setMarketplaceOwnerName} placeholder="Allternit Team" />
+                <FormField label="Marketplace Owner" id="mkt-owner">
+                  <TextInput id="mkt-owner" value={marketplaceOwnerName} onChange={setMarketplaceOwnerName} placeholder="Allternit Team" />
                 </FormField>
-                <FormField label="Owner Email">
-                  <TextInput value={marketplaceOwnerEmail} onChange={setMarketplaceOwnerEmail} placeholder="plugins@allternit.dev" />
+                <FormField label="Owner Email" id="mkt-email">
+                  <TextInput id="mkt-email" value={marketplaceOwnerEmail} onChange={setMarketplaceOwnerEmail} placeholder="plugins@allternit.dev" />
                 </FormField>
               </div>
 
-              <FormField label="Plugin Source Type">
+              <FormField label="Plugin Source Type" id="mkt-type">
                 <Select
+                  id="mkt-type"
                   value={marketplaceSourceType}
                   onChange={(value) => setMarketplaceSourceType(value as 'local' | 'github' | 'url')}
                   options={[
@@ -1235,10 +1250,12 @@ function AddPluginWizardForm({
 
               {marketplaceSourceType !== 'local' && (
                 <FormField
+                  id="mkt-val"
                   label={marketplaceSourceType === 'github' ? 'Repo (owner/repo)' : 'Source URL'}
                   hint={marketplaceSourceType === 'github' ? 'Example: anthropics/claude-code' : 'Example: https://example.com/plugin.zip'}
                 >
                   <TextInput
+                    id="mkt-val"
                     value={marketplaceSourceValue}
                     onChange={setMarketplaceSourceValue}
                     placeholder={marketplaceSourceType === 'github' ? 'owner/repo' : 'https://...'}
@@ -1252,12 +1269,12 @@ function AddPluginWizardForm({
 
       {step === 3 && (
         <>
-          <FormField label="plugin.json preview">
-            <TextArea value={JSON.stringify(pluginManifest, null, 2)} onChange={() => {}} rows={10} />
+          <FormField label="plugin.json preview" id="prev-plug">
+            <TextArea id="prev-plug" value={JSON.stringify(pluginManifest, null, 2)} readOnly rows={10} />
           </FormField>
           {includeMarketplaceTemplate && (
-            <FormField label="marketplace.template.json preview">
-              <TextArea value={JSON.stringify(marketplaceManifest, null, 2)} onChange={() => {}} rows={10} />
+            <FormField label="marketplace.template.json preview" id="prev-mkt">
+              <TextArea id="prev-mkt" value={JSON.stringify(marketplaceManifest, null, 2)} readOnly rows={10} />
             </FormField>
           )}
           {!pluginValidation.valid && (
@@ -1339,11 +1356,11 @@ function AddGenericForm({
       onSubmit={handleSubmit}
       isSubmitDisabled={!name.trim()}
     >
-      <FormField label="Name" required>
-        <TextInput value={name} onChange={setName} placeholder={`e.g., ${label}`} required />
+      <FormField label="Name" id="gen-name" required>
+        <TextInput id="gen-name" value={name} onChange={setName} placeholder={`e.g., ${label}`} required />
       </FormField>
-      <FormField label="Description">
-        <TextArea value={description} onChange={setDescription} rows={3} />
+      <FormField label="Description" id="gen-desc">
+        <TextArea id="gen-desc" value={description} onChange={setDescription} rows={3} />
       </FormField>
     </FormWrapper>
   );

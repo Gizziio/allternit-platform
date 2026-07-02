@@ -3,7 +3,7 @@
 import React, { useReducer, useMemo } from 'react';
 import { useIsClient } from '@/lib/hooks/use-is-client';
 
-export interface BoardItem {
+interface BoardItem {
   id: string;
   title: string;
   status: 'todo' | 'in-progress' | 'review' | 'done';

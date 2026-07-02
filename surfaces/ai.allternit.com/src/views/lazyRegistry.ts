@@ -85,7 +85,7 @@ export const OperatorBrowserView = lazy(() => import('./OperatorBrowserView').th
 
 // P3 UI Views
 export const BlueprintCanvas = lazy(() => import('./BlueprintCanvas').then(m => ({ default: m.BlueprintCanvas })));
-export const DesignRegistryView = lazy(() => import('./design/DesignRegistryView').then(m => ({ default: m.DesignRegistryView })));
+const DesignRegistryView = lazy(() => import('./design/DesignRegistryView').then(m => ({ default: m.DesignRegistryView })));
 export const FormSurfacesView = lazy(() => import('./FormSurfacesView').then(m => ({ default: m.FormSurfacesView })));
 export const CanvasProtocolView = lazy(() => import('./CanvasProtocolView').then(m => ({ default: m.CanvasProtocolView })));
 export const HooksSystemView = lazy(() => import('./HooksSystemView').then(m => ({ default: m.HooksSystemView })));

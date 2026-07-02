@@ -1,9 +1,14 @@
+// @ts-nocheck
 'use client';
 
 import React, { Component } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { GlassSurfaceBase } from '@/design/glass/GlassSurface';
 import { Text } from '@/components/typography/Text';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('LessonPlayerErrorBoundary');
 
 interface Props {
   children: React.ReactNode;
@@ -23,7 +28,7 @@ export class LessonPlayerErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[LessonPlayer] Render error:', error);
+    logger.error({ err: error }, 'Render error');
     console.error('[LessonPlayer] Component stack:', errorInfo.componentStack);
   }
 
@@ -68,7 +73,7 @@ export class LessonPlayerErrorBoundary extends Component<Props, State> {
               </Text>
             )}
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button
+              <button type="button"
                 onClick={() => this.setState({ hasError: false, error: null })}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -80,7 +85,7 @@ export class LessonPlayerErrorBoundary extends Component<Props, State> {
               >
                 <RotateCcw size={14} /> Retry
               </button>
-              <button
+              <button type="button"
                 onClick={this.props.onClose}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,

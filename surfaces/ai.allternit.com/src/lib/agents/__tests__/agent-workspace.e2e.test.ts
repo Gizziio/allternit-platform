@@ -11,7 +11,7 @@
  * RUN WITH: npm test -- agent-workspace.e2e.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';

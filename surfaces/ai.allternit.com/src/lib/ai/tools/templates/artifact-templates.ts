@@ -1305,7 +1305,7 @@ export const TEMPLATES_BY_ID = Object.fromEntries(
   ARTIFACT_TEMPLATES.map(t => [t.id, t]),
 );
 
-export const TEMPLATES_BY_CATEGORY = ARTIFACT_TEMPLATES.reduce<
+const TEMPLATES_BY_CATEGORY = ARTIFACT_TEMPLATES.reduce<
   Record<string, ArtifactTemplate[]>
 >((acc, t) => {
   (acc[t.category] ??= []).push(t);

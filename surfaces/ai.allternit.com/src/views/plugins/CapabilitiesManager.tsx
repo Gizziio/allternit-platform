@@ -18,7 +18,6 @@
  * - Error boundaries and toast notifications
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
 import {
@@ -86,6 +85,7 @@ import { McpMarketplace } from '@/components/agents';
 import { useToolRegistryStore } from '@/lib/agents/tool-registry.store';
 
 import { THEME } from './PluginManager/constants';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { 
   TabId, 
   Capability, 
@@ -107,6 +107,10 @@ import { ConnectorConnectModal } from './PluginManager/components/ConnectorConne
 import { BrowseConnectorsOverlay } from './PluginManager/components/BrowseConnectorsOverlay';
 import { BrowsePluginsOverlay } from './PluginManager/components/BrowsePluginsOverlay';
 import { openInBrowser } from '@/lib/openInBrowser';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CapabilitiesManager');
 
 interface PluginManagerProps {
   isOpen: boolean;
@@ -156,7 +160,7 @@ const safeJSONParse = <T,>(raw: string | null, defaultValue: T): T => {
   try {
     return JSON.parse(raw) as T;
   } catch (error) {
-    console.error('[PluginManager] Failed to parse JSON from localStorage:', error);
+    logger.error({ err: error }, 'Failed to parse JSON from localStorage');
     return defaultValue;
   }
 };
@@ -528,7 +532,7 @@ function Icon({ name, size = 16, color }: { name: string; size?: number; color?:
 
 export function PluginManager({ isOpen, onClose, onOpenSettings }: PluginManagerProps) {
   return (
-    <ErrorBoundary onClose={onClose}>
+    <ErrorBoundary>
       <PluginManagerContent isOpen={isOpen} onClose={onClose} onOpenSettings={onOpenSettings} />
     </ErrorBoundary>
   );
@@ -574,7 +578,6 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
   const [availableUpdates, setAvailableUpdates] = useState<UpdateInfo[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
-  const [updateNotificationDismissed] = useState(false);
 
   // Dependency handling state
   const [pendingPluginInstall, setPendingPluginInstall] = useState<MarketplacePlugin | null>(null);
@@ -586,6 +589,10 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
   const [isInstallingDeps, setIsInstallingDeps] = useState(false);
   const [installProgress, setInstallProgress] = useState(0);
   const [installingDepName, setInstallingDepName] = useState<string>('');
+  const [importUrlDraft, setImportUrlDraft] = useState<string | null>(null);
+  const [createSkillDraft, setCreateSkillDraft] = useState<{ name: string; description: string } | null>(null);
+  const [editDescriptionDraft, setEditDescriptionDraft] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
   // Use file system integration with CRUD operations
   const {
@@ -645,7 +652,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
           }
         }
       } catch (error) {
-        console.error('[PluginManager] Update check failed:', error);
+        logger.error({ err: error }, 'Update check failed');
       } finally {
         setIsCheckingForUpdates(false);
       }
@@ -1065,7 +1072,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
     });
   }, [selectedItem]);
 
-  const handleConnectorConnectFlow = useCallback(async (item: Capability, requestedAccountLabel?: string) => {
+  const handleConnectorConnectFlow = useCallback(async (item: Capability, requestedAccountLabel?: string, confirmed = false) => {
     if (isDesktopConnector(item)) {
       showInfo(`${item.appName || item.name} is included and always available.`);
       return;
@@ -1083,9 +1090,16 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
       return;
     }
 
-    if (currentlyConnected) {
-      const proceed = window.confirm(`Disconnect ${item.appName || item.name}?`);
-      if (!proceed) return;
+    if (currentlyConnected && !confirmed) {
+      setConfirmDialog({
+        title: 'Disconnect',
+        message: `Disconnect ${item.appName || item.name}?`,
+        onConfirm: () => {
+          setConfirmDialog(null);
+          void handleConnectorConnectFlow(item, requestedAccountLabel, true);
+        },
+      });
+      return;
     }
 
     const now = new Date().toISOString();
@@ -1329,21 +1343,25 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
     handleCreateCapability(activeTab, payload);
   };
 
-  const handleImportFromFile = () => {
+  const handleImportFromFile = useCallback(() => {
     setShowCreateMenu(false);
     fileImportRef.current?.click();
-  };
+  }, []);
 
-  const handleImportFromUrl = () => {
+  const handleImportFromUrl = useCallback(() => {
     setShowCreateMenu(false);
-    const url = window.prompt('Enter URL to import from');
-    if (!url) return;
+    setImportUrlDraft('');
+  }, []);
+
+  const commitImportFromUrl = (url: string) => {
+    setImportUrlDraft(null);
+    if (!url.trim()) return;
     void (async () => {
       try {
-        const response = await fetch(url);
+        const response = await fetch(url.trim());
         if (!response.ok) throw new Error(`Request failed (${response.status})`);
         const text = await response.text();
-        const fallbackName = url.split('/').pop() || `import-${activeTab}`;
+        const fallbackName = url.trim().split('/').pop() || `import-${activeTab}`;
         handleImportFromText(fallbackName, text);
       } catch (e) {
         showError(`Import failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -1351,44 +1369,39 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
     })();
   };
 
-  const handleCreateNew = () => {
+  const handleCreateNew = useCallback(() => {
     setShowCreateMenu(false);
     setCreateFormTab(activeTab);
-  };
+  }, [activeTab]);
 
-  const handleCreateSkillWithAssistant = () => {
+  const handleCreateSkillWithAssistant = useCallback(() => {
     setShowCreateMenu(false);
-    const nameInput = window.prompt('Skill name', 'New Skill');
-    if (!nameInput || !nameInput.trim()) return;
-    const name = nameInput.trim();
+    setCreateSkillDraft({ name: '', description: '' });
+  }, []);
 
-    const descriptionInput = window.prompt(`What should "${name}" do?`, '');
-    if (descriptionInput === null) return;
-    const description = descriptionInput.trim() || `Assist with ${name.toLowerCase()}.`;
-
+  const commitCreateSkillWithAssistant = (name: string, description: string) => {
+    setCreateSkillDraft(null);
+    if (!name.trim()) return;
+    const finalName = name.trim();
+    const finalDescription = description.trim() || `Assist with ${finalName.toLowerCase()}.`;
     const content = [
-      `# ${name}`,
+      `# ${finalName}`,
       '',
       '## Purpose',
-      description,
+      finalDescription,
       '',
       '## Instructions',
       '- Clarify user intent before taking action.',
       '- Execute steps with deterministic output when possible.',
       '- Return concise results and include constraints or assumptions.',
     ].join('\n');
-
-    void handleCreateCapability('skills', {
-      name,
-      description,
-      content,
-    });
+    void handleCreateCapability('skills', { name: finalName, description: finalDescription, content });
   };
 
-  const handleOpenSkillUploadModal = () => {
+  const handleOpenSkillUploadModal = useCallback(() => {
     setShowCreateMenu(false);
     setShowSkillUploadModal(true);
-  };
+  }, []);
 
   const handleUploadSkillFile = async (file: File) => {
     const extension = file.name.toLowerCase();
@@ -1699,19 +1712,18 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
       return;
     }
 
-    const nextDescription = window.prompt(`Edit description for ${selectedItem.name}`, selectedItem.description || '');
-    if (nextDescription === null) return;
+    setEditDescriptionDraft(selectedItem.description || '');
+  };
 
+  const commitEditDescription = async (nextDescription: string) => {
+    if (!selectedItem) return;
+    setEditDescriptionDraft(null);
     const capabilityType = capabilityTypeFromTab(activeTab);
-
-    const result = await updateCapabilityMetadata(capabilityType, selectedItem.id, {
-      description: nextDescription,
-    });
+    const result = await updateCapabilityMetadata(capabilityType, selectedItem.id, { description: nextDescription });
     if (!result.success) {
       showError(`Failed to update: ${result.error}`);
       return;
     }
-
     showInfo('Description updated');
   };
 
@@ -1752,26 +1764,25 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
     window.open(`file://${path}`);
   };
 
-  const handleUninstallSelected = async () => {
+  const handleUninstallSelected = () => {
     if (!selectedItem) return;
-    
-    if (!window.confirm(`Are you sure you want to delete "${selectedItem.name}"?`)) {
-      return;
-    }
-
-    const result = await deleteCapability(
-      capabilityTypeFromTab(activeTab),
-      selectedItem.id
-    );
-    
-    if (result.success) {
-      showInfo('Deleted successfully');
-      setSelectedItemId(null);
-      setSelectedFileId(null);
-      await refresh();
-    } else {
-      showError(`Failed to delete: ${result.error}`);
-    }
+    setConfirmDialog({
+      title: 'Delete',
+      message: `Are you sure you want to delete "${selectedItem.name}"?`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        if (!selectedItem) return;
+        const result = await deleteCapability(capabilityTypeFromTab(activeTab), selectedItem.id);
+        if (result.success) {
+          showInfo('Deleted successfully');
+          setSelectedItemId(null);
+          setSelectedFileId(null);
+          await refresh();
+        } else {
+          showError(`Failed to delete: ${result.error}`);
+        }
+      },
+    });
   };
 
   // Context menu
@@ -1802,23 +1813,12 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'var(--view-settings-bg, var(--surface-canvas))',
-        backdropFilter: 'blur(20px)',
-        zIndex: 100,
-        display: 'block',
-        overflow: 'hidden',
-      }}
+      className="fixed inset-0 bg-[var(--view-settings-bg,var(--surface-canvas))] backdrop-blur-[10px] z-[100] block overflow-hidden"
       role="dialog"
       aria-modal="true"
       aria-label="Capabilities Manager"
     >
-      <div style={{ display: 'flex', height: '100%', paddingTop: 28, boxSizing: 'border-box' }}>
+      <div className="flex h-full pt-7 box-border">
         {/* Left pane starts lower; middle/right stay top-aligned full height */}
         <LeftPane
           activeTab={activeTab}
@@ -1829,7 +1829,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
           updateCount={availableUpdates.length}
         />
 
-        <div style={{ flex: 1, display: 'flex', minWidth: 0, overflow: 'hidden' }}>
+        <div className="flex-1 flex min-w-0 overflow-hidden">
           {/* Middle Pane - List with Search */}
           <MiddlePane
             activeTab={activeTab}
@@ -1958,7 +1958,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, color: THEME.textPrimary, margin: 0 }}>MCP Marketplace</h2>
-            <button
+            <button type="button"
               onClick={() => setShowBrowseOverlay(false)}
               style={{
                 padding: '6px 12px',
@@ -1990,8 +1990,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
       )}
 
       {/* File Input */}
-      <input
-        ref={fileImportRef}
+      <input ref={fileImportRef}
         type="file"
         style={{ display: 'none' }}
         onChange={(event) => {
@@ -2060,16 +2059,14 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
       <ErrorToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {/* Update Notifications */}
-      {!updateNotificationDismissed && (
-        <UpdateNotification
-          updates={availableUpdates}
-          onUpdate={handlePluginUpdateAction}
-          onDismiss={handleDismissUpdate}
-          onLater={handleLaterUpdate}
-          onShowAll={() => setShowUpdateModal(true)}
-          maxVisible={3}
-        />
-      )}
+      <UpdateNotification
+        updates={availableUpdates}
+        onUpdate={handlePluginUpdateAction}
+        onDismiss={handleDismissUpdate}
+        onLater={handleLaterUpdate}
+        onShowAll={() => setShowUpdateModal(true)}
+        maxVisible={3}
+      />
 
       {/* Update Modal */}
       <UpdateModal
@@ -2130,7 +2127,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
 
       {/* Dependency Tree View (when user clicks "View Tree") */}
       {showDependencyTree && dependencyResolution && (
-        <div
+        <div role="button" tabIndex={0}
           style={{
             position: 'fixed',
             inset: 0,
@@ -2144,7 +2141,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
           }}
           onClick={() => setShowDependencyTree(false)}
         >
-          <div
+          <div role="button" tabIndex={0}
             style={{
               width: '100%',
               maxWidth: 600,
@@ -2168,7 +2165,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
               <h3 style={{ margin: 0, fontSize: 18, color: THEME.textPrimary }}>
                 Dependency Tree
               </h3>
-              <button
+              <button type="button"
                 onClick={() => setShowDependencyTree(false)}
                 style={{
                   border: 'none',
@@ -2186,6 +2183,85 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
               showOptional={true}
               defaultExpanded={true}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Confirm dialog */}
+      <ConfirmModal
+        isOpen={confirmDialog !== null}
+        title={confirmDialog?.title || ''}
+        message={confirmDialog?.message || ''}
+        destructive
+        onConfirm={confirmDialog?.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(null)}
+      />
+
+      {/* Import from URL dialog */}
+      {importUrlDraft !== null && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setImportUrlDraft(null)}>
+          <div style={{ background: THEME.bgGlass, border: `1px solid ${THEME.borderStrong}`, borderRadius: 12, padding: 24, width: 420, display: 'flex', flexDirection: 'column', gap: 12 }}
+            onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: 0, fontWeight: 600, color: THEME.textPrimary }}>Import from URL</p>
+            <input aria-label="Import URL" autoFocus type="url" value={importUrlDraft}
+              onChange={(e) => setImportUrlDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') commitImportFromUrl(importUrlDraft); else if (e.key === 'Escape') setImportUrlDraft(null); }}
+              placeholder="https://..."
+              style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, background: THEME.bgDeep, color: THEME.textPrimary, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setImportUrlDraft(null)} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, background: 'transparent', color: THEME.textSecondary, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+              <button type="button" onClick={() => commitImportFromUrl(importUrlDraft)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: THEME.accent, color: '#fff', cursor: 'pointer', fontSize: 13 }}>Import</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create skill with assistant dialog */}
+      {createSkillDraft !== null && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setCreateSkillDraft(null)}>
+          <div style={{ background: THEME.bgGlass, border: `1px solid ${THEME.borderStrong}`, borderRadius: 12, padding: 24, width: 420, display: 'flex', flexDirection: 'column', gap: 12 }}
+            onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: 0, fontWeight: 600, color: THEME.textPrimary }}>Create Skill</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ fontSize: 12, color: THEME.textSecondary }}>Skill name</div>
+              <input aria-label="New Skill" autoFocus type="text" value={createSkillDraft.name} placeholder="New Skill"
+                onChange={(e) => setCreateSkillDraft({ ...createSkillDraft, name: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Escape') setCreateSkillDraft(null); }}
+                style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, background: THEME.bgDeep, color: THEME.textPrimary, fontSize: 14, outline: 'none' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ fontSize: 12, color: THEME.textSecondary }}>What should it do?</div>
+              <input aria-label="Describe the skill" type="text" value={createSkillDraft.description} placeholder="Describe the skill's purpose…"
+                onChange={(e) => setCreateSkillDraft({ ...createSkillDraft, description: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') commitCreateSkillWithAssistant(createSkillDraft.name, createSkillDraft.description); else if (e.key === 'Escape') setCreateSkillDraft(null); }}
+                style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, background: THEME.bgDeep, color: THEME.textPrimary, fontSize: 14, outline: 'none' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setCreateSkillDraft(null)} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, background: 'transparent', color: THEME.textSecondary, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+              <button type="button" onClick={() => commitCreateSkillWithAssistant(createSkillDraft.name, createSkillDraft.description)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: THEME.accent, color: '#fff', cursor: 'pointer', fontSize: 13 }}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit description dialog */}
+      {editDescriptionDraft !== null && selectedItem && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setEditDescriptionDraft(null)}>
+          <div style={{ background: THEME.bgGlass, border: `1px solid ${THEME.borderStrong}`, borderRadius: 12, padding: 24, width: 420, display: 'flex', flexDirection: 'column', gap: 12 }}
+            onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: 0, fontWeight: 600, color: THEME.textPrimary }}>Edit description — {selectedItem.name}</p>
+            <input aria-label="Edit description" autoFocus type="text" value={editDescriptionDraft}
+              onChange={(e) => setEditDescriptionDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') commitEditDescription(editDescriptionDraft); else if (e.key === 'Escape') setEditDescriptionDraft(null); }}
+              placeholder="Description…"
+              style={{ padding: '8px 12px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, background: THEME.bgDeep, color: THEME.textPrimary, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }} />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setEditDescriptionDraft(null)} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, background: 'transparent', color: THEME.textSecondary, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
+              <button type="button" onClick={() => commitEditDescription(editDescriptionDraft)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: THEME.accent, color: '#fff', cursor: 'pointer', fontSize: 13 }}>Save</button>
+            </div>
           </div>
         </div>
       )}
@@ -2229,99 +2305,49 @@ function LeftPane({
 }) {
   return (
     <nav
+      className="w-56 ml-4 bg-transparent backdrop-blur-none border-none rounded-none flex flex-col p-[6px_10px_14px] shadow-none overflow-hidden"
       style={{
-        width: 224,
-        marginLeft: 16,
         marginTop: LEFT_PANE_TOP_OFFSET,
         height: `calc(100% - ${LEFT_PANE_TOP_OFFSET}px)`,
-        backgroundColor: 'transparent',
-        backdropFilter: 'none',
-        border: 'none',
-        borderRadius: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '6px 10px 14px',
-        boxShadow: 'none',
-        overflow: 'hidden',
       }}
       aria-label="Capability categories"
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <button
+      <div className="flex items-center gap-2.5 mb-2">
+        <button type="button"
           onClick={onClose}
-          style={{
-            width: 28,
-            height: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderRadius: 6,
-            border: 'none',
-            backgroundColor: 'transparent',
-            color: THEME.textSecondary,
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
+          className="size-7 flex items-center justify-center rounded-md border-none bg-transparent text-[var(--ui-text-secondary)] cursor-pointer shrink-0"
           aria-label="Back"
         >
-          <CaretRight size={16} style={{ transform: 'rotate(180deg)' }} />
+          <CaretRight size={16} className="rotate-180" />
         </button>
-        <span style={{ fontSize: 15, fontWeight: 600, color: THEME.textPrimary }}>
+        <span className="text-[15px] font-semibold text-[var(--ui-text-primary)]">
           Capabilities
         </span>
       </div>
 
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: THEME.textTertiary,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          marginBottom: 4,
-          padding: '0 8px',
-        }}
-      >
+      <div className="text-[12px] font-semibold text-[var(--ui-text-tertiary)] uppercase tracking-[0.05em] mb-1 px-2">
         Categories
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: 2 }}>
+      <div className="flex-1 overflow-y-auto pr-0.5">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
-            <button
+            <button type="button"
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '6px 12px',
-                borderRadius: 7,
-                backgroundColor: isActive ? THEME.accentMuted : 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                marginBottom: 1,
-                textAlign: 'left',
-                transition: 'background-color 0.15s',
-                width: '100%',
-              }}
+              className={`flex items-center gap-2.5 p-[6px_12px] rounded-[7px] border-none cursor-pointer mb-px text-left transition-colors duration-150 w-full ${
+                isActive ? 'bg-[var(--accent-primary)]/10' : 'bg-transparent'
+              }`}
               aria-current={isActive ? 'page' : undefined}
               aria-label={tab.label}
             >
               <Icon
                 size={16}
-                color={isActive ? THEME.accent : THEME.textSecondary}
+                className={isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--ui-text-secondary)]'}
               />
-              <span
-                style={{
-                  flex: 1,
-                  fontSize: 13,
-                  fontWeight: isActive ? 600 : 450,
-                  color: isActive ? THEME.textPrimary : THEME.textSecondary,
-                }}
-              >
+              <span className={`flex-1 text-[13px] ${isActive ? 'font-semibold text-[var(--ui-text-primary)]' : 'font-normal text-[var(--ui-text-secondary)]'}`}>
                 {tab.label}
               </span>
             </button>
@@ -2329,66 +2355,30 @@ function LeftPane({
         })}
       </div>
 
-      <div
-        style={{
-          borderTop: `1px solid ${THEME.border}`,
-          paddingTop: 10,
-          marginTop: 10,
-        }}
-      >
-        <div style={{ fontSize: 12, color: THEME.textTertiary, lineHeight: 1.4, marginBottom: 8 }}>
+      <div className="border-t border-solid border-[var(--ui-border-muted)] pt-2.5 mt-2.5">
+        <div className="text-[12px] text-[var(--ui-text-tertiary)] leading-[1.4] mb-2">
           Discover installable capabilities and manage your active toolset.
         </div>
-        <button
+        <button type="button"
           onClick={onBrowsePlugins}
-          style={{
-            width: '100%',
-            padding: '8px 12px',
-            borderRadius: 7,
-            border: `1px solid ${THEME.borderStrong}`,
-            backgroundColor: THEME.accentMuted,
-            color: THEME.textPrimary,
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 600,
-            marginBottom: onCheckForUpdates ? 8 : 0,
-          }}
+          className="w-full p-[8px_12px] rounded-[7px] border border-solid border-[var(--ui-border-strong)] bg-[var(--accent-primary)]/10 text-[var(--ui-text-primary)] cursor-pointer text-[12px] font-semibold mb-2 last:mb-0"
         >
           Browse Marketplace
         </button>
         
         {onCheckForUpdates && (
-          <button
+          <button type="button"
             onClick={onCheckForUpdates}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: 7,
-              border: `1px solid ${updateCount && updateCount > 0 ? THEME.accent : THEME.border}`,
-              backgroundColor: updateCount && updateCount > 0 ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent',
-              color: updateCount && updateCount > 0 ? THEME.accent : THEME.textSecondary,
-              cursor: 'pointer',
-              fontSize: 12,
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-            }}
+            className={`w-full p-[8px_12px] rounded-[7px] border border-solid cursor-pointer text-[12px] font-semibold flex items-center justify-center gap-1.5 ${
+              updateCount && updateCount > 0 
+                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]' 
+                : 'border-[var(--ui-border-muted)] bg-transparent text-[var(--ui-text-secondary)]'
+            }`}
           >
             <ArrowsClockwise size={13} />
             Check for Updates
             {updateCount !== undefined && updateCount > 0 && (
-              <span
-                style={{
-                  padding: '2px 6px',
-                  backgroundColor: THEME.accent,
-                  borderRadius: 10,
-                  fontSize: 12,
-                  color: 'var(--surface-canvas)',
-                  marginLeft: 4,
-                }}
-              >
+              <span className="p-[2px_6px] bg-[var(--accent-primary)] rounded-[10px] text-[12px] text-[var(--surface-canvas)] ml-1">
                 {updateCount}
               </span>
             )}
@@ -2493,87 +2483,35 @@ function MiddlePane({
 
   return (
     <div
-      style={{
-        width: 340,
-        marginLeft: 34,
-        minWidth: 340,
-        flexShrink: 0,
-        backgroundColor: 'transparent',
-        backdropFilter: 'none',
-        border: 'none',
-        borderRadius: 0,
-        boxShadow: 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
+      className="w-[340px] ml-[34px] min-w-[340px] shrink-0 bg-transparent backdrop-blur-none border-none rounded-none shadow-none flex flex-col overflow-hidden"
       role="region"
       aria-label="Capability list"
     >
       {/* Header with Search and Add Button */}
-      <div
-        style={{
-          padding: '12px 16px',
-          borderBottom: `1px solid ${THEME.border}`,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <div style={{ fontSize: 14, fontWeight: 650, color: THEME.textPrimary }}>
+      <div className="p-[12px_16px] border-b border-solid border-[var(--ui-border-muted)] flex items-center gap-2.5">
+        <div className="text-[14px] font-[650] text-[var(--ui-text-primary)]">
           {TABS.find(t => t.id === activeTab)?.label}
         </div>
 
         {/* Search */}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '6px 10px',
-            backgroundColor: 'var(--surface-hover)',
-            borderRadius: 6,
-            border: `1px solid ${THEME.border}`,
-          }}
-        >
-          <MagnifyingGlass size={14} color={THEME.textTertiary} />
-          <input
-            ref={searchInputRef}
+        <div className="flex-1 flex items-center gap-2 p-[6px_10px] bg-[var(--surface-hover)] rounded-md border border-solid border-[var(--ui-border-muted)]">
+          <MagnifyingGlass size={14} className="text-[var(--ui-text-tertiary)]" />
+          <input ref={searchInputRef}
             type="text"
             placeholder="Search…"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: THEME.textPrimary,
-              fontSize: 13,
-              width: 100,
-            }}
+            className="bg-transparent border-none outline-none text-[var(--ui-text-primary)] text-[13px] w-[100px]"
             aria-label="Search capabilities"
           />
         </div>
 
         {/* Add Button with Dropdown */}
-        <div style={{ position: 'relative' }}>
+        <div className="relative">
           {(activeTab === 'plugins' || activeTab === 'connectors' || activeTab === 'mcps') && (
-            <button
+            <button type="button"
               onClick={onBrowsePlugins}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '6px 10px',
-                borderRadius: 6,
-                backgroundColor: THEME.accentMuted,
-                border: 'none',
-                color: THEME.accent,
-                fontSize: 12,
-                cursor: 'pointer',
-                marginRight: 6,
-              }}
+              className="flex items-center gap-1 p-[6px_10px] rounded-md bg-[var(--accent-primary)]/10 border-none text-[var(--accent-primary)] text-[12px] cursor-pointer mr-1.5"
               aria-label="Browse plugins"
             >
               <SquaresFour size={14} />
@@ -2582,20 +2520,9 @@ function MiddlePane({
           )}
           {activeTab !== 'connectors' && (
             <React.Fragment>
-            <button
+            <button type="button"
               onClick={onToggleCreateMenu}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                backgroundColor: 'var(--surface-hover)',
-                border: `1px solid ${THEME.border}`,
-                color: THEME.textSecondary,
-                cursor: 'pointer',
-              }}
+              className="flex items-center justify-center size-7 rounded-md bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] text-[var(--ui-text-secondary)] cursor-pointer"
               aria-label="Create new"
               aria-expanded={showCreateMenu}
             >
@@ -2604,27 +2531,12 @@ function MiddlePane({
               
               {showCreateMenu && (
                 <>
-                  <div
-                    style={{
-                      position: 'fixed',
-                      inset: 0,
-                      zIndex: 50,
-                    }}
+                  <div role="button" tabIndex={0}
+                    className="fixed inset-0 z-[50]"
                     onClick={onCloseCreateMenu}
                   />
                   <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: 4,
-                      backgroundColor: THEME.bgElevated,
-                      border: `1px solid ${THEME.border}`,
-                      borderRadius: 8,
-                      padding: '4px',
-                      minWidth: 160,
-                      zIndex: 51,
-                    }}
+                    className="absolute top-full right-0 mt-1 bg-[var(--surface-floating)] border border-solid border-[var(--ui-border-muted)] rounded-lg p-1 min-w-[160px] z-[51]"
                     role="menu"
                   >
                     {createMenuActions.map((action) => (
@@ -2646,40 +2558,18 @@ function MiddlePane({
           variant="default"
         />
 
-        <button
+        <button type="button"
           onClick={() => void onRefresh()}
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 6,
-            backgroundColor: 'var(--surface-hover)',
-            border: `1px solid ${THEME.border}`,
-            color: THEME.textSecondary,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className="size-7 rounded-md bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] text-[var(--ui-text-secondary)] cursor-pointer flex items-center justify-center"
           aria-label="Refresh"
         >
           <ArrowsClockwise size={13} />
         </button>
 
         {activeTab === 'connectors' && onOpenSettings && (
-          <button
+          <button type="button"
             onClick={onOpenSettings}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              backgroundColor: 'var(--surface-hover)',
-              border: `1px solid ${THEME.border}`,
-              color: THEME.textSecondary,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="size-7 rounded-md bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] text-[var(--ui-text-secondary)] cursor-pointer flex items-center justify-center"
             aria-label="Connector settings"
           >
             <GearSix size={13} />
@@ -2688,7 +2578,7 @@ function MiddlePane({
       </div>
 
       {/* Items List */}
-      <div style={{ flex: 1, overflow: 'auto' }} role="list">
+      <div className="flex-1 overflow-auto" role="list">
         {error && (
           <div
             style={{
@@ -2709,16 +2599,7 @@ function MiddlePane({
         {groupedSections.map((group) => (
           <div key={group.id}>
             {group.label && (
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: THEME.textTertiary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  padding: '10px 16px 6px',
-                }}
-              >
+              <div className="text-[12px] font-semibold text-[var(--ui-text-tertiary)] uppercase tracking-[0.05em] p-[10px_16px_6px]">
                 {group.label}
               </div>
             )}
@@ -2733,34 +2614,19 @@ function MiddlePane({
               const isActiveItem = isSelected && activeSelection === 'item';
               const hasActiveFileInItem = Boolean(isSelected && selectedFileId && activeSelection === 'file');
               const rowBackground = isActiveItem
-                ? 'var(--ui-border-muted)'
+                ? 'bg-[var(--ui-border-muted)]'
                 : hasActiveFileInItem
-                  ? 'var(--surface-hover)'
-                  : 'transparent';
+                  ? 'bg-[var(--surface-hover)]'
+                  : 'bg-transparent';
               const isConnected = connectorGroup === 'desktop' || connectorGroup === 'connected';
               const isEnabledVisual = activeTab === 'connectors' ? isConnected : item.enabled;
 
 	              return (
 	                <div key={item.id}>
-	                  <button
-	                    className="pm-list-row"
+	                  <button type="button"
+	                    className={`pm-list-row group w-auto flex items-center gap-2.5 p-[10px_16px] rounded-lg border-none m-[1px_8px] box-border cursor-pointer text-left transition-colors duration-150 ${rowBackground}`}
 	                    onClick={() => onSelectItem(item.id)}
 	                    onContextMenu={(e) => onContextMenu(e, 'capability', item.id)}
-                    style={{
-                      width: 'auto',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      padding: '10px 16px',
-                      backgroundColor: rowBackground,
-                      border: 'none',
-                      borderRadius: 8,
-                      margin: '1px 8px',
-                      boxSizing: 'border-box',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    transition: 'background-color 0.15s',
-                  }}
 	                  role="listitem"
 	                    data-selected={isActiveItem || hasActiveFileInItem ? 'true' : 'false'}
 	                    aria-selected={isActiveItem}
@@ -2768,49 +2634,24 @@ function MiddlePane({
                     <Icon
                       name={item.icon}
                       size={16}
-                      color={isEnabledVisual ? THEME.textPrimary : THEME.textTertiary}
+                      color={isEnabledVisual ? 'var(--ui-text-primary)' : 'var(--ui-text-tertiary)'}
                     />
-                    <span
-                      style={{
-                        flex: 1,
-                        fontSize: 13,
-                        fontWeight: isEnabledVisual ? 500 : 400,
-                        color: isEnabledVisual ? THEME.textPrimary : THEME.textTertiary,
-                      }}
-                    >
+                    <span className={`flex-1 text-[13px] ${isEnabledVisual ? 'font-medium text-[var(--ui-text-primary)]' : 'font-normal text-[var(--ui-text-tertiary)]'}`}>
                       {item.name}
                     </span>
                     {activeTab === 'connectors' && connectorGroup === 'desktop' && (
-                      <span
-                        style={{
-                          padding: '2px 6px',
-                          borderRadius: 999,
-                          border: `1px solid ${THEME.borderStrong}`,
-                          fontSize: 12,
-                          letterSpacing: '0.05em',
-                          color: THEME.textSecondary,
-                          textTransform: 'uppercase',
-                        }}
-                      >
+                      <span className="p-[2px_6px] rounded-full border border-solid border-[var(--ui-border-strong)] text-[12px] tracking-[0.05em] text-[var(--ui-text-secondary)] uppercase">
                         Included
                       </span>
                     )}
                     {isEnabledVisual && (
-                      <div
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          backgroundColor: THEME.success,
-                        }}
-                        aria-label="Enabled"
-                      />
+                      <div className="size-1.5 rounded-full bg-[var(--status-success)]" aria-label="Enabled" />
                     )}
                   </button>
 
 	                  {/* File Tree for selected item */}
 	                  {item.id === selectedItemId && item.files && item.files.length > 0 && (
-	                    <div style={{ backgroundColor: 'transparent' }}>
+	                    <div className="bg-transparent">
 	                      {item.files.map((node) => (
 	                        <FileTreeNode
                           key={node.id}
@@ -2846,7 +2687,7 @@ function MiddlePane({
             <div style={{ fontSize: 12, marginBottom: 16, opacity: 0.7 }}>
               Create your first {TABS.find(t => t.id === activeTab)?.label.toLowerCase().slice(0, -1)} to get started
             </div>
-            <button
+            <button type="button"
               onClick={activeTab === 'plugins' || activeTab === 'connectors' || activeTab === 'mcps'
                 ? onBrowsePlugins
                 : onToggleCreateMenu}
@@ -2925,60 +2766,41 @@ function FileTreeNode({
 
 	  return (
 	    <div>
-		      <button
-		        className="pm-file-row"
+		      <button type="button"
+		        className={`pm-file-row group w-auto flex items-center gap-2 p-[8px_16px_8px_${16 + depth * 20}px] rounded-lg border-none m-[1px_8px] box-border cursor-pointer text-left transition-colors duration-150 ${
+              isActiveFile ? 'bg-[color-mix(in_srgb,var(--accent-primary)_15%,transparent)]' :
+              isSelected ? 'bg-[color-mix(in_srgb,var(--accent-primary)_8%,transparent)]' :
+              'bg-transparent'
+            } ${hasChildren || node.type === 'file' ? 'cursor-pointer' : 'cursor-default'}`}
 		        onClick={handleClick}
 		        onContextMenu={(e) => onContextMenu(e, node.type, node.id, node.path, node.name)}
-		        style={{
-	          width: 'auto',
-	          display: 'flex',
-	          alignItems: 'center',
-	          gap: 8,
-	          padding: `8px 16px 8px ${16 + depth * 20}px`,
-	          backgroundColor: isActiveFile
-	            ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)'
-	            : isSelected
-	              ? 'color-mix(in srgb, var(--accent-primary) 8%, transparent)'
-	              : 'transparent',
-	          border: 'none',
-	          borderRadius: 8,
-	          margin: '1px 8px',
-	          boxSizing: 'border-box',
-	          cursor: hasChildren || node.type === 'file' ? 'pointer' : 'default',
-	          textAlign: 'left',
-	          transition: 'background-color 0.15s',
-	        }}
 	        role="treeitem"
 	        data-selected={isSelected ? 'true' : 'false'}
 	        aria-selected={isActiveFile}
 	        aria-expanded={hasChildren ? isExpanded : undefined}
+          style={{ paddingLeft: 16 + depth * 20 }}
 	      >
         {hasChildren ? (
           isExpanded ? (
-            <CaretDown size={14} color={THEME.textTertiary} />
+            <CaretDown size={14} className="text-[var(--ui-text-tertiary)]" />
           ) : (
-            <CaretRight size={14} color={THEME.textTertiary} />
+            <CaretRight size={14} className="text-[var(--ui-text-tertiary)]" />
           )
         ) : (
-          <div style={{ width: 14 }} />
+          <div className="w-3.5" />
         )}
         
         {node.type === 'directory' ? (
           isExpanded ? (
-            <FolderOpen size={14} color={THEME.accent} />
+            <FolderOpen size={14} className="text-[var(--accent-primary)]" />
           ) : (
-            <Folder size={14} color={THEME.textTertiary} />
+            <Folder size={14} className="text-[var(--ui-text-tertiary)]" />
           )
         ) : (
-          <FileText size={14} color={THEME.textSecondary} />
+          <FileText size={14} className="text-[var(--ui-text-secondary)]" />
         )}
         
-        <span
-          style={{
-            fontSize: 12,
-            color: node.type === 'directory' ? THEME.textSecondary : THEME.textTertiary,
-          }}
-        >
+        <span className={`text-[12px] ${node.type === 'directory' ? 'text-[var(--ui-text-secondary)]' : 'text-[var(--ui-text-tertiary)]'}`}>
           {node.name}
         </span>
       </button>
@@ -3108,71 +2930,35 @@ function RightPane({
 
   return (
     <main
-      style={{
-        flex: '1 1 auto',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'transparent',
-        backdropFilter: 'none',
-        border: 'none',
-        borderRadius: 0,
-        boxShadow: 'none',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        minHeight: 0,
-        minWidth: 260,
-      }}
+      className="flex-[1_1_auto] flex flex-col bg-transparent backdrop-blur-none border-none rounded-none shadow-none overflow-y-auto overflow-x-hidden min-h-0 min-w-[260px]"
     >
       {/* Header with Metadata */}
       <header
-        style={{
-          padding: '20px clamp(16px, 2.2vw, 32px) 14px',
-        }}
+        className="p-[20px_clamp(16px,2.2vw,32px)_14px]"
       >
         {/* Top Row: Name, Edit, Toggle, Menu */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div className="flex items-start justify-between mb-4">
           <h1
+            className="pdv-display font-semibold text-[var(--ui-text-primary)] m-0 leading-[1.08] tracking-[-0.015em]"
             style={{
               fontSize: isFileView ? 22 : 'clamp(24px, 2.2vw, 34px)',
-              fontWeight: 600,
-              color: THEME.textPrimary,
-              margin: 0,
-              lineHeight: 1.08,
-              letterSpacing: '-0.015em',
             }}
           >
             {isFileView ? displayItem.name : (item.trigger || item.name)}
           </h1>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="flex items-center gap-2">
             {isEditing ? (
               <>
-                <button
+                <button type="button"
                   onClick={onSaveEdit}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    border: 'none',
-                    backgroundColor: THEME.accent,
-                    color: 'var(--surface-canvas)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className="p-[6px_12px] rounded-md border-none bg-[var(--accent-primary)] text-[var(--surface-canvas)] text-[13px] font-semibold cursor-pointer"
                 >
                   Save
                 </button>
-                <button
+                <button type="button"
                   onClick={onCancelEdit}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: 6,
-                    border: `1px solid ${THEME.border}`,
-                    backgroundColor: 'transparent',
-                    color: THEME.textSecondary,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
+                  className="p-[6px_12px] rounded-md border border-solid border-[var(--ui-border-muted)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -3181,40 +2967,25 @@ function RightPane({
 
             {/* Toggle Switch */}
             {!isFileView && (
-              <button
+              <button type="button"
                 onClick={isConnectorItem ? onConnectorToggle : onToggle}
-                style={{
-                  width: 44,
-                  height: 24,
-                  borderRadius: 12,
-                  backgroundColor: toggleEnabled ? THEME.accent : 'rgba(255,255,255,0.2)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  transition: 'background-color 0.2s',
-                  opacity: connectorBusy ? 0.7 : 1,
-                }}
+                className={`w-11 h-6 rounded-xl border-none cursor-pointer relative transition-colors duration-200 ${
+                  toggleEnabled ? 'bg-[var(--accent-primary)]' : 'bg-white/20'
+                } ${connectorBusy ? 'opacity-70' : 'opacity-100'}`}
                 aria-pressed={toggleEnabled}
                 aria-label={toggleEnabled ? 'Disable' : 'Enable'}
               >
                 <div
-                  style={{
-                    position: 'absolute',
-                    top: 2,
-                    left: toggleEnabled ? 22 : 2,
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
-                    backgroundColor: '#fff',
-                    transition: 'left 0.2s',
-                  }}
+                  className={`absolute top-0.5 size-5 rounded-full bg-white transition-all duration-200 ${
+                    toggleEnabled ? 'left-[22px]' : 'left-0.5'
+                  }`}
                 />
               </button>
             )}
 
             {/* Menu */}
             <div style={{ position: 'relative' }}>
-              <button
+              <button type="button"
                 onClick={() => setShowMenu(!showMenu)}
                 style={{
                   background: 'transparent',
@@ -3268,96 +3039,57 @@ function RightPane({
         </div>
 
         {!isFileView ? (
-          <div style={{ maxWidth: 960 }}>
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: THEME.textTertiary, marginBottom: 4 }}>Added by</div>
-              <div style={{ fontSize: 'clamp(20px, 1.55vw, 30px)', color: THEME.textPrimary, lineHeight: 1.12, letterSpacing: '-0.01em' }}>
+          <div className="max-w-[960px]">
+            <div className="mb-3.5">
+              <div className="text-[12px] text-[var(--ui-text-tertiary)] mb-1">Added by</div>
+              <div className="pdv-display text-[var(--ui-text-primary)] leading-[1.12] tracking-[-0.01em]" style={{ fontSize: 'clamp(20px, 1.55vw, 30px)' }}>
                 {item.author || 'Unknown'}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>
+            <div className="flex items-center gap-1.5 text-[12px] text-[var(--ui-text-tertiary)] mb-1.5">
               <span>Description</span>
               <Info size={12} />
             </div>
-            <p style={{ fontSize: 'clamp(13px, 1vw, 17px)', color: THEME.textSecondary, margin: 0, lineHeight: 1.55, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+            <p className="pdv-serif text-[var(--ui-text-secondary)] m-0 leading-[1.55] overflow-wrap-anywhere break-word" style={{ fontSize: 'clamp(13px, 1vw, 17px)' }}>
               {item.description || 'No description provided.'}
             </p>
           </div>
         ) : (
-          <p style={{ fontSize: 14, color: THEME.textSecondary, margin: 0, lineHeight: 1.5 }}>
+          <p className="text-[14px] text-[var(--ui-text-secondary)] m-0 leading-[1.5]">
             {(selectedFile as FileNode).path}
           </p>
         )}
 
-        <div
-          style={{
-            marginTop: 16,
-            marginLeft: 8,
-            width: 'calc(100% - 18px)',
-            borderBottom: `1px solid ${THEME.border}`,
-          }}
-        />
+        <div className="mt-4 ml-2 w-[calc(100%-18px)] border-b border-solid border-[var(--ui-border-muted)]" />
       </header>
 
       {/* Content Area */}
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '16px clamp(14px, 2.2vw, 32px) 20px' }}>
+      <div className="flex-1 min-h-0 flex flex-col p-[16px_clamp(14px,2.2vw,32px)_20px]">
         {/* View Mode Toggle */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: 8,
-            marginBottom: 16,
-          }}
-        >
-          <button
+        <div className="flex items-center justify-end gap-2 mb-4">
+          <button type="button"
             onClick={() => onViewModeChange('human')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 12px',
-              borderRadius: 6,
-              backgroundColor: viewMode === 'human' ? 'var(--ui-border-default)' : 'transparent',
-              border: 'none',
-              color: viewMode === 'human' ? THEME.textPrimary : THEME.textTertiary,
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
+            className={`flex items-center gap-1.5 p-[6px_12px] rounded-md border-none text-[13px] cursor-pointer transition-colors duration-150 ${
+              viewMode === 'human' ? 'bg-[var(--ui-border-muted)] text-[var(--ui-text-primary)]' : 'bg-transparent text-[var(--ui-text-tertiary)] hover:bg-[var(--surface-hover)]'
+            }`}
             aria-pressed={viewMode === 'human'}
           >
             <Eye size={14} />
             Human
           </button>
-          <button
+          <button type="button"
             onClick={() => onViewModeChange('code')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 12px',
-              borderRadius: 6,
-              backgroundColor: viewMode === 'code' ? 'var(--ui-border-default)' : 'transparent',
-              border: 'none',
-              color: viewMode === 'code' ? THEME.textPrimary : THEME.textTertiary,
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
+            className={`flex items-center gap-1.5 p-[6px_12px] rounded-md border-none text-[13px] cursor-pointer transition-colors duration-150 ${
+              viewMode === 'code' ? 'bg-[var(--ui-border-muted)] text-[var(--ui-text-primary)]' : 'bg-transparent text-[var(--ui-text-tertiary)] hover:bg-[var(--surface-hover)]'
+            }`}
             aria-pressed={viewMode === 'code'}
           >
             <Code size={14} />
             Code
           </button>
-          <button
+          <button type="button"
             onClick={onCopy}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 6,
-              color: THEME.textTertiary,
-            }}
+            className="bg-transparent border-none cursor-pointer p-1.5 text-[var(--ui-text-tertiary)] hover:text-[var(--ui-text-primary)]"
             aria-label="Copy to clipboard"
           >
             <Copy size={14} />
@@ -3365,33 +3097,11 @@ function RightPane({
         </div>
 
         {/* Content Display */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            backgroundColor: THEME.bgElevated,
-            border: `1px solid ${THEME.border}`,
-            borderRadius: 8,
-            overflow: 'auto',
-          }}
-        >
+        <div className="flex-1 min-h-0 bg-[var(--surface-floating)] border border-solid border-[var(--ui-border-muted)] rounded-lg overflow-auto">
           {isEditing && editingContent !== null ? (
-            <textarea
-              value={editingContent}
+            <textarea aria-label="Text Area" value={editingContent}
               onChange={(e) => onEditingContentChange(e.target.value)}
-              style={{
-                width: '100%',
-                height: '100%',
-                padding: 24,
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: THEME.textPrimary,
-                fontFamily: 'var(--font-mono)',
-                fontSize: 13,
-                lineHeight: 1.6,
-                resize: 'none',
-                outline: 'none',
-              }}
+              className="size-full p-6 bg-transparent border-none text-[var(--ui-text-primary)] font-mono text-[13px] leading-[1.6] resize-none outline-none"
             />
           ) : isFileView ? (
             <FileContent file={selectedFile!} viewMode={viewMode} />
@@ -3421,55 +3131,26 @@ function RightPane({
                   
                   {/* Dependencies Section */}
                   {(item as Capability & { dependencies?: Record<string, string> }).dependencies && (
-                    <div style={{ padding: '0 24px 24px' }}>
-                      <div
-                        style={{
-                          border: `1px solid ${THEME.border}`,
-                          borderRadius: 10,
-                          backgroundColor: THEME.bgElevated,
-                          padding: 16,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            marginBottom: 12,
-                          }}
-                        >
-                          <Package size={16} color={THEME.accent} />
-                          <span style={{ fontSize: 14, fontWeight: 600, color: THEME.textPrimary }}>
+                    <div className="p-[0_24px_24px]">
+                      <div className="border border-solid border-[var(--ui-border-muted)] rounded-[10px] bg-[var(--surface-floating)] p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Package size={16} className="text-[var(--accent-primary)]" />
+                          <span className="text-[14px] font-semibold text-[var(--ui-text-primary)]">
                             Dependencies
                           </span>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div className="flex flex-col gap-2">
                           {Object.entries(
                             (item as Capability & { dependencies?: Record<string, string> }).dependencies || {}
                           ).map(([depId, versionRange]) => (
                             <div
                               key={depId}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '8px 12px',
-                                backgroundColor: 'var(--surface-hover)',
-                                borderRadius: 6,
-                              }}
+                              className="flex items-center justify-between p-[8px_12px] bg-[var(--surface-hover)] rounded-md"
                             >
-                              <span style={{ fontSize: 13, color: THEME.textPrimary }}>
+                              <span className="text-[13px] text-[var(--ui-text-primary)]">
                                 {depId}
                               </span>
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: THEME.textSecondary,
-                                  padding: '2px 8px',
-                                  backgroundColor: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
-                                  borderRadius: 4,
-                                }}
-                              >
+                              <span className="text-[12px] text-[var(--ui-text-secondary)] p-[2px_8px] bg-[var(--accent-primary)]/10 rounded-[4px]">
                                 {versionRange}
                               </span>
                             </div>
@@ -3479,7 +3160,7 @@ function RightPane({
                     </div>
                   )}
                   
-                  <div style={{ padding: '0 24px 24px' }}>
+                  <div className="p-[0_24px_24px]">
                     <PluginReviews pluginId={item.id} pluginName={item.name} />
                   </div>
                 </>
@@ -3608,66 +3289,30 @@ function ConnectorContent({
       ];
 
   return (
-    <div style={{ padding: 24, maxWidth: 880 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          marginBottom: 18,
-        }}
-      >
-        <div
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: 14,
-            backgroundColor: THEME.accentMuted,
-            border: `1px solid ${THEME.borderStrong}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <PlugsConnected size={28} color={THEME.accent} />
+    <div className="p-6 max-w-[880px]">
+      <div className="flex items-center gap-3.5 mb-[18px]">
+        <div className="size-[60px] rounded-[14px] bg-[var(--accent-primary)]/10 border border-solid border-[var(--ui-border-strong)] flex items-center justify-center">
+          <PlugsConnected size={28} className="text-[var(--accent-primary)]" />
         </div>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: 20, color: THEME.textPrimary, margin: 0, marginBottom: 4 }}>
+        <div className="flex-1">
+          <h3 className="text-[20px] text-[var(--ui-text-primary)] m-0 mb-1">
             {item.appName || item.name}
           </h3>
-          <p style={{ fontSize: 13, color: THEME.textSecondary, margin: 0, lineHeight: 1.5 }}>
+          <p className="text-[13px] text-[var(--ui-text-secondary)] m-0 leading-[1.5]">
             {item.description}
           </p>
         </div>
         {isDesktopIncluded && (
-          <span
-            style={{
-              padding: '3px 8px',
-              borderRadius: 999,
-              border: `1px solid ${THEME.borderStrong}`,
-              color: THEME.textSecondary,
-              fontSize: 12,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
-            }}
-          >
+          <span className="p-[3px_8px] rounded-full border border-solid border-[var(--ui-border-strong)] text-[var(--ui-text-secondary)] text-[12px] tracking-[0.05em] uppercase">
             Included
           </span>
         )}
       </div>
 
-      <div
-        style={{
-          marginBottom: 14,
-          borderRadius: 10,
-          border: `1px solid ${THEME.border}`,
-          backgroundColor: THEME.bgElevated,
-          padding: 14,
-        }}
-      >
-        <div style={{ fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>Connection</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ color: THEME.textSecondary, fontSize: 13 }}>
+      <div className="mb-3.5 rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-floating)] p-3.5">
+        <div className="text-[12px] text-[var(--ui-text-tertiary)] mb-1.5">Connection</div>
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="text-[var(--ui-text-secondary)] text-[13px]">
             {isDesktopIncluded
               ? 'Included connector is ready in this workspace.'
               : isBusy
@@ -3677,97 +3322,51 @@ function ConnectorContent({
                   : 'Not connected yet. Connect to enable tools and context sync.'}
           </div>
           {!isDesktopIncluded && !isConnected ? (
-            <button
+            <button type="button"
               onClick={onConnectToggle}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 7,
-                backgroundColor: THEME.textPrimary,
-                color: THEME.bg,
-                border: 'none',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                opacity: isBusy ? 0.7 : 1,
-              }}
+              className={`p-[8px_14px] rounded-[7px] bg-[var(--ui-text-primary)] text-[var(--surface-canvas)] border-none text-[13px] font-semibold cursor-pointer whitespace-nowrap ${isBusy ? 'opacity-70' : 'opacity-100'}`}
               disabled={isBusy}
             >
               {isBusy ? 'Connecting...' : 'Connect'}
             </button>
           ) : !isDesktopIncluded ? (
-            <button
+            <button type="button"
               onClick={onConnectToggle}
-              style={{
-                padding: '7px 12px',
-                borderRadius: 7,
-                border: `1px solid ${THEME.borderStrong}`,
-                backgroundColor: 'var(--surface-hover)',
-                color: THEME.textPrimary,
-                fontSize: 12,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                opacity: isBusy ? 0.7 : 1,
-              }}
+              className={`p-[7px_12px] rounded-[7px] border border-solid border-[var(--ui-border-strong)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)] text-[12px] cursor-pointer whitespace-nowrap ${isBusy ? 'opacity-70' : 'opacity-100'}`}
               disabled={isBusy}
             >
               {isBusy ? 'Updating...' : 'Disconnect'}
             </button>
           ) : (
-            <div
-              style={{
-                padding: '4px 10px',
-                borderRadius: 999,
-                fontSize: 12,
-                color: THEME.success,
-                backgroundColor: 'color-mix(in srgb, var(--status-success) 12%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--status-success) 32%, transparent)',
-                whiteSpace: 'nowrap',
-              }}
-            >
+            <div className="p-[4px_10px] rounded-full text-[12px] text-[var(--status-success)] bg-[var(--status-success-bg)] border border-solid border-[var(--status-success-40)] whitespace-nowrap">
               Connected
             </div>
           )}
         </div>
         {!isDesktopIncluded && isConnected && (
-          <div style={{ marginTop: 10, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 12, color: THEME.textTertiary }}>
-              Account: <span style={{ color: THEME.textSecondary }}>{accountLabel}</span>
+          <div className="mt-2.5 flex gap-3.5 flex-wrap">
+            <div className="text-[12px] text-[var(--ui-text-tertiary)]">
+              Account: <span className="text-[var(--ui-text-secondary)]">{accountLabel}</span>
             </div>
             {connectedAtLabel && (
-              <div style={{ fontSize: 12, color: THEME.textTertiary }}>
-                Connected: <span style={{ color: THEME.textSecondary }}>{connectedAtLabel}</span>
+              <div className="text-[12px] text-[var(--ui-text-tertiary)]">
+                Connected: <span className="text-[var(--ui-text-secondary)]">{connectedAtLabel}</span>
               </div>
             )}
           </div>
         )}
       </div>
 
-      <div
-        style={{
-          borderRadius: 10,
-          border: `1px solid ${THEME.border}`,
-          backgroundColor: THEME.bgElevated,
-          padding: 14,
-        }}
-      >
-        <div style={{ fontSize: 12, color: THEME.textTertiary, marginBottom: 8 }}>Tool permissions</div>
-        <ul style={{ margin: 0, paddingLeft: 18, color: THEME.textSecondary, fontSize: 13, lineHeight: 1.7 }}>
+      <div className="rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-floating)] p-3.5">
+        <div className="text-[12px] text-[var(--ui-text-tertiary)] mb-2">Tool permissions</div>
+        <ul className="m-0 pl-[18px] text-[var(--ui-text-secondary)] text-[13px] leading-[1.7]">
           {permissionRows.map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
-        <button
+        <button type="button"
           onClick={() => openInBrowser('https://docs.allternit.dev/connectors')}
-          style={{
-            marginTop: 12,
-            border: 'none',
-            background: 'transparent',
-            color: THEME.accent,
-            padding: 0,
-            fontSize: 12,
-            cursor: 'pointer',
-          }}
+          className="mt-3 border-none bg-transparent text-[var(--accent-primary)] p-0 text-[12px] cursor-pointer hover:underline"
         >
           Manage connector settings
         </button>
@@ -3778,7 +3377,7 @@ function ConnectorContent({
 
 function CreateMenuItem({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         width: '100%',
@@ -3822,7 +3421,7 @@ function MenuItem({
   onClick?: () => void;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         width: '100%',

@@ -24,7 +24,7 @@
  * ```
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { 
   WorkspaceWebSocket, 
   WebSocketStatus, 
@@ -68,44 +68,73 @@ export interface UseWorkspaceWebSocketReturn {
 export function useWorkspaceWebSocket(
   options: UseWorkspaceWebSocketOptions
 ): UseWorkspaceWebSocketReturn {
-  const { url, password, autoConnect = true, ...wsOptions } = options;
-  
-  const [status, setStatus] = useState<WebSocketStatus>('disconnected');
-  const [error, setError] = useState<Error | null>(null);
-  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  
+  const { url, password, autoConnect, ...wsOptions } = options;
+
+  type State = {
+    status: WebSocketStatus;
+    error: Error | null;
+    lastMessage: WebSocketMessage | null;
+  };
+
+  type Action = 
+    | { type: 'SET_STATUS'; status: WebSocketStatus }
+    | { type: 'SET_ERROR'; error: Error | null }
+    | { type: 'SET_MESSAGE'; message: WebSocketMessage }
+    | { type: 'RESET'; url: string | null };
+
+  const [state, dispatch] = useReducer((state: State, action: Action): State => {
+    switch (action.type) {
+      case 'SET_STATUS': return { ...state, status: action.status };
+      case 'SET_ERROR': return { ...state, error: action.error };
+      case 'SET_MESSAGE': return { ...state, lastMessage: action.message };
+      case 'RESET': return { ...state, status: action.url ? state.status : 'disconnected', error: null, lastMessage: null };
+      default: return state;
+    }
+  }, {
+    status: 'disconnected',
+    error: null,
+    lastMessage: null
+  });
+
+  const { status, error, lastMessage } = state;
   const wsRef = useRef<WorkspaceWebSocket | null>(null);
+
+  // Memoize options to avoid stringify in deps
+  const memoizedOptions = useRef(wsOptions);
+  useEffect(() => {
+    memoizedOptions.current = wsOptions;
+  }, [wsOptions]);
 
   // Create WebSocket instance
   useEffect(() => {
     if (!url) {
       wsRef.current = null;
-      setStatus('disconnected');
+      dispatch({ type: 'RESET', url: null });
       return;
     }
 
-    const ws = new WorkspaceWebSocket(url, password, wsOptions);
+    const ws = new WorkspaceWebSocket(url, password, memoizedOptions.current);
     wsRef.current = ws;
 
     // Subscribe to status changes
     const unsubscribeStatus = ws.onStatusChange((newStatus) => {
-      setStatus(newStatus);
+      dispatch({ type: 'SET_STATUS', status: newStatus });
       if (newStatus === 'error') {
-        setError(new Error('WebSocket connection error'));
+        dispatch({ type: 'SET_ERROR', error: new Error('WebSocket connection error') });
       } else if (newStatus === 'connected') {
-        setError(null);
+        dispatch({ type: 'SET_ERROR', error: null });
       }
     });
 
     // Subscribe to messages
     const unsubscribeMessage = ws.onMessage((message) => {
-      setLastMessage(message);
+      dispatch({ type: 'SET_MESSAGE', message });
     });
 
     // Auto-connect if enabled
     if (autoConnect) {
       ws.connect().catch((err) => {
-        setError(err instanceof Error ? err : new Error(String(err)));
+        dispatch({ type: 'SET_ERROR', error: err instanceof Error ? err : new Error(String(err)) });
       });
     }
 
@@ -117,38 +146,37 @@ export function useWorkspaceWebSocket(
       wsRef.current = null;
     };
   }, [url, password, autoConnect]);
-
   const connect = useCallback(async () => {
     if (!wsRef.current) {
       throw new Error('WebSocket not initialized');
     }
     
     try {
-      setError(null);
+      dispatch({ type: 'SET_ERROR', error: null });
       await wsRef.current.connect();
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
-      setError(error);
+      dispatch({ type: 'SET_ERROR', error });
       throw error;
     }
-  }, []);
+    }, []);
 
-  const disconnect = useCallback(() => {
+    const disconnect = useCallback(() => {
     wsRef.current?.disconnect();
-  }, []);
+    }, []);
 
-  const send = useCallback((message: unknown) => {
+    const send = useCallback((message: unknown) => {
     wsRef.current?.send(message);
-  }, []);
+    }, []);
 
-  const on = useCallback(<T extends WebSocketMessage>(
+    const on = useCallback(<T extends WebSocketMessage>(
     type: T['type'],
     handler: (payload: T['payload']) => void
-  ): (() => void) | undefined => {
+    ) => {
     return wsRef.current?.on(type, handler);
-  }, []);
+    }, []);
 
-  return {
+    return {
     ws: wsRef.current,
     status,
     isConnected: status === 'connected',
@@ -158,7 +186,7 @@ export function useWorkspaceWebSocket(
     disconnect,
     send,
     on,
-  };
+    };
 }
 
 export default useWorkspaceWebSocket;

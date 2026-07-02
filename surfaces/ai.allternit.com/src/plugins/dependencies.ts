@@ -12,7 +12,6 @@
  * - Conflict detection and reporting
  */
 
-import type { PluginManifest } from './plugin.types';
 
 // ============================================================================
 // Types
@@ -21,7 +20,7 @@ import type { PluginManifest } from './plugin.types';
 /**
  * Represents a single plugin dependency requirement
  */
-export interface PluginDependency {
+interface PluginDependency {
   /** Unique identifier of the dependency plugin */
   pluginId: string;
   /** Semver version range (e.g., "^1.0.0", ">=2.0.0 <3.0.0") */
@@ -35,7 +34,7 @@ export interface PluginDependency {
 /**
  * Node in the dependency graph representing a plugin and its dependencies
  */
-export interface DependencyNode {
+interface DependencyNode {
   pluginId: string;
   version: string;
   dependencies: PluginDependency[];
@@ -47,7 +46,7 @@ export interface DependencyNode {
 /**
  * The complete dependency graph for all plugins
  */
-export interface DependencyGraph {
+interface DependencyGraph {
   nodes: Map<string, DependencyNode>;
   edges: Map<string, string[]>; // pluginId -> dependencies
 }
@@ -85,7 +84,7 @@ export interface DependencyTreeNode {
 /**
  * Represents a missing dependency
  */
-export interface MissingDependency {
+interface MissingDependency {
   pluginId: string;
   versionRange: string;
   requiredBy: string;
@@ -108,7 +107,7 @@ export interface DependencyConflict {
 /**
  * Dependency check result for a single plugin
  */
-export interface DependencyCheckResult {
+interface DependencyCheckResult {
   pluginId: string;
   satisfied: boolean;
   installed: boolean;
@@ -125,7 +124,7 @@ export interface DependencyCheckResult {
 /**
  * Parse a version string into its numeric components
  */
-export function parseVersion(version: string): {
+function parseVersion(version: string): {
   major: number;
   minor: number;
   patch: number;
@@ -157,7 +156,7 @@ export function parseVersion(version: string): {
  * Compare two version strings
  * Returns: -1 if v1 < v2, 0 if v1 === v2, 1 if v1 > v2
  */
-export function compareVersions(v1: string, v2: string): number {
+function compareVersions(v1: string, v2: string): number {
   const p1 = parseVersion(v1);
   const p2 = parseVersion(v2);
   
@@ -257,7 +256,7 @@ function satisfiesTilde(version: string, rangeVersion: string): boolean {
  * Check if a version satisfies a range
  * Supports: ^, ~, >=, <=, >, <, =, and ranges with spaces (e.g., ">=1.0.0 <2.0.0")
  */
-export function satisfiesRange(version: string, range: string): boolean {
+function satisfiesRange(version: string, range: string): boolean {
   const cleanRange = range.trim();
   
   // Handle caret ranges
@@ -341,7 +340,7 @@ export function satisfiesRange(version: string, range: string): boolean {
 /**
  * Create an empty dependency graph
  */
-export function createDependencyGraph(): DependencyGraph {
+function createDependencyGraph(): DependencyGraph {
   return {
     nodes: new Map(),
     edges: new Map(),
@@ -351,7 +350,7 @@ export function createDependencyGraph(): DependencyGraph {
 /**
  * Add a plugin to the dependency graph
  */
-export function addToGraph(
+function addToGraph(
   graph: DependencyGraph,
   pluginId: string,
   version: string,
@@ -381,7 +380,7 @@ export function addToGraph(
 /**
  * Build a dependency graph from a set of plugins
  */
-export function buildDependencyGraph(
+function buildDependencyGraph(
   plugins: Array<{
     id: string;
     version: string;
@@ -570,7 +569,7 @@ export function resolveDependencies(
 /**
  * Check if all dependencies for a plugin are installed and compatible
  */
-export function checkDependencies(
+function checkDependencies(
   pluginId: string,
   getPlugin: (id: string) => { id: string; version: string; dependencies?: Record<string, string> } | undefined,
   getInstalledVersion: (id: string) => string | undefined
@@ -631,7 +630,7 @@ export function checkDependencies(
 /**
  * Get all missing dependencies for a plugin (including transitive)
  */
-export function getMissingDependencies(
+function getMissingDependencies(
   pluginId: string,
   getPlugin: (id: string) => { id: string; version: string; dependencies?: Record<string, string> } | undefined,
   getInstalledVersion: (id: string) => string | undefined,
@@ -676,7 +675,7 @@ export function getMissingDependencies(
 /**
  * Find all version conflicts in the dependency graph
  */
-export function getConflictingDependencies(
+function getConflictingDependencies(
   plugins: Array<{
     id: string;
     version: string;
@@ -727,9 +726,6 @@ export function getConflictingDependencies(
           const req1 = reqs[i];
           const req2 = reqs[j];
           
-          // Check if ranges are compatible (simplified check)
-          // Two ranges are compatible if there's a version that satisfies both
-          // For now, we just flag if the ranges are different
           if (req1.versionRange !== req2.versionRange) {
             if (!incompatible.includes(req1)) incompatible.push(req1);
             if (!incompatible.includes(req2)) incompatible.push(req2);
@@ -758,7 +754,7 @@ export function getConflictingDependencies(
  * Perform topological sort to determine installation order
  * Returns plugins in order such that dependencies come before dependents
  */
-export function topologicalSort(
+function topologicalSort(
   pluginIds: string[],
   getDependencies: (id: string) => string[]
 ): { order: string[]; cycles: string[][] } {
@@ -804,7 +800,7 @@ export function topologicalSort(
 /**
  * Get installation order for a plugin and all its dependencies
  */
-export function getInstallationOrder(
+function getInstallationOrder(
   pluginId: string,
   getPlugin: (id: string) => { id: string; version: string; dependencies?: Record<string, string> } | undefined,
   visited: Set<string> = new Set()
@@ -848,7 +844,7 @@ export function getInstallationOrder(
 /**
  * Validate the entire dependency graph for cycles and conflicts
  */
-export function validateDependencyGraph(
+function validateDependencyGraph(
   plugins: Array<{
     id: string;
     version: string;
@@ -862,12 +858,13 @@ export function validateDependencyGraph(
   errors: string[];
 } {
   const errors: string[] = [];
+  const pluginMap = new Map(plugins.map(p => [p.id, p]));
   
   // Check for cycles using topological sort
   const { order, cycles } = topologicalSort(
     plugins.map(p => p.id),
     (id) => {
-      const plugin = plugins.find(p => p.id === id);
+      const plugin = pluginMap.get(id);
       return plugin ? Object.keys(plugin.dependencies || {}) : [];
     }
   );
@@ -899,7 +896,7 @@ export function validateDependencyGraph(
 /**
  * Check if a dependency graph has any issues
  */
-export function hasDependencyIssues(
+function hasDependencyIssues(
   plugins: Array<{
     id: string;
     version: string;
@@ -918,7 +915,7 @@ export function hasDependencyIssues(
 /**
  * Format a version range for display
  */
-export function formatVersionRange(range: string): string {
+function formatVersionRange(range: string): string {
   if (range === '*') return 'any version';
   if (range.startsWith('^')) return `compatible with ${range.slice(1)}`;
   if (range.startsWith('~')) return `approximately ${range.slice(1)}`;
@@ -932,7 +929,7 @@ export function formatVersionRange(range: string): string {
 /**
  * Get the minimum required version from a range
  */
-export function getMinVersion(range: string): string | null {
+function getMinVersion(range: string): string | null {
   if (range === '*') return '0.0.0';
   if (range.startsWith('^') || range.startsWith('~') || range.startsWith('=')) {
     return range.slice(1);
@@ -949,7 +946,7 @@ export function getMinVersion(range: string): string | null {
 /**
  * Merge two version ranges (returns the most restrictive)
  */
-export function mergeVersionRanges(range1: string, range2: string): string {
+function mergeVersionRanges(range1: string, range2: string): string {
   // Simplified merge - just return the higher minimum version
   const min1 = getMinVersion(range1);
   const min2 = getMinVersion(range2);
@@ -963,7 +960,7 @@ export function mergeVersionRanges(range1: string, range2: string): string {
 /**
  * Get dependency stats for a plugin
  */
-export function getDependencyStats(
+function getDependencyStats(
   pluginId: string,
   getPlugin: (id: string) => { id: string; version: string; dependencies?: Record<string, string> } | undefined,
   getInstalledVersion: (id: string) => string | undefined

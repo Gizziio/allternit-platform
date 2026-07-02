@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 
-export interface TeamAgentResult {
+interface TeamAgentResult {
   personaId: string;
   personaName: string;
   output: string;

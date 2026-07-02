@@ -5,6 +5,7 @@
  * Provides a consistent loading experience across the application.
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React from 'react';
 
 export interface ViewSkeletonProps {
@@ -47,7 +48,7 @@ export function ViewSkeleton({
       <div className="flex-1 space-y-3">
         {Array.from({ length: lines }).map((_, i) => (
           <div
-            key={i}
+            key={`viewskeleton-${i}`}
             className={`${baseClasses} h-12 w-full`}
             style={{
               opacity: 1 - i * 0.15,
@@ -90,7 +91,7 @@ export function ListSkeleton({ count = 5 }: { count?: number }) {
     <div className="space-y-2">
       {Array.from({ length: count }).map((_, i) => (
         <div
-          key={i}
+          key={`viewskeleton-${i}`}
           className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 animate-pulse"
         >
           <div className="size-10  rounded bg-muted" />
@@ -125,6 +126,7 @@ export function MessageSkeleton({ isUser = false }: { isUser?: boolean }) {
  * CodeEditorSkeleton - Loading state for code editor
  */
 export function CodeEditorSkeleton() {
+  const isClient = useIsClient();
   return (
     <div className="h-64 w-full bg-muted/30 rounded-lg border overflow-hidden">
       <div className="flex items-center px-4 py-2 bg-muted/50 border-b space-x-2">
@@ -136,9 +138,9 @@ export function CodeEditorSkeleton() {
       <div className="p-4 space-y-2">
         {Array.from({ length: 8 }).map((_, i) => (
           <div
-            key={i}
+            key={`viewskeleton-${i}`}
             className="h-4 bg-muted rounded animate-pulse"
-            style={{ width: `${60 + Math.random() * 40}%`, marginLeft: `${(i % 3) * 20}px` }}
+            style={isClient ? { width: `${60 + Math.random() * 40}%`, marginLeft: `${(i % 3) * 20}px` } : undefined}
           />
         ))}
       </div>
@@ -154,7 +156,7 @@ export function TerminalSkeleton() {
     <div className="h-48 w-full bg-black rounded-lg overflow-hidden">
       <div className="p-2 space-y-1">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center space-x-2">
+          <div key={`viewskeleton-${i}`} className="flex items-center space-x-2">
             <div className="h-3 w-2 bg-muted/50 rounded animate-pulse" />
             <div className="h-3 w-16 bg-muted/50 rounded animate-pulse" />
             <div className="h-3 flex-1 bg-muted/30 rounded animate-pulse" />
@@ -176,7 +178,7 @@ export function FormSkeleton({ fields = 4 }: { fields?: number }) {
   return (
     <div className="space-y-4 p-4">
       {Array.from({ length: fields }).map((_, i) => (
-        <div key={i} className="space-y-2">
+        <div key={`viewskeleton-${i}`} className="space-y-2">
           <div className="h-4 w-24 bg-muted rounded animate-pulse" />
           <div className="h-10 w-full bg-muted rounded animate-pulse" />
         </div>
@@ -195,16 +197,16 @@ export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; column
       {/* Header */}
       <div className="flex items-center px-4 py-3 bg-muted/50 border-b space-x-4">
         {Array.from({ length: columns }).map((_, i) => (
-          <div key={i} className="h-4 bg-muted rounded animate-pulse flex-1" />
+          <div key={`viewskeleton-${i}`} className="h-4 bg-muted rounded animate-pulse flex-1" />
         ))}
       </div>
       {/* Rows */}
       <div className="divide-y">
         {Array.from({ length: rows }).map((_, rowIdx) => (
-          <div key={rowIdx} className="flex items-center px-4 py-3 space-x-4">
+          <div key={`viewskeleton-${rowIdx}`} className="flex items-center px-4 py-3 space-x-4">
             {Array.from({ length: columns }).map((_, colIdx) => (
               <div
-                key={colIdx}
+                key={`viewskeleton-${colIdx}`}
                 className="h-4 bg-muted rounded animate-pulse flex-1"
                 style={{ opacity: 1 - colIdx * 0.15 }}
               />
@@ -251,7 +253,7 @@ export function DashboardSkeleton() {
       {/* Stats row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="p-4 border rounded-lg bg-card">
+          <div key={`viewskeleton-${i}`} className="p-4 border rounded-lg bg-card">
             <div className="h-4 w-20 bg-muted rounded animate-pulse mb-2" />
             <div className="h-8 w-16 bg-muted rounded animate-pulse" />
           </div>

@@ -20,8 +20,6 @@ import {
   ArrowsIn,
   Terminal,
   Monitor,
-  Layout,
-  GearSix,
   SidebarSimple,
   Chat,
 } from '@phosphor-icons/react';
@@ -84,7 +82,7 @@ export function AgentSessionLayout({
         <div className="flex items-center gap-1">
           {headerActions}
           
-          <button
+          <button type="button"
             onClick={() => setShowTerminal(!showTerminal)}
             className="p-2 rounded-lg transition-colors"
             style={{ color: showTerminal ? modeColors.accent : TEXT.tertiary }}
@@ -93,7 +91,7 @@ export function AgentSessionLayout({
             <Terminal size={16} />
           </button>
 
-          <button
+          <button type="button"
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-2 rounded-lg transition-colors"
             style={{ color: TEXT.tertiary }}
@@ -101,7 +99,7 @@ export function AgentSessionLayout({
             {isFullscreen ? <ArrowsIn size={16} /> : <ArrowsOut size={16} />}
           </button>
           
-          <button
+          <button type="button"
             onClick={onClose}
             className="p-2 rounded-lg transition-colors hover:bg-red-500/10"
             style={{ color: TEXT.tertiary }}
@@ -154,7 +152,7 @@ export function AgentSessionLayout({
                 <Terminal size={14} className="text-green-500" />
                 <span className="text-xs font-mono text-white/70">root@allternit-orchestrator:~#</span>
               </div>
-              <button onClick={() => setShowTerminal(false)} className="text-white/40 hover:text-white">
+              <button type="button" onClick={() => setShowTerminal(false)} className="text-white/40 hover:text-white">
                 <X size={16} />
               </button>
             </div>
@@ -177,7 +175,7 @@ export function AgentSessionLayout({
 // Sub-Components
 // ============================================================================
 
-export function WorkbenchSection({ 
+function WorkbenchSection({ 
   title, 
   children, 
   mode,
@@ -193,7 +191,7 @@ export function WorkbenchSection({
 
   return (
     <div className="border-b" style={{ borderColor: modeColors.border }}>
-      <button
+      <button type="button"
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium"
         style={{ color: TEXT.secondary }}
@@ -225,7 +223,7 @@ export function WorkbenchSection({
   );
 }
 
-export function WorkbenchItem({
+function WorkbenchItem({
   icon: Icon,
   label,
   active,
@@ -243,7 +241,7 @@ export function WorkbenchItem({
   const modeColors = MODE_COLORS[mode as AgentMode];
 
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all"
       style={{

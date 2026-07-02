@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   MicrosoftWordLogo,
   MicrosoftExcelLogo,
@@ -14,8 +14,19 @@ import {
   Check,
   PlugsConnected,
   Warning,
+  TerminalWindow,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import type { ViewContext } from '@/nav/nav.types';
+import { usePlatformAuth, usePlatformUser } from '@/lib/platform-auth-client';
+import { useWorkspaceStore } from '@/stores/workspace.store';
+import { useChatStore } from '@/views/chat/ChatStore';
+import { openOfficeDesktopApp, openOfficeWebInBrowser } from './open-office-web';
+import { openInBrowser } from '@/lib/openInBrowser';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AciAddinView');
 
 export type OfficeHost = 'word' | 'excel' | 'powerpoint';
 
@@ -67,15 +78,69 @@ const HOST_CONFIG = {
   },
 } as const;
 
-const TASKPANE_ORIGINS = ['https://localhost:3000', 'http://localhost:3000'] as const;
+const TASKPANE_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'https://localhost:3000',
+  'https://localhost:3001',
+] as const;
+const TASKPANE_PROBE_PATH = '/src/taskpane/index.html';
 const ADDIN_DIR = 'surfaces/allternit-extensions/allternit-office-addin';
 
 type ProbeStatus = 'idle' | 'checking' | 'running' | 'offline';
+type GatewayBindingStatus = 'idle' | 'checking' | 'connected' | 'empty' | 'error';
+type BootstrapAckState = 'idle' | 'pending' | 'acknowledged' | 'timed-out';
+
+interface AddinRuntimeState {
+  host: string;
+  hostConnected: boolean;
+  runtimeMode: 'office-host' | 'companion-only';
+  gatewayStatus?: 'connected' | 'error' | 'pending' | 'companion-only';
+  documentTitle?: string | null;
+  bindingId?: string | null;
+  workspaceId?: string | null;
+  projectId?: string | null;
+}
+
+interface OfficeBootstrapPayload {
+  source: 'allternit-shell';
+  type: 'office-bootstrap';
+  platformOrigin: string;
+  auth: {
+    token: string | null;
+    userId: string | null;
+    email: string | null;
+    name: string | null;
+  };
+  context: {
+    workspaceId: string | null;
+    projectId: string | null;
+    projectName: string | null;
+  };
+}
+
+interface OfficeBindingSnapshot {
+  id: string;
+  host?: string | null;
+  title?: string | null;
+  label?: string | null;
+  workspace_id?: string | null;
+  project_id?: string | null;
+  connected?: boolean | null;
+  active_session_count?: number;
+  last_seen_at?: string | null;
+}
+
+interface DesktopHostStatus {
+  installed: boolean;
+  running: boolean;
+  bundlePath: string | null;
+}
 
 async function probeTaskpane(): Promise<string | null> {
   for (const origin of TASKPANE_ORIGINS) {
     try {
-      await fetch(`${origin}/`, {
+      await fetch(`${origin}${TASKPANE_PROBE_PATH}`, {
         signal: AbortSignal.timeout(1500),
         mode: 'no-cors',
       });
@@ -87,18 +152,113 @@ async function probeTaskpane(): Promise<string | null> {
   return null;
 }
 
-export function AciAddinView({ host }: { host: OfficeHost }) {
+async function probeGatewayBinding(host: OfficeHost, token: string | null): Promise<OfficeBindingSnapshot | null> {
+  const response = await fetch('http://127.0.0.1:8013/api/v1/office/bindings', {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    signal: AbortSignal.timeout(1500),
+  });
+  if (!response.ok) {
+    throw new Error(`Gateway returned ${response.status}`);
+  }
+  const data = await response.json() as { bindings?: OfficeBindingSnapshot[] };
+  const bindings = Array.isArray(data.bindings) ? data.bindings : [];
+  return bindings.find((binding) => binding.host === host) ?? null;
+}
+
+function buildTaskpaneUrl(origin: string, context: {
+  workspaceId: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  platformOrigin: string;
+}) {
+  const url = new URL('/src/taskpane/index.html', origin)
+  if (context.workspaceId) url.searchParams.set('workspaceId', context.workspaceId)
+  if (context.projectId) url.searchParams.set('projectId', context.projectId)
+  if (context.projectName) url.searchParams.set('projectName', context.projectName)
+  if (context.platformOrigin) url.searchParams.set('platformOrigin', context.platformOrigin)
+  return url.toString()
+}
+
+export function AciAddinView({ host, context }: { host: OfficeHost; context?: ViewContext }) {
   const cfg = HOST_CONFIG[host];
-  const { label, Icon, color, desktopScheme, webUrl, devScript, commands } = cfg;
+  const { label, Icon, color, devScript, commands } = cfg;
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const { getToken, isLoaded: isAuthLoaded, isSignedIn } = usePlatformAuth();
+  const { user } = usePlatformUser();
 
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>('idle');
-  const [resolvedOrigin, setResolvedOrigin] = useState<string>(TASKPANE_ORIGINS[0]);
-  const [desktopClicked, setDesktopClicked] = useState(false);
+  const [resolvedOrigin, setResolvedOrigin] = useState<string>('http://localhost:3000');
+  const [desktopHostStatus, setDesktopHostStatus] = useState<DesktopHostStatus>({ installed: false, running: false, bundlePath: null });
   const [copied, setCopied] = useState(false);
+  const [copiedCommand, setCopiedCommand] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState(false);
-  const taskpaneUrl = useMemo(() => `${resolvedOrigin}/src/taskpane/index.html`, [resolvedOrigin]);
+  const [gatewayStatus, setGatewayStatus] = useState<GatewayBindingStatus>('idle');
+  const [gatewayBinding, setGatewayBinding] = useState<OfficeBindingSnapshot | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [iframeAcknowledged, setIframeAcknowledged] = useState(false);
+  const [bootstrapAckState, setBootstrapAckState] = useState<BootstrapAckState>('idle');
+  const [runtimeState, setRuntimeState] = useState<AddinRuntimeState | null>(null);
+
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const activeProjectId = useChatStore((s) => s.activeProjectId);
+  const contextWorkspaceId = (context?.context as { workspaceId?: string | null } | undefined)?.workspaceId ?? activeWorkspaceId;
+  const contextProjectId = (context?.context as { projectId?: string | null } | undefined)?.projectId ?? activeProjectId;
+  const contextProjectName = (context?.context as { projectName?: string | null } | undefined)?.projectName ?? null;
+
+  const taskpaneUrl = useMemo(
+    () => buildTaskpaneUrl(resolvedOrigin, {
+      workspaceId: contextWorkspaceId,
+      projectId: contextProjectId,
+      projectName: contextProjectName,
+      platformOrigin: window.location.origin,
+    }),
+    [resolvedOrigin, contextWorkspaceId, contextProjectId, contextProjectName],
+  );
   const manifestUrl = useMemo(() => `${resolvedOrigin}/manifest.xml`, [resolvedOrigin]);
+  const startCommand = useMemo(() => `cd ${ADDIN_DIR}\n${devScript}`, [devScript]);
+  const bootstrapPayload = useMemo<OfficeBootstrapPayload>(() => ({
+    source: 'allternit-shell',
+    type: 'office-bootstrap',
+    platformOrigin: window.location.origin,
+    auth: {
+      token: authToken,
+      userId: user?.id ?? null,
+      email: user?.primaryEmailAddress?.emailAddress ?? user?.userEmail ?? null,
+      name: [user?.firstName, user?.lastName].filter(Boolean).join(' ') || null,
+    },
+    context: {
+      workspaceId: contextWorkspaceId,
+      projectId: contextProjectId,
+      projectName: contextProjectName,
+    },
+  }), [authToken, contextProjectId, contextProjectName, contextWorkspaceId, user]);
+
+  const postBootstrapToIframe = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow) return false;
+    iframe.contentWindow.postMessage(bootstrapPayload, resolvedOrigin);
+    return true;
+  }, [bootstrapPayload, resolvedOrigin]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadToken() {
+      if (!isAuthLoaded) return;
+      if (!isSignedIn) {
+        if (!cancelled) setAuthToken(null);
+        return;
+      }
+      const token = await getToken().catch(() => null);
+      if (!cancelled) setAuthToken(token ?? null);
+    }
+
+    void loadToken();
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken, isAuthLoaded, isSignedIn]);
 
   const checkStatus = useCallback(async () => {
     setProbeStatus('checking');
@@ -112,14 +272,135 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
     }
   }, []);
 
+  const refreshGateway = useCallback(async () => {
+    setGatewayStatus('checking');
+    try {
+      const binding = await probeGatewayBinding(host, authToken);
+      setGatewayBinding(binding);
+      setGatewayStatus(binding ? 'connected' : 'empty');
+    } catch (error) {
+      logger.error({ err: error }, '[AciAddinView] gateway probe failed');
+      setGatewayBinding(null);
+      setGatewayStatus('error');
+    }
+  }, [authToken, host]);
+
+  // Push auth + workspace context into the embedded add-in iframe.
+  // The iframe can also request a resend explicitly via `bootstrap-request`.
+  useEffect(() => {
+    if (!iframeLoaded) return;
+    setIframeAcknowledged(false);
+    setBootstrapAckState('pending');
+
+    let attempts = 0;
+    const maxAttempts = 8;
+    const ackTimeoutMs = 1500;
+    let cancelled = false;
+
+    function scheduleRetry() {
+      if (cancelled || iframeAcknowledged) return;
+      attempts++;
+      if (attempts >= maxAttempts) {
+        setBootstrapAckState('timed-out');
+        return;
+      }
+      window.setTimeout(() => {
+        if (!cancelled && !iframeAcknowledged) {
+          postBootstrapToIframe();
+          scheduleRetry();
+        }
+      }, ackTimeoutMs);
+    }
+
+    // Delay the first send slightly so the iframe can install its message listeners.
+    const initialDelay = window.setTimeout(() => {
+      postBootstrapToIframe();
+      scheduleRetry();
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(initialDelay);
+    };
+  }, [iframeLoaded, iframeAcknowledged, postBootstrapToIframe]);
+
   useEffect(() => {
     checkStatus();
-  }, [checkStatus]);
+    void refreshGateway();
+  }, [checkStatus, refreshGateway]);
+
+  useEffect(() => {
+    if (!window.allternit?.shell?.getOfficeHostStatus) return;
+
+    let cancelled = false;
+
+    const refresh = async () => {
+      try {
+        const next = await window.allternit!.shell!.getOfficeHostStatus();
+        if (!cancelled) {
+          setDesktopHostStatus(next[host] ?? { installed: false, running: false, bundlePath: null });
+        }
+      } catch {
+        if (!cancelled) {
+          setDesktopHostStatus({ installed: false, running: false, bundlePath: null });
+        }
+      }
+    };
+
+    void refresh();
+    const interval = window.setInterval(refresh, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [host]);
+
+  // Auto-refresh gateway binding every 10 seconds when connected
+  useEffect(() => {
+    if (gatewayStatus !== 'connected' && gatewayStatus !== 'empty') return;
+    const interval = window.setInterval(() => {
+      void refreshGateway();
+    }, 10000);
+    return () => window.clearInterval(interval);
+  }, [gatewayStatus, refreshGateway]);
+
+  // Listen for iframe acknowledgments
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.data?.source !== 'allternit-office-addin') return;
+      if (event.data?.type === 'bootstrap-ack') {
+        setIframeAcknowledged(true);
+        setBootstrapAckState('acknowledged');
+        return;
+      }
+      if (event.data?.type === 'bootstrap-request') {
+        setIframeAcknowledged(false);
+        setBootstrapAckState('pending');
+        postBootstrapToIframe();
+        return;
+      }
+      if (event.data?.payload && typeof event.data.payload === 'object') {
+        setIframeAcknowledged(true);
+        setBootstrapAckState('acknowledged');
+        const payload = event.data.payload as Partial<AddinRuntimeState>;
+        setRuntimeState((prev) => ({
+          host: payload.host ?? prev?.host ?? 'unknown',
+          hostConnected: payload.hostConnected ?? prev?.hostConnected ?? false,
+          runtimeMode: payload.runtimeMode ?? prev?.runtimeMode ?? 'companion-only',
+          gatewayStatus: payload.gatewayStatus ?? prev?.gatewayStatus,
+          documentTitle: payload.documentTitle ?? prev?.documentTitle ?? null,
+          bindingId: payload.bindingId ?? prev?.bindingId ?? null,
+          workspaceId: payload.workspaceId ?? prev?.workspaceId ?? null,
+          projectId: payload.projectId ?? prev?.projectId ?? null,
+        }));
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [postBootstrapToIframe]);
 
   const handleDesktop = () => {
-    window.location.href = desktopScheme;
-    setDesktopClicked(true);
-    setTimeout(() => setDesktopClicked(false), 2500);
+    openOfficeDesktopApp(host);
   };
 
   const handleCopyManifest = async () => {
@@ -128,8 +409,16 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleCopyCommand = async () => {
+    await navigator.clipboard.writeText(startCommand);
+    setCopiedCommand(true);
+    setTimeout(() => setCopiedCommand(false), 2000);
+  };
+
   const isRunning = probeStatus === 'running';
   const isChecking = probeStatus === 'checking';
+  const isRealOfficeHost = runtimeState?.hostConnected ?? false;
+  const runtimeModeLabel = isRealOfficeHost ? 'Live Office host attached' : 'Companion iframe only';
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -162,7 +451,7 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
             {isChecking ? 'Checking…' : isRunning ? 'Add-in server running' : 'Server offline'}
           </div>
 
-          <button
+          <button type="button"
             onClick={checkStatus}
             disabled={isChecking}
             className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-50"
@@ -185,26 +474,27 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
               Open {label}
             </p>
             <div className="flex flex-col gap-2">
-              <button
+              <button type="button"
                 onClick={handleDesktop}
+                disabled={!desktopHostStatus.installed}
                 className={cn(
                   'flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition-all',
-                  desktopClicked
-                    ? 'border-green-900/40 bg-green-950/20 text-green-400'
-                    : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]',
+                  desktopHostStatus.installed
+                    ? 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'
+                    : 'border-amber-900/30 bg-amber-950/10 text-amber-400 cursor-not-allowed opacity-80',
                 )}
               >
-                {desktopClicked
-                  ? <><Check size={13} /> Launched</>
-                  : <><Desktop size={13} /> Open {label} (desktop)</>
+                {desktopHostStatus.installed
+                  ? <><Desktop size={13} /> Open {label} (desktop)</>
+                  : <><Warning size={13} /> {label} desktop not installed</>
                 }
               </button>
-              <button
-                onClick={() => window.open(webUrl, '_blank', 'noopener,noreferrer')}
+              <button type="button"
+                onClick={() => openOfficeWebInBrowser(host)}
                 className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] transition-colors"
               >
                 <Globe size={13} />
-                Open {label} Online
+                Open {label} In Browser Mode
                 <ArrowSquareOut size={10} className="ml-auto" />
               </button>
             </div>
@@ -213,9 +503,33 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
           {/* Add-in commands */}
           <section>
             <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-              Add-in commands
+              Runtime
             </p>
             <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-[var(--text-secondary)]" style={{ background: `color-mix(in srgb, ${color} 6%, transparent)` }}>
+                <PlugsConnected size={12} />
+                Host: {label}
+              </div>
+              <div className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-[var(--text-secondary)]" style={{ background: `color-mix(in srgb, ${color} 6%, transparent)` }}>
+                <span className={cn('size-1.5 rounded-full', isRealOfficeHost ? 'bg-green-500' : 'bg-amber-500')} />
+                {runtimeModeLabel}
+              </div>
+              <div className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-[var(--text-secondary)]" style={{ background: `color-mix(in srgb, ${color} 6%, transparent)` }}>
+                <Desktop size={12} />
+                {desktopHostStatus.installed
+                  ? desktopHostStatus.running
+                    ? `${label} desktop host running`
+                    : `${label} desktop host installed`
+                  : `${label} desktop host not installed on this machine`}
+              </div>
+              <div className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-[var(--text-secondary)]" style={{ background: `color-mix(in srgb, ${color} 6%, transparent)` }}>
+                <Globe size={12} />
+                Taskpane: {resolvedOrigin}
+              </div>
+              <div className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-[var(--text-secondary)]" style={{ background: `color-mix(in srgb, ${color} 6%, transparent)` }}>
+                <TerminalWindow size={12} />
+                Gateway: http://127.0.0.1:8013/api/v1
+              </div>
               {commands.map((cmd) => (
                 <div
                   key={cmd}
@@ -232,6 +546,81 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
             </div>
           </section>
 
+          <section>
+            <div className="mb-2.5 flex items-center justify-between">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                Live Binding
+              </p>
+              <button type="button"
+                onClick={() => void refreshGateway()}
+                className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 text-xs text-[var(--text-secondary)]">
+              {gatewayStatus === 'checking' && 'Checking gateway binding…'}
+              {gatewayStatus === 'error' && 'Gateway not reachable. Start the platform gateway on :8013.'}
+              {runtimeState?.runtimeMode === 'companion-only' && (
+                <div className="space-y-2">
+                  <div>This taskpane is loaded in the Allternit companion iframe, not inside a real {label} host yet.</div>
+                  {!desktopHostStatus.installed && (
+                    <div className="text-[var(--status-warning,#f59e0b)]">
+                      Microsoft {label} is not installed on this machine, so a real desktop add-in binding cannot be created here.
+                    </div>
+                  )}
+                  <div className="text-[var(--text-tertiary)]">
+                    To create a real binding, sideload the manifest into Microsoft {label} desktop or Microsoft 365 on the web and launch the add-in there.
+                  </div>
+                </div>
+              )}
+              {gatewayStatus === 'empty' && (
+                <div className="space-y-2">
+                  <div>No live Office document has checked in yet. Launch the real add-in inside Microsoft Office to create the binding.</div>
+                  <div className="flex items-center gap-1">
+                    <span className={cn(
+                      'size-1.5 rounded-full',
+                      bootstrapAckState === 'acknowledged'
+                        ? 'bg-green-500'
+                        : bootstrapAckState === 'timed-out'
+                          ? 'bg-amber-500'
+                          : iframeLoaded
+                            ? 'bg-amber-500'
+                            : 'bg-[var(--border-strong)]',
+                    )} />
+                    <span className="text-[var(--text-tertiary)]">
+                      {bootstrapAckState === 'acknowledged'
+                        ? 'Taskpane acknowledged shell bootstrap'
+                        : bootstrapAckState === 'timed-out'
+                          ? 'Taskpane loaded, but the companion bootstrap channel did not acknowledge'
+                          : iframeLoaded
+                            ? 'Taskpane loaded, waiting for bootstrap acknowledgment'
+                            : 'Taskpane not mounted yet'}
+                    </span>
+                  </div>
+                  {runtimeState && (
+                    <div className="text-[var(--text-tertiary)]">
+                      Runtime: {runtimeState.runtimeMode === 'office-host' ? `Connected to ${runtimeState.host}` : 'Companion iframe only'}
+                    </div>
+                  )}
+                </div>
+              )}
+              {gatewayStatus === 'connected' && gatewayBinding && (
+                <div className="space-y-1.5">
+                  <div className="font-semibold text-[var(--text-primary)]">{gatewayBinding.title || gatewayBinding.label || `${label} document`}</div>
+                  <div>Binding ID: {gatewayBinding.id}</div>
+                  <div>Live sessions: {gatewayBinding.active_session_count ?? 0}</div>
+                  {gatewayBinding.workspace_id && <div>Workspace: {gatewayBinding.workspace_id}</div>}
+                  {gatewayBinding.project_id && <div>Project: {gatewayBinding.project_id}</div>}
+                  <div className="flex items-center gap-1">
+                    <span className={cn('size-1.5 rounded-full', iframeAcknowledged ? 'bg-green-500' : 'bg-amber-500')} />
+                    <span className="text-[var(--text-tertiary)]">{iframeAcknowledged ? 'Add-in acknowledged' : 'Waiting for add-in…'}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Manifest */}
           <section>
             <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
@@ -245,7 +634,7 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
                 <code className="flex-1 truncate font-mono text-[12px] text-[var(--text-tertiary)]">
                   {manifestUrl}
                 </code>
-                <button
+                <button type="button"
                   onClick={handleCopyManifest}
                   className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
@@ -255,6 +644,20 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
               <p className="text-[12px] text-[var(--text-tertiary)]">
                 Requires the add-in server to be running locally.
               </p>
+              <div className="mt-2 flex gap-2">
+                <button type="button"
+                  onClick={() => openInBrowser(manifestUrl)}
+                  className="rounded border border-[var(--border-subtle)] px-2 py-1 text-[12px] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
+                >
+                  Open manifest
+                </button>
+                <button type="button"
+                  onClick={() => openInBrowser(taskpaneUrl)}
+                  className="rounded border border-[var(--border-subtle)] px-2 py-1 text-[12px] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
+                >
+                  Open taskpane
+                </button>
+              </div>
             </div>
           </section>
 
@@ -276,9 +679,18 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
                     {devScript}
                   </div>
                 </div>
-                <p className="text-[12px] text-[var(--text-tertiary)]">
-                  Run <code className="rounded bg-[var(--bg-secondary)] px-1">npm run certs</code> first if you haven't installed dev certs.
-                </p>
+                <div className="flex items-center gap-2">
+                  <button type="button"
+                    onClick={handleCopyCommand}
+                    className="flex items-center gap-1 rounded border border-[var(--border-subtle)] px-2 py-1 text-[12px] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
+                  >
+                    {copiedCommand ? <Check size={11} /> : <Copy size={11} />}
+                    Copy command
+                  </button>
+                  <span className="text-[12px] text-[var(--text-tertiary)]">
+                    Run <code className="rounded bg-[var(--bg-secondary)] px-1">npm run certs</code> first if needed.
+                  </span>
+                </div>
               </div>
             </section>
           )}
@@ -291,10 +703,10 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
               <div className="flex shrink-0 items-center gap-2 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-1.5">
                 <PlugsConnected size={11} className="text-green-400" />
                 <span className="text-[12px] text-[var(--text-tertiary)]">
-                  Live task pane — localhost:3000
+                  Live task pane — {resolvedOrigin}
                 </span>
-                <button
-                  onClick={() => window.open(taskpaneUrl, '_blank', 'noopener,noreferrer')}
+                <button type="button"
+                  onClick={() => openInBrowser(taskpaneUrl)}
                   className="ml-auto flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                 >
                   Open in tab <ArrowSquareOut size={9} />
@@ -306,15 +718,15 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
                   <p className="text-sm font-medium text-[var(--text-primary)]">Couldn't load task pane</p>
                   <p className="max-w-xs text-xs text-[var(--text-secondary)]">
                     The server is running but the iframe was blocked — likely a self-signed cert. Accept the cert at{' '}
-                    <button
-                      onClick={() => window.open(taskpaneUrl, '_blank')}
+                    <button type="button"
+                      onClick={() => openInBrowser(taskpaneUrl)}
                       className="text-[var(--accent-primary)] underline underline-offset-2"
                     >
                       localhost:3000
                     </button>{' '}
                     then refresh.
                   </p>
-                  <button
+                  <button type="button"
                     onClick={() => { setIframeError(false); setIframeLoaded(false); }}
                     className="flex items-center gap-1.5 rounded border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-colors"
                   >
@@ -330,6 +742,7 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
                     </div>
                   )}
                   <iframe
+                    ref={iframeRef}
                     key={`taskpane-${host}`}
                     src={taskpaneUrl}
                     className="h-full w-full border-none"
@@ -360,26 +773,26 @@ export function AciAddinView({ host }: { host: OfficeHost }) {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div
-                  className="rounded-lg border px-4 py-2.5 text-left"
-                  style={{
-                    background: `color-mix(in srgb, ${color} 4%, var(--bg-secondary))`,
-                    borderColor: `color-mix(in srgb, ${color} 15%, var(--border-subtle))`,
-                  }}
-                >
-                  <p className="mb-1 text-[12px] font-semibold uppercase tracking-wider" style={{ color }}>
-                    How it works
-                  </p>
-                  <ol className="flex flex-col gap-1 text-[12px] text-[var(--text-secondary)]">
-                    <li>1. Start the add-in server (see left panel)</li>
-                    <li>2. Open {label} — the Allternit task pane loads automatically</li>
-                    <li>3. The task pane also previews here in the platform</li>
-                  </ol>
+              <div
+                className="rounded-lg border px-4 py-3 text-left"
+                style={{
+                  background: `color-mix(in srgb, ${color} 4%, var(--bg-secondary))`,
+                  borderColor: `color-mix(in srgb, ${color} 15%, var(--border-subtle))`,
+                }}
+              >
+                <p className="mb-1 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider" style={{ color }}>
+                  <TerminalWindow size={12} />
+                  Current Runtime Status
+                </p>
+                <div className="flex flex-col gap-1 text-[12px] text-[var(--text-secondary)]">
+                  <div>Host target: {label}</div>
+                  <div>Manifest URL: {manifestUrl}</div>
+                  <div>Taskpane URL: {taskpaneUrl}</div>
+                  <div>State: waiting for local add-in runtime</div>
                 </div>
               </div>
 
-              <button
+              <button type="button"
                 onClick={checkStatus}
                 disabled={isChecking}
                 className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-colors disabled:opacity-50"

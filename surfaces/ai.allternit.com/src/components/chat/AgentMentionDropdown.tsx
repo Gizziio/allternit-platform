@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef } from "react";
 
-import { AgentAvatar } from "@/components/Avatar";
 import { AgentStorefrontCard } from "@/components/agents";
 import type { Agent } from "@/lib/agents";
 
@@ -127,12 +126,11 @@ export function AgentMentionDropdown({
             (agent.config?.avatar as Record<string, unknown>) || undefined;
 
           return (
-            <button
+            <button type="button"
               key={agent.id}
               ref={(el) => {
                 itemRefs.current[index] = el;
               }}
-              type="button"
               onClick={() => onSelect(agent)}
               onMouseEnter={() => {
                 onHoverIndex?.(index);

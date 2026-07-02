@@ -3,7 +3,7 @@ import { THEME } from '../constants';
 
 export function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       style={{
         position: 'fixed',
         inset: 0,
@@ -17,7 +17,7 @@ export function ModalOverlay({ children, onClose }: { children: React.ReactNode;
       }}
       onClick={onClose}
     >
-      <div
+      <div role="button" tabIndex={0}
         style={{
           width: '100%',
           maxWidth: 520,

@@ -12,7 +12,7 @@ import {
   TYPOGRAPHY,
   ANIMATION,
 } from "@/design/allternit.tokens";
-import { MentionAutocomplete, useMention, MENTION_OPTIONS } from "./MentionAutocomplete";
+import { MentionAutocomplete, getMention, MENTION_OPTIONS } from "./MentionAutocomplete";
 import { QuickActionOverlay } from "./QuickActionOverlay";
 import { useBrowserCapture } from "./useBrowserCapture";
 
@@ -56,7 +56,7 @@ export function BrowserExtensionComposer({
     setCursorPosition(cursor);
 
     // Check for @mention
-    const mention = useMention(newValue, cursor);
+    const mention = getMention(newValue, cursor);
     setShowMention(mention.isActive);
 
     // Check for URL
@@ -71,7 +71,7 @@ export function BrowserExtensionComposer({
   };
 
   const handleMentionSelect = (option: (typeof MENTION_OPTIONS)[0]) => {
-    const mention = useMention(value, cursorPosition);
+    const mention = getMention(value, cursorPosition);
     const beforeMention = value.slice(0, mention.startIndex);
     const afterMention = value.slice(cursorPosition);
     const newValue = `${beforeMention}@${option.name} ${afterMention}`;
@@ -168,6 +168,8 @@ export function BrowserExtensionComposer({
         tabIndex={-1}
       >
         <textarea
+          className="focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+          aria-label={placeholder}
           ref={textareaRef}
           value={value}
           onChange={handleInputChange}
@@ -179,7 +181,6 @@ export function BrowserExtensionComposer({
             resize: "none",
             background: "transparent",
             border: "none",
-            outline: "none",
             fontSize: TYPOGRAPHY.size.sm,
             lineHeight: TYPOGRAPHY.lineHeight.normal,
             color: TEXT.primary,
@@ -189,7 +190,7 @@ export function BrowserExtensionComposer({
             padding: 0,
           }}
         />
-        <button
+        <button type="button"
           onClick={() => (isRunning ? onStop() : canSubmit ? onSubmit(value) : undefined)}
           style={{
             width: 32,
@@ -253,7 +254,7 @@ export function BrowserExtensionComposer({
             <span style={{ fontSize: TYPOGRAPHY.size.xs, fontWeight: TYPOGRAPHY.weight.semibold, color: lastResult.success ? "#4ade80" : "#f87171" }}>
               {lastResult.success ? "Capture Complete" : "Capture Failed"}
             </span>
-            <button onClick={clearResult} style={{ padding: 2, border: "none", background: "transparent", cursor: "pointer", color: TEXT.tertiary }}>
+            <button type="button" onClick={clearResult} style={{ padding: 2, border: "none", background: "transparent", cursor: "pointer", color: TEXT.tertiary }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>

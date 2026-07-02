@@ -1,4 +1,6 @@
 "use client";
+import React from 'react';
+
 
 import type { ComponentProps, CSSProperties, HTMLAttributes } from "react";
 import type {
@@ -33,12 +35,16 @@ import {
 } from "react";
 import { createHighlighter } from "shiki";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CodeBlock');
+
 // Shiki uses bitflags for font styles: 1=italic, 2=bold, 4=underline
 // biome-ignore lint/suspicious/noBitwiseOperators: shiki bitflag check
-// eslint-disable-next-line no-bitwise -- shiki bitflag check
+ 
 const isItalic = (fontStyle: number | undefined) => fontStyle && fontStyle & 1;
 // biome-ignore lint/suspicious/noBitwiseOperators: shiki bitflag check
-// eslint-disable-next-line no-bitwise -- shiki bitflag check
+ 
 // oxlint-disable-next-line eslint(no-bitwise)
 const isBold = (fontStyle: number | undefined) => fontStyle && fontStyle & 2;
 const isUnderline = (fontStyle: number | undefined) =>
@@ -388,11 +394,19 @@ export const CodeBlockContent = ({
     () => highlightCode(code, language) ?? rawTokens
   );
 
+  // Inline state adjustment for code/language change
+  const [prevCode, setPrevCode] = useState(code);
+  const [prevLanguage, setPrevLanguage] = useState(language);
+
+  if (code !== prevCode || language !== prevLanguage) {
+    setPrevCode(code);
+    setPrevLanguage(language);
+    // Reset to raw tokens or cached highlight when code changes (shows current code, not stale tokens)
+    setTokenized(highlightCode(code, language) ?? rawTokens);
+  }
+
   useEffect(() => {
     let cancelled = false;
-
-    // Reset to raw tokens when code changes (shows current code, not stale tokens)
-    setTokenized(highlightCode(code, language) ?? rawTokens);
 
     // Subscribe to async highlighting result
     highlightCode(code, language, (result) => {
@@ -404,7 +418,7 @@ export const CodeBlockContent = ({
     return () => {
       cancelled = true;
     };
-  }, [code, language, rawTokens]);
+  }, [code, language]);
 
   return (
     <div className="relative overflow-auto">

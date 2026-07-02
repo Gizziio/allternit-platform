@@ -46,7 +46,7 @@ export const SidebarNavigation = ({ activeTab, onTabChange }: SidebarNavigationP
         const isActive = activeTab === tab.id;
         const Icon = tab.icon;
         return (
-          <button
+          <button type="button"
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={`flex items-center gap-2.5 rounded-lg border-none px-3 py-2.5 text-left text-sm font-medium transition-all duration-150

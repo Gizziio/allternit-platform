@@ -211,15 +211,15 @@ describe('IVKGEPanel', () => {
     }, { timeout: 3000 });
   });
 
-  it('displays OCR text when present', async () => {isClient ? 
-    const mockExtraction = {
+  it('displays OCR text when present', async () => {
+const mockExtraction = {
       extraction_id: 'ext_1',
       source_type: 'screenshot',
       entities: [],
       relationships: [],
       ocr_text: 'Extracted text from image',
-      created_at: new Date().toISOString(),
-     : "..."};
+      created_at: new Date().toISOString()
+    };
 
     (global.fetch as any)
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ upload_id: 'up_1' }) })

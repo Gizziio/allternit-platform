@@ -7,13 +7,16 @@
 // Import types from separate file to avoid circular dependency
 export type { FileSystemAPI, FileEntry } from './fileSystem.types';
 import type { FileSystemAPI, FileEntry } from './fileSystem.types';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('fileSystem');
 
 function safeJSONParse<T>(text: string | undefined | null, fallback: T): T {
   if (!text) return fallback;
   try {
     return JSON.parse(text) as T;
   } catch (error) {
-    console.error('[fileSystem] JSON parse error:', error);
+    logger.error({ err: error }, 'JSON parse error');
     return fallback;
   }
 }
@@ -129,7 +132,7 @@ const OH_MY_OPENCODE_BUILTIN_COMMANDS = [
 // API File System (renderer-safe, backed by gateway /api/v1/files)
 // ============================================================================
 
-export class ApiFileSystem implements FileSystemAPI {
+class ApiFileSystem implements FileSystemAPI {
   private homeDir = '/Users/macbook';
   private ready = false;
   private apiConfigured = false;
@@ -435,7 +438,7 @@ export class ApiFileSystem implements FileSystemAPI {
 // Capability Scanners
 // ============================================================================
 
-export class CapabilityScanner {
+class CapabilityScanner {
   private fs: FileSystemAPI;
 
   constructor(fs: FileSystemAPI) {
@@ -600,7 +603,7 @@ export class CapabilityScanner {
         files,
       };
     } catch (e) {
-      console.error('Failed to load skill:', name, e);
+      logger.error({ err: e, name }, 'Failed to load skill');
       return null;
     }
   }
@@ -1109,7 +1112,7 @@ export class CapabilityScanner {
         content: (config.content as string) || '',
       };
     } catch (e) {
-      console.error('Failed to load command:', filename, e);
+      logger.error({ err: e, filename }, 'Failed to load command');
       return null;
     }
   }
@@ -1190,7 +1193,7 @@ export class CapabilityScanner {
         files,
       };
     } catch (e) {
-      console.error('Failed to load plugin:', name, e);
+      logger.error({ err: e, name }, 'Failed to load plugin');
       return null;
     }
   }
@@ -1605,7 +1608,7 @@ export class CapabilityScanner {
         language: 'json',
       };
     } catch (e) {
-      console.error('Failed to load MCP:', filename, e);
+      logger.error({ err: e, filename }, 'Failed to load MCP');
       return null;
     }
   }
@@ -1758,7 +1761,7 @@ export class CapabilityScanner {
         language: 'json',
       }
     } catch (e) {
-      console.error('Failed to load webhook:', filename, e);
+      logger.error({ err: e, filename }, 'Failed to load webhook');
       return null;
     }
   }
@@ -1812,7 +1815,7 @@ export class CapabilityScanner {
         updatedAt: config.updatedAt || modified?.toISOString() || new Date().toISOString(),
       }
     } catch (e) {
-      console.error('Failed to load connector:', filename, e);
+      logger.error({ err: e, filename }, 'Failed to load connector');
       return null;
     }
   }
@@ -1905,7 +1908,7 @@ export class CapabilityScanner {
         }
       }));
     } catch (e) {
-      console.error('Failed to scan directory:', dirPath, e);
+      logger.error({ err: e, dirPath }, 'Failed to scan directory');
     }
   }
 }
@@ -2019,7 +2022,7 @@ export function useFileSystem(): UseFileSystemReturn {
       const fallbackTimer = setTimeout(() => {
         clearInterval(poll);
         if (!checkReady() && !cancelled) {
-          console.debug('[useFileSystem] RealFileSystem not ready, falling back to ApiFileSystem');
+          logger.debug('RealFileSystem not ready, falling back to ApiFileSystem');
           setFs(new ApiFileSystem());
           return;
         }
@@ -2048,7 +2051,7 @@ export function useFileSystem(): UseFileSystemReturn {
       const fallbackTimer = setTimeout(() => {
         clearInterval(poll);
         if (!checkReady() && !cancelled) {
-          console.warn('[useFileSystem] ApiFileSystem not ready');
+          logger.warn('ApiFileSystem not ready');
           markReady();
           return;
         }
@@ -2462,5 +2465,5 @@ export function useFileSystem(): UseFileSystemReturn {
 }
 
 // Export singleton for direct usage (try real first)
-export const fileSystem = new RealFileSystem();
-export const scanner = new CapabilityScanner(fileSystem);
+const fileSystem = new RealFileSystem();
+const scanner = new CapabilityScanner(fileSystem);

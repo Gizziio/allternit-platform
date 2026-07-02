@@ -9,6 +9,9 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('WorkspaceService');
 
 // ============================================================================
 // Types
@@ -21,7 +24,7 @@ export interface WorkspaceConfig {
 }
 
 // DAG Types
-export interface DagNode {
+interface DagNode {
   id: string;
   name: string;
   status: 'pending' | 'running' | 'completed' | 'error' | 'skipped';
@@ -33,7 +36,7 @@ export interface DagNode {
   executionTime?: number;
 }
 
-export interface DagState {
+interface DagState {
   id: string;
   name: string;
   status: 'idle' | 'running' | 'paused' | 'completed' | 'error';
@@ -45,7 +48,7 @@ export interface DagState {
 }
 
 // Bus Message Types
-export interface BusMessage {
+interface BusMessage {
   id: string;
   type: string;
   payload: unknown;
@@ -57,7 +60,7 @@ export interface BusMessage {
 }
 
 // Ledger Event Types
-export interface LedgerEvent {
+interface LedgerEvent {
   id: string;
   type: 'task.created' | 'task.updated' | 'task.completed' | 'agent.action' | 'system.event';
   entityId: string;
@@ -69,7 +72,7 @@ export interface LedgerEvent {
 }
 
 // WIH (Work in Hand) Types
-export interface WihWorkItem {
+interface WihWorkItem {
   id: string;
   type: string;
   status: 'queued' | 'active' | 'completed' | 'failed';
@@ -113,7 +116,7 @@ class WorkspaceService {
     this.ws = new WebSocket(wsUrl);
     
     this.ws.onopen = () => {
-      console.debug('[WorkspaceService] Connected');
+      logger.debug('Connected');
       this.isConnected = true;
       this.reconnectAttempts = 0;
       
@@ -131,19 +134,19 @@ class WorkspaceService {
         const message = JSON.parse(event.data);
         this.handleMessage(message);
       } catch (error) {
-        console.error('[WorkspaceService] Failed to parse message:', error);
+        logger.error({ err: error }, 'Failed to parse message');
       }
     };
 
     this.ws.onclose = () => {
-      console.debug('[WorkspaceService] Disconnected');
+      logger.debug('Disconnected');
       this.isConnected = false;
       this.emit('connection', { status: 'disconnected' });
       this.attemptReconnect();
     };
 
     this.ws.onerror = (error) => {
-      console.error('[WorkspaceService] WebSocket error:', error);
+      logger.error({ err: error }, 'WebSocket error');
       this.emit('connection', { status: 'error', error });
     };
   }
@@ -156,14 +159,14 @@ class WorkspaceService {
 
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('[WorkspaceService] Max reconnect attempts reached');
+      logger.error('Max reconnect attempts reached');
       return;
     }
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
     
-    console.debug(`[WorkspaceService] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    logger.debug(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
     
     setTimeout(() => this.connect(), delay);
   }
@@ -210,7 +213,7 @@ class WorkspaceService {
   // Event Subscription
   // ============================================================================
 
-  on(event: string, callback: (data: unknown) => void): () => void {
+  subscribe(event: string, callback: (data: unknown) => void): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
@@ -226,7 +229,7 @@ class WorkspaceService {
       try {
         callback(data);
       } catch (error) {
-        console.error(`[WorkspaceService] Error in ${event} listener:`, error);
+        logger.error({ err: error }, `Error in ${event} listener`);
       }
     });
   }
@@ -407,7 +410,7 @@ class WorkspaceService {
 // React Hook
 // ============================================================================
 
-export function useWorkspaceService(config: WorkspaceConfig) {
+function useWorkspaceService(config: WorkspaceConfig) {
   const serviceRef = useRef<WorkspaceService | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [dags, setDags] = useState<DagState[]>([]);
@@ -418,11 +421,11 @@ export function useWorkspaceService(config: WorkspaceConfig) {
   useEffect(() => {
     serviceRef.current = new WorkspaceService(config);
     
-    const unsubscribeConnection = serviceRef.current.on('connection', (data) => {
+    const unsubscribeConnection = serviceRef.current.subscribe('connection', (data) => {
       setIsConnected((data as { status: string }).status === 'connected');
     });
 
-    const unsubscribeDag = serviceRef.current.on('dag', (data) => {
+    const unsubscribeDag = serviceRef.current.subscribe('dag', (data) => {
       setDags(prev => {
         const updated = data as DagState;
         const index = prev.findIndex(d => d.id === updated.id);
@@ -435,25 +438,25 @@ export function useWorkspaceService(config: WorkspaceConfig) {
       });
     });
 
-    const unsubscribeBus = serviceRef.current.on('bus.message', (data) => {
+    const unsubscribeBus = serviceRef.current.subscribe('bus.message', (data) => {
       setMessages(prev => [data as BusMessage, ...prev].slice(0, 100));
     });
 
-    const unsubscribeLedger = serviceRef.current.on('ledger', (data) => {
+    const unsubscribeLedger = serviceRef.current.subscribe('ledger', (data) => {
       setEvents(prev => [data as LedgerEvent, ...prev].slice(0, 100));
     });
 
-    const unsubscribeWih = serviceRef.current.on('wih', (data) => {
+    const unsubscribeWih = serviceRef.current.subscribe('wih', (data) => {
       setWihQueue(data as WihWorkItem[]);
     });
 
     serviceRef.current.connect();
 
     // Load initial data
-    serviceRef.current.getDags().then(setDags).catch(console.error);
-    serviceRef.current.getBusMessages().then(setMessages).catch(console.error);
-    serviceRef.current.getLedgerEvents().then(setEvents).catch(console.error);
-    serviceRef.current.getWihQueue().then(setWihQueue).catch(console.error);
+    serviceRef.current.getDags().then(setDags).catch((err: unknown) => logger.error({ err }, 'Async fetch error'));
+    serviceRef.current.getBusMessages().then(setMessages).catch((err: unknown) => logger.error({ err }, 'Async fetch error'));
+    serviceRef.current.getLedgerEvents().then(setEvents).catch((err: unknown) => logger.error({ err }, 'Async fetch error'));
+    serviceRef.current.getWihQueue().then(setWihQueue).catch((err: unknown) => logger.error({ err }, 'Async fetch error'));
 
     return () => {
       unsubscribeConnection();

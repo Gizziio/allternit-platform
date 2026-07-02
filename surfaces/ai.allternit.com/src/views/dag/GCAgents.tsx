@@ -1,6 +1,7 @@
+import React from 'react';
 import { GCAgentsSurface } from "./DagRuntimeWorkspace";
 
-export function GCAgents(): JSX.Element {
+export function GCAgents(): React.ReactNode {
   return <GCAgentsSurface />;
 }
 

@@ -6,6 +6,9 @@
  */
 
 import type { ModePlugin, PluginCapability } from './types';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('PluginMarketplace');
 
 export type PluginCategory = 
   | 'create'      // Image, Video, Slides, Website (Violet gradient)
@@ -63,7 +66,7 @@ export interface InstalledPlugin extends MarketplacePlugin {
   loadError?: string;
 }
 
-export interface PluginReview {
+interface PluginReview {
   id: string;
   pluginId: string;
   userId: string;
@@ -73,7 +76,7 @@ export interface PluginReview {
   createdAt: string;
 }
 
-export interface MarketplaceFilters {
+interface MarketplaceFilters {
   category?: PluginCategory;
   search?: string;
   sort?: 'popular' | 'newest' | 'rating' | 'name';
@@ -89,7 +92,7 @@ export interface ColorGrade {
   dot: string[];     // Solid colors for dot indicators
 }
 
-export const COLOR_GRADES: Record<string, ColorGrade> = {
+const COLOR_GRADES: Record<string, ColorGrade> = {
   violet: {
     base: 'violet',
     bg: ['bg-violet-400/20', 'bg-violet-500/20', 'bg-violet-600/20', 'bg-violet-700/20'],
@@ -176,7 +179,7 @@ export const CATEGORY_METADATA: Record<PluginCategory, {
 };
 
 // Built-in modes with their groupings and shades (matching ConsolidatedModeSelector)
-export const BUILTIN_MODES: Record<string, { 
+const BUILTIN_MODES: Record<string, { 
   category: PluginCategory; 
   shade: number;
   description: string;
@@ -203,7 +206,7 @@ export const BUILTIN_MODES: Record<string, {
 };
 
 // Format display name as "Agent | Group-Mode" (e.g., "Agent | Create-Image")
-export function formatAgentDisplayName(modeId: string): string {
+function formatAgentDisplayName(modeId: string): string {
   const mode = BUILTIN_MODES[modeId];
   if (!mode) return `Agent | ${modeId}`;
   
@@ -212,7 +215,7 @@ export function formatAgentDisplayName(modeId: string): string {
 }
 
 // Get color classes for a mode
-export function getModeColorClasses(modeId: string, type: 'bg' | 'text' | 'border' | 'dot'): string {
+function getModeColorClasses(modeId: string, type: 'bg' | 'text' | 'border' | 'dot'): string {
   const mode = BUILTIN_MODES[modeId];
   if (!mode) return '';
   
@@ -239,7 +242,7 @@ class PluginMarketplace {
         this.installed = new Map(Object.entries(parsed));
       }
     } catch (err) {
-      console.error('[PluginMarketplace] Failed to load installed plugins:', err);
+      logger.error({ err }, 'Failed to load installed plugins');
     }
   }
 
@@ -252,7 +255,7 @@ class PluginMarketplace {
       ]);
       localStorage.setItem(INSTALLED_KEY, JSON.stringify(Object.fromEntries(serializable)));
     } catch (err) {
-      console.error('[PluginMarketplace] Failed to save installed plugins:', err);
+      logger.error({ err }, 'Failed to save installed plugins');
     }
   }
 
@@ -270,7 +273,7 @@ class PluginMarketplace {
       }
       return await response.json();
     } catch (err) {
-      console.error('[PluginMarketplace] Browse error:', err);
+      logger.error({ err }, 'Browse error');
       return [];
     }
   }
@@ -284,7 +287,7 @@ class PluginMarketplace {
       }
       return await response.json();
     } catch (err) {
-      console.error('[PluginMarketplace] Get plugin error:', err);
+      logger.error({ err }, 'Get plugin error');
       return null;
     }
   }
@@ -328,7 +331,7 @@ class PluginMarketplace {
       try {
         await plugin.instance.destroy();
       } catch (err) {
-        console.error('[PluginMarketplace] Error destroying plugin:', err);
+        logger.error({ err }, 'Error destroying plugin');
       }
     }
 
@@ -361,7 +364,7 @@ class PluginMarketplace {
         plugin.loadError = undefined;
       } catch (err) {
         plugin.loadError = err instanceof Error ? err.message : 'Failed to load plugin';
-        console.error(`[PluginMarketplace] Failed to enable plugin ${pluginId}:`, err);
+        logger.error({ err }, `Failed to enable plugin ${pluginId}`);
         return plugin;
       }
     }
@@ -379,7 +382,7 @@ class PluginMarketplace {
       try {
         await plugin.instance.destroy();
       } catch (err) {
-        console.error('[PluginMarketplace] Error destroying plugin:', err);
+        logger.error({ err }, 'Error destroying plugin');
       }
       plugin.instance = undefined;
     }
@@ -467,11 +470,11 @@ class PluginMarketplace {
   }
 }
 
-export const pluginMarketplace = new PluginMarketplace();
+const pluginMarketplace = new PluginMarketplace();
 
 import { useState, useEffect, useCallback } from 'react';
 
-export function usePluginMarketplace(filters?: MarketplaceFilters) {
+function usePluginMarketplace(filters?: MarketplaceFilters) {
   const [plugins, setPlugins] = useState<MarketplacePlugin[]>([]);
   const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
   const [loading, setLoading] = useState(false);

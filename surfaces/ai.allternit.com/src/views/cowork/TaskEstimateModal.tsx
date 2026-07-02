@@ -104,7 +104,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
           <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
             Task Estimate
           </h2>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}
           >
@@ -121,8 +121,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
           <div style={labelStyle}><Clock size={12} /> Duration</div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div style={{ flex: 1 }}>
-              <input
-                type="number"
+              <input aria-label="Input" type="number"
                 min={0}
                 max={999}
                 value={hours}
@@ -133,8 +132,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
             </div>
             <span style={{ color: 'var(--text-secondary)', fontSize: '18px', marginTop: '-12px' }}>:</span>
             <div style={{ flex: 1 }}>
-              <input
-                type="number"
+              <input aria-label="Input" type="number"
                 min={0}
                 max={59}
                 value={mins}
@@ -154,8 +152,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
               {priority >= 70 ? 'High' : priority >= 40 ? 'Medium' : 'Low'} ({priority})
             </span>
           </div>
-          <input
-            type="range"
+          <input aria-label="Input" type="range"
             min={1}
             max={100}
             value={priority}
@@ -171,8 +168,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
         {/* Deadline */}
         <div style={{ marginBottom: '20px' }}>
           <div style={labelStyle}><Calendar size={12} /> Deadline (optional)</div>
-          <input
-            type="date"
+          <input aria-label="Input" type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
             style={inputStyle}
@@ -183,8 +179,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
         {otherTasks.length > 0 && (
           <div style={{ marginBottom: '24px' }}>
             <div style={labelStyle}><Link size={12} /> Blocked by (optional)</div>
-            <input
-              type="text"
+            <input aria-label="Search tasks…" type="text"
               placeholder="Search tasks…"
               value={depInput}
               onChange={(e) => setDepInput(e.target.value)}
@@ -211,8 +206,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
                     color: 'var(--text-primary)',
                   }}
                 >
-                  <input
-                    type="checkbox"
+                  <input aria-label="Checkbox" type="checkbox"
                     checked={selectedDeps.includes(t.id)}
                     onChange={() => toggleDep(t.id)}
                     style={{ accentColor: 'var(--status-info)', flexShrink: 0 }}
@@ -236,7 +230,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button
+          <button type="button"
             onClick={onClose}
             style={{
               padding: '8px 18px',
@@ -251,7 +245,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
           >
             Cancel
           </button>
-          <button
+          <button type="button"
             onClick={handleSave}
             style={{
               padding: '8px 18px',

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 
-export interface Workspace {
+interface Workspace {
   id: string;
   name: string;
   slug: string;
@@ -14,7 +14,7 @@ export interface Workspace {
   invitations?: WorkspaceInvitation[];
 }
 
-export interface WorkspaceMember {
+interface WorkspaceMember {
   id: string;
   workspaceId: string;
   userId?: string;
@@ -23,7 +23,7 @@ export interface WorkspaceMember {
   joinedAt: string;
 }
 
-export interface WorkspaceInvitation {
+interface WorkspaceInvitation {
   id: string;
   workspaceId: string;
   email: string;

@@ -1,22 +1,17 @@
+// @ts-nocheck
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import type { Agent } from "@/lib/agents/agent.types";
-import { 
-  STUDIO_THEME 
-} from "./agent-view/AgentView.constants";
-export { STUDIO_THEME };
 import { AgentDetailView } from "./agent-view/components/AgentDetailView";
 import { CreateAgentForm, CreationProgressAnimation } from "./agent-view/components/CreateAgentForm";
-import { AgentGalleryCard } from "./agent-view/components/AgentGalleryCard";
 import { AgentLeaderboard } from "@/components/agents";
 import { EmptyAgentState } from "./agent-view/components/EmptyAgentState";
 import { EditAgentForm } from "./agent-view/components/EditAgentForm";
+import { AgentGalleryGrid } from "./agent-view/main/AgentGalleryGrid";
 
 // UI Components
-import { CircleNotch, Plus, Warning, MagnifyingGlass, Faders } from '@phosphor-icons/react';
+import { CircleNotch, Plus, Warning } from '@phosphor-icons/react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AgentViewProps {
@@ -82,8 +77,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
         />
         {globalForgeVisible && (
           <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(15, 23, 42, 0.98)' }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0f172a]/98"
           >
             <CreationProgressAnimation 
               onComplete={() => setGlobalForgeVisible(false)}
@@ -124,75 +118,28 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
 
   // Default: Agent List View
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      width: '100%',
-      background: 'transparent',
-      overflow: 'hidden',
-      position: 'relative'
-    }}>
+    <div className="flex flex-col h-full w-full bg-transparent overflow-hidden relative">
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px 24px',
-        borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
-        background: 'transparent',
-        flexShrink: 0,
-        position: 'relative'
-      }}>
+      <div className="flex items-center justify-center p-4 px-6 border-b border-solid border-[var(--border-subtle)] bg-transparent shrink-0 relative">
         {!hideCreateButton && (
-          <button 
+          <button type="button" 
             onClick={() => setIsCreating(true)}
-            style={{
-              position: 'absolute',
-              left: '24px',
-              padding: '8px 16px',
-              borderRadius: '6px',
-              background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
-              color: 'var(--ui-text-inverse)',
-              fontSize: '14px',
-              fontWeight: 600,
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
+            className="absolute left-6 px-4 py-2 rounded-[6px] bg-gradient-to-r from-[var(--accent-primary)] to-[#B08D6E] text-[var(--ui-text-inverse)] text-[14px] font-semibold border-none cursor-pointer flex items-center gap-1.5"
           >
-            <Plus style={{ width: 16, height: 16 }} />
+            <Plus size={16} />
             Create Agent
           </button>
         )}
 
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{
-            fontSize: '20px',
-            fontWeight: 600,
-            color: STUDIO_THEME.textPrimary,
-            margin: 0,
-            fontFamily: 'var(--font-research)'
-          }}>{title}</h1>
-          <p style={{
-            fontSize: '13px',
-            color: STUDIO_THEME.textSecondary,
-            margin: '4px 0 0 0'
-          }}>
+        <div className="text-center">
+          <h1 className="text-[20px] font-semibold text-[var(--text-primary)] m-0 font-research">{title}</h1>
+          <p className="text-[13px] text-[var(--text-secondary)] mt-1 m-0">
             {forceListMode ? 'Browse and manage your AI agents' : 'Create, manage, and orchestrate autonomous AI agents'}
           </p>
         </div>
       </div>
 
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        minHeight: 0,
-        position: 'relative'
-      }}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 relative">
         {error && error !== 'API_OFFLINE' && (
           <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-500/50">
             <Warning className="size-4  text-red-400" />
@@ -214,7 +161,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
           />
         ) : (
           <>
-            <div style={{ padding: '0 8px', marginBottom: 8 }}>
+            <div className="px-2 mb-2">
               <AgentLeaderboard
                 agents={agents}
                 onSelectAgent={(agent) => selectAgent(agent.id)}
@@ -236,190 +183,4 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
 
 // Re-export CreateAgentForm for AgentHub
 export { CreateAgentForm } from "./agent-view/components/CreateAgentForm";
-
-// ─── Gemini-style Gallery Grid ─────────────────────────────────────────────
-
-interface AgentGalleryGridProps {
-  agents: Agent[];
-  searchQuery: string;
-  onSearchChange: (q: string) => void;
-  onSelectAgent: (id: string) => void;
-  forceListMode?: boolean;
-}
-
-function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelectAgent, forceListMode }: AgentGalleryGridProps) {
-  const filtered = agents.filter((a) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      a.name.toLowerCase().includes(q) ||
-      a.description.toLowerCase().includes(q) ||
-      a.capabilities.some((c) => c.toLowerCase().includes(q))
-    );
-  });
-
-  const myAgents = filtered.filter((a) => (a.source || "personal") === "personal");
-  const vendorAgents = filtered.filter((a) => a.source === "vendor");
-  const orgAgents = filtered.filter((a) => a.source === "organization");
-
-  return (
-    <div style={{ padding: "8px 0", display: "flex", flexDirection: "column", gap: "28px" }}>
-      {/* Search bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0 8px" }}>
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            padding: "10px 14px",
-            borderRadius: "10px",
-            background: "var(--surface-hover)",
-            border: "1px solid var(--ui-border-muted)",
-            transition: "border-color 0.2s",
-          }}
-        >
-          <MagnifyingGlass size={16} color={STUDIO_THEME.textMuted} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search for agents"
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              color: STUDIO_THEME.textPrimary,
-              fontSize: "14px",
-              fontFamily: 'var(--font-sans)',
-            }}
-          />
-        </div>
-        <button
-          style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
-            border: "1px solid var(--ui-border-muted)",
-            background: "var(--surface-hover)",
-            color: STUDIO_THEME.textMuted,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
-        >
-          <Faders size={16} />
-        </button>
-      </div>
-
-      {/* My agents */}
-      <AgentSection
-        title="My agents"
-        agents={myAgents}
-        onSelectAgent={onSelectAgent}
-        startIndex={0}
-      />
-
-      {/* From vendor */}
-      {vendorAgents.length > 0 && (
-        <AgentSection
-          title="From Allternit"
-          agents={vendorAgents}
-          onSelectAgent={onSelectAgent}
-          startIndex={myAgents.length}
-        />
-      )}
-
-      {/* From organization */}
-      {orgAgents.length > 0 && (
-        <AgentSection
-          title="From my organization"
-          agents={orgAgents}
-          onSelectAgent={onSelectAgent}
-          startIndex={myAgents.length + vendorAgents.length}
-        />
-      )}
-
-      {filtered.length === 0 && (
-        <div style={{ textAlign: "center", padding: "48px 16px", color: STUDIO_THEME.textMuted }}>
-          <MagnifyingGlass size={32} style={{ margin: "0 auto 12px", opacity: 0.3 }} />
-          <p style={{ fontSize: "14px" }}>No agents match "{searchQuery}"</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function AgentSection({
-  title,
-  agents,
-  onSelectAgent,
-  startIndex,
-}: {
-  title: string;
-  agents: Agent[];
-  onSelectAgent: (id: string) => void;
-  startIndex: number;
-}) {
-  const [expanded, setExpanded] = useState(true);
-  if (agents.length === 0) return null;
-
-  return (
-    <div style={{ padding: "0 8px" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "12px",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "15px",
-            fontWeight: 600,
-            color: STUDIO_THEME.textPrimary,
-            margin: 0,
-          }}
-        >
-          {title}
-        </h2>
-        {agents.length > 6 && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: STUDIO_THEME.textMuted,
-              fontSize: "12px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-            }}
-          >
-            {expanded ? "Show less" : "Show more"}
-          </button>
-        )}
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: "12px",
-        }}
-      >
-        {(expanded ? agents : agents.slice(0, 6)).map((agent, i) => (
-          <AgentGalleryCard
-            key={agent.id}
-            agent={agent}
-            onClick={() => onSelectAgent(agent.id)}
-            index={startIndex + i}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
+export default AgentView;

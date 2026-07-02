@@ -11,7 +11,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "@xyflow/react/dist/style.css";
 
-export type AgentType =
+type AgentType =
   | "developer_agent"
   | "browser_agent"
   | "document_agent"
@@ -78,14 +78,14 @@ function AgentNode({ data }: { data: NodeData }) {
         <span style={{ fontWeight: 700, fontSize: 14, color: colors.text }}>{agent.name}</span>
         <div style={{ display: "flex", gap: 6 }}>
           {agent.screenshotUrl && onTakeover && (
-            <button
+            <button type="button"
               onClick={() => onTakeover(agent.agent_id)}
               style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, border: `1px solid ${colors.border}`, background: "white", color: colors.text, cursor: "pointer" }}
             >
               Take Control
             </button>
           )}
-          <button
+          <button type="button"
             onClick={() => onExpandChange?.(agent.agent_id, !isExpanded)}
             style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, border: `1px solid ${colors.border}`, background: "white", color: colors.text, cursor: "pointer" }}
           >
@@ -94,10 +94,10 @@ function AgentNode({ data }: { data: NodeData }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, fontSize: 12, color: "#64748b" }}>
-        {done > 0 && <span style={{ color: "#10b981" }}>{done} done</span>}
-        {running > 0 && <span style={{ color: "#3b82f6" }}>{running} running</span>}
-        {failed > 0 && <span style={{ color: "#ef4444" }}>{failed} failed</span>}
+      <div style={{ display: "flex", gap: 8, fontSize: 12, color: "var(--ui-text-muted)" }}>
+        {done > 0 && <span style={{ color: "var(--status-success)" }}>{done} done</span>}
+        {running > 0 && <span style={{ color: "var(--status-info)" }}>{running} running</span>}
+        {failed > 0 && <span style={{ color: "var(--status-error)" }}>{failed} failed</span>}
         {agent.tasks.length === 0 && <span>idle</span>}
       </div>
 
@@ -107,7 +107,7 @@ function AgentNode({ data }: { data: NodeData }) {
             <img
               src={agent.screenshotUrl}
               alt={`${agent.name} screenshot`}
-              style={{ borderRadius: 8, objectFit: "contain", maxHeight: 300, border: "1px solid #e2e8f0" }}
+              style={{ borderRadius: 8, objectFit: "contain", maxHeight: 300, border: "1px solid var(--border-subtle)" }}
             />
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -130,17 +130,17 @@ function AgentNode({ data }: { data: NodeData }) {
                     height: 8,
                     borderRadius: "50%",
                     background:
-                      task.status === "completed" ? "#10b981" :
-                      task.status === "running" ? "#3b82f6" :
-                      task.status === "failed" ? "#ef4444" : "#94a3b8",
+                      task.status === "completed" ? "var(--status-success)" :
+                      task.status === "running" ? "var(--status-info)" :
+                      task.status === "failed" ? "var(--status-error)" : "var(--ui-text-muted)",
                     flexShrink: 0,
                   }}
                 />
-                <span style={{ color: "#1e293b" }}>{task.title}</span>
+                <span style={{ color: "var(--ui-text-primary)" }}>{task.title}</span>
               </div>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: "var(--ui-text-muted)", marginTop: 4 }}>
             Tools: {agent.tools.join(" · ")}
           </div>
         </>
@@ -242,8 +242,8 @@ export function WorkflowPipeline({ agents, onTakeover }: WorkflowPipelineProps) 
         }}
       />
       <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 4, zIndex: 10 }}>
-        <button onClick={() => moveViewport(200)} style={navBtnStyle}>←</button>
-        <button onClick={() => moveViewport(-200)} style={navBtnStyle}>→</button>
+        <button type="button" onClick={() => moveViewport(200)} style={navBtnStyle}>←</button>
+        <button type="button" onClick={() => moveViewport(-200)} style={navBtnStyle}>→</button>
       </div>
     </div>
   );
@@ -253,8 +253,8 @@ const navBtnStyle: React.CSSProperties = {
   width: 32,
   height: 32,
   borderRadius: 8,
-  border: "1px solid #e2e8f0",
-  background: "white",
+  border: "1px solid var(--border-subtle)",
+  background: "var(--bg-primary)",
   cursor: "pointer",
   fontSize: 14,
   display: "flex",

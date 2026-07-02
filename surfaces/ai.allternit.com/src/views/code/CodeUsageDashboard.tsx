@@ -1,6 +1,5 @@
 "use client";
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useMemo, useState } from "react";
 import { X } from "@phosphor-icons/react";
 import { useCodeSessionStore } from "./CodeSessionStore";

@@ -3,6 +3,10 @@
 import { useCallback, useRef, useState } from "react";
 import type { CoworkAgent, AgentTask } from "./WorkflowPipeline";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('BrowserAgentWorkspace');
+
 interface BrowserAgentWorkspaceProps {
   agent: CoworkAgent | null;
   sessionId: string;
@@ -19,15 +23,15 @@ function TaskBadge({ tasks }: { tasks: AgentTask[] }) {
 
   return (
     <div style={{ display: "flex", gap: 8, fontSize: 12, alignItems: "center" }}>
-      <span style={{ color: "#64748b" }}>{total} tasks</span>
+      <span style={{ color: "var(--ui-text-muted)" }}>{total} tasks</span>
       {running > 0 && (
-        <span style={{ color: "#3b82f6", fontWeight: 600 }}>{running} running</span>
+        <span style={{ color: "var(--status-info)", fontWeight: 600 }}>{running} running</span>
       )}
       {done > 0 && (
-        <span style={{ color: "#10b981", fontWeight: 600 }}>{done} done</span>
+        <span style={{ color: "var(--status-success)", fontWeight: 600 }}>{done} done</span>
       )}
       {failed > 0 && (
-        <span style={{ color: "#ef4444", fontWeight: 600 }}>{failed} failed</span>
+        <span style={{ color: "var(--status-error)", fontWeight: 600 }}>{failed} failed</span>
       )}
     </div>
   );
@@ -45,23 +49,31 @@ export function BrowserAgentWorkspace({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleTakeover = useCallback(async () => {
-    await fetch(`/api/v1/cowork/sessions/${sessionId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "takeover" }),
-    });
-    setIsTakeover(true);
-    onTakeover?.(sessionId);
+    try {
+      await fetch(`/api/v1/cowork/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "takeover" }),
+      });
+      setIsTakeover(true);
+      onTakeover?.(sessionId);
+    } catch (err) {
+      console.error("Failed to take over session:", err);
+    }
   }, [sessionId, onTakeover]);
 
   const handleRelease = useCallback(async () => {
-    await fetch(`/api/v1/cowork/sessions/${sessionId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "running" }),
-    });
-    setIsTakeover(false);
-    onReleaseTakeover?.(sessionId);
+    try {
+      await fetch(`/api/v1/cowork/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "running" }),
+      });
+      setIsTakeover(false);
+      onReleaseTakeover?.(sessionId);
+    } catch (err) {
+      console.error("Failed to release session:", err);
+    }
   }, [sessionId, onReleaseTakeover]);
 
   const screenshots = agent?.screenshotUrl ? [agent.screenshotUrl] : [];
@@ -69,28 +81,28 @@ export function BrowserAgentWorkspace({
   if (!agent) {
     return (
       <div style={containerStyle}>
-        <div style={{ color: "#94a3b8", fontSize: 14 }}>No agent selected</div>
+        <div style={{ color: "var(--text-secondary)", fontSize: 14 }}>No agent selected</div>
       </div>
     );
   }
 
   if (isTakeover) {
     return (
-      <div style={{ ...containerStyle, border: "1.5px solid #10b981" }}>
+      <div style={{ ...containerStyle, border: "1.5px solid var(--status-success)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px" }}>
-          <button onClick={handleRelease} style={successBtnStyle}>
+          <button type="button" onClick={handleRelease} style={successBtnStyle}>
             ← Give back to Agent
           </button>
-          <span style={{ fontSize: 12, color: "#64748b" }}>Manual control active</span>
+          <span style={{ fontSize: 12, color: "var(--ui-text-muted)" }}>Manual control active</span>
         </div>
         <div
           style={{
             flex: 1,
-            background: "#0f172a",
+            background: "var(--bg-primary)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#94a3b8",
+            color: "var(--text-secondary)",
             fontSize: 14,
           }}
         >
@@ -102,16 +114,16 @@ export function BrowserAgentWorkspace({
 
   return (
     <div style={containerStyle}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid #e2e8f0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid var(--border-subtle)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {onBack && (
-            <button onClick={onBack} style={ghostBtnStyle}>←</button>
+            <button type="button" onClick={onBack} style={ghostBtnStyle}>←</button>
           )}
-          <span style={{ fontWeight: 700, fontSize: 14, color: "#1e293b" }}>{agent.name}</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>{agent.name}</span>
           <TaskBadge tasks={agent.tasks} />
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button
+          <button type="button"
             onClick={() => {
               setIsSingleMode(!isSingleMode);
               scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -125,14 +137,14 @@ export function BrowserAgentWorkspace({
       </div>
 
       {screenshots.length === 1 ? (
-        <div style={{ flex: 1, position: "relative", cursor: "pointer" }} onClick={handleTakeover}>
+        <div role="button" tabIndex={0} style={{ flex: 1, position: "relative", cursor: "pointer" }} onClick={handleTakeover}>
           <img
             src={screenshots[0]}
             alt={`${agent.name} view`}
             style={{ width: "100%", height: "100%", objectFit: "contain" }}
           />
           <div style={takeoverOverlayStyle}>
-            <button style={successBtnStyle}>
+            <button type="button" style={successBtnStyle}>
               ✋ Take Control
             </button>
           </div>
@@ -150,8 +162,8 @@ export function BrowserAgentWorkspace({
           }}
         >
           {screenshots.map((src, i) => (
-            <div
-              key={i}
+            <div role="button" tabIndex={0}
+              key={`browseragentworkspace-${i}`}
               onClick={handleTakeover}
               style={{
                 position: "relative",
@@ -164,13 +176,13 @@ export function BrowserAgentWorkspace({
             >
               <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
               <div style={takeoverOverlayStyle}>
-                <button style={successBtnStyle}>✋ Take Control</button>
+                <button type="button" style={successBtnStyle}>✋ Take Control</button>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 13 }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)", fontSize: 13 }}>
           {agent.tasks.filter((t) => t.status === "running").length > 0
             ? "Agent is working — no screenshot yet"
             : "Agent is idle"}
@@ -179,13 +191,13 @@ export function BrowserAgentWorkspace({
 
       {screenshots.length > 1 && (
         <div style={{ position: "absolute", bottom: 12, right: 12, display: "flex", gap: 4, zIndex: 10 }}>
-          <button
+          <button type="button"
             style={ghostBtnStyle}
             onClick={() => scrollRef.current?.scrollBy({ top: -200, behavior: "smooth" })}
           >
             ↑
           </button>
-          <button
+          <button type="button"
             style={ghostBtnStyle}
             onClick={() => scrollRef.current?.scrollBy({ top: 200, behavior: "smooth" })}
           >
@@ -203,8 +215,8 @@ const containerStyle: React.CSSProperties = {
   width: "100%",
   height: "100%",
   borderRadius: 12,
-  border: "1px solid #e2e8f0",
-  background: "#f8fafc",
+  border: "1px solid var(--border-subtle)",
+  background: "var(--bg-secondary)",
   overflow: "hidden",
   position: "relative",
 };
@@ -213,8 +225,8 @@ const ghostBtnStyle: React.CSSProperties = {
   width: 32,
   height: 32,
   borderRadius: 8,
-  border: "1px solid #e2e8f0",
-  background: "white",
+  border: "1px solid var(--border-subtle)",
+  background: "var(--bg-primary)",
   cursor: "pointer",
   fontSize: 14,
   display: "flex",
@@ -225,8 +237,8 @@ const ghostBtnStyle: React.CSSProperties = {
 const successBtnStyle: React.CSSProperties = {
   padding: "6px 14px",
   borderRadius: 20,
-  border: "1px solid #10b981",
-  background: "#10b981",
+  border: "1px solid var(--status-success)",
+  background: "var(--status-success)",
   color: "white",
   cursor: "pointer",
   fontSize: 13,

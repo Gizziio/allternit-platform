@@ -6,7 +6,7 @@ import { useAgentStore } from "@/lib/agents/agent.store";
 import { useAgentInboxStore } from "@/lib/agents/agent-inbox.store";
 import { cn } from "@/lib/utils";
 import { X, Zap, Sparkles } from "lucide-react";
-import { AgentAvatar } from "@/components/Avatar";
+import { AgentAvatar } from "@/components/Avatar/AgentAvatar";
 import { useStudioTheme } from "@/views/agent-view/useStudioTheme";
 
 interface FloatingAvatarProps {
@@ -76,7 +76,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
     } else {
       setPosition(readPosition());
     }
-  }, [activeAgent?.id]);
+  }, [activeAgent]);
 
   // Keyboard arrow-key movement (accessibility)
   useEffect(() => {
@@ -103,7 +103,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [setPosition]);
 
   // Clamp on resize
   useEffect(() => {
@@ -115,44 +115,52 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [setPosition]);
 
   useEffect(() => {
     fetchInbox();
     const interval = setInterval(fetchInbox, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchInbox]);
 
   // Derive status from actual agent state instead of random simulation
   useEffect(() => {
     if (!activeAgent) return;
+    let timeoutId: NodeJS.Timeout | undefined;
     const agentStatus = activeAgent.status;
     if (agentStatus === "running") {
       setStatus("active");
       setPulse(true);
-      setTimeout(() => setPulse(false), 2000);
+      timeoutId = setTimeout(() => setPulse(false), 2000);
     } else if (agentStatus === "paused") {
       setStatus("thinking");
     } else {
       setStatus("idle");
     }
-  }, [activeAgent?.status]);
-
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [activeAgent]);
   // Feature 3: Pulse when this agent is @mentioned in chat
+  const pulseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     const handler = (e: Event) => {
       const { agentId } = (e as CustomEvent).detail;
       if (agentId && activeAgent?.id === agentId) {
         setPulse(true);
         setStatus('active');
-        setTimeout(() => {
+        if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+        pulseTimeoutRef.current = setTimeout(() => {
           setPulse(false);
           setStatus('idle');
         }, 2000);
       }
     };
     window.addEventListener('allternit:agent-pulse' as any, handler);
-    return () => window.removeEventListener('allternit:agent-pulse' as any, handler);
+    return () => {
+      window.removeEventListener('allternit:agent-pulse' as any, handler);
+      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    };
   }, [activeAgent?.id]);
 
   // Pointer event handlers for drag
@@ -265,7 +273,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
               <span className="text-sm font-semibold" style={{ color: STUDIO_THEME.textPrimary }}>
                 {activeAgent?.name || "Agent Companion"}
               </span>
-              <button
+              <button type="button"
                 onClick={() => setIsOpen(false)}
                 className="ml-auto transition-colors"
                 style={{ color: STUDIO_THEME.textMuted }}
@@ -281,7 +289,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
                 more. What would you like to work on?
               </div>
               <div className="flex gap-2 pt-1">
-                <button
+                <button type="button"
                   className="flex-1 text-xs px-3 py-1.5 rounded-lg transition-colors"
                   style={{
                     background: `${STUDIO_THEME.accent}20`,
@@ -290,7 +298,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
                 >
                   Quick Task
                 </button>
-                <button
+                <button type="button"
                   className="flex-1 text-xs px-3 py-1.5 rounded-lg transition-colors"
                   style={{
                     background: STUDIO_THEME.bg,

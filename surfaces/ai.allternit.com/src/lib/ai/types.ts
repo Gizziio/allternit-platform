@@ -6,7 +6,7 @@
 import { z } from "zod";
 
 // StreamWriter for data streaming (matches AI SDK's DataStreamWriter)
-export interface StreamWriter {
+interface StreamWriter {
   writeData: (data: unknown) => void;
   writeMessageAnnotation: (annotation: unknown) => void;
   // Required for compatibility with AI SDK patterns
@@ -15,10 +15,10 @@ export interface StreamWriter {
 }
 
 // Tool name type (legacy alias for compatibility)
-export type ToolName = UiToolName;
+type ToolName = UiToolName;
 
 // Chat tools configuration - key mapping for all tools
-export type ChatTools = {
+type ChatTools = {
   webSearch: unknown;
   generateImage: unknown;
   deepResearch: unknown;
@@ -35,7 +35,7 @@ export type ChatTools = {
 };
 
 // Tool name schema for validation
-export const toolNameSchema = z.enum([
+const toolNameSchema = z.enum([
   "webSearch",
   "generateImage",
   "deepResearch",
@@ -81,7 +81,7 @@ export type UiToolName =
   | null;
 
 // Message parts for structured content - ALL PARTS WIRED
-export type MessagePart =
+type MessagePart =
   | { type: "text"; text: string }
   | { type: "reasoning"; reasoning: string }
   | { type: "file"; file: Attachment }
@@ -119,7 +119,7 @@ export interface ChatMessage {
 }
 
 // Model runtime types
-export type ModelRuntimeType = "api" | "cli" | "local";
+type ModelRuntimeType = "api" | "cli" | "local";
 
 // Model data
 export interface ModelData {
@@ -144,7 +144,7 @@ export interface ModelData {
 }
 
 // File UI part
-export interface FileUIPart {
+interface FileUIPart {
   type: "file";
   url: string;
   mediaType: string;
@@ -152,7 +152,7 @@ export interface FileUIPart {
 }
 
 // Tool invocation
-export interface ToolInvocation {
+interface ToolInvocation {
   toolCallId: string;
   toolName: string;
   args: unknown;
@@ -162,7 +162,7 @@ export interface ToolInvocation {
 }
 
 // Artifact for code/documents
-export interface ArtifactData {
+interface ArtifactData {
   id: string;
   kind: "code" | "document" | "image" | "sheet";
   title: string;
@@ -171,7 +171,7 @@ export interface ArtifactData {
 }
 
 // Source for citations
-export interface SourceData {
+interface SourceData {
   id: string;
   url: string;
   title: string;

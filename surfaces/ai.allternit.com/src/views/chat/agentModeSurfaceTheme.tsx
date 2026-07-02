@@ -181,7 +181,7 @@ interface AgentActivationSweepProps {
   borderRadius?: CSSProperties['borderRadius'];
 }
 
-export function AgentActivationSweep({
+function AgentActivationSweep({
   surface,
   triggerKey,
   inset = 0,
@@ -218,7 +218,7 @@ interface AgentComposerHaloProps {
   className?: string;
 }
 
-export function AgentComposerHalo({
+function AgentComposerHalo({
   surface,
   triggerKey,
   className,

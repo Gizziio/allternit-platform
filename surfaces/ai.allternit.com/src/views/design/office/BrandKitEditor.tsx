@@ -201,7 +201,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
             {srcUrl ? (
               <>
                 <img src={srcUrl} alt="preview" style={{ maxHeight: 230, maxWidth: '100%', objectFit: 'contain', borderRadius: 6 }} />
-                <button onClick={e => { e.stopPropagation(); setSrcImg(null); setSrcUrl(null); setFileInfo(null); }}
+                <button type="button" onClick={e => { e.stopPropagation(); setSrcImg(null); setSrcUrl(null); setFileInfo(null); }}
                   style={{ position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 6, background: 'rgba(0,0,0,0.55)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <X size={13} weight="bold" />
                 </button>
@@ -221,7 +221,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
               </div>
             )}
           </div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) loadFile(f); }} />
+          <input aria-label="File upload" ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) loadFile(f); }} />
 
           {/* File info */}
           {fileInfo && (
@@ -247,8 +247,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
               <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-tertiary)' }}>{selected.size}/{FORMATS.length}</span>
             </div>
 
-            <input
-              type="text" value={search} onChange={e => setSearch(e.target.value)}
+            <input aria-label="Input" type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search formats…"
               style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', borderRadius: 7, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 12, outline: 'none', marginBottom: 10 }}
             />
@@ -260,7 +259,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {items.map(fmt => (
                       <label key={fmt.key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '3px 2px', borderRadius: 5 }} title={`${fmt.description} (${fmt.w}×${fmt.h})`}>
-                        <input type="checkbox" checked={selected.has(fmt.key)} onChange={() => toggleFormat(fmt.key)}
+                        <input aria-label="Checkbox" type="checkbox" checked={selected.has(fmt.key)} onChange={() => toggleFormat(fmt.key)}
                           style={{ width: 14, height: 14, accentColor: 'var(--accent-primary)', cursor: 'pointer', flexShrink: 0 }} />
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>{fmt.label}</span>
                         <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>{fmt.w}×{fmt.h}</span>
@@ -280,7 +279,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
               {Object.entries(PRESETS).map(([name, keys]) => (
-                <button key={name} onClick={() => applyPreset(keys)}
+                <button type="button" key={name} onClick={() => applyPreset(keys)}
                   style={{ padding: '6px 12px', borderRadius: 20, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500, cursor: 'pointer', transition: 'all 0.15s' }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--accent-primary)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
@@ -294,7 +293,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
 
         {/* Generate CTA */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <button
+          <button type="button"
             onClick={generate}
             disabled={!srcImg || selected.size === 0}
             style={{ padding: '14px 40px', borderRadius: 10, border: 'none', background: !srcImg || selected.size === 0 ? 'var(--border-default)' : 'var(--accent-primary)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: !srcImg || selected.size === 0 ? 'default' : 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 8 }}
@@ -352,7 +351,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>Your Brand Kit is Ready!</div>
 
           {/* Big green ZIP button */}
-          <button onClick={downloadZip}
+          <button type="button" onClick={downloadZip}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 32px', borderRadius: 10, border: 'none', background: '#16a34a', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 16px rgba(22,163,74,0.35)', transition: 'opacity 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
@@ -361,7 +360,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
           </button>
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Contains all {assets.length} generated images in a single package</div>
 
-          <button onClick={reset}
+          <button type="button" onClick={reset}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 8, border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
             <ArrowCounterClockwise size={14} /> Start Over
           </button>
@@ -371,7 +370,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
         <div>
           <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border-subtle)', marginBottom: 16 }}>
             {(['assets', 'original'] as const).map(tab => (
-              <button key={tab} onClick={() => setActiveResultTab(tab)}
+              <button type="button" key={tab} onClick={() => setActiveResultTab(tab)}
                 style={{ padding: '8px 16px', background: 'transparent', border: 'none', borderBottom: `2px solid ${activeResultTab === tab ? 'var(--accent-primary)' : 'transparent'}`, color: activeResultTab === tab ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: 13, fontWeight: activeResultTab === tab ? 700 : 400, cursor: 'pointer', marginBottom: -1, transition: 'all 0.15s' }}>
                 {tab === 'assets' ? 'Generated Assets' : 'Original Image'}
               </button>
@@ -382,7 +381,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
           {activeResultTab === 'original' && srcUrl && (
             <div style={{ background: 'var(--bg-primary)', borderRadius: 10, border: '1px solid var(--border-subtle)', padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Original Uploaded Image</div>
-              <img src={srcUrl} style={{ maxWidth: 320, maxHeight: 320, objectFit: 'contain', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }} />
+              <img src={srcUrl} alt="Original uploaded brand asset" style={{ maxWidth: 320, maxHeight: 320, objectFit: 'contain', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }} />
               {fileInfo && (
                 <a href={srcUrl} download={fileInfo.name}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 500 }}>
@@ -424,7 +423,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
                       <span style={{ fontSize: 12, padding: '2px 7px', borderRadius: 5, background: 'var(--bg-tertiary, rgba(0,0,0,0.07))', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                         {asset.format.w}×{asset.format.h}
                       </span>
-                      <button
+                      <button type="button"
                         onClick={() => { const slug = projectName.replace(/\s+/g, '_').toLowerCase(); triggerDownload(asset.blob, `${slug}_${asset.format.key}.${asset.format.ext}`); }}
                         style={{ fontSize: 12, padding: '3px 9px', borderRadius: 5, border: '1px solid var(--border-subtle)', background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         .{asset.format.ext}
@@ -436,7 +435,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
 
               {/* Bottom ZIP button */}
               <div style={{ padding: '16px', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'center' }}>
-                <button onClick={downloadZip}
+                <button type="button" onClick={downloadZip}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 28px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                   <DownloadSimple size={14} weight="bold" /> Download All (.zip)
                 </button>

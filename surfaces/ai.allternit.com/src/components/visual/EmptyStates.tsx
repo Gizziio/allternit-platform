@@ -79,7 +79,7 @@ const secondaryButtonStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
-export const EmptyState: React.FC<EmptyStateProps> = ({
+const EmptyState: React.FC<EmptyStateProps> = ({
   icon = '🔍',
   title,
   description,
@@ -91,12 +91,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     <h3 style={titleStyle}>{title}</h3>
     <p style={descriptionStyle}>{description}</p>
     {action && (
-      <button style={buttonStyle} onClick={action.onClick}>
+      <button type="button" style={buttonStyle} onClick={action.onClick}>
         {action.label}
       </button>
     )}
     {secondaryAction && (
-      <button style={secondaryButtonStyle} onClick={secondaryAction.onClick}>
+      <button type="button" style={secondaryButtonStyle} onClick={secondaryAction.onClick}>
         {secondaryAction.label}
       </button>
     )}
@@ -104,7 +104,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 );
 
 // Predefined empty states
-export const NoWihSelected: React.FC<{ onStart: () => void }> = ({ onStart }) => (
+const NoWihSelected: React.FC<{ onStart: () => void }> = ({ onStart }) => (
   <EmptyState
     icon="🔍"
     title="No WIH Selected"
@@ -113,7 +113,7 @@ export const NoWihSelected: React.FC<{ onStart: () => void }> = ({ onStart }) =>
   />
 );
 
-export const NoEvidenceFound: React.FC<{ wihId: string; onCapture: () => void }> = ({ 
+const NoEvidenceFound: React.FC<{ wihId: string; onCapture: () => void }> = ({ 
   wihId, 
   onCapture 
 }) => (
@@ -125,7 +125,7 @@ export const NoEvidenceFound: React.FC<{ wihId: string; onCapture: () => void }>
   />
 );
 
-export const VerificationFailed: React.FC<{ 
+const VerificationFailed: React.FC<{ 
   wihId: string; 
   error: string;
   onRetry: () => void;
@@ -136,15 +136,15 @@ export const VerificationFailed: React.FC<{
     <h3 style={{ ...titleStyle, color: 'var(--status-error)' }}>Verification Failed</h3>
     <p style={descriptionStyle}>{error}</p>
     <div style={{ display: 'flex', gap: '12px' }}>
-      <button style={buttonStyle} onClick={onRetry}>Retry</button>
-      <button style={{ ...secondaryButtonStyle, borderColor: 'var(--status-error)', color: 'var(--status-error)' }} onClick={onBypass}>
+      <button type="button" style={buttonStyle} onClick={onRetry}>Retry</button>
+      <button type="button" style={{ ...secondaryButtonStyle, borderColor: 'var(--status-error)', color: 'var(--status-error)' }} onClick={onBypass}>
         Request Bypass
       </button>
     </div>
   </div>
 );
 
-export const VerificationPassed: React.FC<{ 
+const VerificationPassed: React.FC<{ 
   wihId: string;
   confidence: number;
   onViewDetails: () => void;
@@ -156,13 +156,13 @@ export const VerificationPassed: React.FC<{
       {wihId} passed visual verification with {Math.round(confidence * 100)}% confidence.
       All required artifacts meet quality thresholds.
     </p>
-    <button style={{ ...buttonStyle, background: 'var(--status-success)' }} onClick={onViewDetails}>
+    <button type="button" style={{ ...buttonStyle, background: 'var(--status-success)' }} onClick={onViewDetails}>
       View Details
     </button>
   </div>
 );
 
-export const AllArtifactsPassed: React.FC = () => (
+const AllArtifactsPassed: React.FC = () => (
   <div style={{ ...baseStyle, padding: '40px 20px' }}>
     <div style={{ ...iconContainerStyle, width: '60px', height: '60px', fontSize: '30px' }}>🎉</div>
     <h3 style={{ ...titleStyle, fontSize: '16px' }}>All Artifacts Passed</h3>
@@ -172,7 +172,7 @@ export const AllArtifactsPassed: React.FC = () => (
   </div>
 );
 
-export const LoadingState: React.FC<{ message?: string }> = ({ message = "Loading verification data..." }) => (
+const LoadingState: React.FC<{ message?: string }> = ({ message = "Loading verification data..." }) => (
   <div style={baseStyle}>
     <div style={{ 
       ...iconContainerStyle, 

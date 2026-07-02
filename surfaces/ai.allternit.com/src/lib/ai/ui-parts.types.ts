@@ -22,7 +22,7 @@ import type {
 // Wire event types (Rust SSE contract)
 // ============================================================================
 
-export type RustEventType =
+type RustEventType =
   | "message_start"
   | "content_block_start"
   | "content_block_delta"
@@ -41,7 +41,7 @@ export type RustEventType =
   | "error"
   | "finish";
 
-export interface RustStreamEvent {
+interface RustStreamEvent {
   type: RustEventType;
   messageId?: string;
   partId?: string;
@@ -104,9 +104,9 @@ export interface RustStreamEvent {
 // UI Part types
 // ============================================================================
 
-export type MessageRole = "user" | "assistant" | "system";
+type MessageRole = "user" | "assistant" | "system";
 
-export interface ReasoningUIPart {
+interface ReasoningUIPart {
   type: "reasoning";
   reasoningId: string;
   text: string;
@@ -128,7 +128,7 @@ export type ArtifactKind =
   | "video"
   | "podcast";
 
-export interface LinkedSourceDocumentUIPart extends SourceDocumentUIPart {
+interface LinkedSourceDocumentUIPart extends SourceDocumentUIPart {
   url?: string;
 }
 
@@ -141,14 +141,14 @@ export interface ArtifactUIPart {
   title: string;
 }
 
-export interface ErrorUIPart {
+interface ErrorUIPart {
   type: "error";
   message: string;
   stackTrace?: string;
   kind: "compilation" | "runtime" | "validation" | "unknown";
 }
 
-export interface McpAppUIPart {
+interface McpAppUIPart {
   type: "mcp-app";
   toolCallId: string;
   toolName: string;
@@ -170,7 +170,7 @@ export interface McpAppUIPart {
 
 type ChatMessageStatus = "streaming" | "complete" | "error" | "stopped";
 
-export interface ChatMessageMetadata {
+interface ChatMessageMetadata {
   modelId?: string;
   runtimeModelId?: string;
   startedAt?: number;
@@ -182,7 +182,7 @@ export interface ChatMessageMetadata {
   status?: ChatMessageStatus;
 }
 
-export type ReasoningTraceStepType =
+type ReasoningTraceStepType =
   | "reasoning"
   | "search"
   | "file-read"
@@ -191,7 +191,7 @@ export type ReasoningTraceStepType =
   | "agent"
   | "tool";
 
-export interface ReasoningTraceStepMetadata {
+interface ReasoningTraceStepMetadata {
   files?: string[];
   agents?: string[];
   commands?: string[];
@@ -199,7 +199,7 @@ export interface ReasoningTraceStepMetadata {
   results?: number;
 }
 
-export interface ReasoningTraceStep {
+interface ReasoningTraceStep {
   type: ReasoningTraceStepType;
   summary: string;
   detail?: string;
@@ -207,34 +207,34 @@ export interface ReasoningTraceStep {
   metadata?: ReasoningTraceStepMetadata;
 }
 
-export interface ReasoningTrace {
+interface ReasoningTrace {
   version: number;
   source?: string;
   headline?: string;
   steps: ReasoningTraceStep[];
 }
 
-export interface PlanStep {
+interface PlanStep {
   id: string;
   description: string;
   status: "pending" | "in-progress" | "complete" | "error";
 }
 
-export interface PlanUIPart {
+interface PlanUIPart {
   type: "plan";
   planId: string;
   title: string;
   steps: PlanStep[];
 }
 
-export interface CheckpointUIPart {
+interface CheckpointUIPart {
   type: "checkpoint";
   checkpointId: string;
   description: string;
   metadata?: Record<string, unknown>;
 }
 
-export interface TaskUIPart {
+interface TaskUIPart {
   type: "task";
   taskId: string;
   title: string;
@@ -243,7 +243,7 @@ export interface TaskUIPart {
   progress?: number;
 }
 
-export interface CitationUIPart {
+interface CitationUIPart {
   type: "citation";
   citationId: string;
   sourceId: string;
@@ -252,7 +252,7 @@ export interface CitationUIPart {
   endIndex: number;
 }
 
-export type UIPart =
+type UIPart =
   | (TextUIPart & { partId?: string })
   | ToolUIPart
   | DynamicToolUIPart
@@ -267,7 +267,7 @@ export type UIPart =
   | ErrorUIPart
   | (ReasoningUIPart & { partId?: string });
 
-export interface ChatMessage {
+interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string | UIPart[];

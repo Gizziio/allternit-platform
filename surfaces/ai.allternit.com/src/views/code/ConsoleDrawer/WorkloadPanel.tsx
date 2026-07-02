@@ -1,4 +1,3 @@
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useMemo } from 'react';
 import { useBoardStore } from '@/stores/board.store';
 import { useWorkspaceStore } from '@/stores/workspace.store';

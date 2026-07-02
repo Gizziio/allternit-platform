@@ -151,16 +151,18 @@ export function DagPlanningPanel() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">DAG ID (optional)</label>
+                <label htmlFor="dag-id-input" className="text-sm font-medium mb-2 block">DAG ID (optional)</label>
                 <Input 
+                  id="dag-id-input"
                   value={dagIdInput}
                   onChange={(e) => setDagIdInput(e.target.value)}
                   placeholder="e.g., dag_build_feature_x"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Task Description</label>
+                <label htmlFor="task-description-input" className="text-sm font-medium mb-2 block">Task Description</label>
                 <Textarea 
+                  id="task-description-input"
                   value={planInput}
                   onChange={(e) => setPlanInput(e.target.value)}
                   placeholder="Build a new authentication system with login, signup, and password reset features…"
@@ -225,7 +227,7 @@ export function DagPlanningPanel() {
 
 function DagListItem({ dag, isSelected, onClick }: { dag: DagDefinition; isSelected: boolean; onClick: () => void }) {
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       className={`p-3 rounded-lg cursor-pointer border transition-all ${
         isSelected 
           ? 'bg-primary/10 border-primary' 
@@ -331,29 +333,29 @@ function DagVisualizer({ dag, execution }: { dag: DagDefinition; execution?: any
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Version</label>
+            <div className="text-sm font-medium">Version</div>
             <p className="text-sm text-muted-foreground">{dag.version}</p>
           </div>
           <div>
-            <label className="text-sm font-medium">Created</label>
+            <div className="text-sm font-medium">Created</div>
             <p className="text-sm text-muted-foreground">{dag.createdAt}</p>
           </div>
           <div>
-            <label className="text-sm font-medium">Nodes</label>
+            <div className="text-sm font-medium">Nodes</div>
             <p className="text-sm text-muted-foreground">{nodes.length}</p>
           </div>
           <div>
-            <label className="text-sm font-medium">Edges</label>
+            <div className="text-sm font-medium">Edges</div>
             <p className="text-sm text-muted-foreground">{edges.length}</p>
           </div>
           {execution && (
             <>
               <div className="border-t pt-4">
-                <label className="text-sm font-medium">Execution Status</label>
+                <div className="text-sm font-medium">Execution Status</div>
                 <Badge className="mt-1">{execution.status}</Badge>
               </div>
               <div>
-                <label className="text-sm font-medium">Progress</label>
+                <div className="text-sm font-medium">Progress</div>
                 <p className="text-sm text-muted-foreground">{execution.progress}%</p>
               </div>
             </>

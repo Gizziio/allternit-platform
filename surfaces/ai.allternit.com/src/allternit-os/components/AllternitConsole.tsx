@@ -217,7 +217,7 @@ const KanbanBoard: React.FC = () => {
   };
 
   const handleAddTask = () => {
-    if (!newTaskName.trim()) return;
+if (!newTaskName.trim()) return;
     
     const newTask: KanbanTask = {
       id: `task-${Date.now()}`,
@@ -255,7 +255,7 @@ const KanbanBoard: React.FC = () => {
           <h2 className="font-semibold">Kanban Board</h2>
           <span className="text-sm text-zinc-500">({tasks.length} tasks)</span>
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowAddTask(true)}
           className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
         >
@@ -294,7 +294,7 @@ const KanbanBoard: React.FC = () => {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <span className="font-medium text-sm">{task.name}</span>
-                      <button className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-zinc-600">
+                      <button type="button" className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-zinc-600">
                         ⋮
                       </button>
                     </div>
@@ -314,7 +314,7 @@ const KanbanBoard: React.FC = () => {
                       </div>
                       {task.dueDate && (
                         <span className="text-zinc-400">
-                          📅 {new Date(task.dueDate).toLocaleDateString()}
+                          📅 {task.dueDate}
                         </span>
                       )}
                     </div>
@@ -331,8 +331,7 @@ const KanbanBoard: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 w-96">
             <h3 className="text-lg font-semibold mb-4">Add New Task</h3>
-            <input
-              type="text"
+            <input aria-label="Input" type="text"
               value={newTaskName}
               onChange={e => setNewTaskName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddTask()}
@@ -341,13 +340,13 @@ const KanbanBoard: React.FC = () => {
               autoFocus
             />
             <div className="flex justify-end gap-2">
-              <button
+              <button type="button"
                 onClick={() => setShowAddTask(false)}
                 className="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-lg"
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={handleAddTask}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
@@ -483,7 +482,7 @@ const AutomationHub: React.FC = () => {
           <span className="text-xl">🤖</span>
           <h2 className="font-semibold">Automation Hub</h2>
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowCreateModal(true)}
           className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
         >
@@ -507,14 +506,14 @@ const AutomationHub: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <button type="button"
                   onClick={() => handleRunSequence(seq.id)}
                   disabled={seq.status === 'running'}
                   className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 disabled:opacity-50"
                 >
                   {seq.status === 'running' ? 'Running...' : '▶ Run'}
                 </button>
-                <button
+                <button type="button"
                   onClick={() => handleToggleSequence(seq.id)}
                   className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded"
                 >
@@ -545,20 +544,20 @@ const AutomationHub: React.FC = () => {
               {seq.lastRun && (
                 <div className="flex items-center gap-1">
                   <span>📅</span>
-                  <span>Last: {new Date(seq.lastRun).toLocaleDateString()}</span>
+                  <span>Last: {seq.lastRun.split('T')[0]}</span>
                 </div>
               )}
               {seq.nextRun && (
                 <div className="flex items-center gap-1">
                   <span>⏰</span>
-                  <span>Next: {new Date(seq.nextRun).toLocaleDateString()}</span>
+                  <span>Next: {seq.nextRun.split('T')[0]}</span>
                 </div>
               )}
               <div className="flex items-center gap-1">
                 <span>⚡</span>
-                <span className="flex gap-1">
-                  {seq.triggers.map((t, i) => (
-                    <span key={i} className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 rounded text-xs">
+                <span className="flex gap-1 flex-wrap">
+                  {seq.triggers.map((t) => (
+                    <span key={`${seq.id}-${t}`} className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 rounded text-xs">
                       {t}
                     </span>
                   ))}
@@ -578,13 +577,13 @@ const AutomationHub: React.FC = () => {
               Automation sequences can be created via the WorkflowBuilder or by writing a workflow file.
             </p>
             <div className="flex justify-end gap-2">
-              <button
+              <button type="button"
                 onClick={() => setShowCreateModal(false)}
                 className="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-lg"
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={() => setShowCreateModal(false)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
@@ -622,7 +621,7 @@ export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onCl
               { id: 'kanban', label: 'Kanban', icon: '📊' },
               { id: 'automation', label: 'Automation', icon: '🤖' },
             ].map(tab => (
-              <button
+              <button type="button"
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as ConsoleTab)}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
@@ -638,7 +637,7 @@ export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onCl
           </div>
         </div>
         
-        <button
+        <button type="button"
           onClick={onClose}
           className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg"
         >
@@ -662,7 +661,7 @@ export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onCl
 
 export const AllternitConsoleToggle: React.FC<{ onClick?: () => void }> = ({ onClick }) => {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all"
     >

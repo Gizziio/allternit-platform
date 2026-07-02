@@ -50,15 +50,15 @@ export function useActiveChatSession() {
   });
 }
 
-export function useActiveChatSessionId() {
+function useActiveChatSessionId() {
   return useChatSessionStore((state) => state.activeSessionId);
 }
 
-export function useIsChatSessionLoading() {
+function useIsChatSessionLoading() {
   return useChatSessionStore((state) => state.isLoading);
 }
 
-export function useChatSessionError() {
+function useChatSessionError() {
   return useChatSessionStore((state) => state.error);
 }
 
@@ -66,7 +66,7 @@ export function useChatSessionError() {
 // Helper: Get agent sessions only
 // ---------------------------------------------------------------------------
 
-export function useAgentChatSessions() {
+function useAgentChatSessions() {
   return useChatSessionStore((state) => 
     (state.sessions ?? []).filter((s) => s.metadata.sessionMode === 'agent')
   );
@@ -76,7 +76,7 @@ export function useAgentChatSessions() {
 // Helper: Get sessions by project
 // ---------------------------------------------------------------------------
 
-export function useChatSessionsByProject(projectId: string | null) {
+function useChatSessionsByProject(projectId: string | null) {
   return useChatSessionStore((state) => {
     const sessions = state.sessions ?? [];
     if (!projectId) return sessions;
@@ -88,7 +88,7 @@ export function useChatSessionsByProject(projectId: string | null) {
 // Sync state
 // ---------------------------------------------------------------------------
 
-export function useChatSessionSyncState() {
+function useChatSessionSyncState() {
   return useChatSessionStore((state) => ({
     isConnected: state.isSyncConnected,
     error: state.syncError,
@@ -99,19 +99,19 @@ export function useChatSessionSyncState() {
 // Unread counts
 // ---------------------------------------------------------------------------
 
-export function useChatSessionUnreadCount(sessionId: string | null) {
+function useChatSessionUnreadCount(sessionId: string | null) {
   return useChatSessionStore((state) => 
     sessionId ? (state.unreadCounts[sessionId] || 0) : 0
   );
 }
 
-export function useChatTotalUnreadCount() {
+function useChatTotalUnreadCount() {
   return useChatSessionStore((state) => 
     Object.values(state.unreadCounts).reduce((sum, count) => sum + count, 0)
   );
 }
 
-export function useChatUnreadCounts() {
+function useChatUnreadCounts() {
   return useChatSessionStore((state) => state.unreadCounts);
 }
 
@@ -123,7 +123,7 @@ export function useChatUnreadCounts() {
  * Get sessions for a specific project
  * Filters sessions by projectId metadata
  */
-export function getChatSessionsForProject(
+function getChatSessionsForProject(
   sessions: ChatSession[],
   projectId: string
 ): ChatSession[] {
@@ -134,7 +134,7 @@ export function getChatSessionsForProject(
  * Get root sessions (not in any project)
  * Filters sessions that don't have a projectId
  */
-export function getRootChatSessions(sessions: ChatSession[]): ChatSession[] {
+function getRootChatSessions(sessions: ChatSession[]): ChatSession[] {
   return sessions.filter((s) => !s.metadata?.projectId);
 }
 
@@ -142,7 +142,7 @@ export function getRootChatSessions(sessions: ChatSession[]): ChatSession[] {
 // Actions
 // ---------------------------------------------------------------------------
 
-export function useChatSessionActions() {
+function useChatSessionActions() {
   return useChatSessionStore((state) => ({
     createSession: state.createSession,
     deleteSession: state.deleteSession,

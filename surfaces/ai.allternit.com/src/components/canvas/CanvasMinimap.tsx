@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import type { CodeCanvasTile, CodeCanvasViewport } from '@/views/code/CodeModeStore';
 
 interface CanvasMinimapProps {
@@ -123,7 +123,7 @@ export function CanvasMinimap({ tiles, viewport, onViewportChange }: CanvasMinim
         boxShadow: 'var(--shadow-lg)',
       }}
     >
-      <div
+      <div role="button" tabIndex={0}
         onClick={handleClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

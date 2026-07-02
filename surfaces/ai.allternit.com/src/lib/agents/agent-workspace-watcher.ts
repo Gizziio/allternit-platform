@@ -58,7 +58,7 @@ export class WorkspaceFileWatcher {
    */
   async start(): Promise<void> {
     if (this.isWatching) {
-      console.debug(`[WorkspaceWatcher] Already watching ${this.agentId}`);
+      logger.debug(`Already watching ${this.agentId}`);
       return;
     }
 
@@ -66,7 +66,7 @@ export class WorkspaceFileWatcher {
     try {
       await this.scanWorkspace();
     } catch (error) {
-      console.error(`[WorkspaceWatcher] Initial scan failed:`, error);
+      logger.error({ err: error }, 'Initial scan failed:');
       this.options.onError?.(error as Error);
       return;
     }
@@ -75,12 +75,12 @@ export class WorkspaceFileWatcher {
     this.isWatching = true;
     this.intervalId = setInterval(() => {
       this.checkForChanges().catch((error) => {
-        console.error(`[WorkspaceWatcher] Check failed:`, error);
+        logger.error({ err: error }, 'Check failed:');
         this.options.onError?.(error);
       });
     }, this.options.pollIntervalMs);
 
-    console.debug(`[WorkspaceWatcher] Started watching ${this.agentId} (${this.options.pollIntervalMs}ms interval)`);
+    logger.debug(`Started watching ${this.agentId} (${this.options.pollIntervalMs}ms interval)`);
   }
 
   /**
@@ -92,7 +92,7 @@ export class WorkspaceFileWatcher {
       this.intervalId = null;
     }
     this.isWatching = false;
-    console.debug(`[WorkspaceWatcher] Stopped watching ${this.agentId}`);
+    logger.debug(`Stopped watching ${this.agentId}`);
   }
 
   /**
@@ -252,7 +252,7 @@ export async function startAllWatchers(
 /**
  * Stop all watchers
  */
-export function stopAllWatchers(): void {
+function stopAllWatchers(): void {
   for (const [agentId, watcher] of watchers) {
     watcher.stop();
   }
@@ -262,7 +262,7 @@ export function stopAllWatchers(): void {
 /**
  * React hook for workspace watching
  */
-export function useWorkspaceWatcher(
+function useWorkspaceWatcher(
   agentId: string | null,
   options?: Partial<FileWatcherOptions>
 ): {
@@ -373,7 +373,7 @@ export function setupSessionAutoRefresh(
       }
 
       debounceTimer = setTimeout(() => {
-        console.debug(`[AutoRefresh] Workspace changed for session ${session.id}, refreshing context`);
+        logger.debug(`Workspace changed for session ${session.id}, refreshing context`);
         fullConfig.onRefreshNeeded(session, changes);
       }, fullConfig.debounceMs);
     },
@@ -392,3 +392,7 @@ export function setupSessionAutoRefresh(
 
 // Need to import React at the end to avoid circular issues
 import React from 'react';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentWorkspaceWatcher');

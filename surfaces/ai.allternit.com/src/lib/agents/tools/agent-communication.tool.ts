@@ -18,11 +18,15 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { v4 as uuidv4 } from "uuid";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentCommunication.tool');
+
 // ============================================================================
 // Types
 // ============================================================================
 
-export type MessageType = "direct" | "channel" | "broadcast";
+type MessageType = "direct" | "channel" | "broadcast";
 
 export interface AgentMessage {
   id: string;
@@ -385,7 +389,7 @@ function extractMentions(text: string): string[] {
 /**
  * Check if message is for current agent
  */
-export function isMessageForAgent(
+function isMessageForAgent(
   message: AgentMessage,
   agentId: string,
   agentRole: string
@@ -400,7 +404,7 @@ export function isMessageForAgent(
 /**
  * Format message for display
  */
-export function formatMessageForDisplay(message: AgentMessage): string {
+function formatMessageForDisplay(message: AgentMessage): string {
   const prefix = message.type === "direct" ? "DM" : `#${message.to.channel || "unknown"}`;
   return `[${prefix}] ${message.from.agentName}: ${message.content}`;
 }
@@ -409,7 +413,7 @@ export function formatMessageForDisplay(message: AgentMessage): string {
 // Tool Definition (for MCP registration)
 // ============================================================================
 
-export const AGENT_COMMUNICATION_TOOL_DEFINITION = {
+const AGENT_COMMUNICATION_TOOL_DEFINITION = {
   name: "agent_communicate",
   description: `Communicate with other AI agents in the system.
 

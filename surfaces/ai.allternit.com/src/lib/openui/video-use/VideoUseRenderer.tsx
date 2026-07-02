@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Play, Pause, FileText, CheckCircle } from '@phosphor-icons/react';
 
 interface VideoUseRendererProps {
-  videoUrl?: string; // Placeholder for actual video source
+  videoUrl?: string;
   transcript: Array<{ time: number; text: string }>;
   title?: string;
 }
@@ -79,7 +79,7 @@ export const VideoUseRenderer: React.FC<VideoUseRendererProps> = ({
 
          {/* Overlay Controls */}
          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-            <button 
+            <button type="button" 
               onClick={togglePlay}
               className="size-16  rounded-full bg-[var(--accent-primary)] text-black flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
             >

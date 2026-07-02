@@ -74,7 +74,7 @@ export function TaskDock({
           <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>Task Dock</div>
           <div style={{ flex: 1 }} />
           {shouldShowActions && (
-            <button 
+            <button type="button" 
               onClick={() => addTicket({ title: 'New Task' })}
               style={{ background: actionBackground, border: actionBorder, borderRadius: 6, padding: '4px 8px', color: textColor, cursor: 'pointer' }}
             >
@@ -121,7 +121,7 @@ export function TaskDock({
         </div>
 
         {shouldShowActions && (
-          <button 
+          <button type="button" 
             onClick={handleViewActivity}
             style={{ 
               width: '100%', 

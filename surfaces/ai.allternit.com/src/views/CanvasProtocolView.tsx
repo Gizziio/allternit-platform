@@ -20,7 +20,6 @@ import {
   Pulse as Activity,
   GitBranch,
   CheckCircle,
-  Warning,
   Clock,
   Eye,
   ArrowSquareOut,
@@ -193,7 +192,7 @@ function CanvasTypeCard({ canvas }: { canvas: CanvasType }) {
         <span className="text-xs text-[var(--text-tertiary)] font-mono">
           {canvas.specVersion}
         </span>
-        <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-xs font-medium hover:opacity-90 transition-opacity">
+        <button type="button" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-xs font-medium hover:opacity-90 transition-opacity">
           Open
           <ArrowSquareOut size={12} />
         </button>
@@ -241,7 +240,7 @@ function ActiveCanvasPanel({ canvas }: { canvas: ActiveCanvas }) {
           <span className="ml-1 text-[var(--text-secondary)]">{canvas.lastUpdate}</span>
         </div>
         <div className="text-right">
-          <button className="text-[var(--accent-primary)] hover:underline">
+          <button type="button" className="text-[var(--accent-primary)] hover:underline">
             <Eye className="size-3  inline mr-1" />
             View
           </button>
@@ -294,7 +293,7 @@ export function CanvasProtocolView() {
 
       {/* Tabs */}
       <div className="px-6 pt-4 border-b border-[var(--border-subtle)] flex gap-6">
-        <button
+        <button type="button"
           onClick={() => setActiveTab('active')}
           className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
             activeTab === 'active'

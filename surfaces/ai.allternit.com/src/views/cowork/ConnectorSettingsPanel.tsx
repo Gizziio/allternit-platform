@@ -76,7 +76,7 @@ export function ConnectorSettingsPanel() {
             </p>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={load}
           disabled={loading}
           style={{
@@ -103,7 +103,7 @@ export function ConnectorSettingsPanel() {
           background: 'rgba(239,68,68,0.08)',
           border: '1px solid rgba(239,68,68,0.2)',
           borderRadius: 8,
-          color: '#f87171',
+          color: 'var(--status-error)',
           fontSize: 13,
           marginBottom: 20,
         }}>
@@ -162,9 +162,9 @@ function ConnectorRow({ connector }: { connector: ConnectorWithStatus }) {
       {/* Status icon */}
       <div style={{ paddingTop: 2, flexShrink: 0 }}>
         {isConnected ? (
-          <CheckCircle size={16} color="#22c55e" weight="fill" />
+          <CheckCircle size={16} color="var(--status-success)" weight="fill" />
         ) : (
-          <Warning size={16} color="#f59e0b" weight="fill" />
+          <Warning size={16} color="var(--status-warning)" weight="fill" />
         )}
       </div>
 
@@ -179,8 +179,8 @@ function ConnectorRow({ connector }: { connector: ConnectorWithStatus }) {
             textTransform: 'uppercase',
             padding: '1px 6px',
             borderRadius: 4,
-            background: isConnected ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)',
-            color: isConnected ? '#4ade80' : '#fbbf24',
+            background: isConnected ? 'color-mix(in srgb, var(--status-success) 12%, transparent)' : 'color-mix(in srgb, var(--status-warning) 12%, transparent)',
+            color: isConnected ? 'var(--status-success)' : 'var(--status-warning)',
           }}>
             {isConnected ? 'Connected' : 'Unconfigured'}
           </span>

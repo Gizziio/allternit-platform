@@ -107,15 +107,14 @@ export const HumanCheckpointBanner: React.FC<HumanCheckpointBannerProps> = ({
 
       <div className="checkpoint-actions">
         <label className="confirmation-checkbox">
-          <input
-            type="checkbox"
+          <input aria-label="Checkbox" type="checkbox"
             checked={confirmed}
             onChange={(e) => setConfirmed(e.target.checked)}
           />
           <span>I have completed this step</span>
         </label>
 
-        <button
+        <button type="button"
           className="resume-btn"
           onClick={handleResume}
           disabled={!confirmed || isResuming}

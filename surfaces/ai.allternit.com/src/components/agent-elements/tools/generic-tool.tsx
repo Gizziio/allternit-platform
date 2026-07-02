@@ -3,13 +3,13 @@ import type { TimelineStep, StepState } from "../types/timeline";
 import { useToolComplete } from "../hooks/use-tool-complete";
 import { ToolRowBase } from "./tool-row-base";
 
-export type GenericToolRowProps = {
+type GenericToolRowProps = {
   step: Extract<TimelineStep, { type: "tool-call" }>;
   state: StepState;
   onComplete: () => void;
 };
 
-export function GenericToolRow({
+function GenericToolRow({
   step,
   state,
   onComplete,

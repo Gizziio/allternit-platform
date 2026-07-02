@@ -72,7 +72,7 @@ const MODES: ModeConfig[] = [
 // Hook for localStorage persistence
 const MODE_STORAGE_KEY = 'allternit-platform-mode';
 
-export function useModePersistence(): { mode: AppMode; setMode: (newMode: AppMode) => void; isLoaded: boolean } {
+function useModePersistence(): { mode: AppMode; setMode: (newMode: AppMode) => void; isLoaded: boolean } {
   const [mode, setMode] = useState<AppMode>('chat');
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -119,7 +119,7 @@ export function ModeSwitcher({
   className = '',
   showLabels = true,
   showTooltips = false
-}: ModeSwitcherProps): JSX.Element {
+}: ModeSwitcherProps): React.ReactNode {
   const [hoveredMode, setHoveredMode] = useState<AppMode | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -181,7 +181,7 @@ export function ModeSwitcher({
           const isHovered = hoveredMode === mode.id;
           
           return (
-            <button
+            <button type="button"
               key={mode.id}
               onClick={() => handleModeChange(mode.id)}
               onMouseEnter={() => setHoveredMode(mode.id)}
@@ -410,7 +410,7 @@ interface ModeIndicatorProps {
   pulse?: boolean;
 }
 
-export function ModeIndicator({ mode, size = 'small', pulse = false }: ModeIndicatorProps): JSX.Element {
+function ModeIndicator({ mode, size = 'small', pulse = false }: ModeIndicatorProps): React.ReactNode {
   const config = MODES.find(m => m.id === mode) || MODES[0];
   const dotSize = size === 'small' ? 6 : 8;
   
@@ -446,7 +446,7 @@ export function ModeIndicator({ mode, size = 'small', pulse = false }: ModeIndic
 }
 
 // Mode-aware accent color hook
-export function useModeAccent(mode: AppMode): { color: string; light: string; dark: string; icon: Icon } {
+function useModeAccent(mode: AppMode): { color: string; light: string; dark: string; icon: Icon } {
   const config = MODES.find(m => m.id === mode) || MODES[0];
   return {
     color: config.accentColor,
@@ -463,7 +463,7 @@ interface ModeTransitionProps {
   className?: string;
 }
 
-export function ModeTransition({ mode, children, className = '' }: ModeTransitionProps): JSX.Element {
+function ModeTransition({ mode, children, className = '' }: ModeTransitionProps): React.ReactNode {
   return (
     <AnimatePresence mode="wait">
       <motion.div

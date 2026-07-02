@@ -143,7 +143,7 @@ export function Skeleton({
       >
         {Array.from({ length: lines }).map((_, i) => (
           <Skeleton
-            key={i}
+            key={`skeleton-${i}`}
             variant="text"
             width={i === lines - 1 ? '60%' : '100%'}
             height={height}
@@ -232,7 +232,7 @@ Skeleton.ThreadList = function SkeletonThreadList({
       aria-label={`Loading ${count} threads...`}
     >
       {Array.from({ length: count }).map((_, i) => (
-        <Skeleton.ThreadItem key={i} />
+        <Skeleton.ThreadItem key={`skeleton-${i}`} />
       ))}
     </div>
   );
@@ -274,7 +274,7 @@ Skeleton.AgentList = function SkeletonAgentList({
       aria-label={`Loading ${count} agents...`}
     >
       {Array.from({ length: count }).map((_, i) => (
-        <Skeleton.AgentItem key={i} />
+        <Skeleton.AgentItem key={`skeleton-${i}`} />
       ))}
     </div>
   );

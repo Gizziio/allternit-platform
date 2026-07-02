@@ -196,7 +196,7 @@ export function CodeLaunchBranding({
   agentModePulse = 0,
   selectedAgentName = null,
 }: CodeLaunchBrandingProps) {
-  const [greeting] = useState(() => getNextCodeModeGreeting(getCodeModeGreetingStorage()));
+  const greeting = useMemo(() => getNextCodeModeGreeting(getCodeModeGreetingStorage()), []);
   const [showThoughtBubble, setShowThoughtBubble] = useState(false);
   const [thoughtIndex, setThoughtIndex] = useState(() => greeting.index % GIZZI_THOUGHTS.length);
   const [showAgentPulse, setShowAgentPulse] = useState(false);

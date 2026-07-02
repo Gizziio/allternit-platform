@@ -5,9 +5,8 @@
  * Rich, Notion-style block editor with Allternit theming.
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useEffect, useState } from 'react';
-import { BlockNoteEditor, PartialBlock } from "@blocknote/core";
+import { PartialBlock } from "@blocknote/core";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import "@blocknote/mantine/style.css";
@@ -21,6 +20,10 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AllternitDocumentEditor');
 
 interface AllternitDocumentEditorProps {
   /** Initial content as markdown or BlockNote blocks */
@@ -88,7 +91,7 @@ export function AllternitDocumentEditor({
         const blocks = parseMarkdownToBlocks(initialContent);
         editor.replaceBlocks(editor.document, blocks);
       } catch (e) {
-        console.warn('[AllternitDocument] Failed to parse markdown:', e);
+        logger.warn({ err: e }, 'Failed to parse markdown');
       }
     }
   }, [editor, initialContent]);
@@ -150,8 +153,7 @@ export function AllternitDocumentEditor({
             
             {/* Editable title */}
             {isEditingTitle ? (
-              <input
-                type="text"
+              <input aria-label="Input" type="text"
                 value={documentTitle}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 onBlur={() => setIsEditingTitle(false)}
@@ -162,7 +164,7 @@ export function AllternitDocumentEditor({
                 className="bg-transparent text-sm font-medium text-[#ECECEC] border-none outline-none min-w-[200px]"
               />
             ) : (
-              <button
+              <button type="button"
                 onClick={() => !readOnly && setIsEditingTitle(true)}
                 className="text-sm font-medium text-[#ECECEC] hover:text-[#D4956A] transition-colors flex items-center gap-2"
               >

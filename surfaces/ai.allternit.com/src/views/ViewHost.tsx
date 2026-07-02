@@ -3,6 +3,10 @@ import type { ViewRegistry } from "./registry";
 import type { ViewContext } from "../nav/nav.types";
 import { assertSinglePrimaryView, assertNoDockingOutsideBrowser } from "../qa/invariants";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ViewHost');
+
 // Error boundary to catch render errors in individual views
 class ViewRenderBoundary extends Component<
   { viewType: string; children: React.ReactNode },
@@ -15,7 +19,7 @@ class ViewRenderBoundary extends Component<
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // Only log actual errors, not development double-invocation
     if (process.env.NODE_ENV === 'production') {
-      console.error(`[ViewHost] Render error in view "${this.props.viewType}":`, error);
+      logger.error({ err: error }, 'Render error in view "${this.props.viewType}":');
     }
   }
   componentDidUpdate(prevProps: { viewType: string }) {
@@ -33,7 +37,7 @@ class ViewRenderBoundary extends Component<
           <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', opacity: 0.8 }}>
             {this.state.error.message}
           </pre>
-          <button
+          <button type="button"
             onClick={() => this.setState({ error: null })}
             style={{ marginTop: 16, padding: '8px 16px', background: 'var(--surface-hover)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
           >

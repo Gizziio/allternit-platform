@@ -11,7 +11,7 @@ export interface InspectResult {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-export function hexWithAlpha(hex: string, opacity?: number | null): string {
+function hexWithAlpha(hex: string, opacity?: number | null): string {
   if (!hex) return 'transparent';
   const op = opacity ?? 1;
   if (op >= 1) return hex;
@@ -36,7 +36,7 @@ function gradientStops(stops: { color: string; opacity: number; offset: number }
     .join(', ');
 }
 
-export function formatCSSBlock(selector: string, props: Record<string, string>): string {
+function formatCSSBlock(selector: string, props: Record<string, string>): string {
   const lines = Object.entries(props).map(([k, v]) => `  ${k}: ${v};`).join('\n');
   return `.${selector} {\n${lines}\n}`;
 }
@@ -187,6 +187,6 @@ export function inspectShape(shape: PenpotShape): InspectResult {
   return { css, cssString, variables };
 }
 
-export function inspectShapeToClipboard(shape: PenpotShape): string {
+function inspectShapeToClipboard(shape: PenpotShape): string {
   return inspectShape(shape).cssString;
 }

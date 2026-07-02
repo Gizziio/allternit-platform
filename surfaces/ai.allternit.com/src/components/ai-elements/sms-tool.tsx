@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { DeviceMobile, Copy, ArrowSquareOut, PencilSimple, ArrowCounterClockwise } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
-export interface SMSMessage {
+interface SMSMessage {
   role: 'sender' | 'recipient';
   text: string;
 }
@@ -47,7 +47,7 @@ export function SMSDraft({ to, messages, className, onEdit, onReset }: SMSDraftP
       <div className="flex flex-col gap-2 p-4">
         {messages.map((msg, i) => (
           <div
-            key={i}
+            key={`sms-tool-${i}`}
             className={cn("flex", msg.role === 'sender' ? "justify-end" : "justify-start")}
           >
             <div className={cn(

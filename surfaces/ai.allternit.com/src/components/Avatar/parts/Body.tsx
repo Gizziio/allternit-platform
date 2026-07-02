@@ -193,7 +193,7 @@ export const Body: React.FC<BodyProps> = ({
 };
 
 // Export position helpers for other parts
-export function getBodyPositions(shape: AvatarBodyShape) {
+function getBodyPositions(shape: AvatarBodyShape) {
   const def = BODY_PATHS[shape];
   return {
     eyeX: def.centerX,
@@ -206,7 +206,7 @@ export function getBodyPositions(shape: AvatarBodyShape) {
 }
 
 // Export shape metadata
-export const BODY_SHAPE_METADATA: Record<AvatarBodyShape, {
+const BODY_SHAPE_METADATA: Record<AvatarBodyShape, {
   name: string;
   description: string;
   idealSetup: string;

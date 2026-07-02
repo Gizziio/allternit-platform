@@ -1,8 +1,8 @@
-"use client";
+import React, { useCallback, useRef, useState } from "react";
 
-import React, { useRef, useCallback, useState } from 'react';
-import type { CodeCanvasTile } from '@/views/code/CodeModeStore';
+"use client";
 import { X, ArrowsOut } from '@phosphor-icons/react';
+import { CodeCanvasTile } from "@/views/code/CodeModeStore";
 
 interface CanvasTileProps {
   tile: CodeCanvasTile;
@@ -180,7 +180,7 @@ export function CanvasTile({
   );
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       data-canvas-tile
       onClick={(e) => {
         e.stopPropagation();
@@ -266,7 +266,7 @@ export function CanvasTile({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-          <button
+          <button type="button"
             onClick={(e) => {
               e.stopPropagation();
               onFocus();
@@ -296,7 +296,7 @@ export function CanvasTile({
           >
             <ArrowsOut size={13} />
           </button>
-          <button
+          <button type="button"
             onClick={(e) => {
               e.stopPropagation();
               onClose?.();

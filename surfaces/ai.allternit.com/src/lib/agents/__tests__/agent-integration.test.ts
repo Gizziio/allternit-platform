@@ -12,7 +12,7 @@
  * RUN WITH: npm test -- agent-integration.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { agentWorkspaceFS } from '../agent-workspace-files';
 import { AgentTrustTiers } from '../agent-trust-tiers';
 import { HeartbeatTaskManager, parseHeartbeatTasks } from '../agent-heartbeat-executor';

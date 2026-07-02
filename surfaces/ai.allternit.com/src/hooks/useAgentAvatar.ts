@@ -5,9 +5,13 @@
  */
 
 import { useCallback, useEffect } from 'react';
-import { useVisualStateStore, createTelemetryEvent, subscribeToAgentState } from '@/stores/visual-state.store';
+import { useVisualStateStore, subscribeToAgentState } from '@/stores/visual-state.store';
 import type { VisualState, TelemetryEvent } from '@allternit/visual-state/types';
 import type { AvatarSize } from '@allternit/visual-state/types';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UseAgentAvatar');
 
 export interface UseAgentAvatarOptions {
   /** Agent ID to track */
@@ -75,7 +79,7 @@ export function useAgentAvatar({
 
     const unsubscribe = subscribeToAgentState(agentId, (state) => {
       if (state) {
-        console.debug(`[Avatar] Agent ${agentId}: ${state.mood} (${state.intensity}/10)`);
+        logger.debug(`Agent ${agentId}: ${state.mood} (${state.intensity}/10)`);
       }
     });
 

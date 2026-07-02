@@ -11,7 +11,7 @@ export function getPageAgentRunEndpoint(): string {
   return isElectronShell() ? withBase('/v1/page-agent/run') : '/api/page-agent/run';
 }
 
-export function getPageAgentConfigEndpoint(): string {
+function getPageAgentConfigEndpoint(): string {
   return isElectronShell() ? withBase('/v1/page-agent/config') : '/api/page-agent/config';
 }
 

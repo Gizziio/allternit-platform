@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Envelope, Copy, PaperPlaneTilt, ArrowSquareOut } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 export interface EmailDraftProps {
   to: string;
@@ -27,7 +28,7 @@ export function EmailDraft({ to, from, subject, body, cc, className, onCopy }: E
 
   const handleOpenGmail = () => {
     const params = new URLSearchParams({ to, subject, body, ...(cc ? { cc } : {}) });
-    window.open(`https://mail.google.com/mail/?view=cm&${params.toString()}`, '_blank');
+    openInBrowser(`https://mail.google.com/mail/?view=cm&${params.toString()}`);
   };
 
   const handleMailto = () => {

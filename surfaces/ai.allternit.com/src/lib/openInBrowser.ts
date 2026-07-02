@@ -1,7 +1,10 @@
-import { useNav } from '@/nav/useNav';
 import { useBrowserStore } from '@/capsules/browser/browser.store';
 
 export function openInBrowser(url: string): void {
-  useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'browser' });
+  window.dispatchEvent(
+    new CustomEvent('allternit:open-view', {
+      detail: { viewType: 'browser' },
+    }),
+  );
   useBrowserStore.getState().addTab(url);
 }

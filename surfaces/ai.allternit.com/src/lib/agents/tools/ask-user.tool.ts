@@ -62,7 +62,7 @@ export interface PendingQuestion {
   timeoutAt?: string;
 }
 
-export interface QuestionResponse {
+interface QuestionResponse {
   questionId: string;
   answer: unknown;
   timestamp: string;
@@ -483,7 +483,7 @@ export function validateAnswer(
 // Helpers
 // ============================================================================
 
-export function formatQuestionForDisplay(config: QuestionConfig): {
+function formatQuestionForDisplay(config: QuestionConfig): {
   title: string;
   subtitle?: string;
   inputType: "text" | "number" | "select" | "multi" | "confirm" | "password";

@@ -111,13 +111,13 @@ export const PolicySection: Story = {
  * Interactive Control Center
  */
 export const Interactive: Story = {
-  render: () => {
+  render: function InteractiveStory() {
     const [isOpen, setIsOpen] = useState(true);
     const [endpoints, setEndpoints] = useState<PairedEndpoint[]>(mockEndpoints);
     const [hosts, setHosts] = useState<string[]>(['example.com']);
     return (
       <div>
-        <button 
+        <button type="button" 
           onClick={() => setIsOpen(true)}
           style={{
             padding: '12px 24px',
@@ -160,7 +160,7 @@ export const Interactive: Story = {
  * Section navigation
  */
 export const SectionNavigation: Story = {
-  render: () => {
+  render: function Render() {
     const [activeSection, setActiveSection] = useState('browser-pairing');
     
     return (
@@ -168,7 +168,7 @@ export const SectionNavigation: Story = {
         <h3 style={{ marginBottom: '16px' }}>Available Sections</h3>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
           {['browser-pairing', 'policies', 'runtime', 'compute', 'secrets', 'ssh'].map(section => (
-            <button
+            <button type="button"
               key={section}
               onClick={() => setActiveSection(section)}
               style={{
@@ -195,7 +195,7 @@ export const SectionNavigation: Story = {
  * Full demo with all sections
  */
 export const FullDemo: Story = {
-  render: () => {
+  render: function Render() {
     const [isOpen, setIsOpen] = useState(true);
     
     return (
@@ -208,7 +208,7 @@ export const FullDemo: Story = {
           isDevMode={true}
         />
         {!isOpen && (
-          <button 
+          <button type="button" 
             onClick={() => setIsOpen(true)}
             style={{
               padding: '12px 24px',

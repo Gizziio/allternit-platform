@@ -5,7 +5,6 @@ import {
   Stack,
   CheckCircle,
   Cpu,
-  GitBranch,
   ClockCounterClockwise,
   CircleNotch,
   ArrowsClockwise,
@@ -315,8 +314,7 @@ export function RuntimeConfigurationPanel({
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <label className="flex flex-col gap-2 text-sm text-muted-foreground">
               Driver isolation
-              <select
-                value={draftSettings.driver.isolation_level}
+              <select aria-label="Selection" value={draftSettings.driver.isolation_level}
                 onChange={(event) =>
                   setDraftSettings((current) =>
                     current

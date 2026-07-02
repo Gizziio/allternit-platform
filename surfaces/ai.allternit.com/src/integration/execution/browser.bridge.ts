@@ -74,7 +74,7 @@ async function handleBrowserTool(call: ToolCall) {
 }
 
 export function initBrowserSurfaceBridge() {
-  const unsub = execEvents.on("onToolCall", (call) => {
+  const unsub = execEvents.subscribe("onToolCall", (call) => {
     if (!call.toolName.startsWith("browser")) return;
     handleBrowserTool(call).catch((err) => {
       execEvents.emit("onLog", {

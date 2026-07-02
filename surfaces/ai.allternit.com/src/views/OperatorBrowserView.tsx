@@ -7,9 +7,10 @@
 
 'use client';
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
+import { useAgentStore, type Agent } from '@/lib/agents';
+import { HarnessConfigPanel } from '@/views/cowork/HarnessConfigPanel';
 import { GlassCard } from '@/design/glass/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,10 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { GATEWAY_URL } from '@/integration/api-client';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('OperatorBrowserView');
 
 // ============================================================================
 // Types
@@ -83,7 +88,14 @@ export function OperatorBrowserView() {
   const [selectedTask, setSelectedTask] = useState<BrowserTask | null>(null);
   const [url, setUrl] = useState('https://');
   const [isCreating, setIsCreating] = useState(false);
-  const [, setIsLoading] = useState(true);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [showHarness, setShowHarness] = useState(false);
+
+  const { agents } = useAgentStore();
+  const selectedAgent = useMemo(
+    () => agents.find((a) => a.id === selectedAgentId) || null,
+    [agents, selectedAgentId],
+  );
 
   // Check operator health on mount
   useEffect(() => {
@@ -107,10 +119,8 @@ export function OperatorBrowserView() {
         setOperatorStatus(prev => ({ ...prev, available: false }));
       }
     } catch (error) {
-      console.error('Operator health check failed:', error);
+      logger.error({ err: error }, 'Operator health check failed:');
       setOperatorStatus(prev => ({ ...prev, available: false }));
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -137,10 +147,10 @@ export function OperatorBrowserView() {
         setSelectedTask(task);
         setUrl('https://');
       } else {
-        console.error('Failed to create task');
+        logger.error('Failed to create task');
       }
     } catch (error) {
-      console.error('Error creating task:', error);
+      logger.error({ err: error }, 'Error creating task:');
     } finally {
       setIsCreating(false);
     }
@@ -160,7 +170,7 @@ export function OperatorBrowserView() {
         }
       }
     } catch (error) {
-      console.error('Error refreshing task:', error);
+      logger.error({ err: error }, 'Error refreshing task:');
     }
   };
 
@@ -260,6 +270,45 @@ export function OperatorBrowserView() {
             </div>
           </div>
 
+          {/* Agent & Harness (parity with Chat/Cowork/Code/Design) */}
+          <div className="p-4 border-b border-[var(--border-subtle)] space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="browser-agent">Agent</Label>
+              <select
+                id="browser-agent"
+                value={selectedAgentId || ''}
+                onChange={(e) => setSelectedAgentId(e.target.value || null)}
+                className="w-full px-3 py-2 rounded-lg text-sm border bg-[var(--bg-secondary)] text-[var(--text-primary)] border-[var(--border-primary)] focus:outline-none"
+              >
+                <option value="">No agent selected</option>
+                {agents.map((agent: Agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {selectedAgent && (
+              <button
+                type="button"
+                onClick={() => setShowHarness((s) => !s)}
+                className="w-full px-3 py-2 rounded-lg text-sm font-medium border transition-colors"
+                style={{
+                  backgroundColor: showHarness ? 'var(--accent-primary)' : 'transparent',
+                  color: showHarness ? 'var(--ui-text-inverse)' : 'var(--text-primary)',
+                  borderColor: 'var(--border-primary)',
+                }}
+              >
+                {showHarness ? 'Hide Harness' : 'Configure Harness'}
+              </button>
+            )}
+            {showHarness && selectedAgent && (
+              <div className="max-h-80 overflow-y-auto -mx-4 px-4">
+                <HarnessConfigPanel agentId={selectedAgent.id} />
+              </div>
+            )}
+          </div>
+
           {/* Task List */}
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
@@ -273,7 +322,7 @@ export function OperatorBrowserView() {
                 </div>
               ) : (
                 tasks.map((task) => (
-                  <button
+                  <button type="button"
                     key={task.id}
                     onClick={() => {
                       setSelectedTask(task);
@@ -349,7 +398,7 @@ export function OperatorBrowserView() {
                     <div className="space-y-2">
                       {selectedTask.actions.map((action, idx) => (
                         <div
-                          key={idx}
+                          key={`operatorbrowserview-${idx}`}
                           className="flex items-center gap-3 p-2 rounded bg-[var(--bg-secondary)]"
                         >
                           {action.type === 'navigate' && (

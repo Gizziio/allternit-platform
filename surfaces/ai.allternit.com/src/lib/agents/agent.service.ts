@@ -21,6 +21,7 @@ import { api } from '../../integration/api-client';
 import type {
   Agent,
   AgentType,
+  AppMode,
   CreateAgentInput,
   VoiceConfig,
   AgentTask,
@@ -55,6 +56,9 @@ export { API_BASE_URL, apiRequest, apiRequestWithError, type ApiResponse };
 
 // Import Rails API for advanced features
 import { railsApi, type WihInfo } from './rails.service';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AgentService');
 
 // ============================================================================
 // Agent CRUD Operations (Registry via API)
@@ -146,7 +150,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
   try {
     validateCreateAgentInput(input);
   } catch (validationError) {
-    console.error('[AgentService] Invalid create agent input:', validationError);
+    logger.error({ err: validationError }, 'Invalid create agent input');
     throw new Error(`Invalid input: ${validationError instanceof Error ? validationError.message : 'Validation failed'}`);
   }
   
@@ -174,9 +178,20 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     config: input.config || {},
     workspace_id: input.workspaceId,
     owner_id: input.ownerId,
+    avatar: input.avatar,
+    character_json: input.characterLayer,
+    trust_tier: input.trustTier,
+    harness_config: input.harness,
+    enabled_modes: input.allowedSurfaces || ['chat'],
+    allowed_skills: input.allowedSkills,
+    allowed_tools: input.allowedTools,
+    category: input.category,
+    tags: input.tags,
+    data_classification: input.dataClassification,
+    write_scope: input.writeScope,
   };
   
-  console.debug('[AgentService] Creating agent:', input.name);
+  logger.debug('Creating agent: ' + String(input.name));
   const startTime = Date.now();
   
   try {
@@ -185,18 +200,18 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        console.debug(`[AgentService] API call attempt ${attempt + 1}/${maxRetries}...`);
+        logger.debug(`API call attempt ${attempt + 1}/${maxRetries}`);
         const agent = await api.createAgent(apiInput as Omit<Agent, 'id'>);
-        console.debug(`[AgentService] Agent created successfully in ${Date.now() - startTime}ms`);
+        logger.debug(`Agent created in ${Date.now() - startTime}ms`);
         return transformAgentFromApi(agent);
       } catch (error: any) {
         lastError = error;
-        console.error(`[AgentService] Attempt ${attempt + 1} failed:`, error.status, error.message);
-        
+        logger.error({ status: error.status, message: error.message }, `Attempt ${attempt + 1} failed`);
+
         // If it's a rate limit error (429), wait and retry with short backoff
         if (error.status === 429 || (error instanceof Error && error.message.includes('429'))) {
           const delay = 500 + Math.random() * 500; // 0.5-1s delay
-          console.warn(`[AgentService] Rate limited (429). Retrying in ${Math.round(delay)}ms...`);
+          logger.warn(`Rate limited (429). Retrying in ${Math.round(delay)}ms`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
@@ -204,7 +219,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
         throw error;
       }
     }
-    console.error(`[AgentService] All ${maxRetries} attempts failed after ${Date.now() - startTime}ms`);
+    logger.error(`All ${maxRetries} attempts failed after ${Date.now() - startTime}ms`);
     throw lastError;
   } catch (error) {
     if (shouldUseLocalAgentRegistryFallback(error)) {
@@ -251,6 +266,19 @@ function transformAgentFromApi(apiAgent: unknown): Agent {
     lastRunAt: a.last_run_at as string | undefined,
     workspaceId: a.workspace_id as string | undefined,
     ownerId: a.owner_id as string | undefined,
+    avatar: (a.avatar as Agent['avatar']) || undefined,
+    characterLayer: (a.character_json as Agent['characterLayer']) || undefined,
+    trustTier: (a.trust_tier as Agent['trustTier']) || 'standard',
+    harness: (a.harness_config as Agent['harness']) || undefined,
+    allowedSurfaces: Array.isArray(a.enabled_modes)
+      ? (a.enabled_modes as AppMode[])
+      : ['chat'],
+    allowedSkills: Array.isArray(a.allowed_skills) ? (a.allowed_skills as string[]) : undefined,
+    allowedTools: Array.isArray(a.allowed_tools) ? (a.allowed_tools as string[]) : undefined,
+    category: (a.category as Agent['category']) || undefined,
+    tags: Array.isArray(a.tags) ? (a.tags as string[]) : undefined,
+    dataClassification: (a.data_classification as string) || undefined,
+    writeScope: (a.write_scope as string) || undefined,
   };
 }
 
@@ -286,7 +314,18 @@ export async function updateAgent(
     } : null;
   }
   if (updates.config !== undefined) apiUpdates.config = updates.config;
-  
+  if (updates.avatar !== undefined) apiUpdates.avatar = updates.avatar;
+  if (updates.characterLayer !== undefined) apiUpdates.character_json = updates.characterLayer;
+  if (updates.trustTier !== undefined) apiUpdates.trust_tier = updates.trustTier;
+  if (updates.harness !== undefined) apiUpdates.harness_config = updates.harness;
+  if (updates.allowedSurfaces !== undefined) apiUpdates.enabled_modes = updates.allowedSurfaces;
+  if (updates.allowedSkills !== undefined) apiUpdates.allowed_skills = updates.allowedSkills;
+  if (updates.allowedTools !== undefined) apiUpdates.allowed_tools = updates.allowedTools;
+  if (updates.category !== undefined) apiUpdates.category = updates.category;
+  if (updates.tags !== undefined) apiUpdates.tags = updates.tags;
+  if (updates.dataClassification !== undefined) apiUpdates.data_classification = updates.dataClassification;
+  if (updates.writeScope !== undefined) apiUpdates.write_scope = updates.writeScope;
+
   try {
     const agent = await api.updateAgent(agentId, apiUpdates);
     return transformAgentFromApi(agent);
@@ -421,7 +460,7 @@ export async function listAgentRuns(agentId: string): Promise<AgentRun[]> {
       new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
     );
   } catch (error) {
-    console.error('[AgentService] Failed to list runs:', error);
+    logger.error({ err: error }, 'Failed to list runs');
     return [];
   }
 }
@@ -432,15 +471,17 @@ export async function listAgentRuns(agentId: string): Promise<AgentRun[]> {
 export async function cancelAgentRun(agentId: string, runId: string): Promise<void> {
   const { wihs } = await railsApi.wihs.list({ dag_id: runId });
   
-  // Close all open WIHs
-  for (const wih of wihs) {
-    if (wih.status === 'open' || wih.status === 'signed') {
-      await railsApi.wihs.close(wih.wih_id, {
-        status: 'failed',
-        evidence: ['Cancelled by user'],
-      });
-    }
-  }
+  // Close all open WIHs in parallel
+  await Promise.all(
+    wihs.map(async (wih) => {
+      if (wih.status === 'open' || wih.status === 'signed') {
+        await railsApi.wihs.close(wih.wih_id, {
+          status: 'failed',
+          evidence: ['Cancelled by user'],
+        });
+      }
+    })
+  );
 }
 
 /**
@@ -717,10 +758,7 @@ export async function enqueueTask(
 }
 
 export async function dequeueTask(itemId: string): Promise<void> {
-  // Pick up the WIH to remove from queue
-  // This requires knowing the dag_id and node_id
-  // For now, this is a no-op - real implementation would track mapping
-  console.debug('[AgentService] Dequeue:', itemId);
+  logger.debug('Dequeue: ' + String(itemId));
 }
 
 // ============================================================================
@@ -758,7 +796,7 @@ export function connectAgentEventStream(
       
       handlers.onEvent?.(agentEvent);
     } catch (err) {
-      console.error('[AgentService] Failed to parse event:', err);
+      logger.error({ err: err }, 'Failed to parse event');
     }
   };
 
@@ -991,8 +1029,6 @@ export async function sendAgentMail(
     // Ensure thread exists - use subject as topic
     const thread = await railsApi.mail.ensureThread(input.subject);
     
-    // Send message - body_ref would be a reference to stored content
-    // For now, we store body directly and use a generated ref
     const bodyRef = `body-${Date.now()}`;
     await railsApi.mail.send({
       thread_id: thread.thread_id,
@@ -1001,7 +1037,7 @@ export async function sendAgentMail(
     
     return { sent: true };
   } catch (error) {
-    console.error('[AgentService] Failed to send mail:', error);
+    logger.error({ err: error }, 'Failed to send mail');
     return { sent: false };
   }
 }
@@ -1032,7 +1068,7 @@ export async function requestAgentReview(
     await railsApi.mail.requestReview(thread.thread_id, wihId || 'default', body);
     return { requested: true };
   } catch (error) {
-    console.error('[AgentService] Failed to request review:', error);
+    logger.error({ err: error }, 'Failed to request review');
     return { requested: false };
   }
 }
@@ -1087,7 +1123,7 @@ function mapApiEventType(apiType: string): AgentEvent['type'] {
   }
 }
 
-export function formatDuration(startTime: string, endTime?: string): string {
+function formatDuration(startTime: string, endTime?: string): string {
   const start = new Date(startTime).getTime();
   const end = endTime ? new Date(endTime).getTime() : Date.now();
   const diff = end - start;
@@ -1105,7 +1141,7 @@ export function formatDuration(startTime: string, endTime?: string): string {
   return `${seconds}s`;
 }
 
-export function getStatusColor(status: string): string {
+function getStatusColor(status: string): string {
   switch (status) {
     case 'running':
     case 'in-progress':
@@ -1172,16 +1208,48 @@ export function splitLines(text: string): string[] {
   return text.split('\n').map(l => l.trim()).filter(Boolean);
 }
 
-export function generateEnhancedWorkspaceDocuments(config: unknown, metadata: Record<string, unknown>): Array<{ path: string; content: string }> {
-  const name = (metadata?.name as string) || 'Agent';
-  const description = (metadata?.description as string) || '';
-  const model = (metadata?.model as string) || 'gpt-4o';
-  const provider = (metadata?.provider as string) || 'openai';
+export interface WorkspaceDocumentInput {
+  name: string;
+  description: string;
+  model: string;
+  provider: string;
+  type?: string;
+  trustTier?: string;
+  writeScope?: string;
+  dataClassification?: string;
+  allowedSurfaces?: string[];
+  allowedSkills?: string[];
+  allowedTools?: string[];
+  harness?: Record<string, unknown>;
+  category?: string;
+  tags?: string[];
+  tools?: string[];
+  capabilities?: string[];
+}
+
+export function generateEnhancedWorkspaceDocuments(
+  config: unknown,
+  metadata: WorkspaceDocumentInput
+): Array<{ path: string; content: string }> {
+  const name = metadata.name || 'Agent';
+  const description = metadata.description || '';
+  const model = metadata.model || 'gpt-4o';
+  const provider = metadata.provider || 'openai';
+  const agentType = metadata.type || 'worker';
+  const trustTier = metadata.trustTier || 'standard';
+  const writeScope = metadata.writeScope || 'workspace';
+  const dataClassification = metadata.dataClassification || 'internal';
+  const allowedSurfaces = metadata.allowedSurfaces || ['chat'];
+  const allowedSkills = metadata.allowedSkills || [];
+  const allowedTools = metadata.allowedTools || metadata.tools || [];
+  const harness = metadata.harness || { mode: 'cloud' };
+  const category = metadata.category || 'general';
+  const tags = metadata.tags || [];
   const c = (config as Record<string, unknown>) || {};
   const personality = (c.personality as Record<string, unknown>) || {};
   const character = (c.character as Record<string, unknown>) || {};
-  const tools = (metadata?.tools as string[]) || (c.tools as string[]) || [];
-  const capabilities = (metadata?.capabilities as string[]) || (c.capabilities as string[]) || [];
+  const tools = metadata.tools || (c.tools as string[]) || [];
+  const capabilities = metadata.capabilities || (c.capabilities as string[]) || [];
   const hardBans = (character.hardBans as Array<{ category: string }>) || [];
   const specialtySkills = (character.specialtySkills as string[]) || [];
   const setup = (character.setup as string) || 'generalist';
@@ -1305,6 +1373,97 @@ ${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '*No ca
 `
     },
     {
+      path: 'identity/VOICE.md',
+      content: `# VOICE.md — How ${name} Speaks
+
+## Voice Style
+${(c.voiceStyle as string) || 'Professional and clear'}
+
+## Tone
+- Formality: ${((c.voice as Record<string, unknown>)?.tone as Record<string, number>)?.formality ?? 0.5}
+- Enthusiasm: ${((c.voice as Record<string, unknown>)?.tone as Record<string, number>)?.enthusiasm ?? 0.5}
+- Empathy: ${((c.voice as Record<string, unknown>)?.tone as Record<string, number>)?.empathy ?? 0.5}
+- Directness: ${((c.voice as Record<string, unknown>)?.tone as Record<string, number>)?.directness ?? 0.5}
+
+## Rules
+${(((c.voice as Record<string, unknown>)?.rules as string[]) || []).map(r => `- ${r}`).join('\n') || '- Be clear and concise'}
+
+## Micro-bans
+${(((c.voice as Record<string, unknown>)?.microBans as string[]) || []).map(m => `- ${m}`).join('\n') || '- None configured'}
+`
+    },
+    {
+      path: 'governance/POLICY.md',
+      content: `# POLICY.md — ${name}'s Operating Policy
+
+## Trust Tier
+${trustTier}
+
+## Write Scope
+${writeScope}
+
+## Data Classification
+${dataClassification}
+
+## Allowed Mode Surfaces
+${allowedSurfaces.map(s => `- ${s}`).join('\n')}
+
+## Hard Bans
+${hardBans.length > 0 ? hardBans.map(b => `- **${b.category}**: Prohibited`).join('\n') : '- No hard bans configured'}
+
+## Escalation Rules
+${((character.escalation as string[]) || []).map(e => `- ${e}`).join('\n') || '- Escalate on policy violations'}
+`
+    },
+    {
+      path: 'skills/SKILL.md',
+      content: `# SKILL.md — ${name}'s Skill Manifest
+
+## Specialty Skills
+${specialtySkills.length > 0 ? specialtySkills.map(s => `- ${s}`).join('\n') : '- General assistance'}
+
+## Allowed Skills
+${allowedSkills.length > 0 ? allowedSkills.map(s => `- ${s}`).join('\n') : '- All platform skills'}
+
+## Allowed Tools
+${allowedTools.length > 0 ? allowedTools.map(t => `- ${t}`).join('\n') : '- No tools configured'}
+
+## Capabilities
+${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '- No capabilities configured'}
+`
+    },
+    {
+      path: 'skills/contract.json',
+      content: JSON.stringify({
+        schema_version: '1.0.0',
+        agent: {
+          name,
+          type: agentType,
+          category,
+          tags,
+          model,
+          provider,
+        },
+        trust: {
+          tier: trustTier,
+          write_scope: writeScope,
+          data_classification: dataClassification,
+        },
+        runtime: {
+          allowed_surfaces: allowedSurfaces,
+          harness,
+          max_iterations: (c.maxIterations as number) || 10,
+          temperature: (c.temperature as number) || 0.7,
+        },
+        skills: {
+          allowed: allowedSkills,
+          tools: allowedTools,
+          capabilities,
+        },
+        created_at: now,
+      }, null, 2),
+    },
+    {
       path: 'CHANGELOG.md',
       content: `# Changelog
 
@@ -1312,6 +1471,8 @@ ${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '*No ca
 - Agent created
 - Workspace initialized with ${tools.length} tools, ${capabilities.length} capabilities
 - ${hardBans.length} hard bans configured
+- Trust tier: ${trustTier}
+- Enabled surfaces: ${allowedSurfaces.join(', ')}
 `
     },
   ];

@@ -13,6 +13,7 @@ import {
   Palette,
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
+import { cn } from '@/lib/utils';
 
 interface RailControlsProps {
   mode: AppMode;
@@ -53,7 +54,7 @@ export function RailControls({
   onOpenIntegrations,
   onSearchOpen,
   onOpenLabs,
-}: RailControlsProps): JSX.Element {
+}: RailControlsProps): React.ReactNode {
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -71,35 +72,15 @@ export function RailControls({
   return (
     <div
       data-testid="shell-rail-controls"
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: 284,
-        zIndex: 150,
-        pointerEvents: 'none',
-      }}
+      className="fixed top-0 left-0 w-[284px] z-[150] pointer-events-none"
     >
       {/* 1. TITLE BAR ROW */}
       <div
-        style={{
-          height: 44,
-          display: 'flex',
-          alignItems: 'center',
-          paddingLeft: 80,
-          paddingRight: 8,
-          pointerEvents: 'auto',
-          ...({ WebkitAppRegion: 'drag' } as React.CSSProperties),
-        }}
+        className="h-11 flex items-center pl-20 pr-2 pointer-events-auto [WebkitAppRegion:drag]"
       >
         {/* All widgets grouped together after traffic lights */}
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
-          }}
+          className="flex items-center gap-px [WebkitAppRegion:no-drag]"
         >
           <TitleBarButton
             onClick={onToggleRail}
@@ -108,24 +89,13 @@ export function RailControls({
             <SidebarSimple size={15} weight="bold" />
           </TitleBarButton>
 
-          <div ref={createMenuRef} style={{ position: 'relative' }}>
+          <div ref={createMenuRef} className="relative">
             <TitleBarButton onClick={() => setShowCreateMenu((v) => !v)} title="New Session">
               <NotePencil size={15} weight="bold" />
             </TitleBarButton>
             {showCreateMenu && (
               <div
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 8px)',
-                  left: 0,
-                  minWidth: 196,
-                  padding: 6,
-                  borderRadius: 12,
-                  border: '1px solid var(--shell-menu-border)',
-                  background: 'var(--shell-menu-bg)',
-                  boxShadow: 'var(--shadow-xl)',
-                  zIndex: 152,
-                }}
+                className="absolute top-[calc(100%+8px)] left-0 min-w-[196px] p-1.5 rounded-xl border border-solid border-[var(--shell-menu-border)] bg-[var(--shell-menu-bg)] shadow-[var(--shadow-xl)] z-[152]"
               >
                 <CreateMenuButton
                   label="New Chat"
@@ -159,23 +129,16 @@ export function RailControls({
 
       {/* 2. MODE TABS — full-width, active expands with label */}
       <div
-        style={{
-          padding: '2px 8px 10px',
-          pointerEvents: 'auto',
-        }}
+        className="p-[2px_8px_10px] pointer-events-auto"
       >
         <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 2,
-          }}
+          className="inline-flex items-center gap-0.5"
         >
           {MODES.map((m) => {
             const active = mode === m.key;
             const Icon = m.icon;
             return (
-              <button
+              <button type="button"
                 key={m.key}
                 onClick={() => {
                   if (m.key === 'browser') {
@@ -184,42 +147,16 @@ export function RailControls({
                     onModeChange(m.key as AppMode);
                   }
                 }}
-                style={{
-                  flex: '0 0 auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: active ? 6 : 0,
-                  height: 30,
-                  padding: active ? '0 10px' : '0 8px',
-                  border: 'none',
-                  borderRadius: 7,
-                  background: active ? 'var(--shell-item-hover, rgba(255,255,255,0.08))' : 'transparent',
-                  color: active ? 'var(--shell-item-fg, var(--text-primary))' : 'var(--shell-item-muted, var(--text-tertiary))',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 500,
-                  letterSpacing: '-0.01em',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = 'var(--shell-item-hover, rgba(255,255,255,0.05))';
-                    e.currentTarget.style.color = 'var(--shell-item-fg, var(--text-primary))';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--shell-item-muted, var(--text-tertiary))';
-                  }
-                }}
+                className={cn(
+                  "flex-[0_0_auto] flex items-center justify-center h-[30px] border-none rounded-[7px] cursor-pointer text-[13px] tracking-tight whitespace-nowrap overflow-hidden transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                  active 
+                    ? "gap-1.5 px-2.5 bg-[var(--shell-item-hover,rgba(255,255,255,0.08))] text-[var(--shell-item-fg,var(--text-primary))] font-semibold" 
+                    : "gap-0 px-2 bg-transparent text-[var(--shell-item-muted,var(--text-tertiary))] font-medium hover:bg-[var(--shell-item-hover,rgba(255,255,255,0.05))] hover:text-[var(--shell-item-fg,var(--text-primary))]"
+                )}
               >
-                <Icon size={14} weight={active ? 'fill' : 'regular'} style={{ flexShrink: 0 }} />
+                <Icon size={14} weight={active ? 'fill' : 'regular'} className="shrink-0" />
                 {active && (
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span className="overflow-hidden text-ellipsis">
                     {m.label}
                   </span>
                 )}
@@ -240,34 +177,12 @@ function TitleBarButton({
   children: React.ReactNode;
   onClick?: () => void;
   title?: string;
-}): JSX.Element {
+}): React.ReactNode {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       title={title}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        borderRadius: 6,
-        width: 28,
-        height: 28,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--shell-item-muted)',
-        cursor: 'pointer',
-        transition: 'background 0.15s, color 0.15s',
-        flexShrink: 0,
-        ...({ WebkitAppRegion: 'no-drag' } as React.CSSProperties),
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'var(--shell-item-hover)';
-        e.currentTarget.style.color = 'var(--shell-item-fg)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'transparent';
-        e.currentTarget.style.color = 'var(--shell-item-muted)';
-      }}
+      className="bg-transparent border-none rounded-md w-7 h-7 flex items-center justify-center text-[var(--shell-item-muted)] cursor-pointer transition-all duration-150 shrink-0 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)]"
     >
       {children}
     </button>
@@ -282,29 +197,14 @@ function CreateMenuButton({
   label: string;
   description: string;
   onClick: () => void;
-}): JSX.Element {
+}): React.ReactNode {
   return (
-    <button
+    <button type="button"
       onClick={onClick}
-      style={{
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: 2,
-        padding: '9px 12px',
-        border: 'none',
-        background: 'transparent',
-        borderRadius: 8,
-        color: 'var(--shell-item-fg)',
-        cursor: 'pointer',
-        textAlign: 'left',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--shell-item-hover)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      className="w-full flex flex-col items-start gap-0.5 p-[9px_12px] border-none bg-transparent rounded-lg text-[var(--shell-item-fg)] cursor-pointer text-left hover:bg-[var(--shell-item-hover)]"
     >
-      <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
-      <span style={{ fontSize: 12, color: 'var(--shell-item-muted)', lineHeight: 1.4 }}>{description}</span>
+      <span className="text-[13px] font-semibold">{label}</span>
+      <span className="text-[12px] text-[var(--shell-item-muted)] leading-tight">{description}</span>
     </button>
   );
 }

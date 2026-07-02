@@ -39,7 +39,7 @@ const RECEIPT_TTL = 30 * 86_400; // 30 days
 
 // ─── Environment ──────────────────────────────────────────────────────────────
 
-export class RedisEnvironmentStore implements EnvironmentStore {
+class RedisEnvironmentStore implements EnvironmentStore {
   constructor(private r: Redis) {}
 
   async getTargets(): Promise<EnvironmentTarget[]> {
@@ -114,7 +114,7 @@ const DEFAULT_POLICY_CONFIG: PolicyConfig = {
   secondaryConfirmationForTier4: true,
 };
 
-export class RedisPolicyStore implements PolicyStore {
+class RedisPolicyStore implements PolicyStore {
   constructor(private r: Redis) {}
 
   async getAllowlist(): Promise<HostAllowlistEntry[]> {
@@ -161,7 +161,7 @@ export class RedisPolicyStore implements PolicyStore {
 
 // ─── Receipt ──────────────────────────────────────────────────────────────────
 
-export class RedisReceiptStore implements ReceiptStore {
+class RedisReceiptStore implements ReceiptStore {
   constructor(private r: Redis) {}
 
   private key(receipt: BrowserReceipt) {

@@ -14,11 +14,15 @@ import { useCallback } from "react";
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ToolHooks');
+
 // ============================================================================
 // Types
 // ============================================================================
 
-export type ToolDecision = "allow" | "deny" | "confirm";
+type ToolDecision = "allow" | "deny" | "confirm";
 
 export interface ToolContext {
   toolName: string;
@@ -67,7 +71,7 @@ export interface ToolHooksState {
   toolExecutions: ToolExecutionRecord[];
 }
 
-export interface ToolExecutionRecord {
+interface ToolExecutionRecord {
   id: string;
   toolName: string;
   sessionId: string;
@@ -185,13 +189,16 @@ export const useToolHooksStore = create<ToolHooksState & ToolHooksActions>()(
     executePostToolHooks: async (context, result, error) => {
       const { postToolHooks } = get();
       
-      for (const fn of Object.values(postToolHooks)) {
-        try {
-          await fn(context, result, error);
-        } catch (err) {
-          console.error(`Post-tool hook failed:`, err);
-        }
-      }
+      // Run post-tool hooks in parallel
+      await Promise.all(
+        Object.values(postToolHooks).map(async (fn) => {
+          try {
+            await fn(context, result, error);
+          } catch (err) {
+            console.error(`Post-tool hook failed:`, err);
+          }
+        })
+      );
     },
 
     // -------------------------------------------------------------------------
@@ -375,7 +382,7 @@ export function usePendingToolConfirmations(sessionId: string) {
 /**
  * Hook to get tool execution history for a session
  */
-export function useToolExecutionHistory(sessionId: string) {
+function useToolExecutionHistory(sessionId: string) {
   const store = useToolHooksStore();
   
   return {
@@ -386,7 +393,7 @@ export function useToolExecutionHistory(sessionId: string) {
 /**
  * Hook to register tool hooks (for use in components)
  */
-export function useToolHooks() {
+function useToolHooks() {
   const store = useToolHooksStore();
   
   return {

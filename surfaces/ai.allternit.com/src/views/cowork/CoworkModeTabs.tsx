@@ -19,7 +19,7 @@ import {
   Globe,
   Robot,
   ArrowsClockwise,
-  UsersThree,
+  ArrowCounterClockwise,
 } from '@phosphor-icons/react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
@@ -32,28 +32,30 @@ interface ModeTab {
   description?: string;
 }
 
-// Top pills configuration (6 tabs)
+// Top pills configuration (8 tabs)
 const TOP_PILLS: ModeTab[] = [
   { id: 'plan', label: 'Plan', icon: ClipboardText, description: 'Define tasks and milestones' },
   { id: 'execute', label: 'Execute', icon: Play, description: 'Run tasks and workflows' },
   { id: 'review', label: 'Review', icon: CheckCircle, description: 'Review and approve work' },
   { id: 'automate', label: 'Automate', icon: Lightning, description: 'Automation and scheduling' },
+  { id: 'routines', label: 'Routines', icon: ArrowsClockwise, description: 'Routines configuration' },
+  { id: 'loops', label: 'Loops', icon: ArrowCounterClockwise, description: 'Loop monitoring' },
   { id: 'web', label: 'Web', icon: Globe, description: 'Web search and browsing' },
   { id: 'agents', label: 'Agents', icon: Robot, description: 'Agent selection and config' },
-  { id: 'team', label: 'Team', icon: UsersThree, description: 'Team collaboration and assignments' },
 ];
 
-// Bottom dock configuration (8 tabs)
+// Bottom dock configuration (10 tabs)
 const BOTTOM_TABS: ModeTab[] = [
   { id: 'plan', label: 'Plan', icon: ClipboardText },
   { id: 'execute', label: 'Execute', icon: Play },
   { id: 'review', label: 'Review', icon: CheckCircle },
   { id: 'report', label: 'Report', icon: FileText },
   { id: 'automate', label: 'Automate', icon: Lightning },
+  { id: 'routines', label: 'Routines', icon: ArrowsClockwise },
+  { id: 'loops', label: 'Loops', icon: ArrowCounterClockwise },
   { id: 'web', label: 'Web', icon: Globe },
   { id: 'agents', label: 'Agents', icon: Robot },
   { id: 'sync', label: 'Sync', icon: ArrowsClockwise },
-  { id: 'team', label: 'Team', icon: UsersThree },
 ];
 
 interface CoworkModeTabsProps {
@@ -73,7 +75,7 @@ interface CoworkModeTabsProps {
  * - Top pills: Main workflow modes (6)
  * - Bottom dock: Extended workflow modes (8)
  */
-export function CoworkModeTabs({ 
+function CoworkModeTabs({ 
   variant, 
   surfaceTheme,
   className 
@@ -105,7 +107,7 @@ export function CoworkModeTabs({
                 "relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border",
                 isActive 
                   ? "text-white border-transparent" 
-                  : "text-[#9B9B9B] border-[var(--ui-border-muted)] hover:text-[#ECECEC] hover:bg-white/5"
+                  : "text-[var(--ui-text-muted)] border-[var(--ui-border-muted)] hover:text-[var(--ui-text-primary)] hover:bg-white/5"
               )}
               style={{
                 background: isActive 
@@ -140,7 +142,7 @@ export function CoworkModeTabs({
   // Bottom dock variant
   return (
     <div className={cn(
-      "flex items-center gap-1 p-1.5 rounded-xl bg-[#1e1e1e] border border-[#333]",
+      "flex items-center gap-1 p-1.5 rounded-xl bg-[var(--surface-panel,#1e1e1e)] border border-[var(--ui-border-muted,#333)]",
       className
     )}>
       {tabs.map((tab) => {
@@ -155,7 +157,7 @@ export function CoworkModeTabs({
               "relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200",
               isActive 
                 ? "text-white" 
-                : "text-[#666] hover:text-[#b8b8b8] hover:bg-white/5"
+                : "text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)] hover:bg-white/5"
             )}
             style={{
               background: isActive 
@@ -166,7 +168,7 @@ export function CoworkModeTabs({
           >
             <Icon className={cn(
               "size-3.5",
-              isActive && "text-[#A78BFA]"
+              isActive && "text-[var(--accent-primary)]"
             )} />
             <span>{tab.label}</span>
             {isActive && (
@@ -202,10 +204,11 @@ export function useCoworkMode() {
     isReview: currentMode === 'review',
     isReport: currentMode === 'report',
     isAutomate: currentMode === 'automate',
+    isRoutines: currentMode === 'routines',
+    isLoops: currentMode === 'loops',
     isWeb: currentMode === 'web',
     isAgents: currentMode === 'agents',
     isSync: currentMode === 'sync',
-    isTeam: currentMode === 'team',
   };
 }
 

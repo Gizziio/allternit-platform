@@ -54,7 +54,7 @@ export interface GlassOptions {
 // Constants & Mappings
 // ============================================================================
 
-export const blurValues: Record<GlassBlur, string> = {
+const blurValues: Record<GlassBlur, string> = {
   none: '0px',
   sm: '4px',
   md: '8px',
@@ -62,7 +62,7 @@ export const blurValues: Record<GlassBlur, string> = {
   xl: '24px',
 };
 
-export const roundedValues: Record<GlassRounded, string> = {
+const roundedValues: Record<GlassRounded, string> = {
   none: '0px',
   sm: '4px',
   md: '8px',
@@ -71,7 +71,7 @@ export const roundedValues: Record<GlassRounded, string> = {
   full: '9999px',
 };
 
-export const paddingValues: Record<GlassPadding, string> = {
+const paddingValues: Record<GlassPadding, string> = {
   none: '0px',
   xs: '4px',
   sm: '8px',
@@ -80,14 +80,14 @@ export const paddingValues: Record<GlassPadding, string> = {
   xl: '32px',
 };
 
-export const transitionValues: Record<GlassTransition, string> = {
+const transitionValues: Record<GlassTransition, string> = {
   none: '0ms',
   fast: '150ms cubic-bezier(0.4, 0, 0.2, 1)',
   normal: '300ms cubic-bezier(0.4, 0, 0.2, 1)',
   slow: '500ms cubic-bezier(0.4, 0, 0.2, 1)',
 };
 
-export const elevationShadows: Record<GlassElevation, string> = {
+const elevationShadows: Record<GlassElevation, string> = {
   base: 'none',
   flat: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
   raised: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
@@ -95,7 +95,7 @@ export const elevationShadows: Record<GlassElevation, string> = {
   overlay: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
 };
 
-export const variantColors: Record<GlassVariant, { light: { bg: string }, dark: { bg: string } }> = {
+const variantColors: Record<GlassVariant, { light: { bg: string }, dark: { bg: string } }> = {
   default: {
     light: { bg: 'rgba(255, 255, 255, 0.7)' },
     dark: { bg: 'rgba(30, 26, 22, 0.6)' },
@@ -122,7 +122,7 @@ export const variantColors: Record<GlassVariant, { light: { bg: string }, dark: 
   }
 };
 
-export const borderStyles: Record<string, { light: string, dark: string }> = {
+const borderStyles: Record<string, { light: string, dark: string }> = {
   subtle: {
     light: '1px solid rgba(0, 0, 0, 0.08)',
     dark: '1px solid rgba(255, 255, 255, 0.1)',
@@ -137,7 +137,7 @@ export const borderStyles: Record<string, { light: string, dark: string }> = {
   }
 };
 
-export const fallbackBackgrounds = {
+const fallbackBackgrounds = {
   light: {
     low: 'rgba(255, 255, 255, 0.9)',
     medium: 'rgba(245, 245, 245, 0.95)',

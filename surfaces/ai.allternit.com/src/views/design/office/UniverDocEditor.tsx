@@ -1,6 +1,10 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UniverDocEditor');
+
 interface Props {
   projectName: string;
 }
@@ -61,7 +65,7 @@ export function UniverDocEditor({ projectName }: Props) {
 
         if (!cancelled) setStatus('ready');
       } catch (err) {
-        console.warn('[UniverDocEditor] init failed', err);
+        logger.warn({ err: err }, '[UniverDocEditor] init failed');
         if (!cancelled) setStatus('error');
       }
     }

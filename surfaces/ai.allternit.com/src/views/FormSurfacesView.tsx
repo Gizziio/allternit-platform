@@ -18,7 +18,6 @@ import {
   FloppyDisk,
   ArrowCounterClockwise,
   Lightning,
-  GearSix,
 } from '@phosphor-icons/react';
 
 interface FormSchema {
@@ -145,7 +144,7 @@ const AGENT_CONFIG_FIELDS: FormField[] = [
 
 function FormSchemaCard({ schema, isActive, onClick }: { schema: FormSchema; isActive: boolean; onClick: () => void }) {
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
       className={`p-4 rounded-xl border transition-all cursor-pointer ${
         isActive
@@ -190,14 +189,13 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
     <div className="space-y-5">
       {fields.map((field) => (
         <div key={field.name}>
-          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+          <div className="block text-sm font-medium text-[var(--text-primary)] mb-2">
             {field.label}
             {field.required && <span className="text-red-500 ml-1">*</span>}
-          </label>
+          </div>
 
           {field.type === 'text' && (
-            <input
-              type="text"
+            <input aria-label={field.placeholder} type="text"
               placeholder={field.placeholder}
               value={formData[field.name] || ''}
               onChange={(e) => handleChange(field.name, e.target.value)}
@@ -206,8 +204,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
           )}
 
           {field.type === 'number' && (
-            <input
-              type="number"
+            <input aria-label={field.placeholder} type="number"
               placeholder={field.placeholder}
               defaultValue={field.defaultValue}
               onChange={(e) => handleChange(field.name, e.target.valueAsNumber)}
@@ -216,8 +213,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
           )}
 
           {field.type === 'select' && (
-            <select
-              defaultValue={field.defaultValue || ''}
+            <select aria-label="Selection" defaultValue={field.defaultValue || ''}
               onChange={(e) => handleChange(field.name, e.target.value)}
               className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)] focus:ring-1 focus:ring-[var(--accent-primary)]"
             >
@@ -230,8 +226,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
           )}
 
           {field.type === 'textarea' && (
-            <textarea
-              placeholder={field.placeholder}
+            <textarea aria-label={field.placeholder} placeholder={field.placeholder}
               rows={4}
               value={formData[field.name] || ''}
               onChange={(e) => handleChange(field.name, e.target.value)}
@@ -241,8 +236,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
 
           {field.type === 'slider' && (
             <div className="flex items-center gap-3">
-              <input
-                type="range"
+              <input aria-label="Input" type="range"
                 min={field.min || 0}
                 max={field.max || 100}
                 step={field.max === 1 ? 0.1 : 1}
@@ -260,8 +254,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
             <div className="space-y-2">
               {field.options?.map((opt) => (
                 <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
+                  <input aria-label="Checkbox" type="checkbox"
                     value={opt}
                     checked={(formData[field.name] || []).includes(opt)}
                     onChange={(e) => {
@@ -283,8 +276,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
             <div className="space-y-2">
               {field.options?.map((opt) => (
                 <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
+                  <input aria-label="Radio" type="radio"
                     name={field.name}
                     value={opt}
                     defaultChecked={opt === field.defaultValue}
@@ -298,7 +290,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
           )}
 
           {field.type === 'toggle' && (
-            <button
+            <button type="button"
               onClick={() => handleChange(field.name, !(formData[field.name] || field.defaultValue))}
               className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
                 formData[field.name] || field.defaultValue
@@ -341,7 +333,7 @@ export function FormSurfacesView() {
             </div>
           </div>
 
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-sm font-medium hover:opacity-90 transition-opacity">
+          <button type="button" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-sm font-medium hover:opacity-90 transition-opacity">
             <Plus size={16} />
             Create Form
           </button>
@@ -384,7 +376,7 @@ export function FormSurfacesView() {
           </div>
 
           <div className="p-4 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-            <button className="w-full px-3 py-2 rounded-lg text-xs font-medium text-[var(--accent-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] transition-colors">
+            <button type="button" className="w-full px-3 py-2 rounded-lg text-xs font-medium text-[var(--accent-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] transition-colors">
               <Plus className="size-3  inline mr-2" />
               New Schema
             </button>
@@ -410,11 +402,11 @@ export function FormSurfacesView() {
 
               {/* Form actions */}
               <div className="flex gap-3 mt-8 pt-6 border-t border-[var(--border-subtle)]">
-                <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] font-medium hover:opacity-90 transition-opacity">
+                <button type="button" className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] font-medium hover:opacity-90 transition-opacity">
                   <FloppyDisk size={16} />
                   Submit
                 </button>
-                <button className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-colors">
+                <button type="button" className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-colors">
                   <ArrowCounterClockwise size={16} />
                   Reset
                 </button>

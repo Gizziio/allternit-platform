@@ -112,7 +112,10 @@ export function CodeCanvasTileTerminal({ sessionId: linkedSessionId, workspacePa
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: data + '\r' }),
-    }).catch(() => {});
+    }).catch((err: unknown) => {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to send input');
+      setStatus('error');
+    });
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -180,18 +183,17 @@ export function CodeCanvasTileTerminal({ sessionId: linkedSessionId, workspacePa
           </span>
         )}
         <input
+          className="focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
+          aria-label={
+            status === 'connecting'
+              ? 'Starting...'
+              : status === 'error'
+                ? 'Disconnected'
+                : 'Type command...'
+          }
           ref={inputRef}
           onKeyDown={handleKeyDown}
           disabled={status !== 'connected'}
-          style={{
-            flex: 1,
-            background: 'transparent',
-            border: 'none',
-            color: '#e2e8f0',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 13,
-            outline: 'none',
-          }}
           placeholder={
             status === 'connecting'
               ? 'Starting...'
@@ -199,6 +201,14 @@ export function CodeCanvasTileTerminal({ sessionId: linkedSessionId, workspacePa
                 ? 'Disconnected'
                 : 'Type command...'
           }
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            color: '#e2e8f0',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 13,
+          }}
         />
       </div>
 
@@ -251,7 +261,7 @@ export function CodeCanvasTileTerminal({ sessionId: linkedSessionId, workspacePa
         >
           <Warning size={24} />
           <div style={{ maxWidth: 320, lineHeight: 1.5 }}>{errorMsg}</div>
-          <button
+          <button type="button"
             onClick={handleRetry}
             style={{
               display: 'inline-flex',

@@ -14,6 +14,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('BlockSuiteEditor');
+
 interface BlockSuiteEditorProps {
   docId: string;
   initialYjsState?: Uint8Array;
@@ -21,7 +25,7 @@ interface BlockSuiteEditorProps {
   readOnly?: boolean;
 }
 
-export const BlockSuiteEditor: React.FC<BlockSuiteEditorProps> = ({
+const BlockSuiteEditor: React.FC<BlockSuiteEditorProps> = ({
   docId,
   initialYjsState,
   onChange,
@@ -38,14 +42,21 @@ export const BlockSuiteEditor: React.FC<BlockSuiteEditorProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    const cleanupFns: Array<() => void> = [];
+    let ydoc: any = null;
+    let updateHandler: ((update: Uint8Array) => void) | null = null;
 
     const mount = async () => {
       try {
         // Dynamic import keeps the bundle light when BlockSuite isn't used
-        const { DocCollection, Schema } = await import('@blocksuite/store');
-        const { AffineSchemas } = await import('@blocksuite/blocks');
-        const { PageEditor } = await import('@blocksuite/presets');
+        const [
+          { DocCollection, Schema },
+          { AffineSchemas },
+          { PageEditor }
+        ] = await Promise.all([
+          import('@blocksuite/store'),
+          import('@blocksuite/blocks'),
+          import('@blocksuite/presets')
+        ]);
 
         if (cancelled || !containerRef.current) return;
 
@@ -58,7 +69,7 @@ export const BlockSuiteEditor: React.FC<BlockSuiteEditorProps> = ({
         doc.awarenessStore.setReadonly((doc as any)._blockCollection, readOnly);
 
         // Apply existing Yjs state if provided
-        const ydoc = (doc as any).spaceDoc ?? (doc as any).yDoc;
+        ydoc = (doc as any).spaceDoc ?? (doc as any).yDoc;
         if (ydoc && initialYjsState && initialYjsState.length > 0) {
           Y.applyUpdate(ydoc, new Uint8Array(initialYjsState));
         }
@@ -87,18 +98,15 @@ export const BlockSuiteEditor: React.FC<BlockSuiteEditorProps> = ({
 
         // Subscribe to Yjs updates for persistence
         if (ydoc && !readOnly) {
-          const handleUpdate = (update: Uint8Array) => {
+          updateHandler = (update: Uint8Array) => {
             onChangeRef.current?.(update);
           };
-          ydoc.on('update', handleUpdate);
-          cleanupFns.push(() => {
-            ydoc.off('update', handleUpdate);
-          });
+          ydoc.on('update', updateHandler);
         }
 
         if (!cancelled) setLoadState('ready');
       } catch (err) {
-        console.error('Failed to mount BlockSuite editor:', err);
+        logger.error({ err: err }, 'Failed to mount BlockSuite editor:');
         if (!cancelled) {
           setLoadState('error');
           setLoadError(err instanceof Error ? err.message : String(err));
@@ -110,7 +118,9 @@ export const BlockSuiteEditor: React.FC<BlockSuiteEditorProps> = ({
 
     return () => {
       cancelled = true;
-      cleanupFns.forEach((fn) => fn());
+      if (ydoc && updateHandler) {
+        ydoc.off('update', updateHandler);
+      }
       if (editorRef.current) {
         try {
           editorRef.current.remove();

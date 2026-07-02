@@ -228,7 +228,7 @@ export function DeckCard({
 
           {/* Navigation */}
           <div className="absolute top-1/2 left-0 right-0 -tranzinc-y-1/2 flex justify-between px-2 pointer-events-none">
-            <button
+            <button type="button"
               onClick={handlePrev}
               disabled={!hasPrev}
               className={cn(
@@ -240,7 +240,7 @@ export function DeckCard({
             >
               <CaretLeft size={16} />
             </button>
-            <button
+            <button type="button"
               onClick={handleNext}
               disabled={!hasNext}
               className={cn(
@@ -258,7 +258,7 @@ export function DeckCard({
         {/* Thumbnail Strip */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
           {slides.slice(0, 6).map((s, idx) => (
-            <button
+            <button type="button"
               key={s.id}
               onClick={() => setCurrentSlide(idx)}
               className={cn(

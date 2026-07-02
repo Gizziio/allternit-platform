@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 
-export interface ResearchMessage {
+interface ResearchMessage {
   role: 'user' | 'assistant';
   content: string;
 }

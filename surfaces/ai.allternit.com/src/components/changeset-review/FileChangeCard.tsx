@@ -14,7 +14,7 @@ export function FileChangeCard({ change, changeSetId }: FileChangeCardProps) {
   
   return (
     <div>
-      <div 
+      <div role="button" tabIndex={0} 
         onClick={() => setExpanded(!expanded)}
         style={{ 
           display: 'flex', 
@@ -104,7 +104,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
       </div>
       
       <div style={{ display: 'flex', borderTop: '1px solid var(--border-subtle)' }}>
-        <button 
+        <button type="button" 
           onClick={() => rejectHunk(changeSetId, fileChangeId, hunk.id)}
           style={{ 
             flex: 1, 
@@ -124,7 +124,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
         >
           <X size={12} weight="bold" /> Reject
         </button>
-        <button 
+        <button type="button" 
           onClick={() => acceptHunk(changeSetId, fileChangeId, hunk.id)}
           style={{ 
             flex: 1, 

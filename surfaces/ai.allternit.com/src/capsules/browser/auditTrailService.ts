@@ -18,6 +18,10 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AuditTrailService');
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -27,7 +31,7 @@ function safeJSONParse<T>(json: string | null, defaultValue: T): T {
   try {
     return JSON.parse(json) as T;
   } catch (e) {
-    console.error('[AuditTrail] JSON parse error:', e);
+    logger.error({ err: e }, 'JSON parse error');
     return defaultValue;
   }
 }
@@ -215,7 +219,7 @@ export interface AuditStore {
 // In-Memory Store (for development/testing)
 // ============================================================================
 
-export class InMemoryAuditStore implements AuditStore {
+class InMemoryAuditStore implements AuditStore {
   private events: Map<string, AuditEvent> = new Map();
   private correlationIndex: Map<string, string[]> = new Map();
   private runIndex: Map<string, string[]> = new Map();
@@ -363,7 +367,7 @@ export class InMemoryAuditStore implements AuditStore {
 // Persistent SQLite Store (for production)
 // ============================================================================
 
-export class SQLiteAuditStore implements AuditStore {
+class SQLiteAuditStore implements AuditStore {
   private db: any; // Database connection
   private initialized: boolean = false;
 
@@ -424,7 +428,7 @@ export class SQLiteAuditStore implements AuditStore {
       
       this.initialized = true;
     } catch (error) {
-      console.error('Failed to initialize SQLite audit store:', error);
+      logger.error({ err: error }, 'Failed to initialize SQLite audit store:');
       throw error;
     }
   }
@@ -832,14 +836,14 @@ export class AuditTrailService {
 let _auditStore: AuditStore | null = null;
 let _auditService: AuditTrailService | null = null;
 
-export function getAuditStore(): AuditStore {
+function getAuditStore(): AuditStore {
   if (!_auditStore) {
     // Use SQLite in production, in-memory for development
     if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
       try {
         _auditStore = new SQLiteAuditStore();
       } catch (error) {
-        console.warn('Failed to create SQLite audit store, falling back to in-memory:', error);
+        logger.warn({ err: error }, 'Failed to create SQLite audit store, falling back to in-memory:');
         _auditStore = new InMemoryAuditStore();
       }
     } else {

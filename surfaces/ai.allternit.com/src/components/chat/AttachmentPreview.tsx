@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import {
   X,
@@ -14,6 +15,7 @@ import {
   Download,
   Maximize2,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
@@ -129,17 +131,8 @@ export function AttachmentPreview({
   if (attachments.length === 0) return null;
 
   return (
-    <div style={{
-      padding: '12px 16px',
-      borderTop: '1px solid var(--ui-border-muted)',
-    }}>
-      <div style={{
-        display: 'flex',
-        gap: 12,
-        overflowX: 'auto',
-        paddingBottom: 8,
-        maxHeight,
-      }}>
+    <div className="p-3 px-4 border-t border-solid border-[var(--ui-border-muted)]">
+      <div className="flex gap-3 overflow-x-auto pb-2" style={{ maxHeight }}>
         {attachments.map((att) => (
           <AttachmentCard 
             key={att.id} 
@@ -191,29 +184,19 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{
-        position: 'relative',
-        width: 140,
-        flexShrink: 0,
-        background: 'var(--surface-hover)',
-        border: `1px solid ${isHovered ? color : 'var(--ui-border-muted)'}`,
-        borderRadius: 12,
-        overflow: 'hidden',
-        transition: 'border-color 0.2s',
-      }}
+      className={cn(
+        "relative w-[140px] shrink-0 bg-[var(--surface-hover)] border border-solid rounded-xl overflow-hidden transition-all duration-200",
+        isHovered ? "border-[var(--accent-primary)] shadow-sm" : "border-[var(--ui-border-muted)]"
+      )}
+      style={isHovered ? { borderColor: color } : undefined}
     >
       {/* Preview Area */}
       <div
+        className="h-[100px] flex items-center justify-center relative overflow-hidden"
         style={{
-          height: 100,
           background: isImage && !imageError 
             ? 'transparent' 
             : `linear-gradient(135deg, ${color}10, ${color}05)`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
         }}
       >
         {isImage && !imageError ? (
@@ -221,35 +204,19 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
             src={item.dataUrl}
             alt={item.name}
             onError={() => setImageError(true)}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
+            className="size-full object-cover"
           />
         ) : (
-          <div style={{ textAlign: 'center' }}>
+          <div className="text-center">
             <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                background: `${color}20`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 8px',
-              }}
+              className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-2"
+              style={{ background: `${color}20` }}
             >
-              <Icon size={24} color={color} />
+              <Icon size={24} style={{ color }} />
             </div>
             <span
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: `${color}CC`,
-                letterSpacing: '0.05em',
-              }}
+              className="text-[12px] font-bold uppercase tracking-wider"
+              style={{ color: `${color}CC` }}
             >
               {ext}
             </span>
@@ -257,88 +224,44 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
         )}
 
         {/* Hover Overlay with actions */}
-        {isHovered && (
-          <div
-            className="allternit-hover-overlay"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'rgba(0,0,0,0.65)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              animation: 'fadeIn 0.15s ease',
-            }}
-          >
-            <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @media (prefers-reduced-motion: reduce) { .allternit-hover-overlay { animation: none !important; } }`}</style>
-            
-            {canPreview && onPreview && (
-              <button
-                onClick={() => onPreview(item)}
-                aria-label={`Preview ${item.name}`}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'var(--ui-border-strong)',
-                  color: 'var(--ui-text-inverse)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Maximize2 size={16} aria-hidden="true" />
-              </button>
-            )}
-
-            <a
-              href={item.dataUrl}
-              download={item.name}
-              aria-label={`Download ${item.name}`}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                border: 'none',
-                background: 'var(--ui-border-strong)',
-                color: 'var(--ui-text-inverse)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textDecoration: 'none',
-              }}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/65 flex items-center justify-center gap-2 z-[1]"
             >
-              <Download size={16} aria-hidden="true" />
-            </a>
-          </div>
-        )}
+              {canPreview && onPreview && (
+                <button type="button"
+                  onClick={() => onPreview(item)}
+                  aria-label={`Preview ${item.name}`}
+                  className="w-8 h-8 rounded-lg border-none bg-[var(--ui-border-strong)] text-[var(--ui-text-inverse)] cursor-pointer flex items-center justify-center hover:scale-105 transition-transform"
+                >
+                  <Maximize2 size={16} aria-hidden="true" />
+                </button>
+              )}
+
+              <a
+                href={item.dataUrl}
+                download={item.name}
+                aria-label={`Download ${item.name}`}
+                className="w-8 h-8 rounded-lg border-none bg-[var(--ui-border-strong)] text-[var(--ui-text-inverse)] cursor-pointer flex items-center justify-center no-underline hover:scale-105 transition-transform"
+              >
+                <Download size={16} aria-hidden="true" />
+              </a>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Remove button */}
         {onRemove && (
-          <button
+          <button type="button"
             onClick={() => onRemove(item.id)}
-            style={{
-              position: 'absolute',
-              top: 6,
-              right: 6,
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              border: 'none',
-              background: isHovered ? 'var(--shell-overlay-backdrop)' : 'var(--surface-panel)',
-              color: 'var(--ui-text-inverse)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: isHovered ? 1 : 0,
-              transition: 'opacity 0.15s, background-color 0.15s',
-              zIndex: 2,
-            }}
+            className={cn(
+              "absolute top-1.5 right-1.5 w-5.5 h-5.5 rounded-md border-none text-[var(--ui-text-inverse)] cursor-pointer flex items-center justify-center transition-all duration-150 z-[2]",
+              isHovered ? "bg-[var(--shell-overlay-backdrop)] opacity-100" : "bg-[var(--surface-panel)] opacity-0"
+            )}
           >
             <X size={12} />
           </button>
@@ -346,42 +269,20 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
 
         {/* File type badge */}
         <div
-          style={{
-            position: 'absolute',
-            top: 6,
-            left: 6,
-            padding: '2px 6px',
-            borderRadius: 4,
-            background: color,
-            fontSize: 12,
-            fontWeight: 700,
-            color: 'var(--ui-text-inverse)',
-            textTransform: 'uppercase',
-          }}
+          className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/40 text-[var(--ui-text-inverse)] text-[11px] font-bold uppercase tracking-wide backdrop-blur-sm"
+          style={{ backgroundColor: color }}
         >
           {item.type === 'screenshot' ? 'SCREEN' : ext}
         </div>
       </div>
 
       {/* Info Area */}
-      <div style={{ padding: 10 }}>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 12,
-            fontWeight: 500,
-            color: 'rgba(245,240,232,0.9)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            marginBottom: 4,
-          }}
-          title={item.name}
-        >
+      <div className="p-2.5">
+        <p className="m-0 text-[12px] font-semibold text-zinc-100/90 whitespace-nowrap overflow-hidden text-ellipsis mb-1" title={item.name}>
           {item.name}
         </p>
         {size && (
-          <p style={{ margin: 0, fontSize: 12, color: 'rgba(245,240,232,0.4)' }}>
+          <p className="m-0 text-[11px] text-zinc-100/40 font-medium">
             {size}
           </p>
         )}
@@ -404,81 +305,38 @@ interface CompactCardProps {
 
 function CompactCard({ item, isImage, color, Icon, size, onRemove, imageError, setImageError }: CompactCardProps) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '6px 10px',
-        background: 'var(--surface-hover)',
-        border: '1px solid var(--ui-border-muted)',
-        borderRadius: 10,
-        minWidth: 0,
-      }}
-    >
+    <div className="flex items-center gap-2 p-1.5 px-2.5 bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded-xl min-w-0">
       {isImage && !imageError ? (
         <img
           src={item.dataUrl}
           alt={item.name}
           onError={() => setImageError(true)}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 6,
-            objectFit: 'cover',
-            flexShrink: 0,
-          }}
+          className="w-8 h-8 rounded-lg object-cover shrink-0"
         />
       ) : (
         <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 6,
-            background: `${color}15`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: `${color}15` }}
         >
-          <Icon size={16} color={color} />
+          <Icon size={16} style={{ color }} />
         </div>
       )}
 
-      <span
-        style={{
-          fontSize: 12,
-          color: 'rgba(245,240,232,0.8)',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          maxWidth: 120,
-        }}
-      >
+      <span className="text-[12px] text-zinc-100/80 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
         {item.name}
       </span>
 
       {size && (
-        <span style={{ fontSize: 12, color: 'rgba(245,240,232,0.4)', flexShrink: 0 }}>
+        <span className="text-[11px] text-zinc-100/40 font-medium shrink-0">
           {size}
         </span>
       )}
 
       {onRemove && (
-        <button
+        <button type="button"
           onClick={() => onRemove(item.id)}
           aria-label={`Remove ${item.name}`}
-          style={{
-            padding: 2,
-            border: 'none',
-            background: 'transparent',
-            color: 'rgba(245,240,232,0.4)',
-            cursor: 'pointer',
-            display: 'flex',
-            flexShrink: 0,
-            borderRadius: 4,
-          }}
+          className="p-0.5 border-none bg-transparent text-zinc-100/40 cursor-pointer flex shrink-0 rounded-md hover:bg-white/5 hover:text-zinc-100/60 transition-all"
         >
           <X size={14} aria-hidden="true" />
         </button>
@@ -516,100 +374,54 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
 
   return (
     <div
-      role="presentation"
+      role="button" tabIndex={0}
+      className="fixed inset-0 bg-black/90 z-[165] flex items-center justify-center p-10 outline-none"
       onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.9)',
-        zIndex: 165,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 40,
-      }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="attachment-preview-title"
+        className="w-full max-w-[90vw] max-h-[90vh] bg-[var(--surface-panel)] rounded-2xl overflow-hidden flex flex-col shadow-2xl"
+        style={{ boxShadow: `0 25px 50px -12px ${color}40` }}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: '90vw',
-          maxHeight: '90vh',
-          background: 'var(--surface-panel)',
-          borderRadius: 16,
-          overflow: 'hidden',
-          boxShadow: `0 25px 50px -12px ${color}40`,
-        }}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--ui-border-muted)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="flex items-center justify-between p-4 px-5 border-b border-solid border-[var(--ui-border-muted)] shrink-0">
+          <div className="flex items-center gap-3">
             <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                background: `${color}20`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: `${color}20` }}
             >
-              <Icon size={18} color={color} aria-hidden="true" />
+              <Icon size={18} style={{ color }} aria-hidden="true" />
             </div>
             <div>
-              <p id="attachment-preview-title" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ui-text-inverse)' }}>
+              <p id="attachment-preview-title" className="m-0 text-[14px] font-bold text-[var(--ui-text-inverse)]">
                 {item.name}
               </p>
               {item.size && (
-                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                <p className="m-0 text-[12px] text-white/40 font-medium">
                   {formatFileSize(item.size)}
                 </p>
               )}
             </div>
           </div>
           
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-2">
             <a
               href={item.dataUrl}
               download={item.name}
-              style={{
-                padding: '8px 16px',
-                borderRadius: 8,
-                background: 'var(--ui-border-default)',
-                color: 'var(--ui-text-inverse)',
-                fontSize: 13,
-                fontWeight: 500,
-                textDecoration: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
+              className="p-2 px-4 rounded-lg bg-[var(--ui-border-default)] text-[var(--ui-text-inverse)] text-[13px] font-bold no-underline flex items-center gap-1.5 transition-opacity hover:opacity-90"
             >
               <Download size={16} aria-hidden="true" />
               Download
             </a>
-            <button
+            <button type="button"
               onClick={onClose}
               aria-label="Close preview"
-              style={{
-                padding: 8,
-                borderRadius: 8,
-                border: 'none',
-                background: 'transparent',
-                color: 'rgba(255,255,255,0.5)',
-                cursor: 'pointer',
-              }}
+              className="p-2 rounded-lg border-none bg-transparent text-white/50 cursor-pointer hover:bg-white/5 hover:text-white transition-all"
             >
               <X size={20} aria-hidden="true" />
             </button>
@@ -617,72 +429,30 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
         </div>
 
         {/* Content */}
-        <div
-          style={{
-            padding: 24,
-            maxHeight: 'calc(90vh - 100px)',
-            overflow: 'auto',
-          }}
-        >
+        <div className="flex-1 overflow-auto p-6 flex flex-col items-center">
           {isImage ? (
             <img
               src={item.dataUrl}
               alt={item.name}
-              style={{
-                maxWidth: '100%',
-                maxHeight: 'calc(90vh - 150px)',
-                borderRadius: 8,
-              }}
+              className="max-w-full max-h-full rounded-lg object-contain shadow-lg"
             />
           ) : isCode && item.extractedText ? (
-            <pre
-              style={{
-                margin: 0,
-                padding: 20,
-                background: 'var(--surface-canvas)',
-                borderRadius: 8,
-                fontSize: 13,
-                lineHeight: 1.6,
-                color: 'var(--ui-text-primary)',
-                fontFamily: "var(--font-mono)",
-                maxHeight: 'calc(90vh - 200px)',
-                overflow: 'auto',
-              }}
-            >
+            <pre className="m-0 p-5 bg-[var(--surface-canvas)] rounded-xl text-[13px] leading-relaxed text-[var(--ui-text-primary)] font-mono w-full overflow-auto border border-solid border-white/5 shadow-inner">
               <code>{item.extractedText.slice(0, 5000)}{item.extractedText.length > 5000 ? '\n\n… (truncated)' : ''}</code>
             </pre>
           ) : item.extractedText ? (
-            <div
-              style={{
-                padding: 20,
-                background: 'var(--surface-canvas)',
-                borderRadius: 8,
-                maxWidth: 600,
-                color: 'var(--ui-text-primary)',
-                fontSize: 14,
-                lineHeight: 1.6,
-                whiteSpace: 'pre-wrap',
-              }}
-            >
+            <div className="p-6 bg-[var(--surface-canvas)] rounded-xl max-w-2xl w-full text-[var(--ui-text-primary)] text-[14px] leading-relaxed whitespace-pre-wrap border border-solid border-white/5 shadow-inner font-sans">
               {item.extractedText.slice(0, 3000)}{item.extractedText.length > 3000 ? '\n\n... (truncated)' : ''}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: 40 }}>
+            <div className="text-center py-20">
               <div
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 20,
-                  background: `${color}20`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 20px',
-                }}
+                className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-5"
+                style={{ background: `${color}20` }}
               >
-                <Icon size={40} color={color} aria-hidden="true" />
+                <Icon size={40} style={{ color }} aria-hidden="true" />
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>
+              <p className="text-white/60 font-medium m-0">
                 Preview not available for this file type
               </p>
             </div>

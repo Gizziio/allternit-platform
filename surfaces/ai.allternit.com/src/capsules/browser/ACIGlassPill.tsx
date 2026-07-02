@@ -1,27 +1,8 @@
+import React, { useEffect, useRef, useState } from "react";
+
 "use client";
-
-/**
- * ACIGlassPill — Agent Computer Interface state overlay
- *
- * Floats inside the ACI viewport (top-left). Shows what the engine is
- * doing right now: action label, step progress, adapter, controls.
- *
- * Inspired by: Kimi's Computer header pattern.
- * Allternit aesthetic: dark glass, copper accent, minimal chrome.
- *
- * Hidden when idle. Appears on engine activity. No heavy strips.
- */
-
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  Square,
-  Pause,
-  Play,
-  Check,
-  X,
-  Monitor,
-} from '@phosphor-icons/react';
 import { useBrowserAgentStore } from './browserAgent.store';
+import { Check, Monitor, Pause, Play, Square, X } from "@phosphor-icons/react";
 // Theme-aware tokens for browser chrome
 const BACKGROUND = {
   primary: 'var(--bg-primary)',
@@ -103,25 +84,27 @@ type VisibilityPhase = 'hidden' | 'entering' | 'visible' | 'exiting';
 
 function useVisibility(active: boolean): VisibilityPhase {
   const [phase, setPhase] = useState<VisibilityPhase>('hidden');
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [prevActive, setPrevActive] = useState(active);
 
-  useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-
+  if (active !== prevActive) {
+    setPrevActive(active);
     if (active) {
       setPhase('entering');
-      timerRef.current = setTimeout(() => setPhase('visible'), 20);
-    } else {
-      if (phase === 'hidden') return;
+    } else if (phase !== 'hidden') {
       setPhase('exiting');
-      timerRef.current = setTimeout(() => setPhase('hidden'), 400);
     }
+  }
 
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+  useEffect(() => {
+    if (phase === 'entering') {
+      const t = setTimeout(() => setPhase('visible'), 20);
+      return () => clearTimeout(t);
+    }
+    if (phase === 'exiting') {
+      const t = setTimeout(() => setPhase('hidden'), 400);
+      return () => clearTimeout(t);
+    }
+  }, [phase]);
 
   return phase;
 }
@@ -203,7 +186,7 @@ function PillButton({
   const [hovered, setHovered] = useState(false);
 
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       title={title}
       onMouseEnter={() => setHovered(true)}
@@ -320,8 +303,8 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
             gap: 8,
             padding: '7px 10px',
             background: 'rgba(20, 18, 16, 0.86)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
             border: requiresApproval
               ? `1px solid ${STATUS.warning}59`
               : `1px solid ${SAND[500]}2e`,
@@ -444,8 +427,8 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
               alignSelf: placement === 'top-right' ? 'flex-end' : 'flex-start',
               padding: '3px 8px',
               background: 'rgba(20, 18, 16, 0.72)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
               border: '1px solid var(--ui-border-muted)',
               borderRadius: 8,
             }}

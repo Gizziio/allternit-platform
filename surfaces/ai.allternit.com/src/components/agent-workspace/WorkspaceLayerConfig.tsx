@@ -284,7 +284,7 @@ export function WorkspaceLayerConfigurator({
         <span style={{ fontSize: '13px', color: theme.textMuted, marginRight: '8px' }}>
           Presets:
         </span>
-        <button
+        <button type="button"
           onClick={() => onChange({ cognitive: true, identity: true, governance: true, skills: true, business: false })}
           style={{
             fontSize: '12px',
@@ -298,7 +298,7 @@ export function WorkspaceLayerConfigurator({
         >
           Standard
         </button>
-        <button
+        <button type="button"
           onClick={() => onChange({ cognitive: true, identity: true, governance: true, skills: true, business: true })}
           style={{
             fontSize: '12px',
@@ -312,7 +312,7 @@ export function WorkspaceLayerConfigurator({
         >
           Full
         </button>
-        <button
+        <button type="button"
           onClick={() => onChange({ cognitive: false, identity: true, governance: false, skills: false, business: false })}
           style={{
             fontSize: '12px',

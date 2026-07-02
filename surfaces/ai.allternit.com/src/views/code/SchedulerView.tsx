@@ -1,16 +1,18 @@
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../../design/glass/GlassCard';
 import {
   Clock,
   Play,
-  Pause,
   CheckCircle,
   Calendar,
   ArrowsClockwise,
   Plus,
 } from '@phosphor-icons/react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('SchedulerView');
 
 interface ScheduledDagMetadata {
   title?: string;
@@ -122,7 +124,7 @@ export function SchedulerView() {
     try {
       await executeDag(dagId);
     } catch (err) {
-      console.error('Failed to run job:', err);
+      logger.error({ err: err }, 'Failed to run job:');
     }
   };
 
@@ -172,7 +174,7 @@ export function SchedulerView() {
           Scheduled Jobs
         </h2>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
+          <button type="button"
             onClick={() => fetchDags()}
             disabled={isLoading}
             style={{
@@ -188,7 +190,7 @@ export function SchedulerView() {
           >
             <ArrowsClockwise size={16} color="#888" className={isLoading ? 'animate-spin' : ''} />
           </button>
-          <button
+          <button type="button"
             onClick={() => setIsCreating(true)}
             style={{
               padding: '8px 16px',
@@ -235,11 +237,10 @@ export function SchedulerView() {
           <h4 style={{ margin: '0 0 12px 0', fontSize: 14 }}>Create New Scheduled Job</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
+              <div style={{ display: 'block', fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
                 Select DAG
-              </label>
-              <select
-                value={newJobDagId}
+              </div>
+              <select aria-label="Selection" value={newJobDagId}
                 onChange={(e) => setNewJobDagId(e.target.value)}
                 style={{
                   width: '100%',
@@ -260,11 +261,10 @@ export function SchedulerView() {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
+              <div style={{ display: 'block', fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
                 Schedule (Cron Expression)
-              </label>
-              <input
-                type="text"
+              </div>
+              <input aria-label="Input" type="text"
                 value={newJobSchedule}
                 onChange={(e) => setNewJobSchedule(e.target.value)}
                 placeholder="0 * * * *"
@@ -284,7 +284,7 @@ export function SchedulerView() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button
+              <button type="button"
                 onClick={() => setIsCreating(false)}
                 style={{
                   flex: 1,
@@ -299,7 +299,7 @@ export function SchedulerView() {
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={handleCreateJob}
                 disabled={!newJobDagId}
                 style={{
@@ -333,7 +333,7 @@ export function SchedulerView() {
         }}>
           <Calendar size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
           <p>No scheduled jobs</p>
-          <button
+          <button type="button"
             onClick={() => setIsCreating(true)}
             style={{
               marginTop: 12,
@@ -390,7 +390,7 @@ export function SchedulerView() {
                     </div>
                   )}
                 </div>
-                <button 
+                <button type="button" 
                   onClick={() => toggleJobStatus(job.id)}
                   style={{ 
                     background: 'transparent', 
@@ -436,7 +436,7 @@ export function SchedulerView() {
                     <span>Next: {formatTimeAgo(job.nextRun)}</span>
                   </div>
                 )}
-                <button
+                <button type="button"
                   onClick={() => runJobNow(job.dagId)}
                   style={{
                     marginLeft: 'auto',

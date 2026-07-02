@@ -90,7 +90,7 @@ export const Labels: Story = {
  * Interactive chip with state
  */
 export const WithState: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [active, setActive] = useState(false);
     return (
       <ActionChip 
@@ -116,7 +116,7 @@ export const WithState: Story = {
  * Multiple selectable chips
  */
 export const MultiSelect: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [selected, setSelected] = useState<string[]>(['option1']);
     const options = [
       { id: 'option1', label: 'Option 1' },

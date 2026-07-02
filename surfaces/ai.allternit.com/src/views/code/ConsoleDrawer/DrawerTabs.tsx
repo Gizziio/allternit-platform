@@ -104,7 +104,7 @@ interface TabProps {
 
 function Tab({ id, label, icon: Icon, active, onClick, disabled = false, tooltip }: TabProps) {
   return (
-    <button
+    <button type="button"
       onClick={() => !disabled && onClick(id)}
       disabled={disabled}
       title={tooltip}

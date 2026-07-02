@@ -17,6 +17,10 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('RiveErrorBoundary');
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -93,7 +97,7 @@ export class RiveErrorBoundary extends Component<Props, State> {
  * }
  * ```
  */
-export function useRiveErrorBoundary() {
+function useRiveErrorBoundary() {
   const [state, setState] = React.useState<{ hasError: boolean; error?: Error }>({
     hasError: false,
   });

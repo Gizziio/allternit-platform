@@ -1,6 +1,7 @@
+import React from 'react';
 import { ReceiptsViewerSurface } from "./DagRuntimeWorkspace";
 
-export function ReceiptsViewer(): JSX.Element {
+export function ReceiptsViewer(): React.ReactNode {
   return <ReceiptsViewerSurface />;
 }
 

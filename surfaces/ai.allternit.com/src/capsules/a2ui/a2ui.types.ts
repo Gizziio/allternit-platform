@@ -299,7 +299,7 @@ export interface AccordionProps extends BaseComponentProps {
   expandedPaths?: string[]; // Data paths for expanded state
 }
 
-export interface BreadcrumbsProps extends BaseComponentProps {
+interface BreadcrumbsProps extends BaseComponentProps {
   items: Array<{
     label: string;
     href?: string;
@@ -308,7 +308,7 @@ export interface BreadcrumbsProps extends BaseComponentProps {
   onNavigate?: string; // Action ID
 }
 
-export interface PaginationProps extends BaseComponentProps {
+interface PaginationProps extends BaseComponentProps {
   pagePath: string;
   pageSize: number;
   totalPath: string;

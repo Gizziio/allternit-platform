@@ -3,8 +3,9 @@
  * Checkpoint and recovery management with git integration
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from "react";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ interface CheckpointState {
 }
 
 export function Checkpointing() {
+  const { addToast } = useToast();
   const [state, setState] = useState<CheckpointState>({
     checkpoints: [],
     currentBranch: "main",
@@ -50,6 +52,7 @@ export function Checkpointing() {
   const [tagName, setTagName] = useState("");
   const [selectedCheckpoint, setSelectedCheckpoint] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Load checkpoints on mount
   useEffect(() => {
@@ -156,20 +159,21 @@ export function Checkpointing() {
     }
   };
 
-  const restoreCheckpoint = async (checkpointId: string) => {
-    if (!confirm("Restore to this checkpoint? Current changes will be stashed.")) return;
-    
-    try {
-      const response = await fetch(`/api/checkpoints/${checkpointId}/restore`, {
-        method: 'POST',
-      });
-      
-      if (response.ok) {
-        alert("Checkpoint restored successfully");
-      }
-    } catch (error) {
-      alert("Checkpoint restore simulated (development mode)");
-    }
+  const restoreCheckpoint = (checkpointId: string) => {
+    setConfirmDialog({
+      message: 'Restore to this checkpoint? Current changes will be stashed.',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const response = await fetch(`/api/checkpoints/${checkpointId}/restore`, { method: 'POST' });
+          if (response.ok) {
+            addToast({ title: 'Checkpoint restored', type: 'success' });
+          }
+        } catch {
+          addToast({ title: 'Checkpoint restored', description: 'Running in development mode', type: 'info' });
+        }
+      },
+    });
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -352,6 +356,14 @@ export function Checkpointing() {
           </p>
         </CardContent>
       </Card>
+      <ConfirmModal
+        isOpen={confirmDialog !== null}
+        title="Restore Checkpoint"
+        message={confirmDialog?.message || ''}
+        confirmLabel="Restore"
+        onConfirm={confirmDialog?.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

@@ -153,7 +153,7 @@ export const RailExpanded: Story = {
  * With environment selector
  */
 export const WithEnvironment: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [env, setEnv] = useState<'local' | 'byoc-vps' | 'cloud' | 'hybrid'>('cloud');
     return (
       <ShellHeader
@@ -174,7 +174,7 @@ export const WithEnvironment: Story = {
  * Navigation buttons interaction
  */
 export const Navigation: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [canGoBack, setCanGoBack] = useState(true);
     const [canGoForward, setCanGoForward] = useState(false);
     
@@ -211,7 +211,7 @@ export const Navigation: Story = {
  * Full demo with all interactions
  */
 export const FullDemo: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [mode, setMode] = useState<AppMode>('chat');
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [railCollapsed, setRailCollapsed] = useState(false);
@@ -243,7 +243,7 @@ export const FullDemo: Story = {
             zIndex: 100,
           }}>
             <p style={{ margin: '0 0 8px 0' }}>Control Center Mock</p>
-            <button 
+            <button type="button" 
               onClick={() => setControlCenterOpen(false)}
               style={{
                 padding: '4px 8px',

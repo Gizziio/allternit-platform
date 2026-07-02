@@ -115,19 +115,19 @@ export function applyRuntimeBackendSnapshot(
   });
 }
 
-export function getRuntimeBackendSnapshotSync(): ClientRuntimeBackendSnapshot {
+function getRuntimeBackendSnapshotSync(): ClientRuntimeBackendSnapshot {
   return readStoredSnapshot() ?? buildDefaultSnapshot();
 }
 
-export function getRuntimeGatewayBaseUrlSync(): string {
+function getRuntimeGatewayBaseUrlSync(): string {
   return getRuntimeBackendSnapshotSync().resolved_gateway_url;
 }
 
-export function getRuntimeGatewayWsBaseUrlSync(): string {
+function getRuntimeGatewayWsBaseUrlSync(): string {
   return getRuntimeBackendSnapshotSync().resolved_gateway_ws_url;
 }
 
-export function getRuntimeGatewayTokenSync(): string | null {
+function getRuntimeGatewayTokenSync(): string | null {
   if (!isBrowser()) return null;
   const win = window as unknown as Window & Record<string, unknown>;
   const winToken = win.__ALLTERNIT_GATEWAY_TOKEN__;

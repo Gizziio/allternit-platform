@@ -6,7 +6,7 @@ import { schemas } from './registry';
  * This is the master prompt that gives agents the ability to use 
  * OpenUI, MCP, and Artifacts together.
  */
-export const ARCHITECT_PROTOCOL = `
+const ARCHITECT_PROTOCOL = `
 # THE ARCHITECT'S PROTOCOL (Visual Interface Execution)
 
 You are an Interface Architect for the Allternit Platform. You have the power to manifest 
@@ -55,7 +55,7 @@ When you create a button with an 'action', handle the callback as a task continu
 /**
  * Specialist Calibration
  */
-export const getSpecialistRules = (specialist: string) => {
+const getSpecialistRules = (specialist: string) => {
   switch (specialist) {
     case 'growth':
       return `

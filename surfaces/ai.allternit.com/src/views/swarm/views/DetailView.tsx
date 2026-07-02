@@ -63,7 +63,7 @@ export function DetailView({
         <div className="text-center" style={{ opacity: 0.5 }}>
           <CursorClick size={40} weight="duotone" style={{ margin: '0 auto 12px' }} />
           <p className="text-sm">Select an agent to view details</p>
-          <button
+          <button type="button"
             onClick={onBack}
             className="mt-4 px-4 py-2 rounded-lg text-sm"
             style={{
@@ -92,7 +92,7 @@ export function DetailView({
         }}
       >
         <div className="p-4 border-b" style={{ borderColor: BORDER.subtle }}>
-          <button
+          <button type="button"
             onClick={onBack}
             className="flex items-center gap-2 text-sm transition-opacity hover:opacity-70"
             style={{ color: TEXT.secondary }}
@@ -108,7 +108,7 @@ export function DetailView({
             const agentWorking = agent.status === 'working';
 
             return (
-              <button
+              <button type="button"
                 key={agent.id}
                 onClick={() => onAgentSelect(agent.id)}
                 className="w-full p-3 rounded-xl text-left transition-all"
@@ -294,7 +294,7 @@ export function DetailView({
 
           {/* Actions */}
           <div className="flex gap-3">
-            <button
+            <button type="button"
               onClick={() => onViewLogs?.(selectedAgent.id)}
               className="flex-1 py-3 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 flex items-center justify-center gap-2"
               style={{
@@ -306,7 +306,7 @@ export function DetailView({
               <Terminal size={14} weight="duotone" />
               View Logs
             </button>
-            <button
+            <button type="button"
               onClick={() => onRestart?.(selectedAgent.id)}
               className="flex-1 py-3 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 flex items-center justify-center gap-2"
               style={{
@@ -318,7 +318,7 @@ export function DetailView({
               <ArrowsClockwise size={14} weight="bold" />
               Restart
             </button>
-            <button
+            <button type="button"
               onClick={() => onStop?.(selectedAgent.id)}
               disabled={selectedAgent.status === 'offline'}
               className="flex-1 py-3 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"

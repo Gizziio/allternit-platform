@@ -59,7 +59,7 @@ export function LiveArtifactEditor() {
   }, [template, dataJson]);
 
   const handleSave = useCallback(() => {
-    const artifact: LiveArtifact = {
+const artifact: LiveArtifact = {
       id: `live-${Date.now()}`,
       name,
       templateHtml: template,
@@ -87,15 +87,15 @@ export function LiveArtifactEditor() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-panel)', flexShrink: 0 }}>
-        <input
-          value={name}
+        <input aria-label="Input" value={name}
           onChange={e => setName(e.target.value)}
-          style={{ background: 'transparent', border: 'none', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', outline: 'none', flex: 1 }}
+          className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
+          style={{ background: 'transparent', border: 'none', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}
         />
-        <button onClick={handleNew} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+        <button type="button" onClick={handleNew} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer' }}>
           <Plus size={12} /> New
         </button>
-        <button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+        <button type="button" onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
           <FloppyDisk size={12} /> Save
         </button>
       </div>
@@ -105,10 +105,10 @@ export function LiveArtifactEditor() {
         {/* Left: Template editor */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-subtle)', minWidth: 0 }}>
           <div style={{ padding: '6px 12px', fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Template</div>
-          <textarea
-            value={template}
+          <textarea aria-label="Text Area" value={template}
             onChange={e => setTemplate(e.target.value)}
-            style={{ flex: 1, padding: 12, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'var(--font-mono, monospace)', background: 'var(--bg-primary)', color: 'var(--text-primary)', resize: 'none' }}
+            className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
+            style={{ flex: 1, padding: 12, border: 'none', fontSize: 12, fontFamily: 'var(--font-mono, monospace)', background: 'var(--bg-primary)', color: 'var(--text-primary)', resize: 'none' }}
           />
         </div>
 
@@ -125,16 +125,16 @@ export function LiveArtifactEditor() {
       <div style={{ height: 180, borderTop: '1px solid var(--border-subtle)', display: 'flex', flexShrink: 0 }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-subtle)', minWidth: 0 }}>
           <div style={{ padding: '6px 12px', fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Data (JSON)</div>
-          <textarea
-            value={dataJson}
+          <textarea aria-label="Text Area" value={dataJson}
             onChange={e => setDataJson(e.target.value)}
-            style={{ flex: 1, padding: 12, border: 'none', outline: 'none', fontSize: 12, fontFamily: 'var(--font-mono, monospace)', background: 'var(--bg-primary)', color: 'var(--text-primary)', resize: 'none' }}
+            className="focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)] focus-visible:outline-none"
+            style={{ flex: 1, padding: 12, border: 'none', fontSize: 12, fontFamily: 'var(--font-mono, monospace)', background: 'var(--bg-primary)', color: 'var(--text-primary)', resize: 'none' }}
           />
         </div>
         <div style={{ width: 220, display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', overflowY: 'auto' }}>
           <div style={{ padding: '6px 12px', fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Saved ({artifacts.length})</div>
           {artifacts.map(a => (
-            <button
+            <button type="button"
               key={a.id}
               onClick={() => handleLoad(a)}
               style={{ padding: '8px 12px', textAlign: 'left', border: 'none', background: 'transparent', borderBottom: '1px solid var(--border-subtle)', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}

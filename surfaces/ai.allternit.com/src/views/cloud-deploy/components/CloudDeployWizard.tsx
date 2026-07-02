@@ -134,8 +134,6 @@ const WizardStep: React.FC<WizardStepProps> = ({
           key={config.providerId}
           providerId={config.providerId || ''}
           onNext={() => {
-            // Store credentials securely (in production, use secure storage)
-            console.debug('Credentials entered');
             handleNext({});
           }}
           onBack={handleBack}

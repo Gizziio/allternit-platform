@@ -53,11 +53,10 @@ const QuestionBlock = memo(function QuestionBlock({
           {question.options.map((opt) => {
             const active = selected.includes(opt.label);
             return (
-              <button
+              <button type="button"
                 key={opt.label}
                 className={`question-option${active ? ' question-option-active' : ''}`}
                 onClick={() => toggleOption(opt.label)}
-                type="button"
               >
                 <span className="question-option-label">{opt.label}</span>
                 {opt.description && (
@@ -70,8 +69,7 @@ const QuestionBlock = memo(function QuestionBlock({
       )}
 
       {question.custom && (
-        <textarea
-          className="question-custom"
+        <textarea aria-label="Type a custom answer…" className="question-custom"
           placeholder="Type a custom answer…"
           value={customText}
           rows={2}
@@ -149,7 +147,7 @@ const QuestionCard = memo(function QuestionCard({ request }: QuestionCardProps) 
       <div className="question-card-header">
         <span className="question-card-icon" aria-hidden="true">?</span>
         <span className="question-card-title">Agent Question</span>
-        <button
+        <button type="button"
           className="question-card-dismiss"
           onClick={handleReject}
           disabled={busy}
@@ -163,7 +161,7 @@ const QuestionCard = memo(function QuestionCard({ request }: QuestionCardProps) 
       <div className="question-card-body">
         {request.questions.map((q, i) => (
           <QuestionBlock
-            key={i}
+            key={`questionmodal-${i}`}
             question={q}
             index={i}
             value={answers[i] ?? ''}
@@ -174,7 +172,7 @@ const QuestionCard = memo(function QuestionCard({ request }: QuestionCardProps) 
 
       {/* Submit */}
       <div className="question-card-footer">
-        <button
+        <button type="button"
           className="question-submit"
           onClick={handleSubmit}
           disabled={busy || !hasAnswers}
@@ -217,11 +215,11 @@ export const QuestionModal = memo(function QuestionModal({ sessionId }: Question
 
 const styles = `
 .question-card {
-  background: #1e1e1e;
-  border: 1px solid rgba(147, 197, 253, 0.2);
+  background: var(--surface-floating, #1a1714);
+  border: 1px solid rgba(200, 169, 110, 0.22);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(200,169,110,0.05);
 }
 
 .question-card-header {
@@ -229,23 +227,28 @@ const styles = `
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background: rgba(147, 197, 253, 0.06);
-  border-bottom: 1px solid rgba(147, 197, 253, 0.1);
+  background: rgba(200, 169, 110, 0.06);
+  border-bottom: 1px solid rgba(200, 169, 110, 0.10);
 }
 
 .question-card-icon {
-  width: 14px;
-  height: 14px;
-  color: #93c5fd;
+  width: 16px;
+  height: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-cowork, #c8a96e);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .question-card-title {
   font-size: 11px;
-  font-weight: 600;
-  color: #93c5fd;
+  font-weight: 700;
+  color: var(--accent-cowork, #c8a96e);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
   flex: 1;
 }
 
@@ -258,26 +261,26 @@ const styles = `
   border-radius: 4px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.28);
   cursor: pointer;
   padding: 0;
-  transition: background 0.15s;
+  transition: background 0.13s, color 0.13s;
 }
 
 .question-card-dismiss:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.07);
   color: rgba(255, 255, 255, 0.6);
 }
 
 .question-card-body {
-  padding: 12px 14px;
+  padding: 14px 14px 10px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
 .question-card-footer {
-  padding: 10px 14px;
+  padding: 10px 14px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   justify-content: flex-end;
@@ -291,18 +294,18 @@ const styles = `
 
 .question-header {
   font-size: 10px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+  color: rgba(200, 169, 110, 0.45);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   margin: 0;
 }
 
 .question-text {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(236, 236, 236, 0.82);
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .question-options {
@@ -318,75 +321,78 @@ const styles = `
   gap: 2px;
   padding: 8px 10px;
   border-radius: 7px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.13s, border-color 0.13s;
   text-align: left;
+  width: 100%;
 }
 
 .question-option:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(200, 169, 110, 0.06);
+  border-color: rgba(200, 169, 110, 0.18);
 }
 
 .question-option-active {
-  background: rgba(147, 197, 253, 0.08) !important;
-  border-color: rgba(147, 197, 253, 0.3) !important;
+  background: rgba(200, 169, 110, 0.10) !important;
+  border-color: rgba(200, 169, 110, 0.32) !important;
 }
 
 .question-option-label {
   font-size: 12px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(236, 236, 236, 0.75);
 }
 
 .question-option-active .question-option-label {
-  color: #93c5fd;
+  color: var(--accent-cowork, #c8a96e);
 }
 
 .question-option-desc {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.32);
+  line-height: 1.4;
 }
 
 .question-custom {
   width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 7px;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(236, 236, 236, 0.78);
   font-size: 12px;
   padding: 8px 10px;
   resize: none;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.13s;
   box-sizing: border-box;
 }
 
 .question-custom:focus {
-  border-color: rgba(147, 197, 253, 0.3);
+  border-color: rgba(200, 169, 110, 0.32);
 }
 
 .question-submit {
-  padding: 6px 16px;
-  border-radius: 6px;
+  padding: 7px 18px;
+  border-radius: 7px;
   font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-  background: rgba(147, 197, 253, 0.15);
-  border: 1px solid rgba(147, 197, 253, 0.3);
+  font-weight: 600;
+  color: rgba(236, 236, 236, 0.9);
+  background: rgba(200, 169, 110, 0.14);
+  border: 1px solid rgba(200, 169, 110, 0.3);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.13s, border-color 0.13s;
 }
 
 .question-submit:hover:not(:disabled) {
-  background: rgba(147, 197, 253, 0.22);
+  background: rgba(200, 169, 110, 0.22);
+  border-color: rgba(200, 169, 110, 0.45);
 }
 
 .question-submit:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: not-allowed;
 }
 `;

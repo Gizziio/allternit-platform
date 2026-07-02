@@ -1,16 +1,16 @@
-"use client"
+import React, { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import { useEffect, useState, type ReactNode } from "react"
+"use client"
 import { useLocation } from "react-router-dom"
 import {
   ClerkProvider,
   SignIn,
   SignUp,
   useAuth,
-  useClerk,
+  useClerk as useClerkReact,
   useUser,
 } from "@clerk/clerk-react"
-
+import { cn } from "@/lib/utils"
 const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? ""
 const SIGN_IN_URL = process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL ?? "/sign-in"
 const SIGN_UP_URL = process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL ?? "/sign-up"
@@ -36,6 +36,10 @@ export interface PlatformUser {
   emailAddresses?: Array<{ emailAddress: string }>;
   imageUrl?: string | null;
 }
+
+type PlatformAuthShape = ReturnType<typeof buildDisabledAuthValue>
+
+const PlatformAuthContext = createContext<PlatformAuthShape | null>(null)
 
 function useDesktopSession() {
   const [session, setSession] = useState<DesktopSession | null>(null)
@@ -149,6 +153,9 @@ const clerkAppearance = {
     formFieldInputShowPasswordButton: {
       color: "#A98A75",
     },
+    formFieldInputShowPasswordButtonIcon: {
+      color: "#A98A75",
+    },
     footerActionText: {
       color: "#A98A75",
     },
@@ -194,7 +201,19 @@ const clerkAppearance = {
 } as const
 
 export function PlatformAuthProvider({ children }: { children: ReactNode }) {
-  if (authDisabled || !PUBLISHABLE_KEY) return <>{children}</>
+  const { session, isLoaded: desktopIsLoaded } = useDesktopSession()
+  const browserAuthSurface = useDesktopBrowserAuthSurface()
+
+  if (desktopAuthEnabled && !browserAuthSurface) {
+    const value = buildDesktopAuthValue(session, desktopIsLoaded)
+    return <PlatformAuthContext.Provider value={value}>{children}</PlatformAuthContext.Provider>
+  }
+
+  if (authDisabled || !PUBLISHABLE_KEY) {
+    const value = buildDisabledAuthValue()
+    return <PlatformAuthContext.Provider value={value}>{children}</PlatformAuthContext.Provider>
+  }
+
   return (
     <ClerkProvider
       publishableKey={PUBLISHABLE_KEY}
@@ -202,7 +221,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       signInUrl={SIGN_IN_URL}
       signUpUrl={SIGN_UP_URL}
     >
-      {children}
+      <ClerkPlatformAuthBridge>{children}</ClerkPlatformAuthBridge>
     </ClerkProvider>
   )
 }
@@ -212,117 +231,143 @@ export function usePlatformUser(): {
   isSignedIn: boolean;
   user: PlatformUser | null;
 } {
-  const { session, isLoaded } = useDesktopSession()
-  const browserAuthSurface = useDesktopBrowserAuthSurface()
-
-  if (desktopAuthEnabled && !browserAuthSurface) {
-    return {
-      isLoaded,
-      isSignedIn: Boolean(session),
-      user: session ? {
-        id: session.userId,
-        userEmail: session.userEmail,
-        primaryEmailAddress: { emailAddress: session.userEmail },
-        emailAddresses: [{ emailAddress: session.userEmail }],
-      } : null,
-    }
-  }
-
-  if (authDisabled) {
-    return { isLoaded: true as const, isSignedIn: false as const, user: null }
-  }
-
-  const clerkUser = useUser()
-  return {
-    isLoaded: clerkUser.isLoaded,
-    isSignedIn: clerkUser.isSignedIn ?? false,
-    user: (clerkUser.user as PlatformUser | null | undefined) ?? null,
-  }
+  const { user } = usePlatformAuthContext()
+  return user
 }
 
 export function usePlatformSessions() {
-  const { isLoaded, isSignedIn } = usePlatformAuth()
-  const clerk = useClerk()
-  const [sessions, setSessions] = useState<any[]>([])
-
-  useEffect(() => {
-    if (isSignedIn && clerk.client) {
-      setSessions(clerk.client.sessions)
-    }
-  }, [isSignedIn, clerk.client])
-
-  return { isLoaded, sessions }
+  const { sessions } = usePlatformAuthContext()
+  return sessions
 }
 
-export { useClerk }
+export function useClerk() {
+  return usePlatformAuthContext().clerk
+}
 
 export function usePlatformAuth() {
-  const { session, isLoaded } = useDesktopSession()
-  const browserAuthSurface = useDesktopBrowserAuthSurface()
-
-  if (desktopAuthEnabled && !browserAuthSurface) {
-    return {
-      isLoaded,
-      isSignedIn: Boolean(session),
-      userId: session?.userId ?? null,
-      sessionId: null,
-      orgId: null,
-      actor: null,
-      getToken: async () => session?.accessToken ?? null,
-    }
-  }
-
-  if (authDisabled) {
-    return {
-      isLoaded: true as const,
-      isSignedIn: false as const,
-      userId: null,
-      sessionId: null,
-      orgId: null,
-      actor: null,
-      getToken: async () => null as string | null,
-    }
-  }
-
-  return useAuth()
+  const { auth } = usePlatformAuthContext()
+  return auth
 }
 
 export function usePlatformSignOut() {
-  const browserAuthSurface = useDesktopBrowserAuthSurface()
-
-  if (desktopAuthEnabled && !browserAuthSurface) {
-    return async (_options?: unknown) => {
-      await window.allternit?.auth?.signOut()
-    }
-  }
-
-  if (authDisabled) {
-    return async (_options?: unknown) => {}
-  }
-
-  const clerk = useClerk()
-  return clerk.signOut
+  return usePlatformAuthContext().signOut
 }
 
 export function usePlatformHardSignOut() {
-  if (desktopAuthEnabled) {
-    return async () => {
+  return usePlatformAuthContext().hardSignOut
+}
+
+function buildDesktopUser(session: DesktopSession | null) {
+  return session ? {
+    id: session.userId,
+    userEmail: session.userEmail,
+    primaryEmailAddress: { emailAddress: session.userEmail },
+    emailAddresses: [{ emailAddress: session.userEmail }],
+  } satisfies PlatformUser : null
+}
+
+function buildDisabledAuthValue() {
+  return {
+    user: {
+      isLoaded: true as boolean,
+      isSignedIn: false as boolean,
+      user: null as PlatformUser | null,
+    },
+    sessions: {
+      isLoaded: true as boolean,
+      sessions: [] as any[],
+    },
+    auth: {
+      isLoaded: true as boolean,
+      isSignedIn: false as boolean | undefined,
+      userId: null as string | null | undefined,
+      sessionId: null as string | null | undefined,
+      orgId: null as string | null | undefined,
+      actor: null as unknown,
+      getToken: async () => null as string | null,
+    },
+    signOut: async (_options?: any) => {},
+    hardSignOut: async (_options?: any) => {},
+    clerk: null as any,
+  }
+}
+
+function buildDesktopAuthValue(session: DesktopSession | null, isLoaded: boolean) {
+  const user = buildDesktopUser(session)
+  return {
+    user: {
+      isLoaded,
+      isSignedIn: Boolean(session),
+      user,
+    },
+    sessions: {
+      isLoaded,
+      sessions: [] as any[],
+    },
+    auth: {
+      isLoaded,
+      isSignedIn: Boolean(session),
+      userId: session?.userId ?? null,
+      sessionId: null as string | null,
+      orgId: null as string | null,
+      actor: null as unknown,
+      getToken: async () => session?.accessToken ?? null,
+    },
+    signOut: async (_options?: unknown) => {
+      await window.allternit?.auth?.signOut()
+    },
+    hardSignOut: async (_options?: unknown) => {
       if (window.allternit?.auth?.hardSignOut) {
         await window.allternit.auth.hardSignOut()
         return
       }
       await window.allternit?.auth?.signOut()
+    },
+    clerk: null as any,
+  }
+}
+
+function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
+  const clerkUser = useUser()
+  const clerkAuth = useAuth()
+  const clerk = useClerkReact()
+  const [sessions, setSessions] = useState<any[]>([])
+
+  useEffect(() => {
+    if (clerkAuth.isSignedIn && clerk.client) {
+      setSessions(clerk.client.sessions)
+      return
     }
-  }
+    setSessions([])
+  }, [clerkAuth.isSignedIn, clerk.client])
 
-  if (authDisabled) {
-    return async () => {}
-  }
+  const value = useMemo(() => ({
+    user: {
+      isLoaded: clerkUser.isLoaded,
+      isSignedIn: clerkUser.isSignedIn ?? false,
+      user: (clerkUser.user as PlatformUser | null | undefined) ?? null,
+    },
+    sessions: {
+      isLoaded: clerkAuth.isLoaded,
+      sessions,
+    },
+    auth: clerkAuth,
+    signOut: clerk.signOut,
+    hardSignOut: async (options?: unknown) => {
+      await clerk.signOut(options as never)
+    },
+    clerk,
+  }), [clerk, clerkAuth, clerkUser, sessions])
 
-  const clerk = useClerk()
-  return async (options?: unknown) => {
-    await clerk.signOut(options as never)
+  return <PlatformAuthContext.Provider value={value}>{children}</PlatformAuthContext.Provider>
+}
+
+function usePlatformAuthContext() {
+  const context = useContext(PlatformAuthContext)
+  if (!context) {
+    throw new Error("PlatformAuthProvider is missing")
   }
+  return context
 }
 
 function DisabledAuthCard({
@@ -334,18 +379,10 @@ function DisabledAuthCard({
 }) {
   return (
     <div
-      style={{
-        padding: "20px 24px",
-        borderRadius: 12,
-        border: "1px solid #d1d5db",
-        background: "#fff",
-        maxWidth: 420,
-        width: "100%",
-        textAlign: "left",
-      }}
+      className="p-5 px-6 rounded-xl border border-solid border-[#d1d5db] bg-white max-w-[420px] w-full text-left"
     >
-      <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600 }}>{title}</h2>
-      <p style={{ margin: 0, fontSize: 14, color: "#6b7280", lineHeight: 1.5 }}>{description}</p>
+      <h2 className="m-0 mb-2 text-[18px] font-semibold">{title}</h2>
+      <p className="m-0 text-[14px] text-[#6b7280] leading-relaxed">{description}</p>
     </div>
   )
 }
@@ -356,10 +393,10 @@ export function PlatformSignIn(props: {
   signUpUrl?: string
 }) {
   const browserAuthSurface = useDesktopBrowserAuthSurface()
+  const [starting, setStarting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (desktopAuthEnabled && !browserAuthSurface) {
-    const [starting, setStarting] = useState(false)
-    const [error, setError] = useState<string | null>(null)
 
     const handleDesktopSignIn = async () => {
       setError(null)
@@ -374,40 +411,24 @@ export function PlatformSignIn(props: {
 
     return (
       <div
-        style={{
-          padding: "20px 24px",
-          borderRadius: 12,
-          border: "1px solid #d1d5db",
-          background: "#fff",
-          maxWidth: 420,
-          width: "100%",
-          textAlign: "left",
-        }}
+        className="p-5 px-6 rounded-xl border border-solid border-[#d1d5db] bg-white max-w-[420px] w-full text-left"
       >
-        <h2 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 600 }}>Sign in with Allternit Desktop</h2>
-        <p style={{ margin: "0 0 16px", fontSize: 14, color: "#6b7280", lineHeight: 1.5 }}>
+        <h2 className="m-0 mb-2 text-[18px] font-semibold">Sign in with Allternit Desktop</h2>
+        <p className="m-0 mb-4 text-[14px] text-[#6b7280] leading-relaxed">
           Continue in your browser to complete the real Allternit account sign-in flow, then return to the desktop app automatically.
         </p>
-        <button
+        <button type="button"
           onClick={() => void handleDesktopSignIn()}
           disabled={starting}
-          style={{
-            width: "100%",
-            padding: "12px 16px",
-            borderRadius: 10,
-            border: "none",
-            background: "#D97757",
-            color: "#140F0B",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: starting ? "not-allowed" : "pointer",
-            opacity: starting ? 0.7 : 1,
-          }}
+          className={cn(
+            "w-full p-3 px-4 rounded-[10px] border-none bg-[#D97757] text-[#140F0B] text-[14px] font-bold transition-all",
+            starting ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+          )}
         >
           {starting ? "Opening browser…" : "Continue in browser"}
         </button>
         {error ? (
-          <p style={{ margin: "12px 0 0", fontSize: 12, color: "#dc2626", lineHeight: 1.5 }}>{error}</p>
+          <p className="m-0 mt-3 text-[12px] text-[#dc2626] leading-relaxed">{error}</p>
         ) : null}
       </div>
     )

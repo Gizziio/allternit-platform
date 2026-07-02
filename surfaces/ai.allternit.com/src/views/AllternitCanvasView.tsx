@@ -56,7 +56,6 @@ export function AllternitCanvasView({
   const [fullscreenCanvas, setFullscreenCanvas] = useState(false);
   
   // Canvas state
-  const [, setActiveArtifactId] = useState<string | null>(initialArtifactId || null);
   const [activeRenderer, setActiveRenderer] = useState<ArtifactKind | null>(null);
   
   // MoA state

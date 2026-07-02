@@ -1,6 +1,7 @@
+import React from 'react';
 import { DirectiveCompilerSurface } from "./DagRuntimeWorkspace";
 
-export function DirectiveCompiler(): JSX.Element {
+export function DirectiveCompiler(): React.ReactNode {
   return <DirectiveCompilerSurface />;
 }
 

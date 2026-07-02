@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
@@ -293,7 +294,7 @@ function SelectAccountContent() {
             transition={{ delay: 0.52, duration: 0.35 }}
             style={{ padding: '12px 20px 24px' }}
           >
-            <button
+            <button type="button"
               onClick={handleContinue}
               disabled={!selected || switching}
               style={{

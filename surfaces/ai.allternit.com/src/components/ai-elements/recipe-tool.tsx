@@ -4,13 +4,13 @@ import React, { useState } from 'react';
 import { Clock, Users, ForkKnife, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
-export interface RecipeIngredient {
+interface RecipeIngredient {
   name: string;
   amount: string;
   unit?: string;
 }
 
-export interface RecipeStep {
+interface RecipeStep {
   description: string;
   durationMinutes?: number;
 }
@@ -111,8 +111,7 @@ export function RecipeDraft({
                   ? scaledAmount.toString()
                   : scaledAmount.toFixed(1);
               return (
-                <li key={i} className="flex items-baseline gap-1.5 text-xs">
-                  <span className="font-medium tabular-nums text-foreground">
+                <li key={ing.name} className="flex items-baseline gap-1.5 text-xs">                  <span className="font-medium tabular-nums text-foreground">
                     {display}{ing.unit ? ` ${ing.unit}` : ''}
                   </span>
                   <span className="text-muted-foreground">{ing.name}</span>
@@ -155,9 +154,8 @@ export function RecipeDraft({
             <div className="flex gap-1 flex-1 justify-center">
               {steps.map((_, i) => (
                 <button
-                  key={i}
-                  type="button"
-                  onClick={() => setActiveStep(i)}
+                  key={`step-dot-${i}`}
+                  type="button"                  onClick={() => setActiveStep(i)}
                   className={cn(
                     "h-1.5 rounded-full transition-all",
                     i === activeStep ? "w-4 bg-primary" : "w-1.5 bg-muted-foreground/30"

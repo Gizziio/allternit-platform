@@ -1,7 +1,5 @@
 import { memo } from "react";
 import type { TimelineStep, StepState } from "../types/timeline";
-// @ts-ignore - source-icons module not yet created
-import type { SourceType } from "../icons/source-icons";
 import { IconFileText } from "@tabler/icons-react";
 import { ToolRowBase } from "./tool-row-base";
 import { useToolComplete } from "../hooks/use-tool-complete";
@@ -11,9 +9,9 @@ import {
 } from "../utils/tool-adapters";
 import { cn } from "../utils/cn";
 
-export type SearchResult = { source: SourceType; title: string; date: string };
+export type SearchResult = { source: string; title: string; date: string };
 
-export type SearchGroupRichProps = {
+type SearchGroupRichProps = {
   toolSteps: Extract<TimelineStep, { type: "tool-call" }>[];
   stepStates: Record<string, StepState>;
   onStepComplete: (id: string) => void;
@@ -36,7 +34,7 @@ function CompleteTracker({
   return null;
 }
 
-export function SearchGroupRich({
+function SearchGroupRich({
   toolSteps,
   stepStates,
   onStepComplete,
@@ -81,7 +79,7 @@ export function SearchGroupRich({
             <div className="flex flex-col gap-1 p-1">
               {results.map((result, i) => (
                 <div
-                  key={i}
+                  key={`search-tool-${i}`}
                   className={cn(
                     "flex items-center gap-2 px-2 py-1 rounded-[calc(var(--an-tool-border-radius)-4px)] cursor-default",
                     "hover:bg-muted/50",
@@ -136,7 +134,7 @@ function normalizeResults(value: unknown): SearchResult[] | undefined {
       ) {
         return null;
       }
-      return { source: source as SourceType, title, date };
+      return { source, title, date };
     })
     .filter((item): item is SearchResult => Boolean(item));
   return parsed.length > 0 ? parsed : undefined;

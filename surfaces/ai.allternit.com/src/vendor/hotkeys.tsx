@@ -1,9 +1,8 @@
-import { HotkeysProvider, useHotkeys as useReactHotkeys } from 'react-hotkeys-hook';
-import type { Options as UseHotkeysOptions } from 'react-hotkeys-hook';
-import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { HotkeysProvider, useHotkeys as useReactHotkeys, type Options } from 'react-hotkeys-hook';
 
 // Re-export options type.
-export type { UseHotkeysOptions };
+export type UseHotkeysOptions = Options;
 
 // Define common platform shortcuts
 export const PLATFORM_SHORTCUTS = {

@@ -67,6 +67,10 @@ import { PreFlightCheck } from './PreFlightCheck';
 import { TemplatePreview } from './TemplatePreview';
 import { CostEstimator } from './CostEstimator';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('EnvironmentWizard');
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -376,7 +380,7 @@ export function EnvironmentWizard({ isOpen, onClose, initialTemplateId, onSucces
           }
         }
       } catch (err) {
-        console.error('Failed to load data:', err);
+        logger.error({ err: err }, 'Failed to load data:');
         setTemplates(defaultTemplates);
       } finally {
         setIsLoading(false);
@@ -652,7 +656,7 @@ function WizardHeader({
         </div>
 
         {!isDeploying && (
-          <button
+          <button type="button"
             onClick={onClose}
             className="size-8  rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
           >
@@ -874,7 +878,7 @@ function TemplateCard({
         </CardDescription>
         <div className="flex flex-wrap gap-1">
           {template.features.slice(0, 4).map((feature, i) => (
-            <Badge key={i} variant="secondary" className="text-xs">
+            <Badge key={`environmentwizard-${i}`} variant="secondary" className="text-xs">
               {feature}
             </Badge>
           ))}
@@ -914,9 +918,9 @@ function ConfigurationStep({
 
         {/* Environment Name */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <div className="text-sm font-medium">
             Environment Name <span className="text-destructive">*</span>
-          </label>
+          </div>
           <Input
             value={config.name || ''}
             onChange={(e) => onConfigChange('name', e.target.value)}
@@ -935,7 +939,7 @@ function ConfigurationStep({
           </h4>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">CPU Cores</label>
+              <div className="text-xs text-muted-foreground">CPU Cores</div>
               <Select
                 value={String(config.cpu || template.resourceRequirements?.minCpu || 1)}
                 onValueChange={(v) => onConfigChange('cpu', parseInt(v))}
@@ -951,7 +955,7 @@ function ConfigurationStep({
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">Memory</label>
+              <div className="text-xs text-muted-foreground">Memory</div>
               <Select
                 value={config.memory || template.resourceRequirements?.minMemory || '1GB'}
                 onValueChange={(v) => onConfigChange('memory', v)}
@@ -1038,10 +1042,10 @@ function VariableInput({
     case 'string':
       return (
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <div className="text-sm font-medium">
             {variable.label}
             {variable.required && <span className="text-destructive">*</span>}
-          </label>
+          </div>
           <Input
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
@@ -1053,10 +1057,10 @@ function VariableInput({
     case 'number':
       return (
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <div className="text-sm font-medium">
             {variable.label}
             {variable.required && <span className="text-destructive">*</span>}
-          </label>
+          </div>
           <Input
             type="number"
             value={value || 0}
@@ -1069,7 +1073,7 @@ function VariableInput({
       return (
         <div className="flex items-center justify-between p-3 border rounded-lg">
           <div>
-            <label className="text-sm font-medium">{variable.label}</label>
+            <div className="text-sm font-medium">{variable.label}</div>
             {variable.description && (
               <p className="text-xs text-muted-foreground">{variable.description}</p>
             )}
@@ -1084,10 +1088,10 @@ function VariableInput({
     case 'select':
       return (
         <div className="space-y-2">
-          <label className="text-sm font-medium">
+          <div className="text-sm font-medium">
             {variable.label}
             {variable.required && <span className="text-destructive">*</span>}
-          </label>
+          </div>
           <Select value={value || ''} onValueChange={onChange}>
             <SelectTrigger>
               <SelectValue />
@@ -1106,7 +1110,7 @@ function VariableInput({
     case 'secret':
       return (
         <div className="space-y-2">
-          <label className="text-sm font-medium">{variable.label}</label>
+          <div className="text-sm font-medium">{variable.label}</div>
           <div className="relative">
             <Input
               type={showSecret ? 'text' : 'password'}
@@ -1180,7 +1184,7 @@ function TargetSelectionStep({
         >
           {target === 'vps' && (
             <div className="mt-4 pt-4 border-t">
-              <label className="text-sm font-medium mb-2 block">Select VPS</label>
+              <div className="text-sm font-medium mb-2 block">Select VPS</div>
               <Select value={selectedVpsId} onValueChange={onVpsChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a VPS…" />
@@ -1208,10 +1212,10 @@ function TargetSelectionStep({
         >
           {target === 'cloud' && (
             <div className="mt-4 pt-4 border-t space-y-4">
-              <label className="text-sm font-medium block">Select Provider</label>
+              <div className="text-sm font-medium block">Select Provider</div>
               <div className="grid grid-cols-1 gap-2">
                 {cloudProviders.map(provider => (
-                  <button
+                  <button type="button"
                     key={provider.id}
                     onClick={() => onCloudProviderChange(provider.id)}
                     className={cn(
@@ -1302,7 +1306,7 @@ function TargetCard({
             {details && (
               <div className="flex flex-wrap gap-3 mt-3">
                 {details.map((detail, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <div key={`environmentwizard-${i}`} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <detail.icon className="size-3.5 " />
                     {detail.label}
                   </div>
@@ -1476,7 +1480,7 @@ function ReviewDeployStep({
             ) : (
               <div className="space-y-1">
                 {logs.map((log, i) => (
-                  <div key={i} className="text-green-400">
+                  <div key={`environmentwizard-${i}`} className="text-green-400">
                     {log}
                   </div>
                 ))}

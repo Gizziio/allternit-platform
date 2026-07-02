@@ -13,7 +13,7 @@ import { useState, useEffect, useCallback } from "react";
 // Types
 // ---------------------------------------------------------------------------
 
-export interface ConversationRecord {
+interface ConversationRecord {
   id: string;
   object: "conversation";
   created_at: string;
@@ -24,7 +24,7 @@ export interface ConversationRecord {
   branch_count: number;
 }
 
-export interface ConversationMessageRecord {
+interface ConversationMessageRecord {
   id: string;
   object: "conversation.message";
   created_at: string;
@@ -35,25 +35,25 @@ export interface ConversationMessageRecord {
   metadata: Record<string, unknown> | null;
 }
 
-export interface ConversationListResponse {
+interface ConversationListResponse {
   object: "list";
   data: ConversationRecord[];
   has_more: boolean;
 }
 
-export interface ConversationMessageListResponse {
+interface ConversationMessageListResponse {
   object: "list";
   conversation_id: string;
   data: ConversationMessageRecord[];
   has_more: boolean;
 }
 
-export interface ForkOptions {
+interface ForkOptions {
   fromMessageId?: string;
   title?: string;
 }
 
-export interface ForkResponse {
+interface ForkResponse {
   id: string;
   object: "conversation";
   created_at: string;
@@ -64,13 +64,13 @@ export interface ForkResponse {
   message_count: number;
 }
 
-export interface CreateConversationOptions {
+interface CreateConversationOptions {
   conversation_id?: string;
   title?: string;
   metadata?: Record<string, unknown>;
 }
 
-export interface AddMessageOptions {
+interface AddMessageOptions {
   role: "user" | "assistant" | "system";
   content: string;
   parentMessageId?: string;
@@ -81,7 +81,7 @@ export interface AddMessageOptions {
 // ConversationsAPI class
 // ---------------------------------------------------------------------------
 
-export class ConversationsAPI {
+class ConversationsAPI {
   private readonly baseUrl: string;
 
   constructor(baseUrl = "/api/v1/conversations") {
@@ -193,7 +193,7 @@ interface UseConversationsState {
   fork: (id: string, options?: ForkOptions) => Promise<ForkResponse>;
 }
 
-export function useConversations(): UseConversationsState {
+function useConversations(): UseConversationsState {
   const [conversations, setConversations] = useState<ConversationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { PROVIDERS, Provider, InstanceType } from '../data/providers';
+import { PROVIDERS, Provider } from '../data/providers';
 import './ProviderComparison.css';
 
 interface ProviderComparisonProps {
@@ -99,7 +99,7 @@ export const ProviderComparison: React.FC<ProviderComparisonProps> = ({
             <h2>🔍 Provider Comparison</h2>
             <p>Compare all {PROVIDERS.length} cloud providers side-by-side</p>
           </div>
-          <button className="btn-close" onClick={onClose}>×</button>
+          <button type="button" className="btn-close" onClick={onClose}>×</button>
         </div>
 
         {/* Recommendation Banner */}
@@ -111,7 +111,7 @@ export const ProviderComparison: React.FC<ProviderComparisonProps> = ({
             {recommendedProvider.currency === 'EUR' ? '€' : '$'}
             {recommendedProvider.startingPrice}/mo
           </span>
-          <button 
+          <button type="button" 
             className="btn-rec-select"
             onClick={() => onSelectProvider(recommendedProvider.id)}
           >
@@ -122,8 +122,8 @@ export const ProviderComparison: React.FC<ProviderComparisonProps> = ({
         {/* Filters */}
         <div className="comparison-filters">
           <div className="filter-group">
-            <label>Filter:</label>
-            <select value={filterBy} onChange={(e) => setFilterBy(e.target.value as FilterCriteria)}>
+            <div>Filter:</div>
+            <select aria-label="Selection" value={filterBy} onChange={(e) => setFilterBy(e.target.value as FilterCriteria)}>
               <option value="all">All Providers</option>
               <option value="automated">Automated Deployment</option>
               <option value="budget">Budget Friendly (&lt;$10)</option>
@@ -132,8 +132,8 @@ export const ProviderComparison: React.FC<ProviderComparisonProps> = ({
             </select>
           </div>
           <div className="filter-group">
-            <label>Sort by:</label>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortField)}>
+            <div>Sort by:</div>
+            <select aria-label="Selection" value={sortBy} onChange={(e) => setSortBy(e.target.value as SortField)}>
               <option value="price">Lowest Price</option>
               <option value="ram">Most RAM</option>
               <option value="cpu">Most CPU</option>
@@ -211,7 +211,7 @@ export const ProviderComparison: React.FC<ProviderComparisonProps> = ({
                         <span className="best-for-tag">{provider.bestFor}</span>
                       </td>
                       <td className="action-cell">
-                        <button
+                        <button type="button"
                           className={`btn-select ${isSelected ? 'selected' : ''}`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -238,11 +238,11 @@ export const ProviderComparison: React.FC<ProviderComparisonProps> = ({
 
         {/* Footer */}
         <div className="comparison-footer">
-          <button className="btn-secondary" onClick={onClose}>
+          <button type="button" className="btn-secondary" onClick={onClose}>
             Cancel
           </button>
           {selectedProvider && (
-            <button 
+            <button type="button" 
               className="btn-primary"
               onClick={onClose}
             >
@@ -263,7 +263,7 @@ const ProviderDetails: React.FC<{ provider: Provider }> = ({ provider }) => {
         <h4>Features</h4>
         <ul className="feature-list">
           {provider.features.map((feature, i) => (
-            <li key={i}>✓ {feature}</li>
+            <li key={`providercomparison-${i}`}>✓ {feature}</li>
           ))}
         </ul>
       </div>

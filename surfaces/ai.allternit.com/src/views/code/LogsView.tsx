@@ -76,8 +76,7 @@ export function LogsView() {
           borderRadius: 6
         }}>
           <Funnel size={14} color="#888" />
-          <input
-            type="text"
+          <input aria-label="Input" type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter logs…"
@@ -92,8 +91,7 @@ export function LogsView() {
           />
         </div>
         
-        <select
-          value={levelFilter}
+        <select aria-label="Selection" value={levelFilter}
           onChange={(e) => setLevelFilter(e.target.value)}
           style={{
             padding: '8px 12px',
@@ -111,8 +109,7 @@ export function LogsView() {
           <option value="error">Error</option>
         </select>
 
-        <select
-          value={sourceFilter}
+        <select aria-label="Selection" value={sourceFilter}
           onChange={(e) => setSourceFilter(e.target.value)}
           style={{
             padding: '8px 12px',
@@ -128,7 +125,7 @@ export function LogsView() {
           <option value="rails">Rails</option>
         </select>
 
-        <button
+        <button type="button"
           onClick={handleExport}
           style={{
             padding: '8px',
@@ -145,7 +142,7 @@ export function LogsView() {
           <DownloadSimple size={16} color="#888" />
         </button>
 
-        <button
+        <button type="button"
           onClick={clearLogs}
           style={{
             padding: '8px',

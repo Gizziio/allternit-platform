@@ -21,7 +21,7 @@ export type BrowserContentType =
   | 'component'; // Direct React component reference
 
 /** Base interface for all browser tabs */
-export interface BrowserTabBase {
+interface BrowserTabBase {
   id: string;
   title: string;
   favicon?: string;
@@ -128,7 +128,7 @@ export interface ProtocolParseResult {
 }
 
 /** Supported protocols and their mappings */
-export const PROTOCOL_MAP: Record<string, BrowserContentType> = {
+const PROTOCOL_MAP: Record<string, BrowserContentType> = {
   'http': 'web',
   'https': 'web',
   'a2ui': 'a2ui',

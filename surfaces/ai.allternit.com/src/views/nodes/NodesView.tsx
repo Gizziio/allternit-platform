@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Plus,
   Cloud,
   HardDrives,
   Terminal,
@@ -90,7 +89,7 @@ export function NodesView({ initialTab = 'nodes' }: NodesViewProps = {}) {
                 <Terminal key="icon" size={16} />,
                 " Terminal",
                 terminalNodeId && (
-                  <span key="close"
+                  <span role="button" tabIndex={0} key="close"
                     onClick={(e: any) => {
                       e.stopPropagation();
                       handleCloseTerminal();

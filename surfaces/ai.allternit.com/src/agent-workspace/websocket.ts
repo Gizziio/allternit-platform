@@ -18,7 +18,7 @@ export interface WebSocketMessage {
   timestamp: string;
 }
 
-export interface TaskUpdateMessage extends WebSocketMessage {
+interface TaskUpdateMessage extends WebSocketMessage {
   type: 'task_update';
   payload: {
     taskId: string;
@@ -30,7 +30,7 @@ export interface TaskUpdateMessage extends WebSocketMessage {
   };
 }
 
-export interface MemoryAppendMessage extends WebSocketMessage {
+interface MemoryAppendMessage extends WebSocketMessage {
   type: 'memory_append';
   payload: {
     entryId: string;
@@ -39,7 +39,7 @@ export interface MemoryAppendMessage extends WebSocketMessage {
   };
 }
 
-export interface PolicyChangeMessage extends WebSocketMessage {
+interface PolicyChangeMessage extends WebSocketMessage {
   type: 'policy_change';
   payload: {
     ruleId: string;
@@ -47,7 +47,7 @@ export interface PolicyChangeMessage extends WebSocketMessage {
   };
 }
 
-export interface ConnectionStatusMessage extends WebSocketMessage {
+interface ConnectionStatusMessage extends WebSocketMessage {
   type: 'connection_status';
   payload: {
     status: 'connected' | 'disconnected';
@@ -365,7 +365,7 @@ export class WorkspaceWebSocket {
 /**
  * Create a WebSocket URL from an HTTP URL
  */
-export function createWebSocketUrl(httpUrl: string, path: string = '/ws'): string {
+function createWebSocketUrl(httpUrl: string, path: string = '/ws'): string {
   const url = new URL(httpUrl);
   const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${url.host}${path}`;

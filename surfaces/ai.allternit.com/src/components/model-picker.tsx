@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from 'react';
 import { useModelDiscovery } from "@/integration/api-client";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Warning,
   Check,
-  CaretDown,
   CircleNotch,
   Sparkle,
 } from '@phosphor-icons/react';
@@ -110,20 +109,21 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
     validateModel,
   } = useModelDiscovery();
 
-  // Fetch providers when dialog opens
-  useEffect(() => {
-    if (open) {
-      fetchProviders();
-      if (defaultProfileId) {
-        setSelectedProfileId(defaultProfileId);
-        setStep("model");
-        const providerId = resolveProviderId(defaultProfileId);
-        if (providerId) {
-          discoverModels(providerId);
-        }
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    fetchProviders();
+    if (defaultProfileId) {
+      setSelectedProfileId(defaultProfileId);
+      setStep("model");
+      const providerId = resolveProviderId(defaultProfileId);
+      if (providerId) {
+        discoverModels(providerId);
       }
     }
-  }, [open, defaultProfileId, fetchProviders, discoverModels]);
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
 
   // Auto-validate when user types in freeform
   useEffect(() => {

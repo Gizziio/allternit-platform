@@ -64,7 +64,7 @@ export const ThreadsView: React.FC = () => {
                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Contextual code discussions</div>
               </div>
             </div>
-            <button
+            <button type="button"
               style={{
                 padding: '6px 12px',
                 backgroundColor: 'var(--accent-primary)',
@@ -94,7 +94,7 @@ export const ThreadsView: React.FC = () => {
           {/* Filter Pills */}
           <div style={{ display: 'flex', gap: '8px' }}>
             {(['all', 'open', 'resolved'] as const).map((filterOption) => (
-              <button
+              <button type="button"
                 key={filterOption}
                 onClick={() => setFilter(filterOption)}
                 style={{
@@ -151,7 +151,7 @@ export const ThreadsView: React.FC = () => {
                   }}
                 >
                   {/* Thread Header */}
-                  <div
+                  <div role="button" tabIndex={0}
                     onClick={() => toggleThreadExpand(thread.id)}
                     style={{
                       padding: '12px',

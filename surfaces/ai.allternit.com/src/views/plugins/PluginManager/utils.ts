@@ -38,7 +38,7 @@ export function parseGitHubRepoRef(value: string): { owner: string; repo: string
   };
 }
 
-export function isVersionNewer(remoteVersion: string | undefined, localVersion: string | undefined): boolean {
+function isVersionNewer(remoteVersion: string | undefined, localVersion: string | undefined): boolean {
   if (!remoteVersion) return false;
   if (!localVersion) return true;
 

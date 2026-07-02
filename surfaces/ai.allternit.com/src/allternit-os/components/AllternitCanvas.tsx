@@ -65,7 +65,7 @@ interface ProgramTabProps {
 
 const ProgramTab: React.FC<ProgramTabProps> = ({ program, isActive, onClick, onClose }) => {
   return (
-    <div
+    <div role="button" tabIndex={0}
       className={`
         group flex items-center gap-2 px-3 py-2 min-w-0 flex-1 max-w-[160px]
         cursor-pointer select-none transition-all duration-150
@@ -79,7 +79,7 @@ const ProgramTab: React.FC<ProgramTabProps> = ({ program, isActive, onClick, onC
     >
       <span className="text-sm flex-shrink-0">{program.icon}</span>
       <span className="text-xs truncate flex-1">{program.title}</span>
-      <button
+      <button type="button"
         className="
           opacity-0 group-hover:opacity-100 
           p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700
@@ -185,7 +185,7 @@ export const AllternitCanvas: React.FC<AllternitCanvasProps> = ({
 
   if (!useSidecarStore.getState().isExpanded) {
     return (
-      <div 
+      <div role="button" tabIndex={0} 
         className={`
           flex items-center justify-center
           w-8 bg-zinc-50 dark:bg-zinc-900 
@@ -231,7 +231,7 @@ export const AllternitCanvas: React.FC<AllternitCanvasProps> = ({
               Utility Pane
             </span>
             <div className="flex items-center gap-1">
-              <button
+              <button type="button"
                 className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
                 onClick={() => useSidecarStore.getState().setExpanded(false)}
                 title="Collapse"

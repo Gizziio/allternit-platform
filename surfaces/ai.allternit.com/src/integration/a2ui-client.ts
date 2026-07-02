@@ -176,12 +176,12 @@ class A2UIApiClient {
         const data = JSON.parse(event.data) as A2UIEvent;
         onEvent(data);
       } catch (err) {
-        console.error('[A2UI] Failed to parse event:', err);
+        logger.error({ err: err }, 'Failed to parse event');
       }
     };
 
     eventSource.onerror = (error) => {
-      console.error('[A2UI] EventSource error:', error);
+      logger.error({ err: error }, 'EventSource error');
       onError?.(new Error('EventSource connection failed'));
     };
 
@@ -269,6 +269,10 @@ export const a2uiApi = new A2UIApiClient();
 // ============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('A2uiClient');
 
 export function useA2UIApi() {
   return a2uiApi;

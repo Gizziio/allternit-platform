@@ -158,11 +158,15 @@ export function BrowserAttachStrip() {
 
   const [editingBaseUrl, setEditingBaseUrl] = useState(false);
   const [draftBaseUrl, setDraftBaseUrl] = useState(engineBaseUrl);
-  const statusTone = toneForStatus(status);
 
-  useEffect(() => {
+  // Inline state adjustment for engineBaseUrl change
+  const [prevEngineBaseUrl, setPrevEngineBaseUrl] = useState(engineBaseUrl);
+  if (engineBaseUrl !== prevEngineBaseUrl) {
+    setPrevEngineBaseUrl(engineBaseUrl);
     setDraftBaseUrl(engineBaseUrl);
-  }, [engineBaseUrl]);
+  }
+
+  const statusTone = toneForStatus(status);
 
   useEffect(() => {
     void refreshEngineHealth();

@@ -9,7 +9,6 @@
  * - Export functionality
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from "react";
 import {
   ClockCounterClockwise,
@@ -144,7 +143,7 @@ export function AuditTab() {
               <ClockCounterClockwise size={18} />
               Event Timeline
             </h3>
-            <button
+            <button type="button"
               onClick={() => fetchLedgerEvents(100)}
               style={{
                 padding: 6,
@@ -177,8 +176,7 @@ export function AuditTab() {
               }}
             >
               <MagnifyingGlass size={14} color="#888" />
-              <input
-                type="text"
+              <input aria-label="Input" type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search events…"
@@ -192,8 +190,7 @@ export function AuditTab() {
                 }}
               />
             </div>
-            <select
-              value={eventTypeFilter}
+            <select aria-label="Selection" value={eventTypeFilter}
               onChange={(e) => setEventTypeFilter(e.target.value)}
               style={{
                 padding: "8px 12px",
@@ -262,7 +259,7 @@ export function AuditTab() {
             gap: 8,
           }}
         >
-          <button
+          <button type="button"
             onClick={() => handleExport("json")}
             style={{
               flex: 1,
@@ -282,7 +279,7 @@ export function AuditTab() {
             <DownloadSimple size={14} />
             Export JSON
           </button>
-          <button
+          <button type="button"
             onClick={() => handleExport("csv")}
             style={{
               flex: 1,
@@ -421,7 +418,7 @@ function EventCard({
   const color = eventColors[event.event_type] || "#888";
 
   return (
-    <div
+    <div role="button" tabIndex={0}
       onClick={onClick}
       style={{
         padding: 12,
@@ -531,7 +528,7 @@ function EventDetail({ event }: { event: LedgerEvent }) {
       </div>
 
       <div>
-        <label
+        <div
           style={{
             display: "block",
             fontSize: 12,
@@ -540,7 +537,7 @@ function EventDetail({ event }: { event: LedgerEvent }) {
           }}
         >
           Payload
-        </label>
+        </div>
         <pre
           style={{
             background: "var(--bg-primary, #0a0a0a)",
@@ -563,7 +560,7 @@ function EventDetail({ event }: { event: LedgerEvent }) {
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <label
+      <div
         style={{
           display: "block",
           fontSize: 12,
@@ -573,7 +570,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
         }}
       >
         {label}
-      </label>
+      </div>
       <div
         style={{
           fontSize: 13,
@@ -609,7 +606,7 @@ function ContextPackDetail({
         overflow: "hidden",
       }}
     >
-      <div
+      <div role="button" tabIndex={0}
         onClick={onToggle}
         style={{
           padding: 12,
@@ -672,7 +669,7 @@ function ContextPackDetail({
           </div>
           {pack.inputs.receipt_refs && pack.inputs.receipt_refs.length > 0 && (
             <div>
-              <label
+              <div
                 style={{
                   display: "block",
                   fontSize: 12,
@@ -681,7 +678,7 @@ function ContextPackDetail({
                 }}
               >
                 Receipt References ({pack.inputs.receipt_refs.length})
-              </label>
+              </div>
               <div
                 style={{
                   display: "flex",

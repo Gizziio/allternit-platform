@@ -60,7 +60,7 @@ export function AllternitOperatorStatus() {
       onMouseLeave={() => setIsExpanded(false)}
     >
       {/* Compact Status Indicator */}
-      <button
+      <button type="button"
         onClick={refresh}
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"
         style={{
@@ -92,7 +92,7 @@ export function AllternitOperatorStatus() {
               <Robot size={20} style={{ color: 'var(--accent-chat)' }} />
               <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Allternit Operator</span>
             </div>
-            <button
+            <button type="button"
               onClick={refresh}
               className="text-xs transition-colors"
               style={{ color: 'var(--text-secondary)' }}

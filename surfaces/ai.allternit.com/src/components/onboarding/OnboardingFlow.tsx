@@ -321,9 +321,9 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   // Local backend detection state
   const [localStatus, setLocalStatus] = useState<'checking' | 'found' | 'not-found'>('checking');
   const [localUrl, setLocalUrl] = useState<string | null>(null);
-  const [isElectron] = useState(isElectronDesktop);
+  const isElectron = isElectronDesktop();
   const [electronTunnel, setElectronTunnel] = useState<{ status: string; url?: string } | null>(null);
-  const [os] = useState(getUserOS);
+  const os = getUserOS();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Manual URL auto-test state
@@ -361,11 +361,16 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   useEffect(() => {
     if (data.infraType !== 'local') { if (pollRef.current) clearInterval(pollRef.current); return; }
     probeLocal();
-    pollRef.current = setInterval(() => { if (localStatus !== 'found') probeLocal(); }, 3000);
+    pollRef.current = setInterval(() => {
+      setLocalStatus((current) => {
+        if (current !== 'found') {
+          probeLocal();
+        }
+        return current;
+      });
+    }, 3000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.infraType]);
-
+  }, [data.infraType, probeLocal]);
   useEffect(() => {
     if (!isElectron) return;
     try {
@@ -516,7 +521,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                       <div className="text-[13px] font-semibold text-ui-text-primary">AI engine is running</div>
                       <div className="text-xs text-ui-text-muted">Connected to this computer's local backend</div>
                     </div>
-                    <button
+                    <button type="button"
                       onClick={activateLocal}
                       disabled={connStatus === 'testing' || connStatus === 'ok'}
                       className={`flex-shrink-0 rounded-lg border-none px-3.5 py-1.5 text-xs font-bold text-text-inverse ${connStatus === 'ok' ? 'cursor-default bg-status-success' : 'cursor-pointer bg-accent-primary'}`}
@@ -555,7 +560,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                   <div className="text-[13px] font-semibold text-ui-text-primary">Backend found</div>
                   <div className="text-xs text-ui-text-muted">{localUrl}</div>
                 </div>
-                <button onClick={activateLocal} disabled={connStatus === 'testing'} className="flex-shrink-0 cursor-pointer rounded-lg border-none bg-accent-primary px-3.5 py-1.5 text-xs font-bold text-text-inverse">
+                <button type="button" onClick={activateLocal} disabled={connStatus === 'testing'} className="flex-shrink-0 cursor-pointer rounded-lg border-none bg-accent-primary px-3.5 py-1.5 text-xs font-bold text-text-inverse">
                   {connStatus === 'testing' ? 'Connecting…' : connStatus === 'ok' ? 'Connected ✓' : 'Use this'}
                 </button>
               </div>
@@ -608,8 +613,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
 
             {/* URL input with inline status */}
             <div className="relative mb-2">
-              <input
-                type="text"
+              <input aria-label="Configuration input" type="text"
                 value={manualUrl}
                 onChange={e => handleUrlChange(e.target.value)}
                 placeholder="https://your-tunnel.trycloudflare.com"
@@ -628,8 +632,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               </div>
             )}
 
-            <input
-              type="text"
+            <input aria-label="Configuration input" type="text"
               value={manualName}
               onChange={e => setManualName(e.target.value)}
               placeholder="Connection name (e.g., My MacBook)"
@@ -641,8 +644,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               <summary className="cursor-pointer select-none px-0 py-1 text-xs text-ui-text-muted">
                 Auth token (optional)
               </summary>
-              <input
-                type="text"
+              <input aria-label="Configuration input" type="text"
                 value={manualToken}
                 onChange={e => setManualToken(e.target.value)}
                 placeholder="Bearer token or Basic auth"
@@ -650,7 +652,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               />
             </details>
 
-            <button
+            <button type="button"
               onClick={connectManual}
               disabled={!manualUrl || urlTestStatus === 'checking' || connStatus === 'testing'}
               className={`w-full rounded-lg border-none py-2.5 text-[13px] font-bold transition-colors duration-200 ${manualUrl && urlTestStatus !== 'fail' ? 'cursor-pointer bg-accent-primary text-text-inverse' : 'cursor-not-allowed bg-surface-panel-muted text-ui-text-muted'}`}
@@ -687,21 +689,18 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             </div>
 
             <div className="mb-2 flex gap-2">
-              <input
-                type="text" value={data.sshConfig.host}
+              <input aria-label="Configuration input" type="text" value={data.sshConfig.host}
                 onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, host: e.target.value } })}
                 placeholder="Hostname or IP"
                 className={inputClassName}
               />
-              <input
-                type="number" value={data.sshConfig.port}
+              <input aria-label="Configuration input" type="number" value={data.sshConfig.port}
                 onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, port: parseInt(e.target.value) || 22 } })}
                 placeholder="22" className={`${inputClassName} w-18 flex-shrink-0`}
               />
             </div>
 
-            <input
-              type="text" value={data.sshConfig.username}
+            <input aria-label="Configuration input" type="text" value={data.sshConfig.username}
               onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, username: e.target.value } })}
               placeholder="Username"
               className={`${inputClassName} mb-2 w-full`}
@@ -712,7 +711,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               {(['key', 'password'] as const).map((type) => {
                 const sel = data.sshConfig.authType === type;
                 return (
-                  <button
+                  <button type="button"
                     key={type}
                     onClick={() => onUpdate({ sshConfig: { ...data.sshConfig, authType: type } })}
                     className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${sel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_10%,var(--surface-panel))] text-accent-primary' : 'border-ui-border-default bg-transparent text-ui-text-muted'}`}
@@ -727,14 +726,13 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             {/* Auth fields */}
             {data.sshConfig.authType === 'password' ? (
               <div className="relative mb-2">
-                <input
-                  type={showPw ? 'text' : 'password'}
+                <input aria-label="Configuration input" type={showPw ? 'text' : 'password'}
                   value={data.sshConfig.password || ''}
                   onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, password: e.target.value } })}
                   placeholder="Password"
                   className={`${inputClassName} w-full pr-10`}
                 />
-                <button
+                <button type="button"
                   onClick={() => setShowPw(p => !p)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-0 text-ui-text-muted"
                 >
@@ -742,8 +740,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                 </button>
               </div>
             ) : (
-              <input
-                type="text" value={data.sshConfig.privateKey || '~/.ssh/id_rsa'}
+              <input aria-label="Configuration input" type="text" value={data.sshConfig.privateKey || '~/.ssh/id_rsa'}
                 onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, privateKey: e.target.value } })}
                 placeholder="~/.ssh/id_rsa"
                 className={`${inputClassName} mb-2 w-full`}
@@ -751,13 +748,13 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             )}
 
             <div className={`flex gap-2 ${connMsg ? 'mb-2' : 'mb-0'}`}>
-              <button
+              <button type="button"
                 onClick={testConn} disabled={connStatus === 'testing' || installing}
                 className={`flex-1 cursor-pointer rounded-lg border border-ui-border-default bg-transparent py-2.5 text-[13px] font-semibold text-accent-primary ${connStatus === 'testing' || installing ? 'opacity-40' : 'opacity-100'}`}
               >
                 {connStatus === 'testing' ? 'Testing…' : 'Test Connection'}
               </button>
-              <button
+              <button type="button"
                 onClick={doInstall} disabled={connStatus !== 'ok' || installing}
                 className={`flex-1 rounded-lg border-none py-2.5 text-[13px] font-bold transition-colors duration-200 ${connStatus === 'ok' ? 'cursor-pointer bg-accent-primary text-text-inverse' : 'cursor-not-allowed bg-surface-panel-muted text-ui-text-muted'}`}
               >
@@ -916,7 +913,7 @@ function PurchaseVPSPanel({
         </div>
 
         {/* "I already have my VPS" toggle */}
-        <button
+        <button type="button"
           onClick={() => setShowConnectForm(f => !f)}
           className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-ui-border-default bg-transparent py-2 text-[13px] font-semibold text-accent-primary"
         >
@@ -938,21 +935,18 @@ function PurchaseVPSPanel({
                 </div>
 
                 <div className="flex gap-2">
-                  <input
-                    type="text" value={sshConfig.host}
+                  <input aria-label="Configuration input" type="text" value={sshConfig.host}
                     onChange={e => onUpdate({ sshConfig: { ...sshConfig, host: e.target.value } })}
                     placeholder="VPS IP address"
                     className={inputClassName}
                   />
-                  <input
-                    type="number" value={sshConfig.port}
+                  <input aria-label="Configuration input" type="number" value={sshConfig.port}
                     onChange={e => onUpdate({ sshConfig: { ...sshConfig, port: parseInt(e.target.value) || 22 } })}
                     placeholder="22" className={`${inputClassName} w-18 flex-shrink-0`}
                   />
                 </div>
 
-                <input
-                  type="text" value={sshConfig.username || 'root'}
+                <input aria-label="Configuration input" type="text" value={sshConfig.username || 'root'}
                   onChange={e => onUpdate({ sshConfig: { ...sshConfig, username: e.target.value } })}
                   placeholder="root"
                   className={`${inputClassName} w-full`}
@@ -963,7 +957,7 @@ function PurchaseVPSPanel({
                   {(['password', 'key'] as const).map((type) => {
                     const sel = sshConfig.authType === type;
                     return (
-                      <button
+                      <button type="button"
                         key={type}
                         onClick={() => onUpdate({ sshConfig: { ...sshConfig, authType: type } })}
                         className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${sel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_10%,var(--surface-panel))] text-accent-primary' : 'border-ui-border-default bg-transparent text-ui-text-muted'}`}
@@ -977,14 +971,13 @@ function PurchaseVPSPanel({
 
                 {sshConfig.authType === 'password' ? (
                   <div className="relative">
-                    <input
-                      type={showPw ? 'text' : 'password'}
+                    <input aria-label="Configuration input" type={showPw ? 'text' : 'password'}
                       value={sshConfig.password || ''}
                       onChange={e => onUpdate({ sshConfig: { ...sshConfig, password: e.target.value } })}
                       placeholder="Root password"
                       className={`${inputClassName} w-full pr-10`}
                     />
-                    <button
+                    <button type="button"
                       onClick={() => setShowPw(p => !p)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-0 text-ui-text-muted"
                     >
@@ -992,8 +985,7 @@ function PurchaseVPSPanel({
                     </button>
                   </div>
                 ) : (
-                  <input
-                    type="text" value={sshConfig.privateKey || '~/.ssh/id_rsa'}
+                  <input aria-label="Configuration input" type="text" value={sshConfig.privateKey || '~/.ssh/id_rsa'}
                     onChange={e => onUpdate({ sshConfig: { ...sshConfig, privateKey: e.target.value } })}
                     placeholder="~/.ssh/id_rsa"
                     className={`${inputClassName} w-full`}
@@ -1001,13 +993,13 @@ function PurchaseVPSPanel({
                 )}
 
                 <div className="flex gap-2">
-                  <button
+                  <button type="button"
                     onClick={testConn} disabled={connStatus === 'testing' || installing}
                     className={`flex-1 cursor-pointer rounded-lg border border-ui-border-default bg-transparent py-2.5 text-[13px] font-semibold text-accent-primary ${connStatus === 'testing' || installing ? 'opacity-40' : 'opacity-100'}`}
                   >
                     {connStatus === 'testing' ? 'Testing…' : 'Test Connection'}
                   </button>
-                  <button
+                  <button type="button"
                     onClick={doInstall} disabled={connStatus !== 'ok' || installing}
                     className={`flex-1 rounded-lg border-none py-2.5 text-[13px] font-bold transition-colors duration-200 ${connStatus === 'ok' ? 'cursor-pointer bg-accent-primary text-text-inverse' : 'cursor-not-allowed bg-surface-panel-muted text-ui-text-muted'}`}
                   >
@@ -1084,7 +1076,7 @@ function AppearanceStep({ theme, onChange }: { theme: WizardData['theme']; onCha
             {/* Swatch strip */}
             <div className="flex h-9 w-13 flex-shrink-0 overflow-hidden rounded-lg border border-ui-border-subtle">
               {opt.swatches.map((c, i) => (
-                <div key={i} className="flex-1" style={{ background: c }} />
+                <div key={`onboard-idx-${i}`} className="flex-1" style={{ background: c }} />
               ))}
             </div>
 
@@ -1470,7 +1462,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             <div className="flex items-center gap-2.5 rounded-xl border border-ui-border-subtle bg-surface-panel p-3 text-xs">
               <Warning size={15} className="flex-shrink-0 text-status-error" />
               <span className="text-ui-text-muted">Download failed — </span>
-              <button
+              <button type="button"
                 onClick={startLocalBrainDownload}
                 className="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-accent-primary"
               >
@@ -1585,8 +1577,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                     <div className="flex flex-col gap-2 p-3">
                       {/* Key input */}
                       <div className="relative">
-                        <input
-                          type={showKey[p.id] ? 'text' : 'password'}
+                        <input aria-label="Configuration input" type={showKey[p.id] ? 'text' : 'password'}
                           value={keyDraft[p.id] ?? ''}
                           onChange={(e) => {
                             setKeyDraft((d) => ({ ...d, [p.id]: e.target.value }));
@@ -1597,13 +1588,13 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                           className={`${inputClassName} w-full pr-20 font-mono`}
                           autoFocus
                         />
-                        <button
+                        <button type="button"
                           onClick={() => setShowKey((s) => ({ ...s, [p.id]: !s[p.id] }))}
                           className="absolute right-10 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-1 text-ui-text-muted"
                         >
                           {showKey[p.id] ? <EyeSlash size={13} /> : <Eye size={13} />}
                         </button>
-                        <button
+                        <button type="button"
                           onClick={() => validateKey(p.id)}
                           disabled={isChecking || (keyDraft[p.id] ?? '').trim().length < 10}
                           className={`absolute right-1.5 top-1/2 flex -translate-y-1/2 cursor-pointer items-center gap-1 rounded border-none px-2 py-1 text-xs font-bold transition-all duration-150 ${isChecking ? 'bg-surface-panel-muted text-ui-text-muted' : 'bg-accent-primary text-text-inverse'} ${(keyDraft[p.id] ?? '').trim().length < 10 ? 'opacity-40' : 'opacity-100'}`}
@@ -1643,7 +1634,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                             {models.map((m) => {
                               const mSel = selectedModel === m.id;
                               return (
-                                <button
+                                <button type="button"
                                   key={m.id}
                                   onClick={() => onUpdate({ defaultModelId: m.id, defaultProvider: p.id })}
                                   className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors duration-150 ${mSel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))]' : 'border-ui-border-subtle bg-surface-panel-muted'}`}
@@ -1716,7 +1707,7 @@ function ModePreviewChat() {
       <div className="flex items-center gap-1 pl-7">
         {[0, 1, 2].map(i => (
           <motion.div
-            key={i}
+            key={`onboard-idx-${i}`}
             className="size-1 rounded-full bg-[rgba(99,102,241,0.5)]"
             animate={{ opacity: [0.3, 1, 0.3], scale: [0.7, 1, 0.7] }}
             transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.22, ease: 'easeInOut' }}
@@ -1741,7 +1732,7 @@ function ModePreviewCode() {
     <div className="rounded-lg border border-ui-border-muted bg-[rgba(0,0,0,0.35)] px-3.5 py-3 font-mono text-xs">
       {lines.map((l, i) => (
         <motion.div
-          key={i}
+          key={`onboard-idx-${i}`}
           initial={{ opacity: 0, x: -6 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.08 + i * 0.07, duration: 0.22 }}
@@ -1779,7 +1770,7 @@ function ModePreviewBrowser() {
       <div className="flex flex-col gap-1 pl-1">
         {steps.map((s, i) => (
           <motion.div
-            key={i}
+            key={`onboard-idx-${i}`}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 + i * 0.12, duration: 0.25 }}
@@ -1814,7 +1805,7 @@ function ModePreviewAgents() {
       <div className="flex flex-col gap-1.5 pl-0.5">
         {tasks.map((t, i) => (
           <motion.div
-            key={i}
+            key={`onboard-idx-${i}`}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.08 + i * 0.1, duration: 0.22 }}
@@ -1953,7 +1944,7 @@ function ModeShowcase() {
       {/* Tab strip */}
       <div className="flex flex-wrap gap-1">
         {MODE_TABS.map(tab => (
-          <button
+          <button type="button"
             key={tab.key}
             onClick={() => { setActive(tab.key); setUserPicked(true); }}
             className={`flex cursor-pointer items-center gap-1 rounded-full border-none px-2.5 py-1 text-xs transition-all duration-150 ${active === tab.key ? 'font-bold' : 'font-medium'}`}

@@ -165,7 +165,7 @@ function PublishActionCard({
         </p>
       </div>
       <div style={{ marginTop: 'auto', paddingTop: 8 }}>
-        <button
+        <button type="button"
           onClick={onClick}
           style={{
             padding: '10px 18px',

@@ -13,7 +13,7 @@ export function cn(...classes: (string | undefined | null | false)[]): string {
 /**
  * Format bytes to human readable string
  */
-export function formatBytes(bytes: number, decimals = 2): string {
+function formatBytes(bytes: number, decimals = 2): string {
   if (bytes === 0) return '0 B';
   
   const k = 1024;
@@ -28,7 +28,7 @@ export function formatBytes(bytes: number, decimals = 2): string {
 /**
  * Format date to relative time
  */
-export function formatRelativeTime(date: Date | string): string {
+function formatRelativeTime(date: Date | string): string {
   const now = new Date();
   const then = new Date(date);
   const diff = now.getTime() - then.getTime();
@@ -47,14 +47,14 @@ export function formatRelativeTime(date: Date | string): string {
 /**
  * Delay promise
  */
-export function delay(ms: number): Promise<void> {
+function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
  * Generate random ID
  */
-export function generateId(): string {
+function generateId(): string {
   return Math.random().toString(36).substring(2, 15) + 
          Math.random().toString(36).substring(2, 15);
 }
@@ -62,7 +62,7 @@ export function generateId(): string {
 /**
  * Generate UUID
  */
-export function generateUUID(): string {
+function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -92,6 +92,6 @@ function extractTextParts(value: unknown): string[] {
   return [];
 }
 
-export function getTextContentFromModelMessage(message: unknown): string {
+function getTextContentFromModelMessage(message: unknown): string {
   return extractTextParts(message).join('\n').trim();
 }

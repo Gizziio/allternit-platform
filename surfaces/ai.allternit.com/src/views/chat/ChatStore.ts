@@ -20,7 +20,6 @@ import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 import {
   useChatSessionStore,
   type ChatSession,
-  type CreateChatSessionOptions,
 } from './ChatSessionStore';
 import * as kernelProjects from '../../integration/kernel/projects';
 

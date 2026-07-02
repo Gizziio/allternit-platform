@@ -72,17 +72,22 @@ export function UpdateBadge({
   variant = 'default',
 }: UpdateBadgeProps) {
   const [isPulsing, setIsPulsing] = useState(false);
-  const [prevCount, setPrevCount] = useState(count);
+  const [prevCountOC, setPrevCountOC] = useState(count);
+
+  if (count !== prevCountOC) {
+    if (count > prevCountOC && pulse) {
+      setIsPulsing(true);
+    }
+    setPrevCountOC(count);
+  }
 
   // Trigger pulse animation when count increases
   useEffect(() => {
-    if (count > prevCount && pulse) {
-      setIsPulsing(true);
+    if (isPulsing) {
       const timeout = setTimeout(() => setIsPulsing(false), 2000);
       return () => clearTimeout(timeout);
     }
-    setPrevCount(count);
-  }, [count, prevCount, pulse]);
+  }, [isPulsing]);
 
   if (count === 0 && variant !== 'dot') return null;
 
@@ -91,7 +96,7 @@ export function UpdateBadge({
   // Dot variant - just a small indicator dot
   if (variant === 'dot') {
     return (
-      <button
+      <button type="button"
         onClick={onClick}
         style={{
           position: 'relative',
@@ -162,7 +167,7 @@ export function UpdateBadge({
   // Subtle variant - minimal badge
   if (variant === 'subtle') {
     return (
-      <button
+      <button type="button"
         onClick={onClick}
         style={{
           display: 'flex',
@@ -193,7 +198,7 @@ export function UpdateBadge({
 
   // Default variant - full badge with animation
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       style={{
         position: 'relative',
@@ -308,11 +313,11 @@ export function UpdateBadge({
 // Inline Badge (for use in text/buttons)
 // ============================================================================
 
-export interface InlineUpdateBadgeProps {
+interface InlineUpdateBadgeProps {
   count: number;
 }
 
-export function InlineUpdateBadge({ count }: InlineUpdateBadgeProps) {
+function InlineUpdateBadge({ count }: InlineUpdateBadgeProps) {
   if (count === 0) return null;
 
   return (
@@ -341,12 +346,12 @@ export function InlineUpdateBadge({ count }: InlineUpdateBadgeProps) {
 // Notification Dot (for minimal indication)
 // ============================================================================
 
-export interface NotificationDotProps {
+interface NotificationDotProps {
   hasUpdate: boolean;
   color?: 'accent' | 'danger' | 'success';
 }
 
-export function NotificationDot({ 
+function NotificationDot({ 
   hasUpdate, 
   color = 'accent' 
 }: NotificationDotProps) {

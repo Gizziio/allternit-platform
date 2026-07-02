@@ -6,10 +6,11 @@
  * and always renders fullscreen at the correct z-index.
  */
 
+import React from 'react';
 import { createPortal } from 'react-dom';
 import { OnboardingFlow } from './OnboardingFlow';
 
-export function OnboardingPortal(): void {
+export function OnboardingPortal(): React.ReactPortal | null {
   // Render onboarding at document.body level, outside any parent containers
   if (typeof document === 'undefined') return null;
   

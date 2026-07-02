@@ -17,6 +17,10 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ObservabilityService');
+
 // ============================================================================
 // Types - Aligned with LAW-ENF-007
 // ============================================================================
@@ -40,13 +44,13 @@ export interface LogEvent {
   };
 }
 
-export interface MetricPoint {
+interface MetricPoint {
   timestamp: string;
   value: number;
   labels?: Record<string, string>;
 }
 
-export interface Metric {
+interface Metric {
   name: string;
   type: 'counter' | 'gauge' | 'histogram';
   points: MetricPoint[];
@@ -54,7 +58,7 @@ export interface Metric {
   description?: string;
 }
 
-export interface TraceSpan {
+interface TraceSpan {
   trace_id: string;
   span_id: string;
   parent_span_id?: string;
@@ -70,7 +74,7 @@ export interface TraceSpan {
   }>;
 }
 
-export interface UIStateSnapshot {
+interface UIStateSnapshot {
   timestamp: string;
   url: string;
   title: string;
@@ -137,7 +141,7 @@ export interface ObservabilityStore {
 // Query Parameters
 // ============================================================================
 
-export interface LogQueryParams {
+interface LogQueryParams {
   session_id?: string;
   correlation_id?: string;
   event_type?: string;
@@ -151,7 +155,7 @@ export interface LogQueryParams {
   pageSize?: number;
 }
 
-export interface LogQueryResult {
+interface LogQueryResult {
   logs: LogEvent[];
   total: number;
   page: number;
@@ -163,7 +167,7 @@ export interface LogQueryResult {
 // In-Memory Store (for development)
 // ============================================================================
 
-export class InMemoryObservabilityStore implements ObservabilityStore {
+class InMemoryObservabilityStore implements ObservabilityStore {
   private logs: LogEvent[] = [];
   private metrics: Map<string, MetricPoint[]> = new Map();
   private traces: Map<string, TraceSpan[]> = new Map();
@@ -410,7 +414,7 @@ export class InMemoryObservabilityStore implements ObservabilityStore {
 // Prometheus Integration Store
 // ============================================================================
 
-export class PrometheusObservabilityStore extends InMemoryObservabilityStore {
+class PrometheusObservabilityStore extends InMemoryObservabilityStore {
   private prometheusUrl?: string;
   private pushGatewayUrl?: string;
   private jobName: string;
@@ -437,7 +441,7 @@ export class PrometheusObservabilityStore extends InMemoryObservabilityStore {
       try {
         await this.pushToGateway(name, value, labels);
       } catch (error) {
-        console.warn('Failed to push metric to Prometheus:', error);
+        logger.warn({ err: error }, 'Failed to push metric to Prometheus:');
       }
     }
   }
@@ -605,7 +609,7 @@ export class ObservabilityService {
 let _observabilityStore: ObservabilityStore | null = null;
 let _observabilityService: ObservabilityService | null = null;
 
-export function getObservabilityStore(): ObservabilityStore {
+function getObservabilityStore(): ObservabilityStore {
   if (!_observabilityStore) {
     // Use Prometheus integration if configured, otherwise in-memory
     if (process.env.PROMETHEUS_PUSHGATEWAY_URL) {

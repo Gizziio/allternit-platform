@@ -249,8 +249,8 @@ const OPENCLAW_CLI_MODELS: ModelData[] = [
 ];
 
 // The default model downloaded during "Add Local Brain" onboarding
-export const LOCAL_BRAIN_MODEL_ID = "local-brain";
-export const LOCAL_BRAIN_OLLAMA_ID = "llama3.2:3b";
+const LOCAL_BRAIN_MODEL_ID = "local-brain";
+const LOCAL_BRAIN_OLLAMA_ID = "llama3.2:3b";
 
 // Local Models (Ollama)
 const LOCAL_MODELS: ModelData[] = [
@@ -327,7 +327,7 @@ export const ALL_MODELS: ModelData[] = [
 export const DEFAULT_MODEL = "kimi/kimi-for-coding";
 
 // Model groups for UI organization
-export const MODEL_GROUPS = [
+const MODEL_GROUPS = [
   { title: "Cloud Models", models: AI_SDK_MODELS },
   { title: "CLI Agents", models: OPENCLAW_CLI_MODELS },
   { title: "Local Brain", models: LOCAL_MODELS },
@@ -338,17 +338,14 @@ export function getModelById(id: string): ModelData | undefined {
   return ALL_MODELS.find((m) => m.id === id);
 }
 
-export function getModelsByRuntimeType(type: ModelData["runtimeType"]): ModelData[] {
+function getModelsByRuntimeType(type: ModelData["runtimeType"]): ModelData[] {
   return ALL_MODELS.filter((m) => m.runtimeType === type);
 }
 
-export function getDefaultModel(): ModelData {
+function getDefaultModel(): ModelData {
   return getModelById(DEFAULT_MODEL) || ALL_MODELS[0];
 }
 
-// Fetch models - async version for server-side usage
 export async function fetchModels(): Promise<ModelData[]> {
-  // In a real implementation, this would fetch from an API
-  // For now, return the static list
   return ALL_MODELS;
 }

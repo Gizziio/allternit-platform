@@ -24,13 +24,17 @@ import {
 } from '../lib/agents/character.types';
 import { validateAvatarConfig, cloneAvatarConfig } from '../lib/agents/avatar-validation';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AvatarCreator');
+
 // ============================================================================
 // Types
 // ============================================================================
 
-export type CreatorTab = 'body' | 'eyes' | 'colors' | 'antennas' | 'accessories' | 'personality';
+type CreatorTab = 'body' | 'eyes' | 'colors' | 'antennas' | 'accessories' | 'personality';
 
-export interface ValidationError {
+interface ValidationError {
   field: string;
   message: string;
 }
@@ -41,7 +45,7 @@ export interface ConfigHistoryEntry {
   action: string;
 }
 
-export interface AvatarTemplate {
+interface AvatarTemplate {
   id: string;
   name: string;
   description: string;
@@ -165,7 +169,7 @@ export interface AvatarCreatorActions {
 // Constants
 // ============================================================================
 
-export const AVATAR_TEMPLATES: AvatarTemplate[] = [
+const AVATAR_TEMPLATES: AvatarTemplate[] = [
   {
     id: 'hacker',
     name: 'The Hacker',
@@ -422,8 +426,6 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
       },
 
       setBodySize: (size) => {
-        // Body size affects overall scale, stored in personality or we could add a new field
-        // For now, we'll keep it simple and just log this would affect the SVG viewBox
         console.debug('Body size adjustment:', size);
       },
 
@@ -1001,17 +1003,17 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
 // Selectors
 // ============================================================================
 
-export const selectAvatarConfig = (state: AvatarCreatorState & AvatarCreatorActions) => 
+const selectAvatarConfig = (state: AvatarCreatorState & AvatarCreatorActions) => 
   state.currentConfig;
 
-export const selectIsValid = (state: AvatarCreatorState & AvatarCreatorActions) => 
+const selectIsValid = (state: AvatarCreatorState & AvatarCreatorActions) => 
   state.isValid;
 
-export const selectValidationErrors = (state: AvatarCreatorState & AvatarCreatorActions) => 
+const selectValidationErrors = (state: AvatarCreatorState & AvatarCreatorActions) => 
   state.validationErrors;
 
-export const selectCanUndo = (state: AvatarCreatorState & AvatarCreatorActions) => 
+const selectCanUndo = (state: AvatarCreatorState & AvatarCreatorActions) => 
   state.canUndo();
 
-export const selectCanRedo = (state: AvatarCreatorState & AvatarCreatorActions) => 
+const selectCanRedo = (state: AvatarCreatorState & AvatarCreatorActions) => 
   state.canRedo();

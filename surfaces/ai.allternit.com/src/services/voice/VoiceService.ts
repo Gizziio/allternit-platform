@@ -23,8 +23,9 @@ const MAX_HEALTH_BACKOFF_MS = 300000;
 const isVoiceServiceEnabled = () => {
   if (typeof window === 'undefined') return false;
   const envValue = (import.meta as any).env?.VITE_ENABLE_VOICE_SERVICE;
-  // Default to true if not specified, false if explicitly set to 'false'
-  return envValue !== 'false';
+  if (envValue === 'true') return true;
+  if (envValue === 'false') return false;
+  return Boolean((window as unknown as { allternit?: unknown }).allternit);
 };
 
 const resolveVoiceServiceUrl = (): string => {

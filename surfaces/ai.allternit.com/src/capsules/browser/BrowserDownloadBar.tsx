@@ -1,6 +1,6 @@
 "use client";
 
-import { X, DownloadSimple, CheckCircle, Warning, ArrowDown } from "@phosphor-icons/react";
+import { X, CheckCircle, Warning, ArrowDown } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RADIUS, TYPOGRAPHY } from "@/design/allternit.tokens";
 // Theme-aware tokens for browser chrome
@@ -115,7 +115,7 @@ export function BrowserDownloadBar() {
                 </div>
               )}
             </div>
-            <button
+            <button type="button"
               onClick={() => removeDownload(dl.id)}
               style={{
                 padding: 4,
@@ -139,7 +139,7 @@ export function BrowserDownloadBar() {
         </div>
       )}
       {active.length === 0 && downloads.length > 0 && (
-        <button
+        <button type="button"
           onClick={clearCompleted}
           style={{
             alignSelf: "flex-start",

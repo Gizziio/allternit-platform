@@ -5,6 +5,10 @@ import { FileText, Link, Mail, MessageSquare, Upload, Plus, X, Loader2, Search }
 import { notebookApi } from '../hooks/useNotebookApi';
 import type { Source } from '../hooks/useNotebookApi';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('SourcePanel');
+
 interface SearchResult {
   source_id: string;
   excerpt: string;
@@ -45,6 +49,7 @@ export function SourcePanel({
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [addUrlInput, setAddUrlInput] = useState<string | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -73,7 +78,7 @@ export function SourcePanel({
       const res = await notebookApi.search(notebookId, query, 8);
       setSearchResults(res.results);
     } catch (err) {
-      console.error('Semantic search failed:', err);
+      logger.error({ err: err }, 'Semantic search failed:');
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -122,7 +127,7 @@ export function SourcePanel({
       <div className="research-panel-header">
         <div className="flex items-center justify-between">
           <span>Sources</span>
-          <button
+          <button type="button"
             onClick={() => setShowSearch(s => !s)}
             className={`bg-transparent border-none cursor-pointer p-1 rounded ${showSearch ? 'text-purple-400' : 'text-[var(--text-muted,#a1a1aa)]'} hover:text-purple-400`}
             title="Semantic search"
@@ -140,8 +145,7 @@ export function SourcePanel({
         <div className="px-2.5 pb-2 border-b border-[var(--border-subtle,#27272a)]">
           <div className="relative">
             <Search size={12} className="absolute left-2 top-1/2 -tranzinc-y-1/2 text-[var(--text-muted,#a1a1aa)]" />
-            <input
-              type="text"
+            <input aria-label="Input" type="text"
               value={searchQuery}
               onChange={e => onSearchChange(e.target.value)}
               placeholder="Semantic search…"
@@ -149,7 +153,7 @@ export function SourcePanel({
               autoFocus
             />
             {searchQuery && (
-              <button
+              <button type="button"
                 onClick={() => { setSearchQuery(''); setSearchResults([]); }}
                 className="absolute right-1.5 top-1/2 -tranzinc-y-1/2 bg-transparent border-none p-0 text-[var(--text-muted,#a1a1aa)] cursor-pointer hover:text-white"
               >
@@ -169,7 +173,7 @@ export function SourcePanel({
               {searchResults.map((result, idx) => {
                 const source = sourceMap.get(result.source_id);
                 return (
-                  <button
+                  <button type="button"
                     key={`${result.source_id}-${idx}`}
                     onClick={() => handleResultClick(result.source_id)}
                     className="w-full text-left bg-[var(--bg-tertiary,#18181b)] hover:bg-purple-500/10 border border-[var(--border-subtle,#27272a)] rounded-md p-2 transition-colors"
@@ -235,7 +239,7 @@ export function SourcePanel({
                       </span>
                     </div>
                   </div>
-                  <button
+                  <button type="button"
                     onClick={() => onRemoveSource(source.id)}
                     className="bg-transparent border-none text-[var(--text-muted,#a1a1aa)] cursor-pointer p-0.5 opacity-50 hover:opacity-100"
                     title="Remove source"
@@ -261,16 +265,46 @@ export function SourcePanel({
           <Upload size={14} className="mx-auto mb-1" />
           Drop files or paste URL
         </div>
-        <button
-          onClick={() => {
-            const url = prompt('Enter URL to add as source:');
-            if (url) onAddSource({ type: 'url', title: url, url, status: 'pending' });
-          }}
-          className="research-btn-secondary w-full"
-        >
-          <Plus size={12} />
-          Add from URL
-        </button>
+        {addUrlInput !== null ? (
+          <div className="flex gap-1">
+            <input aria-label="Input" autoFocus
+              type="url"
+              value={addUrlInput}
+              onChange={(e) => setAddUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && addUrlInput.trim()) {
+                  onAddSource({ type: 'url', title: addUrlInput.trim(), url: addUrlInput.trim(), status: 'pending' });
+                  setAddUrlInput(null);
+                } else if (e.key === 'Escape') {
+                  setAddUrlInput(null);
+                }
+              }}
+              placeholder="https://..."
+              className="flex-1 rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-2 py-1 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#6366f1)]"
+            />
+            <button type="button"
+              onClick={() => {
+                if (addUrlInput.trim()) {
+                  onAddSource({ type: 'url', title: addUrlInput.trim(), url: addUrlInput.trim(), status: 'pending' });
+                }
+                setAddUrlInput(null);
+              }}
+              className="rounded bg-[var(--accent-primary,#6366f1)] px-2 py-1 text-[11px] text-white"
+            >Add</button>
+            <button type="button"
+              onClick={() => setAddUrlInput(null)}
+              className="rounded border border-[var(--border-subtle,#27272a)] px-2 py-1 text-[11px] text-[var(--text-muted)]"
+            >✕</button>
+          </div>
+        ) : (
+          <button type="button"
+            onClick={() => setAddUrlInput('')}
+            className="research-btn-secondary w-full"
+          >
+            <Plus size={12} />
+            Add from URL
+          </button>
+        )}
       </div>
     </div>
   );

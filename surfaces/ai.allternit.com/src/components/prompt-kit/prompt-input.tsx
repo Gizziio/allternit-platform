@@ -1,26 +1,27 @@
 "use client"
 
-import { Textarea } from "../ui/textarea"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip"
-import { cn } from "../../lib/utils"
-import React, {
-  createContext,
-  useContext,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react"
+import React, { 
+  createContext, 
+  useContext, 
+  useState, 
+  useRef, 
+  useLayoutEffect, 
+  useEffect 
+} from 'react';
 import { motion, AnimatePresence } from "framer-motion"
-import { Paperclip, Microphone, Stop, ArrowUp, X } from "@phosphor-icons/react"
+import { Paperclip, Microphone, Stop, ArrowUp } from "@phosphor-icons/react"
+import { cn } from "@/lib/utils"
+import { 
+  Tooltip, 
+  TooltipTrigger, 
+  TooltipContent, 
+  TooltipProvider 
+} from "@/components/ui/tooltip"
+import { Textarea } from "@/components/ui/textarea"
 
 // --- Types ---
 
-export type AttachmentType = "file" | "photo" | "screenshot"
+type AttachmentType = "file" | "photo" | "screenshot"
 export type ChatMode = "standard" | "search" | "research" | "agent" | "temp"
 
 type PromptInputContextType = {
@@ -59,7 +60,7 @@ const PromptInputContext = createContext<PromptInputContextType>({
   acceptSuggestion: () => {},
 })
 
-export function usePromptInput() {
+function usePromptInput() {
   return useContext(PromptInputContext)
 }
 
@@ -262,13 +263,13 @@ export function PromptInputActions({
     <div className={cn("flex items-center justify-between px-3 pb-3 gap-2", className)} >
       <div className="flex items-center gap-1.5">
         <PromptInputAction tooltip="Attach files" onClick={() => onAttach("file")}>
-          <button aria-label="Attach files" className="p-2 hover:bg-[var(--rail-hover)] rounded-xl text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
+          <button type="button" aria-label="Attach files" className="p-2 hover:bg-[var(--rail-hover)] rounded-xl text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
             <Paperclip size={20} />
           </button>
         </PromptInputAction>
         
         <PromptInputAction tooltip={isRecording ? "Stop recording" : "Voice input"} onClick={toggleRecording}>
-          <button aria-label="Voice input" className={cn(
+          <button type="button" aria-label="Voice input" className={cn(
             "p-2 hover:bg-[var(--rail-hover)] rounded-xl transition-all",
             isRecording ? "text-red-500 bg-red-500/10" : "text-[var(--text-tertiary)]"
           )}>
@@ -315,7 +316,7 @@ export function PromptInputActions({
   )
 }
 
-export function PromptInputAction({
+function PromptInputAction({
   tooltip,
   children,
   className,

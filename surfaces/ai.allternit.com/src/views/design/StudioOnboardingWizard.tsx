@@ -28,6 +28,7 @@ import {
   Stack,
   MagicWand,
 } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
 interface OnboardingData {
   designFocus: string[];
@@ -132,60 +133,52 @@ function VideoPlayer() {
 
   return (
     <div
-      style={{
-        width: "100%",
-        aspectRatio: "16/9",
-        background: "rgba(0,0,0,0.6)",
-        borderRadius: 16,
-        border: "1px solid rgba(255,255,255,0.08)",
-        marginBottom: 24,
-        position: "relative",
-        overflow: "hidden",
-        cursor: "pointer",
-      }}
+      className="w-full aspect-video bg-black/60 rounded-2xl border border-solid border-white/5 mb-6 relative overflow-hidden cursor-pointer"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => setPlaying((p) => !p)}
+      role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPlaying((p) => !p); }}
     >
       {/* Gradient bg */}
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 30% 40%, rgba(226,124,89,0.12), transparent 55%), radial-gradient(circle at 70% 60%, rgba(59,130,246,0.08), transparent 55%)" }} />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_30%_40%,rgba(226,124,89,0.12),transparent_55%),radial-gradient(circle_at_70%_60%,rgba(59,130,246,0.08),transparent_55%)]" />
 
       {/* Simulated UI frames */}
       {!playing && (
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 16, padding: 32 }}>
-          {[{ h: "60%", bg: "rgba(255,255,255,0.04)" }, { h: "80%", bg: "rgba(226,124,89,0.08)" }, { h: "50%", bg: "rgba(255,255,255,0.04)" }].map((f, i) => (
-            <motion.div key={i} animate={{ y: [0, -6, 0] }} transition={{ duration: 3, repeat: Infinity, delay: i * 0.6 }} style={{ flex: 1, height: f.h, borderRadius: 12, background: f.bg, border: "1px solid rgba(255,255,255,0.06)" }} />
+        <div className="absolute inset-0 flex items-center justify-center gap-4 p-8">
+          {[{ h: "60%", bg: "bg-white/5" }, { h: "80%", bg: "bg-[var(--accent-primary,#e27c59)]/10" }, { h: "50%", bg: "bg-white/5" }].map((f, i) => (
+            <motion.div key={`studioonboardingwizard-${i}`} animate={{ y: [0, -6, 0] }} transition={{ duration: 3, repeat: Infinity, delay: i * 0.6 }} className={cn("flex-1 rounded-xl border border-solid border-white/5", f.h === "60%" ? "h-[60%]" : f.h === "80%" ? "h-[80%]" : "h-[50%]", f.bg)} />
           ))}
         </div>
       )}
 
       {/* Playing scan-line */}
       {playing && (
-        <motion.div animate={{ x: [`${progress - 2}%`, `${progress}%`] }} style={{ position: "absolute", top: 0, bottom: 0, width: 2, background: "#e27c59", opacity: 0.5, zIndex: 2 }} />
+        <motion.div animate={{ x: [`${progress - 2}%`, `${progress}%`] }} className="absolute top-0 bottom-0 w-0.5 bg-[var(--accent-primary,#e27c59)] opacity-50 z-[2]" />
       )}
 
       {/* Center play/pause */}
       <AnimatePresence>
         {(!playing || hovered) && (
-          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, zIndex: 3 }}>
-            <div style={{ width: 60, height: 60, borderRadius: "50%", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {playing ? <div style={{ width: 14, height: 14, display: "flex", gap: 4 }}><div style={{ flex: 1, background: "#fff", borderRadius: 2 }} /><div style={{ flex: 1, background: "#fff", borderRadius: 2 }} /></div> : <PlayCircle size={32} color="#e27c59" weight="fill" style={{ marginLeft: 3 }} />}
+          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-[3]">
+            <div className="w-[60px] h-[60px] rounded-full bg-black/50 backdrop-blur-md border border-solid border-white/15 flex items-center justify-center">
+              {playing ? <div className="w-3.5 h-3.5 flex gap-1"><div className="flex-1 bg-white rounded-sm" /><div className="flex-1 bg-white rounded-sm" /></div> : <PlayCircle size={32} className="text-[var(--accent-primary,#e27c59)] ml-1" weight="fill" />}
             </div>
-            {!playing && <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)" }}>Featured Walkthrough — 3:03</span>}
+            {!playing && <span className="text-[12px] font-semibold text-white/50">Featured Walkthrough — 3:03</span>}
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Bottom bar */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "8px 16px 12px", background: "linear-gradient(transparent, rgba(0,0,0,0.7))", zIndex: 4 }}>
-        <div style={{ height: 3, background: "rgba(255,255,255,0.12)", borderRadius: 2, marginBottom: 8, position: "relative", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); setProgress(((e.clientX - rect.left) / rect.width) * 100); }}>
-          <div style={{ height: "100%", width: `${progress}%`, background: "#e27c59", borderRadius: 2, transition: "width 0.1s" }} />
+      <div className="absolute bottom-0 left-0 right-0 p-[8px_16px_12px] bg-gradient-to-t from-black/70 to-transparent z-[4]">
+        <div role="button" tabIndex={0} className="h-0.5 bg-white/10 rounded-full mb-2 relative cursor-pointer group" onClick={(e) => { e.stopPropagation(); const rect = e.currentTarget.getBoundingClientRect(); setProgress(((e.clientX - rect.left) / rect.width) * 100); }}>
+          <div className="h-full bg-[var(--accent-primary,#e27c59)] rounded-full transition-all" style={{ width: `${progress}%` }} />
         </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>{fmt(elapsed)} / 3:03</span>
-          <div style={{ display: "flex", gap: 10 }}>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-bold text-[var(--text-secondary)] tabular-nums">{fmt(elapsed)} / 3:03</span>
+          <div className="flex gap-2.5">
             {VIDEO_CHAPTERS.map((ch) => (
-              <button key={ch.label} style={{ fontSize: 12, fontWeight: 700, padding: "2px 7px", borderRadius: 4, border: "1px solid rgba(255,255,255,0.1)", background: "var(--surface-hover)", color: "var(--text-secondary)", cursor: "pointer" }}>{ch.label}</button>
+              <button type="button" key={ch.label} className="text-[12px] font-bold px-1.5 py-0.5 rounded bg-[var(--surface-hover)] border border-solid border-white/10 text-[var(--text-secondary)] cursor-pointer hover:bg-[var(--surface-active)] transition-colors">{ch.label}</button>
             ))}
           </div>
         </div>
@@ -254,85 +247,28 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
   const stepLabels = ["WELCOME", "STAY IN THE LOOP", "WATCH THE WORKFLOW"];
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 1000,
-        background: "rgba(0,0,0,0.85)",
-        backdropFilter: "blur(12px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "var(--font-sans)",
-        padding: "24px",
-      }}
-    >
+    <div className="fixed inset-0 z-[1000] bg-black/85 backdrop-blur-xl flex items-center justify-center font-sans p-6">
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.2, 0, 0, 1] }}
-        style={{
-          width: "100%",
-          maxWidth: 720,
-          maxHeight: "90vh",
-          background: "var(--surface-panel)",
-          borderRadius: 24,
-          border: "1px solid var(--border-subtle)",
-          boxShadow: "0 40px 80px rgba(0,0,0,0.6)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          position: "relative",
-        }}
+        className="w-full max-w-[720px] max-h-[90vh] bg-[var(--surface-panel)] rounded-[24px] border border-solid border-[var(--border-subtle)] shadow-[0_40px_80px_rgba(0,0,0,0.6)] flex flex-col overflow-hidden relative"
       >
         {/* Top Bar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "20px 24px 0",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <MagicWand size={18} color="var(--accent-primary)" weight="duotone" />
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                letterSpacing: "0.1em",
-                color: "var(--text-secondary)",
-                textTransform: "uppercase",
-              }}
-            >
+        <div className="flex items-center justify-between p-[20px_24px_0]">
+          <div className="flex items-center gap-2">
+            <MagicWand size={18} className="text-[var(--accent-primary)]" weight="duotone" />
+            <span className="text-[12px] font-extrabold tracking-widest text-[var(--text-secondary)] uppercase">
               Allternit Design
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: "var(--text-tertiary)",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
+          <div className="flex items-center gap-3">
+            <span className="text-[12px] font-bold text-[var(--text-tertiary)] tabular-nums">
               {String(step + 1).padStart(2, "0")} / {String(totalSteps).padStart(2, "0")}
             </span>
-            <button
+            <button type="button"
               onClick={onSkip || onComplete}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--text-tertiary)",
-                cursor: "pointer",
-                padding: 4,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 8,
-              }}
+              className="bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer p-1 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
             >
               <X size={18} />
             </button>
@@ -340,29 +276,18 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
         </div>
 
         {/* Progress Bar */}
-        <div style={{ padding: "16px 24px 0" }}>
-          <div
-            style={{
-              height: 2,
-              background: "var(--border-default)",
-              borderRadius: 2,
-              overflow: "hidden",
-            }}
-          >
+        <div className="px-6 pt-4">
+          <div className="h-0.5 bg-[var(--border-default)] rounded-full overflow-hidden">
             <motion.div
               animate={{ width: `${progressPercent}%` }}
               transition={{ duration: 0.4, ease: "easeInOut" }}
-              style={{
-                height: "100%",
-                background: "var(--accent-primary)",
-                borderRadius: 2,
-              }}
+              className="h-full bg-[var(--accent-primary)] rounded-full"
             />
           </div>
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
+        <div className="flex-1 overflow-y-auto p-[28px_32px]">
           <AnimatePresence mode="wait">
             {step === 0 && (
               <motion.div
@@ -372,80 +297,35 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    letterSpacing: "0.15em",
-                    color: "var(--text-tertiary)",
-                    textTransform: "uppercase",
-                    marginBottom: 12,
-                  }}
-                >
+                <div className="text-[12px] font-extrabold tracking-widest text-[var(--text-tertiary)] uppercase mb-3">
                   {stepLabels[0]}
                 </div>
-                <h2
-                  style={{
-                    fontSize: 32,
-                    fontWeight: 700,
-                    color: "var(--text-primary)",
-                    lineHeight: 1.15,
-                    marginBottom: 8,
-                    letterSpacing: "-0.02em",
-                  }}
-                >
+                <h2 className="text-[32px] font-bold text-[var(--text-primary)] leading-tight mb-2 tracking-tight">
                   Let's shape your first{" "}
-                  <span style={{ color: "var(--accent-primary)", fontStyle: "italic" }}>Allternit</span>{" "}
+                  <span className="text-[var(--accent-primary)] italic">Allternit</span>{" "}
                   session.
                 </h2>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: "var(--text-secondary)",
-                    marginBottom: 32,
-                    lineHeight: 1.5,
-                  }}
-                >
+                <p className="text-[14px] text-[var(--text-secondary)] mb-8 leading-relaxed">
                   A couple quick signals help us tailor onboarding, prompts, and what we send
                   your way next.
                 </p>
 
                 {/* What do you design most? */}
-                <div style={{ marginBottom: 28 }}>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      letterSpacing: "0.15em",
-                      color: "var(--text-tertiary)",
-                      textTransform: "uppercase",
-                      marginBottom: 12,
-                    }}
-                  >
+                <div className="mb-7">
+                  <div className="block text-[12px] font-extrabold tracking-widest text-[var(--text-tertiary)] uppercase mb-3">
                     What do you design most?
-                  </label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {DESIGN_FOCUS_OPTIONS.map((opt) => {
                       const active = data.designFocus.includes(opt.id);
                       return (
-                        <button
+                        <button type="button"
                           key={opt.id}
                           onClick={() => toggleArrayValue("designFocus", opt.id)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "8px 14px",
-                            borderRadius: 10,
-                            border: `1px solid ${active ? "var(--accent-primary)" : "var(--border-subtle)"}`,
-                            background: active ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "var(--bg-primary)",
-                            color: active ? "var(--accent-primary)" : "var(--text-secondary)",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            transition: "all 0.2s",
-                          }}
+                          className={cn(
+                            "flex items-center gap-1.5 p-[8px_14px] rounded-xl border border-solid text-[13px] font-semibold cursor-pointer transition-all duration-200",
+                            active ? "border-[var(--accent-primary)] bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-[var(--accent-primary)]" : "border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                          )}
                         >
                           {opt.icon}
                           {opt.label}
@@ -456,41 +336,21 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 </div>
 
                 {/* What tools do you use daily? */}
-                <div style={{ marginBottom: 28 }}>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      letterSpacing: "0.15em",
-                      color: "var(--text-tertiary)",
-                      textTransform: "uppercase",
-                      marginBottom: 12,
-                    }}
-                  >
+                <div className="mb-7">
+                  <div className="block text-[12px] font-extrabold tracking-widest text-[var(--text-tertiary)] uppercase mb-3">
                     What tools do you use daily?
-                  </label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {TOOL_OPTIONS.map((opt) => {
                       const active = data.dailyTools.includes(opt.id);
                       return (
-                        <button
+                        <button type="button"
                           key={opt.id}
                           onClick={() => toggleArrayValue("dailyTools", opt.id)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "8px 14px",
-                            borderRadius: 10,
-                            border: `1px solid ${active ? "var(--accent-primary)" : "var(--border-subtle)"}`,
-                            background: active ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "var(--bg-primary)",
-                            color: active ? "var(--accent-primary)" : "var(--text-secondary)",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            transition: "all 0.2s",
-                          }}
+                          className={cn(
+                            "flex items-center gap-1.5 p-[8px_14px] rounded-xl border border-solid text-[13px] font-semibold cursor-pointer transition-all duration-200",
+                            active ? "border-[var(--accent-primary)] bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-[var(--accent-primary)]" : "border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                          )}
                         >
                           {opt.icon}
                           {opt.label}
@@ -502,40 +362,20 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
 
                 {/* How did you hear about us? */}
                 <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      letterSpacing: "0.15em",
-                      color: "var(--text-tertiary)",
-                      textTransform: "uppercase",
-                      marginBottom: 12,
-                    }}
-                  >
+                  <div className="block text-[12px] font-extrabold tracking-widest text-[var(--text-tertiary)] uppercase mb-3">
                     How did you hear about us?
-                  </label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {REFERRAL_OPTIONS.map((opt) => {
                       const active = data.referralSource === opt.id;
                       return (
-                        <button
+                        <button type="button"
                           key={opt.id}
                           onClick={() => setData((prev) => ({ ...prev, referralSource: opt.id }))}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "8px 14px",
-                            borderRadius: 10,
-                            border: `1px solid ${active ? "var(--accent-primary)" : "var(--border-subtle)"}`,
-                            background: active ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "var(--bg-primary)",
-                            color: active ? "var(--accent-primary)" : "var(--text-secondary)",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            transition: "all 0.2s",
-                          }}
+                          className={cn(
+                            "flex items-center gap-1.5 p-[8px_14px] rounded-xl border border-solid text-[13px] font-semibold cursor-pointer transition-all duration-200",
+                            active ? "border-[var(--accent-primary)] bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-[var(--accent-primary)]" : "border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
+                          )}
                         >
                           {opt.icon}
                           {opt.label}
@@ -555,109 +395,45 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    letterSpacing: "0.15em",
-                    color: "var(--text-tertiary)",
-                    textTransform: "uppercase",
-                    marginBottom: 12,
-                  }}
-                >
+                <div className="text-[12px] font-extrabold tracking-widest text-[var(--text-tertiary)] uppercase mb-3">
                   {stepLabels[1]}
                 </div>
-                <h2
-                  style={{
-                    fontSize: 32,
-                    fontWeight: 700,
-                    color: "var(--text-primary)",
-                    lineHeight: 1.15,
-                    marginBottom: 8,
-                    letterSpacing: "-0.02em",
-                  }}
-                >
+                <h2 className="text-[32px] font-bold text-[var(--text-primary)] leading-tight mb-2 tracking-tight">
                   Get the best prompts & templates weekly. For free.
                 </h2>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: "var(--text-secondary)",
-                    marginBottom: 32,
-                    lineHeight: 1.5,
-                  }}
-                >
+                <p className="text-[14px] text-[var(--text-secondary)] mb-8 leading-relaxed">
                   Subscribe to design drops, prompt engineering guides, and major product
                   updates.
                 </p>
 
-                <div
-                  style={{
-                    background: "var(--bg-primary)",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: 16,
-                    padding: 24,
-                    marginBottom: 24,
-                  }}
-                >
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      fontWeight: 800,
-                      letterSpacing: "0.15em",
-                      color: "var(--text-tertiary)",
-                      textTransform: "uppercase",
-                      marginBottom: 16,
-                    }}
-                  >
+                <div className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] rounded-2xl p-6 mb-6">
+                  <div className="block text-[12px] font-extrabold tracking-widest text-[var(--text-tertiary)] uppercase mb-4">
                     Subscribe to updates
-                  </label>
-                  <p
-                    style={{
-                      fontSize: 14,
-                      color: "var(--text-secondary)",
-                      lineHeight: 1.6,
-                      marginBottom: 20,
-                    }}
-                  >
+                  </div>
+                  <p className="text-[14px] text-[var(--text-secondary)] mb-5 leading-relaxed">
                     Email the best prompts, remixable design drops, and major product updates.
                     We will send a confirmation email first.
                   </p>
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <div style={{ position: "relative", flex: 1 }}>
+                  <div className="flex gap-2.5">
+                    <div className="relative flex-1">
                       <Envelope
                         size={16}
-                        style={{
-                          position: "absolute",
-                          left: 14,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          color: "var(--text-tertiary)",
-                        }}
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
                       />
-                      <input
-                        type="email"
+                      <input aria-label="your@email.com" type="email"
                         placeholder="your@email.com"
                         value={data.email}
                         onChange={(e) => {
                           setData((prev) => ({ ...prev, email: e.target.value }));
                           setEmailError("");
                         }}
-                        style={{
-                          width: "100%",
-                          padding: "12px 14px 12px 40px",
-                          borderRadius: 10,
-                          border: `1px solid ${emailError ? "#ef4444" : "var(--border-subtle)"}`,
-                          background: "var(--bg-primary)",
-                          color: "var(--text-primary)",
-                          fontSize: 14,
-                          outline: "none",
-                          fontFamily: "inherit",
-                        }}
+                        className={cn(
+                          "w-full p-[12px_14px_12px_40px] rounded-xl border border-solid bg-[var(--bg-primary)] text-[var(--text-primary)] text-[14px] outline-none font-inherit transition-all",
+                          emailError ? "border-[#ef4444]" : "border-[var(--border-subtle)] focus:border-[var(--accent-primary)]"
+                        )}
                       />
                     </div>
-                    <button
+                    <button type="button"
                       onClick={() => {
                         if (data.email && validateEmail(data.email)) {
                           setData((prev) => ({ ...prev, subscribed: true }));
@@ -665,68 +441,30 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                           setEmailError("Please enter a valid email.");
                         }
                       }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        padding: "0 20px",
-                        borderRadius: 10,
-                        background: data.subscribed ? "#22c55e" : "var(--accent-primary)",
-                        border: "none",
-                        color: "#fff",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-5 rounded-xl border-none text-white text-[13px] font-bold cursor-pointer whitespace-nowrap transition-colors",
+                        data.subscribed ? "bg-green-500" : "bg-[var(--accent-primary)] hover:opacity-90"
+                      )}
                     >
                       {data.subscribed ? <Check size={16} weight="bold" /> : <Envelope size={16} />}
                       {data.subscribed ? "Subscribed" : "Subscribe for free"}
                     </button>
                   </div>
                   {emailError && (
-                    <p style={{ fontSize: 12, color: "#ef4444", marginTop: 8 }}>{emailError}</p>
+                    <p className="text-[12px] text-[#ef4444] mt-2 m-0">{emailError}</p>
                   )}
                 </div>
 
                 {/* Preview card */}
-                <div
-                  style={{
-                    background: "linear-gradient(135deg, rgba(226,124,89,0.1), rgba(59,130,246,0.1))",
-                    border: "1px solid var(--border-subtle)",
-                    borderRadius: 16,
-                    padding: 20,
-                    display: "flex",
-                    gap: 16,
-                    alignItems: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 12,
-                      background: "rgba(226,124,89,0.15)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <MagicWand size={24} color="var(--accent-primary)" weight="duotone" />
+                <div className="bg-gradient-to-br from-[var(--accent-primary)]/10 to-blue-500/10 border border-solid border-[var(--border-subtle)] rounded-2xl p-5 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[var(--accent-primary)]/15 flex items-center justify-center shrink-0">
+                    <MagicWand size={24} className="text-[var(--accent-primary)]" weight="duotone" />
                   </div>
                   <div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: "var(--text-primary)",
-                        marginBottom: 4,
-                      }}
-                    >
+                    <div className="text-[14px] font-bold text-[var(--text-primary)] mb-1">
                       Weekly Design Drops
                     </div>
-                    <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                    <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                       Prompts, templates, and system updates curated for your design workflow.
                     </div>
                   </div>
@@ -742,38 +480,13 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    letterSpacing: "0.15em",
-                    color: "var(--text-tertiary)",
-                    textTransform: "uppercase",
-                    marginBottom: 12,
-                  }}
-                >
+                <div className="text-[12px] font-extrabold tracking-widest text-[var(--text-tertiary)] uppercase mb-3">
                   {stepLabels[2]}
                 </div>
-                <h2
-                  style={{
-                    fontSize: 32,
-                    fontWeight: 700,
-                    color: "var(--text-primary)",
-                    lineHeight: 1.15,
-                    marginBottom: 8,
-                    letterSpacing: "-0.02em",
-                  }}
-                >
+                <h2 className="text-[32px] font-bold text-[var(--text-primary)] leading-tight mb-2 tracking-tight">
                   3 Steps to Start
                 </h2>
-                <p
-                  style={{
-                    fontSize: 14,
-                    color: "var(--text-secondary)",
-                    marginBottom: 24,
-                    lineHeight: 1.5,
-                  }}
-                >
+                <p className="text-[14px] text-[var(--text-secondary)] mb-6 leading-relaxed">
                   Watch how Allternit turns your first prompt into a shipped design system.
                 </p>
 
@@ -781,65 +494,22 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 <VideoPlayer />
 
                 {/* Feature Cards */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: 12,
-                    marginBottom: 8,
-                  }}
-                >
+                <div className="grid grid-cols-3 gap-3 mb-2">
                   {WALKTHROUGH_FEATURES.map((feat, idx) => (
                     <div
-                      key={idx}
-                      style={{
-                        background: "var(--bg-primary)",
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: 14,
-                        padding: 18,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 10,
-                      }}
+                      key={`studioonboardingwizard-${idx}`}
+                      className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] rounded-xl p-4.5 flex flex-col gap-2.5"
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div
-                          style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: "50%",
-                            background: "rgba(226,124,89,0.12)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "var(--accent-primary)",
-                            fontSize: 12,
-                            fontWeight: 800,
-                          }}
-                        >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-[var(--accent-primary)]/12 flex items-center justify-center text-[var(--accent-primary)] text-[12px] font-extrabold">
                           {feat.step}
                         </div>
-                        <div style={{ color: "var(--text-secondary)" }}>{feat.icon}</div>
+                        <div className="text-[var(--text-secondary)]">{feat.icon}</div>
                       </div>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 800,
-                          letterSpacing: "0.08em",
-                          color: "var(--text-tertiary)",
-                          textTransform: "uppercase",
-                        }}
-                      >
+                      <div className="text-[12px] font-extrabold tracking-widest text-[var(--text-tertiary)] uppercase">
                         {feat.title}
                       </div>
-                      <p
-                        style={{
-                          fontSize: 12,
-                          color: "var(--text-secondary)",
-                          lineHeight: 1.5,
-                          margin: 0,
-                        }}
-                      >
+                      <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed m-0">
                         {feat.desc}
                       </p>
                     </div>
@@ -851,65 +521,30 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
         </div>
 
         {/* Bottom Actions */}
-        <div
-          style={{
-            padding: "16px 24px 20px",
-            borderTop: "1px solid var(--border-subtle)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <button
+        <div className="p-[16px_24px_20px] border-t border-solid border-[var(--border-subtle)] flex items-center justify-between">
+          <button type="button"
             onClick={onSkip || onComplete}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--text-tertiary)",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              padding: "8px 0",
-            }}
+            className="bg-transparent border-none text-[var(--text-tertiary)] text-[13px] font-medium cursor-pointer p-[8px_0] hover:text-[var(--text-secondary)] transition-colors"
           >
             Skip for now
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="flex items-center gap-2.5">
             {step > 0 && (
-              <button
+              <button type="button"
                 onClick={handleBack}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  background: "var(--surface-hover)",
-                  border: "1px solid var(--border-subtle)",
-                  color: "var(--text-secondary)",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
+                className="p-[10px_18px] rounded-xl bg-[var(--surface-hover)] border border-solid border-[var(--border-subtle)] text-[var(--text-secondary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-active)] transition-colors"
               >
                 Back
               </button>
             )}
-            <button
+            <button type="button"
               onClick={handleNext}
               disabled={!canProceed()}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "10px 20px",
-                borderRadius: 10,
-                background: canProceed() ? "var(--accent-primary)" : "var(--surface-hover)",
-                border: "none",
-                color: canProceed() ? "#fff" : "var(--text-tertiary)",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: canProceed() ? "pointer" : "not-allowed",
-                transition: "all 0.2s",
-              }}
+              className={cn(
+                "flex items-center gap-1.5 p-[10px_20px] rounded-xl border-none text-white text-[13px] font-bold transition-all duration-200",
+                canProceed() ? "bg-[var(--accent-primary)] cursor-pointer hover:opacity-90" : "bg-[var(--surface-hover)] text-[var(--text-tertiary)] cursor-not-allowed"
+              )}
             >
               {step === totalSteps - 1 ? "Start creating" : "Next"}
               <ArrowRight size={16} weight="bold" />

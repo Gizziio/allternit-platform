@@ -49,6 +49,6 @@ export const Z = {
 } as const;
 
 // Convenience for CSS custom properties
-export const Z_CSS = Object.fromEntries(
+const Z_CSS = Object.fromEntries(
   Object.entries(Z).map(([k, v]) => [`--z-${k}`, String(v)])
 ) as Record<`--z-${keyof typeof Z}`, string>;

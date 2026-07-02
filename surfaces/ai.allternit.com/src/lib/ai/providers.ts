@@ -10,6 +10,10 @@ import type {
 import type { AppModelId, ModelId } from "./app-models";
 import { getAppModelDefinition } from "./app-models";
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('Providers');
+
 const _telemetryConfig = {
   telemetry: {
     isEnabled: true,
@@ -33,16 +37,16 @@ export const getLanguageModel = async (modelId: ModelId) => {
   return languageProvider;
 };
 
-export const getImageModel = (modelId: ImageModelId) =>
+const getImageModel = (modelId: ImageModelId) =>
   gateway.imageModel(modelId);
 
 // Get a multimodal language model that can generate images via generateText
-export const getMultimodalImageModel = (modelId: MultimodalImageModelId) =>
+const getMultimodalImageModel = (modelId: MultimodalImageModelId) =>
   gateway(modelId);
 
 // Model aliases removed - use getLanguageModel directly with specific model IDs
 
-export const getModelProviderOptions = async (
+const getModelProviderOptions = async (
   providerModelId: AppModelId
 ): Promise<
   | {

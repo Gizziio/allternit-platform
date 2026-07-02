@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode, useMemo } from "react";
+import { createContext, useContext, useCallback, ReactNode, useMemo } from "react";
 import type { ModelData } from "@/lib/ai/types";
 import { ALL_MODELS, DEFAULT_MODEL, getModelById } from "@/lib/ai/models";
 
@@ -59,7 +59,7 @@ export function ChatModelsProvider({
   );
 }
 
-export function useChatModels() {
+function useChatModels() {
   const context = useContext(ChatModelsContext);
   if (!context) {
     throw new Error("useChatModels must be used within a ChatModelsProvider");

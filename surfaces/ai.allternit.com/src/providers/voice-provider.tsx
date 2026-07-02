@@ -13,8 +13,7 @@ import {
   voiceService, 
   speechToText, 
   type VoicePreset, 
-  type VoiceModel,
-  type TTSResponse 
+  type VoiceModel 
 } from '@/services/voice';
 
 // Default settings
@@ -179,16 +178,10 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
       }
     });
 
-    // Initial health check and voice loading
-    voiceService.checkHealth({ quiet: true, force: true }).then(available => {
-      setServiceAvailable(available);
-      if (available) {
-        refreshVoices().catch((refreshError) => {
-          const message = refreshError instanceof Error ? refreshError.message : 'Failed to load voices';
-          setError(message);
-        });
-      }
-    });
+    // Do not eagerly probe the local voice backend on app startup.
+    // Voice is an optional capability and should initialize when the user
+    // actually engages the voice controls instead of generating console noise
+    // for every shell boot.
 
     return () => {
       unsubscribePlayback();
@@ -199,7 +192,7 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
 
   // Subscribe to STT events
   useEffect(() => {
-    const unsubscribe = speechToText.on((event) => {
+    const unsubscribe = speechToText.subscribe((event) => {
       switch (event.type) {
         case 'start':
           setIsRecording(true);
@@ -231,7 +224,7 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
       }
     });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   // Actions

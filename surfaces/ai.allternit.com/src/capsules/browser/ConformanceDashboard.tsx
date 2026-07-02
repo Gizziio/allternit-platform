@@ -141,7 +141,7 @@ export function ConformanceDashboard() {
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           {(['A', 'D', 'F'] as Suite[]).map((s) => (
-            <button
+            <button type="button"
               key={s}
               onClick={() => void runSuite(s)}
               disabled={running !== null}
@@ -162,7 +162,7 @@ export function ConformanceDashboard() {
               {running === `suite-${s}` ? '…' : `Run ${s}`}
             </button>
           ))}
-          <button
+          <button type="button"
             onClick={() => void fetchGrades()}
             disabled={loading}
             style={{

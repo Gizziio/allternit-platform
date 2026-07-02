@@ -64,11 +64,11 @@ export const Default: Story = {
  * Interactive slide toggle
  */
 export const Interactive: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [visible, setVisible] = useState(true);
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setVisible(!visible)}
           style={{
             padding: '8px 16px',
@@ -104,13 +104,13 @@ export const Interactive: Story = {
  * All slide directions
  */
 export const Directions: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [key, setKey] = useState(0);
     const directions: Array<'up' | 'down' | 'left' | 'right'> = ['up', 'down', 'left', 'right'];
     
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setKey(k => k + 1)}
           style={{
             padding: '8px 16px',
@@ -160,12 +160,12 @@ export const Directions: Story = {
  * Slide presets demonstration
  */
 export const Presets: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [key, setKey] = useState(0);
     
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setKey(k => k + 1)}
           style={{
             padding: '8px 16px',
@@ -218,13 +218,13 @@ export const Presets: Story = {
  * Different slide distances
  */
 export const Distances: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [key, setKey] = useState(0);
     const distances = [50, 100, 200, 300];
     
     return (
       <div style={{ textAlign: 'center' }}>
-        <button 
+        <button type="button" 
           onClick={() => setKey(k => k + 1)}
           style={{
             padding: '8px 16px',
@@ -258,14 +258,14 @@ export const Distances: Story = {
  * Panel/drawer simulation
  */
 export const PanelSimulation: Story = {
-  render: () => {
+  render: function StoryRender() {
     const [open, setOpen] = useState(false);
     
     return (
       <div style={{ position: 'relative', width: '400px', height: '300px', overflow: 'hidden', border: '1px solid var(--border-default)', borderRadius: '12px' }}>
         {/* Main content */}
         <div style={{ padding: '20px' }}>
-          <button 
+          <button type="button" 
             onClick={() => setOpen(true)}
             style={{
               padding: '8px 16px',
@@ -295,7 +295,7 @@ export const PanelSimulation: Story = {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0 }}>Panel</h3>
-              <button 
+              <button type="button" 
                 onClick={() => setOpen(false)}
                 style={{
                   padding: '4px 8px',

@@ -52,7 +52,7 @@ export function CodeCanvasTileSession({ sessionId, workspacePath }: CodeCanvasTi
     >
       {/* h5i Context button (subtle, top-right of tile content area) */}
       {workspacePath && (
-        <button
+        <button type="button"
           onClick={() => setShowContext(true)}
           title="View h5i context trace"
           style={{

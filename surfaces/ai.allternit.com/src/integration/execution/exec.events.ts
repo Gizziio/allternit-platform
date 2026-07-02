@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import { TraceFrame, RunResult, ToolCall } from './exec.types';
 
 type EventHandler<T> = (data: T) => void;
@@ -20,7 +19,7 @@ interface ExecutionEvents {
 class ExecutionEventBus {
   private listeners: Partial<Record<keyof ExecutionEvents, Set<any>>> = {};
 
-  on<K extends keyof ExecutionEvents>(event: K, handler: ExecutionEvents[K]) {
+  subscribe<K extends keyof ExecutionEvents>(event: K, handler: ExecutionEvents[K]) {
     if (!this.listeners[event]) {
       this.listeners[event] = new Set();
     }

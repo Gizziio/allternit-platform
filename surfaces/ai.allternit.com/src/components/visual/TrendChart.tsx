@@ -5,7 +5,8 @@
  * with interactive tooltips and threshold indicators.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface DataPoint {
   timestamp: string;
@@ -72,8 +73,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   const innerWidth = chartWidth - padding.left - padding.right;
   const innerHeight = chartHeight - padding.top - padding.bottom;
 
-  const xScale = (index: number) => padding.left + (index / (Math.max(data.length - 1, 1))) * innerWidth;
-  const yScale = (confidence: number) => padding.top + innerHeight - confidence * innerHeight;
+  const xScale = useCallback((index: number) => padding.left + (index / (Math.max(data.length - 1, 1))) * innerWidth, [padding.left, data.length, innerWidth]);
+  const yScale = useCallback((confidence: number) => padding.top + innerHeight - confidence * innerHeight, [padding.top, innerHeight]);
 
   const linePath = useMemo(() => {
     if (data.length === 0) return '';
@@ -94,11 +95,11 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div style={{ background: 'var(--surface-panel)', border: '1px solid var(--ui-border-default)', borderRadius: '12px', padding: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>Confidence Trend</h4>
+      <div className="p-5 rounded-xl border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)]">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="m-0 text-[14px] font-semibold text-[var(--ui-text-primary)]">Confidence Trend</h4>
         </div>
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ui-text-muted)' }}>
+        <div className="flex items-center justify-center text-[var(--ui-text-muted)]" style={{ height }}>
           No data available
         </div>
       </div>
@@ -106,41 +107,43 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   }
 
   return (
-    <div style={{ background: 'var(--surface-panel)', border: '1px solid var(--ui-border-default)', borderRadius: '12px', padding: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>Confidence Trend</h4>
-        <div style={{ display: 'flex', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: stats.trend === 'up' ? 'var(--status-success)' : stats.trend === 'down' ? 'var(--status-error)' : 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+    <div className="p-5 rounded-xl border border-solid border-[var(--ui-border-default)] bg-[var(--surface-panel)]">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="m-0 text-[14px] font-semibold text-[var(--ui-text-primary)]">Confidence Trend</h4>
+        <div className="flex gap-4">
+          <div className="flex flex-col items-end">
+            <span 
+              className="text-[16px] font-semibold tabular-nums"
+              style={{ color: stats.trend === 'up' ? 'var(--status-success)' : stats.trend === 'down' ? 'var(--status-error)' : 'var(--ui-text-primary)' }}
+            >
               {stats.trend === 'up' && '↑ '}{stats.trend === 'down' && '↓ '}{Math.round(stats.avg * 100)}%
             </span>
-            <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Average</span>
+            <span className="text-[12px] text-[var(--ui-text-muted)]">Average</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(stats.min * 100)}%</span>
-            <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Min</span>
+          <div className="flex flex-col items-end">
+            <span className="text-[16px] font-semibold text-[var(--ui-text-primary)] tabular-nums">{Math.round(stats.min * 100)}%</span>
+            <span className="text-[12px] text-[var(--ui-text-muted)]">Min</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(stats.max * 100)}%</span>
-            <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Max</span>
+          <div className="flex flex-col items-end">
+            <span className="text-[16px] font-semibold text-[var(--ui-text-primary)] tabular-nums">{Math.round(stats.max * 100)}%</span>
+            <span className="text-[12px] text-[var(--ui-text-muted)]">Max</span>
           </div>
         </div>
       </div>
 
-      <div style={{ position: 'relative', height, width: '100%' }}>
-        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+      <div className="relative w-full" style={{ height }}>
+        <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="size-full overflow-visible">
           {[0, 0.25, 0.5, 0.75, 1].map(tick => (
-            <g key={tick}>
+            <g key={`tick-${tick}`}>
               <line
                 x1={padding.left}
                 y1={yScale(tick)}
                 x2={chartWidth - padding.right}
                 y2={yScale(tick)}
-                stroke="var(--ui-border-default)"
-                strokeWidth={1}
+                className="stroke-[var(--ui-border-default)] stroke-1"
                 strokeDasharray="4,4"
               />
-              <text x={padding.left - 10} y={yScale(tick) + 4} textAnchor="end" fill="var(--ui-text-muted)" fontSize="11" fontWeight="500">
+              <text x={padding.left - 10} y={yScale(tick) + 4} textAnchor="end" className="fill-[var(--ui-text-muted)] text-[11px] font-medium">
                 {Math.round(tick * 100)}%
               </text>
             </g>
@@ -151,8 +154,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             y1={yScale(threshold)}
             x2={chartWidth - padding.right}
             y2={yScale(threshold)}
-            stroke="var(--status-warning)"
-            strokeWidth={2}
+            className="stroke-[var(--status-warning)] stroke-2"
             strokeDasharray="8,4"
           />
 
@@ -160,14 +162,13 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 
           {showPoints && data.map((point, i) => (
             <circle
-              key={i}
+              key={`${point.timestamp}-${i}`}
               cx={xScale(i)}
               cy={yScale(point.confidence)}
               r={hoveredIndex === i ? 6 : 4}
-              fill="var(--surface-panel)"
+              className="fill-[var(--surface-panel)] transition-all duration-200 cursor-pointer"
               stroke={getLineColor(point.confidence)}
               strokeWidth={hoveredIndex === i ? 3 : 2}
-              style={{ cursor: 'pointer', transition: 'all 0.2s' }}
               onMouseEnter={(e) => handleMouseMove(e, i)}
               onMouseMove={(e) => handleMouseMove(e, i)}
               onMouseLeave={() => { setHoveredIndex(null); setTooltipPos(null); }}
@@ -176,52 +177,43 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           ))}
 
           {[0, Math.floor(data.length / 2), data.length - 1].map(i => (
-            <text key={i} x={xScale(i)} y={chartHeight - 10} textAnchor="middle" fill="var(--ui-text-muted)" fontSize="11">
+            <text key={`label-${i}`} x={xScale(i)} y={chartHeight - 10} textAnchor="middle" className="fill-[var(--ui-text-muted)] text-[11px]">
               {formatDate(data[i].timestamp)}
             </text>
           ))}
         </svg>
 
         {hoveredIndex !== null && tooltipPos && (
-          <div style={{
-            position: 'absolute',
-            left: tooltipPos.x,
-            top: tooltipPos.y - 60,
-            transform: 'translateX(-50%)',
-            background: 'var(--surface-panel)',
-            border: '1px solid #333',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            pointerEvents: 'none',
-            zIndex: 10,
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-            minWidth: '140px',
-          }}>
-            <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginBottom: '4px' }}>
+          <div 
+            className="absolute -translate-x-1/2 bg-[var(--surface-panel)] border border-solid border-[#333] rounded-lg p-[12px_16px] pointer-events-none z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)] min-w-[140px]"
+            style={{
+              left: tooltipPos.x,
+              top: tooltipPos.y - 60,
+            }}
+          >
+            <div className="text-[12px] text-[var(--ui-text-muted)] mb-1">
               {formatDate(data[hoveredIndex].timestamp)} at {formatTime(data[hoveredIndex].timestamp)}
             </div>
-            <div style={{ 
-              fontSize: '18px', 
-              fontWeight: 700, 
-              color: getLineColor(data[hoveredIndex].confidence),
-              fontVariantNumeric: 'tabular-nums'
-            }}>
+            <div 
+              className="text-[18px] font-bold tabular-nums"
+              style={{ color: getLineColor(data[hoveredIndex].confidence) }}
+            >
               {Math.round(data[hoveredIndex].confidence * 100)}% Confidence
             </div>
             {data[hoveredIndex].wihId && (
-              <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>{data[hoveredIndex].wihId}</div>
+              <div className="text-[12px] text-[var(--ui-text-muted)] mt-1 font-mono">{data[hoveredIndex].wihId}</div>
             )}
           </div>
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #333' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ui-text-muted)' }}>
-          <div style={{ width: '20px', height: '2px', background: trendColor }} />
+      <div className="flex items-center gap-4 mt-4 pt-4 border-t border-solid border-[#333]">
+        <div className="flex items-center gap-1.5 text-[12px] text-[var(--ui-text-muted)]">
+          <div className="w-5 h-0.5" style={{ background: trendColor }} />
           Confidence
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ui-text-muted)' }}>
-          <div style={{ width: '20px', height: '2px', background: 'repeating-linear-gradient(to right, #eab308 0px, #eab308 4px, transparent 4px, transparent 8px)' }} />
+        <div className="flex items-center gap-1.5 text-[12px] text-[var(--ui-text-muted)]">
+          <div className="w-5 h-0.5 bg-[repeating-linear-gradient(to_right,#eab308_0px,#eab308_4px,transparent_4px,transparent_8px)]" />
           Threshold ({Math.round(threshold * 100)}%)
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import { useDakStore } from "../runner/dak.store";
 import { DagPlanningPanel } from "../runner/components/DagPlanningPanel";
 import { WIHManagerPanel } from "../runner/components/WIHManagerPanel";
@@ -51,12 +51,11 @@ function ExecutePanel() {
         {output.length === 0 ? (
           <span className="text-muted-foreground">Ready to execute tools…</span>
         ) : (
-          output.map((line, i) => <div key={i}>{line}</div>)
+          output.map((line, i) => <div key={`runnerview-${i}`}>{line}</div>)
         )}
       </div>
       <div className="flex gap-2">
-        <input
-          type="text"
+        <input aria-label="Input" type="text"
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleExecute()}
@@ -123,7 +122,7 @@ function StatusBar() {
   );
 }
 
-export function RunnerView(): JSX.Element {
+export function RunnerView(): React.ReactNode {
   const { 
     activeTab, 
     setActiveTab, 

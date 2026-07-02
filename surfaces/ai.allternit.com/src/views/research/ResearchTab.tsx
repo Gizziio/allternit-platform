@@ -1,6 +1,5 @@
 'use client';
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useEffect } from 'react';
 import { BookOpen, Plus, ChevronDown, Send, Loader2, WifiOff } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
@@ -9,6 +8,9 @@ import { ChatWorkspace } from './components/ChatWorkspace';
 import { ToolsPanel } from './components/ToolsPanel';
 import { ResearchErrorBoundary } from './components/ErrorBoundary';
 import { notebookApi, type Notebook, type Source, type ChatMessage, type Citation } from './hooks/useNotebookApi';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ResearchTab');
 
 export function ResearchTab() {
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
@@ -23,6 +25,7 @@ export function ResearchTab() {
   const [isMobile, setIsMobile] = useState(false);
   const [showToolsOnMobile, setShowToolsOnMobile] = useState(false);
   const [showNotebookDropdown, setShowNotebookDropdown] = useState(false);
+  const [newNotebookTitle, setNewNotebookTitle] = useState<string | null>(null);
   const streamingMessageIdRef = React.useRef<string | null>(null);
 
   const activeNotebook = notebooks.find(n => n.id === activeNotebookId);
@@ -86,7 +89,7 @@ export function ResearchTab() {
           setActiveNotebookId(data[0].id);
         }
       })
-      .catch(console.error);
+      .catch((err: unknown) => logger.error({ err }, 'Request failed'));
   }, [apiAvailable]);
 
   // Load sources when notebook changes
@@ -94,7 +97,7 @@ export function ResearchTab() {
     if (!activeNotebookId || !apiAvailable) return;
     notebookApi.listSources(activeNotebookId)
       .then(data => setSources(data))
-      .catch(console.error);
+      .catch((err: unknown) => logger.error({ err }, 'Request failed'));
   }, [activeNotebookId, apiAvailable]);
 
   // Load messages when notebook changes
@@ -111,19 +114,19 @@ export function ResearchTab() {
         }));
         setMessages(mapped);
       })
-      .catch(console.error);
+      .catch((err: unknown) => logger.error({ err }, 'Request failed'));
   }, [activeNotebookId, apiAvailable]);
 
-  const handleCreateNotebook = useCallback(async () => {
-    const title = prompt('Name your research notebook:');
-    if (!title) return;
+  const handleCreateNotebook = useCallback(async (title: string) => {
+    if (!title.trim()) return;
     try {
-      const notebook = await notebookApi.createNotebook(title);
+      const notebook = await notebookApi.createNotebook(title.trim());
       setNotebooks(prev => [...prev, notebook]);
       setActiveNotebookId(notebook.id);
       setMessages([]);
+      setNewNotebookTitle(null);
     } catch (e) {
-      console.error('Failed to create notebook:', e);
+      logger.error({ err: e }, 'Failed to create notebook');
     }
   }, []);
 
@@ -134,7 +137,7 @@ export function ResearchTab() {
       const newSource = await notebookApi.addSource(activeNotebookId, source);
       setSources(prev => [...prev, newSource]);
     } catch (e) {
-      console.error('Failed to add source:', e);
+      logger.error({ err: e }, 'Failed to add source');
     } finally {
       setIsUploading(false);
     }
@@ -146,7 +149,7 @@ export function ResearchTab() {
       await notebookApi.removeSource(activeNotebookId, sourceId);
       setSources(prev => prev.filter(s => s.id !== sourceId));
     } catch (e) {
-      console.error('Failed to remove source:', e);
+      logger.error({ err: e }, 'Failed to remove source');
     }
   }, [activeNotebookId]);
 
@@ -213,7 +216,7 @@ export function ResearchTab() {
         }
       });
     } catch (e) {
-      console.error('Chat failed:', e);
+      logger.error({ err: e }, 'Chat failed');
       streamingMessageIdRef.current = null;
       setIsLoading(false);
     }
@@ -289,7 +292,7 @@ export function ResearchTab() {
             The research backend is starting up or unavailable. Please wait a moment and try again.
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={() => {
             setApiAvailable(null);
             notebookApi.health().then(() => setApiAvailable(true)).catch(() => setApiAvailable(false));
@@ -318,10 +321,28 @@ export function ResearchTab() {
             Create a notebook, add sources, and chat with your documents using AI-powered insights and citations.
           </p>
         </div>
-        <button onClick={handleCreateNotebook} className="research-btn-primary">
-          <Plus size={18} />
-          Create Notebook
-        </button>
+        {newNotebookTitle !== null ? (
+          <div className="flex gap-2 items-center">
+            <input aria-label="Input" autoFocus
+              type="text"
+              value={newNotebookTitle}
+              onChange={(e) => setNewNotebookTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateNotebook(newNotebookTitle);
+                else if (e.key === 'Escape') setNewNotebookTitle(null);
+              }}
+              placeholder="Notebook name…"
+              className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-3 py-1.5 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#6366f1)]"
+            />
+            <button type="button" onClick={() => handleCreateNotebook(newNotebookTitle)} className="research-btn-primary text-sm px-3 py-1.5">Create</button>
+            <button type="button" onClick={() => setNewNotebookTitle(null)} className="research-btn-secondary text-sm px-3 py-1.5">Cancel</button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setNewNotebookTitle('')} className="research-btn-primary">
+            <Plus size={18} />
+            Create Notebook
+          </button>
+        )}
       </div>
     );
   }
@@ -338,7 +359,7 @@ export function ResearchTab() {
         >
           <div className="flex items-center gap-2.5">
             <div className="relative" data-notebook-selector>
-              <button
+              <button type="button"
                 onClick={() => setShowNotebookDropdown(v => !v)}
                 className="research-btn-secondary text-[13px] font-medium"
                 style={{
@@ -370,7 +391,7 @@ export function ResearchTab() {
                     </div>
                   )}
                   {notebooks.map(nb => (
-                    <button
+                    <button type="button"
                       key={nb.id}
                       onClick={() => {
                         setActiveNotebookId(nb.id);
@@ -393,15 +414,33 @@ export function ResearchTab() {
                 </div>
               )}
             </div>
-            <button onClick={handleCreateNotebook} className="research-btn-secondary">
-              <Plus size={12} />
-              New
-            </button>
+            {newNotebookTitle !== null ? (
+              <div className="flex gap-1 items-center">
+                <input aria-label="Input" autoFocus
+                  type="text"
+                  value={newNotebookTitle}
+                  onChange={(e) => setNewNotebookTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateNotebook(newNotebookTitle);
+                    else if (e.key === 'Escape') setNewNotebookTitle(null);
+                  }}
+                  placeholder="Notebook name…"
+                  className="rounded border border-[var(--border-subtle,#27272a)] bg-[var(--bg-secondary,#18181b)] px-2 py-0.5 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary,#6366f1)]"
+                />
+                <button type="button" onClick={() => handleCreateNotebook(newNotebookTitle)} className="research-btn-primary text-[11px] px-2 py-0.5">Create</button>
+                <button type="button" onClick={() => setNewNotebookTitle(null)} className="research-btn-secondary text-[11px] px-2 py-0.5">✕</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setNewNotebookTitle('')} className="research-btn-secondary">
+                <Plus size={12} />
+                New
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
             {isMobile && (
-              <button
+              <button type="button"
                 onClick={() => setShowToolsOnMobile(!showToolsOnMobile)}
                 className="research-btn-secondary"
                 style={{
@@ -428,11 +467,10 @@ export function ResearchTab() {
                 onCitationClick={handleCitationClick}
               />
               <div className="research-composer">
-                <button className="bg-transparent border-none p-1 text-[var(--text-muted,#a1a1aa)] cursor-pointer" title="Add attachment">
+                <button type="button" className="bg-transparent border-none p-1 text-[var(--text-muted,#a1a1aa)] cursor-pointer" title="Add attachment">
                   <Plus size={18} />
                 </button>
-                <input
-                  value={inputValue}
+                <input aria-label="Input" value={inputValue}
                   onChange={e => setInputValue(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -444,7 +482,7 @@ export function ResearchTab() {
                   disabled={!activeNotebook || isLoading}
                   className="research-input"
                 />
-                <button
+                <button type="button"
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || !activeNotebook || isLoading}
                   className="research-btn-icon"
@@ -498,11 +536,10 @@ export function ResearchTab() {
                   onCitationClick={handleCitationClick}
                 />
                 <div className="research-composer">
-                  <button className="bg-transparent border-none p-1 text-[var(--text-muted,#a1a1aa)] cursor-pointer" title="Add attachment">
+                  <button type="button" className="bg-transparent border-none p-1 text-[var(--text-muted,#a1a1aa)] cursor-pointer" title="Add attachment">
                     <Plus size={18} />
                   </button>
-                  <input
-                    value={inputValue}
+                  <input aria-label="Input" value={inputValue}
                     onChange={e => setInputValue(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
@@ -514,7 +551,7 @@ export function ResearchTab() {
                     disabled={!activeNotebook || isLoading}
                     className="research-input"
                   />
-                  <button
+                  <button type="button"
                     onClick={handleSendMessage}
                     disabled={!inputValue.trim() || !activeNotebook || isLoading}
                     className="research-btn-icon"

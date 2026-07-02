@@ -7,10 +7,10 @@
  * Inspired by OpenWork's transition-controller.ts.
  */
 
-export type TransitionState = 'idle' | 'switching' | 'loading' | 'error' | 'recovering';
-export type RenderSource = 'cache' | 'live' | 'empty' | 'error' | 'recovering';
+type TransitionState = 'idle' | 'switching' | 'loading' | 'error' | 'recovering';
+type RenderSource = 'cache' | 'live' | 'empty' | 'error' | 'recovering';
 
-export interface SessionRenderModel {
+interface SessionRenderModel {
   intendedSessionId: string | null;
   renderedSessionId: string | null;
   transitionState: TransitionState;
@@ -18,7 +18,7 @@ export interface SessionRenderModel {
   isFetching: boolean;
 }
 
-export function deriveSessionRenderModel(input: {
+function deriveSessionRenderModel(input: {
   intendedSessionId: string | null;
   renderedSessionId: string | null;
   hasSnapshot: boolean;
@@ -96,7 +96,7 @@ export function deriveSessionRenderModel(input: {
  * Hook-friendly state manager for transitions.
  * Use this in components that need to guard against stale session data.
  */
-export class SessionTransitionController {
+class SessionTransitionController {
   private state: SessionRenderModel = {
     intendedSessionId: null,
     renderedSessionId: null,

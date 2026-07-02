@@ -32,7 +32,7 @@ export interface TaskExecutionResult {
   timestamp: Date;
 }
 
-export interface CoworkTaskIntegration {
+interface CoworkTaskIntegration {
   taskId?: string;
   projectId?: string;
   createIfNotExists?: boolean;
@@ -329,11 +329,23 @@ export async function syncTaskToCowork(
   }
 ): Promise<{ success: boolean; coworkTaskId?: string; error?: string }> {
   try {
-    // Cowork task sync not yet wired to a backend — report honestly
-    return {
-      success: false,
-      error: 'Cowork task sync is not yet implemented',
-    };
+    const res = await fetch('/api/v1/cowork/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: heartbeatTask.id,
+        action: heartbeatTask.action,
+        frequency: heartbeatTask.frequency,
+        projectId: options.projectId,
+        createIfNotExists: options.createIfNotExists ?? true,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      return { success: false, error: `Cowork sync failed (${res.status})${text ? `: ${text.slice(0, 80)}` : ''}` };
+    }
+    const data = (await res.json()) as { id?: string };
+    return { success: true, coworkTaskId: data.id };
   } catch (error) {
     return {
       success: false,

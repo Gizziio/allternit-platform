@@ -86,14 +86,6 @@ export function useCanvasStream({
   useEffect(() => {
     if (!sessionId) return;
 
-    // Connect to stream endpoint
-    const streamUrl = `/api/canvas/stream?sessionId=${sessionId}`;
-    
-    // For now, we'll simulate stream events
-    // In production, this would connect to Rust SSE stream
-    console.debug('[useCanvasStream] Would connect to:', streamUrl);
-
-    // Simulate stream status
     setStreamStatus('idle');
 
     return () => {

@@ -70,8 +70,7 @@ export function InputModal({
             {description}
           </p>
         )}
-        <input
-          ref={inputRef}
+        <input aria-label="Input" ref={inputRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}

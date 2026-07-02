@@ -8,7 +8,7 @@ export interface PageAgentBridgeConfig {
   experimentalLlmsTxt?: boolean;
 }
 
-export interface BrowserPageAgentConfigSource {
+interface BrowserPageAgentConfigSource {
   language?: string;
   extensionApiKey?: string;
   extensionBaseUrl?: string;
@@ -18,7 +18,7 @@ export interface BrowserPageAgentConfigSource {
   extensionExperimentalLlmsTxt?: boolean;
 }
 
-export function normalizePageAgentLanguage(
+function normalizePageAgentLanguage(
   language?: string,
 ): PageAgentBridgeConfig["language"] {
   if (language === "zh" || language === "zh-CN") return "zh-CN";
@@ -27,7 +27,7 @@ export function normalizePageAgentLanguage(
   return undefined;
 }
 
-export function buildPageAgentBridgeConfig(
+function buildPageAgentBridgeConfig(
   source: BrowserPageAgentConfigSource,
 ): PageAgentBridgeConfig {
   return {
@@ -44,7 +44,7 @@ export function buildPageAgentBridgeConfig(
   };
 }
 
-export function hasPageAgentBridgeConfig(
+function hasPageAgentBridgeConfig(
   config: PageAgentBridgeConfig | null | undefined,
 ): config is PageAgentBridgeConfig {
   if (!config) return false;

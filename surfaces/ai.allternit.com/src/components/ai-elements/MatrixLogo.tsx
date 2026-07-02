@@ -1,7 +1,7 @@
-"use client";
+import React, { memo, useMemo } from "react";
 
-import React, { useMemo, memo } from 'react';
-import { motion, MotionConfig, useSpring, useMotionValue, useTransform, useMotionTemplate } from 'framer-motion';
+"use client";
+import { m, MotionConfig, useSpring, useMotionValue, useTransform, useMotionTemplate, LazyMotion, domAnimation } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface MatrixLogoProps {
@@ -84,116 +84,117 @@ export const MatrixLogo = memo(({
   }, [isSmall]);
 
   return (
-    <MotionConfig reducedMotion="user">
-    <div
-      className={cn("relative flex items-center justify-center cursor-pointer", className)}
-      style={{
-        width: size,
-        height: size,
-        perspective: isSmall ? "600px" : "1200px",
-        transformStyle: "preserve-3d"
-      }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-    >
-      <motion.div
-        animate={state}
+    <LazyMotion features={domAnimation}>
+      <MotionConfig reducedMotion="user">
+      <div
+        className={cn("relative flex items-center justify-center cursor-pointer", className)}
         style={{
-          width: '100%',
-          height: '100%',
-          rotateX,
-          rotateY,
-          transformStyle: "preserve-3d",
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          width: size,
+          height: size,
+          perspective: isSmall ? "600px" : "1200px",
+          transformStyle: "preserve-3d"
         }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
-        {/* Structural Extensions (Integrated Rays) */}
-        <motion.div 
-          className="absolute inset-0"
-          style={{ transform: `translateZ(${isSmall ? -15 : -30}px)`, color: 'var(--accent-primary)' }}
-          animate={isCompacting ? { rotate: 360 } : isThinking ? { rotate: 360 } : isListening ? { rotate: 360 } : { rotate: 0 }}
-          transition={isCompacting ? { repeat: Infinity, duration: 0.8, ease: "linear" } : isThinking ? { repeat: Infinity, duration: 8, ease: "linear" } : isListening ? { repeat: Infinity, duration: 4, ease: "linear" } : { type: "spring" }}
-        >
-          <svg viewBox="0 0 100 100" className="size-full overflow-visible">
-            {extensions.map((ext, i) => (
-              <motion.g key={i} transform={`rotate(${ext.angle}, 50, 50)`}>
-                <motion.line
-                  x1={ext.x1} y1={ext.y1} x2={ext.x2} y2={ext.y2}
-                  stroke="currentColor"
-                  strokeWidth={isSmall ? "1" : "0.5"}
-                  initial={{ y2: ext.y2, opacity: ext.opacity, strokeDashoffset: 0 }}
-                  animate={{
-                    opacity: isCompacting ? [0.1, 1, 0.1] : isThinking ? [ext.opacity, 0.6, ext.opacity] : isListening ? [ext.opacity * 0.5, ext.opacity * 1.4, ext.opacity * 0.5] : isAsleep ? ext.opacity * 0.15 : ext.opacity,
-                    y2: isCompacting ? 48 : isSpeaking ? ext.y2 - (energy * (isSmall ? 4 : 8)) : ext.y2,
-                    strokeDasharray: isCompacting ? "2 1" : isThinking ? ["4 2", "1 4", "4 2"] : "none",
-                    strokeDashoffset: isCompacting ? [0, -10] : 0
-                  }}
-                  transition={{
-                    duration: isCompacting ? 0.2 : 0.4,
-                    strokeDashoffset: isCompacting ? { repeat: Infinity, duration: 0.2, ease: "linear" } : { duration: 0.3 }
-                  }}
-                />
-                <motion.rect
-                  x="49.5" y={ext.y2 - 1} width={isSmall ? 2 : 1} height={isSmall ? 2 : 1}
-                  fill="currentColor"
-                  initial={{ opacity: 0.4, y: 0 }}
-                  animate={{
-                    opacity: isCompacting ? [0.6, 1, 0.6] : isThinking ? [0.2, 1, 0.2] : 0.4,
-                    scale: isCompacting ? [1, 4, 1] : isSpeaking ? [1, 2, 1] : 1,
-                    y: isCompacting ? [0, 48, 0] : 0
-                  }}
-                  transition={isCompacting ? { repeat: Infinity, duration: 0.3, ease: "easeInOut" } : {}}
-                />
-              </motion.g>
-            ))}
-          </svg>
-        </motion.div>
-
-        {/* The Blocks (Living Construct) */}
-        {blocks.map((b, i) => (
-          <Block 
-            key={i} 
-            data={b} 
-            mouseX={mouseX} 
-            mouseY={mouseY} 
-            state={state}
-            energy={energy}
-            isSmall={isSmall}
-          />
-        ))}
-
-        {/* Center Core Light */}
-        <motion.div
-          className="absolute size-1 bg-[#D4B08C] rounded-full"
+        <m.div
+          animate={state}
           style={{
-            transform: `translateZ(${isSmall ? 30 : 60}px)`,
-            boxShadow: `0 0 ${15 + energy * (isSmall ? 20 : 40)}px #D4B08C`
+            width: '100%',
+            height: '100%',
+            rotateX,
+            rotateY,
+            transformStyle: "preserve-3d",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
-          animate={isCompacting ? {
-            scale: [1, 10, 1],
-            opacity: [0.2, 1, 0.2],
-            boxShadow: [`0 0 10px #D4B08C`, `0 0 80px #D4B08C`, `0 0 10px #D4B08C`]
-          } : isThinking ? {
-            opacity: [0.4, 1, 0.4],
-            scale: [1, 2.5, 1]
-          } : isListening ? {
-            opacity: [0.5, 1, 0.5],
-            scale: [1, 1.8, 1],
-            boxShadow: [`0 0 8px #D4B08C`, `0 0 22px #D4B08C`, `0 0 8px #D4B08C`]
-          } : isSpeaking ? {
-            opacity: [0.6, 1, 0.6],
-            scale: [1, 2, 1]
-          } : state === "asleep" ? {
-            opacity: [0.1, 0.25, 0.1],
-            scale: [0.8, 1, 0.8]
-          } : { opacity: 0.8 }}
-          transition={{ repeat: Infinity, duration: isCompacting ? 0.2 : isListening ? 1.4 : isSpeaking ? 0.7 : state === "asleep" ? 4 : 1.2 }}
-        />
-      </motion.div>
-    </div>
-    </MotionConfig>
+        >
+          {/* Structural Extensions (Integrated Rays) */}
+          <m.div 
+            className="absolute inset-0"
+            style={{ transform: `translateZ(${isSmall ? -15 : -30}px)`, color: 'var(--accent-primary)' }}
+            animate={isCompacting ? { rotate: 360 } : isThinking ? { rotate: 360 } : isListening ? { rotate: 360 } : { rotate: 0 }}
+            transition={isCompacting ? { repeat: Infinity, duration: 0.8, ease: "linear" } : isThinking ? { repeat: Infinity, duration: 8, ease: "linear" } : isListening ? { repeat: Infinity, duration: 4, ease: "linear" } : { type: "spring" }}
+          >
+            <svg viewBox="0 0 100 100" className="size-full overflow-visible">
+              {extensions.map((ext, i) => (
+                <m.g key={`ext-${ext.angle}`} transform={`rotate(${ext.angle}, 50, 50)`}>
+                  <m.line
+                    x1={ext.x1} y1={ext.y1} x2={ext.x2} y2={ext.y2}
+                    stroke="currentColor"
+                    strokeWidth={isSmall ? "1" : "0.5"}
+                    initial={{ y2: ext.y2, opacity: ext.opacity, strokeDashoffset: 0 }}
+                    animate={{
+                      opacity: isCompacting ? [0.1, 1, 0.1] : isThinking ? [ext.opacity, 0.6, ext.opacity] : isListening ? [ext.opacity * 0.5, ext.opacity * 1.4, ext.opacity * 0.5] : isAsleep ? ext.opacity * 0.15 : ext.opacity,
+                      y2: isCompacting ? 48 : isSpeaking ? ext.y2 - (energy * (isSmall ? 4 : 8)) : ext.y2,
+                      strokeDasharray: isCompacting ? "2 1" : isThinking ? ["4 2", "1 4", "4 2"] : "none",
+                      strokeDashoffset: isCompacting ? [0, -10] : 0
+                    }}
+                    transition={{
+                      duration: isCompacting ? 0.2 : 0.4,
+                      strokeDashoffset: isCompacting ? { repeat: Infinity, duration: 0.2, ease: "linear" } : { duration: 0.3 }
+                    }}
+                  />
+                  <m.rect
+                    x="49.5" y={ext.y2 - 1} width={isSmall ? 2 : 1} height={isSmall ? 2 : 1}
+                    fill="currentColor"
+                    initial={{ opacity: 0.4, y: 0 }}
+                    animate={{
+                      opacity: isCompacting ? [0.6, 1, 0.6] : isThinking ? [0.2, 1, 0.2] : 0.4,
+                      scale: isCompacting ? [1, 4, 1] : isSpeaking ? [1, 2, 1] : 1,
+                      y: isCompacting ? [0, 48, 0] : 0
+                    }}
+                    transition={isCompacting ? { repeat: Infinity, duration: 0.3, ease: "easeInOut" } : {}}
+                  />
+                </m.g>
+              ))}
+            </svg>
+          </m.div>
+
+          {/* The Blocks (Living Construct) */}
+          {blocks.map((b, i) => (
+            <Block 
+              key={i} 
+              data={b} 
+              mouseX={mouseX} 
+              mouseY={mouseY} 
+              state={state}
+              energy={energy}
+              isSmall={isSmall}
+            />
+          ))}
+          {/* Center Core Light */}
+          <m.div
+            className="absolute size-1 bg-[#D4B08C] rounded-full"
+            style={{
+              transform: `translateZ(${isSmall ? 30 : 60}px)`,
+              boxShadow: `0 0 ${8 + energy * (isSmall ? 2 : 2)}px #D4B08C`
+            }}
+            animate={isCompacting ? {
+              scale: [1, 10, 1],
+              opacity: [0.2, 1, 0.2],
+              boxShadow: [`0 0 4px #D4B08C`, `0 0 10px #D4B08C`, `0 0 4px #D4B08C`]
+            } : isThinking ? {
+              opacity: [0.4, 1, 0.4],
+              scale: [1, 2.5, 1]
+            } : isListening ? {
+              opacity: [0.5, 1, 0.5],
+              scale: [1, 1.8, 1],
+              boxShadow: [`0 0 4px #D4B08C`, `0 0 10px #D4B08C`, `0 0 4px #D4B08C`]
+            } : isSpeaking ? {
+              opacity: [0.6, 1, 0.6],
+              scale: [1, 2, 1]
+            } : state === "asleep" ? {
+              opacity: [0.1, 0.25, 0.1],
+              scale: [0.8, 1, 0.8]
+            } : { opacity: 0.8 }}
+            transition={{ repeat: Infinity, duration: isCompacting ? 0.2 : isListening ? 1.4 : isSpeaking ? 0.7 : state === "asleep" ? 4 : 1.2 }}
+          />
+        </m.div>
+      </div>
+      </MotionConfig>
+    </LazyMotion>
   );
 });
 
@@ -227,7 +228,7 @@ const Block = ({ data, mouseX, mouseY, state, energy, isSmall }: any) => {
   const filterStyle = useMotionTemplate`brightness(${brightness})`;
 
   return (
-    <motion.div
+    <m.div
       animate={state}
       style={{
         position: 'absolute',
@@ -307,11 +308,11 @@ const Block = ({ data, mouseX, mouseY, state, energy, isSmall }: any) => {
       <div className="absolute inset-0 bg-[#D4B08C]/30" style={{ transform: `rotateY(90deg) translateZ(${blockSize / 2}px)` }} />
       <div className="absolute inset-0 bg-[#D4B08C]/15" style={{ transform: `rotateX(90deg) translateZ(${blockSize / 2}px)` }} />
       
-      <motion.div 
+      <m.div 
         className="absolute inset-0 bg-white"
         style={{ opacity: useTransform(dist, [0.4, 1], [0, 0.4]) }}
       />
-    </motion.div>
+    </m.div>
   );
 };
 

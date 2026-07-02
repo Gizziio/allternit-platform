@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { cn } from "../utils/cn";
-
-export type QuestionOption = {
+import { cn } from "@/lib/utils";
+import React, { useEffect, useMemo, useState } from "react";
+type QuestionOption = {
   id: string;
   label: string;
   description?: string;
@@ -67,51 +66,50 @@ export function QuestionPrompt({
   onSkip,
   className,
 }: QuestionPromptProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [customText, setCustomText] = useState("");
-  const [textValue, setTextValue] = useState("");
   const resolvedTotal = totalQuestions ?? questions.length;
   const clampedIndex = Math.max(1, Math.min(questionIndex, resolvedTotal));
   const activeQuestion = questions[clampedIndex - 1];
   const customEnabled = activeQuestion?.allowCustom ?? false;
+
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [customText, setCustomText] = useState("");
+  const [textValue, setTextValue] = useState("");
+
+  const [prevClampedIndex, setPrevClampedIndex] = useState(clampedIndex);
+  const [prevInitialAnswer, setPrevInitialAnswer] = useState(initialAnswer);
+  const [prevQuestionKind, setPrevQuestionKind] = useState(activeQuestion?.kind);
+
+  if (clampedIndex !== prevClampedIndex || initialAnswer !== prevInitialAnswer || activeQuestion?.kind !== prevQuestionKind) {
+    setPrevClampedIndex(clampedIndex);
+    setPrevInitialAnswer(initialAnswer);
+    setPrevQuestionKind(activeQuestion?.kind);
+
+    if (!initialAnswer || initialAnswer.kind === "skip") {
+      setSelectedIds([]);
+      setCustomText("");
+      setTextValue("");
+    } else if (activeQuestion?.kind === "text") {
+      setSelectedIds([]);
+      setCustomText("");
+      setTextValue(initialAnswer.text ?? "");
+    } else {
+      const nextSelected = new Set(initialAnswer.selectedIds ?? []);
+      const nextCustomText = initialAnswer.text ?? "";
+      if (customEnabled && nextCustomText.trim().length > 0) {
+        nextSelected.add(QUESTION_CUSTOM_ID);
+      }
+      setSelectedIds(Array.from(nextSelected));
+      setCustomText(nextCustomText);
+      setTextValue("");
+    }
+  }
+
   const showNav =
     resolvedTotal > 1 && (!!onPreviousQuestion || !!onNextQuestion);
   const canGoPrev = clampedIndex > 1;
   const canGoNext = clampedIndex < resolvedTotal;
   const isLastQuestion = clampedIndex >= resolvedTotal;
   const primaryLabel = isLastQuestion ? submitLabel : nextLabel;
-
-  useEffect(() => {
-    if (!initialAnswer || initialAnswer.kind === "skip") {
-      setSelectedIds([]);
-      setCustomText("");
-      setTextValue("");
-      return;
-    }
-
-    if (activeQuestion?.kind === "text") {
-      setSelectedIds([]);
-      setCustomText("");
-      setTextValue(initialAnswer.text ?? "");
-      return;
-    }
-
-    const nextSelected = new Set(initialAnswer.selectedIds ?? []);
-    const nextCustomText = initialAnswer.text ?? "";
-    if (customEnabled && nextCustomText.trim().length > 0) {
-      nextSelected.add(QUESTION_CUSTOM_ID);
-    }
-    setSelectedIds(Array.from(nextSelected));
-    setCustomText(nextCustomText);
-    setTextValue("");
-  }, [
-    activeQuestion?.kind,
-    clampedIndex,
-    customEnabled,
-    initialAnswer?.kind,
-    initialAnswer?.text,
-    initialAnswer?.selectedIds?.join("|"),
-  ]);
 
   const canSubmit = useMemo(() => {
     if (activeQuestion?.kind === "text") return textValue.trim().length > 0;
@@ -262,8 +260,7 @@ export function QuestionPrompt({
                 >
                   {optionBadge(activeQuestion.options!.length)}
                 </span>
-                <input
-                  value={customText}
+                <input aria-label="Input" value={customText}
                   onChange={(event) =>
                     handleCustomTextChange(event.target.value)
                   }
@@ -278,8 +275,7 @@ export function QuestionPrompt({
         )}
 
       {activeQuestion.kind === "text" && (
-        <textarea
-          value={textValue}
+        <textarea aria-label="Text Area" value={textValue}
           onChange={(event) => setTextValue(event.target.value)}
           placeholder={activeQuestion.placeholder ?? "Type your answer"}
           rows={3}

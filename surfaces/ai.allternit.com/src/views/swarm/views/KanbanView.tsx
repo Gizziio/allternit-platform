@@ -16,6 +16,7 @@ import { TEXT, STATUS, BACKGROUND } from '@/design/allternit.tokens';
 import { useAgents } from '../SwarmMonitor.store';
 import { SwarmAgent } from '../types';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 const AGENT_ICON_MAP: Record<string, React.ElementType> = {
   brain: Brain, robot: Robot, microchip: Cpu, 'clipboard-check': ClipboardText,
@@ -129,6 +130,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   const handleDragStart = useCallback((taskId: string) => {
     setDraggingTask(taskId);
@@ -204,10 +206,14 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
   }, [agents]);
 
   const handleDeleteTask = useCallback((taskId: string) => {
-    if (confirm('Delete this task?')) {
-      setTasks(prev => prev.filter(t => t.id !== taskId));
-      toast({ title: 'Task Deleted', description: 'Task removed from board' });
-    }
+    setConfirmDialog({
+      message: 'Delete this task?',
+      onConfirm: () => {
+        setConfirmDialog(null);
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        toast({ title: 'Task Deleted', description: 'Task removed from board' });
+      },
+    });
   }, []);
 
   const getTasksForColumn = (status: KanbanTask['status']) => 
@@ -233,7 +239,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
           </div>
         </div>
         
-        <button 
+        <button type="button" 
           onClick={() => setShowCreateModal(true)}
           className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
           style={{ background: `${modeColors.accent}20`, color: modeColors.accent }}
@@ -295,7 +301,10 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                           key={task.id}
                           draggable
                           onDragStart={() => handleDragStart(task.id)}
+                          role="button"
+                          tabIndex={0}
                           onClick={() => setSelectedTask(task)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedTask(task); }}
                           className="p-3 rounded-lg border cursor-pointer transition-all hover:border-white/20"
                           style={{
                             background: 'var(--surface-hover)',
@@ -347,7 +356,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                                 </span>
                               </div>
                             ) : (
-                              <button 
+                              <button type="button" 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   // Show agent selector
@@ -359,7 +368,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                               </button>
                             )}
                             
-                            <button
+                            <button type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteTask(task.id);
@@ -410,6 +419,15 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
           modeColors={modeColors}
         />
       )}
+      <ConfirmModal
+        isOpen={confirmDialog !== null}
+        title="Delete Task"
+        message={confirmDialog?.message || ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDialog?.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }
@@ -436,23 +454,24 @@ function CreateTaskModal({ onCreate, onClose, modeColors }: CreateTaskModalProps
   };
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
     >
-      <div 
+      <div role="button" tabIndex={0} 
         className="w-full max-w-sm p-5 rounded-xl border"
         style={{ background: BACKGROUND.primary, borderColor: 'var(--ui-border-default)' }}
         onClick={e => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold mb-4">New Task</h3>
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs mb-1.5" style={{ color: TEXT.tertiary }}>Title</label>
-            <input
-              type="text"
+            <div className="block text-xs mb-1.5" style={{ color: TEXT.tertiary }}>Title</div>
+            <input aria-label="Input" type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
               autoFocus
@@ -467,7 +486,7 @@ function CreateTaskModal({ onCreate, onClose, modeColors }: CreateTaskModalProps
           </div>
 
           <div>
-            <label className="block text-xs mb-1.5" style={{ color: TEXT.tertiary }}>Priority</label>
+            <div className="block text-xs mb-1.5" style={{ color: TEXT.tertiary }}>Priority</div>
             <div className="flex gap-2">
               {(['low', 'medium', 'high'] as const).map(p => (
                 <button
@@ -528,15 +547,17 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
   const column = COLUMNS.find(c => c.status === task.status);
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose(); }}
     >
-      <div 
+      <div role="button" tabIndex={0} 
         className="w-full max-w-md p-5 rounded-xl border"
         style={{ background: BACKGROUND.primary, borderColor: 'var(--ui-border-default)' }}
         onClick={e => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
@@ -556,7 +577,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
             </div>
             <h3 className="text-lg font-semibold">{task.title}</h3>
           </div>
-          <button 
+          <button type="button" 
             onClick={onClose}
             className="size-8  rounded-lg flex items-center justify-center hover:bg-white/5"
             style={{ color: TEXT.tertiary }}
@@ -574,7 +595,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
 
         {/* Assigned Agent */}
         <div className="mb-4">
-          <label className="block text-xs mb-2" style={{ color: TEXT.tertiary }}>Assigned Agent</label>
+          <div className="block text-xs mb-2" style={{ color: TEXT.tertiary }}>Assigned Agent</div>
           
           {assignedAgent ? (
             <div className="flex items-center justify-between p-3 rounded-lg border" style={{ background: 'var(--surface-hover)', borderColor: 'var(--surface-hover)' }}>
@@ -590,7 +611,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
                   <div className="text-xs" style={{ color: TEXT.tertiary }}>{assignedAgent.role}</div>
                 </div>
               </div>
-              <button
+              <button type="button"
                 onClick={() => onAssign(task.id, undefined)}
                 className="px-3 py-1.5 rounded-lg text-xs"
                 style={{ color: TEXT.tertiary }}
@@ -603,7 +624,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
               <div className="text-xs" style={{ color: TEXT.tertiary }}>Select an agent:</div>
               <div className="max-h-40 overflow-y-auto space-y-1">
                 {agents.map(agent => (
-                  <button
+                  <button type="button"
                     key={agent.id}
                     onClick={() => onAssign(task.id, agent.id)}
                     className="w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors hover:bg-white/5"
@@ -628,7 +649,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
 
         {/* Tags */}
         <div className="mb-4">
-          <label className="block text-xs mb-2" style={{ color: TEXT.tertiary }}>Tags</label>
+          <div className="block text-xs mb-2" style={{ color: TEXT.tertiary }}>Tags</div>
           <div className="flex flex-wrap gap-1">
             {task.tags.map(tag => (
               <span 

@@ -5,7 +5,11 @@
  * Handles panel sizes, layout mode, and localStorage persistence.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UseCanvasLayout');
 
 interface LayoutState {
   layoutMode: 'horizontal' | 'vertical';
@@ -41,7 +45,7 @@ export function useCanvasLayout({
         return parsed;
       }
     } catch (error) {
-      console.error('[useCanvasLayout] Failed to load layout:', error);
+      logger.error({ err: error }, 'Failed to load layout');
     }
     return null;
   }, []);
@@ -60,7 +64,7 @@ export function useCanvasLayout({
       
       localStorage.setItem(`${LAYOUT_STORAGE_KEY}-${sourceView}`, JSON.stringify(next));
     } catch (error) {
-      console.error('[useCanvasLayout] Failed to save layout:', error);
+      logger.error({ err: error }, 'Failed to save layout');
     }
   }, [defaultChatSize, defaultCanvasSize]);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Brain, Eye, Lightning, Note, X, Spinner } from '@phosphor-icons/react';
+import { Brain, Eye, Lightning, Note, X } from '@phosphor-icons/react';
 import { fetchH5iContextTrace, type H5iContextEntry } from '@/lib/h5i/client';
 
 interface H5iContextPanelProps {
@@ -85,7 +85,7 @@ export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContex
             {sessionId.slice(0, 8)}...
           </span>
         </div>
-        <button
+        <button type="button"
           onClick={onClose}
           style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}
         >
@@ -122,7 +122,7 @@ export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContex
             const config = typeConfig[entry.type];
             return (
               <div
-                key={i}
+                key={`h5icontextpanel-${i}`}
                 style={{
                   display: 'flex',
                   gap: 10,

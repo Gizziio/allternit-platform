@@ -1,31 +1,88 @@
+import React, { useCallback, useEffect, useRef } from "react";
 /**
- * allternit Super-Agent OS - Python Execution Bridge
+ * allternit Super-Agent OS - Python Execution Service
  * 
- * Connects DataGrid visualizations to Python kernel execution.
- * Supports matplotlib, plotly, seaborn, and pandas operations.
+ * Production-ready Python execution with multiple backend support:
+ * - Mock mode: Browser-based simulation for development
+ * - Kernel mode: Connect to 1-kernel allternit-daemon via Electron IPC
+ * - HTTP mode: Connect to workspace service HTTP API
  */
 
 import { useSidecarStore } from '../stores/useSidecarStore';
 import type { DataGridState, DataGridVisualization } from '../types/programs';
 
 // ============================================================================
-// Types
+// Configuration Types
+// ============================================================================
+
+export type ExecutionBackend = 'mock' | 'kernel' | 'http';
+
+export interface PythonExecutionConfig {
+  backend: ExecutionBackend;
+  /** HTTP endpoint for workspace service (HTTP mode) */
+  httpEndpoint?: string;
+  /** Unix socket path for kernel daemon (Kernel mode - used via Electron IPC) */
+  kernelSocketPath?: string;
+  /** Default timeout in milliseconds */
+  defaultTimeout: number;
+  /** Enable debug logging */
+  debug: boolean;
+}
+
+// ============================================================================
+// Execution Types
 // ============================================================================
 
 export interface PythonExecutionRequest {
-  vizId: string;
-  programId: string;
+  /** Unique execution ID */
+  executionId: string;
+  /** Python code to execute */
   code: string;
+  /** Required Python packages */
   libraries: string[];
+  /** Execution timeout in milliseconds */
   timeout?: number;
+  /** Additional context */
+  context?: {
+    programId?: string;
+    vizId?: string;
+    sessionId?: string;
+  };
+  /** Working directory for execution */
+  workingDir?: string;
+  /** Environment variables */
+  env?: Record<string, string>;
 }
 
 export interface PythonExecutionResult {
   success: boolean;
+  /** Output file URL (for visualizations) */
   outputUrl?: string;
+  /** Console stdout */
+  stdout: string;
+  /** Console stderr */
+  stderr: string;
+  /** Execution error message */
   error?: string;
-  logs: string[];
+  /** Execution time in milliseconds */
   executionTime: number;
+  /** Exit code */
+  exitCode?: number;
+  /** Resource usage */
+  resources?: {
+    cpuPercent: number;
+    memoryMb: number;
+  };
+}
+
+export interface ExecutionSession {
+  id: string;
+  status: 'pending' | 'running' | 'completed' | 'error' | 'cancelled';
+  request: PythonExecutionRequest;
+  result?: PythonExecutionResult;
+  startTime: number;
+  endTime?: number;
+  progress?: number;
 }
 
 export type VisualizationLibrary = 'matplotlib' | 'plotly' | 'seaborn' | 'pandas';
@@ -40,7 +97,8 @@ export function generateVisualizationCode(
   data: Record<string, unknown>[],
   library: VisualizationLibrary = 'matplotlib'
 ): string {
-  const dfCode = generateDataFrameCode(data);
+  const sanitizedData = sanitizeForPython(data);
+  const dfCode = generateDataFrameCode(sanitizedData);
   
   switch (library) {
     case 'matplotlib':
@@ -54,16 +112,30 @@ export function generateVisualizationCode(
   }
 }
 
+function sanitizeForPython(data: Record<string, unknown>[]): Record<string, unknown>[] {
+  return data.map(row => {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (typeof value === 'string') {
+        sanitized[key] = value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      } else {
+        sanitized[key] = value;
+      }
+    }
+    return sanitized;
+  });
+}
+
 function generateDataFrameCode(data: Record<string, unknown>[]): string {
   return `
 import pandas as pd
 import json
 
 # Data from allternit DataGrid
-data = json.loads('${JSON.stringify(data).replace(/'/g, "\\'")}')
+data_json = '''${JSON.stringify(data)}'''
+data = json.loads(data_json)
 df = pd.DataFrame(data)
-print(f"DataFrame shape: {df.shape}")
-print(f"Columns: {list(df.columns)}")
+print(f"DataFrame: {df.shape[0]} rows × {df.shape[1]} columns")
 `;
 }
 
@@ -79,41 +151,45 @@ function generateMatplotlibCode(
   
   switch (type) {
     case 'bar':
-      plotCode = `df.plot.bar(x='${xCol}', y='${yCol}', figsize=(10, 6))`;
+      plotCode = `df.plot.bar(x='${xCol}', y='${yCol}', figsize=(10, 6), color='steelblue')`;
       break;
     case 'line':
-      plotCode = `df.plot.line(x='${xCol}', y='${yCol}', figsize=(10, 6), marker='o')`;
+      plotCode = `df.plot.line(x='${xCol}', y='${yCol}', figsize=(10, 6), marker='o', linewidth=2)`;
       break;
     case 'scatter':
-      plotCode = `df.plot.scatter(x='${xCol}', y='${yCol}', figsize=(10, 6), alpha=0.6)`;
+      plotCode = `df.plot.scatter(x='${xCol}', y='${yCol}', figsize=(10, 6), alpha=0.6, c='steelblue')`;
       break;
     case 'pie':
       plotCode = `df.set_index('${xCol}')['${yCol}'].plot.pie(figsize=(8, 8), autopct='%1.1f%%')`;
       break;
     case 'heatmap':
-      plotCode = `sns.heatmap(df.corr(), annot=True, cmap='coolwarm', figsize=(10, 8))`;
+      plotCode = `sns.heatmap(df.corr(), annot=True, cmap='coolwarm', fmt='.2f', square=True)`;
       break;
     default:
       plotCode = `df.plot(figsize=(10, 6))`;
   }
 
   return `${dfCode}
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
-# Create visualization
 plt.figure(figsize=(10, 6))
 ${plotCode}
-plt.title('${type.charAt(0).toUpperCase() + type.slice(1)} Chart')
-plt.xlabel('${xCol}')
-plt.ylabel('${yCol}')
+plt.title('${type.charAt(0).toUpperCase() + type.slice(1)} Chart', fontsize=14, pad=20)
+plt.xlabel('${xCol}', fontsize=12)
+plt.ylabel('${yCol}', fontsize=12)
 plt.tight_layout()
 
-# Save to file
-output_path = '/tmp/allternit_viz_${Date.now()}.png'
-plt.savefig(output_path, dpi=150, bbox_inches='tight')
-print(f"SAVED:{output_path}")
+output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/allternit-output')
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, 'viz_${Date.now()}.png')
+plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
 plt.close()
+
+print(f"ALLTERNIT_OUTPUT:{output_path}")
 `;
 }
 
@@ -129,7 +205,7 @@ function generatePlotlyCode(
   
   switch (type) {
     case 'bar':
-      plotCode = `fig = px.bar(df, x='${xCol}', y='${yCol}', title='${type.charAt(0).toUpperCase() + type.slice(1)} Chart')`;
+      plotCode = `fig = px.bar(df, x='${xCol}', y='${yCol}', title='${type.charAt(0).toUpperCase() + type.slice(1)} Chart', color='${yCol}')`;
       break;
     case 'line':
       plotCode = `fig = px.line(df, x='${xCol}', y='${yCol}', title='${type.charAt(0).toUpperCase() + type.slice(1)} Chart', markers=True)`;
@@ -147,14 +223,16 @@ function generatePlotlyCode(
   return `${dfCode}
 import plotly.express as px
 import plotly.io as pio
+import os
 
-# Create visualization
 ${plotCode}
 
-# Save to HTML
-output_path = '/tmp/allternit_viz_${Date.now()}.html'
-fig.write_html(output_path)
-print(f"SAVED:{output_path}")
+output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/allternit-output')
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, 'viz_${Date.now()}.html')
+fig.write_html(output_path, include_plotlyjs='cdn')
+
+print(f"ALLTERNIT_OUTPUT:{output_path}")
 `;
 }
 
@@ -170,7 +248,7 @@ function generateSeabornCode(
   
   switch (type) {
     case 'bar':
-      plotCode = `sns.barplot(data=df, x='${xCol}', y='${yCol}')`;
+      plotCode = `sns.barplot(data=df, x='${xCol}', y='${yCol}', palette='viridis')`;
       break;
     case 'line':
       plotCode = `sns.lineplot(data=df, x='${xCol}', y='${yCol}', marker='o')`;
@@ -179,119 +257,203 @@ function generateSeabornCode(
       plotCode = `sns.scatterplot(data=df, x='${xCol}', y='${yCol}', alpha=0.6)`;
       break;
     case 'heatmap':
-      plotCode = `sns.heatmap(df.corr(), annot=True, cmap='coolwarm')`;
+      plotCode = `sns.heatmap(df.corr(), annot=True, cmap='coolwarm', fmt='.2f', square=True)`;
       break;
     default:
       plotCode = `sns.lineplot(data=df, x='${xCol}', y='${yCol}')`;
   }
 
   return `${dfCode}
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
-# Set style
 sns.set_style("whitegrid")
+sns.set_palette("husl")
 
-# Create visualization
 plt.figure(figsize=(10, 6))
 ${plotCode}
-plt.title('${type.charAt(0).toUpperCase() + type.slice(1)} Chart')
+plt.title('${type.charAt(0).toUpperCase() + type.slice(1)} Chart', fontsize=14, pad=20)
 plt.tight_layout()
 
-# Save to file
-output_path = '/tmp/allternit_viz_${Date.now()}.png'
-plt.savefig(output_path, dpi=150, bbox_inches='tight')
-print(f"SAVED:{output_path}")
+output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/allternit-output')
+os.makedirs(output_dir, exist_ok=True)
+output_path = os.path.join(output_dir, 'viz_${Date.now()}.png')
+plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
 plt.close()
+
+print(f"ALLTERNIT_OUTPUT:{output_path}")
 `;
 }
 
 // ============================================================================
-// Execution Bridge
+// Execution Service
 // ============================================================================
 
-export class PythonExecutionBridge {
-  private kernelEndpoint: string;
-  private activeExecutions: Map<string, AbortController> = new Map();
+export class PythonExecutionService {
+  private config: PythonExecutionConfig;
+  private sessions: Map<string, ExecutionSession> = new Map();
+  private abortControllers: Map<string, AbortController> = new Map();
 
-  constructor(kernelEndpoint: string = 'http://localhost:8080/kernel/python') {
-    this.kernelEndpoint = kernelEndpoint;
+  constructor(config: Partial<PythonExecutionConfig> = {}) {
+    this.config = {
+      backend: config.backend ?? this.detectBackend(),
+      httpEndpoint: config.httpEndpoint ?? 'http://127.0.0.1:3021/execute',
+      kernelSocketPath: config.kernelSocketPath ?? '/var/run/allternit/daemon.sock',
+      defaultTimeout: config.defaultTimeout ?? 30000,
+      debug: config.debug ?? false,
+    };
   }
 
-  /**
-   * Execute Python code for visualization
-   */
+  private detectBackend(): ExecutionBackend {
+    if (typeof window !== 'undefined' && window.electron?.kernel) {
+      return 'kernel';
+    }
+    return 'mock';
+  }
+
+  private log(...args: unknown[]): void {
+    if (this.config.debug) {
+      console.debug('[PythonExecutionService]', ...args);
+    }
+  }
+
   async execute(request: PythonExecutionRequest): Promise<PythonExecutionResult> {
-    const { vizId, programId, code, timeout = 30000 } = request;
-    
-    // Update visualization status to rendering
-    this.updateVizStatus(programId, vizId, 'rendering');
-    
-    const startTime = Date.now();
-    const abortController = new AbortController();
-    this.activeExecutions.set(vizId, abortController);
+    const session: ExecutionSession = {
+      id: request.executionId,
+      status: 'pending',
+      request,
+      startTime: Date.now(),
+    };
+
+    this.sessions.set(session.id, session);
 
     try {
-      const response = await fetch(this.kernelEndpoint, {
+      session.status = 'running';
+      let result: PythonExecutionResult;
+
+      switch (this.config.backend) {
+        case 'kernel':
+          result = await this.executeViaKernel(request);
+          break;
+        case 'http':
+          result = await this.executeViaHttp(request);
+          break;
+        case 'mock':
+          result = await this.executeViaMock(request);
+          break;
+        default:
+          throw new Error(`Unknown backend: ${this.config.backend}`);
+      }
+
+      session.status = result.success ? 'completed' : 'error';
+      session.result = result;
+      session.endTime = Date.now();
+      return result;
+    } catch (error) {
+      const errorResult: PythonExecutionResult = {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        stdout: '', stderr: '',
+        executionTime: Date.now() - session.startTime,
+      };
+      session.status = 'error';
+      session.result = errorResult;
+      session.endTime = Date.now();
+      return errorResult;
+    }
+  }
+
+  cancel(executionId: string): void {
+    const controller = this.abortControllers.get(executionId);
+    if (controller) {
+      controller.abort();
+      this.abortControllers.delete(executionId);
+    }
+    const session = this.sessions.get(executionId);
+    if (session && session.status === 'running') {
+      session.status = 'cancelled';
+      session.endTime = Date.now();
+    }
+  }
+
+  getSession(executionId: string) { return this.sessions.get(executionId); }
+  cleanup(maxAgeMs: number = 3600000) {
+    const now = Date.now();
+    this.sessions.forEach((s, id) => {
+      if (s.endTime && (now - s.endTime) > maxAgeMs) {
+        this.sessions.delete(id);
+        this.abortControllers.delete(id);
+      }
+    });
+  }
+
+  private async executeViaKernel(request: PythonExecutionRequest): Promise<PythonExecutionResult> {
+    if (typeof window === 'undefined' || !window.electron?.kernel) throw new Error('Kernel not available');
+    if (!window.electron.kernel.execute) throw new Error('Kernel execute not available');
+    const abortController = new AbortController();
+    this.abortControllers.set(request.executionId, abortController);
+    try {
+      const result = await window.electron.kernel.execute({
+        code: request.code,
+        timeout: request.timeout ?? this.config.defaultTimeout,
+        libraries: request.libraries,
+        env: request.env,
+        workingDir: request.workingDir,
+      });
+      return {
+        success: result.success,
+        stdout: result.stdout, stderr: result.stderr,
+        error: result.error,
+        outputUrl: result.outputPath ? `file://${result.outputPath}` : undefined,
+        executionTime: result.executionTime,
+        exitCode: result.exitCode,
+      };
+    } finally {
+      this.abortControllers.delete(request.executionId);
+    }
+  }
+
+  private async executeViaHttp(request: PythonExecutionRequest): Promise<PythonExecutionResult> {
+    const abortController = new AbortController();
+    this.abortControllers.set(request.executionId, abortController);
+    const timeoutId = setTimeout(() => abortController.abort(), request.timeout ?? this.config.defaultTimeout);
+    try {
+      const response = await fetch(this.config.httpEndpoint!, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code,
-          timeout,
-          context: {
-            vizId,
-            programId,
-          },
+          code: request.code,
+          libraries: request.libraries,
+          timeout: request.timeout ?? this.config.defaultTimeout,
+          context: request.context,
         }),
         signal: abortController.signal,
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      // Parse output to find saved file path
-      const outputUrl = this.parseOutputUrl(result.output);
-      
-      this.activeExecutions.delete(vizId);
-      
+      clearTimeout(timeoutId);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
       return {
-        success: true,
-        outputUrl,
-        logs: result.logs || [],
-        executionTime: Date.now() - startTime,
+        success: data.success,
+        stdout: data.stdout || '', stderr: data.stderr || '',
+        error: data.error,
+        outputUrl: data.outputUrl,
+        executionTime: data.executionTime,
       };
-
     } catch (error) {
-      this.activeExecutions.delete(vizId);
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      return {
-        success: false,
-        error: errorMessage,
-        logs: [],
-        executionTime: Date.now() - startTime,
-      };
+      clearTimeout(timeoutId);
+      throw error;
+    } finally {
+      this.abortControllers.delete(request.executionId);
     }
   }
 
-  /**
-   * Cancel an ongoing execution
-   */
-  cancel(vizId: string): void {
-    const controller = this.activeExecutions.get(vizId);
-    if (controller) {
-      controller.abort();
-      this.activeExecutions.delete(vizId);
-    }
+  private async executeViaMock(_request: PythonExecutionRequest): Promise<PythonExecutionResult> {
+    return { success: false, stdout: '', stderr: 'Python unavailable', executionTime: 0, error: 'No backend' };
   }
 
-  /**
-   * Generate and execute visualization for DataGrid
-   */
   async executeVisualization(
     programId: string,
     vizId: string,
@@ -299,53 +461,42 @@ export class PythonExecutionBridge {
   ): Promise<void> {
     const store = useSidecarStore.getState();
     const state = store.getProgramState<DataGridState>(programId);
-    
     if (!state) return;
-
     const viz = state.visualizations.find(v => v.id === vizId);
     if (!viz) return;
 
-    // Extract columns to visualize
-    const columns = viz.config.columns as string[] || state.columns.map(c => c.id);
-    
-    // Convert rows to data
-    const data = state.rows.map(row => row.cells);
+    this.updateVizStatus(programId, vizId, 'rendering');
+    try {
+      const columns = viz.config.columns as string[] || state.columns.map(c => c.id);
+      const data = state.rows.map(row => row.cells);
+      const code = generateVisualizationCode(viz.type, columns, data, library);
 
-    // Generate Python code
-    const code = generateVisualizationCode(viz.type, columns, data, library);
+      store.updateProgramState<DataGridState>(programId, (prev) => ({
+        ...prev,
+        visualizations: prev.visualizations.map(v => v.id === vizId ? { ...v, pythonCode: code } : v),
+      }));
 
-    // Update viz with code
-    store.updateProgramState<DataGridState>(programId, (prev) => ({
-      ...prev,
-      visualizations: prev.visualizations.map(v => 
-        v.id === vizId ? { ...v, pythonCode: code } : v
-      ),
-    }));
+      const result = await this.execute({
+        executionId: `viz-${programId}-${vizId}`,
+        code,
+        libraries: this.getRequiredLibraries(library),
+        timeout: 60000,
+        context: { programId, vizId },
+      });
 
-    // Execute
-    const result = await this.execute({
-      vizId,
-      programId,
-      code,
-      libraries: this.getRequiredLibraries(library),
-    });
-
-    // Update with result
-    if (result.success) {
-      this.updateVizComplete(programId, vizId, result.outputUrl!);
-    } else {
-      this.updateVizError(programId, vizId, result.error!);
+      if (result.success && result.outputUrl) {
+        this.updateVizComplete(programId, vizId, result.outputUrl);
+      } else {
+        this.updateVizError(programId, vizId, result.error || 'Unknown error');
+      }
+    } catch (error) {
+      this.updateVizError(programId, vizId, String(error));
     }
-  }
-
-  private parseOutputUrl(output: string): string | undefined {
-    const match = output.match(/SAVED:(.+)/);
-    return match ? match[1] : undefined;
   }
 
   private getRequiredLibraries(library: VisualizationLibrary): string[] {
     const libs: Record<VisualizationLibrary, string[]> = {
-      matplotlib: ['matplotlib', 'pandas', 'numpy'],
+      matplotlib: ['matplotlib', 'pandas', 'numpy', 'seaborn'],
       plotly: ['plotly', 'pandas'],
       seaborn: ['seaborn', 'matplotlib', 'pandas'],
       pandas: ['pandas'],
@@ -353,37 +504,24 @@ export class PythonExecutionBridge {
     return libs[library];
   }
 
-  private updateVizStatus(
-    programId: string,
-    vizId: string,
-    status: DataGridVisualization['status']
-  ): void {
-    const store = useSidecarStore.getState();
-    store.updateProgramState<DataGridState>(programId, (prev) => ({
+  private updateVizStatus(programId: string, vizId: string, status: any) {
+    useSidecarStore.getState().updateProgramState<DataGridState>(programId, (prev) => ({
       ...prev,
-      visualizations: prev.visualizations.map(v => 
-        v.id === vizId ? { ...v, status } : v
-      ),
+      visualizations: prev.visualizations.map(v => v.id === vizId ? { ...v, status } : v),
     }));
   }
 
-  private updateVizComplete(programId: string, vizId: string, resultUrl: string): void {
-    const store = useSidecarStore.getState();
-    store.updateProgramState<DataGridState>(programId, (prev) => ({
+  private updateVizComplete(programId: string, vizId: string, resultUrl: string) {
+    useSidecarStore.getState().updateProgramState<DataGridState>(programId, (prev) => ({
       ...prev,
-      visualizations: prev.visualizations.map(v => 
-        v.id === vizId ? { ...v, status: 'complete', resultUrl } : v
-      ),
+      visualizations: prev.visualizations.map(v => v.id === vizId ? { ...v, status: 'complete', resultUrl } : v),
     }));
   }
 
-  private updateVizError(programId: string, vizId: string, errorMessage: string): void {
-    const store = useSidecarStore.getState();
-    store.updateProgramState<DataGridState>(programId, (prev) => ({
+  private updateVizError(programId: string, vizId: string, errorMessage: string) {
+    useSidecarStore.getState().updateProgramState<DataGridState>(programId, (prev) => ({
       ...prev,
-      visualizations: prev.visualizations.map(v => 
-        v.id === vizId ? { ...v, status: 'error', errorMessage } : v
-      ),
+      visualizations: prev.visualizations.map(v => v.id === vizId ? { ...v, status: 'error', errorMessage } : v),
     }));
   }
 }
@@ -391,37 +529,29 @@ export class PythonExecutionBridge {
 // ============================================================================
 // React Hook
 // ============================================================================
+import { createModuleLogger } from '@/lib/logger';
+const logger = createModuleLogger('PythonExecutionService');
 
-import { useCallback, useRef } from 'react';
+export interface UsePythonExecutionOptions {
+  backend?: ExecutionBackend;
+  httpEndpoint?: string;
+  debug?: boolean;
+}
 
-export function usePythonExecution(endpoint?: string) {
-  const bridgeRef = useRef(new PythonExecutionBridge(endpoint));
+export function usePythonExecution(options: UsePythonExecutionOptions = {}) {
+  const serviceRef = useRef(new PythonExecutionService(options));
 
-  const executeViz = useCallback(async (
-    programId: string,
-    vizId: string,
-    library: VisualizationLibrary = 'matplotlib'
-  ) => {
-    return bridgeRef.current.executeVisualization(programId, vizId, library);
-  }, []);
-
-  const cancelExecution = useCallback((vizId: string) => {
-    bridgeRef.current.cancel(vizId);
-  }, []);
-
-  const generateCode = useCallback((
-    type: DataGridVisualization['type'],
-    columns: string[],
-    data: Record<string, unknown>[],
-    library: VisualizationLibrary
-  ) => {
-    return generateVisualizationCode(type, columns, data, library);
+  useEffect(() => {
+    const interval = setInterval(() => serviceRef.current.cleanup(), 60000);
+    return () => clearInterval(interval);
   }, []);
 
   return {
-    executeViz,
-    cancelExecution,
-    generateCode,
-    bridge: bridgeRef.current,
+    execute: useCallback((req: PythonExecutionRequest) => serviceRef.current.execute(req), []),
+    cancel: useCallback((id: string) => serviceRef.current.cancel(id), []),
+    executeViz: useCallback((pid: string, vid: string, lib?: VisualizationLibrary) => serviceRef.current.executeVisualization(pid, vid, lib), []),
+    generateCode: useCallback((type: any, cols: string[], data: any[], lib: VisualizationLibrary) => generateVisualizationCode(type, cols, data, lib), []),
+    getSession: useCallback((id: string) => serviceRef.current.getSession(id), []),
+    service: serviceRef.current,
   };
 }

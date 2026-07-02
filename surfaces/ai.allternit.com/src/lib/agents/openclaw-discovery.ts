@@ -2,7 +2,7 @@ import { api } from "@/integration/api-client";
 
 import type { Agent, CreateAgentInput } from "./agent.types";
 
-export interface OpenClawDiscoveryFiles {
+interface OpenClawDiscoveryFiles {
   models: boolean;
   auth_profiles: boolean;
   sessions_store: boolean;

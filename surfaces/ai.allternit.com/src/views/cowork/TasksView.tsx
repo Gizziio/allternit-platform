@@ -8,8 +8,6 @@ import {
   Play,
   Pause,
   PencilSimple,
-  X,
-  Check,
   Timer,
   ClockCounterClockwise,
 } from '@phosphor-icons/react';
@@ -225,7 +223,7 @@ export const TasksView: React.FC = () => {
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-xl)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <CheckSquare size={24} color="#af52de" />
+          <CheckSquare size={24} color="var(--accent-primary)" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Tasks</h1>
         </div>
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Project task management</p>
@@ -235,9 +233,8 @@ export const TasksView: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 'var(--spacing-md)' }}>
         {/* Workspace Filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-          <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Workspace:</label>
-          <select
-            value={selectedWorkspace}
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Workspace:</div>
+          <select aria-label="Selection" value={selectedWorkspace}
             onChange={(e) => setSelectedWorkspace(e.target.value)}
             style={{
               padding: '6px 12px',
@@ -258,7 +255,7 @@ export const TasksView: React.FC = () => {
         </div>
 
         {/* Optimize Schedule Button */}
-        <button
+        <button type="button"
           onClick={optimizeSchedule}
           style={{
             display: 'inline-flex',
@@ -273,12 +270,6 @@ export const TasksView: React.FC = () => {
             fontWeight: 600,
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-cowork)';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-cowork)';
           }}
         >
           <Lightning size={16} weight="fill" />
@@ -509,7 +500,7 @@ export const TasksView: React.FC = () => {
                             fontSize: '12px',
                             padding: '1px 6px',
                             borderRadius: '999px',
-                            background: 'rgba(139, 92, 246, 0.15)',
+                            background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
                             color: 'var(--ui-text-muted)',
                             fontWeight: 500,
                           }}>
@@ -522,7 +513,7 @@ export const TasksView: React.FC = () => {
                             fontSize: '12px',
                             padding: '1px 6px',
                             borderRadius: '4px',
-                            background: 'rgba(16, 185, 129, 0.15)',
+                            background: 'color-mix(in srgb, var(--status-success) 15%, transparent)',
                             color: 'var(--status-success)',
                             fontWeight: 500,
                           }}>
@@ -535,7 +526,7 @@ export const TasksView: React.FC = () => {
                             fontSize: '12px',
                             padding: '1px 6px',
                             borderRadius: '4px',
-                            background: 'rgba(245, 158, 11, 0.15)',
+                            background: 'color-mix(in srgb, var(--status-warning) 15%, transparent)',
                             color: 'var(--status-warning)',
                             fontWeight: 500,
                           }}>
@@ -547,8 +538,7 @@ export const TasksView: React.FC = () => {
                       {/* Inline Tag Editor */}
                       {editingTaskId === task.id && editMode === 'tags' && (
                         <div style={{ marginBottom: 'var(--spacing-md)' }}>
-                          <input
-                            type="text"
+                          <input aria-label="Input" type="text"
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             onKeyDown={(e) => {
@@ -590,8 +580,7 @@ export const TasksView: React.FC = () => {
                       {/* Inline Notes Editor */}
                       {editingTaskId === task.id && editMode === 'notes' && (
                         <div style={{ marginBottom: 'var(--spacing-md)' }}>
-                          <textarea
-                            value={editValue}
+                          <textarea aria-label="Text Area" value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
                             onKeyDown={(e) => {
                               if (e.key === 'Escape') {
@@ -628,7 +617,7 @@ export const TasksView: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: 'var(--spacing-md)' }}>
                         {/* Timer Button */}
                         {taskTimers[task.id] ? (
-                          <button
+                          <button type="button"
                             onClick={() => {
                               stopTaskTimer(task.id);
                               addAuditLogEntry(task.id, 'time_tracked', `Stopped timer for "${task.title}"`);
@@ -642,7 +631,7 @@ export const TasksView: React.FC = () => {
                               padding: '4px 8px',
                               borderRadius: '6px',
                               border: 'none',
-                              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                              backgroundColor: 'color-mix(in srgb, var(--status-error) 12%, transparent)',
                               color: 'var(--status-error)',
                               fontSize: '12px',
                               fontWeight: 600,
@@ -650,17 +639,17 @@ export const TasksView: React.FC = () => {
                               transition: 'all 0.15s ease',
                             }}
                             onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--status-error) 20%, transparent)';
                             }}
                             onMouseLeave={(e) => {
-                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--status-error) 12%, transparent)';
                             }}
                           >
                             <Pause size={12} weight="fill" />
                             <TimerDisplay startTime={taskTimers[task.id]} />
                           </button>
                         ) : (
-                          <button
+                          <button type="button"
                             onClick={() => {
                               startTaskTimer(task.id);
                               addAuditLogEntry(task.id, 'time_tracked', `Started timer for "${task.title}"`);
@@ -674,7 +663,7 @@ export const TasksView: React.FC = () => {
                               padding: '4px 8px',
                               borderRadius: '6px',
                               border: 'none',
-                              backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                              backgroundColor: 'color-mix(in srgb, var(--status-success) 12%, transparent)',
                               color: 'var(--status-success)',
                               fontSize: '12px',
                               fontWeight: 600,
@@ -682,10 +671,10 @@ export const TasksView: React.FC = () => {
                               transition: 'all 0.15s ease',
                             }}
                             onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(34, 197, 94, 0.2)';
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--status-success) 20%, transparent)';
                             }}
                             onMouseLeave={(e) => {
-                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(34, 197, 94, 0.12)';
+                              (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--status-success) 12%, transparent)';
                             }}
                           >
                             <Play size={12} weight="fill" />
@@ -694,7 +683,7 @@ export const TasksView: React.FC = () => {
                         )}
 
                         {/* Edit Tags Button */}
-                        <button
+                        <button type="button"
                           onClick={() => {
                             setEditingTaskId(task.id);
                             setEditMode('tags');
@@ -707,23 +696,23 @@ export const TasksView: React.FC = () => {
                             padding: '4px',
                             borderRadius: '6px',
                             border: 'none',
-                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            backgroundColor: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
                             color: 'var(--ui-text-muted)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(139, 92, 246, 0.2)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--accent-primary) 20%, transparent)';
                           }}
                           onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(139, 92, 246, 0.1)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--accent-primary) 10%, transparent)';
                           }}
                         >
                           <PencilSimple size={12} />
                         </button>
 
                         {/* Edit Notes Button */}
-                        <button
+                        <button type="button"
                           onClick={() => {
                             setEditingTaskId(task.id);
                             setEditMode('notes');
@@ -736,23 +725,23 @@ export const TasksView: React.FC = () => {
                             padding: '4px',
                             borderRadius: '6px',
                             border: 'none',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            backgroundColor: 'color-mix(in srgb, var(--status-warning) 10%, transparent)',
                             color: 'var(--status-warning)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(245, 158, 11, 0.2)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--status-warning) 20%, transparent)';
                           }}
                           onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--status-warning) 10%, transparent)';
                           }}
                         >
                           <PencilSimple size={12} />
                         </button>
 
                         {/* Set Estimate Button */}
-                        <button
+                        <button type="button"
                           onClick={() => setEstimateModalTaskId(task.id)}
                           title="Set estimate"
                           style={{
@@ -761,23 +750,23 @@ export const TasksView: React.FC = () => {
                             padding: '4px',
                             borderRadius: '6px',
                             border: 'none',
-                            backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                            backgroundColor: 'color-mix(in srgb, var(--accent-cowork) 10%, transparent)',
                             color: 'var(--accent-cowork)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(6, 182, 212, 0.2)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--accent-cowork) 20%, transparent)';
                           }}
                           onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(6, 182, 212, 0.1)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--accent-cowork) 10%, transparent)';
                           }}
                         >
                           <Timer size={12} />
                         </button>
 
                         {/* Audit Log Button */}
-                        <button
+                        <button type="button"
                           onClick={() => setAuditTask({ id: task.id, title: task.title })}
                           title="View audit log"
                           style={{
@@ -786,16 +775,16 @@ export const TasksView: React.FC = () => {
                             padding: '4px',
                             borderRadius: '6px',
                             border: 'none',
-                            backgroundColor: 'rgba(107, 114, 128, 0.1)',
+                            backgroundColor: 'color-mix(in srgb, var(--ui-text-muted) 10%, transparent)',
                             color: 'var(--ui-text-muted)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(107, 114, 128, 0.2)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--ui-text-muted) 20%, transparent)';
                           }}
                           onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(107, 114, 128, 0.1)';
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'color-mix(in srgb, var(--ui-text-muted) 10%, transparent)';
                           }}
                         >
                           <ClockCounterClockwise size={12} />

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { tokens } from '../design/tokens';
+import { cn } from '@/lib/utils';
 
-export function FloatingOrb(): JSX.Element {
+export function FloatingOrb(): React.ReactNode {
   const [isHovered, setIsHovered] = useState(false);
   const [pulse, setPulse] = useState(1);
 
@@ -14,46 +15,24 @@ export function FloatingOrb(): JSX.Element {
 
   return (
     <div 
+      role="button"
+      tabIndex={0}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { /* action */ } }}
+      className={cn(
+        "fixed bottom-10 left-1/2 -ml-10 size-20 rounded-full bg-[var(--shell-floating-bg)] backdrop-blur-md backdrop-saturate-[150%] border border-solid border-[var(--shell-floating-border)] flex items-center justify-center cursor-pointer z-[100] transition-all duration-300",
+        isHovered ? "shadow-[var(--shadow-xl)]" : "shadow-[var(--shadow-lg)]"
+      )}
       style={{
-        width: 80,
-        height: 80,
-        borderRadius: '50%',
-        background: 'var(--shell-floating-bg)',
-        backdropFilter: 'blur(12px) saturate(150%)',
-        border: '1px solid var(--shell-floating-border)',
-        boxShadow: isHovered 
-          ? 'var(--shadow-xl)'
-          : 'var(--shadow-lg)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.3s ' + tokens.motion.spring,
-        transform: 'scale(' + (isHovered ? 1.05 : pulse) + ')',
-        cursor: 'pointer',
-        position: 'fixed',
-        bottom: 40,
-        left: '50%',
-        marginLeft: -40,
-        zIndex: 100,
+        transitionTimingFunction: tokens.motion.spring,
+        transform: `scale(${isHovered ? 1.05 : pulse})`,
       }}
     >
-      <div style={{
-        width: 60,
-        height: 60,
-        borderRadius: '50%',
-        background: 'linear-gradient(135deg, var(--accent-cowork) 0%, var(--status-info) 50%, var(--accent-code) 100%)',
-        opacity: 0.8,
-        filter: 'blur(4px)',
-      }} />
-      <div style={{
-        position: 'absolute',
-        display: 'flex',
-        gap: 8,
-      }}>
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ui-text-inverse)' }} />
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ui-text-inverse)' }} />
+      <div className="size-[60px] rounded-full bg-[linear-gradient(135deg,var(--accent-cowork)_0%,var(--status-info)_50%,var(--accent-code)_100%)] opacity-80 blur-[4px]" />
+      <div className="absolute flex gap-2">
+        <div className="size-1.5 rounded-full bg-[var(--ui-text-inverse)]" />
+        <div className="size-1.5 rounded-full bg-[var(--ui-text-inverse)]" />
       </div>
     </div>
   );

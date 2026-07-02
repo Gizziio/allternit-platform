@@ -231,7 +231,7 @@ export function TopologyView({
         
         <div className="p-2 space-y-1">
           {orchestrator && (
-            <button
+            <button type="button"
               onClick={() => onAgentSelect(orchestrator.id)}
               className="w-full p-3 rounded-xl text-left transition-all hover:bg-white/5"
               style={{ 
@@ -255,7 +255,7 @@ export function TopologyView({
           {workers.map((worker) => {
             const isWorking = worker.status === 'working';
             return (
-              <button
+              <button type="button"
                 key={worker.id}
                 onClick={() => onAgentSelect(worker.id)}
                 className="w-full p-3 rounded-xl text-left transition-all hover:bg-white/5"

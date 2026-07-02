@@ -181,7 +181,7 @@ export function CodeSessionBar() {
 
           {activeSession && (
             <ContextWindowCard>
-              <button style={{ ...pillStyle('#7db8ff'), cursor: 'pointer', outline: 'none' }}>
+              <button type="button" style={{ ...pillStyle('#7db8ff'), cursor: 'pointer', outline: 'none' }}>
                 <ClockCounterClockwise size={12} weight="bold" />
                 {`${activeSession.mode}${activeSession.state}`}
               </button>

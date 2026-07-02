@@ -7,7 +7,7 @@ export type HardBanCategory =
   | "file_delete"
   | "other";
 
-export type EnforcementMode = "tool-block" | "prompt-only";
+type EnforcementMode = "tool-block" | "prompt-only";
 
 export type AgentSetup =
   | "coding"
@@ -22,7 +22,7 @@ export interface CharacterBlueprint {
   temperament: "precision" | "exploratory" | "systemic" | "balanced";
 }
 
-export interface CharacterIdentity {
+interface CharacterIdentity {
   setup: AgentSetup;
   className: string;
   specialtySkills: string[];
@@ -50,7 +50,7 @@ export interface RoleCardConfig {
   metrics: string[];
 }
 
-export interface VoiceConfigLayer {
+interface VoiceConfigLayer {
   style: string;
   rules: string[];
   microBans: string[];
@@ -59,7 +59,7 @@ export interface VoiceConfigLayer {
   };
 }
 
-export interface RelationshipPair {
+interface RelationshipPair {
   agentA: string;
   agentB: string;
   affinity: number; // [0.1, 0.95]
@@ -73,12 +73,12 @@ export interface RelationshipConfig {
   pairs: RelationshipPair[];
 }
 
-export interface ProgressionStatRule {
+interface ProgressionStatRule {
   source: string;
   formula: string;
 }
 
-export interface ProgressionConfig {
+interface ProgressionConfig {
   stats: Record<string, ProgressionStatRule>;
   relevantStats: string[];
   level: {
@@ -127,7 +127,7 @@ export type AvatarEmotion =
   | "narrow"     // Narrowed eyes, intense focus
   | "sleepy";    // Droopy eyes, relaxed state
 
-export interface AvatarEyeConfig {
+interface AvatarEyeConfig {
   preset?: EyePreset;
   size?: number;        // 0.5 - 1.5
   color?: string;       // Hex color
@@ -135,27 +135,27 @@ export interface AvatarEyeConfig {
   blinkRate?: BlinkRate;
 }
 
-export interface AvatarAntennaConfig {
+interface AvatarAntennaConfig {
   count?: 0 | 1 | 2 | 3;
   style?: AntennaStyle;
   animation?: AntennaAnimation;
   tipDecoration?: "none" | "ball" | "glow" | "star" | "diamond";
 }
 
-export interface AvatarColorScheme {
+interface AvatarColorScheme {
   primary?: string;     // Body fill
   secondary?: string;   // Eye/accent color
   glow?: string;        // Beacon/emission color
   outline?: string;     // Stroke color
 }
 
-export interface AvatarPersonalityConfig {
+interface AvatarPersonalityConfig {
   bounce?: number;      // 0-1 idle bounce intensity
   sway?: number;        // 0-1 rotation sway
   breathing?: boolean;  // Scale pulsing
 }
 
-export interface AvatarAccessory {
+interface AvatarAccessory {
   id: string;
   type: "glasses" | "hat" | "neck" | "other";
   style: string;
@@ -204,7 +204,7 @@ export interface AvatarConfig {
  * Legacy Avatar Config (for backward compatibility)
  * @deprecated Use AvatarConfig instead
  */
-export interface LegacyAvatarConfig {
+interface LegacyAvatarConfig {
   type: "glb" | "image" | "color";
   uri?: string;
   fallbackColor: string;
@@ -213,7 +213,7 @@ export interface LegacyAvatarConfig {
 /**
  * Simple Avatar Config (for backward compatibility with minimal config)
  */
-export interface SimpleAvatarConfig {
+interface SimpleAvatarConfig {
   type: "color";
   fallbackColor: string;
 }
@@ -360,7 +360,7 @@ export interface CharacterArtifactFile {
   content: string;
 }
 
-export type CharacterTelemetryEventType =
+type CharacterTelemetryEventType =
   | "mission_created"
   | "mission_completed"
   | "mission_failed"

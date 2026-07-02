@@ -10,7 +10,6 @@
 
 import type {
   MarketplacePlugin,
-  InstalledPlugin,
   PluginCategory
 } from './marketplace';
 import type { PluginCapability } from './types';
@@ -29,7 +28,7 @@ export type BundledPluginSource =
   | 'built-in'      // 10 core agent modes (image, video, etc.)
   | 'vendor';       // 16 Claude Desktop plugins
 
-export type DownloadablePluginSource = 
+type DownloadablePluginSource = 
   | 'vendored'      // Available in repo but not bundled (18 plugins)
   | 'external';     // Fetched from external repos (70+ plugins)
 
@@ -54,7 +53,7 @@ export type UnifiedMarketplacePlugin = BundledPlugin | DownloadablePlugin;
 // BUNDLED PLUGINS REGISTRY
 // =============================================================================
 
-export const BUNDLED_PLUGINS: BundledPlugin[] = [
+const BUNDLED_PLUGINS: BundledPlugin[] = [
   // === BUILT-IN (10 plugins) ===
   {
     id: 'image',
@@ -709,7 +708,7 @@ export const EXTERNAL_MARKETPLACE_SOURCES = [
 // UNIFIED ACCESS
 // =============================================================================
 
-export function getAllPlugins(): UnifiedMarketplacePlugin[] {
+function getAllPlugins(): UnifiedMarketplacePlugin[] {
   return [...BUNDLED_PLUGINS, ...getDownloadablePlugins()];
 }
 
@@ -721,7 +720,7 @@ export function getBundledBySource(source: BundledPluginSource): BundledPlugin[]
   return BUNDLED_PLUGINS.filter(p => p.bundledSource === source);
 }
 
-export function getPluginsByCategory(category: PluginCategory): UnifiedMarketplacePlugin[] {
+function getPluginsByCategory(category: PluginCategory): UnifiedMarketplacePlugin[] {
   return getAllPlugins().filter(p => p.category === category);
 }
 
@@ -739,15 +738,15 @@ export function searchPlugins(query: string): UnifiedMarketplacePlugin[] {
 // INSTALLATION HELPERS
 // =============================================================================
 
-export function isBundled(pluginId: string): boolean {
+function isBundled(pluginId: string): boolean {
   return BUNDLED_PLUGINS.some(p => p.id === pluginId);
 }
 
-export function getBundledPlugin(pluginId: string): BundledPlugin | undefined {
+function getBundledPlugin(pluginId: string): BundledPlugin | undefined {
   return BUNDLED_PLUGINS.find(p => p.id === pluginId);
 }
 
-export function getDownloadablePlugin(pluginId: string): DownloadablePlugin | undefined {
+function getDownloadablePlugin(pluginId: string): DownloadablePlugin | undefined {
   return getDownloadablePlugins().find(p => p.id === pluginId);
 }
 

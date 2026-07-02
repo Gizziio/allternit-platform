@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 /**
  * Cowork background — traveling dot-wave matrix.
@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react';
  * that is alive but never distracting. Same base color in dark and light mode,
  * only the dot opacity and background tint change.
  */
-export function CoworkAnimatedBackground(): JSX.Element {
+export function CoworkAnimatedBackground(): React.ReactNode {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export function CoworkAnimatedBackground(): JSX.Element {
       const t = (now - startTime) * SPEED;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = dark ? '#100e0b' : '#faf9f7';
+      ctx.fillStyle = dark ? '#100e0b' : '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const cols = Math.ceil(canvas.width  / SPACING) + 1;

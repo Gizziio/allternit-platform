@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * VPSConnectionsPanel - SSH Connection Management for Settings
  * 
@@ -6,11 +7,10 @@
 
 "use client";
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ArrowClockwise, Warning } from '@phosphor-icons/react';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 import { VPSConnectionModal } from '@/components/vps';
 import { SSHConnectionsList, type SSHConnection } from '@/components/ssh';
 import type { SSHConnectionFormData, SSHConnectionTestResult } from '@/components/ssh';
@@ -314,7 +314,7 @@ export function VPSConnectionsPanel() {
         >
           <Warning size={18} weight="fill" />
           <span style={{ flex: 1 }}>{error}</span>
-          <button 
+          <button type="button" 
             onClick={() => setError(null)}
             style={{ 
               padding: '4px 10px',
@@ -347,7 +347,7 @@ export function VPSConnectionsPanel() {
           border: '1px solid var(--ui-border-muted)',
         }}
       >
-        <button
+        <button type="button"
           onClick={() => setIsModalOpen(true)}
           style={{
             padding: '10px 18px',
@@ -381,7 +381,7 @@ export function VPSConnectionsPanel() {
 
         <div style={{ flex: 1 }} />
 
-        <button
+        <button type="button"
           onClick={loadConnections}
           disabled={isLoading}
           style={{

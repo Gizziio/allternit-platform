@@ -8,8 +8,6 @@
 import { useSidecarStore } from '../stores/useSidecarStore';
 import type {
   AllternitProgramType,
-  AllternitProgramState,
-  LaunchProgramRequest,
   ResearchDocState,
   DataGridState,
   PresentationState,
@@ -20,7 +18,7 @@ import type {
 // Launch Functions
 // ============================================================================
 
-export function launchResearchDoc(
+function launchResearchDoc(
   title: string,
   topic: string,
   sourceThreadId: string,
@@ -56,7 +54,7 @@ export function launchResearchDoc(
   });
 }
 
-export function launchDataGrid(
+function launchDataGrid(
   title: string,
   columns: DataGridState['columns'],
   sourceThreadId: string,
@@ -104,7 +102,7 @@ export function launchDataGrid(
   });
 }
 
-export function launchPresentation(
+function launchPresentation(
   title: string,
   sourceThreadId: string,
   options?: { focus?: boolean; replaceExisting?: boolean },
@@ -147,7 +145,7 @@ export function launchPresentation(
   });
 }
 
-export function launchCodePreview(
+function launchCodePreview(
   title: string,
   files: CodePreviewState['files'],
   entryFile: string,
@@ -177,7 +175,7 @@ export function launchCodePreview(
   });
 }
 
-export function launchAssetManager(sourceThreadId: string): string {
+function launchAssetManager(sourceThreadId: string): string {
   return useSidecarStore.getState().launchProgram({
     type: 'asset-manager',
     title: 'Asset Manager',
@@ -187,7 +185,7 @@ export function launchAssetManager(sourceThreadId: string): string {
   });
 }
 
-export function launchImageStudio(imageUrl: string, sourceThreadId: string): string {
+function launchImageStudio(imageUrl: string, sourceThreadId: string): string {
   return useSidecarStore.getState().launchProgram({
     type: 'image-studio',
     title: 'Image Studio',
@@ -209,7 +207,7 @@ export function launchImageStudio(imageUrl: string, sourceThreadId: string): str
   });
 }
 
-export function launchAudioStudio(title: string, sourceThreadId: string): string {
+function launchAudioStudio(title: string, sourceThreadId: string): string {
   return useSidecarStore.getState().launchProgram({
     type: 'audio-studio',
     title: `Audio: ${title}`,
@@ -230,7 +228,7 @@ export function launchAudioStudio(title: string, sourceThreadId: string): string
   });
 }
 
-export function launchTelephony(phoneNumber?: string, sourceThreadId: string = 'system'): string {
+function launchTelephony(phoneNumber?: string, sourceThreadId: string = 'system'): string {
   return useSidecarStore.getState().launchProgram({
     type: 'telephony',
     title: phoneNumber ? `Call: ${phoneNumber}` : 'Phone',
@@ -248,7 +246,7 @@ export function launchTelephony(phoneNumber?: string, sourceThreadId: string = '
   });
 }
 
-export function launchOrchestrator(taskDescription: string, sourceThreadId: string): string {
+function launchOrchestrator(taskDescription: string, sourceThreadId: string): string {
   return useSidecarStore.getState().launchProgram({
     type: 'orchestrator',
     title: 'Orchestrator',
@@ -266,7 +264,7 @@ export function launchOrchestrator(taskDescription: string, sourceThreadId: stri
   });
 }
 
-export function launchWorkflowBuilder(
+function launchWorkflowBuilder(
   title: string,
   workspaceId: string,
   sourceThreadId: string,
@@ -448,7 +446,7 @@ export function executeLaunchCommands(
   });
 }
 
-export type DispatchReplyEventFn = (
+type DispatchReplyEventFn = (
   conversationId: string,
   event: {
     type: "artifact.created";
@@ -463,7 +461,7 @@ export type DispatchReplyEventFn = (
   }
 ) => void;
 
-export function processAgentMessage(
+function processAgentMessage(
   message: string,
   sourceThreadId: string,
   /**

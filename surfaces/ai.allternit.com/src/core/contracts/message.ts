@@ -1,6 +1,6 @@
 import { UUID, ISODate } from './base';
 
-export type MessagePart =
+type MessagePart =
   | { type: 'text'; text: string }
   | { type: 'artifact'; artifactId: UUID }
   | { type: 'tool_call'; toolCallId: UUID }
@@ -10,7 +10,7 @@ export type MessagePart =
   | { type: 'code'; code: string; language: string }
   | { type: 'error'; error: string };
 
-export interface Message {
+interface Message {
   readonly id: UUID;
   readonly threadId: UUID;
   readonly projectId: UUID;

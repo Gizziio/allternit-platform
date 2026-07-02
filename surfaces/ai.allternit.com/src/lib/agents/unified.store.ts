@@ -36,7 +36,7 @@ export type ContextMode =
   | "monitoring";
 
 export type MainTab = "plan" | "work" | "status" | "mail" | "tools" | "audit";
-export type DrawerTab = "queue" | "terminal" | "logs" | "executions" | "agents" | "scheduler" | "context";
+type DrawerTab = "queue" | "terminal" | "logs" | "executions" | "agents" | "scheduler" | "context";
 
 export interface DagDefinition {
   dagId: string;
@@ -60,7 +60,7 @@ export interface DagNode {
   wihId?: string;
 }
 
-export interface DagEdge {
+interface DagEdge {
   from: string;
   to: string;
 }
@@ -105,7 +105,7 @@ export interface PromptTemplate {
   tags: string[];
 }
 
-export interface TemplateVariable {
+interface TemplateVariable {
   name: string;
   description: string;
   required: boolean;
@@ -121,7 +121,7 @@ export interface ToolSnapshot {
   hash: string;
 }
 
-export interface SnapshotStats {
+interface SnapshotStats {
   total: number;
   totalSize: number;
   oldestSnapshot?: number;
@@ -139,9 +139,9 @@ export interface LogEntry {
   threadId?: string;
 }
 
-export type TimelineEntryType = "message" | "ledger" | "receipt";
+type TimelineEntryType = "message" | "ledger" | "receipt";
 
-export interface TimelineEntry {
+interface TimelineEntry {
   timestamp: number;
   label: string;
   type: TimelineEntryType;
@@ -149,27 +149,27 @@ export interface TimelineEntry {
   detail?: string;
 }
 
-export interface TokenUsage {
+interface TokenUsage {
   input: number;
   output: number;
   total: number;
   cached?: number;
 }
 
-export interface ModelUsageSummary {
+interface ModelUsageSummary {
   messages: number;
   toolCalls: number;
   lastUsedAt: number;
   avgLatencyMs?: number;
 }
 
-export interface ToolUsageEntry {
+interface ToolUsageEntry {
   name: string;
   count: number;
   lastUsedAt: number;
 }
 
-export interface SessionDuration {
+interface SessionDuration {
   startedAt: number;
   lastActivityAt: number;
   minutes: number;
@@ -197,7 +197,7 @@ export interface SessionAnalytics {
   status?: "active" | "idle" | "complete" | "error";
 }
 
-export interface ScheduledJob {
+interface ScheduledJob {
   jobId: string;
   title: string;
   dagId: string;
@@ -217,6 +217,8 @@ interface UnifiedStore {
   isLoading: boolean;
   error: string | null;
   lastSync: number;
+  lastWihsFetchAt: number;
+  lastWihsFetchKey: string | null;
   
   // Context State
   contextMode: ContextMode;
@@ -678,6 +680,8 @@ export const useUnifiedStore = create<UnifiedStore>()(
     isLoading: false,
     error: null,
     lastSync: 0,
+    lastWihsFetchAt: 0,
+    lastWihsFetchKey: null,
     
     contextMode: "idle",
     selectedDagId: null,
@@ -962,11 +966,25 @@ export const useUnifiedStore = create<UnifiedStore>()(
       // Guard against concurrent calls
       const state = get();
       if (state.isLoading) return;
+
+      const requestKey = dagId ? `dag:${dagId}` : 'all';
+      const freshnessWindowMs = dagId ? 5_000 : 15_000;
+      if (
+        state.lastWihsFetchKey === requestKey &&
+        Date.now() - state.lastWihsFetchAt < freshnessWindowMs
+      ) {
+        return;
+      }
       
       set({ isLoading: true, error: null });
       try {
         const response = await railsApi.wihs.list({ dag_id: dagId });
-        set({ wihs: response.wihs ?? [], isLoading: false });
+        set({
+          wihs: response.wihs ?? [],
+          isLoading: false,
+          lastWihsFetchAt: Date.now(),
+          lastWihsFetchKey: requestKey,
+        });
       } catch (err: any) {
         set({ error: err.message, isLoading: false });
       }
@@ -1282,9 +1300,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
     },
     
     // Actions - Templates
-    fetchTemplates: async () => {
-      // Templates are static for now, loaded from production templates
-    },
+    fetchTemplates: async () => {},
     
     executeTemplate: async (templateId, variables) => {
       set({ isLoading: true, error: null });
@@ -1398,13 +1414,13 @@ export function stopAutoSync() {
 // Selectors (for performance)
 // ============================================================================
 
-export const selectHealth = (state: UnifiedStore) => state.health;
-export const selectContextMode = (state: UnifiedStore) => state.contextMode;
-export const selectCurrentDag = (state: UnifiedStore) => state.currentDag;
-export const selectCurrentWih = (state: UnifiedStore) => state.currentWih;
-export const selectWihsByStatus = (status: string) => (state: UnifiedStore) =>
+const selectHealth = (state: UnifiedStore) => state.health;
+const selectContextMode = (state: UnifiedStore) => state.contextMode;
+const selectCurrentDag = (state: UnifiedStore) => state.currentDag;
+const selectCurrentWih = (state: UnifiedStore) => state.currentWih;
+const selectWihsByStatus = (status: string) => (state: UnifiedStore) =>
   state.wihs.filter((w) => w.status === status);
-export const selectActiveExecutions = (state: UnifiedStore) =>
+const selectActiveExecutions = (state: UnifiedStore) =>
   state.executions.filter((e) => e.status === "running");
 
 // ============================================================================

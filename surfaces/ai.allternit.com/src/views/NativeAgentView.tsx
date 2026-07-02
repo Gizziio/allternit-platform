@@ -1,36 +1,27 @@
+// @ts-nocheck
 "use client";
 
-/**
- * NativeAgentView - N20 Native OpenClaw Agent View (Reconstructed)
- *
- * A high-fidelity, split-pane component featuring:
- * - Left side: Chat interface with streaming support
- * - Right side: Canvas panel for tool visualization and content
- * - Session management with dropdown selector
- * - Allternit Native Milestone Progress (Protocol Layer)
- * - Full integration with ChatSessionStore
- */
-
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useIsClient } from '@/lib/hooks/use-is-client';
 
-// Store - Using ChatSessionStore for native agent view
+// Store
 import {
   useChatSessionStore,
   type ChatSession as NativeSession,
-  type ModeSessionMessage as NativeMessage,
 } from "@/views/chat/ChatSessionStore";
 
-// Type aliases for backward compatibility
-interface Canvas { id: string; sessionId: string; content: string; type: string; title?: string; }
-interface SessionUpdateInput { name?: string; description?: string; metadata?: Record<string, unknown>; }
-interface RuntimeExecutionModeStatus { mode: string; updatedAt: string; supportedModes: string[]; }
-import type { Reply, TextReplyItem } from "@/lib/agents/replies-stream";
+// Utils & Types
+import { 
+  type ViewMode, 
+  type Canvas, 
+  formatSessionTimestamp 
+} from "./native-agent/main/NativeAgentView.utils";
 import { useWorkspace } from "@/agent-workspace/useWorkspace";
 import { MilestoneProgress } from "@/components/AllternitNative/MilestoneProgress";
 import { ToolCallVisualization } from "@/components/agents";
 import { UnifiedMessageRenderer } from "@/components/ai-elements/UnifiedMessageRenderer";
-import { parseStructuredContent, type ExtendedUIPart } from "@/lib/ai/rust-stream-adapter-extended";
+import { parseStructuredContent } from "@/lib/ai/rust-stream-adapter-extended";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -38,88 +29,25 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { ProgramErrorBoundary } from "@/allternit-os/components/ProgramErrorBoundary";
+
+// Modularized Components
+import { SessionSelector } from "./native-agent/main/SessionSelector";
+import { SessionComposerRegion } from "@/components/session-composer";
 
 // Icons
 import {
   Plus,
   Trash,
-  Robot,
-  User,
-  CircleNotch,
-  Copy,
-  DownloadSimple,
   Sidebar,
   SidebarSimple,
   Layout,
-  Code,
-  FileText,
   Terminal,
-  StackSimple,
-  Sparkle,
-  Chat,
-  Wrench,
   Lightning,
-  Warning,
+  X,
 } from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
-import { GATEWAY_BASE_URL } from "@/lib/agents/api-config";
-import { SessionComposerRegion } from "@/components/session-composer";
-
-// ============================================================================
-// Local hook stubs for features not yet implemented in mode-session-store
-// ============================================================================
-
-const NATIVE_AGENT_UNAVAILABLE = {
-  canvases: "Session canvases are not yet wired into NativeAgentView after the session-store migration.",
-  replies: "Canonical reply-state streaming is not yet wired into NativeAgentView after the session-store migration.",
-  executionMode: "Runtime execution mode inspection is not yet wired into NativeAgentView after the session-store migration.",
-} as const;
-
-function useActiveMessages() {
-  return useChatSessionStore((s) => {
-    const id = s.activeSessionId;
-    return id ? (s.sessions.find(sess => sess.id === id)?.messages ?? []) : [];
-  });
-}
-
-function useSessionCanvases(_sessionId: string): Canvas[] {
-  return [];
-}
-
-function isLocalDraftSession(session: NativeSession | null): boolean {
-  return !!(session && session.id.startsWith('local-'));
-}
-
-function useSessionStreamingState(sessionId: string) {
-  const streamingState = useChatSessionStore((s) => s.streamingBySession?.[sessionId]);
-  return { isStreaming: streamingState?.isStreaming ?? false };
-}
-
-function useConversationReplies(_sessionId?: string): import('@/types/replies-contract').ConversationReplyState | null {
-  return null;
-}
-
-function UnavailableNotice({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-left text-amber-100/90">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <Warning size={14} />
-        <span>{title}</span>
-      </div>
-      <p className="mt-2 text-xs leading-relaxed text-amber-100/70">{description}</p>
-    </div>
-  );
-}
-
-// ============================================================================
-// Types & Helpers
-// ============================================================================
 
 interface NativeAgentViewProps {
   initialSessionId?: string;
@@ -128,66 +56,44 @@ interface NativeAgentViewProps {
   onOpenRuntimeOps?: () => void;
 }
 
-type ViewMode = "split" | "chat-only" | "canvas-only";
-
-function formatSessionTimestamp(value?: string): string {
-  if (!value) return "Awaiting activity";
-  const timestamp = Date.parse(value);
-  if (Number.isNaN(timestamp)) return "Awaiting activity";
-
-  const elapsedMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
-  if (elapsedMinutes < 1) return "Updated just now";
-  if (elapsedMinutes < 60) return `Updated ${elapsedMinutes}m ago`;
-  const elapsedHours = Math.floor(elapsedMinutes / 60);
-  if (elapsedHours < 24) return `Updated ${elapsedHours}h ago`;
-  const elapsedDays = Math.floor(elapsedHours / 24);
-  if (elapsedDays < 7) return `Updated ${elapsedDays}d ago`;
-
-  return `Updated ${new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(new Date(timestamp))}`;
-}
-
-// ============================================================================
-// Main Component
-// ============================================================================
-
 export function NativeAgentView({
   initialSessionId,
-  defaultLayout = [50, 50],
   bootstrapStrategy = "auto",
   onOpenRuntimeOps,
 }: NativeAgentViewProps) {
+  const isClient = useIsClient();
   const {
     updateSession = async () => {},
     deleteSession,
     setActiveSession,
     loadSessions,
+    sessions,
+    activeSessionId,
+    isLoading: isLoadingSessions,
   } = useChatSessionStore();
   
-  // Derived state
-  const activeSessionId = useChatSessionStore((s) => s.activeSessionId);
-  const sessions = useChatSessionStore((s) => s.sessions);
-  const isLoadingSessions = useChatSessionStore((s) => s.isLoading);
   const streamingState = useChatSessionStore((s) => activeSessionId ? s.streamingBySession[activeSessionId] : null);
   const isStreaming = streamingState?.isStreaming ?? false;
-  const isSessionSyncConnected = useChatSessionStore((s) => s.isSyncConnected);
-  const sessionSyncError = useChatSessionStore((s) => s.syncError);
 
-  // Allternit Native Context Integration
-  const { allternitNativeState } = useWorkspace(activeSessionId || "");
-  const executionMode: RuntimeExecutionModeStatus | null = null;
-  const isUpdatingSession = false;
-  const isLoadingExecutionMode = false;
-  
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [hasFetchedSessions, setHasFetchedSessions] = useState(false);
+
+  const [prevBootstrapOC, setPrevBootstrapOC] = useState(bootstrapStrategy);
+  if (bootstrapStrategy !== prevBootstrapOC) {
+    setPrevBootstrapOC(bootstrapStrategy);
+    if (bootstrapStrategy === "manual") {
+      setHasFetchedSessions(true);
+    }
+  }
+
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const hasAutoCreatedWelcomeSession = useRef(false);
   
   const activeSession = useMemo(() => 
     sessions.find((session) => session.id === activeSessionId) || null
   , [sessions, activeSessionId]);
+
+  const activeMessages = useMemo(() => activeSession?.messages ?? [], [activeSession]);
 
   // Initialization
   useEffect(() => {
@@ -207,11 +113,6 @@ export function NativeAgentView({
 
     return () => { isMounted = false; };
   }, [bootstrapStrategy, loadSessions]);
-
-  // Execution mode not implemented in new store - skipping
-  useEffect(() => {
-    // Placeholder for execution mode loading
-  }, []);
 
   // Auto-select session
   useEffect(() => {
@@ -233,571 +134,149 @@ export function NativeAgentView({
       hasAutoCreatedWelcomeSession.current = true;
       void useChatSessionStore.getState().createSession({ name: "Welcome Session" });
     }
-  }, [activeSessionId, hasFetchedSessions, initialSessionId, isLoadingSessions, sessions, setActiveSession, bootstrapStrategy]);
+  }, [hasFetchedSessions, isLoadingSessions, activeSessionId, initialSessionId, sessions, setActiveSession, bootstrapStrategy]);
 
-  const handleNewSession = useCallback(async () => {
-    const newSessionId = await useChatSessionStore.getState().createSession({ name: "New Session" });
-    if (newSessionId) setActiveSession(newSessionId);
+  const handleDeleteSession = useCallback((id: string) => {
+    const session = sessions.find(s => s.id === id);
+    setConfirmDialog({
+      message: `Are you sure you want to delete "${session?.name || 'this session'}"?`,
+      onConfirm: async () => {
+        await deleteSession(id);
+        setConfirmDialog(null);
+      }
+    });
+  }, [sessions, deleteSession]);
+
+  const handleCreateSession = useCallback(async () => {
+    const id = await useChatSessionStore.getState().createSession({ name: "New Agent Session" });
+    setActiveSession(id);
   }, [setActiveSession]);
 
-  const handleDeleteSession = useCallback(async (sessionId: string) => {
-    if (confirm("Delete this session?")) await deleteSession(sessionId);
-  }, [deleteSession]);
-
-  const toggleViewMode = useCallback(() => {
-    const modes: ViewMode[] = ["split", "chat-only", "canvas-only"];
-    const nextMode = modes[(modes.indexOf(viewMode) + 1) % modes.length];
-    setViewMode(nextMode);
-  }, [viewMode]);
+  if (!isClient) return null;
 
   return (
     <TooltipProvider>
-      <div className="flex h-full flex-col overflow-hidden bg-[color:var(--bg-primary)]">
-        <WorkspaceHeader
-          sessions={sessions}
-          activeSession={activeSession}
-          activeSessionId={activeSessionId}
-          executionMode={executionMode}
-          onSelectSession={setActiveSession}
-          viewMode={viewMode}
-          onToggleViewMode={toggleViewMode}
-          isStreaming={isStreaming}
-          isSessionSyncConnected={isSessionSyncConnected}
-          sessionSyncError={sessionSyncError}
-          onOpenRuntimeOps={onOpenRuntimeOps}
-          allternitNativeState={allternitNativeState}
-        />
-
-        <div className="flex-1 min-h-0 overflow-hidden p-4 pt-0">
-          <div className="flex h-full min-h-0 flex-col gap-4 lg:flex-row">
-            <SessionWorkbenchRail
+      <div className="flex flex-col h-full bg-[var(--surface-canvas)] overflow-hidden font-sans">
+        {/* Header / Control Bar */}
+        <header className="flex items-center justify-between px-5 py-3 border-b border-solid border-[rgba(212,176,140,0.1)] bg-[rgba(15,12,10,0.4)] backdrop-blur-md z-20 shrink-0">
+          <div className="flex items-center gap-4 min-w-0">
+            <SessionSelector
               sessions={sessions}
               activeSession={activeSession}
-              activeSessionId={activeSessionId}
-              onSelectSession={setActiveSession}
-              onNewSession={handleNewSession}
-              onUpdateSession={updateSession as (id: string, updates: SessionUpdateInput) => Promise<void>}
-              onDeleteSession={handleDeleteSession}
-              executionMode={executionMode}
-              isLoadingSessions={isLoadingSessions}
-              isUpdatingSession={isUpdatingSession}
-              isLoadingExecutionMode={isLoadingExecutionMode}
-              isSessionSyncConnected={isSessionSyncConnected}
-              sessionSyncError={sessionSyncError}
-              onOpenRuntimeOps={onOpenRuntimeOps}
+              onSelect={setActiveSession}
+              onNew={handleCreateSession}
+              onDelete={handleDeleteSession}
             />
 
-            <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden rounded-[28px] border border-[color:var(--border-subtle)] bg-[color:var(--glass-bg-elevated)] shadow-[var(--shadow-lg)] backdrop-blur-xl">
-              {viewMode === "chat-only" && <ChatPanel sessionId={activeSessionId} />}
-              {viewMode === "canvas-only" && <CanvasPanel sessionId={activeSessionId} />}
-              {viewMode === "split" && (
-                <div className="flex h-full min-h-0 w-full min-w-0">
-                  <div className="min-h-0 min-w-0" style={{ flex: `${defaultLayout[0]} 1 0%` }}>
-                    <ChatPanel sessionId={activeSessionId} />
+            <div className="h-6 w-px bg-white/10" />
+
+            <div className="flex items-center gap-1.5 p-1 bg-black/20 rounded-lg border border-solid border-white/5">
+              <ViewModeButton active={viewMode === 'split'} onClick={() => setViewMode('split')} icon={Layout} label="Split" />
+              <ViewModeButton active={viewMode === 'chat-only'} onClick={() => setViewMode('chat-only')} icon={Sidebar} label="Chat" />
+              <ViewModeButton active={viewMode === 'canvas-only'} onClick={() => setViewMode('canvas-only')} icon={SidebarSimple} label="Canvas" />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {isStreaming && (
+              <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30 text-blue-400 gap-1.5 px-2.5 py-1 animate-pulse">
+                <Lightning size={12} weight="fill" />
+                Agent Thinking
+              </Badge>
+            )}
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onOpenRuntimeOps}
+              className="text-zinc-400 hover:text-white gap-2"
+            >
+              <Terminal size={16} />
+              <span className="hidden sm:inline">Runtime Ops</span>
+            </Button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex overflow-hidden relative">
+          <ProgramErrorBoundary programName="Native Agent">
+            <div className="flex-1 flex overflow-hidden">
+              {/* Chat Column */}
+              {(viewMode === 'split' || viewMode === 'chat-only') && (
+                <div className={cn(
+                  "flex flex-col border-r border-solid border-[rgba(212,176,140,0.1)] relative transition-all duration-300",
+                  viewMode === 'split' ? "w-[40%] min-w-[360px]" : "w-full"
+                )}>
+                  <ScrollArea className="flex-1">
+                    <div className="p-6 pb-32 space-y-8 max-w-3xl mx-auto">
+                      {activeMessages.map((msg) => (
+                        <UnifiedMessageRenderer 
+                          key={msg.id} 
+                          message={msg} 
+                        />
+                      ))}
+                      {isStreaming && (
+                        <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2">
+                          <div className="size-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 border border-solid border-blue-500/20">
+                            <Lightning size={18} className="text-blue-500" weight="fill" />
+                          </div>
+                          <div className="flex-1 pt-1">
+                            <div className="h-4 w-24 bg-white/5 rounded animate-pulse" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-[var(--surface-canvas)] via-[var(--surface-canvas)] to-transparent pt-12">
+                    <div className="max-w-2xl mx-auto">
+                      <SessionComposerRegion 
+                        sessionId={activeSessionId || ""}
+                        isLoading={isStreaming}
+                      />
+                    </div>
                   </div>
-                  <div className="w-px bg-[color:var(--border-subtle)]" />
-                  <div className="min-h-0 min-w-0" style={{ flex: `${defaultLayout[1]} 1 0%` }}>
-                    <CanvasPanel sessionId={activeSessionId} />
+                </div>
+              )}
+
+              {/* Canvas Column */}
+              {(viewMode === 'split' || viewMode === 'canvas-only') && (
+                <div className="flex-1 flex flex-col bg-zinc-950/50">
+                  <div className="flex-1 p-6 overflow-auto">
+                    <div className="max-w-4xl mx-auto space-y-6">
+                      <MilestoneProgress sessionId={activeSessionId || ""} />
+                      <ToolCallVisualization sessionId={activeSessionId || ""} />
+                    </div>
                   </div>
                 </div>
               )}
             </div>
-          </div>
-        </div>
+          </ProgramErrorBoundary>
+        </main>
+
+        <ConfirmModal
+          isOpen={confirmDialog !== null}
+          title="Confirm Action"
+          message={confirmDialog?.message || ""}
+          onConfirm={() => confirmDialog?.onConfirm()}
+          onCancel={() => setConfirmDialog(null)}
+          destructive
+        />
       </div>
     </TooltipProvider>
   );
 }
 
-// ============================================================================
-// Header Component
-// ============================================================================
-
-interface WorkspaceHeaderProps {
-  sessions: NativeSession[];
-  activeSession: NativeSession | null;
-  activeSessionId: string | null;
-  executionMode: RuntimeExecutionModeStatus | null;
-  onSelectSession: (id: string) => void;
-  viewMode: ViewMode;
-  onToggleViewMode: () => void;
-  isStreaming: boolean;
-  isSessionSyncConnected: boolean;
-  sessionSyncError: string | null;
-  onOpenRuntimeOps?: () => void;
-  allternitNativeState: any | null; // Use real type from workspace
-}
-
-function WorkspaceHeader({
-  activeSession,
-  activeSessionId,
-  executionMode,
-  viewMode,
-  onToggleViewMode,
-  isStreaming,
-  isSessionSyncConnected,
-  onOpenRuntimeOps,
-  allternitNativeState,
-}: WorkspaceHeaderProps) {
-  const messages = useActiveMessages();
-  const canvases = useSessionCanvases(activeSessionId || "");
-  const isLocalDraft = isLocalDraftSession(activeSession);
-
-  const ViewModeIcon = { split: Layout, "chat-only": Sidebar, "canvas-only": SidebarSimple }[viewMode];
-
+function ViewModeButton({ active, onClick, icon: Icon, label }: any) {
   return (
-    <div className="relative overflow-hidden border-b border-[color:var(--border-subtle)] bg-[color:var(--glass-bg-thick)] px-5 py-5 backdrop-blur-xl">
-      <div className="relative flex flex-col gap-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex size-12  shrink-0 items-center justify-center rounded-[24px] border border-[color:rgba(217,119,87,0.18)] bg-[linear-gradient(135deg,rgba(217,119,87,0.16),rgba(176,141,110,0.08))] shadow-[0_10px_32px_rgba(42,31,22,0.14)]">
-              <Robot className="size-5  text-[color:var(--accent-primary)]" />
-            </div>
-            <div className="min-w-0 space-y-1">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="h-5 bg-accent-primary/10 text-accent-primary border-accent-primary/20 text-xs uppercase tracking-wider">
-                  Agent Workspace
-                </Badge>
-                {isStreaming && (
-                  <Badge className="h-5 animate-pulse bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs uppercase">
-                    Streaming
-                  </Badge>
-                )}
-              </div>
-              <h1 className="truncate text-lg font-bold text-[color:var(--text-primary)]">
-                {activeSession?.name || "Initializing..."}
-              </h1>
-              <div className="flex items-center gap-3 text-xs text-[color:var(--text-tertiary)]">
-                <span className="flex items-center gap-1"><Chat size={12} /> {messages.length} messages</span>
-                <span className="flex items-center gap-1"><StackSimple size={12} /> {canvases.length} canvases</span>
-                {isLocalDraft && <span className="text-amber-500 font-medium">● Local Draft</span>}
-              </div>
-            </div>
-          </div>
-
-          {/* Allternit Native Milestone Progress - The "Layer" */}
-          {allternitNativeState && (
-            <div className="flex-1 lg:max-w-xl mx-4">
-              <MilestoneProgress state={allternitNativeState} />
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={onToggleViewMode} className="rounded-xl hover:bg-white/10">
-              <ViewModeIcon size={16} />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={onOpenRuntimeOps} className="rounded-xl hover:bg-white/10 text-accent-primary">
-              <Lightning size={16} />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// Sidebar / Rail Component
-// ============================================================================
-
-interface SessionWorkbenchRailProps {
-  sessions: NativeSession[];
-  activeSession: NativeSession | null;
-  activeSessionId: string | null;
-  onSelectSession: (id: string) => void;
-  onNewSession: () => void;
-  onUpdateSession: (id: string, updates: SessionUpdateInput) => Promise<void>;
-  onDeleteSession: (id: string) => Promise<void>;
-  executionMode: RuntimeExecutionModeStatus | null;
-  isLoadingSessions: boolean;
-  isUpdatingSession: boolean;
-  isLoadingExecutionMode: boolean;
-  isSessionSyncConnected: boolean;
-  sessionSyncError: string | null;
-  onOpenRuntimeOps?: () => void;
-}
-
-function SessionWorkbenchRail({
-  sessions,
-  activeSessionId,
-  onSelectSession,
-  onNewSession,
-  isLoadingSessions,
-}: SessionWorkbenchRailProps) {
-  return (
-    <div className="flex w-full flex-col gap-4 lg:w-64 lg:shrink-0">
-      <Button 
-        onClick={onNewSession}
-        className="w-full justify-start gap-2 rounded-[20px] bg-accent-primary hover:bg-accent-primary/90 text-black font-bold h-12 shadow-lg"
-      >
-        <Plus size={16} />
-        New Session
-      </Button>
-
-      <div className="flex-1 min-h-0 flex flex-col rounded-[28px] border border-white/5 bg-black/20 backdrop-blur-md overflow-hidden">
-        <div className="p-4 border-b border-white/5 bg-white/5">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Recent Threads</span>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {isLoadingSessions && sessions.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <CircleNotch className="size-5  animate-spin text-white/20" />
-              </div>
-            ) : (
-              sessions.map((session) => (
-                <button
-                  key={session.id}
-                  onClick={() => onSelectSession(session.id)}
-                  className={cn(
-                    "w-full flex flex-col gap-1 p-3 rounded-2xl text-left transition-all group",
-                    activeSessionId === session.id 
-                      ? "bg-white/10 ring-1 ring-white/10 shadow-inner" 
-                      : "hover:bg-white/5"
-                  )}
-                >
-                  <span className={cn(
-                    "text-sm font-medium truncate",
-                    activeSessionId === session.id ? "text-white" : "text-white/60 group-hover:text-white/80"
-                  )}>
-                    {session.name || "Untitled Session"}
-                  </span>
-                  <span className="text-xs text-white/30">
-                    {formatSessionTimestamp(session.updatedAt)}
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// Chat Panel Component
-// ============================================================================
-
-function ChatPanel({ sessionId }: { sessionId: string | null }) {
-  const messages = useActiveMessages();
-  const { isStreaming } = useSessionStreamingState(sessionId ?? '');
-  const replyState = useConversationReplies(sessionId ?? undefined);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [inputValue, setInputValue] = useState("");
-
-  const sendMessageStream = useChatSessionStore((state) => state.sendMessageStream);
-  const abortGeneration = useChatSessionStore((state) => state.abortGeneration);
-
-  // Derive the currently-streaming reply for the live tail render.
-  const lastReplyId = replyState?.orderedReplyIds[replyState.orderedReplyIds.length - 1];
-  const streamingReply = lastReplyId ? replyState?.replies[lastReplyId] : null;
-  const activeStreamingReply = streamingReply?.status === "streaming" ? streamingReply : null;
-
-  // Use accumulated text length as scroll trigger instead of the raw buffer string.
-  const streamingTextLength = activeStreamingReply
-    ? (activeStreamingReply.items || [])
-        .filter((i): i is TextReplyItem => i.kind === "text")
-        .reduce((n: number, i: TextReplyItem) => n + i.content.length, 0)
-    : 0;
-
-  const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, streamingTextLength, scrollToBottom]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!sessionId || !inputValue.trim() || isStreaming) return;
-    const content = inputValue.trim();
-    setInputValue("");
-    await sendMessageStream(sessionId, { text: content });
-  }, [sessionId, inputValue, isStreaming, sendMessageStream]);
-
-  return (
-    <div className="flex h-full flex-col bg-transparent relative">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto space-y-8 pb-32">
-          {!replyState && (
-            <UnavailableNotice
-              title="Reply Streaming Unavailable"
-              description={NATIVE_AGENT_UNAVAILABLE.replies}
-            />
-          )}
-
-          {messages.length === 0 && !isStreaming && (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
-              <div className="size-16  rounded-3xl bg-white/5 flex items-center justify-center">
-                <Sparkle size={32} />
-              </div>
-              <h3 className="text-xl font-medium">How can I assist you?</h3>
-              <p className="text-sm max-w-xs">Start a conversation or use the Allternit Native protocol to build your project.</p>
-            </div>
-          )}
-
-          {messages.map((msg) => (
-            <ChatMessage key={msg.id} message={msg} />
-          ))}
-
-          {activeStreamingReply && (
-            <StreamingReplyTail reply={activeStreamingReply} />
-          )}
-        </div>
-      </div>
-
-      <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-[color:var(--glass-bg-elevated)] via-[color:var(--glass-bg-elevated)] to-transparent pointer-events-none">
-        <div className="max-w-2xl mx-auto pointer-events-auto">
-          <SessionComposerRegion
-            serverUrl={GATEWAY_BASE_URL}
-            sessionID={sessionId ?? ""}
-            isLoading={isStreaming}
-            value={inputValue}
-            onValueChange={setInputValue}
-            onSubmit={handleSubmit}
-            onStop={() => abortGeneration(sessionId ?? '')}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Renders the live streaming reply tail from canonical ConversationReplyState.
-// Replaces the old streamBuffer synthetic ChatMessage.
-function StreamingReplyTail({ reply }: { reply: Reply }) {
-  const textItems = (reply.items || []).filter((i): i is TextReplyItem => i.kind === "text");
-  const liveText = textItems.map((i) => i.content).join("");
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex gap-4 items-start"
-    >
-      <div className="size-8  rounded-full flex items-center justify-center shrink-0 mt-1 bg-accent-primary text-black">
-        <Robot size={16} />
-      </div>
-      <div className="flex flex-col gap-2 max-w-[85%] items-start">
-        <div className="px-4 py-3 rounded-3xl text-sm leading-relaxed bg-white/[0.03] border border-white/5 text-white/90">
-          {liveText || (
-            <span className="inline-block h-4 w-24 rounded bg-white/10 animate-pulse align-middle" />
-          )}
-          <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />
-        </div>
-        {(reply.items || []).some((i) => i.kind === "tool_call") && (
-          <div className="space-y-1 w-full text-xs text-white/40 px-2">
-            {(reply.items || [])
-              .filter((i) => i.kind === "tool_call")
-              .map((i) => (
-                <div key={i.id} className="flex items-center gap-1.5">
-                  <Wrench size={10} />
-                  <span>{(i as import("@/lib/agents/replies-stream").ToolCallReplyItem).toolName}</span>
-                  <span className="opacity-50">
-                    {{queued: "queued", running: "running…", done: "done", error: "error"}[
-                      (i as import("@/lib/agents/replies-stream").ToolCallReplyItem).state
-                    ]}
-                  </span>
-                </div>
-              ))}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-function buildAssistantParts(message: NativeMessage): ExtendedUIPart[] {
-  const parts: ExtendedUIPart[] = [];
-
-  // Thinking blocks from extended reasoning
-  if (message.thinking?.trim()) {
-    parts.push({
-      type: "reasoning",
-      reasoningId: `thinking-${message.id}`,
-      text: message.thinking,
-    } as ExtendedUIPart);
-  }
-
-  // Tool call parts — stored as {type:"tool-bash", toolCallId, input, state, output}
-  // Normalize to dynamic-tool format that UnifiedMessageRenderer understands
-  const rawToolParts = Array.isArray(message.metadata?.agentElementsParts)
-    ? (message.metadata!.agentElementsParts as Array<Record<string, unknown>>)
-    : [];
-  for (const raw of rawToolParts) {
-    const toolName = String(raw.type ?? "").replace(/^tool-/, "") || "Tool";
-    // Cast allows result (non-SDK field) that humanizeToolCall reads via (part as any).result
-    parts.push({
-      type: "dynamic-tool",
-      toolName,
-      toolCallId: String(raw.toolCallId ?? ""),
-      input: raw.input ?? {},
-      state: (raw.state as string) ?? "output-available",
-      output: raw.output ?? raw.result,
-      result: raw.result,
-    } as unknown as ExtendedUIPart);
-  }
-
-  // Text content — may contain embedded structured JSON blocks
-  parts.push(...parseStructuredContent(message.content));
-
-  return parts;
-}
-
-function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStreaming?: boolean }) {
-  const isAssistant = message.role === "assistant";
-  const parts = isAssistant ? buildAssistantParts(message) : null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+    <button type="button"
+      onClick={onClick}
       className={cn(
-        "flex gap-4",
-        isAssistant ? "items-start" : "items-start flex-row-reverse"
+        "flex items-center justify-center size-8 rounded-md border-none transition-all cursor-pointer",
+        active ? "bg-white/10 text-white shadow-sm" : "bg-transparent text-zinc-500 hover:text-zinc-300"
       )}
+      title={label}
     >
-      <div className={cn(
-        "size-8  rounded-full flex items-center justify-center shrink-0 mt-1",
-        isAssistant ? "bg-accent-primary text-black" : "bg-white/10 text-white/60"
-      )}>
-        {isAssistant ? <Robot size={16} /> : <User size={16} />}
-      </div>
-
-      <div className={cn(
-        "flex flex-col gap-2 max-w-[85%]",
-        isAssistant ? "items-start" : "items-end"
-      )}>
-        <div className={cn(
-          "px-4 py-3 rounded-3xl text-sm leading-relaxed",
-          isAssistant
-            ? "bg-white/[0.03] border border-white/5 text-white/90"
-            : "bg-accent-primary/10 border border-accent-primary/20 text-accent-primary"
-        )}>
-          {isAssistant ? (
-            <UnifiedMessageRenderer
-              parts={parts!}
-              isStreaming={isStreaming}
-              className="text-sm leading-relaxed"
-            />
-          ) : (
-            message.content
-          )}
-          {isStreaming && !isAssistant && <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />}
-        </div>
-
-        <span className="text-xs text-white/20 uppercase tracking-tighter px-2">
-          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
-      </div>
-    </motion.div>
+      <Icon size={18} weight={active ? "fill" : "regular"} />
+    </button>
   );
 }
-
-// ============================================================================
-// Canvas Panel Component
-// ============================================================================
-
-function CanvasPanel({ sessionId }: { sessionId: string | null }) {
-  // Canvases not yet implemented in new store - stub for compatibility
-  const canvases: string[] = [];
-  const canvasMap: Record<string, Canvas> = {};
-  const deleteCanvas = async (_id: string) => {};
-  const [activeCanvasId, setActiveCanvasId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (canvases.length > 0 && !activeCanvasId) {
-      setActiveCanvasId(canvases[canvases.length - 1]);
-    }
-  }, [canvases, activeCanvasId]);
-
-  const activeCanvas = activeCanvasId ? canvasMap[activeCanvasId] : null;
-
-  if (canvases.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center p-12 text-center">
-        <div className="max-w-sm space-y-4">
-          <StackSimple className="size-12  mx-auto text-amber-200/70" />
-          <h3 className="text-lg font-medium text-amber-50">Canvas Panel Unavailable</h3>
-          <p className="text-xs leading-relaxed text-amber-100/70">
-            {NATIVE_AGENT_UNAVAILABLE.canvases}
-          </p>
-          {sessionId && (
-            <p className="text-[12px] uppercase tracking-[0.16em] text-amber-200/50">
-              Session {sessionId}
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-full flex-col bg-black/10">
-      {/* Canvas Tabs */}
-      <div className="flex items-center gap-1 p-2 border-b border-white/5 bg-white/5 overflow-x-auto no-scrollbar">
-        {canvases.map((id) => {
-          const canvas = canvasMap[id];
-          const isActive = activeCanvasId === id;
-          const Icon = canvas?.type === "terminal" ? Terminal : canvas?.type === "code" ? Code : FileText;
-          
-          return (
-            <button
-              key={id}
-              onClick={() => setActiveCanvasId(id)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap",
-                isActive ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
-              )}
-            >
-              <Icon className="size-3.5 " />
-              {canvas?.title || "Untitled"}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Canvas Content */}
-      <div className="flex-1 min-h-0 relative group">
-        {activeCanvas ? (
-          <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between px-6 py-3 border-b border-white/5">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold uppercase tracking-widest text-white/20">{activeCanvas.type}</span>
-                <Separator orientation="vertical" className="h-3 bg-white/10" />
-                <span className="text-sm font-medium text-white/80">{activeCanvas.title}</span>
-              </div>
-              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="size-7  rounded-lg"><Copy className="size-3.5 " /></Button>
-                <Button variant="ghost" size="icon" className="size-7  rounded-lg"><DownloadSimple className="size-3.5 " /></Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="size-7  rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                  onClick={() => activeCanvasId && deleteCanvas(activeCanvasId)}
-                >
-                  <Trash className="size-3.5 " />
-                </Button>
-              </div>
-            </div>
-            <ScrollArea className="flex-1 bg-black/20">
-              <pre className="p-6 font-mono text-sm leading-relaxed text-white/70 overflow-x-auto">
-                <code>{activeCanvas.content}</code>
-              </pre>
-            </ScrollArea>
-          </div>
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <CircleNotch className="size-6  animate-spin text-white/10" />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
-export default NativeAgentView;

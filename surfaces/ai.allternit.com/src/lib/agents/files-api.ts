@@ -40,7 +40,7 @@ export interface WriteFileResponse {
   operation: "write" | "append";
 }
 
-export interface FileEntry {
+interface FileEntry {
   name: string;
   path: string;
   type: "file" | "directory";
@@ -67,7 +67,7 @@ export interface SearchCodeRequest {
   maxResults?: number;
 }
 
-export interface SearchResult {
+interface SearchResult {
   file: string;
   line: number;
   column: number;
@@ -83,7 +83,7 @@ export interface SearchCodeResponse {
   totalResults: number;
 }
 
-export interface FilesApiError {
+interface FilesApiError {
   code: string;
   message: string;
   path?: string;

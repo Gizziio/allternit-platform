@@ -4,6 +4,7 @@ import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
 import { ALL_TEMPLATES } from '@/components/chat/TemplatePreviewCards';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
+import { cn } from '@/lib/utils';
 
 const THEME = {
   accent: 'var(--accent-chat)',
@@ -80,7 +81,7 @@ function TemplateCard({
   const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
-    <button
+    <button type="button"
       onClick={() => onClick?.(prompt)}
       className="flex flex-col p-3 bg-input border border-input-border rounded-xl cursor-pointer text-left transition-all ease hover:-translate-y-0.5"
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = color)}
@@ -133,8 +134,7 @@ export function ModeDock({
       {agentStatus && (
         <div className="flex items-center gap-2 py-1" aria-label="Agent status">
           <div
-            className="size-1.5 rounded-full animate-pulse"
-            style={{ background: 'var(--accent-chat, #D4B08C)' }}
+            className="size-1.5 rounded-full animate-pulse bg-[var(--accent-chat,#D4B08C)]"
           />
           <TextShimmer as="span" className="text-xs font-medium">
             {agentStatus}
@@ -146,35 +146,24 @@ export function ModeDock({
           const isSelected = selectedMode === mode.id;
           const isActiveTab = isSelected && isLoading;
           return (
-            <button
+            <button type="button"
               key={mode.id}
               onClick={() => onSelectMode(mode.id)}
-              className={`flex items-center justify-center py-2 px-4 rounded-full text-xs cursor-pointer transition-all ease whitespace-nowrap ${
-                isActiveTab ? 'animate-pulse' : ''
-              }`}
-              style={{
-                background: isSelected ? `${mode.color}20` : 'var(--surface-hover)',
-                border: `1px solid ${isSelected ? mode.color : 'var(--ui-border-muted)'}`,
-                color: isSelected ? mode.color : THEME.textSecondary,
-                fontWeight: isSelected ? 600 : 500,
+              className={cn(
+                "flex items-center justify-center py-2 px-4 rounded-full text-xs cursor-pointer transition-all duration-150 whitespace-nowrap border border-solid",
+                isActiveTab ? "animate-pulse" : "",
+                isSelected 
+                  ? "font-semibold shadow-sm" 
+                  : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--chat-composer-muted)] font-medium hover:bg-[var(--surface-active)] hover:border-[var(--ui-border-default)]"
+              )}
+              style={isSelected ? {
+                background: `${mode.color}20`,
+                borderColor: mode.color,
+                color: mode.color,
                 boxShadow: isActiveTab
                   ? `0 0 12px ${mode.color}60, 0 0 0 1px ${mode.color}40`
-                  : isSelected
-                  ? `0 0 0 1px ${mode.color}40`
-                  : 'none',
-              }}
-              onMouseEnter={(e) => {
-                if (!isSelected) {
-                  e.currentTarget.style.background = 'var(--surface-active)';
-                  e.currentTarget.style.borderColor = 'var(--ui-border-default)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isSelected) {
-                  e.currentTarget.style.background = 'var(--surface-hover)';
-                  e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
-                }
-              }}
+                  : `0 0 0 1px ${mode.color}40`,
+              } : undefined}
             >
               <span>{mode.label}</span>
             </button>
@@ -184,20 +173,20 @@ export function ModeDock({
       {selectedMode && modeData && (
         <div className="w-full flex flex-col gap-2.5 mt-2 max-h-80 overflow-y-auto pr-1">
           <div className="flex items-center justify-between px-1 flex-shrink-0">
-            <span className="text-xs font-semibold text-secondary uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-[var(--ui-text-secondary)] uppercase tracking-wider">
               Featured {modeColors?.label} Cases
             </span>
-            <span className="text-xs text-muted">{modeData.length} templates</span>
+            <span className="text-[11px] text-[var(--ui-text-muted)]">{modeData.length} templates</span>
           </div>
           <div className="grid grid-cols-3 gap-2.5 flex-shrink-0">
-            {modeData.map((template, index) => (
+            {modeData.map((template) => (
               <TemplateCard
-                key={index}
+                key={template.title}
                 title={template.title}
                 description={template.description}
                 prompt={template.prompt}
                 previewImage={template.previewImage}
-                color={modeColors?.color || THEME.accent}
+                color={modeColors?.color || 'var(--accent-chat)'}
                 onClick={onSelectTemplate}
               />
             ))}

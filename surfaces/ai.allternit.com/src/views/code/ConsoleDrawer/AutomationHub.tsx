@@ -163,7 +163,7 @@ export const AutomationHub: React.FC = () => {
             margin: 0,
           }}>Automation Hub</h2>
         </div>
-        <button
+        <button type="button"
           onClick={() => setShowCreateModal(true)}
           style={{
             padding: '6px 12px',
@@ -228,7 +228,7 @@ export const AutomationHub: React.FC = () => {
                   alignItems: 'center',
                   gap: '8px',
                 }}>
-                  <button
+                  <button type="button"
                     onClick={() => handleRunSequence(seq.id)}
                     disabled={seq.status === 'running'}
                     style={{
@@ -247,7 +247,7 @@ export const AutomationHub: React.FC = () => {
                   >
                     {seq.status === 'running' ? 'Running...' : '▶ Run'}
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => handleToggleSequence(seq.id)}
                     style={{
                       padding: '6px',
@@ -320,7 +320,7 @@ export const AutomationHub: React.FC = () => {
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {seq.triggers.map((t, i) => (
                       <span
-                        key={i}
+                        key={`automationhub-${i}`}
                         style={{
                           padding: '2px 8px',
                           background: 'var(--bg-tertiary, #374151)',
@@ -375,7 +375,7 @@ export const AutomationHub: React.FC = () => {
               justifyContent: 'flex-end',
               gap: '8px',
             }}>
-              <button
+              <button type="button"
                 onClick={() => setShowCreateModal(false)}
                 style={{
                   padding: '8px 16px',
@@ -389,7 +389,7 @@ export const AutomationHub: React.FC = () => {
               >
                 Cancel
               </button>
-              <button
+              <button type="button"
                 onClick={() => setShowCreateModal(false)}
                 style={{
                   padding: '8px 16px',

@@ -20,8 +20,8 @@ const logger = createModuleLogger('AgentWizard.Validations');
 // ============================================================================
 
 export const MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024; // 1MB
-export const MAX_FILE_SIZE_DISPLAY = '1 MB';
-export const FILE_SIZE_WARNING_THRESHOLD = 0.8; // 80% of max
+const MAX_FILE_SIZE_DISPLAY = '1 MB';
+const FILE_SIZE_WARNING_THRESHOLD = 0.8; // 80% of max
 
 /**
  * Format file size for display
@@ -41,7 +41,7 @@ export const formatFileSize = (bytes: number): string => {
  * @param file - File object or object with size property
  * @returns Error message if file is too large, null otherwise
  */
-export const validateFileSize = (file: File | { size: number }): string | null => {
+const validateFileSize = (file: File | { size: number }): string | null => {
   if (file.size > MAX_FILE_SIZE_BYTES) {
     return `File size (${formatFileSize(file.size)}) exceeds maximum allowed size of ${MAX_FILE_SIZE_DISPLAY}`;
   }
@@ -71,7 +71,7 @@ const AGENT_NAMES_KEY = 'allternit-existing-agent-names';
 /**
  * Get existing agent names from localStorage
  */
-export const getExistingAgentNames = (): string[] => {
+const getExistingAgentNames = (): string[] => {
   try {
     const stored = localStorage.getItem(AGENT_NAMES_KEY);
     if (!stored) return [];
@@ -85,7 +85,7 @@ export const getExistingAgentNames = (): string[] => {
 /**
  * Check if agent name is duplicate
  */
-export const isAgentNameDuplicate = (name: string): boolean => {
+const isAgentNameDuplicate = (name: string): boolean => {
   const existingNames = getExistingAgentNames();
   return existingNames.some(n => n.toLowerCase() === name.toLowerCase());
 };
@@ -93,7 +93,7 @@ export const isAgentNameDuplicate = (name: string): boolean => {
 /**
  * Register agent name in localStorage
  */
-export const registerAgentName = (name: string): void => {
+const registerAgentName = (name: string): void => {
   try {
     const existingNames = getExistingAgentNames();
     if (!existingNames.includes(name)) {
@@ -108,7 +108,7 @@ export const registerAgentName = (name: string): void => {
 /**
  * Remove agent name from localStorage
  */
-export const removeAgentName = (name: string): void => {
+const removeAgentName = (name: string): void => {
   try {
     const existingNames = getExistingAgentNames();
     localStorage.setItem(
@@ -124,13 +124,13 @@ export const removeAgentName = (name: string): void => {
 /**
  * Validate agent name
  */
-export interface AgentNameValidationResult {
+interface AgentNameValidationResult {
   valid: boolean;
   error?: string;
   isDuplicate?: boolean;
 }
 
-export const validateAgentName = (name: string, checkDuplicate: boolean = true): AgentNameValidationResult => {
+const validateAgentName = (name: string, checkDuplicate: boolean = true): AgentNameValidationResult => {
   if (!name || name.trim().length === 0) {
     return { valid: false, error: 'Agent name cannot be empty' };
   }
@@ -166,7 +166,7 @@ const WORKSPACE_PATHS_KEY = 'allternit-workspace-paths';
 /**
  * Get registered workspace paths
  */
-export const getRegisteredWorkspacePaths = (): string[] => {
+const getRegisteredWorkspacePaths = (): string[] => {
   try {
     const stored = localStorage.getItem(WORKSPACE_PATHS_KEY);
     if (!stored) return [];
@@ -180,12 +180,12 @@ export const getRegisteredWorkspacePaths = (): string[] => {
 /**
  * Validate workspace path
  */
-export interface WorkspacePathValidationResult {
+interface WorkspacePathValidationResult {
   valid: boolean;
   error?: string;
 }
 
-export const validateWorkspacePath = (path: string): WorkspacePathValidationResult => {
+const validateWorkspacePath = (path: string): WorkspacePathValidationResult => {
   if (!path || path.trim().length === 0) {
     return { valid: false, error: 'Workspace path cannot be empty' };
   }
@@ -217,7 +217,7 @@ export const validateWorkspacePath = (path: string): WorkspacePathValidationResu
 /**
  * Register workspace path
  */
-export const registerWorkspacePath = (path: string): void => {
+const registerWorkspacePath = (path: string): void => {
   try {
     const existingPaths = getRegisteredWorkspacePaths();
     if (!existingPaths.includes(path)) {
@@ -238,7 +238,7 @@ const PLUGINS_KEY = 'allternit-installed-plugins';
 /**
  * Known plugin conflicts
  */
-export const PLUGIN_CONFLICTS: Record<string, string[]> = {
+const PLUGIN_CONFLICTS: Record<string, string[]> = {
   'eslint': ['tslint', 'jshint'],
   'prettier': ['clang-format'],
   'jest': ['mocha', 'jasmine', 'vitest'],
@@ -251,7 +251,7 @@ export const PLUGIN_CONFLICTS: Record<string, string[]> = {
 /**
  * Get installed plugins
  */
-export const getInstalledPlugins = (): string[] => {
+const getInstalledPlugins = (): string[] => {
   try {
     const stored = localStorage.getItem(PLUGINS_KEY);
     if (!stored) return [];
@@ -304,7 +304,7 @@ export const detectPluginConflicts = (selectedTools: string[]): PluginConflictRe
 /**
  * Register installed plugin
  */
-export const registerPlugin = (plugin: string): void => {
+const registerPlugin = (plugin: string): void => {
   try {
     const existingPlugins = getInstalledPlugins();
     if (!existingPlugins.includes(plugin)) {
@@ -319,7 +319,7 @@ export const registerPlugin = (plugin: string): void => {
 /**
  * Get conflict-free tool suggestions
  */
-export const getConflictFreeSuggestions = (selectedTools: string[]): string[] => {
+const getConflictFreeSuggestions = (selectedTools: string[]): string[] => {
   const conflictResult = detectPluginConflicts(selectedTools);
   if (!conflictResult.hasConflict) {
     return [];
@@ -435,7 +435,7 @@ export const detectBrowserCompatibility = (): BrowserCompatibility => {
 /**
  * Get compatibility status message
  */
-export const getCompatibilityStatusMessage = (compatibility: BrowserCompatibility): string => {
+const getCompatibilityStatusMessage = (compatibility: BrowserCompatibility): string => {
   if (compatibility.compatibilityScore === 100) {
     return 'Full browser support';
   } else if (compatibility.compatibilityScore >= 80) {

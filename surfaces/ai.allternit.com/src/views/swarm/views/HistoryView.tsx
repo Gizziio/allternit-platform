@@ -25,7 +25,7 @@ import {
   Legend,
 } from 'recharts';
 import { ChartLine, FileCsv, FileCode } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, BACKGROUND, BORDER, STATUS } from '@/design/allternit.tokens';
+import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/allternit.tokens';
 import type { MetricsDataPoint } from '../types';
 import { exportAndDownloadMetrics, copyToClipboard } from '../lib/export-utils';
 
@@ -203,7 +203,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
         <div className="flex items-center gap-2">
           <span className="text-xs" style={{ color: TEXT.tertiary }}>Chart:</span>
           {(['area', 'line', 'bar'] as ChartType[]).map(type => (
-            <button
+            <button type="button"
               key={type}
               onClick={() => setChartType(type)}
               className="px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize"
@@ -222,7 +222,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
         <div className="flex items-center gap-2">
           <span className="text-xs" style={{ color: TEXT.tertiary }}>Range:</span>
           {(['1h', '6h', '24h', '7d'] as TimeRange[]).map(range => (
-            <button
+            <button type="button"
               key={range}
               onClick={() => setTimeRange(range)}
               className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
@@ -239,7 +239,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
 
         {/* Export */}
         <div className="flex items-center gap-2">
-          <button
+          <button type="button"
             onClick={() => handleExport('csv')}
             disabled={isExporting}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"
@@ -248,7 +248,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
             <FileCsv size={12} weight="duotone" style={{ marginRight: 4 }} />
             CSV
           </button>
-          <button
+          <button type="button"
             onClick={() => handleExport('json')}
             disabled={isExporting}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"
@@ -432,7 +432,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                 const stat = stats[metric.key];
                 
                 return (
-                  <button
+                  <button type="button"
                     key={metric.key}
                     onClick={() => toggleMetric(metric.key)}
                     className="w-full p-3 rounded-xl text-left transition-all border"

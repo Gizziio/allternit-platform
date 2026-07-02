@@ -1,8 +1,8 @@
 export type StepState = "animating" | "complete";
 
-export type TimelineToolVariant = "thinking" | "action" | "search" | undefined;
+type TimelineToolVariant = "thinking" | "action" | "search" | undefined;
 
-export type TimelineToolCallStep = {
+type TimelineToolCallStep = {
   id: string;
   type: "tool-call";
   toolName: string;

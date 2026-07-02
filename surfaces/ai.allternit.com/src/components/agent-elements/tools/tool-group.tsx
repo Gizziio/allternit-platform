@@ -271,7 +271,7 @@ export const ToolGroup = memo(function ToolGroup({
               getToolStatus(derivedPart, chatStatus);
             return (
               <GenericTool
-                key={idx}
+                key={`tool-group-${idx}`}
                 icon={nestedMeta.icon}
                 title={nestedMeta.title(derivedPart)}
                 subtitle={nestedMeta.subtitle?.(derivedPart)}

@@ -9,31 +9,31 @@
 
 // ─── IDs ─────────────────────────────────────────────────────────────────────
 
-export type PenpotUUID = string;
+type PenpotUUID = string;
 export type PenpotFileId = PenpotUUID;
-export type PenpotPageId = PenpotUUID;
+type PenpotPageId = PenpotUUID;
 export type PenpotShapeId = PenpotUUID;
 export type PenpotComponentId = PenpotUUID;
-export type PenpotColorId = PenpotUUID;
-export type PenpotTypographyId = PenpotUUID;
+type PenpotColorId = PenpotUUID;
+type PenpotTypographyId = PenpotUUID;
 
 // ─── Geometry ────────────────────────────────────────────────────────────────
 
-export interface PenpotPoint {
+interface PenpotPoint {
   x: number;
   y: number;
 }
 
-export interface PenpotSize {
+interface PenpotSize {
   width: number;
   height: number;
 }
 
-export interface PenpotBounds extends PenpotPoint, PenpotSize {}
+interface PenpotBounds extends PenpotPoint, PenpotSize {}
 
 // ─── Transform ───────────────────────────────────────────────────────────────
 
-export interface PenpotMatrix {
+interface PenpotMatrix {
   a: number; b: number;
   c: number; d: number;
   e: number; f: number;
@@ -41,9 +41,9 @@ export interface PenpotMatrix {
 
 // ─── Fill ────────────────────────────────────────────────────────────────────
 
-export type PenpotFillType = 'plain' | 'linear' | 'radial' | 'image' | 'pattern';
+type PenpotFillType = 'plain' | 'linear' | 'radial' | 'image' | 'pattern';
 
-export interface PenpotGradientStop {
+interface PenpotGradientStop {
   color: string;
   opacity: number;
   offset: number;
@@ -65,9 +65,9 @@ export interface PenpotFill {
 
 // ─── Stroke ──────────────────────────────────────────────────────────────────
 
-export type PenpotStrokeType = 'none' | 'inner' | 'outer' | 'center';
-export type PenpotStrokeStyle = 'solid' | 'dashed' | 'dotted' | 'mixed';
-export type PenpotStrokeAlignment = 'center' | 'inner' | 'outer';
+type PenpotStrokeType = 'none' | 'inner' | 'outer' | 'center';
+type PenpotStrokeStyle = 'solid' | 'dashed' | 'dotted' | 'mixed';
+type PenpotStrokeAlignment = 'center' | 'inner' | 'outer';
 
 export interface PenpotStroke {
   strokeColor?: string | null;
@@ -81,7 +81,7 @@ export interface PenpotStroke {
 
 // ─── Shadow ──────────────────────────────────────────────────────────────────
 
-export type PenpotShadowType = 'drop-shadow' | 'inner-shadow';
+type PenpotShadowType = 'drop-shadow' | 'inner-shadow';
 
 export interface PenpotShadow {
   id?: PenpotUUID;
@@ -105,8 +105,8 @@ export interface PenpotBlur {
 
 // ─── Export config ───────────────────────────────────────────────────────────
 
-export type PenpotExportType = 'png' | 'jpg' | 'svg' | 'pdf';
-export type PenpotExportSuffix = '' | '@1x' | '@2x' | '@3x';
+type PenpotExportType = 'png' | 'jpg' | 'svg' | 'pdf';
+type PenpotExportSuffix = '' | '@1x' | '@2x' | '@3x';
 
 export interface PenpotExport {
   type: PenpotExportType;
@@ -121,11 +121,11 @@ export type PenpotConstraintV = 'top' | 'bottom' | 'topbottom' | 'center' | 'sca
 
 // ─── Layout (flex/grid) ───────────────────────────────────────────────────────
 
-export type PenpotLayoutType = 'flex' | 'grid' | null;
+type PenpotLayoutType = 'flex' | 'grid' | null;
 export type PenpotFlexDirection = 'row' | 'row-reverse' | 'column' | 'column-reverse';
 export type PenpotAlignItems = 'start' | 'end' | 'center' | 'stretch';
 export type PenpotJustifyContent = 'start' | 'end' | 'center' | 'space-between' | 'space-around' | 'space-evenly';
-export type PenpotWrap = 'wrap' | 'nowrap';
+type PenpotWrap = 'wrap' | 'nowrap';
 
 export interface PenpotLayout {
   layoutType?: PenpotLayoutType;
@@ -139,7 +139,7 @@ export interface PenpotLayout {
 
 // ─── Text content ─────────────────────────────────────────────────────────────
 
-export interface PenpotTextStyle {
+interface PenpotTextStyle {
   fontFamily?: string;
   fontId?: string;
   fontSize?: string;
@@ -152,25 +152,25 @@ export interface PenpotTextStyle {
   fills?: PenpotFill[];
 }
 
-export interface PenpotTextNode {
+interface PenpotTextNode {
   text: string;
   styles?: PenpotTextStyle;
 }
 
-export interface PenpotTextParagraph {
+interface PenpotTextParagraph {
   type: 'paragraph';
   children: PenpotTextNode[];
   align?: 'left' | 'right' | 'center' | 'justify';
 }
 
-export interface PenpotTextRoot {
+interface PenpotTextRoot {
   type: 'root';
   children: PenpotTextParagraph[];
 }
 
 // ─── Component ref ───────────────────────────────────────────────────────────
 
-export interface PenpotComponentRef {
+interface PenpotComponentRef {
   componentId: PenpotComponentId;
   componentFile: PenpotFileId;
   componentRoot?: boolean;
@@ -180,7 +180,7 @@ export interface PenpotComponentRef {
 
 // ─── Base shape ───────────────────────────────────────────────────────────────
 
-export interface PenpotShapeBase {
+interface PenpotShapeBase {
   id: PenpotShapeId;
   name: string;
   type: PenpotShapeType;
@@ -222,7 +222,7 @@ export interface PenpotShapeBase {
 
 // ─── Shape types ──────────────────────────────────────────────────────────────
 
-export type PenpotShapeType =
+type PenpotShapeType =
   | 'frame'
   | 'rect'
   | 'ellipse'
@@ -249,26 +249,26 @@ export interface PenpotFrame extends PenpotShapeBase {
   gridColor?: string;
 }
 
-export interface PenpotRect extends PenpotShapeBase {
+interface PenpotRect extends PenpotShapeBase {
   type: 'rect';
   rx?: number;
   ry?: number;
 }
 
-export interface PenpotEllipse extends PenpotShapeBase {
+interface PenpotEllipse extends PenpotShapeBase {
   type: 'ellipse';
 }
 
-export interface PenpotPath extends PenpotShapeBase {
+interface PenpotPath extends PenpotShapeBase {
   type: 'path';
   content?: PenpotPathSegment[];
 }
 
-export type PenpotPathCommandType =
+type PenpotPathCommandType =
   | 'M' | 'L' | 'C' | 'Q' | 'A' | 'Z'
   | 'move-to' | 'line-to' | 'curve-to' | 'close-path';
 
-export interface PenpotPathSegment {
+interface PenpotPathSegment {
   command: PenpotPathCommandType;
   params?: {
     x?: number; y?: number;
@@ -283,14 +283,14 @@ export interface PenpotText extends PenpotShapeBase {
   grow?: 'fixed' | 'auto-width' | 'auto-height';
 }
 
-export interface PenpotGroup extends PenpotShapeBase {
+interface PenpotGroup extends PenpotShapeBase {
   type: 'group';
   children?: PenpotShapeId[];
   masked?: boolean;
   maskId?: PenpotShapeId;
 }
 
-export interface PenpotImage extends PenpotShapeBase {
+interface PenpotImage extends PenpotShapeBase {
   type: 'image';
   metadata?: {
     id: PenpotUUID;
@@ -300,7 +300,7 @@ export interface PenpotImage extends PenpotShapeBase {
   };
 }
 
-export interface PenpotBool extends PenpotShapeBase {
+interface PenpotBool extends PenpotShapeBase {
   type: 'bool';
   children?: PenpotShapeId[];
   boolType?: 'union' | 'difference' | 'intersection' | 'exclusion';
@@ -318,7 +318,7 @@ export type PenpotShape =
 
 // ─── Library assets ───────────────────────────────────────────────────────────
 
-export interface PenpotColor {
+interface PenpotColor {
   id: PenpotColorId;
   name: string;
   color?: string;
@@ -327,7 +327,7 @@ export interface PenpotColor {
   groupName?: string;
 }
 
-export interface PenpotTypography {
+interface PenpotTypography {
   id: PenpotTypographyId;
   name: string;
   fontFamily: string;
@@ -340,7 +340,7 @@ export interface PenpotTypography {
   textTransform?: string;
 }
 
-export interface PenpotComponent {
+interface PenpotComponent {
   id: PenpotComponentId;
   name: string;
   path?: string;
@@ -390,15 +390,15 @@ export function isFrame(shape: PenpotShape): shape is PenpotFrame {
   return shape.type === 'frame';
 }
 
-export function isGroup(shape: PenpotShape): shape is PenpotGroup {
+function isGroup(shape: PenpotShape): shape is PenpotGroup {
   return shape.type === 'group';
 }
 
-export function hasChildren(shape: PenpotShape): shape is PenpotFrame | PenpotGroup | PenpotBool {
+function hasChildren(shape: PenpotShape): shape is PenpotFrame | PenpotGroup | PenpotBool {
   return shape.type === 'frame' || shape.type === 'group' || shape.type === 'bool';
 }
 
-export function isComponentInstance(shape: PenpotShape): boolean {
+function isComponentInstance(shape: PenpotShape): boolean {
   return !!shape.componentRef?.componentId;
 }
 

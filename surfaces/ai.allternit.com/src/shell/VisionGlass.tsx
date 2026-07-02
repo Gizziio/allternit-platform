@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { execEvents } from "../integration/execution/exec.events";
 import type { ToolCall } from "../integration/execution/exec.types";
 
-export interface VisionAction {
+interface VisionAction {
   id: string;
   x: number;
   y: number;
@@ -41,7 +41,7 @@ function labelForCall(call: ToolCall): string {
   return `${call.toolName}${args ? " " + args.slice(0, 64) : ""}`;
 }
 
-export function VisionGlass(): JSX.Element {
+export function VisionGlass(): React.ReactNode {
   const [actions, setActions] = useState<VisionAction[]>([]);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
@@ -59,7 +59,7 @@ export function VisionGlass(): JSX.Element {
       }
     };
 
-    const unsubTool = execEvents.on("onToolCall", (call) => {
+    const unsubTool = execEvents.subscribe("onToolCall", (call) => {
       const point = extractPoint(call.args);
       if (!point) return;
       const action: VisionAction = {

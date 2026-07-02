@@ -7,7 +7,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-export type ArtifactType = 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('UseVisualVerification');
+
+type ArtifactType = 
   | 'ui_state' 
   | 'coverage_map' 
   | 'console_output' 
@@ -138,7 +142,7 @@ export function useVisualVerification(
       const data = await verificationApi.getTrendData(wihId);
       setTrendData(data);
     } catch (err) {
-      console.error('Failed to fetch trend data:', err);
+      logger.error({ err: err }, 'Failed to fetch trend data:');
     }
   }, [wihId]);
 
@@ -221,7 +225,7 @@ export function useVisualVerification(
           }
         }
       } catch (err) {
-        console.error('Polling error:', err);
+        logger.error({ err: err }, 'Polling error:');
       }
     };
 

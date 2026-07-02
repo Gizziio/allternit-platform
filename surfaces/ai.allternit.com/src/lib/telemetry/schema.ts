@@ -1,19 +1,19 @@
-export type LineKind = "text" | "progress" | "badge";
+type LineKind = "text" | "progress" | "badge";
 
-export interface TelemetryLineBase {
+interface TelemetryLineBase {
   type: LineKind;
   label: string;
   scope?: "overview" | "detail";
 }
 
-export interface TextLine extends TelemetryLineBase {
+interface TextLine extends TelemetryLineBase {
   type: "text";
   value: string;
   color?: string;
   subtitle?: string;
 }
 
-export interface ProgressLine extends TelemetryLineBase {
+interface ProgressLine extends TelemetryLineBase {
   type: "progress";
   used: number;
   limit: number;
@@ -23,38 +23,38 @@ export interface ProgressLine extends TelemetryLineBase {
   color?: string;
 }
 
-export interface BadgeLine extends TelemetryLineBase {
+interface BadgeLine extends TelemetryLineBase {
   type: "badge";
   text: string;
   color?: string;
   subtitle?: string;
 }
 
-export type TelemetryLine = TextLine | ProgressLine | BadgeLine;
+type TelemetryLine = TextLine | ProgressLine | BadgeLine;
 
-export interface TokenUsage {
+interface TokenUsage {
   input: number;
   output: number;
   total: number;
   cached?: number;
 }
 
-export interface ModelUsageSummary {
+interface ModelUsageSummary {
   messages: number;
   toolCalls: number;
   lastUsedAt: number;
   avgLatencyMs?: number;
 }
 
-export interface ToolUsageEntry {
+interface ToolUsageEntry {
   name: string;
   count: number;
   lastUsedAt: number;
 }
 
-export type TimelineEntryType = "message" | "ledger" | "receipt" | "status";
+type TimelineEntryType = "message" | "ledger" | "receipt" | "status";
 
-export interface TimelineEntry {
+interface TimelineEntry {
   timestamp: number;
   label: string;
   type: TimelineEntryType;
@@ -77,7 +77,7 @@ export interface TelemetrySnapshot {
   metadata?: Record<string, unknown>;
 }
 
-export interface SessionDuration {
+interface SessionDuration {
   startedAt: number;
   lastActivityAt: number;
   minutes: number;

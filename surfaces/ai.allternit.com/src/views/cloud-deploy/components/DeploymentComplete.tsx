@@ -4,7 +4,7 @@
  * Success screen with access details.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { DeploymentStatus } from '../CloudDeployView';
 
 interface DeploymentCompleteProps {
@@ -13,9 +13,13 @@ interface DeploymentCompleteProps {
 }
 
 export const DeploymentComplete: React.FC<DeploymentCompleteProps> = ({ status, onNewDeployment }) => {
+  const [copiedText, setCopiedText] = useState<string | null>(null);
+
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('Copied to clipboard!');
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedText(text);
+      setTimeout(() => setCopiedText(null), 2000);
+    });
   };
 
   return (
@@ -36,11 +40,11 @@ export const DeploymentComplete: React.FC<DeploymentCompleteProps> = ({ status, 
           <span className="label">🌐 Access URL:</span>
           <div className="access-value">
             <code>{status.accessUrl}</code>
-            <button 
+            <button type="button"
               className="btn-copy"
               onClick={() => copyToClipboard(status.accessUrl || '')}
             >
-              📋 Copy
+              {copiedText === status.accessUrl ? '✓ Copied' : '📋 Copy'}
             </button>
           </div>
         </div>
@@ -49,11 +53,11 @@ export const DeploymentComplete: React.FC<DeploymentCompleteProps> = ({ status, 
           <span className="label">🔑 Instance IP:</span>
           <div className="access-value">
             <code>{status.instanceIp}</code>
-            <button 
+            <button type="button"
               className="btn-copy"
               onClick={() => copyToClipboard(status.instanceIp || '')}
             >
-              📋 Copy
+              {copiedText === status.instanceIp ? '✓ Copied' : '📋 Copy'}
             </button>
           </div>
         </div>
@@ -69,7 +73,7 @@ export const DeploymentComplete: React.FC<DeploymentCompleteProps> = ({ status, 
           <span className="label">🔐 Temporary Password:</span>
           <div className="access-value">
             <code>••••••••••••</code>
-            <button className="btn-copy">📋 Copy</button>
+            <button type="button" className="btn-copy">📋 Copy</button>
           </div>
           <p className="access-hint">
             Check your email for the temporary password. Change it on first login.

@@ -73,8 +73,8 @@ function StatCard({ label, value, color }: { label: string; value: number; color
         {label}
       </div>
       <div 
-        className="text-[20px] font-extrabold tabular-nums"
-        style={{ color }}
+        className="text-[20px] font-extrabold tabular-nums text-[var(--stat-color)]"
+        style={{ '--stat-color': color } as React.CSSProperties}
       >
         {value}
       </div>
@@ -160,7 +160,7 @@ export function PromotionDashboardView() {
       <div className="flex justify-between items-center gap-3">
         <div className="flex gap-2">
           {(['All', 'pending', 'approved', 'rejected'] as const).map(status => (
-            <button
+            <button type="button"
               key={status}
               onClick={() => setFilterStatus(status === 'All' ? 'All' : status)}
               className={`px-3.5 py-1.5 rounded-md border-none text-[12px] font-semibold cursor-pointer transition-all duration-200 capitalize ${
@@ -175,8 +175,7 @@ export function PromotionDashboardView() {
         </div>
 
         {/* Sort Dropdown */}
-        <select
-          value={sortBy}
+        <select aria-label="Selection" value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortBy)}
           className="p-1.5 px-2.5 rounded-md border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-[12px] font-semibold cursor-pointer outline-none"
         >
@@ -197,10 +196,9 @@ export function PromotionDashboardView() {
             return (
               <GlassCard
                 key={proposal.id}
-                className="p-4 transition-all duration-200 border border-solid border-transparent"
-                style={{
-                   borderColor: isExpanded ? 'var(--border-subtle)' : undefined
-                }}
+                className={`p-4 transition-all duration-200 border border-solid ${
+                  isExpanded ? 'border-[var(--border-subtle)]' : 'border-transparent'
+                }`}
               >
                 {/* Header */}
                 <div className="flex justify-between items-start gap-3 mb-3">
@@ -252,7 +250,13 @@ export function PromotionDashboardView() {
                 <div className="flex gap-3 items-center mb-3 pt-3 border-t border-solid border-[var(--border-subtle)]">
                   {/* CI Checks */}
                   <div className="flex items-center gap-1.5">
-                    {CheckIconComponent && <CheckIconComponent size={14} style={{ color: getCheckColor(proposal.ciChecks) }} />}
+                    {CheckIconComponent && (
+                      <CheckIconComponent 
+                        size={14} 
+                        className="text-[var(--check-color)]" 
+                        style={{ '--check-color': getCheckColor(proposal.ciChecks) } as React.CSSProperties} 
+                      />
+                    )}
                     <span className="text-[12px] text-[var(--text-secondary)] font-semibold uppercase">
                       CI: {proposal.ciChecks}
                     </span>
@@ -260,10 +264,14 @@ export function PromotionDashboardView() {
 
                   {/* Risk Level */}
                   <div className="flex items-center gap-1.5">
-                    <Warning size={14} style={{ color: getRiskColor(proposal.riskLevel) }} />
+                    <Warning 
+                      size={14} 
+                      className="text-[var(--risk-color)]" 
+                      style={{ '--risk-color': getRiskColor(proposal.riskLevel) } as React.CSSProperties} 
+                    />
                     <span
-                      className="text-[12px] font-semibold uppercase"
-                      style={{ color: getRiskColor(proposal.riskLevel) }}
+                      className="text-[12px] font-semibold uppercase text-[var(--risk-color)]"
+                      style={{ '--risk-color': getRiskColor(proposal.riskLevel) } as React.CSSProperties}
                     >
                       Risk: {proposal.riskLevel}
                     </span>
@@ -278,7 +286,7 @@ export function PromotionDashboardView() {
                   </div>
 
                   {/* Expand Button */}
-                  <button
+                  <button type="button"
                     onClick={() => setExpandedId(isExpanded ? null : proposal.id)}
                     className="ml-auto p-1 border-none bg-transparent text-[var(--text-tertiary)] cursor-pointer"
                   >
@@ -294,7 +302,7 @@ export function PromotionDashboardView() {
                     </h4>
                     <div className="flex flex-col gap-1.5 mb-3">
                       {proposal.affectedFiles.map((file, idx) => (
-                        <div key={idx} className="p-2 bg-white/5 rounded text-[12px] flex justify-between items-center">
+                        <div key={`promotiondashboardview-${idx}`} className="p-2 bg-white/5 rounded text-[12px] flex justify-between items-center">
                           <span className="text-[var(--text-secondary)] font-mono">
                             {file.path}
                           </span>
@@ -310,13 +318,13 @@ export function PromotionDashboardView() {
                 {/* Action Buttons */}
                 {currentStatus === 'pending' && (
                   <div className="flex gap-2 pt-3 border-t border-solid border-[var(--border-subtle)]">
-                    <button
+                    <button type="button"
                       onClick={() => handleApply(proposal.id)}
                       className="flex-1 py-2 px-3 rounded-md border-none bg-[var(--status-success)] text-white text-[12px] font-bold cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-95"
                     >
                       Apply Proposal
                     </button>
-                    <button
+                    <button type="button"
                       onClick={() => handleReject(proposal.id)}
                       className="flex-1 py-2 px-3 rounded-md border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--status-error)] text-[12px] font-bold cursor-pointer transition-all duration-200 hover:bg-[var(--status-error-bg)]"
                     >

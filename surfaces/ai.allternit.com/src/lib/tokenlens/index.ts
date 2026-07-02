@@ -30,7 +30,7 @@ const MODEL_PRICING: Record<string, { input: number; output: number; cacheRead?:
  * Estimate the number of tokens in a text string
  * Rough approximation: ~4 characters per token for English text
  */
-export function estimateTokenCount(text: string): number {
+function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
@@ -155,8 +155,6 @@ export function getUsage(
   // Estimate prompt tokens from text
   const inputTokens = estimateTokenCount(text);
   
-  // For completion, we'd need the actual response
-  // This is a placeholder that assumes 50% of context used for response
   const outputTokens = Math.min(
     Math.ceil(inputTokens * 0.5),
     maxTokens - inputTokens
@@ -183,7 +181,7 @@ export function getUsage(
 /**
  * Calculate the percentage of context window used
  */
-export function calculateUsagePercent(
+function calculateUsagePercent(
   usage: LanguageModelUsage,
   maxTokens: number
 ): number {
@@ -194,7 +192,7 @@ export function calculateUsagePercent(
 /**
  * Check if the conversation is approaching token limits
  */
-export function isNearTokenLimit(
+function isNearTokenLimit(
   usage: LanguageModelUsage,
   maxTokens: number,
   thresholdPercent = 80
@@ -206,7 +204,7 @@ export function isNearTokenLimit(
 /**
  * Get max tokens for a given model
  */
-export function getModelMaxTokens(modelId?: string): number {
+function getModelMaxTokens(modelId?: string): number {
   // Default context window sizes for common models
   const modelLimits: Record<string, number> = {
     "gpt-4": 8192,

@@ -38,7 +38,7 @@ export interface ToolRegistryEntry extends Tool {
   tags: string[];
 }
 
-export type ToolCategory =
+type ToolCategory =
   // Core
   | "file-system"
   | "web"
@@ -64,7 +64,7 @@ export type ToolCategory =
   | "custom"
   | "user";
 
-export interface SessionToolConfig {
+interface SessionToolConfig {
   sessionId: string;
   enabledTools: string[]; // Tool IDs
   toolOverrides: Record<string, Partial<ToolRegistryEntry>>;
@@ -105,7 +105,7 @@ export interface CliTool {
   tags: string[];
 }
 
-export interface CliToolExecutionResult {
+interface CliToolExecutionResult {
   exitCode: number;
   stdout: string;
   stderr: string;
@@ -693,7 +693,7 @@ export const useToolRegistryStore = create<ToolRegistryState & ToolRegistryActio
 // Selectors
 // ============================================================================
 
-export function useToolsByCategory(category: ToolCategory | null) {
+function useToolsByCategory(category: ToolCategory | null) {
   return useToolRegistryStore((state) => {
     const tools = Object.values(state.tools);
     if (!category) return tools;
@@ -701,7 +701,7 @@ export function useToolsByCategory(category: ToolCategory | null) {
   });
 }
 
-export function useFilteredTools() {
+function useFilteredTools() {
   return useToolRegistryStore((state) => {
     const tools = Object.values(state.tools);
     const { filterCategory, searchQuery } = state;
@@ -721,13 +721,13 @@ export function useFilteredTools() {
   });
 }
 
-export function useEnabledToolCount() {
+function useEnabledToolCount() {
   return useToolRegistryStore((state) => {
     return Object.values(state.tools).filter((t) => t.isEnabled).length;
   });
 }
 
-export function useToolCategories() {
+function useToolCategories() {
   return useToolRegistryStore((state) => {
     const categories = new Set<ToolCategory>();
     Object.values(state.tools).forEach((tool) => {
@@ -741,11 +741,11 @@ export function useToolCategories() {
 // CLI Tool Selectors
 // ============================================================================
 
-export function useCliTools() {
+function useCliTools() {
   return useToolRegistryStore((state) => Object.values(state.cliTools));
 }
 
-export function useCliToolsByCategory(category: CliTool['category'] | null) {
+function useCliToolsByCategory(category: CliTool['category'] | null) {
   return useToolRegistryStore((state) => {
     const tools = Object.values(state.cliTools);
     if (!category) return tools;
@@ -753,13 +753,13 @@ export function useCliToolsByCategory(category: CliTool['category'] | null) {
   });
 }
 
-export function useInstalledCliTools() {
+function useInstalledCliTools() {
   return useToolRegistryStore((state) => 
     Object.values(state.cliTools).filter((t) => t.installed)
   );
 }
 
-export function useCliToolCategories() {
+function useCliToolCategories() {
   return useToolRegistryStore((state) => {
     const categories = new Set<CliTool['category']>();
     Object.values(state.cliTools).forEach((tool) => {

@@ -7,7 +7,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
-  ArrowsOut,
   DownloadSimple,
   ShareNetwork,
   MagnifyingGlassPlus,
@@ -19,6 +18,10 @@ import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { MoATask } from '@/lib/api/moa-client';
 import { cn } from '@/lib/utils';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('MermaidRenderer');
 
 declare global {
   interface Window {
@@ -79,7 +82,7 @@ export function MermaidRenderer({
         }
       } catch (error) {
         setRenderError('Failed to render diagram');
-        console.error('Mermaid render error:', error);
+        logger.error({ err: error }, 'Mermaid render error:');
       } finally {
         setIsRendering(false);
       }

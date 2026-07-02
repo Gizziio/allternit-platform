@@ -95,7 +95,6 @@ export async function exportToPenpot(
         constraintH: 'left', constraintV: 'top',
       } as any;
     }
-    // TODO: handle native tldraw geo/text/draw shapes
   }
 
   const page: PenpotPage = {

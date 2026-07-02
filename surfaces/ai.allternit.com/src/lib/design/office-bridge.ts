@@ -40,4 +40,4 @@ export const OFFICE_HOSTS = {
   }
 };
 
-export type OfficeHostType = keyof typeof OFFICE_HOSTS;
+type OfficeHostType = keyof typeof OFFICE_HOSTS;

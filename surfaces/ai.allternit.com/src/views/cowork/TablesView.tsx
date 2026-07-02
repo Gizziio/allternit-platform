@@ -18,7 +18,7 @@ export const TablesView: React.FC = () => {
   const [tables, setTables] = useState<DataTable[]>([]);
 
   useEffect(() => {
-    fetch('/api/v1/workspace/tables').then(r => r.json()).then(setTables).catch(() => {});
+    fetch('/api/v1/workspace/tables').then(r => r.json()).then(setTables).catch(() => setTables([]));
   }, []);
 
   return (
@@ -26,13 +26,18 @@ export const TablesView: React.FC = () => {
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-xl)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <Table2 size={24} color="#af52de" />
+          <Table2 size={24} color="var(--accent-primary)" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Tables</h1>
         </div>
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Structured data tables</p>
       </div>
 
       {/* Table Cards Grid */}
+      {tables.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 'var(--spacing-xl)', color: 'var(--text-secondary)' }}>
+          <p style={{ margin: 0, fontSize: '14px' }}>No tables yet.</p>
+        </div>
+      )}
       <div
         style={{
           display: 'grid',
@@ -75,7 +80,7 @@ export const TablesView: React.FC = () => {
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {table.columns.slice(0, 4).map((col, idx) => (
                   <span
-                    key={idx}
+                    key={`tablesview-${idx}`}
                     style={{
                       fontSize: '12px',
                       padding: '4px 8px',
@@ -109,36 +114,34 @@ export const TablesView: React.FC = () => {
               Updated {table.lastUpdated}
             </p>
 
-            {/* Open Table Button - appears on hover */}
-            {hoveredTableId === table.id && (
-              <button
-                style={{
-                  marginTop: 'var(--spacing-sm)',
-                  padding: '10px 16px',
-                  width: '100%',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-subtle)',
-                  backgroundColor: 'transparent',
-                  color: 'var(--accent-cowork)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  const target = e.currentTarget;
-                  target.style.backgroundColor = 'rgba(175, 82, 222, 0.1)';
-                  target.style.borderColor = 'var(--accent-cowork)';
-                }}
-                onMouseLeave={(e) => {
-                  const target = e.currentTarget;
-                  target.style.backgroundColor = 'transparent';
-                  target.style.borderColor = 'var(--border-subtle)';
-                }}
-              >
-                Open Table
-              </button>
-            )}
+            {/* Open Table Button — faded when not hovered to avoid layout shift */}
+            <button type="button"
+              style={{
+                marginTop: 'var(--spacing-sm)',
+                padding: '10px 16px',
+                width: '100%',
+                borderRadius: '6px',
+                border: '1px solid var(--border-subtle)',
+                backgroundColor: 'transparent',
+                color: 'var(--accent-cowork)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                opacity: hoveredTableId === table.id ? 1 : 0,
+                transition: 'opacity 0.15s, background 0.13s, border-color 0.13s',
+                pointerEvents: hoveredTableId === table.id ? 'auto' : 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(200,169,110,0.08)';
+                e.currentTarget.style.borderColor = 'var(--accent-cowork)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              }}
+            >
+              Open Table
+            </button>
           </GlassSurface>
         ))}
       </div>

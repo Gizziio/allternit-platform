@@ -60,7 +60,7 @@ export function CoworkModeAgentTasks({
         />
       }
       headerActions={
-        <button
+        <button type="button"
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
           style={{ 
             background: modeColors.soft,
@@ -164,7 +164,7 @@ function WorkspaceComputer({
 function TabButton({ label, active, onClick, mode }: { label: string; active: boolean; onClick: () => void; mode: 'cowork' }) {
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.cowork;
   return (
-    <button
+    <button type="button"
       onClick={onClick}
       className="px-4 py-3 text-xs font-bold uppercase tracking-widest transition-all relative"
       style={{ color: active ? modeColors.accent : TEXT.tertiary }}

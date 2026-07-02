@@ -135,6 +135,8 @@ export interface Agent {
   id: string;
   name: string;
   description: string;
+  type?: 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
+  parentAgentId?: string;
   model: string;
   provider: 'openai' | 'anthropic' | 'local' | 'custom';
   capabilities: string[];
@@ -147,6 +149,18 @@ export interface Agent {
   createdAt: string;
   updatedAt: string;
   lastRunAt?: string;
+  workspaceId?: string;
+  avatar?: unknown;
+  characterLayer?: unknown;
+  trustTier?: 'safe' | 'low' | 'standard' | 'elevated' | 'admin' | 'critical';
+  harness?: unknown;
+  allowedSurfaces?: Array<'chat' | 'cowork' | 'code' | 'design' | 'browser'>;
+  allowedSkills?: string[];
+  allowedTools?: string[];
+  category?: 'engineering' | 'design' | 'marketing' | 'product' | 'research' | 'operations' | 'creative' | 'general';
+  tags?: string[];
+  dataClassification?: string;
+  writeScope?: string;
 }
 
 export interface ApiErrorDetails {
@@ -378,7 +392,7 @@ class AllternitApiClient {
           response = candidateResponse;
           if (base !== this.baseUrl) {
             if (process.env.NODE_ENV === 'development') {
-              console.debug(`[AllternitApiClient] Falling back to API base: ${base}`);
+              logger.debug(`Falling back to API base: ${base}`);
             }
             this.baseUrl = base;
           }
@@ -393,7 +407,7 @@ class AllternitApiClient {
         // Continue to next candidate base if this one fails entirely (offline or network error)
         // Silent fail - expected when backend isn't running
         if (process.env.NODE_ENV === 'development') {
-          console.debug(`[AllternitApiClient] Base ${base} unreachable, trying next candidate...`);
+          logger.debug(`Base ${base} unreachable, trying next candidate...`);
         }
       }
     }
@@ -401,7 +415,7 @@ class AllternitApiClient {
     if (!response) {
       // Only log error if not in development (in dev, this is expected)
       if (process.env.NODE_ENV === 'production') {
-        console.error('[AllternitApiClient] All API bases failed:', lastNetworkError);
+        logger.error({ err: lastNetworkError }, 'All API bases failed');
       }
       throw new AllternitApiError(
         `Network error - unable to reach API after multiple attempts (${lastAttemptedUrl || this.baseUrl})`,
@@ -627,7 +641,7 @@ class AllternitApiClient {
     const eventSource = new EventSource(url);
     
     eventSource.onerror = (error) => {
-      console.error('[AllternitApiClient] EventSource error:', error);
+      logger.error({ err: error }, 'EventSource error');
     };
 
     return eventSource;
@@ -791,7 +805,7 @@ class AllternitApiClient {
     const eventSource = new EventSource(url);
 
     eventSource.onerror = (error) => {
-      console.error('[AllternitApiClient] Agent EventSource error:', error);
+      logger.error({ err: error }, 'Agent EventSource error');
     };
 
     return eventSource;
@@ -947,7 +961,7 @@ class AllternitApiClient {
     const eventSource = new EventSource(url);
 
     eventSource.onerror = (error) => {
-      console.error('[AllternitApiClient] Operator EventSource error:', error);
+      logger.error({ err: error }, 'Operator EventSource error');
     };
 
     return eventSource;
@@ -988,6 +1002,10 @@ export const api = new AllternitApiClient();
 // =============================================================================
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ApiClient');
 
 export function useApi() {
   return api;
@@ -1106,7 +1124,7 @@ export function useSession(sessionId: string | null) {
             break;
         }
       } catch (err) {
-        console.error('[useSession] Failed to parse event:', err);
+        logger.error({ err: err }, 'Failed to parse event');
       }
     };
 
@@ -1167,7 +1185,7 @@ export function useSkills() {
 // MODEL DISCOVERY HOOK
 // =============================================================================
 
-export interface ModelInfo {
+interface ModelInfo {
   id: string;
   name: string;
   description?: string;
@@ -1180,7 +1198,7 @@ export interface ProviderInfo {
   models: ModelInfo[];
 }
 
-export interface ProviderListResponse {
+interface ProviderListResponse {
   all: ProviderInfo[];
   default: Record<string, string>;
   connected: string[];

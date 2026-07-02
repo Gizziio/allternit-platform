@@ -31,7 +31,7 @@ import {
 // WebSocket base URL
 const WS_BASE = `ws://${window.location.host}/api/v1/multimodal/ws`;
 
-export function MultimodalInput(): JSX.Element {
+export function MultimodalInput(): React.ReactNode {
   // Stream states
   const [visionEnabled, setVisionEnabled] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
@@ -417,7 +417,7 @@ export function MultimodalInput(): JSX.Element {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label>Video Resolution</Label>
-              <select className="w-full mt-2 p-2 border rounded-md">
+              <select aria-label="Selection" className="w-full mt-2 p-2 border rounded-md">
                 <option value="720p">1280x720 (HD)</option>
                 <option value="480p">640x480 (SD)</option>
                 <option value="360p">480x360 (Low)</option>
@@ -425,7 +425,7 @@ export function MultimodalInput(): JSX.Element {
             </div>
             <div>
               <Label>Frame Rate</Label>
-              <select className="w-full mt-2 p-2 border rounded-md">
+              <select aria-label="Selection" className="w-full mt-2 p-2 border rounded-md">
                 <option value="30">30 FPS</option>
                 <option value="24">24 FPS</option>
                 <option value="15">15 FPS</option>
@@ -433,7 +433,7 @@ export function MultimodalInput(): JSX.Element {
             </div>
             <div>
               <Label>Audio Sample Rate</Label>
-              <select className="w-full mt-2 p-2 border rounded-md">
+              <select aria-label="Selection" className="w-full mt-2 p-2 border rounded-md">
                 <option value="48000">48 kHz</option>
                 <option value="44100">44.1 kHz</option>
                 <option value="16000">16 kHz</option>
@@ -441,7 +441,7 @@ export function MultimodalInput(): JSX.Element {
             </div>
             <div>
               <Label>Audio Channels</Label>
-              <select className="w-full mt-2 p-2 border rounded-md">
+              <select aria-label="Selection" className="w-full mt-2 p-2 border rounded-md">
                 <option value="2">Stereo (2)</option>
                 <option value="1">Mono (1)</option>
               </select>

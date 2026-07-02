@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from "react";
 import { useDakStore } from "../dak.store";
 import { Button } from "@/components/ui/button";
@@ -74,12 +75,16 @@ export function LeaseMonitorPanel() {
       {/* Filter */}
       <div className="p-4 border-b flex items-center gap-4">
         <div className="flex-1 relative">
-          <MagnifyingGlass className="size-4  absolute left-3 top-1/2 -tranzinc-y-1/2 text-muted-foreground" />
-          <Input
+          <label htmlFor="agent-filter-input">
+            <MagnifyingGlass className="size-4  absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          </label>
+          <Input 
+            id="agent-filter-input"
             placeholder="Filter by agent ID…"
             value={filterAgentId}
             onChange={(e) => setFilterAgentId(e.target.value)}
             className="pl-10"
+            aria-label="Filter by agent ID"
           />
         </div>
         <Button variant="outline" onClick={fetchLeases}>
@@ -201,7 +206,7 @@ function LeaseListItem({
   const Icon = config.icon;
   
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       className={`p-3 rounded-lg border cursor-pointer transition-all ${
         isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted'
       }`}
@@ -260,12 +265,12 @@ function LeaseDetails({ lease, onRenew, onRelease }: { lease: ManagedLease; onRe
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-sm font-medium">Lease ID</label>
+        <div className="text-sm font-medium">Lease ID</div>
         <p className="text-sm font-mono text-muted-foreground break-all">{lease.leaseId}</p>
       </div>
       
       <div>
-        <label className="text-sm font-medium">Status</label>
+        <div className="text-sm font-medium">Status</div>
         <div className="mt-1">
           <Badge variant={
             lease.status === "active" ? "default" :
@@ -294,37 +299,37 @@ function LeaseDetails({ lease, onRenew, onRelease }: { lease: ManagedLease; onRe
       
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium">Acquired</label>
+          <div className="text-sm font-medium">Acquired</div>
           <p className="text-xs text-muted-foreground">{new Date(lease.acquiredAt).toLocaleString()}</p>
         </div>
         <div>
-          <label className="text-sm font-medium">Expires</label>
+          <div className="text-sm font-medium">Expires</div>
           <p className="text-xs text-muted-foreground">{new Date(lease.expiresAt).toLocaleString()}</p>
         </div>
       </div>
       
       <div>
-        <label className="text-sm font-medium">DAG / Node</label>
+        <div className="text-sm font-medium">DAG / Node</div>
         <p className="text-sm text-muted-foreground">{lease.dagId} / {lease.nodeId}</p>
       </div>
       
       <div>
-        <label className="text-sm font-medium">Agent</label>
+        <div className="text-sm font-medium">Agent</div>
         <p className="text-sm font-mono text-muted-foreground">{lease.agentId}</p>
       </div>
       
       <div>
-        <label className="text-sm font-medium">WIH ID</label>
+        <div className="text-sm font-medium">WIH ID</div>
         <p className="text-sm font-mono text-muted-foreground">{lease.wihId}</p>
       </div>
       
       <div>
-        <label className="text-sm font-medium">Renewals</label>
+        <div className="text-sm font-medium">Renewals</div>
         <p className="text-sm text-muted-foreground">{lease.renewalCount}</p>
       </div>
       
       <div>
-        <label className="text-sm font-medium">Keys (Resources)</label>
+        <div className="text-sm font-medium">Keys (Resources)</div>
         <div className="flex flex-wrap gap-1 mt-1">
           {lease.keys.map((key) => (
             <Badge key={key} variant="outline" className="text-xs">{key}</Badge>
@@ -334,7 +339,7 @@ function LeaseDetails({ lease, onRenew, onRelease }: { lease: ManagedLease; onRe
       
       {lease.tools && lease.tools.length > 0 && (
         <div>
-          <label className="text-sm font-medium">Allowed Tools</label>
+          <div className="text-sm font-medium">Allowed Tools</div>
           <div className="flex flex-wrap gap-1 mt-1">
             {lease.tools.map((tool) => (
               <Badge key={tool} variant="secondary" className="text-xs">{tool}</Badge>

@@ -53,7 +53,7 @@ export const Step1DeploymentType: React.FC<Step1DeploymentTypeProps> = ({ onNext
       <form onSubmit={handleSubmit}>
         <div className="deployment-type-grid">
           {deploymentTypes.map((type) => (
-            <div
+            <div role="button" tabIndex={0}
               key={type.id}
               className={`deployment-type-card ${type.popular ? 'popular' : ''} ${selectedType === type.id ? 'selected' : ''}`}
               onClick={() => setSelectedType(type.id)}
@@ -64,12 +64,11 @@ export const Step1DeploymentType: React.FC<Step1DeploymentTypeProps> = ({ onNext
               <p className="price">{type.price}</p>
               <ul className="features">
                 {type.features.map((feature, i) => (
-                  <li key={i}>✓ {feature}</li>
+                  <li key={`step1deploymenttype-${i}`}>✓ {feature}</li>
                 ))}
               </ul>
               <div className="radio-indicator">
-                <input
-                  type="radio"
+                <input aria-label="Radio" type="radio"
                   name="deploymentType"
                   value={type.id}
                   checked={selectedType === type.id}

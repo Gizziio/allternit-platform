@@ -21,12 +21,15 @@ import {
   FEATURE_PLUGIN_REGISTRY,
   type FeatureDefinition as RegistryFeatureDefinition,
 } from './feature.registry';
+import { createModuleLogger } from '@/lib/logger';
 import {
   getEnabledPluginIds,
   isPluginEnabled,
   subscribeToPluginChanges,
   togglePlugin,
 } from './feature.store';
+
+const logger = createModuleLogger('UseFeaturePlugins');
 
 // Re-export error class for consumers
 export { FeatureRegistryError } from './feature.registry';
@@ -272,7 +275,7 @@ export function useFeaturePlugins(): UseFeaturePluginsReturn {
  * Simplified hook that only returns plugins and basic operations
  * Use this when you don't need the full feature set
  */
-export function usePlugins(): Pick<
+function usePlugins(): Pick<
   UseFeaturePluginsReturn,
   'plugins' | 'enabledPlugins' | 'enabledIds' | 'toggle' | 'isEnabled'
 > {
@@ -296,7 +299,7 @@ export function usePlugins(): Pick<
  *
  * @param pluginId - The ID of the plugin to manage
  */
-export function usePlugin(pluginId: string): {
+function usePlugin(pluginId: string): {
   plugin: FeatureDefinition | undefined;
   isEnabled: boolean;
   toggle: () => void;

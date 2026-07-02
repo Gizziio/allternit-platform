@@ -4,9 +4,8 @@
  * @module agent-session-types
  */
 
-import type { AgentMode } from '@/design/allternit.tokens';
 
-export type AgentSessionMode = 'chat' | 'cowork' | 'code' | 'browser';
+export type AgentSessionMode = 'chat' | 'cowork' | 'code' | 'browser' | 'design';
 
 export interface BaseAgentSessionProps {
   /** Session identifier */
@@ -47,7 +46,7 @@ export interface CoworkModeAgentTasksProps extends BaseAgentSessionProps {
   taskFilter?: 'all' | 'pending' | 'running' | 'completed';
 }
 
-export interface AgentSessionState {
+interface AgentSessionState {
   isLoading: boolean;
   isStreaming: boolean;
   error: Error | null;
@@ -56,7 +55,7 @@ export interface AgentSessionState {
   metadata: Record<string, unknown>;
 }
 
-export interface AgentSessionMessage {
+interface AgentSessionMessage {
   id: string;
   role: 'user' | 'agent' | 'system';
   content: string;
@@ -65,7 +64,7 @@ export interface AgentSessionMessage {
   attachments?: AgentAttachment[];
 }
 
-export interface AgentToolCall {
+interface AgentToolCall {
   id: string;
   name: string;
   arguments: Record<string, unknown>;
@@ -74,7 +73,7 @@ export interface AgentToolCall {
   duration?: number;
 }
 
-export interface AgentAttachment {
+interface AgentAttachment {
   id: string;
   type: 'image' | 'file' | 'code' | 'link';
   name: string;
@@ -92,7 +91,7 @@ export interface AgentSessionCanvas {
   isPinned?: boolean;
 }
 
-export interface AgentTask {
+interface AgentTask {
   id: string;
   title: string;
   description?: string;

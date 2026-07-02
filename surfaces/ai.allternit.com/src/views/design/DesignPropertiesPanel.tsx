@@ -30,8 +30,7 @@ function NumberInput({ value, onChange, min = 0, max = 9999, step = 1, suffix }:
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 3, flex: 1 }}>
-      <input
-        type="number"
+      <input aria-label="Input" type="number"
         value={value}
         min={min} max={max} step={step}
         onChange={e => onChange(Number(e.target.value))}
@@ -45,14 +44,12 @@ function NumberInput({ value, onChange, min = 0, max = 9999, step = 1, suffix }:
 function ColorInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-      <input
-        type="color"
+      <input aria-label="Input" type="color"
         value={value || '#ffffff'}
         onChange={e => onChange(e.target.value)}
         style={{ width: 28, height: 26, padding: 2, border: '1px solid var(--border-subtle)', borderRadius: 5, background: 'var(--bg-tertiary)', cursor: 'pointer', flexShrink: 0 }}
       />
-      <input
-        type="text"
+      <input aria-label="Input" type="text"
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder="#ffffff"
@@ -78,7 +75,7 @@ function SegmentedControl<T extends string>({ options, value, onChange }: {
   return (
     <div style={{ display: 'flex', gap: 2, flex: 1, background: 'var(--bg-tertiary)', borderRadius: 6, padding: 2 }}>
       {options.map(opt => (
-        <button key={opt.value} onClick={() => onChange(opt.value)}
+        <button type="button" key={opt.value} onClick={() => onChange(opt.value)}
           style={{
             flex: 1, padding: '3px 4px', borderRadius: 4, border: 'none', cursor: 'pointer',
             background: value === opt.value ? 'var(--bg-primary)' : 'transparent',
@@ -105,6 +102,12 @@ interface DesignPropertiesPanelProps {
 export function DesignPropertiesPanel({ editorRef, selectedShapeId }: DesignPropertiesPanelProps) {
   const selectedShape = useDesignInspectStore(s => s.selectedShape);
 
+  const update = useCallback((props: Record<string, unknown>) => {
+    const editor = editorRef.current;
+    if (!editor || !selectedShapeId) return;
+    editor.updateShapes([{ id: selectedShapeId as any, type: (editor.getShape(selectedShapeId as any) as any)?.type, props }]);
+  }, [editorRef, selectedShapeId]);
+
   if (!selectedShape || !selectedShapeId) {
     return (
       <div style={panelStyle}>
@@ -114,13 +117,6 @@ export function DesignPropertiesPanel({ editorRef, selectedShapeId }: DesignProp
       </div>
     );
   }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const update = useCallback((props: Record<string, unknown>) => {
-    const editor = editorRef.current;
-    if (!editor || !selectedShapeId) return;
-    editor.updateShapes([{ id: selectedShapeId as any, type: (editor.getShape(selectedShapeId as any) as any)?.type, props }]);
-  }, [editorRef, selectedShapeId]);
 
   const fills = (selectedShape as any).fills ?? [];
   const strokes = (selectedShape as any).strokes ?? [];

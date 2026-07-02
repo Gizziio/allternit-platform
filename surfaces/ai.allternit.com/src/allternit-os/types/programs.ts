@@ -22,7 +22,7 @@ export type AllternitProgramType =
   | 'workflow-builder' // Visual workflow builder with Allternit Rails integration
   | 'custom';          // Custom/external programs
 
-export type AllternitProgramStatus = 
+type AllternitProgramStatus = 
   | 'loading'     // Initializing
   | 'active'      // Currently visible and running
   | 'background'  // Running but not visible
@@ -180,7 +180,7 @@ export interface PresentationSlide {
   };
 }
 
-export interface PresentationTheme {
+interface PresentationTheme {
   id: string;
   name: string;
   primaryColor: string;
@@ -259,7 +259,7 @@ export interface AssetManagerState {
 
 // --- Image Studio ---
 
-export interface ImageStudioLayer {
+interface ImageStudioLayer {
   id: string;
   name: string;
   visible: boolean;
@@ -267,7 +267,7 @@ export interface ImageStudioLayer {
   canvasData?: ImageData;
 }
 
-export interface ImageStudioState {
+interface ImageStudioState {
   imageUrl: string;
   originalImageUrl: string;
   layers: ImageStudioLayer[];
@@ -285,7 +285,7 @@ export interface ImageStudioState {
 
 // --- Audio Studio ---
 
-export interface AudioStudioVoice {
+interface AudioStudioVoice {
   id: string;
   name: string;
   provider: 'elevenlabs' | 'openai' | 'local';
@@ -293,7 +293,7 @@ export interface AudioStudioVoice {
   previewUrl?: string;
 }
 
-export interface AudioStudioSegment {
+interface AudioStudioSegment {
   id: string;
   speaker: string;
   text: string;
@@ -303,7 +303,7 @@ export interface AudioStudioSegment {
   status: 'pending' | 'generating' | 'complete' | 'error';
 }
 
-export interface AudioStudioState {
+interface AudioStudioState {
   title: string;
   script: AudioStudioSegment[];
   voices: AudioStudioVoice[];
@@ -320,7 +320,7 @@ export interface AudioStudioState {
 
 // --- Telephony ---
 
-export interface TelephonyCall {
+interface TelephonyCall {
   id: string;
   status: 'dialing' | 'ringing' | 'connected' | 'holding' | 'ended';
   direction: 'outbound' | 'inbound';
@@ -332,7 +332,7 @@ export interface TelephonyCall {
   recordingUrl?: string;
 }
 
-export interface TelephonyState {
+interface TelephonyState {
   activeCall?: TelephonyCall;
   callHistory: TelephonyCall[];
   keypadOpen: boolean;
@@ -385,7 +385,7 @@ export interface OrchestratorState {
 
 // --- Agent (Generic Agent Type) ---
 
-export interface Agent {
+interface Agent {
   id: string;
   name: string;
   type: string;
@@ -489,14 +489,14 @@ export interface StreamingChunk {
 // URI Scheme for Programs
 // ============================================================================
 
-export interface AllternitProgramUri {
+interface AllternitProgramUri {
   scheme: 'allternit';
   program: AllternitProgramType;
   id?: string;
   params: Record<string, string>;
 }
 
-export function parseAllternitUri(uri: string): AllternitProgramUri | null {
+function parseAllternitUri(uri: string): AllternitProgramUri | null {
   try {
     const url = new URL(uri);
     if (url.protocol !== 'allternit:') return null;
@@ -519,7 +519,7 @@ export function parseAllternitUri(uri: string): AllternitProgramUri | null {
   }
 }
 
-export function buildAllternitUri(program: AllternitProgramType, params: Record<string, string> = {}): string {
+function buildAllternitUri(program: AllternitProgramType, params: Record<string, string> = {}): string {
   const queryString = Object.entries(params)
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');

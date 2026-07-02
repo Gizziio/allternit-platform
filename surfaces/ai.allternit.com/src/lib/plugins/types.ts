@@ -101,7 +101,7 @@ export interface PluginOutput {
 }
 
 // Plugin Event Types
-export type PluginEventType = 
+type PluginEventType = 
   | 'initialized'
   | 'started'
   | 'progress'
@@ -154,10 +154,10 @@ export interface ModePlugin {
 }
 
 // Plugin Factory
-export type PluginFactory = () => ModePlugin;
+type PluginFactory = () => ModePlugin;
 
 // Plugin Registry Entry
-export interface PluginRegistryEntry {
+interface PluginRegistryEntry {
   id: string;
   name: string;
   description: string;
@@ -170,7 +170,7 @@ export interface PluginRegistryEntry {
 }
 
 // Execution Context
-export interface ExecutionContext {
+interface ExecutionContext {
   sessionId: string;
   userId: string;
   workspaceId?: string;

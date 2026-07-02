@@ -5,9 +5,9 @@ import { cloudProviderCatalog } from './catalog';
 
 export type Provider = 'hetzner' | 'digitalocean' | 'aws' | 'gcp' | 'azure' | 'linode' | 'vultr';
 
-export type InstanceStatus = 'running' | 'stopped' | 'error' | 'pending' | 'provisioning' | 'destroying';
+type InstanceStatus = 'running' | 'stopped' | 'error' | 'pending' | 'provisioning' | 'destroying';
 
-export type DeploymentStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+type DeploymentStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
 export interface Region {
   id: string;

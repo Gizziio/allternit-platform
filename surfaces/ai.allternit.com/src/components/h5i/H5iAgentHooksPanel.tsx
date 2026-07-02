@@ -56,8 +56,8 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
         borderRadius: 16,
         border: '1px solid var(--ui-border-muted)',
         background: 'rgba(11,14,16,0.96)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         boxShadow: '0 20px 50px var(--shell-overlay-backdrop)',
         overflow: 'hidden',
       }}
@@ -78,7 +78,7 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
             Install Agent Hooks
           </span>
         </div>
-        <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
+        <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>
           <X size={16} />
         </button>
       </div>
@@ -91,7 +91,7 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
           {AGENTS.map((agent) => (
-            <button
+            <button type="button"
               key={agent.id}
               onClick={() => toggleAgent(agent.id)}
               style={{
@@ -117,7 +117,7 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
           ))}
         </div>
 
-        <button
+        <button type="button"
           onClick={handleInstall}
           disabled={loading || selected.length === 0}
           style={{
@@ -184,7 +184,7 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
                   Errors
                 </div>
                 {result.errors.map((e, i) => (
-                  <div key={i} style={{ fontSize: 12, color: 'var(--status-error)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div key={`h5iagenthookspanel-${i}`} style={{ fontSize: 12, color: 'var(--status-error)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Warning size={12} /> {e}
                   </div>
                 ))}

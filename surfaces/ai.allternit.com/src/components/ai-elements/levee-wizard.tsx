@@ -25,13 +25,13 @@ const useLeveeWizard = () => {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface LeveeWizardStepOption {
+interface LeveeWizardStepOption {
   id: string;
   label: string;
   description?: string;
 }
 
-export interface LeveeWizardStep {
+interface LeveeWizardStep {
   id: string;
   title: string;
   description?: string;
@@ -139,8 +139,7 @@ function LeveeStepRenderer({ step, stepIndex }: { step: LeveeWizardStep; stepInd
       </div>
 
       {step.type === 'text' && (
-        <textarea
-          value={typeof current === 'string' ? current : ''}
+        <textarea aria-label="Text Area" value={typeof current === 'string' ? current : ''}
           onChange={e => setAnswer(stepIndex, e.target.value)}
           placeholder={step.placeholder ?? 'Your answer...'}
           rows={3}

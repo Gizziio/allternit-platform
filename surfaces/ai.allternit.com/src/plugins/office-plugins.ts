@@ -11,7 +11,7 @@ import type { FeaturePlugin } from './feature.types';
 
 const OFFICE_BASE_TAGS = ['office', 'microsoft', 'office-addin', 'ai-automation'];
 
-export const OFFICE_PLUGIN_EXCEL: FeaturePlugin = {
+const OFFICE_PLUGIN_EXCEL: FeaturePlugin = {
   id: 'allternit-office-excel',
   name: 'Allternit for Excel',
   version: '1.0.0',
@@ -27,7 +27,7 @@ export const OFFICE_PLUGIN_EXCEL: FeaturePlugin = {
   tags: [...OFFICE_BASE_TAGS, 'excel', 'spreadsheet', 'formulas', 'charts', 'financial-modeling'],
 };
 
-export const OFFICE_PLUGIN_POWERPOINT: FeaturePlugin = {
+const OFFICE_PLUGIN_POWERPOINT: FeaturePlugin = {
   id: 'allternit-office-powerpoint',
   name: 'Allternit for PowerPoint',
   version: '1.0.0',
@@ -43,7 +43,7 @@ export const OFFICE_PLUGIN_POWERPOINT: FeaturePlugin = {
   tags: [...OFFICE_BASE_TAGS, 'powerpoint', 'slides', 'presentations', 'deck'],
 };
 
-export const OFFICE_PLUGIN_WORD: FeaturePlugin = {
+const OFFICE_PLUGIN_WORD: FeaturePlugin = {
   id: 'allternit-office-word',
   name: 'Allternit for Word',
   version: '1.0.0',

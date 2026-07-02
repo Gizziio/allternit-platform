@@ -71,6 +71,15 @@ export function EnvironmentSelector({
   const [selectedEnvironment, setSelectedEnvironment] =
     useState<EnvironmentType>(currentEnvironment);
 
+  // Inline state adjustment for currentEnvironment change
+  const [prevCurrentEnvironment, setPrevCurrentEnvironment] = useState(currentEnvironment);
+  if (currentEnvironment !== prevCurrentEnvironment) {
+    setPrevCurrentEnvironment(currentEnvironment);
+    if (!runtimeBackend) {
+      setSelectedEnvironment(currentEnvironment);
+    }
+  }
+
   const refreshRuntime = useCallback(async () => {
     const runtime = await runtimeBackendApi.get();
     setRuntimeBackend(runtime);
@@ -89,12 +98,6 @@ export function EnvironmentSelector({
       refreshRuntime().catch(() => null);
     });
   }, [refreshRuntime]);
-
-  useEffect(() => {
-    if (!runtimeBackend) {
-      setSelectedEnvironment(currentEnvironment);
-    }
-  }, [currentEnvironment, runtimeBackend]);
 
   const envList = environments.length > 0 ? environments : internalEnvs;
   const currentEnv = useMemo(
@@ -182,7 +185,7 @@ export function EnvironmentSelector({
 
   return (
     <div className={`relative ${className || ""}`}>
-      <button
+      <button type="button"
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
         className="flex items-center gap-2 rounded-lg border border-border/50 bg-secondary/50 px-3 py-1.5 text-sm transition-colors hover:bg-secondary disabled:opacity-50"
@@ -223,7 +226,7 @@ export function EnvironmentSelector({
                   const isSelected = env.type === selectedEnvironment;
 
                   return (
-                    <button
+                    <button type="button"
                       key={env.id}
                       onClick={() => handleSelect(env.type)}
                       disabled={isLoading}
@@ -269,7 +272,7 @@ export function EnvironmentSelector({
             </div>
 
             <div className="border-t border-border bg-secondary/30 px-4 py-3">
-              <button
+              <button type="button"
                 onClick={onOpenControlCenter}
                 className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent/20 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/30"
               >
@@ -284,7 +287,7 @@ export function EnvironmentSelector({
   );
 }
 
-function getDefaultEnvironment(type: EnvironmentType): EnvironmentTarget {isClient ? 
+function getDefaultEnvironment(type: EnvironmentType): EnvironmentTarget {
   const now = new Date().toISOString();
 
   switch (type) {
@@ -297,7 +300,7 @@ function getDefaultEnvironment(type: EnvironmentType): EnvironmentTarget {isClie
         status: "active",
         createdAt: now,
         updatedAt: now,
-       : "..."};
+      };
     case "cloud":
       return {
         id: "cloud-default",
@@ -371,7 +374,7 @@ function mapRemoteStatus(
 
 function mapRuntimeBackendToEnvironments(
   runtime: RuntimeBackendResponse,
-): EnvironmentTarget[] {isClient ? 
+): EnvironmentTarget[] {
   const now = new Date().toISOString();
   const remoteTarget = runtime.active_backend ?? runtime.available_backends?.[0] ?? null;
   const environments: EnvironmentTarget[] = [
@@ -383,7 +386,7 @@ function mapRuntimeBackendToEnvironments(
       status: runtime.mode === "local" ? "active" : "inactive",
       createdAt: now,
       updatedAt: now,
-     : "..."},
+    },
   ];
 
   if (remoteTarget || (runtime.available_backends?.length ?? 0) > 0) {

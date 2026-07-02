@@ -9,13 +9,12 @@
  * - Quick-apply templates to create agents
  */
 
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   Brain, Robot, Cpu, ClipboardText,
   MagnifyingGlass, Upload, Export, Plus, Stack, PencilSimple, Copy, Trash,
 } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/allternit.tokens';
+import { TEXT, STATUS, BACKGROUND } from '@/design/allternit.tokens';
 
 const ROLE_ICON_MAP: Record<string, React.ElementType> = {
   brain: Brain, robot: Robot, microchip: Cpu, 'clipboard-check': ClipboardText,
@@ -27,6 +26,7 @@ function RoleIcon({ icon, color, size = 14 }: { icon: string; color: string; siz
 import type { AgentTemplate, AgentRole } from '../types';
 import { templateStorage } from '../lib/template-storage';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 interface TemplatesViewProps {
   modeColors: { accent: string };
@@ -58,6 +58,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<AgentTemplate | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   // Subscribe to template changes
   React.useEffect(() => {
@@ -102,13 +103,16 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
 
   const handleDelete = useCallback((id: string) => {
     const template = templateStorage.getById(id);
-    if (template && confirm(`Are you sure you want to delete "${template.name}"?`)) {
-      templateStorage.delete(id);
-      toast({
-        title: 'Template Deleted',
-        description: `"${template.name}" has been removed`,
-      });
-    }
+    if (!template) return;
+    setConfirmDialog({
+      message: `Are you sure you want to delete "${template.name}"?`,
+      onConfirm: () => {
+        setConfirmDialog(null);
+        templateStorage.delete(id);
+        toast({ title: 'Template Deleted', description: `"${template.name}" has been removed` });
+        setTemplates(templateStorage.getAll());
+      },
+    });
   }, []);
 
   const handleDuplicate = useCallback((id: string) => {
@@ -128,7 +132,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
     
     const link = document.createElement('a');
     link.href = url;
-    link.download = `agent-templates-${isClient ? new Date().toISOString().split('T')[0] : "..."}.json`;
+    link.download = `agent-templates-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -185,8 +189,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
               color={TEXT.tertiary}
               className="absolute left-3 top-1/2 -tranzinc-y-1/2 pointer-events-none"
             />
-            <input
-              type="text"
+            <input aria-label="Input" type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search templates…"
@@ -202,7 +205,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
           {/* Role Filter */}
           <div className="flex items-center gap-1">
             {(['all', 'orchestrator', 'worker', 'specialist', 'reviewer'] as const).map(role => (
-              <button
+              <button type="button"
                 key={role}
                 onClick={() => setSelectedRole(role)}
                 className="px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize"
@@ -225,15 +228,14 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
           >
             <Upload size={12} weight="duotone" style={{ marginRight: 6, display: 'inline' }} />
             Import
-            <input
-              type="file"
+            <input aria-label="File upload" type="file"
               accept=".json"
               onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
               className="hidden"
               disabled={isImporting}
             />
           </label>
-          <button
+          <button type="button"
             onClick={handleExport}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:bg-white/5"
             style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
@@ -241,7 +243,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
             <Export size={12} weight="duotone" style={{ marginRight: 6 }} />
             Export
           </button>
-          <button
+          <button type="button"
             onClick={() => setShowCreateModal(true)}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:opacity-80"
             style={{ background: `${modeColors.accent}20`, color: modeColors.accent }}
@@ -301,6 +303,15 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
           }}
         />
       )}
+      <ConfirmModal
+        isOpen={confirmDialog !== null}
+        title="Delete Template"
+        message={confirmDialog?.message || ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={confirmDialog?.onConfirm || (() => {})}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }
@@ -338,7 +349,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
           <RoleIcon icon={ROLE_ICONS[template.role]} color={roleColor} size={16} />
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
+          <button type="button"
             onClick={() => onEdit(template)}
             className="size-7  rounded flex items-center justify-center text-xs hover:bg-white/5"
             style={{ color: TEXT.tertiary }}
@@ -346,7 +357,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
           >
             <PencilSimple size={12} weight="bold" />
           </button>
-          <button
+          <button type="button"
             onClick={() => onDuplicate(template.id)}
             className="size-7  rounded flex items-center justify-center text-xs hover:bg-white/5"
             style={{ color: TEXT.tertiary }}
@@ -354,7 +365,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
           >
             <Copy size={12} weight="bold" />
           </button>
-          <button
+          <button type="button"
             onClick={() => onDelete(template.id)}
             className="size-7  rounded flex items-center justify-center text-xs hover:bg-white/5"
             style={{ color: TEXT.tertiary }}
@@ -407,7 +418,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
         <span className="text-xs" style={{ color: TEXT.tertiary }}>
           Used {template.usageCount} times
         </span>
-        <button
+        <button type="button"
           onClick={() => onApply(template)}
           className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
           style={{ background: `${modeColors.accent}20`, color: modeColors.accent }}
@@ -450,12 +461,12 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
   };
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
-      <div 
+      <div role="button" tabIndex={0} 
         className="w-full max-w-md p-6 rounded-2xl border"
         style={{ 
           background: BACKGROUND.primary,
@@ -469,11 +480,10 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
+            <div className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
               Name
-            </label>
-            <input
-              type="text"
+            </div>
+            <input aria-label="Input" type="text"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
               required
@@ -487,11 +497,10 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
+            <div className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
               Description
-            </label>
-            <textarea
-              value={form.description}
+            </div>
+            <textarea aria-label="Text Area" value={form.description}
               onChange={e => setForm({ ...form, description: e.target.value })}
               rows={3}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
@@ -505,11 +514,10 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
+              <div className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
                 Role
-              </label>
-              <select
-                value={form.role}
+              </div>
+              <select aria-label="Selection" value={form.role}
                 onChange={e => setForm({ ...form, role: e.target.value as AgentRole })}
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                 style={{
@@ -526,11 +534,10 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
+              <div className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
                 Model
-              </label>
-              <select
-                value={form.model}
+              </div>
+              <select aria-label="Selection" value={form.model}
                 onChange={e => setForm({ ...form, model: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                 style={{
@@ -548,11 +555,10 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
+            <div className="block text-xs font-medium mb-1.5" style={{ color: TEXT.secondary }}>
               Capabilities (comma-separated)
-            </label>
-            <input
-              type="text"
+            </div>
+            <input aria-label="Input" type="text"
               value={form.capabilities}
               onChange={e => setForm({ ...form, capabilities: e.target.value })}
               placeholder="e.g., code-review, testing, documentation"

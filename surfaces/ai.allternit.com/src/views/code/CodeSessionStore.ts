@@ -17,6 +17,9 @@ import {
   type CreateModeSessionOptions,
   type SendMessageOptions,
 } from '@/lib/agents/mode-session-store';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CodeSessionStore');
 
 export type { 
   ModeSession as CodeSession, 
@@ -127,5 +130,41 @@ export function useCodeSessionActions() {
     connectSessionSync: state.connectSessionSync,
     disconnectSessionSync: state.disconnectSessionSync,
     markSessionRead: state.markSessionRead,
+    abortGeneration: state.abortGeneration,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Session creation with memory/context parity (matches Cowork)
+// ---------------------------------------------------------------------------
+
+export async function createCodeSession(options?: CreateModeSessionOptions): Promise<string> {
+  const sessionId = await useCodeSessionStore.getState().createSession(options);
+
+  // Inject memory context — use semantic search when we have a task name, else formatted context list
+  const taskName = options?.name;
+  const memoryUrl = taskName
+    ? `/api/v1/cowork/memory/search?query=${encodeURIComponent(taskName)}&limit=10`
+    : `/api/v1/cowork/memory?limit=10&format=context`;
+
+  fetch(memoryUrl)
+    .then((r) => r.json())
+    .then((data: { results?: Array<{ content: string }>; context?: string; entries?: Array<{ content: string }> }) => {
+      let memoryContext = '';
+      if (data.context) {
+        memoryContext = data.context;
+      } else if (data.results?.length) {
+        memoryContext = `Relevant memory:\n${data.results.map((r) => r.content).join('\n')}`;
+      } else if (data.entries?.length) {
+        memoryContext = data.entries.map((e) => e.content).join('\n---\n');
+      }
+      if (!memoryContext) return;
+      const existing = useCodeSessionStore.getState().sessions.find((s) => s.id === sessionId)?.metadata;
+      useCodeSessionStore.getState().updateSession(sessionId, {
+        metadata: { ...existing, originSurface: 'code', memoryContext },
+      });
+    })
+    .catch((err) => { logger.error({ err: err }, 'Failed to fetch memory context'); });
+
+  return sessionId;
 }

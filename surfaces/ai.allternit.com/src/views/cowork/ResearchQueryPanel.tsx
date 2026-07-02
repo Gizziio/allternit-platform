@@ -6,7 +6,7 @@ import { useResearchThread } from '@/lib/cowork/useResearchThread';
 import { UnifiedMessageRenderer } from '@/components/ai-elements/UnifiedMessageRenderer';
 import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
 
-export function ResearchQueryPanel(): JSX.Element {
+export function ResearchQueryPanel(): React.ReactNode {
   const { messages, isStreaming, streamBuffer, error, isHealthy, query, reset, checkHealth } = useResearchThread();
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -53,15 +53,15 @@ export function ResearchQueryPanel(): JSX.Element {
               textTransform: 'uppercase',
               padding: '1px 6px',
               borderRadius: 4,
-              background: isHealthy ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-              color: isHealthy ? '#4ade80' : '#f87171',
+              background: isHealthy ? 'color-mix(in srgb, var(--status-success) 12%, transparent)' : 'color-mix(in srgb, var(--status-error) 12%, transparent)',
+              color: isHealthy ? 'var(--status-success)' : 'var(--status-error)',
             }}>
               {isHealthy ? 'Online' : 'Offline'}
             </span>
           )}
         </div>
         {messages.length > 0 && (
-          <button
+          <button type="button"
             onClick={reset}
             style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--ui-text-muted)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
           >
@@ -75,7 +75,7 @@ export function ResearchQueryPanel(): JSX.Element {
       {messages.length > 0 || isStreaming ? (
         <div style={{ maxHeight: 360, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {messages.map((msg, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+            <div key={`researchquerypanel-${i}`} style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
               <span style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {msg.role === 'user' ? 'You' : 'Research'}
               </span>
@@ -136,7 +136,7 @@ export function ResearchQueryPanel(): JSX.Element {
 
       {/* Error */}
       {error && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', color: '#f87171', fontSize: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', color: 'var(--status-error)', fontSize: 12 }}>
           <WarningCircle size={13} />
           {error}
         </div>
@@ -144,8 +144,7 @@ export function ResearchQueryPanel(): JSX.Element {
 
       {/* Input */}
       <div style={{ padding: '12px 16px', borderTop: messages.length > 0 ? '1px solid var(--ui-border-muted)' : 'none', display: 'flex', gap: 8 }}>
-        <input
-          type="text"
+        <input aria-label="Input" type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
@@ -163,7 +162,7 @@ export function ResearchQueryPanel(): JSX.Element {
             outline: 'none',
           }}
         />
-        <button
+        <button type="button"
           onClick={handleSubmit}
           disabled={isStreaming || !input.trim() || isHealthy === false}
           style={{

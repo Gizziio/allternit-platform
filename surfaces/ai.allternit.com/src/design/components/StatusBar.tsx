@@ -5,8 +5,10 @@
  * Provides real-time session status display
  */
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { useAllternitTheme, AllternitRuntimeState, getStatusColor } from "../theme/allternit-theme.tsx"
+import { cn } from "@/lib/utils"
+import { useIsClient } from "@/lib/hooks/use-is-client"
 
 export interface StatusBarProps {
   /** Current runtime state */
@@ -40,6 +42,7 @@ export function StatusBar({
   interruptPending,
 }: StatusBarProps) {
   const theme = useAllternitTheme()
+  const isClient = useIsClient()
   const [now, setNow] = useState(Date.now())
   
   // Update elapsed time every second
@@ -53,7 +56,7 @@ export function StatusBar({
   const statusColor = getStatusColor(state, theme)
   const statusLabel = getStatusLabel(state, isConnecting)
   const statusHint = getStatusHint(state, isConnecting)
-  const elapsed = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : undefined
+  const elapsed = isClient && startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : undefined
   
   const displayedTools = compact 
     ? pendingTools.slice(0, 1)
@@ -63,26 +66,23 @@ export function StatusBar({
   
   return (
     <div 
-      className="status-bar"
+      className={cn(
+        "flex justify-between items-center bg-[var(--status-bar-bg)] border-t border-solid border-white/5 font-mono",
+        compact ? "p-2 px-3 text-[12px]" : "p-3 px-4 text-[14px]"
+      )}
       style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: compact ? "0.5rem 0.75rem" : "0.75rem 1rem",
-        background: theme.bg,
-        borderTop: `1px solid ${theme.muted}30`,
-        fontFamily: "var(--font-mono)",
-        fontSize: compact ? "0.75rem" : "0.875rem",
+        backgroundColor: theme.bg,
+        borderTopColor: `${theme.muted}30`,
       }}
     >
       {/* Left: Status & Tools */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+      <div className="flex items-center gap-3">
         {/* Status Indicator */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div className="flex items-center gap-2">
           {state !== "idle" && (
             <StatusIndicator color={statusColor} />
           )}
-          <span style={{ color: statusColor, fontWeight: 600 }}>
+          <span className="font-bold" style={{ color: statusColor }}>
             {theme.glyph.status} {statusLabel}
           </span>
         </div>
@@ -96,21 +96,19 @@ export function StatusBar({
         
         {/* Tools */}
         {displayedTools.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            {displayedTools.map((tool, i) => (
+          <div className="flex items-center gap-2">
+            {displayedTools.map((tool) => (
               <span 
-                key={i}
-                style={{ 
-                  color: theme.fg,
-                  fontSize: "0.8em",
-                }}
+                key={tool}
+                className="text-[0.8em]"
+                style={{ color: theme.fg }}
               >
                 <span style={{ color: theme.accent }}>{theme.glyph.tool}</span>{" "}
                 <span style={{ color: theme.muted }}>{tool}</span>
               </span>
             ))}
             {overflow > 0 && (
-              <span style={{ color: theme.muted, fontSize: "0.8em" }}>
+              <span className="text-[0.8em]" style={{ color: theme.muted }}>
                 +{overflow} more
               </span>
             )}
@@ -119,34 +117,34 @@ export function StatusBar({
         
         {/* Retry Info */}
         {retryAttempt !== undefined && retryDelay !== undefined && (
-          <span style={{ color: theme.status.connecting, fontSize: "0.8em" }}>
+          <span className="text-[0.8em]" style={{ color: theme.status.connecting }}>
             Retry {retryAttempt} in {Math.ceil(retryDelay / 1000)}s
           </span>
         )}
       </div>
       
       {/* Right: Elapsed & Interrupt */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+      <div className="flex items-center gap-3">
         {/* Elapsed Time */}
         {elapsed !== undefined && !compact && (
-          <span style={{ color: theme.muted, fontSize: "0.8em" }}>
+          <span className="text-[0.8em]" style={{ color: theme.muted }}>
             {elapsed}s
           </span>
         )}
         
         {/* Interrupt Button */}
         {state !== "idle" && onInterrupt && (
-          <button
+          <button type="button"
             onClick={onInterrupt}
+            className={cn(
+              "rounded border border-solid cursor-pointer text-[0.8em] transition-all duration-200",
+              compact ? "p-1 px-2" : "p-1.5 px-3",
+              interruptPending ? "bg-[var(--status-pending-bg)] border-[var(--status-pending-border)]" : "bg-transparent border-[var(--status-border)]"
+            )}
             style={{
-              padding: compact ? "0.25rem 0.5rem" : "0.375rem 0.75rem",
               background: interruptPending ? `${statusColor}20` : "transparent",
-              border: `1px solid ${interruptPending ? statusColor : theme.muted}`,
-              borderRadius: "4px",
+              borderColor: interruptPending ? statusColor : theme.muted,
               color: interruptPending ? statusColor : theme.fg,
-              cursor: "pointer",
-              fontSize: "0.8em",
-              transition: "all 0.2s",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = `${statusColor}20`
@@ -161,7 +159,7 @@ export function StatusBar({
           >
             Esc
             {!compact && (
-              <span style={{ color: theme.muted, marginLeft: "0.25rem" }}>
+              <span className="ml-1" style={{ color: theme.muted }}>
                 {interruptPending ? "Press again" : "to interrupt"}
               </span>
             )}
@@ -176,13 +174,9 @@ export function StatusBar({
 function StatusIndicator({ color }: { color: string }) {
   return (
     <span
+      className="inline-block size-2 rounded-full animate-pulse"
       style={{
-        display: "inline-block",
-        width: "8px",
-        height: "8px",
-        borderRadius: "50%",
         background: color,
-        animation: "pulse 1.5s ease-in-out infinite",
       }}
     />
   )
@@ -223,11 +217,3 @@ function getStatusHint(state: AllternitRuntimeState, isConnecting?: boolean): st
   
   return hints[state]
 }
-
-// CSS Animation
-export const statusBarStyles = `
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-`

@@ -119,7 +119,7 @@ function WorkflowCanvas({ nodes, edges, selectedNode, onSelectNode, onMoveNode }
   };
 
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       className="relative w-full h-full bg-zinc-950 overflow-hidden"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -396,7 +396,7 @@ export function WorkflowBuilder() {
               
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs text-zinc-500 block mb-1">Type</label>
+                  <div className="text-xs text-zinc-500 block mb-1">Type</div>
                   <Badge variant="secondary" className="bg-zinc-800">
                     {selectedNodeData.type}
                   </Badge>
@@ -404,9 +404,8 @@ export function WorkflowBuilder() {
 
                 {selectedNodeData.type === 'mode' && (
                   <div>
-                    <label className="text-xs text-zinc-500 block mb-1">Mode</label>
-                    <select 
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm"
+                    <div className="text-xs text-zinc-500 block mb-1">Mode</div>
+                    <select aria-label="Selection" className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-sm"
                       value={selectedNodeData.modeId || ''}
                       onChange={(e) => {
                         const modeId = e.target.value as PluginId;
@@ -426,7 +425,7 @@ export function WorkflowBuilder() {
                 )}
 
                 <div>
-                  <label className="text-xs text-zinc-500 block mb-1">Description</label>
+                  <div className="text-xs text-zinc-500 block mb-1">Description</div>
                   <Input
                     className="bg-zinc-900 border-zinc-800 text-sm"
                     placeholder="Node description…"
@@ -446,7 +445,7 @@ export function WorkflowBuilder() {
 
                 {nodes.length > 1 && (
                   <div>
-                    <label className="text-xs text-zinc-500 block mb-1">Connect To</label>
+                    <div className="text-xs text-zinc-500 block mb-1">Connect To</div>
                     <div className="space-y-1">
                       {nodes
                         .filter(n => n.id !== selectedNodeData.id)

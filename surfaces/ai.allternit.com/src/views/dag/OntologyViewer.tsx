@@ -1,6 +1,7 @@
+import React from 'react';
 import { OntologyViewerSurface } from "./DagRuntimeWorkspace";
 
-export function OntologyViewer(): JSX.Element {
+export function OntologyViewer(): React.ReactNode {
   return <OntologyViewerSurface />;
 }
 

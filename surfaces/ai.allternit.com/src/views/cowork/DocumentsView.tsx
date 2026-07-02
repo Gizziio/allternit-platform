@@ -22,11 +22,11 @@ type SortOption = 'Recent' | 'Name' | 'Size';
 const getDocIcon = (type: Document['type']) => {
   switch (type) {
     case 'doc':
-      return <FileText size={18} color="#3b82f6" />;
+      return <FileText size={18} color="var(--status-info)" />;
     case 'table':
-      return <FileText size={18} color="#8b5cf6" />;
+      return <FileText size={18} color="var(--accent-cowork)" />;
     case 'code':
-      return <FileText size={18} color="#06b6d4" />;
+      return <FileText size={18} color="var(--status-success)" />;
     default:
       return <FileText size={18} />;
   }
@@ -40,7 +40,7 @@ export const DocumentsView: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
 
   useEffect(() => {
-    fetch('/api/v1/workspace/documents').then(r => r.json()).then(setDocuments).catch(() => {});
+    fetch('/api/v1/workspace/documents').then(r => r.json()).then(setDocuments).catch(() => setDocuments([]));
   }, []);
 
   const filteredDocs = documents
@@ -64,7 +64,7 @@ export const DocumentsView: React.FC = () => {
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-xl)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <FileText size={24} color="#af52de" />
+          <FileText size={24} color="var(--accent-primary)" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Documents</h1>
         </div>
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>All workspace documents</p>
@@ -75,8 +75,7 @@ export const DocumentsView: React.FC = () => {
         {/* Search Input */}
         <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
           <MagnifyingGlass size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-          <input
-            type="text"
+          <input aria-label="Search documents…" type="text"
             placeholder="Search documents…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -96,7 +95,7 @@ export const DocumentsView: React.FC = () => {
         {/* Type Filter Chips */}
         <div style={{ display: 'flex', gap: '8px' }}>
           {(['All', 'Doc', 'Table', 'Code'] as DocType[]).map((type) => (
-            <button
+            <button type="button"
               key={type}
               onClick={() => setTypeFilter(type)}
               style={{
@@ -117,8 +116,7 @@ export const DocumentsView: React.FC = () => {
         </div>
 
         {/* Sort Dropdown */}
-        <select
-          value={sortBy}
+        <select aria-label="Selection" value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
           style={{
             padding: '8px 12px',
@@ -176,42 +174,38 @@ export const DocumentsView: React.FC = () => {
                 {doc.modified}
               </div>
 
-              {/* Actions */}
-              {hoveredDocId === doc.id && (
-                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-                  <button
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '4px',
-                      border: 'none',
-                      backgroundColor: 'var(--accent-cowork)',
-                      color: '#fff',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    Open
-                  </button>
-                  <button
-                    style={{
-                      padding: '6px 8px',
-                      borderRadius: '4px',
-                      border: 'none',
-                      backgroundColor: 'var(--bg-secondary)',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <DotsThreeVertical size={16} />
-                  </button>
-                </div>
-              )}
+              {/* Actions — always present to avoid layout shift, faded when not hovered */}
+              <div style={{ display: 'flex', gap: '8px', flexShrink: 0, opacity: hoveredDocId === doc.id ? 1 : 0, transition: 'opacity 0.15s', pointerEvents: hoveredDocId === doc.id ? 'auto' : 'none' }}>
+                <button type="button"
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    backgroundColor: 'var(--accent-cowork)',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Open
+                </button>
+                <button type="button"
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <DotsThreeVertical size={16} />
+                </button>
+              </div>
             </div>
           </GlassSurface>
         ))}

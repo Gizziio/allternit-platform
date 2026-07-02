@@ -134,7 +134,7 @@ function PackListItem({
   onClick: () => void;
 }) {
   return (
-    <div 
+    <div role="button" tabIndex={0} 
       className={`p-3 rounded-lg border cursor-pointer transition-all ${
         isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted'
       }`}
@@ -172,7 +172,7 @@ function PackDetails({ pack }: { pack: ContextPack }) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-sm font-medium">Context Pack ID</label>
+        <div className="text-sm font-medium">Context Pack ID</div>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-sm font-mono text-muted-foreground break-all flex-1">{pack.contextPackId}</p>
           <Button size="icon" variant="ghost" title="Copy ID">
@@ -183,17 +183,17 @@ function PackDetails({ pack }: { pack: ContextPack }) {
       
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium">Version</label>
+          <div className="text-sm font-medium">Version</div>
           <p className="text-sm text-muted-foreground">{pack.version}</p>
         </div>
         <div>
-          <label className="text-sm font-medium">Created</label>
+          <div className="text-sm font-medium">Created</div>
           <p className="text-sm text-muted-foreground">{new Date(pack.createdAt).toLocaleString()}</p>
         </div>
       </div>
       
       <div>
-        <label className="text-sm font-medium">Correlation ID</label>
+        <div className="text-sm font-medium">Correlation ID</div>
         <p className="text-sm font-mono text-muted-foreground">{pack.correlationId}</p>
       </div>
       
@@ -201,29 +201,29 @@ function PackDetails({ pack }: { pack: ContextPack }) {
         <h4 className="font-medium mb-3">Inputs</h4>
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-muted-foreground">WIH ID</label>
+            <div className="text-sm text-muted-foreground">WIH ID</div>
             <p className="text-sm font-mono">{pack.inputs.wihId}</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-sm text-muted-foreground">DAG ID</label>
+              <div className="text-sm text-muted-foreground">DAG ID</div>
               <p className="text-sm">{pack.inputs.dagId}</p>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground">Node ID</label>
+              <div className="text-sm text-muted-foreground">Node ID</div>
               <p className="text-sm font-mono">{pack.inputs.nodeId}</p>
             </div>
           </div>
           
           {pack.inputs.wihContent && (
             <div>
-              <label className="text-sm text-muted-foreground">WIH Content</label>
+              <div className="text-sm text-muted-foreground">WIH Content</div>
               <p className="text-sm bg-muted p-2 rounded mt-1">{pack.inputs.wihContent}</p>
             </div>
           )}
           
           <div>
-            <label className="text-sm text-muted-foreground">Receipt References</label>
+            <div className="text-sm text-muted-foreground">Receipt References</div>
             <div className="flex flex-wrap gap-1 mt-1">
               {pack.inputs.receiptRefs?.map((ref) => (
                 <Badge key={ref} variant="outline" className="text-xs font-mono">{ref.slice(0, 12)}…</Badge>
@@ -233,21 +233,21 @@ function PackDetails({ pack }: { pack: ContextPack }) {
           
           {pack.inputs.policyBundleId && (
             <div>
-              <label className="text-sm text-muted-foreground">Policy Bundle</label>
+              <div className="text-sm text-muted-foreground">Policy Bundle</div>
               <p className="text-sm font-mono">{pack.inputs.policyBundleId}</p>
             </div>
           )}
           
           {pack.inputs.toolRegistryVersion && (
             <div>
-              <label className="text-sm text-muted-foreground">Tool Registry Version</label>
+              <div className="text-sm text-muted-foreground">Tool Registry Version</div>
               <p className="text-sm">{pack.inputs.toolRegistryVersion}</p>
             </div>
           )}
           
           {pack.inputs.leaseInfo && (
             <div>
-              <label className="text-sm text-muted-foreground">Lease Info</label>
+              <div className="text-sm text-muted-foreground">Lease Info</div>
               <div className="text-sm bg-muted p-2 rounded mt-1 space-y-1">
                 <p className="font-mono">{pack.inputs.leaseInfo.leaseId}</p>
                 <p className="text-xs text-muted-foreground">

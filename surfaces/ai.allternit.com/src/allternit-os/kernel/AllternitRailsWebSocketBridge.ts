@@ -11,11 +11,15 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('AllternitRailsWebSocketBridge');
+
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface RailsWebSocketConfig {
+interface RailsWebSocketConfig {
   /** WebSocket endpoint URL */
   url: string;
   /** Workspace ID */
@@ -28,7 +32,7 @@ export interface RailsWebSocketConfig {
   debug?: boolean;
 }
 
-export type RailsMessageType = 
+type RailsMessageType = 
   | 'dag.update'
   | 'dag.node.update'
   | 'bus.message'
@@ -42,13 +46,13 @@ export type RailsMessageType =
   | 'connected'
   | 'disconnected';
 
-export interface RailsMessage {
+interface RailsMessage {
   type: RailsMessageType;
   timestamp: string;
   payload: unknown;
 }
 
-export interface DagUpdatePayload {
+interface DagUpdatePayload {
   dag_id: string;
   nodes?: Record<string, {
     id: string;
@@ -58,7 +62,7 @@ export interface DagUpdatePayload {
   status?: 'planning' | 'active' | 'paused' | 'completed' | 'failed';
 }
 
-export interface BusMessagePayload {
+interface BusMessagePayload {
   id: number;
   correlation_id: string;
   to: string;
@@ -69,7 +73,7 @@ export interface BusMessagePayload {
   created_at: string;
 }
 
-export interface LedgerEventPayload {
+interface LedgerEventPayload {
   event_id: string;
   ts: string;
   type: string;
@@ -78,14 +82,14 @@ export interface LedgerEventPayload {
   payload: Record<string, unknown>;
 }
 
-export type RailsMessageHandler = (message: RailsMessage) => void;
-export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
+type RailsMessageHandler = (message: RailsMessage) => void;
+type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 // ============================================================================
 // WebSocket Bridge Class
 // ============================================================================
 
-export class AllternitRailsWebSocketBridge {
+class AllternitRailsWebSocketBridge {
   private ws: WebSocket | null = null;
   private config: Required<RailsWebSocketConfig>;
   private messageHandlers: Set<RailsMessageHandler> = new Set();
@@ -103,6 +107,20 @@ export class AllternitRailsWebSocketBridge {
       debug: false,
       ...config,
     };
+  }
+
+  updateConfig(config: Partial<RailsWebSocketConfig>): void {
+    const oldUrl = this.config.url;
+    const oldWorkspaceId = this.config.workspaceId;
+    
+    this.config = { ...this.config, ...config };
+    
+    // If connection parameters changed, reconnect
+    if (this.config.url !== oldUrl || this.config.workspaceId !== oldWorkspaceId) {
+      this.log('Configuration changed, reconnecting...');
+      this.disconnect();
+      this.connect();
+    }
   }
 
   private log(...args: unknown[]): void {
@@ -249,7 +267,7 @@ export class AllternitRailsWebSocketBridge {
       try {
         handler(message);
       } catch (err) {
-        console.error('[RailsWebSocket] Handler error:', err);
+        logger.error({ err: err }, 'Handler error');
       }
     });
   }
@@ -399,13 +417,14 @@ export function useRailsWebSocket(options: UseRailsWebSocketOptions): UseRailsWe
     return unsubscribe;
   }, [onMessage]);
 
-  // Auto-connect
+  // Auto-connect and update config
   useEffect(() => {
+    bridgeRef.current.updateConfig({ url, workspaceId, debug });
     if (autoConnect) {
       bridgeRef.current.connect();
     }
     return () => bridgeRef.current.disconnect();
-  }, [autoConnect, url, workspaceId]);
+  }, [autoConnect, url, workspaceId, debug]);
 
   const connect = useCallback(() => bridgeRef.current.connect(), []);
   const disconnect = useCallback(() => bridgeRef.current.disconnect(), []);
@@ -430,7 +449,7 @@ export function useRailsWebSocket(options: UseRailsWebSocketOptions): UseRailsWe
 // Singleton Export
 // ============================================================================
 
-export const railsWebSocketBridge = new AllternitRailsWebSocketBridge({
+const railsWebSocketBridge = new AllternitRailsWebSocketBridge({
   url: 'ws://127.0.0.1:3021/ws',
   workspaceId: 'default',
 });

@@ -3,12 +3,11 @@ import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { GlassCard } from '../../design/glass/GlassCard';
 import {
   Circle,
-  Pulse as Activity,
   Clock,
   Robot,
 } from '@phosphor-icons/react';
 
-export function OrchestrationView(): JSX.Element {
+export function OrchestrationView(): React.ReactNode {
   const { 
     agents,
     wihs,
@@ -56,7 +55,7 @@ export function OrchestrationView(): JSX.Element {
         </div>
       ) : (
         agents.map(agent => (
-          <div 
+          <div role="button" tabIndex={0} 
             key={agent.agentId}
             onClick={() => agent.currentWihId && handleAgentClick(agent.currentWihId)}
             style={{ cursor: agent.currentWihId ? 'pointer' : 'default' }}

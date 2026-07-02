@@ -18,12 +18,16 @@
  * @module CoworkSessionStore
  */
 
-import { 
+import {
   createModeSessionStore, 
   type ModeSession, 
   type CreateModeSessionOptions,
   type SendMessageOptions,
 } from '@/lib/agents/mode-session-store';
+
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('CoworkSessionStore');
 
 export type { 
   ModeSession as CoworkSession, 
@@ -41,26 +45,26 @@ export const useCoworkSessionStore = createModeSessionStore({
 // Derived selectors
 // ---------------------------------------------------------------------------
 
-export function useCoworkSessions() {
+function useCoworkSessions() {
   return useCoworkSessionStore((state) => state.sessions ?? []);
 }
 
-export function useActiveCoworkSession() {
+function useActiveCoworkSession() {
   return useCoworkSessionStore((state) => {
     if (!state.activeSessionId) return null;
     return (state.sessions ?? []).find((s) => s.id === state.activeSessionId) || null;
   });
 }
 
-export function useActiveCoworkSessionId() {
+function useActiveCoworkSessionId() {
   return useCoworkSessionStore((state) => state.activeSessionId);
 }
 
-export function useIsCoworkSessionLoading() {
+function useIsCoworkSessionLoading() {
   return useCoworkSessionStore((state) => state.isLoading);
 }
 
-export function useCoworkSessionError() {
+function useCoworkSessionError() {
   return useCoworkSessionStore((state) => state.error);
 }
 
@@ -68,7 +72,7 @@ export function useCoworkSessionError() {
 // Helper: Get agent sessions only
 // ---------------------------------------------------------------------------
 
-export function useAgentCoworkSessions() {
+function useAgentCoworkSessions() {
   return useCoworkSessionStore((state) => 
     state.sessions.filter((s) => s.metadata.sessionMode === 'agent')
   );
@@ -78,7 +82,7 @@ export function useAgentCoworkSessions() {
 // Helper: Get sessions by task
 // ---------------------------------------------------------------------------
 
-export function useCoworkSessionsByTask(taskId: string | null) {
+function useCoworkSessionsByTask(taskId: string | null) {
   return useCoworkSessionStore((state) => {
     if (!taskId) return state.sessions;
     return state.sessions.filter((s) => s.metadata.taskId === taskId);
@@ -89,7 +93,7 @@ export function useCoworkSessionsByTask(taskId: string | null) {
 // Actions
 // ---------------------------------------------------------------------------
 
-export function useCoworkSessionActions() {
+function useCoworkSessionActions() {
   return useCoworkSessionStore((state) => ({
     createSession: state.createSession,
     deleteSession: state.deleteSession,
@@ -120,7 +124,7 @@ export async function createCoworkSession(options?: CreateModeSessionOptions): P
       status: 'active',
       mode: options?.sessionMode === 'agent' ? 'agent' : 'regular',
     }),
-  }).catch(() => {});
+  }).catch((err) => { logger.error({ err: err }, 'Failed to persist session to server'); });
 
   // Inject memory context — use semantic search when we have a task name, else formatted context list
   const taskName = options?.name;
@@ -145,7 +149,7 @@ export async function createCoworkSession(options?: CreateModeSessionOptions): P
         metadata: { ...existing, originSurface: 'cowork', memoryContext },
       });
     })
-    .catch(() => {});
+    .catch((err) => { logger.error({ err: err }, 'Failed to fetch memory context'); });
 
   return sessionId;
 }

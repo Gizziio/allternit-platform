@@ -10,7 +10,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
-import { GATEWAY_URL } from '../../integration/api-client';
 
 export interface Task {
   id: string;
@@ -48,6 +47,7 @@ export interface TaskProject {
   title: string;
   createdAt: string;
   updatedAt: string;
+  instructions?: string;
 }
 
 interface PendingMutation {
@@ -86,6 +86,7 @@ interface TaskState {
   createProject: (title: string) => TaskProject;
   deleteProject: (id: string) => void;
   renameProject: (id: string, title: string) => void;
+  updateProjectInstructions: (id: string, instructions: string) => void;
   moveTaskToProject: (taskId: string, projectId: string | null) => void;
   setActiveTask: (id: string | null) => void;
   setActiveProject: (id: string | null) => void;
@@ -115,6 +116,7 @@ interface TaskState {
   // Audit
   addAuditLogEntry: (taskId: string, action: string, details?: string) => void;
   getTaskAuditLog: (taskId: string) => Array<{ id: string; action: string; actor: string; timestamp: string; details?: string }>;
+  fetchTasks: () => Promise<void>;
 }
 
 function mapStoreStatusToApiStatus(status: Task['status']): string {
@@ -133,7 +135,9 @@ async function syncTaskToApi(
   body?: Record<string, unknown>
 ): Promise<void> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const token = typeof window !== 'undefined' ? localStorage.getItem('allternit_api_token') : null;
+  const token = typeof window !== 'undefined' 
+    ? (localStorage.getItem('allternit_token') || localStorage.getItem('allternit_api_token')) 
+    : null;
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -200,7 +204,6 @@ export const useTaskStore = create<TaskState>()(
       },
 
       deleteTask: (id) => {
-        const previousTasks = get().tasks;
         set((state) => ({
           tasks: state.tasks.filter((t) => t.id !== id),
           activeTaskId: state.activeTaskId === id ? null : state.activeTaskId,
@@ -211,15 +214,17 @@ export const useTaskStore = create<TaskState>()(
         }));
 
         if (get().apiEnabled) {
-          syncTaskToApi(`/api/v1/tasks/${id}`, 'DELETE').catch(() => {
-            set({ tasks: previousTasks });
-          }).finally(() => {
-            set((state) => ({
-              pendingMutations: state.pendingMutations.filter(
-                (m) => !(m.type === 'delete' && m.id === id)
-              ),
-            }));
-          });
+          syncTaskToApi(`/api/v1/tasks/${id}`, 'DELETE')
+            .catch(() => {
+              // Deletion is permanent locally; backend sync failure is non-blocking
+            })
+            .finally(() => {
+              set((state) => ({
+                pendingMutations: state.pendingMutations.filter(
+                  (m) => !(m.type === 'delete' && m.id === id)
+                ),
+              }));
+            });
         }
       },
 
@@ -308,6 +313,14 @@ export const useTaskStore = create<TaskState>()(
         }));
       },
 
+      updateProjectInstructions: (id, instructions) => {
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id ? { ...p, instructions, updatedAt: new Date().toISOString() } : p
+          ),
+        }));
+      },
+
       moveTaskToProject: (taskId, projectId) => {
         set((state) => ({
           tasks: state.tasks.map((t) =>
@@ -329,25 +342,71 @@ export const useTaskStore = create<TaskState>()(
           ),
         })),
 
-      assignTask: (taskId, assigneeType, assigneeId, assigneeName) =>
+      assignTask: (taskId, assigneeType, assigneeId, assigneeName) => {
+        const previousTasks = get().tasks;
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t.id === taskId
               ? { ...t, assigneeType, assigneeId, assigneeName, updatedAt: new Date().toISOString() }
               : t
           ),
-        })),
+          pendingMutations: [
+            ...state.pendingMutations,
+            { type: 'update', id: taskId, timestamp: Date.now() },
+          ],
+        }));
 
-      unassignTask: (taskId) =>
+        if (get().apiEnabled) {
+          syncTaskToApi(`/api/v1/tasks/${taskId}/assign`, 'POST', {
+            assignee_type: assigneeType,
+            assignee_id: assigneeId,
+            assignee_name: assigneeName,
+          }).catch(() => {
+            set({ tasks: previousTasks });
+          }).finally(() => {
+            set((state) => ({
+              pendingMutations: state.pendingMutations.filter(
+                (m) => !(m.type === 'update' && m.id === taskId)
+              ),
+            }));
+          });
+        }
+      },
+
+      unassignTask: (taskId) => {
+        const previousTasks = get().tasks;
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t.id === taskId
               ? { ...t, assigneeType: undefined, assigneeId: undefined, assigneeName: undefined, updatedAt: new Date().toISOString() }
               : t
           ),
-        })),
+          pendingMutations: [
+            ...state.pendingMutations,
+            { type: 'update', id: taskId, timestamp: Date.now() },
+          ],
+        }));
 
-      addComment: (taskId, author, body) =>
+        if (get().apiEnabled) {
+          syncTaskToApi(`/api/v1/tasks/${taskId}/assign`, 'POST', {
+            assignee_type: null,
+            assignee_id: null,
+            assignee_name: null,
+          }).catch(() => {
+            set({ tasks: previousTasks });
+          }).finally(() => {
+            set((state) => ({
+              pendingMutations: state.pendingMutations.filter(
+                (m) => !(m.type === 'update' && m.id === taskId)
+              ),
+            }));
+          });
+        }
+      },
+
+      addComment: (taskId, author, body) => {
+        const previousTasks = get().tasks;
+        const commentId = `comment-${Date.now()}`;
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t.id === taskId
@@ -355,13 +414,32 @@ export const useTaskStore = create<TaskState>()(
                   ...t,
                   comments: [
                     ...(t.comments || []),
-                    { id: `comment-${Date.now()}`, author, body, createdAt: new Date().toISOString() },
+                    { id: commentId, author, body, createdAt: new Date().toISOString() },
                   ],
                   updatedAt: new Date().toISOString(),
                 }
               : t
           ),
-        })),
+          pendingMutations: [
+            ...state.pendingMutations,
+            { type: 'update', id: taskId, timestamp: Date.now() },
+          ],
+        }));
+
+        if (get().apiEnabled) {
+          syncTaskToApi(`/api/v1/tasks/${taskId}/comments`, 'POST', {
+            body,
+          }).catch(() => {
+            set({ tasks: previousTasks });
+          }).finally(() => {
+            set((state) => ({
+              pendingMutations: state.pendingMutations.filter(
+                (m) => !(m.type === 'update' && m.id === taskId)
+              ),
+            }));
+          });
+        }
+      },
 
       setTaskWorkspaceId: (taskId, workspaceId) =>
         set((state) => ({
@@ -458,6 +536,50 @@ export const useTaskStore = create<TaskState>()(
 
       getTaskAuditLog: (taskId) =>
         get().auditLogs.filter((log) => log.taskId === taskId),
+
+      fetchTasks: async () => {
+        if (!get().apiEnabled) return;
+        try {
+          const headers: Record<string, string> = { 'Accept': 'application/json' };
+          const token = typeof window !== 'undefined' 
+            ? (localStorage.getItem('allternit_token') || localStorage.getItem('allternit_api_token')) 
+            : null;
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          const res = await fetch('/api/v1/tasks', { headers });
+          if (res.ok) {
+            const data = await res.json() as { tasks: any[] };
+            if (data && Array.isArray(data.tasks)) {
+              const mappedTasks: Task[] = data.tasks.map((apiTask: any) => {
+                let parsedMeta: any = {};
+                try {
+                  if (apiTask.metadata) {
+                    parsedMeta = JSON.parse(apiTask.metadata);
+                  }
+                } catch {}
+                
+                return {
+                  id: apiTask.id,
+                  title: apiTask.title,
+                  mode: parsedMeta.mode || 'task',
+                  projectId: apiTask.workspace_id === 'default' ? undefined : apiTask.workspace_id,
+                  status: apiTask.status === 'done' ? 'completed' : apiTask.status === 'in-progress' ? 'in_progress' : 'pending',
+                  createdAt: apiTask.created_at,
+                  updatedAt: apiTask.updated_at,
+                  description: apiTask.description || undefined,
+                  assigneeId: apiTask.assignee_id || undefined,
+                  deadline: apiTask.due_date || undefined,
+                  tags: apiTask.tags ? apiTask.tags.split(',') : undefined,
+                };
+              });
+              set({ tasks: mappedTasks });
+            }
+          }
+        } catch (err) {
+          console.error('[TaskStore] Failed to fetch tasks:', err);
+        }
+      },
     }),
     {
       name: 'allternit-task-storage',

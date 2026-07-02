@@ -5,9 +5,9 @@ import { useCoworkStore } from './CoworkStore';
 
 const riskIcon = (risk: 'low' | 'medium' | 'high') => {
   switch (risk) {
-    case 'high': return <Warning size={14} color="#ef4444" weight="fill" />;
-    case 'medium': return <Warning size={14} color="#f59e0b" weight="fill" />;
-    default: return <CheckCircle size={14} color="#22c55e" weight="fill" />;
+    case 'high': return <Warning size={14} color="var(--status-error)" weight="fill" />;
+    case 'medium': return <Warning size={14} color="var(--status-warning)" weight="fill" />;
+    default: return <CheckCircle size={14} color="var(--status-success)" weight="fill" />;
   }
 };
 
@@ -37,7 +37,7 @@ export const IntelliSchedulePanel: React.FC = () => {
     <GlassSurface style={{ padding: '20px', marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Lightning size={18} color="#06b6d4" weight="fill" />
+          <Lightning size={18} color="var(--status-info)" weight="fill" />
           <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
             Optimized Schedule
           </span>
@@ -46,7 +46,7 @@ export const IntelliSchedulePanel: React.FC = () => {
               fontSize: '12px',
               padding: '2px 8px',
               borderRadius: '20px',
-              backgroundColor: '#06b6d420',
+              backgroundColor: 'color-mix(in srgb, var(--status-info) 12%, transparent)',
               color: 'var(--status-info)',
               fontWeight: 600,
             }}>
@@ -54,7 +54,7 @@ export const IntelliSchedulePanel: React.FC = () => {
             </span>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={optimizeSchedule}
           style={{
             display: 'inline-flex',
@@ -62,7 +62,7 @@ export const IntelliSchedulePanel: React.FC = () => {
             gap: '6px',
             padding: '6px 12px',
             borderRadius: '6px',
-            border: '1px solid #06b6d440',
+            border: '1px solid color-mix(in srgb, var(--status-info) 25%, transparent)',
             backgroundColor: 'transparent',
             color: 'var(--status-info)',
             fontSize: '12px',

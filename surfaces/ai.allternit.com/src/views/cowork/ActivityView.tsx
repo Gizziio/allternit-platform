@@ -150,7 +150,7 @@ const ActivityView: React.FC = () => {
       {/* Filter Chips */}
       <div className="flex gap-2 flex-wrap">
         {filterOptions.map((option) => (
-          <button
+          <button type="button"
             key={option.value}
             onClick={() => setFilter(option.value)}
             className="px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
