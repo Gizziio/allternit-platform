@@ -72,7 +72,36 @@ pub struct ModelConfig {
     pub provider: String,   // e.g. "anthropic", "openai", "google", "local"
     pub model_name: String, // e.g. "claude-3-opus", "gpt-4o"
     pub temperature: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_tokens: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_iterations: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, utoipa::ToSchema)]
+pub struct RoleCard {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub domain: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub definition_of_done: Option<String>,
+    #[serde(default)]
+    pub hard_bans: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub escalation: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metrics: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, utoipa::ToSchema)]
+pub struct VoiceConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style: Option<String>,
+    #[serde(default)]
+    pub rules: Vec<String>,
+    #[serde(default)]
+    pub micro_bans: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tone: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -84,9 +113,16 @@ pub struct CharacterLayer {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub personality: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub role_card: Option<String>,   // freeform role card text
+    pub specialty_skills: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub backstory: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role_card: Option<RoleCard>,
     #[serde(default)]
     pub hard_bans: Vec<String>,      // categories the agent must never touch
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice: Option<VoiceConfig>,
+    // Legacy free-form fields kept for backwards compatibility
     #[serde(skip_serializing_if = "Option::is_none")]
     pub voice_rules: Option<String>,
 }
