@@ -39,10 +39,10 @@ jobs:
           node-version: '20'
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm@10.28.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.91.0
         with:
           targets: x86_64-apple-darwin,aarch64-apple-darwin
 
@@ -180,10 +180,10 @@ jobs:
           node-version: '20'
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm@10.28.0
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.91.0
         with:
           targets: x86_64-pc-windows-msvc
 

@@ -25,9 +25,10 @@ jobs:
           node-version: '20'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 10.28.0
+          run_install: false
 
       - name: Install dependencies
         working-directory: surfaces/allternit-extensions/allternit-office-addin
