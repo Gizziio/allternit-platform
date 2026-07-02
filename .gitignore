@@ -23,6 +23,7 @@ release/
 .claude/
 .gemini/
 .allternit/
+.gizzi/
 _tmp_*/
 _archive/
 coverage/
