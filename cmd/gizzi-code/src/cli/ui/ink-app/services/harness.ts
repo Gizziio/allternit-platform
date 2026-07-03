@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { AllternitHarness } from '@allternit/sdk/harness'
 import type { HarnessConfig } from '@allternit/sdk'
 import { Config } from '@/runtime/context/config/config'
@@ -8,14 +7,15 @@ import {
   setHarnessConfig as setGlobalHarnessConfig,
   type HarnessConfig as MigrationHarnessConfig,
 } from '../utils/migration'
+import { getSessionIngressAuthHeaders } from '../utils/sessionIngressAuth'
 
 export type { HarnessConfig }
 
 /**
  * Normalize the legacy/global harness config stored by migration.ts into the
- * canonical SDK harness shape. Migration stores BYOK keys as nested provider
- * objects (anthropic: { apiKey }) which matches the SDK shape, but it also
- * supports a legacy 'mode' value of 'legacy' that the SDK does not accept.
+ * canonical SDK harness shape. The migration store uses a legacy BYOK layout
+ * (byok.anthropic.apiKey) while the SDK uses byok.keys.{provider} and
+ * byok.baseURLs.{provider}. Legacy 'mode' values of 'legacy' are rejected.
  */
 function normalizeMigrationConfig(
   config: MigrationHarnessConfig | undefined,
@@ -27,21 +27,23 @@ function normalizeMigrationConfig(
   const normalized: HarnessConfig = { mode: config.mode }
 
   if (config.mode === 'byok' && config.byok) {
-    normalized.byok = {}
-    if (config.byok.anthropic?.apiKey) {
-      normalized.byok.anthropic = {
-        apiKey: config.byok.anthropic.apiKey,
+    normalized.byok = { keys: {}, baseURLs: {} }
+    for (const provider of ['anthropic', 'openai', 'google'] as const) {
+      const entry = config.byok[provider]
+      if (entry?.apiKey) {
+        normalized.byok.keys[provider] = entry.apiKey
+      }
+      const baseURL = (entry as { baseURL?: string } | undefined)?.baseURL
+      if (baseURL) {
+        normalized.byok.baseURLs = normalized.byok.baseURLs ?? {}
+        normalized.byok.baseURLs[provider] = baseURL
       }
     }
-    if (config.byok.openai?.apiKey) {
-      normalized.byok.openai = {
-        apiKey: config.byok.openai.apiKey,
-      }
+    if (Object.keys(normalized.byok.keys).length === 0) {
+      delete normalized.byok.keys
     }
-    if (config.byok.google?.apiKey) {
-      normalized.byok.google = {
-        apiKey: config.byok.google.apiKey,
-      }
+    if (!normalized.byok.baseURLs || Object.keys(normalized.byok.baseURLs).length === 0) {
+      delete normalized.byok.baseURLs
     }
   }
 
@@ -76,19 +78,14 @@ function denormalizeToMigrationConfig(
 
   if (config.mode === 'byok' && config.byok) {
     migration.byok = {}
-    if (config.byok.anthropic) {
-      migration.byok.anthropic = {
-        apiKey: config.byok.anthropic.apiKey,
-      }
-    }
-    if (config.byok.openai) {
-      migration.byok.openai = {
-        apiKey: config.byok.openai.apiKey,
-      }
-    }
-    if (config.byok.google) {
-      migration.byok.google = {
-        apiKey: config.byok.google.apiKey,
+    for (const provider of ['anthropic', 'openai', 'google'] as const) {
+      const apiKey = config.byok.keys?.[provider]
+      const baseURL = config.byok.baseURLs?.[provider]
+      if (apiKey || baseURL) {
+        migration.byok[provider] = {
+          ...(apiKey && { apiKey }),
+          ...(baseURL && { baseURL }),
+        }
       }
     }
   }
@@ -114,17 +111,88 @@ function denormalizeToMigrationConfig(
   return migration
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function looksLikePlatformAgentId(value: string): boolean {
+  return UUID_RE.test(value)
+}
+
+function getAllternitApiBase(): string {
+  return (
+    process.env.ALLTERNIT_API_URL ||
+    process.env.ALLTERNIT_BASE_URL ||
+    'http://127.0.0.1:8013'
+  ).replace(/\/$/, '')
+}
+
+/**
+ * Load a per-agent harness config from the Allternit platform API/registry.
+ * Platform agents are identified by UUID agent ids. The runtime uses the
+ * session-ingress auth token (or ALLTERNIT_API_TOKEN) to call the platform.
+ */
+export async function getPlatformHarnessConfig(
+  agentId: string,
+): Promise<HarnessConfig | undefined> {
+  if (!looksLikePlatformAgentId(agentId)) {
+    return undefined
+  }
+
+  const baseUrl = getAllternitApiBase()
+  const url = `${baseUrl}/api/v1/agents/${encodeURIComponent(agentId)}`
+  const authHeaders = getSessionIngressAuthHeaders()
+  const token =
+    process.env.ALLTERNIT_API_TOKEN || authHeaders.Authorization?.split(' ')[1]
+
+  if (!token) {
+    return undefined
+  }
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  }).catch(() => undefined)
+
+  if (!response || !response.ok) {
+    return undefined
+  }
+
+  const data = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >
+  const agent = (data.agent ?? data) as Record<string, unknown>
+  const harness = agent.harness_config ?? agent.harness
+  if (!harness || typeof harness !== 'object') {
+    return undefined
+  }
+
+  return validateHarnessConfig(harness)
+}
+
 /**
  * Resolve the effective harness configuration for an agent.
  *
  * Order of precedence (highest to lowest):
- * 1. Per-agent harness in gizzi runtime config (agent.<name>.harness)
- * 2. Global harness config from the CLI UI migration store
- * 3. undefined when no harness is configured
+ * 1. Platform API/registry harness when agentId is a platform UUID
+ * 2. Per-agent harness in gizzi runtime config (agent.<name>.harness)
+ * 3. Global harness config from the CLI UI migration store
+ * 4. undefined when no harness is configured
  */
 export async function getAgentHarnessConfig(
   agentName?: string,
 ): Promise<HarnessConfig | undefined> {
+  if (agentName && looksLikePlatformAgentId(agentName)) {
+    const platformConfig = await getPlatformHarnessConfig(agentName).catch(
+      () => undefined,
+    )
+    if (platformConfig) {
+      return platformConfig
+    }
+  }
+
   const [globalMigrationConfig, agentInfo] = await Promise.all([
     getGlobalHarnessConfig().catch(() => undefined),
     agentName ? Agent.get(agentName).catch(() => undefined) : undefined,

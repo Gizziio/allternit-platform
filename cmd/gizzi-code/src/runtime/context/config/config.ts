@@ -767,22 +767,18 @@ export namespace Config {
           mode: z.enum(["byok", "cloud", "local", "subprocess"]),
           byok: z
             .object({
-              anthropic: z
+              keys: z
                 .object({
-                  apiKey: z.string(),
-                  baseURL: z.string().optional(),
+                  anthropic: z.string().optional(),
+                  openai: z.string().optional(),
+                  google: z.string().optional(),
                 })
                 .optional(),
-              openai: z
+              baseURLs: z
                 .object({
-                  apiKey: z.string(),
-                  baseURL: z.string().optional(),
-                })
-                .optional(),
-              google: z
-                .object({
-                  apiKey: z.string(),
-                  baseURL: z.string().optional(),
+                  anthropic: z.string().optional(),
+                  openai: z.string().optional(),
+                  google: z.string().optional(),
                 })
                 .optional(),
             })

@@ -25,23 +25,11 @@ const HarnessConfigSchema = z.object({
   mode: z.enum(["byok", "cloud", "local", "subprocess"]),
   byok: z
     .object({
-      anthropic: z
-        .object({
-          apiKey: z.string(),
-          baseURL: z.string().optional(),
-        })
+      keys: z
+        .record(z.enum(["anthropic", "openai", "google"]), z.string())
         .optional(),
-      openai: z
-        .object({
-          apiKey: z.string(),
-          baseURL: z.string().optional(),
-        })
-        .optional(),
-      google: z
-        .object({
-          apiKey: z.string(),
-          baseURL: z.string().optional(),
-        })
+      baseURLs: z
+        .record(z.enum(["anthropic", "openai", "google"]), z.string())
         .optional(),
     })
     .optional(),
