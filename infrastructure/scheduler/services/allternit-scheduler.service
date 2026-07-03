@@ -1,0 +1,22 @@
+[Unit]
+Description=Allternit Cloud Scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=allternit
+Group=allternit
+WorkingDirectory=/var/lib/allternit
+EnvironmentFile=/etc/allternit-scheduler/env
+ExecStart=/usr/local/bin/allternit-scheduler
+Restart=always
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/allternit
+
+[Install]
+WantedBy=multi-user.target

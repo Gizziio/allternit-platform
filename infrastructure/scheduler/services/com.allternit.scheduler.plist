@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.allternit.scheduler</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/allternit-scheduler</string>
+        <string>--database-url</string>
+        <string>sqlite:///Users/REPLACE_ME/.allternit/allternit-cloud.db</string>
+        <string>--api-url</string>
+        <string>http://127.0.0.1:3001</string>
+        <string>--execution-mode</string>
+        <string>api</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>ALLTERNIT_SCHEDULER_API_KEY</key>
+        <string>REPLACE_ME</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/REPLACE_ME/Library/Logs/allternit-scheduler.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/REPLACE_ME/Library/Logs/allternit-scheduler.log</string>
+</dict>
+</plist>

@@ -85,6 +85,17 @@ CREATE TABLE schedules (
 );
 ```
 
+### Cloud scheduler deployment
+
+Because the cloud scheduler is a server-side daemon, it must be installed as an always-on service. This is opt-in and explicit:
+
+- Build: `cargo build --release -p allternit-scheduler`.
+- Install: `infrastructure/scheduler/services/install-scheduler.sh` asks for permission before creating a `systemd` (Linux) or `launchd` (macOS) service.
+- Service definitions: `infrastructure/scheduler/services/allternit-scheduler.service` and `com.allternit.scheduler.plist`.
+- Full guide: `docs/cloud-scheduler-setup.md`.
+
+The installer does **not** silently enable cloud scheduling. The user must explicitly agree, and must provide the database URL and operator API key before the service starts.
+
 ### Local scheduler
 
 - **Crate**: `cmd/gizzi-code/src/runtime/automation/cron/`.
