@@ -63,7 +63,7 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     let raw_model = body_json.get("runtimeModelId")
         .or_else(|| body_json.get("modelId"))
         .and_then(|v| v.as_str())
-        .unwrap_or("claude-cli/claude-sonnet-4-6")
+        .unwrap_or("kimi-for-coding/kimi-k2")
         .to_string();
 
     let (provider_id, model_id) = if let Some((p, m)) = raw_model.split_once('/') {

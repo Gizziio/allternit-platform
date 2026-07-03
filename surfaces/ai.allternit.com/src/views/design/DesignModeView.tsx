@@ -379,35 +379,28 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
-  // Inline state adjustment for initialTab change
-  const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
-  if (initialTab !== prevInitialTab) {
-    setPrevInitialTab(initialTab);
-    if (initialTab) {
-      setActiveTab(initialTab);
-      setShowWizard(false);
-      setShowCutscene(false);
-      setActiveProject((current) => current ?? buildDirectProject(initialTab));
-    }
-  }
+  // Sync state when initialTab prop changes.
+  useEffect(() => {
+    if (!initialTab) return;
+    setActiveTab(initialTab);
+    setShowWizard(false);
+    setShowCutscene(false);
+    setActiveProject((current) => current ?? buildDirectProject(initialTab));
+  }, [initialTab]);
 
-  // Inline state adjustment for backendMessages change
-  const [prevBackendMessages, setPrevBackendMessages] = useState(backendMessages);
-  if (backendMessages !== prevBackendMessages) {
-    setPrevBackendMessages(backendMessages);
-    if (backendMessages.length > 0) {
-      const lastAsstMsg = [...backendMessages].reverse().find(m => m.role === 'assistant');
-      if (lastAsstMsg) {
-        const content = lastAsstMsg.content || '';
-        // Extract design system markdown: look for # Brand or # Design System sections
-        const mdMatch = content.match(/#\s*(?:Brand|Design System|Tokens)[\s\S]*?(?=\n#\s|\n<artifact|<\/?artifact|\z)/i);
-        if (mdMatch) setDesignMd(mdMatch[0].trim());
-        // Extract UI stream: look for v:card, v:metric, or similar stream syntax
-        const uiMatch = content.match(/(?:\?\[v:|\[v:)[\s\S]*/);
-        if (uiMatch) setUiStream(uiMatch[0].trim());
-      }
-    }
-  }
+  // Extract design system markdown / UI stream when backend messages change.
+  useEffect(() => {
+    if (backendMessages.length === 0) return;
+    const lastAsstMsg = [...backendMessages].reverse().find(m => m.role === 'assistant');
+    if (!lastAsstMsg) return;
+    const content = lastAsstMsg.content || '';
+    // Extract design system markdown: look for # Brand or # Design System sections
+    const mdMatch = content.match(/#\s*(?:Brand|Design System|Tokens)[\s\S]*?(?=\n#\s|\n<artifact|<\/?artifact|\z)/i);
+    if (mdMatch) setDesignMd(mdMatch[0].trim());
+    // Extract UI stream: look for v:card, v:metric, or similar stream syntax
+    const uiMatch = content.match(/(?:\?\[v:|\[v:)[\s\S]*/);
+    if (uiMatch) setUiStream(uiMatch[0].trim());
+  }, [backendMessages]);
 
   // Bridge: DesignRailPanel → DesignModeView project creation
   useEffect(() => {
