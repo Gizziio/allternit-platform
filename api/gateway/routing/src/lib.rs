@@ -1410,10 +1410,37 @@ mod tests {
     fn repo_root() -> PathBuf {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
         std::env::set_var("ALLTERNIT_REPO_ROOT", &root);
-        std::env::set_var(
-            "ALLTERNIT_WORKER_REGISTRY_PATH",
-            root.join("workers").join("worker_registry.json"),
-        );
+
+        // Build a temporary worker registry for tests so subprocess tests are
+        // deterministic and do not depend on the host repo's registry file.
+        let workers_dir = std::env::temp_dir().join(format!("allternit_test_workers_{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&workers_dir).unwrap();
+        let registry_path = workers_dir.join("worker_registry.json");
+        let registry = WorkerRegistry {
+            version: "v0.1.0".to_string(),
+            workers: vec![WorkerDefinition {
+                worker_id: "git.diff".to_string(),
+                description: "Test worker that always succeeds".to_string(),
+                command: "/bin/echo".to_string(),
+                args_template: vec!["ok".to_string()],
+                cwd_policy: "repo_root".to_string(),
+                env_allowlist: vec![],
+                fs_policy: WorkerFsPolicy {
+                    must_be_run_scoped: true,
+                    allowed_output_roots: vec!["/.allternit/artifacts/{{run_id}}".to_string()],
+                },
+                timeouts: WorkerTimeouts {
+                    wall_ms: 5000,
+                    cpu_ms: None,
+                },
+                output_limits: WorkerOutputLimits {
+                    max_stdout_bytes: 1024,
+                    max_stderr_bytes: 1024,
+                },
+            }],
+        };
+        std::fs::write(&registry_path, serde_json::to_string_pretty(&registry).unwrap()).unwrap();
+        std::env::set_var("ALLTERNIT_WORKER_REGISTRY_PATH", &registry_path);
         root
     }
 
