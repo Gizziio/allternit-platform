@@ -99,6 +99,10 @@ async fn main() {
     info!("Allternit API Server starting...");
     info!("Version: 0.1.0");
 
+    // Load unified configuration once and make it globally available.
+    let app_config = allternit_api::init_app_config();
+    info!("Configuration loaded");
+
     // Data directory for local state
     let data_dir = dirs::data_dir()
         .map(|d| d.join("allternit"))
@@ -112,12 +116,12 @@ async fn main() {
     info!("Database ready at {}", db_path.display());
 
     // Initialize unified auth configuration and JWKS manager for Clerk JWT verification
-    let auth_config = allternit_api::auth::AuthConfig::from_env();
+    let auth_config = allternit_api::auth::AuthConfig::from_app_config(app_config);
     let jwks = allternit_api::auth::JwksManager::new(&auth_config);
     info!("JWKS manager initialized");
 
     // Webhook secret for Clerk webhook verification
-    let webhook_secret = std::env::var("CLERK_WEBHOOK_SECRET").ok();
+    let webhook_secret = app_config.clerk_webhook_secret();
 
     // Initialize VM driver (platform-specific)
     let vm_driver = initialize_vm_driver().await;
@@ -128,7 +132,7 @@ async fn main() {
         .expect("Failed to initialize Rails service state");
 
     // Initialize cowork scheduler (optional — no-op if DB path is unset)
-    let cowork_scheduler = initialize_cowork_scheduler(&data_dir).await;
+    let cowork_scheduler = initialize_cowork_scheduler(&data_dir, app_config.api_port()).await;
     let scheduler_state = cowork_scheduler.clone().map(|s| {
         Arc::new(SchedulerApiState { scheduler: s })
     });
@@ -149,6 +153,7 @@ async fn main() {
 
     // Create application state
     let state = Arc::new(AppState {
+        config: app_config.clone(),
         db,
         jwks,
         auth_config,
@@ -281,11 +286,8 @@ async fn main() {
         allternit_api::metrics::metrics_middleware,
     ));
 
-    // Start server — port from ALLTERNIT_API_PORT env var, default 8013
-    let port: u16 = std::env::var("ALLTERNIT_API_PORT")
-        .ok()
-        .and_then(|p| p.parse().ok())
-        .unwrap_or(8013);
+    // Start server — port from config (env override supported), default 8013
+    let port = app_config.api_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
     info!("Server listening on {}", listener.local_addr().unwrap());
     info!("API Documentation:");
@@ -458,12 +460,12 @@ async fn load_persisted_cowork_runs(db: &allternit_api::db::DbHandle, manager: &
 }
 
 /// Initialize the cowork task scheduler backed by SQLite.
-async fn initialize_cowork_scheduler(data_dir: &std::path::Path) -> Option<Arc<RwLock<Scheduler>>> {
+async fn initialize_cowork_scheduler(
+    data_dir: &std::path::Path,
+    api_port: u16,
+) -> Option<Arc<RwLock<Scheduler>>> {
     let db_path = data_dir.join("cowork-schedules.db");
-    let api_url = format!(
-        "http://localhost:{}",
-        std::env::var("ALLTERNIT_API_PORT").unwrap_or_else(|_| "8013".to_string())
-    );
+    let api_url = format!("http://localhost:{}", api_port);
 
     match Scheduler::new(&db_path, api_url).await {
         Ok(scheduler) => {

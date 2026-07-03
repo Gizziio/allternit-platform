@@ -16,11 +16,12 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::AppState;
 use crate::auth::AuthUser;
+use crate::gizzi_completion;
 
 fn db_error(e: impl std::fmt::Display) -> impl IntoResponse {
     (
@@ -391,54 +392,14 @@ async fn generate_lesson(
     let tier = body.tier.clone().unwrap_or(tier);
     let prompt = build_lesson_prompt(&body.topic, &course_title, &course_desc, &tier);
 
-    // Call Anthropic API directly
-    let api_key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
-    if api_key.is_empty() {
-        warn!("ANTHROPIC_API_KEY not set — falling back to rule-based generation");
-        let fallback = generate_fallback_lesson(&body, &course_title);
-        return persist_generated_lesson(state, user.user_id, body, fallback).await;
-    }
-
-    let client = reqwest::Client::new();
-    let llm_response = client
-        .post("https://api.anthropic.com/v1/messages")
-        .header("x-api-key", api_key)
-        .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&json!({
-            "model": "claude-sonnet-4-5-20251101",
-            "max_tokens": 4096,
-            "system": "You are an expert curriculum designer for the Allternit A://Labs learning platform. You create structured lesson content with slides and quizzes. Output ONLY valid JSON matching the requested schema.",
-            "messages": [{"role": "user", "content": prompt}]
-        }))
-        .send()
-        .await;
-
-    let lesson = match llm_response {
-        Ok(resp) if resp.status().is_success() => {
-            let data: serde_json::Value = match resp.json().await {
-                Ok(v) => v,
-                Err(e) => {
-                    error!("Failed to parse LLM response: {}", e);
-                    let fallback = generate_fallback_lesson(&body, &course_title);
-                    return persist_generated_lesson(state, user.user_id, body, fallback).await;
-                }
-            };
-            let content = data["content"]
-                .as_array()
-                .and_then(|arr| arr.first())
-                .and_then(|c| c["text"].as_str())
-                .unwrap_or("");
-            parse_llm_lesson(content, &body, &course_title)
-        }
-        Ok(resp) => {
-            let status = resp.status();
-            let body_text = resp.text().await.unwrap_or_default();
-            error!("LLM API error: {} — {}", status, body_text);
-            generate_fallback_lesson(&body, &course_title)
-        }
-        Err(e) => {
-            error!("LLM request failed: {}", e);
+    // Route lesson generation through the Gizzi runtime instead of calling
+    // Anthropic directly. This ensures ALabs uses the same brain/provider
+    // configuration as the rest of the platform.
+    let system = "You are an expert curriculum designer for the Allternit A://Labs learning platform. You create structured lesson content with slides and quizzes. Output ONLY valid JSON matching the requested schema.";
+    let lesson = match gizzi_completion::complete(&prompt, Some(system), None).await {
+        Some(content) if !content.is_empty() => parse_llm_lesson(&content, &body, &course_title),
+        _ => {
+            warn!("Gizzi completion unavailable — falling back to rule-based generation");
             generate_fallback_lesson(&body, &course_title)
         }
     };

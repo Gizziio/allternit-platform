@@ -180,6 +180,12 @@ pub enum Domain {
     General,    // General purpose
 }
 
+impl Default for Domain {
+    fn default() -> Self {
+        Domain::General
+    }
+}
+
 impl Domain {
     /// Get domain expertise tags
     pub fn expertise_tags(&self) -> Vec<&'static str> {

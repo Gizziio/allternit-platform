@@ -17,7 +17,7 @@ tower-http = { version = "0.6", features = ["cors"] }
 tracing = "0.1"
 async-trait = "0.1"
 allternit-kernel-contracts = { workspace = true }
-marketplace = { path = "../../../../sdk/adapters/rust/marketplace" }
+marketplace = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite"] }
 
 [dev-dependencies]

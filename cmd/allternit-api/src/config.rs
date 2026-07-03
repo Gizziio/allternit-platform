@@ -1,0 +1,315 @@
+//! Unified configuration loader for the packaged Allternit Platform app.
+//!
+//! Configuration is layered so that company standards are baked in and users
+//! only ever touch brain/provider settings:
+//!
+//!   1. Company config (`resources/company.json` in the app bundle, or
+//!      `~/.allternit/company.json` for dev overrides).
+//!   2. User config (`~/.allternit/config.json`) — created by the onboarding
+//!      wizard and editable in settings.
+//!   3. Environment variables — power-user override, kept for CI/dev.
+//!
+//! Any value present in a higher layer wins.
+
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use tracing::{info, warn};
+
+/// Company-level configuration. These values are part of the packaged app and
+/// should not be edited by end users. They standardize auth, endpoints, and
+/// encryption across every host computer.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct CompanyConfig {
+    /// Clerk publishable key rendered by the frontend.
+    #[serde(rename = "clerkPublishableKey")]
+    pub clerk_publishable_key: Option<String>,
+
+    /// Clerk JWKS URL used by the API to verify JWT signatures.
+    #[serde(rename = "clerkJwksUrl")]
+    pub clerk_jwks_url: Option<String>,
+
+    /// Expected Clerk JWT issuer (`iss`).
+    #[serde(rename = "clerkIssuer")]
+    pub clerk_issuer: Option<String>,
+
+    /// Secret for verifying Clerk webhook signatures.
+    #[serde(rename = "clerkWebhookSecret")]
+    pub clerk_webhook_secret: Option<String>,
+
+    /// Default URL the frontend should use to reach the API.
+    #[serde(rename = "gatewayUrl")]
+    pub gateway_url: Option<String>,
+
+    /// Default URL the API should use to reach the Gizzi runtime.
+    #[serde(rename = "terminalServerUrl")]
+    pub terminal_server_url: Option<String>,
+
+    /// Default encryption key for local-at-rest data.
+    #[serde(rename = "encryptionKey")]
+    pub encryption_key: Option<String>,
+
+    /// Company branding / tenant marker.
+    #[serde(rename = "tenantId")]
+    pub tenant_id: Option<String>,
+}
+
+/// User-level configuration. Written by the onboarding wizard and the settings
+/// UI. Contains only things an end user is expected to change: their brain,
+/// their provider credentials, and optional local overrides.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct UserConfig {
+    /// Default LLM provider/model, e.g. `kimi-for-coding/kimi-k2`.
+    #[serde(rename = "defaultModel")]
+    pub default_model: Option<String>,
+
+    /// Optional override for the Gizzi runtime URL.
+    #[serde(rename = "terminalServerUrl")]
+    pub terminal_server_url: Option<String>,
+
+    /// Optional override for the API gateway URL (frontend use).
+    #[serde(rename = "gatewayUrl")]
+    pub gateway_url: Option<String>,
+
+    /// Provider API keys. In production these should be moved to the OS
+    /// keychain; this field is a transitional store.
+    #[serde(rename = "providerApiKeys")]
+    pub provider_api_keys: Option<serde_json::Map<String, serde_json::Value>>,
+
+    /// Whether onboarding has been completed.
+    #[serde(rename = "onboardingComplete")]
+    pub onboarding_complete: Option<bool>,
+}
+
+/// Merged runtime configuration. Code reads from this struct instead of calling
+/// `std::env::var` directly.
+#[derive(Debug, Clone)]
+pub struct AppConfig {
+    pub company: CompanyConfig,
+    pub user: UserConfig,
+}
+
+impl AppConfig {
+    /// Load company + user config from disk and apply env overrides.
+    pub fn load() -> Self {
+        let company = load_company_config();
+        let user = load_user_config();
+
+        let mut config = Self { company, user };
+        config.apply_env_overrides();
+        config
+    }
+
+    /// Port the API server listens on.
+    pub fn api_port(&self) -> u16 {
+        std::env::var("ALLTERNIT_API_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8013)
+    }
+
+    /// URL the API uses to reach the Gizzi runtime.
+    pub fn terminal_server_url(&self) -> String {
+        std::env::var("TERMINAL_SERVER_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.terminal_server_url.clone())
+            .or_else(|| self.company.terminal_server_url.clone())
+            .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
+    }
+
+    /// Default LLM provider/model when a request does not specify one.
+    pub fn default_model(&self) -> (String, String) {
+        let raw = std::env::var("ALLTERNIT_DEFAULT_MODEL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.default_model.clone())
+            .unwrap_or_else(|| "kimi-for-coding/kimi-k2".to_string());
+
+        if let Some((provider, model)) = raw.split_once('/') {
+            (provider.trim().to_string(), model.trim().to_string())
+        } else {
+            ("kimi-for-coding".to_string(), raw.trim().to_string())
+        }
+    }
+
+    /// Clerk JWKS URL used to verify JWT signatures.
+    pub fn clerk_jwks_url(&self) -> Option<String> {
+        std::env::var("CLERK_JWKS_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.clerk_jwks_url.clone())
+    }
+
+    /// Expected Clerk JWT issuer.
+    pub fn clerk_issuer(&self) -> Option<String> {
+        std::env::var("CLERK_ISSUER")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.clerk_issuer.clone())
+    }
+
+    /// Clerk webhook secret.
+    pub fn clerk_webhook_secret(&self) -> Option<String> {
+        std::env::var("CLERK_WEBHOOK_SECRET")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.clerk_webhook_secret.clone())
+    }
+
+    /// Clerk publishable key rendered by the frontend.
+    pub fn clerk_publishable_key(&self) -> Option<String> {
+        std::env::var("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.clerk_publishable_key.clone())
+    }
+
+    /// Default encryption key for local data.
+    pub fn encryption_key(&self) -> Option<String> {
+        std::env::var("ENCRYPTION_KEY")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.encryption_key.clone())
+    }
+
+    /// Tenant identifier for this packaged deployment.
+    pub fn tenant_id(&self) -> String {
+        self.company
+            .tenant_id
+            .clone()
+            .unwrap_or_else(|| "default".to_string())
+    }
+
+    /// URL the frontend should use to reach the API.
+    pub fn gateway_url(&self) -> String {
+        std::env::var("NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.gateway_url.clone())
+            .or_else(|| self.company.gateway_url.clone())
+            .unwrap_or_else(|| "http://localhost:8013".to_string())
+    }
+
+    /// Whether onboarding has been completed.
+    pub fn onboarding_complete(&self) -> bool {
+        self.user.onboarding_complete.unwrap_or(false)
+    }
+
+    /// Apply env-variable overrides to the in-memory config. This keeps the
+    /// existing dev/CI workflow working while the file-based config becomes
+    /// the primary path for packaged users.
+    fn apply_env_overrides(&mut self) {
+        if let Ok(v) = std::env::var("ALLTERNIT_DEFAULT_MODEL") {
+            if !v.is_empty() {
+                self.user.default_model = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("TERMINAL_SERVER_URL") {
+            if !v.is_empty() {
+                self.user.terminal_server_url = Some(v);
+            }
+        }
+    }
+}
+
+fn load_company_config() -> CompanyConfig {
+    let paths = company_config_paths();
+    for path in &paths {
+        if let Ok(text) = std::fs::read_to_string(path) {
+            match serde_json::from_str::<CompanyConfig>(&text) {
+                Ok(config) => {
+                    info!(path = %path.display(), "Loaded company config");
+                    return config;
+                }
+                Err(err) => {
+                    warn!(path = %path.display(), error = %err, "Failed to parse company config");
+                }
+            }
+        }
+    }
+    info!("No company config found; using defaults");
+    CompanyConfig::default()
+}
+
+fn load_user_config() -> UserConfig {
+    let path = user_config_path();
+    if let Ok(text) = std::fs::read_to_string(&path) {
+        match serde_json::from_str::<UserConfig>(&text) {
+            Ok(config) => {
+                info!(path = %path.display(), "Loaded user config");
+                return config;
+            }
+            Err(err) => {
+                warn!(path = %path.display(), error = %err, "Failed to parse user config");
+            }
+        }
+    }
+    info!(path = %path.display(), "No user config found; using defaults");
+    UserConfig::default()
+}
+
+fn company_config_paths() -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+
+    // Packaged app bundle path (sibling to the binary).
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            paths.push(exe_dir.join("resources").join("company.json"));
+            paths.push(exe_dir.join("company.json"));
+        }
+    }
+
+    // Dev override in the user's home directory.
+    if let Some(home) = dirs::home_dir() {
+        paths.push(home.join(".allternit").join("company.json"));
+    }
+
+    paths
+}
+
+fn user_config_path() -> PathBuf {
+    dirs::data_dir()
+        .or_else(dirs::home_dir)
+        .map(|p| p.join("allternit"))
+        .unwrap_or_else(|| PathBuf::from(".allternit"))
+        .join("config.json")
+}
+
+/// Persist user config to disk. Called by the onboarding wizard and settings UI.
+pub fn save_user_config(config: &UserConfig) -> std::io::Result<()> {
+    let path = user_config_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let text = serde_json::to_string_pretty(config)?;
+    std::fs::write(&path, text)?;
+    info!(path = %path.display(), "Saved user config");
+    Ok(())
+}
+
+/// API endpoint payload used by the onboarding wizard to save user config.
+#[derive(Debug, Deserialize)]
+pub struct SaveUserConfigPayload {
+    #[serde(rename = "defaultModel")]
+    pub default_model: Option<String>,
+    #[serde(rename = "terminalServerUrl")]
+    pub terminal_server_url: Option<String>,
+    #[serde(rename = "gatewayUrl")]
+    pub gateway_url: Option<String>,
+    #[serde(rename = "providerApiKeys")]
+    pub provider_api_keys: Option<serde_json::Map<String, serde_json::Value>>,
+    #[serde(rename = "onboardingComplete")]
+    pub onboarding_complete: Option<bool>,
+}
+
+impl From<SaveUserConfigPayload> for UserConfig {
+    fn from(payload: SaveUserConfigPayload) -> Self {
+        Self {
+            default_model: payload.default_model,
+            terminal_server_url: payload.terminal_server_url,
+            gateway_url: payload.gateway_url,
+            provider_api_keys: payload.provider_api_keys,
+            onboarding_complete: payload.onboarding_complete,
+        }
+    }
+}

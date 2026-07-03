@@ -37,7 +37,8 @@ pub mod utils;
 pub use config::MetaSwarmConfig;
 pub use controller::MetaSwarmController;
 pub use error::{SwarmError, SwarmResult};
-pub use router::{ModeRouter, RoutingDecision};
+pub use router::ModeRouter;
+pub use types::RoutingDecision;
 
 use types::*;
 

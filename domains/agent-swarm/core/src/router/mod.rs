@@ -67,7 +67,7 @@ impl ModeRouter {
         // Step 6: Build alternatives
         let alternatives: Vec<(SwarmMode, f64)> = scores
             .iter()
-            .filter(|(m, _)| *m != best_mode)
+            .filter(|(m, _)| **m != best_mode)
             .map(|(m, s)| (*m, *s))
             .collect();
 
@@ -164,7 +164,7 @@ impl ModeRouter {
             score += 0.1;
         }
 
-        score.min(1.0)
+        f64::min(score, 1.0_f64)
     }
 
     fn calculate_claudeswarm_score(
@@ -194,7 +194,7 @@ impl ModeRouter {
             score += 0.1;
         }
 
-        score.min(1.0)
+        f64::min(score, 1.0_f64)
     }
 
     fn calculate_closedloop_score(&self, task: &Task, analysis: &TaskAnalysis) -> f64 {
@@ -222,7 +222,7 @@ impl ModeRouter {
             score += 0.1;
         }
 
-        score.min(1.0)
+        f64::min(score, 1.0_f64)
     }
 
     fn calculate_hybrid_score(&self, task: &Task, analysis: &TaskAnalysis) -> f64 {
@@ -243,7 +243,7 @@ impl ModeRouter {
             score += 0.2;
         }
 
-        score.min(1.0)
+        f64::min(score, 1.0_f64)
     }
 
     fn generate_reasoning(

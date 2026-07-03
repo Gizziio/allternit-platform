@@ -16,6 +16,7 @@ pub mod backend_install_routes;
 pub mod board_routes;
 pub mod board_stream_routes;
 pub mod chat_routes;
+pub mod config;
 pub mod conversation_routes;
 pub mod cowork;
 pub mod cowork_routes;
@@ -23,6 +24,7 @@ pub mod cowork_team_routes;
 pub mod db;
 pub mod error;
 pub mod fallback_routes;
+pub mod gizzi_completion;
 pub mod h5i_routes;
 pub mod health;
 pub mod oauth_routes;
@@ -47,6 +49,7 @@ pub mod rails_client_impl;
 pub mod runtime_backend_routes;
 pub mod runtime_discover_routes;
 pub mod sandbox_routes;
+pub mod secrets;
 pub mod ssh_key_routes;
 pub mod ssh_routes;
 pub mod status_routes;
@@ -66,6 +69,7 @@ pub mod workflow_routes;
 pub mod workspace_routes;
 
 use auth::{AuthConfig, JwksManager};
+use config::AppConfig;
 use db::DbHandle;
 use rails::RailsState;
 use vm_session_routes::VmSessionStore;
@@ -75,11 +79,24 @@ use allternit_cowork_runtime::RunManager;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// Globally accessible application configuration, initialized once at startup.
+/// Routes and helpers that do not receive `AppState` can read from here so the
+/// entire crate uses the same layered config.
+pub static APP_CONFIG: once_cell::sync::OnceCell<AppConfig> = once_cell::sync::OnceCell::new();
+
+/// Initialize the global configuration. Must be called exactly once, from
+/// `main`, before any route handler runs.
+pub fn init_app_config() -> &'static AppConfig {
+    APP_CONFIG.get_or_init(AppConfig::load)
+}
+
 /// Office runtime state (bindings + sessions) — kept in memory for concurrency safety
 pub type OfficeRuntimeState = Arc<RwLock<crate::office_routes::OfficeRuntimeFile>>;
 
 /// Application state shared across all route handlers
 pub struct AppState {
+    /// Unified app configuration (company + user + env overrides)
+    pub config: AppConfig,
     /// SQLite database handle
     pub db: DbHandle,
     /// Clerk JWKS manager for JWT verification
@@ -106,14 +123,11 @@ pub struct AppState {
 }
 
 /// Return the default LLM provider/model pair used when a request does not
-/// specify one. Configurable via `ALLTERNIT_DEFAULT_MODEL` as
-/// `provider-id/model-id`. Falls back to `kimi-for-coding/kimi-k2`.
+/// specify one. Reads from the unified app config (file + env overrides).
+/// Falls back to `kimi-for-coding/kimi-k2`.
 pub fn default_model() -> (String, String) {
-    let raw = std::env::var("ALLTERNIT_DEFAULT_MODEL")
-        .unwrap_or_else(|_| "kimi-for-coding/kimi-k2".to_string());
-    if let Some((provider, model)) = raw.split_once('/') {
-        (provider.trim().to_string(), model.trim().to_string())
-    } else {
-        ("kimi-for-coding".to_string(), raw.trim().to_string())
-    }
+    APP_CONFIG
+        .get()
+        .map(|c| c.default_model())
+        .unwrap_or_else(|| ("kimi-for-coding".to_string(), "kimi-k2".to_string()))
 }

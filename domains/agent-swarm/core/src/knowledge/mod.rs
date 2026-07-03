@@ -1,6 +1,6 @@
 use crate::error::SwarmResult;
 use crate::types::{
-    CrossModeLearning, EntityId, KnowledgeQueryResult, Pattern, ParticleArchive, Solution,
+    EntityId, KnowledgeQueryResult, Pattern, ParticleArchive, Solution,
     SwarmMode, TransferType,
 };
 use async_trait::async_trait;
@@ -55,7 +55,7 @@ pub trait KnowledgeStore: Send + Sync {
 }
 
 /// Cross-mode learning coordinator
-pub struct CrossModeLearning {
+pub struct CrossModeLearningCoordinator {
     store: Arc<dyn KnowledgeStore>,
     transfers: RwLock<Vec<TransferRecord>>,
 }
@@ -69,7 +69,7 @@ pub struct TransferRecord {
     pub effectiveness: f64,
 }
 
-impl CrossModeLearning {
+impl CrossModeLearningCoordinator {
     pub fn new(store: Arc<dyn KnowledgeStore>) -> Self {
         Self {
             store,

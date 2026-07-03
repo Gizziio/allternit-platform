@@ -33,6 +33,20 @@ members = [
     "api/services/workspace-service",
     "services/orchestration/control-plane/unified-registry/registry",
     "domains/agent/allternit-agent-workspace/allternit-agent-workspace",
+    "domains/agent-swarm/core",
+    "domains/kernel/drivers/allternit-providers",
+    "domains/kernel/drivers/allternit-rlm",
+    "domains/kernel/drivers/context-pack-builder",
+    "domains/kernel/drivers/dag-wih-integration",
+    "domains/kernel/service/allternit-local-compute/executor",
+    "infrastructure/chrome-stream/runtime",
+    "infrastructure/scheduler",
+    "infrastructure/scheduler/cron-parser",
+    "platform/contracts/capsule/capsule-system/allternit-capsule-runtime",
+    "services/orchestration/control-plane/unified-registry/tool-registry",
+    "platform/sdk/adapters/rust/marketplace",
+    "platform/types/a2ui-types",
+    "domains/governance/evidence-management/receipts-schema",
     "services/memory",
     "services/memory/data/memory-fabric",
     # Referenced by workspace.dependencies but previously outside the workspace
@@ -153,6 +167,25 @@ gateway-stdio = { path = "services/gateway/stdio" }
 allternit-registry-apps = { path = "services/registry/apps-registry" }
 framework = { path = "services/registry/framework-registry" }
 allternit-registry-functions = { path = "services/registry/functions-registry" }
+allternit-registry = { path = "services/orchestration/control-plane/unified-registry/registry" }
+allternit-tool-registry = { path = "services/orchestration/control-plane/unified-registry/tool-registry" }
+
+allternit-browser-runtime = { path = "infrastructure/chrome-stream/runtime" }
+allternit-scheduler = { path = "infrastructure/scheduler" }
+allternit-cron-parser = { path = "infrastructure/scheduler/cron-parser" }
+allternit-cloud-api = { path = "cmd/allternit-cloud-api" }
+
+allternit-receipts-schema = { path = "domains/governance/evidence-management/receipts-schema" }
+allternit-meta-swarm = { path = "domains/agent-swarm/core" }
+allternit-rlm = { path = "domains/kernel/drivers/allternit-rlm" }
+allternit-providers = { path = "domains/kernel/drivers/allternit-providers" }
+allternit-context-pack-builder = { path = "domains/kernel/drivers/context-pack-builder" }
+allternit-dag-wih-integration = { path = "domains/kernel/drivers/dag-wih-integration" }
+executor = { path = "domains/kernel/service/allternit-local-compute/executor" }
+
+marketplace = { path = "platform/sdk/adapters/rust/marketplace" }
+a2ui-types = { path = "platform/types/a2ui-types" }
+capsule-runtime = { path = "platform/contracts/capsule/capsule-system/allternit-capsule-runtime" }
 
 
 allternit-tools-gateway = { path = "api/gateway/routing" }

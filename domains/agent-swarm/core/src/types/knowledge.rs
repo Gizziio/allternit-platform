@@ -41,7 +41,7 @@ impl Pattern {
     }
 
     pub fn is_proven(&self) -> bool {
-        self.effecticiency.usage_count > 5 && self.effecticiency.success_rate > 0.8
+        self.effectiveness.usage_count > 5 && self.effectiveness.success_rate() > 0.8
     }
 }
 
@@ -205,17 +205,6 @@ pub struct ScoredPattern {
 pub struct ScoredSolution {
     pub solution: Solution,
     pub similarity_score: f64,
-}
-
-/// Cross-mode learning record
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CrossModeLearning {
-    pub metadata: Metadata,
-    pub from_mode: SwarmMode,
-    pub to_mode: SwarmMode,
-    pub transfer_type: TransferType,
-    pub content: TransferContent,
-    pub effectiveness: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

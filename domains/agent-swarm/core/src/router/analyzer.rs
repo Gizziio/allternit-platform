@@ -77,7 +77,7 @@ impl TaskAnalyzer {
         let component_count = component_pattern.find_iter(description).count();
         if component_count > 3 {
             score += 0.1;
-            factors.push(format!("Multiple components mentioned ({)", component_count));
+            factors.push(format!("Multiple components mentioned ({})", component_count));
         }
 
         // Clamp score to valid range

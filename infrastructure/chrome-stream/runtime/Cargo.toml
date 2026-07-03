@@ -15,10 +15,10 @@ tracing = { workspace = true }
 url = "2.5"
 regex = { workspace = true }
 
-allternit-policy-tier-gating = { path = "../../2-governance/identity-access-control/policy-tier-gating" }
-allternit-receipts-schema = { path = "../../2-governance/evidence-management/receipts-schema" }
-allternit-purpose-binding = { path = "../../2-governance/identity-access-control/purpose-binding" }
-allternit-security-hardening = { path = "../../2-governance/security-network/security-hardening" }
+allternit-policy-tier-gating = { workspace = true }
+allternit-receipts-schema = { workspace = true }
+allternit-purpose-binding = { workspace = true }
+allternit-security-hardening = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -26,7 +26,7 @@ semver.workspace = true
 tracing.workspace = true
 
 # Internal crates
-allternit-capsule = { path = "../../../capsule-system/allternit-capsule", package = "allternit-capsule" }
+allternit-capsule = { workspace = true }
 
 [dev-dependencies]
 tempfile.workspace = true

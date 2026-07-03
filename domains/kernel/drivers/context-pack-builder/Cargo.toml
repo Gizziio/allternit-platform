@@ -19,7 +19,7 @@ tracing = { workspace = true }
 
 allternit-ontology-runtime = { path = "../ontology-runtime" }
 allternit-dag-wih-integration = { path = "../dag-wih-integration" }
-allternit-security-hardening = { path = "../../../2-governance/security-network/security-hardening" }
+allternit-security-hardening = { path = "../../../governance/security-network/security-hardening" }
 allternit-system-law = { path = "../system-law" }
 
 [dev-dependencies]

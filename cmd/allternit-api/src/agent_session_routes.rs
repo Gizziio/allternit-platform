@@ -23,10 +23,13 @@ use tracing::warn;
 use crate::AppState;
 use crate::db::DbHandle;
 use crate::default_model;
+use crate::secrets;
 
 fn gizzi_base() -> String {
-    std::env::var("TERMINAL_SERVER_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:4096".to_string())
+    crate::APP_CONFIG
+        .get()
+        .map(|c| c.terminal_server_url())
+        .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
         .trim_end_matches('/')
         .to_string()
 }
@@ -41,6 +44,54 @@ fn gizzi_client(headers: &HeaderMap) -> Client {
         }
     }
     builder.build().unwrap_or_else(|_| Client::new())
+}
+
+/// Inject provider API keys from the OS keychain into a Gizzi harness.
+///
+/// The wizard stores keys in the keychain and writes provider metadata (baseURL,
+/// npm, models) to the Gizzi config without secrets. At session creation time
+/// we merge the key into `harness.byok.keys.{provider}` so Gizzi can authenticate.
+fn inject_provider_keys(
+    harness: Option<serde_json::Value>,
+    provider_id: &str,
+) -> Option<serde_json::Value> {
+    let key = secrets::get_secret(&secrets::provider_account(provider_id))?;
+
+    let mut harness = harness.unwrap_or_else(|| {
+        json!({
+            "mode": "byok",
+            "byok": { "keys": {}, "baseURLs": {} }
+        })
+    });
+
+    let byok = harness
+        .as_object_mut()
+        .and_then(|obj| obj.get_mut("byok"))
+        .and_then(|v| v.as_object_mut())?;
+
+    let keys = byok.entry("keys").or_insert_with(|| json!({}));
+    if let Some(keys_obj) = keys.as_object_mut() {
+        keys_obj.insert(provider_id.to_string(), json!(key));
+    }
+
+    // Ensure harness mode is set to byok when we are injecting keys.
+    if let Some(obj) = harness.as_object_mut() {
+        obj.entry("mode").or_insert_with(|| json!("byok"));
+    }
+
+    Some(harness)
+}
+
+/// Extract the provider id from a Gizzi model reference object or a
+/// "provider/model" string.
+fn provider_id_from_model(model: &serde_json::Value) -> Option<String> {
+    if let Some(provider_id) = model.get("providerID").and_then(|v| v.as_str()) {
+        return Some(provider_id.to_string());
+    }
+    if let Some(s) = model.as_str().and_then(|s| s.split_once('/').map(|(p, _)| p)) {
+        return Some(s.to_string());
+    }
+    None
 }
 
 pub fn agent_session_router() -> Router<Arc<AppState>> {
@@ -510,7 +561,25 @@ async fn create_session(
     } else {
         None
     };
-    if let Some(harness) = agent_harness {
+
+    // Determine which provider this session will use so we can inject the
+    // user's API key from the OS keychain into the harness.
+    let provider_id = agent_harness
+        .as_ref()
+        .and_then(|h| h.get("model"))
+        .and_then(provider_id_from_model)
+        .or_else(|| {
+            payload
+                .get("model")
+                .and_then(provider_id_from_model)
+        })
+        .unwrap_or_else(|| {
+            let (provider, _) = default_model();
+            provider
+        });
+
+    let harness = inject_provider_keys(agent_harness, &provider_id);
+    if let Some(harness) = harness {
         payload.insert("harness".to_string(), harness);
     }
     let session = match gizzi_json::<GizziSessionInfo>(

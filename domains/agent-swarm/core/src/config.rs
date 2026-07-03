@@ -49,7 +49,8 @@ impl MetaSwarmConfig {
             _ => return Err(SwarmError::Config("Unsupported config format".to_string())),
         };
 
-        config.validate()?;
+        config.validate()
+            .map_err(|e| SwarmError::Config(format!("Validation error: {}", e)))?;
         Ok(config)
     }
 

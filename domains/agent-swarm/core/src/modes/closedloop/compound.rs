@@ -8,9 +8,17 @@ use std::sync::Arc;
 use tracing::info;
 
 /// Compound Phase - Extract and store knowledge
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CompoundPhase {
     knowledge: Arc<dyn KnowledgeStore>,
+}
+
+impl std::fmt::Debug for CompoundPhase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CompoundPhase")
+            .field("knowledge", &"<dyn KnowledgeStore>")
+            .finish()
+    }
 }
 
 impl CompoundPhase {

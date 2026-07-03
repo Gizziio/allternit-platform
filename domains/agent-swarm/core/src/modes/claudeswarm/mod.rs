@@ -22,11 +22,21 @@ pub use file_lock::FileLockManager;
 pub use quality_gate::QualityGate;
 
 /// Claude Swarm Mode - Parallel execution with dependency graphs
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ClaudeSwarmMode {
     config: ModeConfig,
     knowledge: Arc<dyn KnowledgeStore>,
     file_locks: Arc<RwLock<FileLockManager>>,
+}
+
+impl std::fmt::Debug for ClaudeSwarmMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClaudeSwarmMode")
+            .field("config", &self.config)
+            .field("knowledge", &"<dyn KnowledgeStore>")
+            .field("file_locks", &"<FileLockManager>")
+            .finish()
+    }
 }
 
 impl ClaudeSwarmMode {

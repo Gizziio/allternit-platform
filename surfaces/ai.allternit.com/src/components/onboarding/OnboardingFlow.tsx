@@ -51,6 +51,8 @@ import { useThemeStore, getSystemTheme } from '@/design/ThemeStore';
 import { GizziMascot } from '../ai-elements/GizziMascot';
 import { MatrixLogo } from '../ai-elements/MatrixLogo';
 import { AuthPreview } from '../auth/AuthPreview';
+import { setupApi } from '@/services/setup-api';
+import type { SaveProviderPayload } from '@/services/setup-api';
 import {
   testSSHConnection,
   installBackend,
@@ -1255,14 +1257,43 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   // Run discovery on mount
   useEffect(() => {
     setScanning(true);
-    fetch('/api/onboarding/discover')
-      .then((r) => r.json())
-      .then((d) => setDiscovery(d as DiscoveryResult))
+    setupApi
+      .discover()
+      .then((d) => {
+        const toDiscovered = (models: Array<{ id: string; name: string }>, source: string): DiscoveredModel[] =>
+          models.map((m) => ({
+            id: `${source}:${m.id}`,
+            modelId: m.id,
+            name: m.name,
+            provider: source,
+            source,
+          }));
+        setDiscovery({
+          ollama: {
+            running: d.ollama.running,
+            models: toDiscovered(d.ollama.models, 'ollama'),
+          },
+          lmstudio: {
+            running: d.lmstudio.running,
+            models: toDiscovered(d.lmstudio.models, 'lmstudio'),
+          },
+          cli: d.cli
+            .filter((c) => c.installed)
+            .map((c) => ({
+              id: `cli:${c.name}`,
+              modelId: c.name,
+              name: `${c.name}${c.version ? ` ${c.version}` : ''}`,
+              provider: c.name,
+              source: c.name,
+              badge: 'CLI',
+            })),
+        });
+      })
       .catch(() => setDiscovery({ ollama: { running: false, models: [] }, lmstudio: { running: false, models: [] }, cli: [] }))
       .finally(() => setScanning(false));
   }, []);
 
-  // Validate an API key against the backend
+  // Validate an API key against the backend and persist the provider config.
   async function validateKey(provider: CloudProviderId) {
     const key = (keyDraft[provider] ?? '').trim();
     if (key.length < 10) return;
@@ -1271,12 +1302,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
     setKeyError((s) => ({ ...s, [provider]: undefined }));
 
     try {
-      const res = await fetch('/api/onboarding/validate-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, key }),
-      });
-      const json = await res.json() as { valid: boolean; models?: Array<{ id: string; name: string }>; error?: string };
+      const json = await setupApi.validateKey(provider, key);
 
       if (json.valid) {
         setKeyStatus((s) => ({ ...s, [provider]: 'valid' }));
@@ -1284,6 +1310,29 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
         // Store the key + mark provider active
         const keys = { ...(data.configuredKeys ?? {}), [provider]: key };
         onUpdate({ configuredKeys: keys, apiKeysConfigured: true, defaultProvider: provider });
+
+        // Persist provider metadata + secure key storage to backend.
+        const models: Record<string, unknown> = {};
+        (json.models ?? []).forEach((m) => {
+          models[m.id] = {
+            id: m.id,
+            name: m.name,
+            tool_call: true,
+            limit: { context: 200000, output: 32000 },
+          };
+        });
+        const firstModel = json.models?.[0]?.id;
+        await setupApi.saveProvider({
+          provider,
+          apiKey: key,
+          authType: 'api_key',
+          models,
+          defaultModel: firstModel ? `${provider}/${firstModel}` : undefined,
+          setDefault: true,
+        }).catch(() => {
+          // Non-fatal: validation succeeded; persistence failure is surfaced
+          // in Settings if the user needs to reconfigure.
+        });
       } else {
         setKeyStatus((s) => ({ ...s, [provider]: 'invalid' }));
         setKeyError((s) => ({ ...s, [provider]: json.error ?? 'Key rejected' }));
@@ -1294,9 +1343,32 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
     }
   }
 
-  // Select a discovered local/CLI model
-  function selectDiscovered(m: DiscoveredModel) {
+  // Select a discovered local/CLI model and persist it as the active provider.
+  async function selectDiscovered(m: DiscoveredModel) {
     onUpdate({ defaultProvider: m.source, defaultModelId: m.modelId });
+
+    const isCli = m.source === 'claude' || m.source === 'codex' || m.source === 'ollama';
+    const payload: SaveProviderPayload = {
+      provider: m.source,
+      name: m.source,
+      authType: isCli ? 'subprocess' : 'none',
+      subprocessCmd: isCli ? `${m.source} -p` : undefined,
+      models: {
+        [m.modelId]: {
+          id: m.modelId,
+          name: m.name,
+          tool_call: true,
+          limit: { context: 128000, output: 16384 },
+        },
+      },
+      defaultModel: `${m.source}/${m.modelId}`,
+      setDefault: true,
+    };
+
+    await setupApi.saveProvider(payload).catch(() => {
+      // Selection is already reflected in UI; persistence failures are
+      // recoverable via Settings.
+    });
   }
 
   const allLocalModels: DiscoveredModel[] = [
@@ -1979,7 +2051,7 @@ function ModeShowcase() {
   );
 }
 
-function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void }) {
+function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void | Promise<void> }) {
   const infraLabel = data.infraType === 'local' ? 'This machine' : data.infraType === 'connect' ? 'Remote server' : data.infraType === 'purchase' ? 'New VPS' : 'Remote';
   const modelLabel = data.defaultModelId ?? data.defaultProvider ?? null;
   const keyCount = Object.keys(data.configuredKeys ?? {}).length;
@@ -2122,19 +2194,28 @@ export function OnboardingFlow() {
     if (idx > 0) setScreen(SCREEN_ORDER[idx - 1]);
   };
 
-  const finish = () => {
-    // Persist configured API keys to sessionStorage so the runtime can pick them up.
-    // Keys are ephemeral — they are not stored in the onboarding Zustand store.
-    if (data.configuredKeys) {
-      Object.entries(data.configuredKeys).forEach(([provider, key]) => {
-        sessionStorage.setItem(`allternit_key_${provider}`, key);
+  const finish = async () => {
+    // Persist final user preferences (default model, onboarding complete) to
+    // the backend. Provider keys are already stored in the OS keychain.
+    const defaultModel = data.defaultModelId
+      ? `${data.defaultProvider}/${data.defaultModelId}`
+      : data.defaultProvider;
+    try {
+      await setupApi.saveConfig({
+        defaultModel,
+        onboardingComplete: true,
       });
+    } catch (err) {
+      // Continue completing onboarding locally even if the backend save fails;
+      // the user can re-run setup from Settings.
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[Onboarding] saveConfig failed:', err);
+      }
     }
+
     completeOnboarding({
       theme: data.theme,
-      defaultProvider: data.defaultModelId
-        ? `${data.defaultProvider}::${data.defaultModelId}`
-        : data.defaultProvider,
+      defaultProvider: defaultModel,
       apiKeysConfigured: data.apiKeysConfigured || Object.keys(data.configuredKeys ?? {}).length > 0,
       defaultWorkspacePath: data.workspacePath,
       preferredModes: data.selectedModes,

@@ -17,8 +17,10 @@ use uuid::Uuid;
 use crate::{AppState, default_model};
 
 fn gizzi_base() -> String {
-    std::env::var("TERMINAL_SERVER_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:4096".to_string())
+    crate::APP_CONFIG
+        .get()
+        .map(|c| c.terminal_server_url())
+        .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
         .trim_end_matches('/')
         .to_string()
 }

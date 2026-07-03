@@ -473,8 +473,10 @@ impl CollaborationTopology {
             let wave: Vec<EntityId> = remaining
                 .iter()
                 .filter(|agent| {
-                    let deps = dependencies.get(agent).unwrap_or(&HashSet::new());
-                    deps.iter().all(|dep| completed.contains(dep))
+                    dependencies
+                        .get(agent)
+                        .map(|deps| deps.iter().all(|dep| completed.contains(dep)))
+                        .unwrap_or(true)
                 })
                 .copied()
                 .collect();

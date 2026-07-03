@@ -22,10 +22,19 @@ pub use review::ReviewPhase;
 pub use work::WorkPhase;
 
 /// ClosedLoop Mode - 5-step methodology with knowledge compounding
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ClosedLoopMode {
     config: ModeConfig,
     knowledge: Arc<dyn KnowledgeStore>,
+}
+
+impl std::fmt::Debug for ClosedLoopMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClosedLoopMode")
+            .field("config", &self.config)
+            .field("knowledge", &"<dyn KnowledgeStore>")
+            .finish()
+    }
 }
 
 impl ClosedLoopMode {

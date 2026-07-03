@@ -15,10 +15,19 @@ pub mod pso;
 pub use pso::PSOEngine;
 
 /// Auto-Architect Mode using SwarmAgentic PSO
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AutoArchitectMode {
     config: ModeConfig,
     knowledge: Arc<dyn KnowledgeStore>,
+}
+
+impl std::fmt::Debug for AutoArchitectMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AutoArchitectMode")
+            .field("config", &self.config)
+            .field("knowledge", &"<dyn KnowledgeStore>")
+            .finish()
+    }
 }
 
 /// Result of architecture discovery

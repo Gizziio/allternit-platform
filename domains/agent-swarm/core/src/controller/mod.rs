@@ -1,8 +1,9 @@
 use crate::config::MetaSwarmConfig;
 use crate::error::{SwarmError, SwarmResult};
-use crate::knowledge::{KnowledgeStore, PatternStore, SolutionArchive};
+use crate::knowledge::KnowledgeStore;
 use crate::modes::{claudeswarm::ClaudeSwarmMode, closedloop::ClosedLoopMode, swarmagentic::AutoArchitectMode};
-use crate::router::{ModeRouter, RoutingDecision};
+use crate::router::ModeRouter;
+use crate::types::RoutingDecision;
 use crate::types::*;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -111,6 +112,7 @@ impl MetaSwarmController {
     async fn execute_task(&self, task: Task, mode: SwarmMode) -> SwarmResult<ExecutionResult> {
         info!("Executing task {} with mode {:?}", task.id(), mode);
 
+        let storage_task = task.clone();
         let result = match mode {
             SwarmMode::SwarmAgentic => {
                 self.swarmagentic_mode.execute(task).await
@@ -129,7 +131,7 @@ impl MetaSwarmController {
         // Store result in knowledge base if successful
         if let Ok(ref exec_result) = result {
             if exec_result.is_success() {
-                if let Err(e) = self.store_execution_knowledge(&task, exec_result).await {
+                if let Err(e) = self.store_execution_knowledge(&storage_task, exec_result).await {
                     warn!("Failed to store execution knowledge: {}", e);
                 }
             }
@@ -186,7 +188,10 @@ impl MetaSwarmController {
         let solution = Solution {
             metadata: Metadata::new(),
             problem_summary: task.description.clone(),
-            problem_hash: format!("{:x}", md5::compute(&task.description)),
+            problem_hash: md5::compute(&task.description)
+                .iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<String>(),
             approach: format!("{:?}", result),
             agent_team: None,
             mode_used: SwarmMode::Hybrid,

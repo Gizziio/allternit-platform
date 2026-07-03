@@ -70,6 +70,18 @@ impl AuthConfig {
         }
         config
     }
+
+    /// Build configuration from the unified app config, with env overrides.
+    pub fn from_app_config(app_config: &crate::config::AppConfig) -> Self {
+        let mut config = Self::default();
+        if let Some(url) = app_config.clerk_jwks_url() {
+            config.clerk_jwks_url = url;
+        }
+        if let Some(issuer) = app_config.clerk_issuer() {
+            config.clerk_issuer = issuer;
+        }
+        config
+    }
 }
 
 // ─── Data Types ─────────────────────────────────────────────────────────────

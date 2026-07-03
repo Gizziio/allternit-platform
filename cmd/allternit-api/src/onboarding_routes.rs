@@ -1,4 +1,14 @@
-//! Onboarding routes — local AI service discovery and API key validation
+//! Onboarding routes — local AI service discovery, API key validation, and
+//! unified configuration management for the packaged Allternit Platform app.
+//!
+//! These endpoints are the backend for the brain-setup wizard. They let the
+//! frontend:
+//!   - read the current company + user configuration (without secrets)
+//!   - save user preferences (default model, gateway URLs)
+//!   - discover local providers (Ollama, LM Studio, Claude CLI, Codex CLI)
+//!   - validate a provider API key against the provider's model endpoint
+//!   - store the key in the OS keychain and write the provider metadata to the
+//!     Gizzi runtime config so every agent/session routes through Gizzi.
 
 use axum::{
     extract::State,
@@ -9,20 +19,305 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::path::PathBuf;
 use std::sync::Arc;
+use tracing::{info, warn};
 
 use crate::AppState;
+use crate::config::{save_user_config, SaveUserConfigPayload, UserConfig};
+use crate::secrets;
 
 pub fn onboarding_router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/onboarding/config", get(get_config).post(save_config))
+        .route("/onboarding/provider", post(save_provider))
         .route("/onboarding/discover", get(onboarding_discover))
         .route("/onboarding/validate-key", post(onboarding_validate_key))
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Configuration endpoints
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(Serialize)]
+struct ConfigResponse {
+    #[serde(rename = "company")]
+    company: CompanyConfigResponse,
+    #[serde(rename = "user")]
+    user: UserConfig,
+    #[serde(rename = "onboardingComplete")]
+    onboarding_complete: bool,
+}
+
+#[derive(Serialize)]
+struct CompanyConfigResponse {
+    #[serde(rename = "clerkPublishableKey")]
+    clerk_publishable_key: Option<String>,
+    #[serde(rename = "gatewayUrl")]
+    gateway_url: String,
+    #[serde(rename = "terminalServerUrl")]
+    terminal_server_url: String,
+    #[serde(rename = "tenantId")]
+    tenant_id: String,
+}
+
+async fn get_config(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let app_config = &state.config;
+    let company = CompanyConfigResponse {
+        clerk_publishable_key: app_config.clerk_publishable_key(),
+        gateway_url: app_config.gateway_url(),
+        terminal_server_url: app_config.terminal_server_url(),
+        tenant_id: app_config.tenant_id(),
+    };
+    let user = app_config.user.clone();
+    let response = ConfigResponse {
+        company,
+        user,
+        onboarding_complete: app_config.onboarding_complete(),
+    };
+    (StatusCode::OK, Json(response))
+}
+
+async fn save_config(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<SaveUserConfigPayload>,
+) -> impl IntoResponse {
+    let mut user: UserConfig = payload.into();
+
+    // Preserve existing provider API keys if the payload did not send them.
+    if user.provider_api_keys.is_none() {
+        user.provider_api_keys = state.config.user.provider_api_keys.clone();
+    }
+
+    match save_user_config(&user) {
+        Ok(()) => {
+            info!(default_model = ?user.default_model, "Saved user config from wizard");
+            (StatusCode::OK, Json(json!({ "success": true })))
+        }
+        Err(err) => {
+            warn!(error = %err, "Failed to save user config");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": format!("Failed to save config: {err}") })),
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Provider configuration endpoint
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(Debug, Deserialize)]
+struct SaveProviderPayload {
+    /// Provider identifier, e.g. "anthropic", "openai", "kimi-for-coding".
+    provider: String,
+    /// Human-readable provider name.
+    #[serde(default)]
+    name: Option<String>,
+    /// NPM package used by the AI SDK adapter (optional — Gizzi can infer it).
+    #[serde(default)]
+    npm: Option<String>,
+    /// Default model for this provider, e.g. "anthropic/claude-sonnet-4-6".
+    #[serde(rename = "defaultModel", default)]
+    default_model: Option<String>,
+    /// Provider API key. Stored in the OS keychain, never written to disk.
+    #[serde(rename = "apiKey", default)]
+    api_key: Option<String>,
+    /// Base URL for the provider API.
+    #[serde(rename = "baseURL", default)]
+    base_url: Option<String>,
+    /// Authentication mode. Defaults to api_key for remote providers, none for
+    /// local providers, subprocess for CLI-backed providers.
+    #[serde(rename = "authType", default)]
+    auth_type: Option<String>,
+    /// CLI command for auth_type: subprocess providers.
+    #[serde(rename = "subprocessCmd", default)]
+    subprocess_cmd: Option<String>,
+    /// Models exposed by this provider.
+    #[serde(default)]
+    models: Option<serde_json::Map<String, serde_json::Value>>,
+    /// Whether this provider should become the new default.
+    #[serde(default)]
+    set_default: bool,
+}
+
+async fn save_provider(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<SaveProviderPayload>,
+) -> impl IntoResponse {
+    let provider_id = payload.provider.trim().to_string();
+    if provider_id.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "provider is required" })),
+        );
+    }
+
+    // 1. Store the API key in the OS keychain if provided.
+    if let Some(key) = payload.api_key.as_ref().filter(|k| !k.is_empty()) {
+        if let Err(err) = secrets::set_secret(&secrets::provider_account(&provider_id), key) {
+            warn!(provider = %provider_id, error = %err, "Failed to store provider key");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": err })),
+            );
+        }
+    }
+
+    // 2. Merge provider metadata into the Gizzi user config file.
+    let gizzi_path = gizzi_user_config_path();
+    let mut gizzi_config = read_gizzi_config(&gizzi_path);
+
+    let provider_entry = build_provider_entry(&payload);
+    gizzi_config
+        .entry("provider")
+        .or_insert_with(|| json!({}))
+        .as_object_mut()
+        .unwrap()
+        .insert(provider_id.clone(), provider_entry);
+
+    if payload.set_default {
+        if let Some(model) = payload.default_model.as_ref().filter(|m| !m.is_empty()) {
+            gizzi_config.insert("model".to_string(), json!(model));
+        } else if let Some(model_id) = payload.models.as_ref().and_then(|m| m.keys().next()) {
+            gizzi_config.insert(
+                "model".to_string(),
+                json!(format!("{}/{}", provider_id, model_id)),
+            );
+        }
+    }
+
+    match write_gizzi_config(&gizzi_path, &gizzi_config) {
+        Ok(()) => {
+            info!(provider = %provider_id, path = %gizzi_path.display(), "Wrote Gizzi provider config");
+        }
+        Err(err) => {
+            warn!(provider = %provider_id, error = %err, "Failed to write Gizzi config");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": format!("Failed to write provider config: {err}") })),
+            );
+        }
+    }
+
+    // 3. Update the Allternit user config so the default model reflects the new
+    //    provider if requested.
+    if payload.set_default {
+        let new_default = gizzi_config
+            .get("model")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        if let Some(model) = new_default {
+            let mut user = state.config.user.clone();
+            user.default_model = Some(model);
+            user.onboarding_complete = Some(true);
+            let _ = save_user_config(&user);
+        }
+    }
+
+    (StatusCode::OK, Json(json!({ "success": true, "provider": provider_id })))
+}
+
+fn build_provider_entry(payload: &SaveProviderPayload) -> serde_json::Value {
+    let mut entry = serde_json::Map::new();
+
+    if let Some(name) = payload.name.as_ref().filter(|n| !n.is_empty()) {
+        entry.insert("name".to_string(), json!(name));
+    } else {
+        entry.insert("name".to_string(), json!(payload.provider.clone()));
+    }
+
+    if let Some(npm) = payload.npm.as_ref().filter(|n| !n.is_empty()) {
+        entry.insert("npm".to_string(), json!(npm));
+    }
+
+    let auth_type = payload
+        .auth_type
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or("api_key");
+    entry.insert("auth_type".to_string(), json!(auth_type));
+
+    if auth_type == "subprocess" {
+        if let Some(cmd) = payload.subprocess_cmd.as_ref().filter(|c| !c.is_empty()) {
+            entry.insert("subprocess_cmd".to_string(), json!(cmd));
+        }
+    }
+
+    let mut options = serde_json::Map::new();
+    if let Some(base_url) = payload.base_url.as_ref().filter(|u| !u.is_empty()) {
+        options.insert("baseURL".to_string(), json!(base_url));
+    }
+    // NOTE: The API key is intentionally NOT written here. It lives in the OS
+    // keychain. The API injects it into Gizzi session harnesses at runtime.
+    if !options.is_empty() {
+        entry.insert("options".to_string(), json!(options));
+    }
+
+    if let Some(models) = payload.models.clone() {
+        entry.insert("models".to_string(), json!(models));
+    }
+
+    json!(entry)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Gizzi config file helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn gizzi_user_config_path() -> PathBuf {
+    dirs::config_dir()
+        .map(|p| p.join("gizzi").join("gizzi.json"))
+        .unwrap_or_else(|| PathBuf::from(".config/gizzi/gizzi.json"))
+}
+
+fn read_gizzi_config(path: &PathBuf) -> serde_json::Map<String, serde_json::Value> {
+    if let Ok(text) = std::fs::read_to_string(path) {
+        match serde_json::from_str::<serde_json::Value>(&text) {
+            Ok(serde_json::Value::Object(map)) => return map,
+            Ok(_) => warn!(path = %path.display(), "Gizzi config is not an object"),
+            Err(err) => warn!(path = %path.display(), error = %err, "Failed to parse Gizzi config"),
+        }
+    }
+    let mut default = serde_json::Map::new();
+    default.insert(
+        "$schema".to_string(),
+        json!("https://gizzi.io/config.json"),
+    );
+    default
+}
+
+fn write_gizzi_config(
+    path: &PathBuf,
+    config: &serde_json::Map<String, serde_json::Value>,
+) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    let text = serde_json::to_string_pretty(config)?;
+    std::fs::write(path, text)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Provider discovery
+// ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Serialize)]
 struct ModelInfo {
     id: String,
     name: String,
+}
+
+#[derive(Serialize)]
+struct CliInfo {
+    name: String,
+    #[serde(rename = "command")]
+    command: String,
+    #[serde(rename = "installed")]
+    installed: bool,
+    #[serde(rename = "version", skip_serializing_if = "Option::is_none")]
+    version: Option<String>,
 }
 
 async fn onboarding_discover(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -113,6 +408,10 @@ async fn onboarding_discover(State(_state): State<Arc<AppState>>) -> impl IntoRe
         vec![]
     };
 
+    let claude_cli = discover_cli("claude", &["--version"]).await;
+    let codex_cli = discover_cli("codex", &["--version"]).await;
+    let ollama_cli = discover_cli("ollama", &["--version"]).await;
+
     Json(json!({
         "ollama": {
             "running": ollama_running,
@@ -122,9 +421,44 @@ async fn onboarding_discover(State(_state): State<Arc<AppState>>) -> impl IntoRe
             "running": lmstudio_running,
             "models": lmstudio_models,
         },
-        "cli": vec!["allternit".to_string()],
+        "cli": [
+            CliInfo { name: "Allternit".to_string(), command: "allternit".to_string(), installed: true, version: None },
+            claude_cli,
+            codex_cli,
+            ollama_cli,
+        ],
     }))
 }
+
+async fn discover_cli(command: &str, args: &[&str]) -> CliInfo {
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        tokio::process::Command::new(command).args(args).output(),
+    )
+    .await;
+
+    let (installed, version) = match output {
+        Ok(Ok(out)) if out.status.success() => {
+            let version = String::from_utf8(out.stdout)
+                .ok()
+                .map(|s| s.trim().split('\n').next().unwrap_or("").to_string())
+                .filter(|s| !s.is_empty());
+            (true, version)
+        }
+        _ => (false, None),
+    };
+
+    CliInfo {
+        name: command.to_string(),
+        command: command.to_string(),
+        installed,
+        version,
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// API key validation
+// ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Deserialize)]
 struct ValidateKeyBody {
@@ -138,13 +472,13 @@ async fn onboarding_validate_key(
     let provider = body.provider.to_lowercase();
     let key = body.key;
 
-    // Validate key against known providers
     let result = match provider.as_str() {
         "openai" => validate_openai_key(&key).await,
         "anthropic" => validate_anthropic_key(&key).await,
         "google" => validate_google_key(&key).await,
         "groq" => validate_groq_key(&key).await,
         "openrouter" => validate_openrouter_key(&key).await,
+        "kimi" | "kimi-for-coding" => validate_kimi_key(&key).await,
         _ => Ok(ValidationResult {
             valid: true,
             models: None,
@@ -251,7 +585,6 @@ async fn validate_anthropic_key(key: &str) -> Result<ValidationResult, String> {
 }
 
 async fn validate_google_key(_key: &str) -> Result<ValidationResult, String> {
-    // Google keys are harder to validate without specific API calls
     Ok(ValidationResult {
         valid: true,
         models: Some(vec![
@@ -338,6 +671,39 @@ async fn validate_openrouter_key(key: &str) -> Result<ValidationResult, String> 
     Ok(ValidationResult {
         valid: true,
         models: Some(models),
+        error: None,
+    })
+}
+
+async fn validate_kimi_key(key: &str) -> Result<ValidationResult, String> {
+    // Kimi does not expose a public model list endpoint, so we validate by
+    // making a tiny chat completion request.
+    let client = reqwest::Client::new();
+    let res = client
+        .post("https://api.kimi.com/coding/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", key))
+        .header("Content-Type", "application/json")
+        .json(&json!({
+            "model": "kimi-k2",
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 1
+        }))
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    if !res.status().is_success() {
+        return Ok(ValidationResult {
+            valid: false,
+            models: None,
+            error: Some(format!("API returned {}", res.status())),
+        });
+    }
+
+    Ok(ValidationResult {
+        valid: true,
+        models: Some(vec![json!({"id": "kimi-k2", "name": "Kimi K2"})]),
         error: None,
     })
 }

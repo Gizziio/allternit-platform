@@ -18,7 +18,7 @@ async-trait = { workspace = true }
 allternit-sdk-core = { workspace = true }
 allternit-sdk-functions = { workspace = true }
 allternit-sdk-policy = { workspace = true }
-allternit-registry-apps = { path = "../../../../4-services/registry/apps-registry" }
-allternit-registry-functions = { path = "../../../../4-services/registry/functions-registry" }
+allternit-registry-apps = { workspace = true }
+allternit-registry-functions = { workspace = true }
 sqlx = { workspace = true }
 reqwest = { workspace = true }

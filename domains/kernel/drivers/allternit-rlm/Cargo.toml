@@ -12,7 +12,7 @@ sha2 = "0.10"
 hex = "0.4"
 allternit-memory = { workspace = true }
 allternit-policy = { workspace = true }
-allternit-registry = { path = "../../control-plane/unified-registry/registry" }
+allternit-registry = { workspace = true }
 allternit-skills = { workspace = true }
 allternit-tools-gateway = { workspace = true }
 allternit-providers = { workspace = true }

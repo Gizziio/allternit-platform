@@ -10,8 +10,8 @@ path = "src/main.rs"
 
 [dependencies]
 # Allternit internal
-allternit-cron-parser = { path = "../../packages/cron-parser" }
-allternit-cloud-api = { path = "../../cmd/allternit-cloud-api" }
+allternit-cron-parser = { workspace = true }
+allternit-cloud-api = { workspace = true }
 
 # Async runtime
 tokio = { workspace = true, features = ["full"] }
