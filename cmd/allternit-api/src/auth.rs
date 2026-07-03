@@ -36,11 +36,46 @@ const USER_NAME_HEADER: &str = "x-allternit-user-name";
 /// Key pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ decodes to clerk.platform.allternit.com
 const CLERK_JWKS_URL: &str = "https://clerk.platform.allternit.com/.well-known/jwks.json";
 
+/// Default expected JWT issuer.
+const CLERK_ISSUER: &str = "https://clerk.platform.allternit.com";
+
 /// How long to cache JWKS before refreshing
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(3600);
 
 /// How long to wait for JWKS fetch
 const JWKS_FETCH_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Runtime authentication configuration.
+#[derive(Clone, Debug)]
+pub struct AuthConfig {
+    /// Clerk JWKS endpoint.
+    pub clerk_jwks_url: String,
+    /// Expected JWT issuer (`iss`).
+    pub clerk_issuer: String,
+}
+
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self {
+            clerk_jwks_url: CLERK_JWKS_URL.to_string(),
+            clerk_issuer: CLERK_ISSUER.to_string(),
+        }
+    }
+}
+
+impl AuthConfig {
+    /// Build configuration from environment, falling back to sensible defaults.
+    pub fn from_env() -> Self {
+        let mut config = Self::default();
+        if let Ok(url) = std::env::var("CLERK_JWKS_URL") {
+            config.clerk_jwks_url = url;
+        }
+        if let Ok(issuer) = std::env::var("CLERK_ISSUER") {
+            config.clerk_issuer = issuer;
+        }
+        config
+    }
+}
 
 // ─── Data Types ─────────────────────────────────────────────────────────────
 
@@ -51,6 +86,7 @@ pub struct AuthUser {
     pub email: Option<String>,
     pub name: Option<String>,
     pub avatar_url: Option<String>,
+    pub tenant_id: Option<String>,
 }
 
 /// Clerk JWT claims
@@ -104,17 +140,28 @@ struct CachedJwks {
 pub struct JwksManager {
     cache: RwLock<Option<CachedJwks>>,
     client: reqwest::Client,
+    config: AuthConfig,
 }
 
 impl JwksManager {
-    pub fn new() -> Self {
+    pub fn new(config: &AuthConfig) -> Self {
         Self {
             cache: RwLock::new(None),
             client: reqwest::Client::builder()
                 .timeout(JWKS_FETCH_TIMEOUT)
                 .build()
                 .expect("Failed to build HTTP client"),
+            config: config.clone(),
         }
+    }
+
+    /// Returns `true` when a non-expired JWKS cache is available.
+    pub async fn is_ready(&self) -> bool {
+        let cache = self.cache.read().await;
+        cache
+            .as_ref()
+            .map(|c| c.fetched_at.elapsed() < JWKS_CACHE_TTL)
+            .unwrap_or(false)
     }
 
     /// Get a JWK by key ID, fetching from Clerk if necessary
@@ -149,10 +196,11 @@ impl JwksManager {
     }
 
     async fn fetch_jwks(&self) -> Result<HashMap<String, JwkKey>, AuthError> {
-        info!("Fetching JWKS from {}", CLERK_JWKS_URL);
+        let jwks_url = &self.config.clerk_jwks_url;
+        info!("Fetching JWKS from {}", jwks_url);
         let resp = self
             .client
-            .get(CLERK_JWKS_URL)
+            .get(jwks_url)
             .send()
             .await
             .map_err(|e| AuthError::JwksFetch(e.to_string()))?;
@@ -181,7 +229,7 @@ impl JwksManager {
 
 impl Default for JwksManager {
     fn default() -> Self {
-        Self::new()
+        Self::new(&AuthConfig::default())
     }
 }
 
@@ -287,7 +335,7 @@ pub async fn verify_token(
     // Validate token
     let mut validation = Validation::new(Algorithm::RS256);
     // Clerk tokens are issued by the Clerk instance
-    validation.set_issuer(&["https://clerk.platform.allternit.com"]);
+    validation.set_issuer(&[jwks.config.clerk_issuer.as_str()]);
     // Accept tokens with or without audience
     validation.validate_aud = false;
 
@@ -304,6 +352,7 @@ pub async fn verify_token(
         email: claims.email,
         name: claims.name,
         avatar_url: claims.image_url,
+        tenant_id: None,
     })
 }
 
@@ -385,6 +434,7 @@ fn extract_desktop_bootstrap_user(headers: &HeaderMap) -> Option<AuthUser> {
         email,
         name,
         avatar_url: None,
+        tenant_id: None,
     })
 }
 
@@ -468,5 +518,6 @@ pub fn get_user(headers: &HeaderMap) -> Option<AuthUser> {
         email,
         name,
         avatar_url: None,
+        tenant_id: None,
     })
 }

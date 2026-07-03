@@ -2,6 +2,7 @@
 //!
 //! Shared state and route handlers for the Allternit API.
 
+pub mod agent_execution;
 pub mod agent_routes;
 pub mod agent_runtime_routes;
 pub mod agent_session_routes;
@@ -23,6 +24,7 @@ pub mod db;
 pub mod error;
 pub mod fallback_routes;
 pub mod h5i_routes;
+pub mod health;
 pub mod oauth_routes;
 pub mod office_routes;
 pub mod onboarding_routes;
@@ -63,7 +65,7 @@ pub mod web_proxy_routes;
 pub mod workflow_routes;
 pub mod workspace_routes;
 
-use auth::JwksManager;
+use auth::{AuthConfig, JwksManager};
 use db::DbHandle;
 use rails::RailsState;
 use vm_session_routes::VmSessionStore;
@@ -82,8 +84,10 @@ pub struct AppState {
     pub db: DbHandle,
     /// Clerk JWKS manager for JWT verification
     pub jwks: JwksManager,
+    /// Unified auth configuration
+    pub auth_config: AuthConfig,
     /// VM execution driver (Firecracker on Linux, Apple VF on macOS)
-    pub vm_driver: Option<Box<dyn allternit_driver_interface::ExecutionDriver>>,
+    pub vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
     /// Rails service state (Ledger, Gate, Leases, etc.)
     pub rails: RailsState,
     /// Persistent VM sessions — each gizzi-code session gets one VM that stays

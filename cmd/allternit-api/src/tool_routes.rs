@@ -63,6 +63,7 @@ async fn execute_tool(
             email: headers.get("x-allternit-user-email").and_then(|v| v.to_str().ok()).map(|s| s.to_string()),
             name: headers.get("x-allternit-user-name").and_then(|v| v.to_str().ok()).map(|s| s.to_string()),
             avatar_url: None,
+            tenant_id: headers.get("x-allternit-tenant-id").and_then(|v| v.to_str().ok()).map(|s| s.to_string()),
         },
         None => {
             return (

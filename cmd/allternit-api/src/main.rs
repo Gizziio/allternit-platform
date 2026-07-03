@@ -24,6 +24,7 @@ use tracing::warn;
 use allternit_api::AppState;
 use allternit_api::auth::auth_middleware;
 use allternit_api::db::DbHandle;
+use allternit_api::health::health_router;
 use allternit_api::aci_routes::aci_router;
 use allternit_api::agent_routes::agent_router;
 use allternit_api::automation_routes::automation_router;
@@ -110,8 +111,9 @@ async fn main() {
         .expect("Failed to initialize SQLite database");
     info!("Database ready at {}", db_path.display());
 
-    // Initialize JWKS manager for Clerk JWT verification
-    let jwks = allternit_api::auth::JwksManager::new();
+    // Initialize unified auth configuration and JWKS manager for Clerk JWT verification
+    let auth_config = allternit_api::auth::AuthConfig::from_env();
+    let jwks = allternit_api::auth::JwksManager::new(&auth_config);
     info!("JWKS manager initialized");
 
     // Webhook secret for Clerk webhook verification
@@ -149,6 +151,7 @@ async fn main() {
     let state = Arc::new(AppState {
         db,
         jwks,
+        auth_config,
         vm_driver,
         rails,
         vm_sessions: new_vm_session_store(),
@@ -229,7 +232,7 @@ async fn main() {
 
     // ── Public routes (no authentication required) ────────────────────────────
     let public = Router::new()
-        .route("/health", axum::routing::get(health_check))
+        .nest("/health", health_router())
         .nest("/api", web_proxy_router())
         .merge(status_router())
         .merge(webhook_router())
@@ -272,6 +275,11 @@ async fn main() {
                 HeaderName::from_static("x-allternit-user-name"),
             ]),
     );
+
+    // Record request metrics for all non-preflight requests
+    let app = app.layer(axum::middleware::from_fn(
+        allternit_api::metrics::metrics_middleware,
+    ));
 
     // Start server — port from ALLTERNIT_API_PORT env var, default 8013
     let port: u16 = std::env::var("ALLTERNIT_API_PORT")
@@ -475,17 +483,8 @@ async fn initialize_cowork_scheduler(data_dir: &std::path::Path) -> Option<Arc<R
     }
 }
 
-/// Health check endpoint
-async fn health_check() -> impl axum::response::IntoResponse {
-    axum::Json(serde_json::json!({
-        "status": "healthy",
-        "service": "allternit-api",
-        "version": "0.1.0",
-    }))
-}
-
 /// Initialize the appropriate VM driver for the platform
-async fn initialize_vm_driver() -> Option<Box<dyn allternit_driver_interface::ExecutionDriver>> {
+async fn initialize_vm_driver() -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
     // Get packaged VM directory from desktop app (if available)
     let vm_dir = std::env::var("ALLTERNIT_VM_DIR").ok().filter(|s| !s.is_empty());
     if let Some(ref dir) = vm_dir {
@@ -506,7 +505,7 @@ async fn initialize_vm_driver() -> Option<Box<dyn allternit_driver_interface::Ex
         match FirecrackerDriver::new(config).await {
             Ok(driver) => {
                 info!("Firecracker driver initialized");
-                return Some(Box::new(driver));
+                return Some(Arc::new(driver));
             }
             Err(e) => {
                 warn!("Failed to initialize Firecracker driver: {}", e);
@@ -542,7 +541,7 @@ async fn initialize_vm_driver() -> Option<Box<dyn allternit_driver_interface::Ex
         match AppleVFDriver::with_config(config) {
             Ok(driver) => {
                 info!("Apple VF driver initialized (powered by Lume)");
-                return Some(Box::new(driver));
+                return Some(Arc::new(driver));
             }
             Err(e) => {
                 warn!("Failed to initialize Apple VF driver: {}", e);
