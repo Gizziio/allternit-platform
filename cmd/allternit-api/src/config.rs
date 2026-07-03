@@ -313,13 +313,16 @@ impl AppConfig {
     }
 
     /// Cron daemon URL.
+    ///
+    /// The gizzi-code terminal server exposes the cron API under `/cron`, so the
+    /// default points at the local gizzi server (`http://127.0.0.1:4096/cron`).
     pub fn cron_daemon_url(&self) -> String {
         std::env::var("ALLTERNIT_CRON_DAEMON_URL")
             .ok()
             .filter(|s| !s.is_empty())
             .or_else(|| self.user.cron_daemon_url.clone())
             .or_else(|| self.company.cron_daemon_url.clone())
-            .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
+            .unwrap_or_else(|| "http://127.0.0.1:4096/cron".to_string())
     }
 
     /// Gizzi runtime port. Used when a full URL is not supplied.

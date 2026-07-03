@@ -87,10 +87,12 @@ CREATE TABLE schedules (
 
 ### Local scheduler
 
-- Not yet implemented. Proposed as a new crate or module inside the Gizzi Code runtime.
-- Should reuse `allternit-cron-parser` for natural-language → cron conversion.
-- Should reuse the same misfire policies as the cloud scheduler.
-- Should store schedules in `~/.allternit/gizzi-scheduler.db`.
+- **Crate**: `cmd/gizzi-code/src/runtime/automation/cron/`.
+- **Scheduler**: `CronService` singleton backed by SQLite (`~/.allternit/gizzi-cron.db`).
+- **HTTP API**: `/cron/*` routes mounted on the gizzi-code terminal server (port 4096).
+- **Lifetime**: initialized when the gizzi-code server starts, stopped when it stops. Because the Allternit Desktop process manages the gizzi-code server, schedules run as long as the desktop process is running (Kimi-style).
+- **Bridge**: `cmd/allternit-api/src/automation_routes.rs` stores platform `Routine`/`Loop` records in its own database and proxies CRUD/run calls to `http://127.0.0.1:4096/cron`.
+- **Misfire policy**: `catchUpMissed` boolean on persistent jobs; session-scoped loops expire after 3 days.
 
 ## No Fallbacks Rule
 
@@ -134,8 +136,8 @@ POST /api/v1/schedules/:id/trigger
 
 ## Next Steps
 
-1. Implement the local scheduler for Gizzi Code / Allternit Desktop.
-2. Add the schedule CRUD API to `cmd/allternit-api`.
-3. Add a UI in `surfaces/ai.allternit.com` for creating and monitoring schedules.
-4. Add schedule execution metrics and alerting.
-5. Document which execution domain each schedule type uses.
+1. Add a UI in `surfaces/ai.allternit.com` for creating and monitoring schedules.
+2. Add schedule execution metrics and alerting.
+3. Document which execution domain each schedule type uses.
+4. Add end-to-end tests that create a local schedule, wait for the due time, and verify execution.
+5. Revisit the standalone `gizzi daemon` entry point once the terminal-server-hosted scheduler is proven in production.

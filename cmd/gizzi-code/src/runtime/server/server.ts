@@ -50,6 +50,7 @@ import { AuthRoutes } from "@/runtime/server/routes/auth"
 import { AgentRoutes } from "@/runtime/server/routes/agent"
 import { CommandRoutes } from "@/runtime/server/routes/command"
 import { CronRoutes } from "@/runtime/server/routes/cron"
+import { CronService } from "@/runtime/automation/cron/service"
 import { ArsContextaRoutes } from "@/runtime/server/routes/ars-contexta"
 import { WebProxyRoutes } from "@/runtime/server/routes/web-proxy"
 import { MDNS } from "@/runtime/server/mdns"
@@ -465,6 +466,21 @@ export namespace Server {
 
     _url = server.url
 
+    // Initialize local cron scheduler so /cron routes are functional.
+    // The scheduler lifetime is bound to the gizzi server process (Kimi-style local scheduling).
+    try {
+      CronService.initialize({
+        dbPath: `${Global.Path.data}/gizzi-cron.db`,
+        checkIntervalMs: 60_000,
+        maxConcurrentJobs: 10,
+        defaultTimeoutSeconds: 300,
+      })
+      CronService.start()
+      log.info("cron service initialized")
+    } catch (err) {
+      log.error("failed to initialize cron service", { error: err })
+    }
+
     const shouldPublishMDNS =
       opts.mdns &&
       server.port &&
@@ -480,6 +496,12 @@ export namespace Server {
     const originalStop = server.stop.bind(server)
     server.stop = async (closeActiveConnections?: boolean) => {
       if (shouldPublishMDNS) MDNS.unpublish()
+      try {
+        CronService.close()
+        log.info("cron service stopped")
+      } catch (err) {
+        log.error("failed to stop cron service", { error: err })
+      }
       return originalStop(closeActiveConnections)
     }
 

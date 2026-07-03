@@ -21,6 +21,11 @@ export interface UserConfig {
   gatewayUrl?: string;
   providerApiKeys?: Record<string, unknown>;
   onboardingComplete?: boolean;
+  ollamaUrl?: string;
+  memoryUrl?: string;
+  embeddingUrl?: string;
+  agentWorkdir?: string;
+  cronDaemonUrl?: string;
 }
 
 export interface SetupConfigResponse {
