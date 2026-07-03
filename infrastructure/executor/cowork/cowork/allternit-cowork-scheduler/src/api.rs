@@ -203,17 +203,7 @@ async fn update_schedule(
         
         let result = match status.as_str() {
             "active" => scheduler.enable_schedule(&id).await,
-            "paused" | "disabled" => {
-                // Get the schedule first to return it after disabling
-                let schedule = scheduler.get_schedule(&id).await;
-                if let Ok(_) = schedule {
-                    // Note: disable_schedule doesn't exist in current impl
-                    // For now just return the schedule
-                    schedule
-                } else {
-                    schedule
-                }
-            }
+            "paused" | "disabled" => scheduler.disable_schedule(&id).await,
             _ => Err(SchedulerError::InvalidCron(format!("Invalid status: {}", status))),
         };
         
@@ -330,14 +320,28 @@ async fn get_status(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
 }
 
 /// Wake/Trigger all due schedules
-async fn wake_schedules(State(_state): State<Arc<ApiState>>) -> impl IntoResponse {
-    // This would check for due jobs and trigger them
-    // For now, just return a placeholder response
-    let response = serde_json::json!({
-        "triggered": 0,
-        "jobs": [],
-    });
-    (StatusCode::OK, Json(response)).into_response()
+async fn wake_schedules(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
+    let scheduler = state.scheduler.read().await;
+
+    match scheduler.wake_due_schedules().await {
+        Ok(triggered) => {
+            let response = serde_json::json!({
+                "triggered": triggered.len(),
+                "jobs": triggered,
+            });
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "Failed to wake due schedules");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: e.to_string(),
+                }),
+            )
+                .into_response()
+        }
+    }
 }
 
 /// Create the API router

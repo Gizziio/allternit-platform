@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allternit.com/schemas/v1/schedule.json",
+  "title": "Cowork Schedule",
+  "description": "A cron-based schedule definition for the Allternit cowork scheduler.",
+  "type": "object",
+  "required": ["id", "name", "cron", "timezone", "enabled", "entrypoint", "args", "env", "priority", "timeout_secs", "created_at", "updated_at", "owner", "run_mode"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the schedule."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name for the schedule."
+    },
+    "cron": {
+      "type": "string",
+      "description": "Cron expression defining when the schedule runs (e.g. '0 9 * * 1-5')."
+    },
+    "timezone": {
+      "type": "string",
+      "description": "Timezone for the cron expression. Defaults to UTC."
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether the schedule is currently enabled."
+    },
+    "entrypoint": {
+      "type": "string",
+      "description": "Command or script to execute when the schedule triggers."
+    },
+    "args": {
+      "type": "array",
+      "description": "Arguments to pass to the entrypoint.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "env": {
+      "type": "object",
+      "description": "Environment variables available to the scheduled job.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "priority": {
+      "type": "integer",
+      "description": "Execution priority (higher values are more important)."
+    },
+    "timeout_secs": {
+      "type": "integer",
+      "description": "Maximum runtime in seconds before the scheduled job is considered failed."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the schedule was created."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the schedule was last updated."
+    },
+    "last_triggered_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of the last successful trigger."
+    },
+    "next_run_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of the next scheduled execution."
+    },
+    "owner": {
+      "type": "string",
+      "description": "Owner of the schedule (tenant or user identifier)."
+    },
+    "run_mode": {
+      "type": "string",
+      "enum": ["interactive", "cowork", "scheduled"],
+      "description": "Execution mode to use when triggering the run."
+    }
+  },
+  "additionalProperties": false
+}

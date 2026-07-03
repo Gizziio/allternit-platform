@@ -7,8 +7,9 @@ use chrono::Utc;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
+use tokio::task::JoinHandle;
 use tokio::time::{interval, Duration};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::attachment::AttachmentRegistry;
 use crate::checkpoint::CheckpointManager;
@@ -31,6 +32,8 @@ pub struct RunManager {
     rails_client: Arc<dyn RailsClient>,
     /// Graceful shutdown signal
     shutdown: mpsc::Receiver<()>,
+    /// Handle to the event forwarding task
+    event_forwarder: Option<JoinHandle<()>>,
 }
 
 /// Trait for Rails client interaction
@@ -96,8 +99,18 @@ impl RunManager {
             CheckpointManager::new(config.data_dir.join("checkpoints"), &config.rails_base_url).await?
         );
 
-        let (event_tx, _event_rx) = mpsc::channel(1000);
+        let (event_tx, mut event_rx) = mpsc::channel(1000);
         let (_shutdown_tx, shutdown_rx) = mpsc::channel(1);
+
+        // Forward emitted events to the Rails ledger.
+        let forwarder_client = rails_client.clone();
+        let event_forwarder = tokio::spawn(async move {
+            while let Some(event) = event_rx.recv().await {
+                if let Err(e) = forwarder_client.append_event(&event).await {
+                    error!(error = %e, "Failed to append event to Rails ledger");
+                }
+            }
+        });
 
         let manager = Self {
             runs,
@@ -107,6 +120,7 @@ impl RunManager {
             event_tx: event_tx.clone(),
             rails_client,
             shutdown: shutdown_rx,
+            event_forwarder: Some(event_forwarder),
         };
 
         // Start background tasks
@@ -586,6 +600,11 @@ impl RunManager {
 
         // Stop attachment cleanup
         self.attachments.stop_cleanup().await;
+
+        // Stop event forwarding
+        if let Some(handle) = self.event_forwarder.take() {
+            handle.abort();
+        }
 
         info!("RunManager shutdown complete");
     }

@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allternit.com/schemas/v1/scheduler-stats.json",
+  "title": "Scheduler Statistics",
+  "description": "Aggregate statistics reported by the cowork scheduler.",
+  "type": "object",
+  "required": ["total_schedules", "enabled_schedules"],
+  "properties": {
+    "total_schedules": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of schedules known to the scheduler."
+    },
+    "enabled_schedules": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of schedules that are currently enabled."
+    }
+  },
+  "additionalProperties": false
+}

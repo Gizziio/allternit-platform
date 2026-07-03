@@ -173,11 +173,15 @@ impl SqliteStore {
     
     /// Delete a schedule
     pub async fn delete_schedule(&self, id: &str) -> Result<()> {
-        sqlx::query("DELETE FROM schedules WHERE id = ?")
+        let result = sqlx::query("DELETE FROM schedules WHERE id = ?")
             .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| SchedulerError::Store(e.to_string()))?;
+        
+        if result.rows_affected() == 0 {
+            return Err(SchedulerError::NotFound(id.to_string()));
+        }
         
         Ok(())
     }

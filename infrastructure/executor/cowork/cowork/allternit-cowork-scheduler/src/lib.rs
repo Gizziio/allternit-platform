@@ -262,7 +262,7 @@ impl Scheduler {
         owner: impl Into<String>,
         req: CreateScheduleRequest,
     ) -> Result<Schedule> {
-        // Validate cron expression
+        // Validate the user-provided cron expression.
         if let Err(e) = cron_parser::parse(&req.cron, &Utc::now()) {
             return Err(SchedulerError::InvalidCron(e.to_string()));
         }
@@ -315,19 +315,19 @@ impl Scheduler {
     /// Get a schedule by ID
     pub async fn get_schedule(&self, id: &str) -> Result<Schedule> {
         let store = self.store.read().await;
-        store.get_schedule(id).await.map_err(|e| SchedulerError::Store(e.to_string()))
+        store.get_schedule(id).await
     }
 
     /// List all schedules
     pub async fn list_schedules(&self) -> Result<Vec<Schedule>> {
         let store = self.store.read().await;
-        store.list_schedules().await.map_err(|e| SchedulerError::Store(e.to_string()))
+        store.list_schedules().await
     }
 
     /// List schedules for an owner
     pub async fn list_schedules_for_owner(&self, owner: &str) -> Result<Vec<Schedule>> {
         let store = self.store.read().await;
-        store.list_schedules_for_owner(owner).await.map_err(|e| SchedulerError::Store(e.to_string()))
+        store.list_schedules_for_owner(owner).await
     }
 
     /// Enable a schedule
@@ -365,12 +365,22 @@ impl Scheduler {
     /// Delete a schedule
     pub async fn delete_schedule(&self, id: &str) -> Result<()> {
         let store = self.store.write().await;
-        store.delete_schedule(id).await.map_err(|e| SchedulerError::Store(e.to_string()))?;
+        store.delete_schedule(id).await?;
 
         // Note: tokio-cron-scheduler doesn't support removing jobs by ID in this version
         // The job will be skipped when triggered if the schedule is disabled/deleted
 
         info!(schedule_id = %id, "Deleted schedule");
+        Ok(())
+    }
+
+    /// Save an updated schedule to the store.
+    ///
+    /// This is useful for tests and for callers that need to update metadata
+    /// (such as `next_run_at`) outside of the standard lifecycle methods.
+    pub async fn save_schedule(&self, schedule: &Schedule) -> Result<()> {
+        let store = self.store.write().await;
+        store.save_schedule(schedule).await.map_err(|e| SchedulerError::Store(e.to_string()))?;
         Ok(())
     }
 
@@ -410,8 +420,8 @@ impl Scheduler {
         let handler = self.handler.clone();
         let store = self.store.clone();
 
-        // Parse the cron expression
-        let schedule_cron = schedule.cron.clone();
+        // Parse the cron expression (tokio-cron-scheduler requires 6 or 7 fields).
+        let schedule_cron = normalize_cron(&schedule.cron)?;
         let job = Job::new_async(schedule_cron.as_str(), move |_uuid, _l| {
             let ctx = ctx.clone();
             let handler = handler.clone();
@@ -453,6 +463,74 @@ impl Scheduler {
             total_schedules: total,
             enabled_schedules: enabled,
         })
+    }
+
+    /// Check all enabled schedules and trigger any that are due.
+    ///
+    /// A schedule is considered due when its `next_run_at` timestamp is in the
+    /// past and it has not been triggered since that time. The method returns
+    /// the IDs of schedules that were triggered.
+    pub async fn wake_due_schedules(&self) -> Result<Vec<String>> {
+        let store = self.store.read().await;
+        let schedules = store.list_schedules().await.map_err(|e| SchedulerError::Store(e.to_string()))?;
+        drop(store);
+
+        let now = Utc::now();
+        let mut triggered = Vec::new();
+
+        for schedule in schedules {
+            if !schedule.enabled {
+                continue;
+            }
+
+            let Some(next_run) = schedule.next_run_at else {
+                continue;
+            };
+
+            if next_run > now {
+                continue;
+            }
+
+            let already_triggered = schedule
+                .last_triggered_at
+                .map(|last| last >= next_run)
+                .unwrap_or(false);
+
+            if already_triggered {
+                continue;
+            }
+
+            match self.run_now(&schedule.id).await {
+                Ok(_) => {
+                    info!(schedule_id = %schedule.id, "Triggered due schedule");
+                    triggered.push(schedule.id.clone());
+                }
+                Err(e) => {
+                    error!(schedule_id = %schedule.id, error = %e, "Failed to trigger due schedule");
+                }
+            }
+        }
+
+        Ok(triggered)
+    }
+}
+
+/// Normalize a cron expression for `tokio-cron-scheduler`.
+///
+/// The user-facing API accepts standard 5-field cron (`min hour day month weekday`).
+/// `tokio-cron-scheduler` (via the `cron` crate) requires 6 or 7 fields, so 5-field
+/// expressions are normalized by prepending a `0` second field.
+fn normalize_cron(expr: &str) -> Result<String> {
+    let trimmed = expr.trim();
+    let parts: Vec<&str> = trimmed.split_whitespace().collect();
+
+    match parts.len() {
+        5 => Ok(format!("0 {}", trimmed)),
+        6 | 7 => Ok(trimmed.to_string()),
+        _ => Err(SchedulerError::InvalidCron(format!(
+            "Invalid cron field count: expected 5, 6, or 7, got {}",
+            parts.len()
+        ))),
     }
 }
 
