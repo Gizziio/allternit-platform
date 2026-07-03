@@ -1,2 +1,1 @@
-// Auto-generated shim to satisfy TypeScript imports
-export const TaskGetTool: any = {}
+export { TaskGetTool } from '../builtins/taskgettool/TaskGetTool.js'
