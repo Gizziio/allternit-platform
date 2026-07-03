@@ -31,6 +31,7 @@ members = [
     "services/voice",
     "api/services/workspace-service",
     "services/orchestration/control-plane/unified-registry/registry",
+    "domains/agent/allternit-agent-workspace/allternit-agent-workspace",
 ]
 
 [workspace.package]

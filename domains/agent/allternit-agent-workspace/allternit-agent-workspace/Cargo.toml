@@ -42,12 +42,12 @@ log = { version = "0.4", optional = true }
 clap = { version = "4.0", features = ["derive"], optional = true }
 
 # WASM dependencies
-wasm-bindgen = { version = "=0.2.89", optional = true }
-wasm-bindgen-futures = { version = "=0.4.39", optional = true }
-js-sys = { version = "=0.3.66", optional = true }
-web-sys = { version = "=0.3.66", optional = true }
-serde-wasm-bindgen = { version = "=0.6.5", optional = true }
-console_error_panic_hook = { version = "=0.1.7", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true }
+serde-wasm-bindgen = { version = "0.6", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
 
 [features]
 default = ["std", "cli"]
@@ -70,8 +70,6 @@ wasm = [
     "web-sys",
     "serde-wasm-bindgen",
     "console_error_panic_hook",
-    "sha2",
-    "hex",
 ]
 cli = ["clap"]
 
