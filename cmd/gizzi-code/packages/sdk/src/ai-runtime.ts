@@ -93,10 +93,9 @@ export {
   type ACPRegistryEntry,
 } from './acp/schema.js';
 export {
-  validateMessage,
-  validateTool,
-  validateSession,
-  validateRegistryEntry,
+  validateACPMessage,
+  validateACPSession,
+  validateACPRegistryEntry,
 } from './acp/validator.js';
 export {
   ACPHarnessBridge,
