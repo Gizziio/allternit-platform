@@ -1,4 +1,4 @@
-import chalk, { Chalk } from 'chalk'
+import chalk from 'chalk'
 import { env } from './env.js'
 
 export type Theme = {
@@ -616,7 +616,7 @@ export function getTheme(themeName: ThemeName): Theme {
 // Apple Terminal doesn't handle 24-bit color escape sequences well
 const chalkForChart =
   env.terminal === 'Apple_Terminal'
-    ? new Chalk({ level: 2 }) // 256 colors
+    ? new chalk.Instance({ level: 2 }) // 256 colors
     : chalk
 
 /**

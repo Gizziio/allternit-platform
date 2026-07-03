@@ -81,7 +81,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
 
   const handleBack = (): void => {
     setActiveWorkspace(''); // Clear active workspace
-    dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'code' } }));
   };
 
   const createAndStreamCodeSession = async (text: string) => {
@@ -91,6 +91,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
       workspaceId: currentWorkspaceId,
     });
     useCodeSessionStore.getState().setActiveSession(sessionId);
+    setActiveSession(sessionId);
     await useCodeSessionStore.getState().sendMessageStream(sessionId, { text });
   };
 
@@ -98,7 +99,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     if (!text.trim() || !currentWorkspaceId) return;
     setComposerInput('');
     await createAndStreamCodeSession(text);
-    dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'code' } }));
   };
 
   const handleNewThread = async (): Promise<void> => {
@@ -108,7 +109,8 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
       workspaceId: currentWorkspaceId,
     });
     useCodeSessionStore.getState().setActiveSession(sessionId);
-    dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+    setActiveSession(sessionId);
+    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'code' } }));
   };
 
   const handleSessionSelect = (sessionId: string): void => {
