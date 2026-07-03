@@ -94,6 +94,17 @@ export interface RoutineRun {
   metadata?: Record<string, unknown>;
 }
 
+export interface RoutineMetrics {
+  routine_id: string;
+  total_runs: number;
+  successful_runs: number;
+  failed_runs: number;
+  success_rate: number;
+  average_duration_ms?: number;
+  last_run_status?: RoutineRunStatus;
+  last_run_at?: string;
+}
+
 export interface GoalChildren {
   routines: Routine[];
   loops: Loop[];

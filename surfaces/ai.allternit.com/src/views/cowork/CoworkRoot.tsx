@@ -148,6 +148,7 @@ function CoworkRootContent() {
     activeProjectId,
   } = useCoworkStore();
 
+  const defaultSelection = useDefaultModelSelection();
   const { isAgents, isWeb, isSync, isRoutines, isLoops } = useCoworkMode();
   const [coworkAgents, setCoworkAgents] = useState<CoworkAgent[]>([]);
   const [selectedWebAgent, setSelectedWebAgent] = useState<CoworkAgent | null>(null);

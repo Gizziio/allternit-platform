@@ -113,6 +113,18 @@ pub struct RoutineRun {
     pub metadata: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoutineMetrics {
+    pub routine_id: String,
+    pub total_runs: i64,
+    pub successful_runs: i64,
+    pub failed_runs: i64,
+    pub success_rate: f64,
+    pub average_duration_ms: Option<f64>,
+    pub last_run_status: Option<String>,
+    pub last_run_at: Option<String>,
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Request / Response Types
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1095,6 +1107,64 @@ async fn list_routine_runs(
     Ok(Json(runs))
 }
 
+async fn get_routine_metrics(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<RoutineMetrics>, StatusCode> {
+    let user = get_user(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
+    let conn = state.db.connect().map_err(|e| {
+        warn!("db error: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    conn.query_row(
+        "SELECT 1 FROM routines WHERE id = ?1 AND user_id = ?2",
+        [&id, &user.user_id],
+        |_| Ok(()),
+    )
+    .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    let metrics = conn
+        .query_row(
+            "SELECT
+                COUNT(*),
+                COUNT(CASE WHEN status = 'completed' THEN 1 END),
+                COUNT(CASE WHEN status = 'failed' THEN 1 END),
+                AVG(CASE WHEN status = 'completed' THEN duration_ms END),
+                (SELECT status FROM routine_runs WHERE routine_id = ?1 ORDER BY scheduled_at DESC LIMIT 1),
+                (SELECT scheduled_at FROM routine_runs WHERE routine_id = ?1 ORDER BY scheduled_at DESC LIMIT 1)
+             FROM routine_runs WHERE routine_id = ?1",
+            [&id],
+            |row| {
+                let total_runs: i64 = row.get(0)?;
+                let successful_runs: i64 = row.get(1)?;
+                let failed_runs: i64 = row.get(2)?;
+                let success_rate = if total_runs > 0 {
+                    successful_runs as f64 / total_runs as f64
+                } else {
+                    0.0
+                };
+                Ok(RoutineMetrics {
+                    routine_id: id.clone(),
+                    total_runs,
+                    successful_runs,
+                    failed_runs,
+                    success_rate,
+                    average_duration_ms: row.get(3)?,
+                    last_run_status: row.get(4)?,
+                    last_run_at: row.get(5)?,
+                })
+            },
+        )
+        .map_err(|e| {
+            warn!("metrics query failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(metrics))
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Loops Handlers
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1455,6 +1525,7 @@ pub fn automation_router() -> Router<Arc<AppState>> {
         )
         .route("/automation/routines/:id/run", post(run_routine))
         .route("/automation/routines/:id/runs", get(list_routine_runs))
+        .route("/automation/routines/:id/metrics", get(get_routine_metrics))
         // Loops
         .route("/automation/loops", get(list_loops).post(create_loop))
         .route(

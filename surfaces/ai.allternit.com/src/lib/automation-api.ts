@@ -17,6 +17,7 @@ import type {
   CreateRoutineInput,
   UpdateRoutineInput,
   RoutineRun,
+  RoutineMetrics,
   Loop,
   CreateLoopInput,
   UpdateLoopInput,
@@ -68,6 +69,10 @@ export async function runRoutine(id: string): Promise<Record<string, unknown>> {
 
 export async function listRoutineRuns(id: string): Promise<RoutineRun[]> {
   return api.get<RoutineRun[]>(`/api/v1/automation/routines/${id}/runs`);
+}
+
+export async function getRoutineMetrics(id: string): Promise<RoutineMetrics> {
+  return api.get<RoutineMetrics>(`/api/v1/automation/routines/${id}/metrics`);
 }
 
 export async function listLoops(): Promise<Loop[]> {

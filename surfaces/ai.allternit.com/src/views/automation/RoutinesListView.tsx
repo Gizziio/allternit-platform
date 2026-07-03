@@ -21,9 +21,11 @@ import {
   updateRoutine,
   deleteRoutine,
   runRoutine,
+  getRoutineMetrics,
 } from '@/lib/automation-api';
 import { useAgentStore } from '@/lib/agents';
 import { formatRelativeTime } from '@/lib/time';
+import type { RoutineMetrics } from '@/lib/agents/automation.types';
 
 const statusColor: Record<string, string> = {
   active: 'var(--status-success)',
@@ -34,6 +36,7 @@ const statusColor: Record<string, string> = {
 
 export function RoutinesListView() {
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [metrics, setMetrics] = useState<Record<string, RoutineMetrics>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -66,6 +69,17 @@ export function RoutinesListView() {
       setError(null);
       const data = await listRoutines();
       setRoutines(data);
+      const metricsMap: Record<string, RoutineMetrics> = {};
+      await Promise.all(
+        data.map(async (routine) => {
+          try {
+            metricsMap[routine.id] = await getRoutineMetrics(routine.id);
+          } catch {
+            // ignore per-routine metric errors
+          }
+        })
+      );
+      setMetrics(metricsMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load routines');
     } finally {
@@ -419,6 +433,17 @@ export function RoutinesListView() {
                 >
                   {routine.execution_domain}
                 </span>
+                {metrics[routine.id]?.total_runs > 0 && (
+                  <>
+                    <span>
+                      {metrics[routine.id].successful_runs}/{metrics[routine.id].total_runs} succeeded
+                    </span>
+                    <span>{Math.round(metrics[routine.id].success_rate * 100)}% success</span>
+                    {metrics[routine.id].last_run_status && (
+                      <span>Last: {metrics[routine.id].last_run_status}</span>
+                    )}
+                  </>
+                )}
                 <span>Updated {formatRelativeTime(routine.updated_at)}</span>
               </div>
             </GlassSurface>
