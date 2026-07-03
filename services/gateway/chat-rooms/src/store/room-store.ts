@@ -4,8 +4,8 @@
  * In-memory store for chat rooms.
  */
 
-import type { ChatRoom, RoomMember } from './types.js';
-import { generateRoomId } from './types.js';
+import type { ChatRoom, RoomMember } from '../types.js';
+import { generateRoomId } from '../types.js';
 
 /**
  * Room store

@@ -107,7 +107,7 @@ app.post('/broadcast', (req, res) => {
 
 const PORT = process.env.PORT || 8010;
 const HOST = process.env.HOST || "127.0.0.1";
-server.listen(PORT, HOST, () => {
+server.listen(Number(PORT), HOST, () => {
   console.log(`AGUI Gateway running on http://${HOST}:${PORT}`);
   console.log(`WebSocket server listening for connections`);
   console.log(`Health check: GET /health`);

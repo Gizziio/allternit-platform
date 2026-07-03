@@ -28,6 +28,9 @@ import sys
 import json
 import logging
 import time
+import glob
+from pathlib import Path
+from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, Request, HTTPException, Response
@@ -95,6 +98,131 @@ logger.info(f"  Operator URL: {OPERATOR_URL}")
 logger.info(f"  Rails URL: {RAILS_URL}")
 logger.info(f"  Memory URL: {MEMORY_URL}")
 logger.info(f"  CORS Origins: {CORS_ORIGINS}")
+
+# =============================================================================
+# Usage Telemetry Models
+# =============================================================================
+
+class UsageAggregateResponse(BaseModel):
+    total_requests: int
+    total_tool_calls: int
+    total_tokens: int
+    local_tokens: int
+    cloud_tokens: int
+    tool_distribution: Dict[str, Dict[str, int]] # tool_name -> {success, failure}
+    daily_activity: List[Dict[str, Any]]
+    top_skills: List[Dict[str, Any]]
+    last_updated: float
+
+@app.get("/api/v1/usage/aggregate", response_model=UsageAggregateResponse)
+async def get_usage_aggregate():
+    """Aggregate real usage data from allternit receipts with deep telemetry"""
+    try:
+        receipts_root = Path("/Users/macbook/Desktop/allternit-workspace/allternit/.allternit/receipts")
+        gateway_receipts = glob.glob(str(receipts_root / "dev-session" / "gateway-*.json"))
+
+        total_requests = len(gateway_receipts)
+        total_tool_calls = 0
+        local_tokens = 0
+        cloud_tokens = 0
+        tool_metrics = {} # name -> {success: X, failure: Y}
+        skill_distribution = {}
+        daily_map = {}
+
+        operator_receipt_paths = glob.glob("/Users/macbook/Desktop/allternit-workspace/allternit/**/receipts/*.json", recursive=True)
+
+        for path in operator_receipt_paths:
+            try:
+                with open(path, 'r') as f:
+                    data = json.load(f)
+
+                    # Privacy tracking
+                    model = data.get("model", "")
+                    tokens = data.get("usage", {}).get("total_tokens", 1000)
+                    if "ollama" in model.lower() or not model:
+                        local_tokens += tokens
+                    else:
+                        cloud_tokens += tokens
+
+                    # Skill usage
+                    skill = data.get("skill", "unknown")
+                    skill_distribution[skill] = skill_distribution.get(skill, 0) + 1
+
+                    # Tool metrics (Success vs Failure)
+                    tcalls = data.get("tool_calls", [])
+                    total_tool_calls += len(tcalls)
+                    for tc in tcalls:
+                        name = tc.get("tool", "unknown")
+                        status = tc.get("status", "success")
+                        if name not in tool_metrics:
+                            tool_metrics[name] = {"success": 0, "failure": 0}
+                        if status == "success":
+                            tool_metrics[name]["success"] += 1
+                        else:
+                            tool_metrics[name]["failure"] += 1
+
+                    # Daily buckets
+                    ts_str = data.get("timestamp")
+                    if ts_str:
+                        ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                        day_key = ts.strftime("%Y-%m-%d")
+                        daily_map[day_key] = daily_map.get(day_key, 0) + 1
+            except Exception:
+                continue
+
+        # Synthesize daily activity
+        daily_activity = []
+        for i in range(14):
+            d = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+            daily_activity.append({
+                "date": d,
+                "count": daily_map.get(d, 0)
+            })
+
+        top_skills = [{"name": k, "count": v} for k, v in sorted(skill_distribution.items(), key=lambda x: x[1], reverse=True)[:5]]
+
+        return UsageAggregateResponse(
+            total_requests=total_requests,
+            total_tool_calls=total_tool_calls,
+            total_tokens=local_tokens + cloud_tokens,
+            local_tokens=local_tokens,
+            cloud_tokens=cloud_tokens,
+            tool_distribution=tool_metrics,
+            daily_activity=sorted(daily_activity, key=lambda x: x["date"]),
+            top_skills=top_skills,
+            last_updated=time.time()
+        )
+    except Exception as e:
+        logger.error(f"Failed to aggregate usage: {e}")
+        return UsageAggregateResponse(
+            total_requests=0, total_tool_calls=0, total_tokens=0,
+            local_tokens=0, cloud_tokens=0, tool_distribution={},
+            daily_activity=[], top_skills=[], last_updated=time.time()
+        )
+
+@app.get("/api/v1/usage/export")
+async def export_usage_data():
+    """Export all usage receipts as a single audit bundle"""
+    try:
+        operator_receipt_paths = glob.glob("/Users/macbook/Desktop/allternit-workspace/allternit/**/receipts/*.json", recursive=True)
+        bundle = []
+
+        for path in operator_receipt_paths:
+            try:
+                with open(path, 'r') as f:
+                    bundle.append(json.load(f))
+            except Exception:
+                continue
+
+        return {
+            "version": "1.0",
+            "exported_at": datetime.now().isoformat(),
+            "total_records": len(bundle),
+            "data": bundle
+        }
+    except Exception as e:
+        logger.error(f"Failed to export usage: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # =============================================================================
 # FastAPI App

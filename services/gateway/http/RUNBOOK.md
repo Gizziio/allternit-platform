@@ -26,7 +26,7 @@
 ## Step 1: Start Gateway
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/allternit-gateway
+cd /Users/macbook/Desktop/allternit-workspace/allternit/services/gateway/http
 
 # Install if needed
 npm install

@@ -185,7 +185,7 @@ app.post('/ping/:agentId', (req, res) => {
 
 const PORT = process.env.PORT || 8012;
 const HOST = process.env.HOST || "127.0.0.1";
-server.listen(PORT, HOST, () => {
+server.listen(Number(PORT), HOST, () => {
   console.log(`A2A Gateway running on http://${HOST}:${PORT}`);
   console.log(`Register agent: POST /register/agent`);
   console.log(`Discover agents: GET /discover/agents`);

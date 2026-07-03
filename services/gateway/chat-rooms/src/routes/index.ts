@@ -55,6 +55,7 @@ export function registerRoutes(
       type: body.type || 'public',
       memberIds: body.memberIds || [],
       maxMembers: body.maxMembers || 0,
+      createdBy: body.createdBy || 'system',
     });
     
     return reply.code(201).send({ room });

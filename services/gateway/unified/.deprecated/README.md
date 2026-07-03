@@ -19,7 +19,7 @@ Use the new unified gateway:
 
 ```python
 # New canonical gateway
-4-services/gateway/src/main.py
+services/gateway/unified/src/main.py
 ```
 
 ## Cleanup

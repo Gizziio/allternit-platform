@@ -133,6 +133,8 @@ export interface CreateRoomRequest {
   memberIds?: string[];
   /** Max members */
   maxMembers?: number;
+  /** Created by */
+  createdBy?: string;
 }
 
 /**

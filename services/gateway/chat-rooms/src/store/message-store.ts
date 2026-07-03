@@ -4,7 +4,7 @@
  * In-memory store for chat messages.
  */
 
-import type { ChatMessage } from './types.js';
+import type { ChatMessage } from '../types.js';
 
 /**
  * Message store
