@@ -33,6 +33,7 @@ import type {
   QueueItem,
   ExecutionPlan,
   PlanStep,
+  AgentWorkspaceLayers,
 } from './agent.types';
 import {
   validateCreateAgentInput,
@@ -1225,7 +1226,16 @@ export interface WorkspaceDocumentInput {
   tags?: string[];
   tools?: string[];
   capabilities?: string[];
+  layers?: AgentWorkspaceLayers;
 }
+
+const DEFAULT_WORKSPACE_LAYERS: AgentWorkspaceLayers = {
+  cognitive: true,
+  identity: true,
+  governance: true,
+  skills: true,
+  business: false,
+};
 
 export function generateEnhancedWorkspaceDocuments(
   config: unknown,
@@ -1245,6 +1255,7 @@ export function generateEnhancedWorkspaceDocuments(
   const harness = metadata.harness || { mode: 'cloud' };
   const category = metadata.category || 'general';
   const tags = metadata.tags || [];
+  const layers = metadata.layers ?? DEFAULT_WORKSPACE_LAYERS;
   const c = (config as Record<string, unknown>) || {};
   const personality = (c.personality as Record<string, unknown>) || {};
   const character = (c.character as Record<string, unknown>) || {};
@@ -1256,9 +1267,22 @@ export function generateEnhancedWorkspaceDocuments(
   const temperament = (character.temperament as string) || 'balanced';
   const now = new Date().toISOString();
 
-  return [
+  const docs: Array<{ path: string; content: string }> = [
     {
-      path: 'README.md',
+      path: '.allternit/manifest.json',
+      content: JSON.stringify({
+        id: `${agentType}-${Date.now()}`,
+        agentName: name,
+        template: 'allternit-standard',
+        version: '1.0.0',
+        createdAt: Date.now(),
+        lastModified: Date.now(),
+        layers,
+        files: [],
+      }, null, 2),
+    },
+    {
+      path: '.allternit/README.md',
       content: `# ${name}
 
 ${description}
@@ -1276,8 +1300,67 @@ ${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '*No ca
 ${tools.length > 0 ? tools.map(t => `- ${t}`).join('\n') : '*No tools configured*'}
 `
     },
+  ];
+
+  if (layers.cognitive) {
+    docs.push({
+      path: '.allternit/cognitive/COGNITIVE.md',
+      content: `# COGNITIVE.md — ${name}'s Cognitive Layer
+
+## Overview
+This layer contains the agent's reasoning, memory, and learning systems.
+
+## Current Focus
+${description || 'Ready to assist with tasks'}
+
+## Active Tasks
+- [ ] Initialize and learn about the workspace
+- [ ] Ready for first interaction
+
+## Task Graph
+*To be populated based on interactions*
+
+## Review Criteria
+*To be defined based on agent purpose*
+
+## Memory Systems
+- Working memory: active session context
+- Long-term memory: persistent facts and patterns
+- Episodic memory: conversation history and outcomes
+`,
+    },
     {
-      path: 'identity/IDENTITY.md',
+      path: '.allternit/cognitive/BRAIN.md',
+      content: `# BRAIN.md — ${name}'s Cognitive Core
+
+## Current Focus
+${description || 'Ready to assist with tasks'}
+
+## Active Tasks
+- [ ] Initialize and learn about the workspace
+- [ ] Ready for first interaction
+
+## Task Graph
+*To be populated based on interactions*
+
+## Review Criteria
+*To be defined based on agent purpose*
+`,
+    },
+    {
+      path: '.allternit/memory/active-tasks.md',
+      content: `# Active Tasks
+
+*No active tasks*
+
+> Tasks will be automatically added when ${name} receives work.
+`,
+    });
+  }
+
+  if (layers.identity) {
+    docs.push({
+      path: '.allternit/identity/IDENTITY.md',
       content: `# IDENTITY.md — Who Is ${name}?
 
 | Field | Value |
@@ -1293,10 +1376,10 @@ ${description || 'To assist effectively and deliver high-quality results.'}
 
 ## Specialty Skills
 ${specialtySkills.length > 0 ? specialtySkills.map(s => `- ${s}`).join('\n') : '- General assistance'}
-`
+`,
     },
     {
-      path: 'identity/SOUL.md',
+      path: '.allternit/identity/SOUL.md',
       content: `# SOUL.md — ${name}'s Core Principles
 
 ## Communication Style
@@ -1309,71 +1392,10 @@ ${((c.personalityTraits as string[]) || []).map(t => `- ${t}`).join('\n') || '- 
 
 ## Backstory
 ${(c.backstory as string) || 'An AI assistant created to serve with accuracy and efficiency.'}
-`
+`,
     },
     {
-      path: 'governance/PLAYBOOK.md',
-      content: `# PLAYBOOK.md — ${name}'s Execution Rules
-
-## Standard Operating Procedures
-
-### Communication
-- Be ${(personality.communicationStyle as string) || 'direct'} and clear
-- Adapt tone to context
-- Acknowledge uncertainty honestly
-
-### Error Handling
-- Acknowledge limitations honestly
-- Offer alternatives when stuck
-- Log errors for improvement
-
-### Boundaries
-${hardBans.length > 0 ? hardBans.map(b => `- **${b.category}**: Prohibited`).join('\n') : '- No hard bans configured'}
-`
-    },
-    {
-      path: 'governance/TOOLS.md',
-      content: `# TOOLS.md — ${name}'s Tool Inventory
-
-## Available Tools
-${tools.length > 0 ? tools.map(t => `- ${t}`).join('\n') : '*No tools configured*'}
-
-## Capabilities
-${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '*No capabilities configured*'}
-
-## Tool Usage Guidelines
-- Verify permissions before use
-- Explain what tools will do
-- Report results clearly
-`
-    },
-    {
-      path: 'governance/HEARTBEAT.md',
-      content: `# HEARTBEAT.md — ${name}'s Periodic Tasks
-
-## Scheduled Tasks
-*Configure in CronJob wizard*
-
-### Daily
-- [ ] Self-check
-- [ ] Memory review
-
-### Weekly
-- [ ] Performance review
-- [ ] Archive old data
-`
-    },
-    {
-      path: 'memory/active-tasks.md',
-      content: `# Active Tasks
-
-*No active tasks*
-
-> Tasks will be automatically added when ${name} receives work.
-`
-    },
-    {
-      path: 'identity/VOICE.md',
+      path: '.allternit/identity/VOICE.md',
       content: `# VOICE.md — How ${name} Speaks
 
 ## Voice Style
@@ -1390,10 +1412,65 @@ ${(((c.voice as Record<string, unknown>)?.rules as string[]) || []).map(r => `- 
 
 ## Micro-bans
 ${(((c.voice as Record<string, unknown>)?.microBans as string[]) || []).map(m => `- ${m}`).join('\n') || '- None configured'}
-`
+`,
+    });
+  }
+
+  if (layers.governance) {
+    docs.push({
+      path: '.allternit/governance/PLAYBOOK.md',
+      content: `# PLAYBOOK.md — ${name}'s Execution Rules
+
+## Standard Operating Procedures
+
+### Communication
+- Be ${(personality.communicationStyle as string) || 'direct'} and clear
+- Adapt tone to context
+- Acknowledge uncertainty honestly
+
+### Error Handling
+- Acknowledge limitations honestly
+- Offer alternatives when stuck
+- Log errors for improvement
+
+### Boundaries
+${hardBans.length > 0 ? hardBans.map(b => `- **${b.category}**: Prohibited`).join('\n') : '- No hard bans configured'}
+`,
     },
     {
-      path: 'governance/POLICY.md',
+      path: '.allternit/governance/TOOLS.md',
+      content: `# TOOLS.md — ${name}'s Tool Inventory
+
+## Available Tools
+${tools.length > 0 ? tools.map(t => `- ${t}`).join('\n') : '*No tools configured*'}
+
+## Capabilities
+${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '*No capabilities configured*'}
+
+## Tool Usage Guidelines
+- Verify permissions before use
+- Explain what tools will do
+- Report results clearly
+`,
+    },
+    {
+      path: '.allternit/governance/HEARTBEAT.md',
+      content: `# HEARTBEAT.md — ${name}'s Periodic Tasks
+
+## Scheduled Tasks
+*Configure in CronJob wizard*
+
+### Daily
+- [ ] Self-check
+- [ ] Memory review
+
+### Weekly
+- [ ] Performance review
+- [ ] Archive old data
+`,
+    },
+    {
+      path: '.allternit/governance/POLICY.md',
       content: `# POLICY.md — ${name}'s Operating Policy
 
 ## Trust Tier
@@ -1413,10 +1490,13 @@ ${hardBans.length > 0 ? hardBans.map(b => `- **${b.category}**: Prohibited`).joi
 
 ## Escalation Rules
 ${((character.escalation as string[]) || []).map(e => `- ${e}`).join('\n') || '- Escalate on policy violations'}
-`
-    },
-    {
-      path: 'skills/SKILL.md',
+`,
+    });
+  }
+
+  if (layers.skills) {
+    docs.push({
+      path: '.allternit/skills/SKILL.md',
       content: `# SKILL.md — ${name}'s Skill Manifest
 
 ## Specialty Skills
@@ -1430,10 +1510,10 @@ ${allowedTools.length > 0 ? allowedTools.map(t => `- ${t}`).join('\n') : '- No t
 
 ## Capabilities
 ${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '- No capabilities configured'}
-`
+`,
     },
     {
-      path: 'skills/contract.json',
+      path: '.allternit/skills/contract.json',
       content: JSON.stringify({
         schema_version: '1.0.0',
         agent: {
@@ -1462,10 +1542,41 @@ ${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '- No c
         },
         created_at: now,
       }, null, 2),
-    },
-    {
-      path: 'CHANGELOG.md',
-      content: `# Changelog
+    });
+  }
+
+  if (layers.business) {
+    docs.push({
+      path: '.allternit/business/BUSINESS.md',
+      content: `# BUSINESS.md — ${name}'s Business Layer
+
+## Purpose
+${description || 'To assist the user effectively'}
+
+## Success Metrics
+- Task completion rate
+- User satisfaction
+- Accuracy of outputs
+- Efficiency of execution
+
+## Key Stakeholders
+- User: primary beneficiary of agent outputs
+- Platform: Allternit runtime and governance
+
+## Value Proposition
+*Define the unique value this agent provides*
+
+## Escalation Paths
+- Technical issues: platform support
+- Safety concerns: governance policy review
+- Scope questions: refer to IDENTITY.md and PLAYBOOK.md
+`,
+    });
+  }
+
+  docs.push({
+    path: '.allternit/CHANGELOG.md',
+    content: `# Changelog
 
 ## 1.0.0 — ${now.split('T')[0]}
 - Agent created
@@ -1473,9 +1584,11 @@ ${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '- No c
 - ${hardBans.length} hard bans configured
 - Trust tier: ${trustTier}
 - Enabled surfaces: ${allowedSurfaces.join(', ')}
-`
-    },
-  ];
+- Layers: ${Object.entries(layers).filter(([, v]) => v).map(([k]) => k).join(', ')}
+`,
+  });
+
+  return docs;
 }
 
 export function buildSeedTelemetryEvents(blueprint: CreationBlueprintState): CharacterTelemetryEvent[] {

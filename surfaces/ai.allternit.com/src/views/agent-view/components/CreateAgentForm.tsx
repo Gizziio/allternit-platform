@@ -133,11 +133,11 @@ const CREATE_FLOW_STEPS: StepInfo[] = [
 ];
 
 const DEFAULT_LAYER_CONFIG: WorkspaceLayerConfig = {
-  shared: true,
-  private: true,
-  temporary: false,
-  persistent: true,
-  kernel: false,
+  cognitive: true,
+  identity: true,
+  governance: true,
+  skills: true,
+  business: false,
 };
 
 function calculateProjectedStats(
@@ -594,6 +594,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
             tags: payload.tags,
             tools: payload.tools,
             capabilities: payload.capabilities,
+            layers: workspaceLayers,
           });
 
           const workspaceResponse = await api.post(`/api/v1/agents/${createdAgent.id}/workspace/initialize`, {

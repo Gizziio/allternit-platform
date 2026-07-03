@@ -67,6 +67,7 @@ services/docmost
 surfaces/allternit-desktop/resources/platform/
 surfaces/ai.allternit.com/tmp/
 surfaces/ai.allternit.com/test-results/
+surfaces/ai.allternit.com/src/generated/prisma/
 
 # AI surface temporary analysis/cleanup artifacts
 surfaces/ai.allternit.com/*.txt
