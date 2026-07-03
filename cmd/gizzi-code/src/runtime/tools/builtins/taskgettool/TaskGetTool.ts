@@ -8,6 +8,11 @@ import {
   isTodoV2Enabled,
   TaskStatusSchema,
 } from '../../../utils/tasks.js'
+import {
+  apiTaskToLocalTask,
+  getApiConfig,
+  getApiTask,
+} from '../taskstool/apiTasks.js'
 import { TASK_GET_TOOL_NAME } from './constants.js'
 import { DESCRIPTION, PROMPT } from './prompt.js'
 
@@ -72,6 +77,29 @@ export const TaskGetTool = buildTool({
     return null
   },
   async call({ taskId }) {
+    const apiConfig = getApiConfig()
+
+    if (apiConfig) {
+      try {
+        const apiTask = await getApiTask(apiConfig, taskId)
+        const task = apiTaskToLocalTask(apiTask)
+        return {
+          data: {
+            task: {
+              id: task.id,
+              subject: task.subject,
+              description: task.description,
+              status: task.status,
+              blocks: task.blocks,
+              blockedBy: task.blockedBy,
+            },
+          },
+        }
+      } catch {
+        return { data: { task: null } }
+      }
+    }
+
     const taskListId = getTaskListId()
 
     const task = await getTask(taskListId, taskId)

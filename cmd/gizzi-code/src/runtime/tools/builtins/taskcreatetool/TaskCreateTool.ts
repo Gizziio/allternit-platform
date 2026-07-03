@@ -13,6 +13,11 @@ import {
   isTodoV2Enabled,
 } from '../../../utils/tasks.js'
 import { getAgentName, getTeamName } from '../../../utils/teammate.js'
+import {
+  createApiTask,
+  getApiConfig,
+  localMetadataToApiMetadata,
+} from '../taskstool/apiTasks.js'
 import { TASK_CREATE_TOOL_NAME } from './constants.js'
 import { DESCRIPTION, getPrompt } from './prompt.js'
 
@@ -79,6 +84,31 @@ export const TaskCreateTool = buildTool({
     return null
   },
   async call({ subject, description, activeForm, metadata }, context) {
+    const apiConfig = getApiConfig()
+
+    if (apiConfig) {
+      const apiTask = await createApiTask(apiConfig, {
+        title: subject,
+        description,
+        status: 'pending',
+        metadata: localMetadataToApiMetadata(metadata, [], []),
+      })
+
+      context.setAppState(prev => {
+        if (prev.expandedView === 'tasks') return prev
+        return { ...prev, expandedView: 'tasks' as const }
+      })
+
+      return {
+        data: {
+          task: {
+            id: apiTask.id,
+            subject,
+          },
+        },
+      }
+    }
+
     const taskId = await createTask(getTaskListId(), {
       subject,
       description,

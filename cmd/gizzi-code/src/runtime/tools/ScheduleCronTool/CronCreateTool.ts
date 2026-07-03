@@ -8,6 +8,7 @@ import {
   buildCronCreatePrompt,
   DEFAULT_MAX_AGE_DAYS,
 } from './prompt.js'
+import { createApiCronJob, getApiConfig } from './apiCron.js'
 import { ensureCronService } from './cronService.js'
 
 const inputSchema = lazySchema(() =>
@@ -69,6 +70,25 @@ export const CronCreateTool = buildTool({
     return buildCronCreatePrompt()
   },
   async call({ cron, prompt, recurring = true, scope = 'persistent' }) {
+    const apiConfig = getApiConfig()
+
+    if (apiConfig) {
+      const maxRuns = recurring ? undefined : 1
+      const job = await createApiCronJob(apiConfig, {
+        schedule: cron,
+        prompt,
+        scope,
+      })
+      return {
+        data: {
+          id: job.id,
+          schedule: cron,
+          recurring,
+          scope,
+        },
+      }
+    }
+
     ensureCronService()
 
     const maxRuns = recurring ? undefined : 1

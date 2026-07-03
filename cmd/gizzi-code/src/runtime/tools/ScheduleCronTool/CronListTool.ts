@@ -7,6 +7,7 @@ import {
   CRON_LIST_DESCRIPTION,
   buildCronListPrompt,
 } from './prompt.js'
+import { getApiConfig, listApiCronJobs } from './apiCron.js'
 import { ensureCronService } from './cronService.js'
 
 const inputSchema = lazySchema(() => z.strictObject({}))
@@ -55,6 +56,23 @@ export const CronListTool = buildTool({
     return buildCronListPrompt()
   },
   async call() {
+    const apiConfig = getApiConfig()
+
+    if (apiConfig) {
+      const jobs = await listApiCronJobs(apiConfig)
+      return {
+        data: {
+          jobs: jobs.map(job => ({
+            id: job.id,
+            schedule: job.schedule,
+            prompt: job.prompt,
+            status: job.status,
+            scope: job.scope,
+          })),
+        },
+      }
+    }
+
     ensureCronService()
     const jobs = CronService.list().map(job => ({
       id: job.id,

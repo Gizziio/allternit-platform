@@ -24,6 +24,15 @@ import {
   getTeamName,
 } from '../../../utils/teammate.js'
 import { writeToMailbox } from '../../../utils/teammateMailbox.js'
+import {
+  apiTaskToLocalTask,
+  deleteApiTask,
+  getApiConfig,
+  getApiTask,
+  localMetadataToApiMetadata,
+  localStatusToApiStatus,
+  updateApiTask,
+} from '../taskstool/apiTasks.js'
 import { TASK_UPDATE_TOOL_NAME } from './constants.js'
 import { DESCRIPTION, PROMPT } from './prompt.js'
 
@@ -130,13 +139,128 @@ export const TaskUpdateTool = buildTool({
     },
     context,
   ) {
-    const taskListId = getTaskListId()
+    const apiConfig = getApiConfig()
 
     // Auto-expand task list when updating tasks
     context.setAppState(prev => {
       if (prev.expandedView === 'tasks') return prev
       return { ...prev, expandedView: 'tasks' as const }
     })
+
+    if (apiConfig) {
+      let existingApiTask: Awaited<ReturnType<typeof getApiTask>>
+      try {
+        existingApiTask = await getApiTask(apiConfig, taskId)
+      } catch {
+        return {
+          data: {
+            success: false,
+            taskId,
+            updatedFields: [],
+            error: 'Task not found',
+          },
+        }
+      }
+      const existingTask = apiTaskToLocalTask(existingApiTask)
+
+      if (status === 'deleted') {
+        await deleteApiTask(apiConfig, taskId)
+        return {
+          data: {
+            success: true,
+            taskId,
+            updatedFields: ['deleted'],
+            statusChange: { from: existingTask.status, to: 'deleted' },
+          },
+        }
+      }
+
+      const apiUpdates: {
+        title?: string
+        description?: string
+        status?: string
+        assignee_id?: string
+        assignee_name?: string
+        metadata?: string
+      } = {}
+      const updatedFields: string[] = []
+
+      if (subject !== undefined && subject !== existingTask.subject) {
+        apiUpdates.title = subject
+        updatedFields.push('subject')
+      }
+      if (
+        description !== undefined &&
+        description !== existingTask.description
+      ) {
+        apiUpdates.description = description
+        updatedFields.push('description')
+      }
+      if (owner !== undefined && owner !== existingTask.owner) {
+        apiUpdates.assignee_id = owner
+        updatedFields.push('owner')
+      }
+      if (status !== undefined && status !== existingTask.status) {
+        apiUpdates.status = localStatusToApiStatus(status)
+        updatedFields.push('status')
+      }
+
+      const mergedMetadata: Record<string, unknown> = {
+        ...(existingTask.metadata ?? {}),
+      }
+      if (metadata !== undefined) {
+        for (const [key, value] of Object.entries(metadata)) {
+          if (value === null) {
+            delete mergedMetadata[key]
+          } else {
+            mergedMetadata[key] = value
+          }
+        }
+      }
+
+      let newBlocks = existingTask.blocks
+      if (addBlocks && addBlocks.length > 0) {
+        newBlocks = [
+          ...new Set([...existingTask.blocks, ...addBlocks]),
+        ]
+        updatedFields.push('blocks')
+      }
+      let newBlockedBy = existingTask.blockedBy
+      if (addBlockedBy && addBlockedBy.length > 0) {
+        newBlockedBy = [
+          ...new Set([...existingTask.blockedBy, ...addBlockedBy]),
+        ]
+        updatedFields.push('blockedBy')
+      }
+
+      if (
+        Object.keys(apiUpdates).length > 0 ||
+        addBlocks?.length ||
+        addBlockedBy?.length ||
+        metadata !== undefined
+      ) {
+        apiUpdates.metadata = localMetadataToApiMetadata(
+          mergedMetadata,
+          newBlocks,
+          newBlockedBy,
+        )
+        await updateApiTask(apiConfig, taskId, apiUpdates)
+      }
+
+      return {
+        data: {
+          success: true,
+          taskId,
+          updatedFields,
+          statusChange:
+            status !== undefined && status !== existingTask.status
+              ? { from: existingTask.status, to: status }
+              : undefined,
+        },
+      }
+    }
+
+    const taskListId = getTaskListId()
 
     // Check if task exists
     const existingTask = await getTask(taskListId, taskId)

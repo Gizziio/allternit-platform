@@ -8,6 +8,11 @@ import {
   listTasks,
   TaskStatusSchema,
 } from '../../../utils/tasks.js'
+import {
+  apiTaskToLocalTask,
+  getApiConfig,
+  listApiTasks,
+} from '../taskstool/apiTasks.js'
 import { TASK_LIST_TOOL_NAME } from './constants.js'
 import { DESCRIPTION, getPrompt } from './prompt.js'
 
@@ -64,6 +69,24 @@ export const TaskListTool = buildTool({
     return null
   },
   async call() {
+    const apiConfig = getApiConfig()
+
+    if (apiConfig) {
+      const response = await listApiTasks(apiConfig)
+      const allTasks = response.tasks.map(apiTaskToLocalTask)
+      const resolvedTaskIds = new Set(
+        allTasks.filter(t => t.status === 'completed').map(t => t.id),
+      )
+      const tasks = allTasks.map(task => ({
+        id: task.id,
+        subject: task.subject,
+        status: task.status,
+        owner: task.owner,
+        blockedBy: task.blockedBy.filter(id => !resolvedTaskIds.has(id)),
+      }))
+      return { data: { tasks } }
+    }
+
     const taskListId = getTaskListId()
 
     const allTasks = (await listTasks(taskListId)).filter(
