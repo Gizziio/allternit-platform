@@ -29,18 +29,16 @@ pub fn status_router() -> Router<Arc<AppState>> {
     Router::new().route("/status", get(status_handler))
 }
 
-async fn status_handler(State(_state): State<Arc<AppState>>) -> Json<StatusResponse> {
+async fn status_handler(State(state): State<Arc<AppState>>) -> Json<StatusResponse> {
     let checked_at = chrono::Utc::now().to_rfc3339();
     let mut services = Vec::new();
 
     // Probe Gateway (Rust API itself)
-    let gateway_url = std::env::var("ALLTERNIT_GATEWAY_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:8013".to_string());
+    let gateway_url = state.config.gateway_url();
     services.push(probe_service("Gateway", "gateway", &format!("{}/health", gateway_url)).await);
 
     // Probe Gizzi Runtime
-    let gizzi_url = std::env::var("TERMINAL_SERVER_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:4096".to_string());
+    let gizzi_url = state.config.terminal_server_url();
     services.push(probe_service("Gizzi Runtime", "gizzi-runtime", &format!("{}/v1/global/health", gizzi_url)).await);
 
     let overall = if services.iter().any(|s| s.status == "outage") {

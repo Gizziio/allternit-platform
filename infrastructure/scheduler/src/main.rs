@@ -17,12 +17,34 @@ mod scheduler;
 
 use daemon::SchedulerDaemon;
 
+/// How the scheduler executes jobs when they are due.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ExecutionMode {
+    /// Call the control plane API to create a run (cloud mode).
+    #[default]
+    Api,
+    /// Execute the configured command directly on this machine (local mode).
+    Local,
+}
+
+impl std::str::FromStr for ExecutionMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "api" => Ok(ExecutionMode::Api),
+            "local" => Ok(ExecutionMode::Local),
+            _ => Err(format!("Unknown execution mode: {}", s)),
+        }
+    }
+}
+
 /// Scheduler daemon configuration
 #[derive(Debug, Clone)]
 pub struct SchedulerConfig {
     /// Database URL
     pub database_url: String,
-    /// Control plane API URL
+    /// Control plane API URL (used in Api mode)
     pub api_url: String,
     /// API key for authentication
     pub api_key: Option<String>,
@@ -34,6 +56,8 @@ pub struct SchedulerConfig {
     pub misfire_threshold_secs: i64,
     /// Misfire policy: ignore, fire_once, fire_all
     pub misfire_policy: MisfirePolicy,
+    /// Execution mode: api or local
+    pub execution_mode: ExecutionMode,
 }
 
 impl Default for SchedulerConfig {
@@ -46,6 +70,7 @@ impl Default for SchedulerConfig {
             max_schedules_per_tick: 100,
             misfire_threshold_secs: 300, // 5 minutes
             misfire_policy: MisfirePolicy::FireOnce,
+            execution_mode: ExecutionMode::Api,
         }
     }
 }
@@ -94,7 +119,11 @@ struct Args {
     /// Misfire policy
     #[arg(long, default_value = "fire_once")]
     misfire_policy: String,
-    
+
+    /// Execution mode: api (cloud) or local (run commands directly)
+    #[arg(long, default_value = "api")]
+    execution_mode: String,
+
     /// Run once and exit (for testing)
     #[arg(long)]
     once: bool,
@@ -113,6 +142,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     // Build configuration
+    let execution_mode = args.execution_mode.parse().unwrap_or(ExecutionMode::Api);
     let config = SchedulerConfig {
         database_url: args.database_url.unwrap_or_else(|| "sqlite://allternit-cloud.db".to_string()),
         api_url: args.api_url,
@@ -121,12 +151,14 @@ async fn main() -> Result<()> {
         max_schedules_per_tick: 100,
         misfire_threshold_secs: 300,
         misfire_policy: args.misfire_policy.parse().unwrap_or(MisfirePolicy::FireOnce),
+        execution_mode,
     };
 
     info!("Database: {}", config.database_url);
     info!("API URL: {}", config.api_url);
     info!("Poll interval: {}s", config.poll_interval_secs);
     info!("Misfire policy: {:?}", config.misfire_policy);
+    info!("Execution mode: {:?}", config.execution_mode);
 
     // Create and run scheduler daemon
     let daemon = SchedulerDaemon::new(config).await?;

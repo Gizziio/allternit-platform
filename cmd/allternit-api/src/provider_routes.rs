@@ -181,7 +181,7 @@ struct OllamaModel {
 }
 
 async fn list_ollama_models(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Extension(_user): Extension<AuthUser>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
@@ -190,8 +190,7 @@ async fn list_ollama_models(
         None => return unauthorized(),
     };
 
-    let ollama_url = std::env::var("OLLAMA_URL")
-        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+    let ollama_url = state.config.ollama_url();
 
     let client = reqwest::Client::new();
     match client

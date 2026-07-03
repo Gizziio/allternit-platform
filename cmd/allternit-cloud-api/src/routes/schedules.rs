@@ -51,18 +51,30 @@ pub struct UpdateScheduleRequest {
 }
 
 /// Calculate next run time from cron expression
+///
+/// Supports 5-field cron (minute hour day month weekday) by prepending a seconds
+/// field, and 6/7-field cron as-is.
 fn calculate_next_run(cron_expr: &str, timezone: &str) -> Option<chrono::DateTime<chrono::Utc>> {
     use std::str::FromStr;
     use chrono_tz::Tz;
 
+    let trimmed = cron_expr.trim();
+    let field_count = trimmed.split_whitespace().count();
+
+    // cron 0.15 expects seconds as the first field; prepend "0" for classic 5-field cron.
+    let expression = if field_count == 5 {
+        format!("0 {}", trimmed)
+    } else {
+        trimmed.to_string()
+    };
+
     // Parse cron expression
-    let schedule = cron::Schedule::from_str(cron_expr).ok()?;
-    
+    let schedule = cron::Schedule::from_str(&expression).ok()?;
+
     // Parse timezone, fallback to UTC if invalid
     let tz: Tz = timezone.parse().unwrap_or(chrono_tz::UTC);
-    
+
     // Get next occurrence in target timezone
-    let _now = chrono::Utc::now().with_timezone(&tz);
     schedule.upcoming(tz).next().map(|dt| dt.with_timezone(&chrono::Utc))
 }
 

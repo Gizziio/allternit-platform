@@ -24,11 +24,8 @@ async fn runtime_discover_status() -> impl IntoResponse {
     }))
 }
 
-async fn discover_runtimes(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
-    let port = std::env::var("ALLTERNIT_API_PORT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(8013);
+async fn discover_runtimes(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let port = state.config.api_port();
 
     Json(json!({
         "runtimes": [

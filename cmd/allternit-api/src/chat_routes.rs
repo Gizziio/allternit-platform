@@ -39,7 +39,7 @@ pub fn chat_router() -> Router<Arc<AppState>> {
 
 /// Handle agent chat request by proxying to Gizzi terminal server
 async fn handle_agent_chat(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(request): Json<ChatRequest>,
 ) -> Response {
     info!(chat_id = %request.chat_id, "Received chat request, running subprocess agent");
@@ -58,7 +58,7 @@ async fn handle_agent_chat(
         .unwrap_or(raw_model_id)
         .to_string();
 
-    match run_claude_print(&request.message, &model_id).await {
+    match run_claude_print(&request.message, &model_id, &state.config).await {
         Ok(output) => stream_subprocess_reply(assistant_message_id, model_id, output).into_response(),
         Err(err) => {
             error!(error = %err, "Claude subprocess failed");
@@ -67,8 +67,8 @@ async fn handle_agent_chat(
     }
 }
 
-fn workspace_root() -> PathBuf {
-    if let Ok(explicit) = std::env::var("ALLTERNIT_AGENT_WORKDIR") {
+fn workspace_root(app_config: &crate::config::AppConfig) -> PathBuf {
+    if let Some(explicit) = app_config.agent_workdir() {
         let path = PathBuf::from(explicit);
         if path.exists() {
             return path;
@@ -85,13 +85,13 @@ fn workspace_root() -> PathBuf {
     PathBuf::from(".")
 }
 
-async fn run_claude_print(prompt: &str, model_id: &str) -> Result<String, String> {
+async fn run_claude_print(prompt: &str, model_id: &str, app_config: &crate::config::AppConfig) -> Result<String, String> {
     let output = Command::new("claude")
         .arg("-p")
         .arg(prompt)
         .arg("--model")
         .arg(model_id)
-        .current_dir(workspace_root())
+        .current_dir(workspace_root(app_config))
         .output()
         .await
         .map_err(|error| format!("failed to spawn claude subprocess: {}", error))?;

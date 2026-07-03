@@ -17,10 +17,7 @@ use crate::auth::AuthUser;
 use crate::AppState;
 
 fn self_port() -> u16 {
-    std::env::var("ALLTERNIT_API_PORT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(8013)
+    crate::config::AppConfig::load().api_port()
 }
 
 pub fn runtime_backend_router() -> Router<Arc<AppState>> {

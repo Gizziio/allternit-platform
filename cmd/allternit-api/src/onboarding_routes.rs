@@ -320,9 +320,8 @@ struct CliInfo {
     version: Option<String>,
 }
 
-async fn onboarding_discover(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
-    let ollama_url = std::env::var("OLLAMA_URL")
-        .unwrap_or_else(|_| "http://localhost:11434".to_string());
+async fn onboarding_discover(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let ollama_url = state.config.ollama_url();
 
     // Check Ollama
     let ollama_running = reqwest::Client::new()

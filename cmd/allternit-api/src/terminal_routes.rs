@@ -50,8 +50,8 @@ pub fn terminal_router() -> Router<Arc<AppState>> {
 }
 
 fn gizzi_base_url() -> String {
-    let port = std::env::var("GIZZI_PORT").unwrap_or_else(|_| "4096".to_string());
-    format!("http://127.0.0.1:{}", port)
+    crate::config::AppConfig::load()
+        .terminal_server_url()
 }
 
 async fn forward_to_gizzi(

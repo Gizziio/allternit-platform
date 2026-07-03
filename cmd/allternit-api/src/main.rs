@@ -124,7 +124,7 @@ async fn main() {
     let webhook_secret = app_config.clerk_webhook_secret();
 
     // Initialize VM driver (platform-specific)
-    let vm_driver = initialize_vm_driver().await;
+    let vm_driver = initialize_vm_driver(&app_config).await;
 
     // Initialize Rails service state
     let rails = RailsState::new(data_dir.clone())
@@ -141,7 +141,7 @@ async fn main() {
     let (cowork_background, bg_state) = initialize_cowork_background(&data_dir).await;
 
     // Initialize cowork runtime run manager (Rails-backed DAG/WIH lifecycle)
-    let cowork_run_manager = initialize_cowork_run_manager(&data_dir, rails.clone()).await;
+    let cowork_run_manager = initialize_cowork_run_manager(&data_dir, rails.clone(), &app_config).await;
     if let Some(ref manager) = cowork_run_manager {
         load_persisted_cowork_runs(&db, manager).await;
     }
@@ -338,16 +338,15 @@ async fn initialize_cowork_background(
 async fn initialize_cowork_run_manager(
     data_dir: &std::path::Path,
     rails: allternit_api::rails::RailsState,
+    app_config: &allternit_api::config::AppConfig,
 ) -> Option<Arc<RunManager>> {
     let runtime_dir = data_dir.join("cowork-runtime");
     if let Err(e) = std::fs::create_dir_all(&runtime_dir) {
         warn!("Failed to create cowork-runtime directory: {e}");
         return None;
     }
-    let rails_url = std::env::var("ALLTERNIT_RAILS_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:3021".to_string());
-    let workspace_id = std::env::var("ALLTERNIT_RAILS_WORKSPACE_ID")
-        .unwrap_or_else(|_| "default".to_string());
+    let rails_url = app_config.rails_url();
+    let workspace_id = app_config.rails_workspace_id();
 
     let config = RunManagerConfig {
         data_dir: runtime_dir,
@@ -486,9 +485,11 @@ async fn initialize_cowork_scheduler(
 }
 
 /// Initialize the appropriate VM driver for the platform
-async fn initialize_vm_driver() -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
+async fn initialize_vm_driver(
+    app_config: &allternit_api::config::AppConfig,
+) -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
     // Get packaged VM directory from desktop app (if available)
-    let vm_dir = std::env::var("ALLTERNIT_VM_DIR").ok().filter(|s| !s.is_empty());
+    let vm_dir = app_config.vm_dir().map(|p| p.to_string_lossy().to_string());
     if let Some(ref dir) = vm_dir {
         info!("Using packaged VM directory: {}", dir);
     }

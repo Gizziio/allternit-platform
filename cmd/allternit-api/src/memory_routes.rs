@@ -31,10 +31,8 @@ pub fn memory_router() -> Router<Arc<AppState>> {
 // ── Health ──────────────────────────────────────────────────────────────────
 
 async fn memory_health(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
-    let ollama_url = std::env::var("OLLAMA_URL")
-        .unwrap_or_else(|_| "http://localhost:11434".to_string());
-    let memory_url = std::env::var("ALLTERNIT_MEMORY_URL")
-        .unwrap_or_else(|_| "http://localhost:3201".to_string());
+    let ollama_url = state.config.ollama_url();
+    let memory_url = state.config.memory_url();
 
     let client = reqwest::Client::new();
 
@@ -79,9 +77,8 @@ async fn list_memory() -> Json<serde_json::Value> {
 
 // ── Consolidate ─────────────────────────────────────────────────────────────
 
-async fn memory_consolidate() -> impl axum::response::IntoResponse {
-    let memory_url = std::env::var("ALLTERNIT_MEMORY_URL")
-        .unwrap_or_else(|_| "http://localhost:3201".to_string());
+async fn memory_consolidate(State(state): State<Arc<AppState>>) -> impl axum::response::IntoResponse {
+    let memory_url = state.config.memory_url();
 
     let client = reqwest::Client::new();
     match client
@@ -355,6 +352,7 @@ struct QueryBody {
 }
 
 async fn query_memory(
+    State(state): State<Arc<AppState>>,
     Extension(_user): Extension<AuthUser>,
     headers: HeaderMap,
     Json(body): Json<QueryBody>,
@@ -364,8 +362,7 @@ async fn query_memory(
         None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
     };
     // Proxy to memory agent if available, otherwise return stub
-    let memory_url = std::env::var("ALLTERNIT_MEMORY_URL")
-        .unwrap_or_else(|_| "http://localhost:3201".to_string());
+    let memory_url = state.config.memory_url();
 
     let client = reqwest::Client::new();
     match client

@@ -171,11 +171,19 @@ impl SchedulerDaemon {
     
     /// Trigger a run for a schedule
     async fn trigger_run(&self, schedule: &Schedule) -> Result<String> {
+        match self.config.execution_mode {
+            crate::ExecutionMode::Api => self.trigger_run_api(schedule).await,
+            crate::ExecutionMode::Local => self.trigger_run_local(schedule).await,
+        }
+    }
+
+    /// Trigger a run via the control plane API (cloud mode).
+    async fn trigger_run_api(&self, schedule: &Schedule) -> Result<String> {
         let run_id = uuid::Uuid::new_v4().to_string();
-        
+
         // Build API request to create run
         let url = format!("{}/api/v1/runs", self.config.api_url);
-        
+
         let body = serde_json::json!({
             "name": format!("Scheduled: {}", schedule.name),
             "description": schedule.description,
@@ -184,36 +192,90 @@ impl SchedulerDaemon {
             "auto_start": true,
             "schedule_id": schedule.id,
         });
-        
+
         let mut request = self.http_client
             .post(&url)
             .json(&body);
-        
+
         // Add API key if configured
         if let Some(api_key) = &self.config.api_key {
             request = request.header("Authorization", format!("Bearer {}", api_key));
         }
-        
+
         let response = request
             .send()
             .await
             .context("Failed to send trigger request")?;
-        
+
         if !response.status().is_success() {
             let error_text = response.text().await.unwrap_or_default();
             return Err(anyhow::anyhow!("API error: {}", error_text));
         }
-        
+
         let result: serde_json::Value = response
             .json()
             .await
             .context("Failed to parse API response")?;
-        
+
         let created_run_id = result["id"].as_str()
             .map(|s| s.to_string())
             .unwrap_or(run_id);
-        
+
         Ok(created_run_id)
+    }
+
+    /// Execute the scheduled job directly on this machine (local mode).
+    async fn trigger_run_local(&self, schedule: &Schedule) -> Result<String> {
+        let run_id = uuid::Uuid::new_v4().to_string();
+
+        #[derive(Debug, serde::Deserialize)]
+        struct LocalJobConfig {
+            command: String,
+            #[serde(default)]
+            args: Vec<String>,
+            #[serde(default)]
+            env: std::collections::HashMap<String, String>,
+            working_dir: Option<String>,
+            timeout_seconds: Option<u64>,
+        }
+
+        let job: LocalJobConfig = serde_json::from_value(schedule.job_template.0.clone())
+            .context("Failed to parse job_template as local job config")?;
+
+        info!(
+            "[local] Executing schedule {}: {} {:?}",
+            schedule.id, job.command, job.args
+        );
+
+        let mut cmd = tokio::process::Command::new(&job.command);
+        cmd.args(&job.args);
+
+        for (key, value) in &job.env {
+            cmd.env(key, value);
+        }
+
+        if let Some(dir) = &job.working_dir {
+            cmd.current_dir(dir);
+        }
+
+        let timeout = job.timeout_seconds.unwrap_or(300);
+
+        let status = tokio::time::timeout(
+            Duration::from_secs(timeout),
+            cmd.status(),
+        )
+        .await
+        .context("Local job timed out")?
+        .context("Failed to spawn local job")?;
+
+        if !status.success() {
+            return Err(anyhow::anyhow!(
+                "Local job exited with code {:?}",
+                status.code()
+            ));
+        }
+
+        Ok(run_id)
     }
     
     /// Update schedule after successful run

@@ -59,7 +59,6 @@ struct BrainResult {
     created_at: String,
 }
 
-const DEFAULT_OLLAMA_URL: &str = "http://localhost:11434";
 const LOCAL_BRAIN_MODEL: &str = "llama3.2:3b";
 
 // ─── Combined local-brain entrypoint ─────────────────────────────────────────
@@ -70,21 +69,21 @@ async fn local_brain_entry(
     headers: HeaderMap,
     Query(q): Query<BrainQuery>,
 ) -> impl IntoResponse {
+    let ollama_url = state.config.ollama_url();
     match q.q.clone().as_deref().map(str::trim) {
         Some(query) if !query.is_empty() => query_brain_impl(state, user, q, query.to_string()).await,
-        _ => local_brain_probe(headers).await,
+        _ => local_brain_probe(headers, ollama_url).await,
     }
 }
 
 // ─── Probe Ollama / Local Brain status ───────────────────────────────────────
 
-async fn local_brain_probe(headers: HeaderMap) -> Response {
+async fn local_brain_probe(headers: HeaderMap, ollama_url: String) -> Response {
     let _user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
     };
 
-    let ollama_url = std::env::var("OLLAMA_URL").unwrap_or_else(|_| DEFAULT_OLLAMA_URL.to_string());
     let client = reqwest::Client::new();
 
     let tags_response = match client
@@ -269,13 +268,16 @@ async fn query_brain_impl(
 
 // ─── Pull Local Brain model over SSE ─────────────────────────────────────────
 
-async fn pull_local_brain(headers: HeaderMap) -> Response {
+async fn pull_local_brain(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Response {
     let _user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
     };
 
-    let ollama_url = std::env::var("OLLAMA_URL").unwrap_or_else(|_| DEFAULT_OLLAMA_URL.to_string());
+    let ollama_url = state.config.ollama_url();
     let client = reqwest::Client::new();
     let tags_url = format!("{}/api/tags", ollama_url.trim_end_matches('/'));
     let pull_url = format!("{}/api/pull", ollama_url.trim_end_matches('/'));
@@ -385,7 +387,7 @@ async fn pull_local_brain(headers: HeaderMap) -> Response {
 // ─── Brain status ─────────────────────────────────────────────────────────────
 
 async fn brain_status(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Extension(_user): Extension<AuthUser>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
@@ -394,11 +396,8 @@ async fn brain_status(
         None => return unauthorized(),
     };
 
-    let ollama_url = std::env::var("OLLAMA_URL")
-        .unwrap_or_else(|_| "http://localhost:11434".to_string());
-
-    let embedding_url = std::env::var("ALLTERNIT_EMBEDDING_URL")
-        .unwrap_or_else(|_| "http://localhost:3201".to_string());
+    let ollama_url = state.config.ollama_url();
+    let embedding_url = state.config.embedding_url();
 
     let client = reqwest::Client::new();
 

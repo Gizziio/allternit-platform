@@ -338,6 +338,7 @@ tokio-test = "0.4"
 
 # Scheduling
 tokio-cron-scheduler = "0.10"
+cron = "0.15"
 
 # OpenTelemetry
 opentelemetry = { version = "0.20", features = ["trace"] }

@@ -417,20 +417,27 @@ fn ordinal(n: u8) -> String {
 }
 
 /// Get next occurrence of a cron expression
+///
+/// Supports both 5-field cron (minute hour day month weekday) and 6-field cron
+/// (seconds minute hour day month weekday). The optional year field is also accepted.
 pub fn next_occurrence(cron_expr: &str, after: Option<DateTime<Utc>>) -> Option<DateTime<Utc>> {
-    // This is a simplified implementation
-    // For production, use a proper cron parser like cron-parser or schedule-crate
+    use cron::Schedule;
+    use std::str::FromStr;
+
     let after = after.unwrap_or_else(Utc::now);
-    
-    // Try to interpret simple patterns
-    let parts: Vec<&str> = cron_expr.split_whitespace().collect();
-    if parts.len() != 5 {
-        return None;
-    }
-    
-    // For now, just return 1 minute from now as a placeholder
-    // In production, this should properly parse the cron expression
-    Some(after + chrono::Duration::minutes(1))
+
+    let trimmed = cron_expr.trim();
+    let field_count = trimmed.split_whitespace().count();
+
+    // cron 0.15 expects seconds as the first field; prepend "0" for classic 5-field cron.
+    let expression = if field_count == 5 {
+        format!("0 {}", trimmed)
+    } else {
+        trimmed.to_string()
+    };
+
+    let schedule = Schedule::from_str(&expression).ok()?;
+    schedule.upcoming(Utc).next()
 }
 
 /// Validate a cron expression
@@ -502,5 +509,31 @@ mod tests {
     #[test]
     fn test_parse_invalid() {
         assert!(parse("invalid schedule").is_err());
+    }
+
+    #[test]
+    fn test_next_occurrence_hourly() {
+        use chrono::Timelike;
+        let after = Utc::now();
+        let next = next_occurrence("0 * * * *", Some(after)).unwrap();
+        assert!(next > after);
+        // Should be at the top of the next hour
+        assert_eq!(next.minute(), 0);
+        assert!(next.signed_duration_since(after).num_hours() <= 1);
+    }
+
+    #[test]
+    fn test_next_occurrence_daily() {
+        use chrono::Timelike;
+        let after = Utc::now();
+        let next = next_occurrence("0 9 * * *", Some(after)).unwrap();
+        assert!(next > after);
+        assert_eq!(next.hour(), 9);
+        assert_eq!(next.minute(), 0);
+    }
+
+    #[test]
+    fn test_next_occurrence_invalid_cron() {
+        assert!(next_occurrence("not a cron", None).is_none());
     }
 }

@@ -21,8 +21,8 @@ use crate::auth::get_user;
 use crate::AppState;
 
 fn cron_daemon_base() -> String {
-    std::env::var("ALLTERNIT_CRON_DAEMON_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:3031".to_string())
+    crate::config::AppConfig::load()
+        .cron_daemon_url()
         .trim_end_matches('/')
         .to_string()
 }
