@@ -1,16 +1,18 @@
 # Orphan Rust Crate Audit
 
-Generated: 2026-07-03 12:40
+Generated: 2026-07-03 12:48
 
 Passes completed:
 - Archived 8 tiny dead stubs.
 - Archived 19 additional dead stubs.
 - Integrated memory subsystem: 8 crates.
 - Integrated 15 clean orphans without broken dependency paths.
-- Archived 8 orphans that referenced already-archived crates (including security-network, environment-spec, kernel-service, marketplace, etc.).
+- Archived 8 orphans that referenced already-archived crates.
+- Integrated registry subsystem: apps-registry, framework-registry, functions-registry.
+- Archived registry-server (compile errors: missing base64 module).
 - Skipped ars-contexta-nlp due to conflicting `tch` versions.
 
-Remaining orphan crates: 48
+Remaining orphan crates: 44
 
 ## Remaining orphans by size
 
@@ -58,10 +60,6 @@ Remaining orphan crates: 48
 | services/orchestration/orchestration/conflict-arbitration | allternit-conflict-arbitration | 1 | 530 | 2026-04-25 | — |
 | services/orchestration/orchestration/node-registry | allternit-node-registry | 1 | 594 | 2026-04-25 | — |
 | services/process-driver | allternit-process-driver | 1 | 429 | 2026-07-01 | — |
-| services/registry/apps-registry | allternit-registry-apps | 2 | 905 | 2026-04-25 | path:domains/kernel/service/allternit-local-compute/executor |
-| services/registry/framework-registry | framework | 4 | 1088 | 2026-07-01 | — |
-| services/registry/functions-registry | allternit-registry-functions | 2 | 545 | 2026-04-25 | path:domains/kernel/service/allternit-local-compute/executor |
-| services/registry/server-registry | registry-server | 3 | 1277 | 2026-07-01 | — |
 | services/tools/kernel-tools | allternit-tools | 4 | 410 | 2026-07-01 | — |
 | services/ui/browser-view-service | allternit-browser-view-service | 3 | 979 | 2026-04-25 | — |
 

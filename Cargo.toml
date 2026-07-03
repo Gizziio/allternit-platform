@@ -77,21 +77,9 @@ members = [
     "infrastructure/local",
     "platform/protocols/allternit-protocol",
     "services/gateway/stdio",
-    "domains/governance/audit-logging/core-audit",
-    "domains/governance/identity-access-control/core-policy",
-    "domains/kernel/allternit-intent-graph-kernel/allternit-intent-graph-kernel",
-    "domains/kernel/allternit-presentation-kernel",
-    "domains/kernel/drivers/ivkge-advanced",
-    "domains/kernel/drivers/multimodal-streaming",
-    "domains/kernel/drivers/swarm-advanced",
-    "domains/kernel/drivers/tambo-integration",
-    "domains/kernel/drivers/tambo-napi",
-    "domains/kernel/service/allternit-local-compute/local-inference-gguf",
-    "domains/kernel/service/environment-standardization",
-    "domains/kernel/service/multimodal-streaming",
-    "infrastructure/local",
-    "platform/protocols/allternit-protocol",
-    "services/gateway/stdio",
+    "services/registry/apps-registry",
+    "services/registry/framework-registry",
+    "services/registry/functions-registry",
     "worktree-manager",
 ]
 
@@ -161,6 +149,10 @@ multimodal-streaming-execution = { path = "domains/kernel/service/multimodal-str
 allternit-multi-region = { path = "infrastructure/local" }
 allternit-protocol = { path = "platform/protocols/allternit-protocol" }
 gateway-stdio = { path = "services/gateway/stdio" }
+
+allternit-registry-apps = { path = "services/registry/apps-registry" }
+framework = { path = "services/registry/framework-registry" }
+allternit-registry-functions = { path = "services/registry/functions-registry" }
 
 
 allternit-tools-gateway = { path = "api/gateway/routing" }

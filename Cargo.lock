@@ -1021,6 +1021,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "allternit-registry-apps"
+version = "0.1.0"
+dependencies = [
+ "allternit-sdk-apps",
+ "allternit-sdk-core",
+ "allternit-sdk-functions",
+ "allternit-sdk-policy",
+ "anyhow",
+ "async-trait",
+ "axum",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 1.0.69",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "allternit-registry-functions"
+version = "0.1.0"
+dependencies = [
+ "allternit-sdk-apps",
+ "allternit-sdk-core",
+ "allternit-sdk-functions",
+ "allternit-sdk-policy",
+ "anyhow",
+ "async-trait",
+ "axum",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 1.0.69",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "allternit-runtime-core"
 version = "0.1.0"
 dependencies = [
@@ -3556,6 +3602,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8878864ba14bb86e818a412bfd6f18f9eabd4ec0f008a28e8f7eb61db532fcf9"
 dependencies = [
  "futures-core",
+]
+
+[[package]]
+name = "framework"
+version = "0.1.0"
+dependencies = [
+ "allternit-kernel-contracts",
+ "anyhow",
+ "axum",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
