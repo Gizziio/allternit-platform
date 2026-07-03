@@ -3,8 +3,8 @@
 //! Coordinates the full deployment lifecycle.
 
 use allternit_cloud_core::{
-    CloudProvider, CloudError, DeploymentConfig, Instance, 
-    ProviderCredentials, PreflightChecker, PreflightResult,
+    CloudProvider, CloudError, DeploymentConfig, Instance,
+    ProviderCredentials, PreflightChecker,
     DeploymentStatus, DeploymentPhase,
 };
 use std::sync::Arc;
