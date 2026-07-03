@@ -65,6 +65,8 @@ services/docmost
 
 # Built desktop shell assets and temp analysis output
 surfaces/allternit-desktop/resources/platform/
+surfaces/allternit-desktop/resources/bin/*
+!surfaces/allternit-desktop/resources/bin/*.cjs
 surfaces/ai.allternit.com/tmp/
 surfaces/ai.allternit.com/test-results/
 surfaces/ai.allternit.com/src/generated/prisma/
