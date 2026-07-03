@@ -190,13 +190,22 @@ fn to_iso(timestamp_ms: Option<i64>) -> String {
     chrono::Utc::now().to_rfc3339()
 }
 
-fn transform_session(info: GizziSessionInfo) -> serde_json::Value {
+fn transform_session(info: GizziSessionInfo, db: &DbHandle) -> serde_json::Value {
     let created_at = to_iso(info.time.as_ref().and_then(|t| t.created));
     let updated_at = to_iso(
         info.time
             .as_ref()
             .and_then(|t| t.updated.or(t.created)),
     );
+
+    // Restore the original frontend surface if the API normalized it before
+    // sending to Gizzi (e.g. "design" -> "chat").
+    let origin_surface = db
+        .get_session_origin_surface(&info.id)
+        .ok()
+        .flatten()
+        .or_else(|| info.surface.clone())
+        .unwrap_or_default();
 
     json!({
         "id": info.id,
@@ -214,7 +223,7 @@ fn transform_session(info: GizziSessionInfo) -> serde_json::Value {
             "version": info.version,
             "agent_id": info.agent_id,
             "surface": info.surface,
-            "originSurface": info.surface,
+            "originSurface": origin_surface,
             "permission": info.permission,
         }
     })
@@ -298,6 +307,16 @@ fn transform_message(message: GizziMessage) -> serde_json::Value {
             "error": message.info.error.as_ref().and_then(|e| e.data.clone()),
         }
     })
+}
+
+/// Gizzi's compiled server currently only accepts a fixed set of surface values.
+/// Map unsupported frontend surfaces to a compatible fallback while preserving
+/// the original value in API metadata (see `session_origin_surface` table).
+fn normalize_surface_for_gizzi(surface: &str) -> &str {
+    match surface {
+        "design" => "chat",
+        other => other,
+    }
 }
 
 fn select_model(metadata: Option<&serde_json::Value>) -> serde_json::Value {
@@ -400,6 +419,7 @@ async fn gizzi_no_content(
 }
 
 async fn list_sessions(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Query(query): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
@@ -419,7 +439,7 @@ async fn list_sessions(
     let surface_filter = query.get("surface").cloned();
     let mut filtered = Vec::new();
     for session in sessions {
-        let transformed = transform_session(session);
+        let transformed = transform_session(session, &state.db);
         let should_include = surface_filter.as_ref().map_or(true, |sf| {
             transformed
                 .get("metadata")
@@ -477,7 +497,10 @@ async fn create_session(
             .map(|s| s.to_string())
     });
     if let Some(ref s) = surface {
-        payload.insert("surface".to_string(), json!(s));
+        payload.insert(
+            "surface".to_string(),
+            json!(normalize_surface_for_gizzi(s)),
+        );
     }
 
     // Resolve platform agent harness config and forward it into the gizzi session.
@@ -502,19 +525,29 @@ async fn create_session(
         Err(response) => return response,
     };
 
-    (StatusCode::CREATED, Json(transform_session(session))).into_response()
+    // Remember the original surface so list/get responses can restore it.
+    if let Some(ref s) = surface {
+        let _ = state.db.set_session_origin_surface(&session.id, s);
+    }
+
+    (StatusCode::CREATED, Json(transform_session(session, &state.db))).into_response()
 }
 
-async fn get_session(headers: HeaderMap, Path(session_id): Path<String>) -> impl IntoResponse {
+async fn get_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+) -> impl IntoResponse {
     let client = gizzi_client(&headers);
     let path = format!("/v1/session/{}", urlencoding::encode(&session_id));
     match gizzi_json::<GizziSessionInfo>(&client, reqwest::Method::GET, &path, None).await {
-        Ok(session) => Json(transform_session(session)).into_response(),
+        Ok(session) => Json(transform_session(session, &state.db)).into_response(),
         Err(response) => response,
     }
 }
 
 async fn update_session(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(session_id): Path<String>,
     Json(body): Json<UpdateSessionBody>,
@@ -539,12 +572,17 @@ async fn update_session(
         payload.insert("permission".to_string(), permission.clone());
     }
     if let Some(ref s) = surface {
-        payload.insert("surface".to_string(), json!(s));
+        payload.insert("surface".to_string(), json!(normalize_surface_for_gizzi(s)));
     }
 
     match gizzi_json::<GizziSessionInfo>(&client, reqwest::Method::PATCH, &path, Some(serde_json::Value::Object(payload))).await
     {
-        Ok(session) => Json(transform_session(session)).into_response(),
+        Ok(session) => {
+            if let Some(ref s) = surface {
+                let _ = state.db.set_session_origin_surface(&session.id, s);
+            }
+            Json(transform_session(session, &state.db)).into_response()
+        }
         Err(response) => response,
     }
 }
@@ -613,17 +651,19 @@ async fn abort_session(headers: HeaderMap, Path(session_id): Path<String>) -> im
 }
 
 async fn revert_session(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(session_id): Path<String>,
 ) -> impl IntoResponse {
-    get_session(headers, Path(session_id)).await
+    get_session(State(state), headers, Path(session_id)).await
 }
 
 async fn unrevert_session(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(session_id): Path<String>,
 ) -> impl IntoResponse {
-    get_session(headers, Path(session_id)).await
+    get_session(State(state), headers, Path(session_id)).await
 }
 
 async fn compact_session() -> impl IntoResponse {
@@ -652,7 +692,11 @@ async fn fetch_latest_message(client: &Client, session_id: &str) -> Option<serde
     messages.into_iter().last().map(transform_message)
 }
 
-async fn transform_bus_event(client: &Client, event: GizziBusEvent) -> Option<serde_json::Value> {
+async fn transform_bus_event(
+    client: &Client,
+    db: &DbHandle,
+    event: GizziBusEvent,
+) -> Option<serde_json::Value> {
     let event_type = event.event_type?;
     let props = event.properties.unwrap_or(serde_json::Value::Null);
 
@@ -660,7 +704,7 @@ async fn transform_bus_event(client: &Client, event: GizziBusEvent) -> Option<se
         "session.created" => serde_json::from_value::<GizziSessionInfo>(props)
             .ok()
             .map(|info| {
-                let mut payload = transform_session(info);
+                let mut payload = transform_session(info, db);
                 if let Some(obj) = payload.as_object_mut() {
                     obj.insert("type".to_string(), json!("created"));
                 }
@@ -669,6 +713,12 @@ async fn transform_bus_event(client: &Client, event: GizziBusEvent) -> Option<se
         "session.updated" => serde_json::from_value::<GizziSessionInfo>(props)
             .ok()
             .map(|info| {
+                let origin_surface = db
+                    .get_session_origin_surface(&info.id)
+                    .ok()
+                    .flatten()
+                    .or_else(|| info.surface.clone())
+                    .unwrap_or_default();
                 json!({
                     "type": "updated",
                     "session_id": info.id,
@@ -682,7 +732,7 @@ async fn transform_bus_event(client: &Client, event: GizziBusEvent) -> Option<se
                         "version": info.version,
                         "agent_id": info.agent_id,
                         "surface": info.surface,
-                        "originSurface": info.surface,
+                        "originSurface": origin_surface,
                         "permission": info.permission,
                     }
                 })
@@ -749,7 +799,10 @@ async fn transform_bus_event(client: &Client, event: GizziBusEvent) -> Option<se
     }
 }
 
-async fn sync_sessions(headers: HeaderMap) -> Result<Sse<impl Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>, Response> {
+async fn sync_sessions(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Sse<impl Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>, Response> {
     let client = gizzi_client(&headers);
     let response = client
         .get(format!("{}/v1/event", gizzi_base()))
@@ -808,7 +861,7 @@ async fn sync_sessions(headers: HeaderMap) -> Result<Sse<impl Stream<Item = Resu
                     continue;
                 }
 
-                if let Some(payload) = transform_bus_event(&client, parsed).await {
+                if let Some(payload) = transform_bus_event(&client, &state.db, parsed).await {
                     yield Ok(axum::response::sse::Event::default().data(payload.to_string()));
                 }
             }

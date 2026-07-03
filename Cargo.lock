@@ -827,6 +827,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "allternit-sdk-apps"
+version = "0.1.0"
+dependencies = [
+ "allternit-sdk-core",
+ "serde",
+ "serde_json",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "allternit-sdk-core"
 version = "0.1.0"
 dependencies = [
@@ -839,12 +850,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "allternit-sdk-functions"
+version = "0.1.0"
+dependencies = [
+ "allternit-sdk-core",
+ "serde",
+ "serde_json",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "allternit-sdk-policy"
 version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "allternit-sdk-transport"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

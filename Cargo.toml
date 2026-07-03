@@ -48,7 +48,13 @@ members = [
     "domains/governance/identity-access-control/purpose-binding",
     "domains/kernel/drivers/ontology-runtime",
     "platform/sdk/adapters/rust/skills",
+    "platform/sdk/rust/sdk-core",
+    "platform/sdk/rust/sdk-apps",
+    "platform/sdk/rust/sdk-functions",
+    "platform/sdk/rust/sdk-policy",
+    "platform/sdk/rust/sdk-transport",
     "api/gateway/routing",
+    "worktree-manager",
 ]
 
 [workspace.package]
@@ -87,6 +93,11 @@ allternit-ontology-runtime = { path = "domains/kernel/drivers/ontology-runtime" 
 allternit-system-law = { path = "domains/kernel/drivers/system-law" }
 allternit-kernel-contracts = { path = "domains/kernel/core/kernel-contracts" }
 allternit-skills = { path = "platform/sdk/adapters/rust/skills" }
+allternit-sdk-core = { path = "platform/sdk/rust/sdk-core" }
+allternit-sdk-apps = { path = "platform/sdk/rust/sdk-apps" }
+allternit-sdk-functions = { path = "platform/sdk/rust/sdk-functions" }
+allternit-sdk-policy = { path = "platform/sdk/rust/sdk-policy" }
+allternit-sdk-transport = { path = "platform/sdk/rust/sdk-transport" }
 allternit-tools-gateway = { path = "api/gateway/routing" }
 allternit-harness-engineering = { path = "domains/kernel/drivers/harness-engineering" }
 mcp = { path = "mcp/core" }

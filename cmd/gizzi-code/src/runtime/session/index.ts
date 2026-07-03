@@ -158,7 +158,7 @@ export namespace Session {
         })
         .optional(),
       agentID: z.string().optional(),
-      surface: z.enum(["chat", "cowork", "code", "browser"]).optional(),
+      surface: z.enum(["chat", "cowork", "code", "browser", "design"]).optional(),
       harness: z
         .object({
           mode: z.enum(["byok", "cloud", "local", "subprocess"]),

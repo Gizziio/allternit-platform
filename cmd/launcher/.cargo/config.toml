@@ -1,0 +1,5 @@
+# cmd/launcher is built independently of the main workspace.
+# Share the workspace target directory so we do not create another duplicate
+# 140 MB+ target folder here.
+[build]
+target-dir = "../../target"

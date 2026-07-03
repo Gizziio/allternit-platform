@@ -1,0 +1,40 @@
+# Cargo configuration for the allternit workspace.
+# These settings reduce build artifact size without breaking active development.
+
+[build]
+# Keep the allternit workspace using its existing local target directory.
+# This overrides any global shared-target setting so active development does
+# not suffer a full rebuild.
+target-dir = "target"
+
+# Incremental compilation is already the default, but we make it explicit.
+# It keeps rebuilds fast by reusing previously compiled artifacts.
+incremental = true
+
+[profile.dev]
+# debug = 1 emits only line tables, not full debug info.
+# This keeps binaries and .rlib files much smaller while still producing
+# useful stack traces during development.
+debug = 1
+
+# On macOS, pack debug info into a separate .dSYM bundle instead of embedding
+# it in every binary/rlib. This significantly reduces per-artifact size.
+split-debuginfo = "packed"
+
+[profile.release]
+# Optimize for size instead of speed.
+opt-level = "z"
+
+# Thin LTO removes dead code across crate boundaries and produces smaller binaries.
+lto = "thin"
+
+# Strip symbols in release builds. Stack traces are less useful in release,
+# and this greatly reduces binary size.
+strip = true
+
+# Use abort instead of unwinding for panics. Smaller and faster for release.
+panic = "abort"
+
+[profile.dev.build-override]
+# Build scripts and proc-macros are rebuilt often. Keep them optimized for size.
+opt-level = "z"
