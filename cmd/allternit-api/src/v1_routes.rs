@@ -14,7 +14,7 @@ use std::{convert::Infallible, sync::Arc};
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::AppState;
+use crate::{AppState, default_model};
 
 fn gizzi_base() -> String {
     std::env::var("TERMINAL_SERVER_URL")
@@ -59,17 +59,21 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     let chat_id = body_json.get("chatId").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let message = body_json.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
-    // Parse model from runtimeModelId or modelId — strip provider prefix if present
+    // Parse model from runtimeModelId or modelId — strip provider prefix if present.
+    // When nothing is supplied, use the environment-configurable default so the
+    // packaged app can target any Gizzi provider/model without recompiling.
+    let (default_provider, default_model_id) = default_model();
+    let default_label = format!("{}/{}", default_provider, default_model_id);
     let raw_model = body_json.get("runtimeModelId")
         .or_else(|| body_json.get("modelId"))
         .and_then(|v| v.as_str())
-        .unwrap_or("kimi-for-coding/kimi-k2")
+        .unwrap_or(&default_label)
         .to_string();
 
     let (provider_id, model_id) = if let Some((p, m)) = raw_model.split_once('/') {
         (p.to_string(), m.to_string())
     } else {
-        ("claude-cli".to_string(), raw_model.clone())
+        (default_provider, raw_model.clone())
     };
 
     if chat_id.is_empty() || message.is_empty() {

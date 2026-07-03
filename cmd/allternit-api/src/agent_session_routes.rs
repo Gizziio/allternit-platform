@@ -85,11 +85,11 @@ struct SendMessageBody {
 }
 
 #[derive(Debug, Serialize)]
-struct GizziModelRef<'a> {
+struct GizziModelRef {
     #[serde(rename = "providerID")]
-    provider_id: &'a str,
+    provider_id: String,
     #[serde(rename = "modelID")]
-    model_id: &'a str,
+    model_id: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -310,8 +310,8 @@ fn select_model(metadata: Option<&serde_json::Value>) -> serde_json::Value {
             model.get("modelID").and_then(|value| value.as_str()),
         ) {
             return json!(GizziModelRef {
-                provider_id,
-                model_id,
+                provider_id: provider_id.to_string(),
+                model_id: model_id.to_string(),
             });
         }
     }
@@ -323,15 +323,13 @@ fn select_model(metadata: Option<&serde_json::Value>) -> serde_json::Value {
         ))
     }) {
         return json!(GizziModelRef {
-            provider_id,
-            model_id,
+            provider_id: provider_id.to_string(),
+            model_id: model_id.to_string(),
         });
     }
 
-    json!(GizziModelRef {
-        provider_id: "claude-cli",
-        model_id: "claude-sonnet-4-6",
-    })
+    let (provider_id, model_id) = default_model();
+    json!(GizziModelRef { provider_id, model_id })
 }
 
 async fn gizzi_json<T: serde::de::DeserializeOwned>(
