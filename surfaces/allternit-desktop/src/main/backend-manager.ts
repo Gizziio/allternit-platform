@@ -18,10 +18,11 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import log from 'electron-log';
 import { getBackendDownloadUrl, getBackendChecksum } from './manifest.js';
+import { PORTS, URLS } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const API_PORT = 8013;
+const API_PORT = PORTS.API;
 const HEALTH_TIMEOUT_MS = 30_000;
 
 export interface BackendStatus {
@@ -108,7 +109,7 @@ export class BackendManager {
       ALLTERNIT_DATA_DIR: dataDir,
       ALLTERNIT_VM_DIR: fs.existsSync(vmDir) ? vmDir : '',
       ALLTERNIT_PLATFORM_STATIC: platformStatic ?? '',
-      TERMINAL_SERVER_URL: config.gizziUrl ?? process.env.TERMINAL_SERVER_URL ?? 'http://127.0.0.1:4096',
+      TERMINAL_SERVER_URL: config.gizziUrl ?? process.env.TERMINAL_SERVER_URL ?? URLS.GIZZI,
       GIZZI_USERNAME: config.gizziUsername ?? process.env.GIZZI_USERNAME ?? 'gizzi',
       GIZZI_PASSWORD: config.gizziPassword ?? process.env.GIZZI_PASSWORD ?? '',
       RUST_LOG: 'info',

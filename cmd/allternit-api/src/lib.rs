@@ -24,6 +24,7 @@ pub mod cowork_team_routes;
 pub mod db;
 pub mod error;
 pub mod fallback_routes;
+pub mod gizzi_chat_stream;
 pub mod gizzi_completion;
 pub mod h5i_routes;
 pub mod health;

@@ -27,10 +27,12 @@ import * as path from 'path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import log from 'electron-log';
+import { URLS } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const PLATFORM_CONNECT_URL = 'https://platform.allternit.com/connect';
+const LOCAL_API_URL = URLS.API.replace('127.0.0.1', 'localhost');
 const TUNNEL_URL_PATTERN = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/;
 const TUNNEL_READY_TIMEOUT_MS = 30_000;
 
@@ -78,9 +80,9 @@ export class TunnelManager {
     this.sessionToken = crypto.randomBytes(32).toString('hex');
     this.setStatus('starting');
 
-    log.info('[TunnelManager] Starting cloudflared tunnel to http://localhost:8013');
+    log.info(`[TunnelManager] Starting cloudflared tunnel to ${LOCAL_API_URL}`);
 
-    this.proc = spawn(binaryPath, ['tunnel', '--url', 'http://localhost:8013'], {
+    this.proc = spawn(binaryPath, ['tunnel', '--url', LOCAL_API_URL], {
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });

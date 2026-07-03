@@ -21,6 +21,7 @@ import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
 import { gizziManager } from './gizzi-manager.js';
+import { PORTS, URLS, devUiUrl, apiUrl } from './config.js';
 import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus } from './mini-apps-manager.js';
 
 import { tunnelManager } from './tunnel-manager.js';
@@ -94,20 +95,20 @@ let pushServiceState = () => {
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let activePlatformUrl: string = isDev ? 'http://localhost:3013' : 'https://ai.allternit.com';
+let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
 
 const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 const MINI_WINDOW_WIDTH = 520;
 const MINI_WINDOW_HEIGHT = 600;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
-let activeBackendUrl: string = 'http://localhost:8013';
+let activeBackendUrl: string = URLS.API;
 /** Active TCP connection from the native messaging host (Chrome extension bridge) */
 let extensionSocket: net.Socket | null = null;
 function updateSidecarConfig(gizziUrl: string) {
   const config = {
     apiUrl: gizziUrl,
     password: gizziManager.getPassword()!,
-    port: new URL(gizziUrl).port ? Number(new URL(gizziUrl).port) : 4096,
+    port: new URL(gizziUrl).port ? Number(new URL(gizziUrl).port) : PORTS.GIZZI,
   };
   persistedState.set('sidecar', config);
 }
@@ -691,7 +692,7 @@ function createMainWindow(): BrowserWindow {
   const platformOrigin = activePlatformUrl;
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
     if (details.url.startsWith(`${platformOrigin}/api/`)) {
-      const redirectURL = details.url.replace(platformOrigin, 'allternit-api://localhost:8013');
+      const redirectURL = details.url.replace(platformOrigin, 'allternit-api://localhost:${PORTS.API}');
       callback({ redirectURL });
       return;
     }
@@ -816,7 +817,7 @@ async function initializeBundledMode(): Promise<void> {
   
   try {
     log.info('[Main] Starting initialization sequence...');
-    // Step 1 — gizzi-code (AI runtime, port 4096)
+    // Step 1 — gizzi-code (AI runtime, port ${PORTS.GIZZI})
     // All agent sessions, conversations, tool calls and provider routing go through here.
     updateSplash('Starting AI runtime…', 10);
     let gizziUrl: string | null = null;
@@ -829,13 +830,13 @@ async function initializeBundledMode(): Promise<void> {
       pushServiceState();
     } catch (gizziErr) {
       log.warn('[Main] Gizzi-code failed to start, continuing without AI runtime:', gizziErr);
-      serviceState.gizzi = { status: 'down', detail: 'Failed to start on 4096' };
+      serviceState.gizzi = { status: 'down', detail: `Failed to start on ${PORTS.GIZZI}` };
       pushServiceState();
       updateSplash('AI runtime unavailable, continuing…', 15);
       await new Promise(r => setTimeout(r, 1000));
     }
 
-    // Step 2 — allternit-api (Rust operator API, port 8013 — VM, rails, terminal)
+    // Step 2 — allternit-api (Rust operator API, port ${PORTS.API} — VM, rails, terminal)
     const apiStatus = await backendManager.getStatus();
     if (!apiStatus.installed) {
       updateSplash('Setting up Allternit Desktop for the first time…', 25);
@@ -850,27 +851,27 @@ async function initializeBundledMode(): Promise<void> {
       gizziPassword: gizziManager.getPassword(),
       gizziUsername: 'gizzi',
     });
-    serviceState.api = { status: 'up', detail: 'Connected on http://127.0.0.1:8013' };
-    serviceState.gateway = { status: 'up', detail: 'Connected on http://127.0.0.1:8013' };
+    serviceState.api = { status: 'up', detail: `Connected on ${URLS.API}` };
+    serviceState.gateway = { status: 'up', detail: `Connected on ${URLS.API}` };
     pushServiceState();
     store.set('backend.lastLocalVersion', PLATFORM_MANIFEST.backend.version);
 
     updateSplash('Connecting to platform…', 60);
 
     // Step 3 — Platform URL
-    // Dev:        local Next.js dev server on port 3013
+    // Dev:        local Next.js dev server on port ${PORTS.DEV_UI}
     // Production: ai.allternit.com hosted on Cloudflare Pages (remote)
     //              We always load the remote URL (Claude Desktop model).
     //              API calls are redirected to localhost via injected config.
     // Offline:    If remote URL is unreachable, fall back to local static files
     //              served by the Rust API at localhost:8013.
-    let platformUrl: string = isDev ? 'http://localhost:3013' : 'https://ai.allternit.com';
+    let platformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
 
     if (!isDev) {
       const remoteReachable = await isUrlReachable(platformUrl, 5000);
       if (!remoteReachable) {
         log.warn(`[Main] Remote platform ${platformUrl} is unreachable — falling back to local static UI`);
-        platformUrl = 'http://localhost:8013';
+        platformUrl = URLS.API;
         serviceState.platform = { status: 'up', detail: 'Offline mode (local static)' };
       } else {
         serviceState.platform = { status: 'up', detail: 'ai.allternit.com' };
@@ -884,7 +885,7 @@ async function initializeBundledMode(): Promise<void> {
       try {
         await fs.promises.mkdir(dirname(sessionFile), { recursive: true });
         await fs.promises.writeFile(sessionFile, JSON.stringify({
-          gizziUrl: gizziUrl ?? 'http://127.0.0.1:4096',
+          gizziUrl: gizziUrl ?? URLS.GIZZI,
           gizziPassword: gizziManager.getPassword() ?? '',
           writtenAt: Date.now(),
         }), 'utf8');
@@ -894,7 +895,7 @@ async function initializeBundledMode(): Promise<void> {
       }
     }
 
-    serviceState.platform = { status: 'up', detail: isDev ? 'Dev on port 3013' : 'ai.allternit.com' };
+    serviceState.platform = { status: 'up', detail: isDev ? 'Dev on port ${PORTS.DEV_UI}' : 'ai.allternit.com' };
     pushServiceState();
 
     activePlatformUrl = platformUrl;
@@ -1084,10 +1085,10 @@ async function initializeRemoteMode(remoteUrl: string): Promise<void> {
 
 async function initializeDevelopmentMode(): Promise<void> {
   log.info('[Main] Development mode');
-  activeBackendUrl = 'http://localhost:3013';
+  activeBackendUrl = URLS.DEV_UI;
 
   mainWindow = createMainWindow();
-  mainWindow.loadURL('http://localhost:3013');
+  mainWindow.loadURL(URLS.DEV_UI);
   mainWindow.webContents.openDevTools();
   mainWindow.show();
 }
@@ -1275,7 +1276,7 @@ function createMiniWindow(): BrowserWindow {
   });
 
   const platformUrl = isDev
-    ? 'http://localhost:3013/?mini=1'
+    ? devUiUrl('/?mini=1')
     : `${activePlatformUrl}/?mini=1`;
 
   win.loadURL(platformUrl);
@@ -1515,7 +1516,7 @@ app.whenReady().then(async () => {
   console.log('[Main] Registering allternit-api protocol handler...');
   protocol.handle('allternit-api', async (request) => {
     const url = new URL(request.url);
-    const targetUrl = `http://localhost:8013${url.pathname}${url.search}`;
+    const targetUrl = apiUrl(`${url.pathname}${url.search}`);
 
     // CORS preflight for custom-protocol cross-origin requests
     if (request.method === 'OPTIONS') {
@@ -1838,7 +1839,7 @@ ipcMain.handle('dialog:show-open', async (_event, options: Electron.OpenDialogOp
 });
 
 // ============================================================================
-// IPC: Sidecar — gizzi-code AI runtime (port 4096)
+// IPC: Sidecar — gizzi-code AI runtime (port ${PORTS.GIZZI})
 // The platform uses window.allternitSidecar to discover the backend URL.
 // ============================================================================
 
@@ -1931,9 +1932,9 @@ ipcMain.handle('connection:set-backend', async (_event, config: { mode: 'bundled
   if (nextBackend.mode === 'remote' && nextBackend.remoteUrl) {
     activeBackendUrl = nextBackend.remoteUrl;
   } else if (nextBackend.mode === 'development') {
-    activeBackendUrl = 'http://localhost:3013';
+    activeBackendUrl = URLS.DEV_UI;
   } else {
-    activeBackendUrl = 'http://localhost:8013';
+    activeBackendUrl = URLS.API;
   }
 
   mainWindow?.webContents.send('connection:state', { mode: nextBackend.mode, url: activeBackendUrl });

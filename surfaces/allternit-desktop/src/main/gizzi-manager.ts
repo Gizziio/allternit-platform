@@ -20,10 +20,11 @@ import * as path from 'path';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import log from 'electron-log';
+import { PORTS, URLS } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const GIZZI_PORT = 4096;
+const GIZZI_PORT = PORTS.GIZZI;
 const HEALTH_TIMEOUT_MS = 30_000;
 
 export class GizziManager {
@@ -70,7 +71,7 @@ export class GizziManager {
       GIZZI_PASSWORD: this.password,
       GIZZI_USERNAME: 'gizzi',
       // Point at allternit-api for operator-level routes (vm-session, rails, etc.)
-      ALLTERNIT_API_URL: 'http://127.0.0.1:8013',
+      ALLTERNIT_API_URL: URLS.API,
       NODE_ENV: 'production',
     };
 

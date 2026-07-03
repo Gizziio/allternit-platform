@@ -543,6 +543,61 @@ fn read_gizzi_default_model() -> Option<String> {
     })
 }
 
+/// Best-effort build of a Gizzi harness for the default model configured in
+/// the Gizzi runtime user config. This lets the Allternit API create sessions
+/// that route through the user's chosen brain (subprocess, local, or BYOK)
+/// without requiring an agent record in the platform DB.
+pub fn read_gizzi_default_harness() -> Option<serde_json::Value> {
+    let path = gizzi_user_config_path();
+    let text = std::fs::read_to_string(&path).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+
+    let provider_id = value
+        .get("model")
+        .and_then(|v| v.as_str())
+        .and_then(|m| m.split_once('/').map(|(p, _)| p.to_string()))?;
+
+    let provider = value.get("provider")?.as_object()?.get(&provider_id)?.clone();
+
+    // Subprocess provider (e.g. claude-cli, custom local scripts).
+    if let Some(cmd) = provider.get("subprocess_cmd").and_then(|v| v.as_str()) {
+        return Some(serde_json::json!({
+            "mode": "subprocess",
+            "subprocess": { "command": cmd }
+        }));
+    }
+
+    // Local/OpenAI-compatible provider (e.g. Ollama).
+    if let Some(base_url) = provider
+        .get("options")
+        .and_then(|o| o.get("baseURL"))
+        .and_then(|v| v.as_str())
+    {
+        return Some(serde_json::json!({
+            "mode": "local",
+            "local": { "baseURL": base_url }
+        }));
+    }
+
+    // BYOK cloud-style providers with an explicit baseURL / auth_type.
+    if provider.get("auth_type").and_then(|v| v.as_str()) == Some("api_key") {
+        let base_url = provider
+            .get("baseURL")
+            .or_else(|| provider.get("options").and_then(|o| o.get("baseURL")))
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        return Some(serde_json::json!({
+            "mode": "byok",
+            "byok": {
+                "baseURLs": { provider_id: base_url },
+                "keys": {}
+            }
+        }));
+    }
+
+    None
+}
+
 fn gizzi_user_config_path() -> PathBuf {
     dirs::config_dir()
         .map(|p| p.join("gizzi").join("gizzi.json"))

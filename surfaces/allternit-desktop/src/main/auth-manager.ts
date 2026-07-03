@@ -4,10 +4,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import log from 'electron-log';
+import { URLS } from './config.js';
 
 const DESKTOP_CLIENT_ID = 'allternit-desktop';
 const DESKTOP_CALLBACK_URI = 'allternit://auth/callback';
-const OAUTH_DEV_BASE_URL = 'http://localhost:3013';
+const OAUTH_DEV_BASE_URL = URLS.DEV_UI;
 const OAUTH_PROD_BASE_URL = 'https://platform.allternit.com';
 const SESSION_REFRESH_SKEW_MS = 5 * 60 * 1000;
 const AUTH_TIMEOUT_MS = 5 * 60 * 1000;

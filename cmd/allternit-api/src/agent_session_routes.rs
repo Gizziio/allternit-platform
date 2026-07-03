@@ -21,15 +21,15 @@ use std::{collections::HashMap, sync::Arc};
 use tracing::warn;
 
 use crate::AppState;
+use crate::config::{AppConfig, read_gizzi_default_harness};
 use crate::db::DbHandle;
-use crate::default_model;
 use crate::secrets;
 
 fn gizzi_base() -> String {
-    crate::APP_CONFIG
-        .get()
-        .map(|c| c.terminal_server_url())
-        .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
+    // Reload from disk each time so runtime URL changes (wizard, settings) take
+    // effect without an API restart.
+    AppConfig::load()
+        .terminal_server_url()
         .trim_end_matches('/')
         .to_string()
 }
@@ -439,7 +439,7 @@ fn select_model(metadata: Option<&serde_json::Value>) -> serde_json::Value {
         });
     }
 
-    let (provider_id, model_id) = default_model();
+    let (provider_id, model_id) = AppConfig::load().default_model();
     json!(GizziModelRef { provider_id, model_id })
 }
 
@@ -595,6 +595,17 @@ async fn create_session(
         );
     }
 
+    // Always set the platform default model so Gizzi sessions know which brain
+    // to use, even when the frontend doesn't send an explicit model.
+    let (default_provider, default_model_id) = AppConfig::load().default_model();
+    payload.insert(
+        "model".to_string(),
+        json!(GizziModelRef {
+            provider_id: default_provider,
+            model_id: default_model_id,
+        }),
+    );
+
     // Resolve platform agent harness config and forward it into the gizzi session.
     if let Some(ref agent_id) = body.agent_id {
         if let Err(err) = agent_allowed_on_surface(&state.db, agent_id, surface.as_deref()) {
@@ -605,7 +616,9 @@ async fn create_session(
     let agent_harness = if let Some(ref agent_id) = body.agent_id {
         resolve_agent_harness(&state.db, agent_id).await
     } else {
-        None
+        // Fall back to the brain configured in the Gizzi runtime so regular
+        // (non-agent) sessions still route through the user's chosen provider.
+        read_gizzi_default_harness()
     };
 
     // Determine which provider this session will use so we can inject the
@@ -620,7 +633,7 @@ async fn create_session(
                 .and_then(provider_id_from_model)
         })
         .unwrap_or_else(|| {
-            let (provider, _) = default_model();
+            let (provider, _) = AppConfig::load().default_model();
             provider
         });
 
