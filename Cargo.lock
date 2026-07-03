@@ -260,6 +260,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "allternit-canvas-protocol"
+version = "0.1.0"
+dependencies = [
+ "allternit-capsule-sdk",
+ "allternit-system-law",
+ "anyhow",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "allternit-capsule"
 version = "0.1.0"
 dependencies = [
@@ -278,6 +295,23 @@ dependencies = [
  "sha2 0.10.9",
  "tar",
  "thiserror 1.0.69",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "allternit-capsule-sdk"
+version = "0.1.0"
+dependencies = [
+ "allternit-harness-engineering",
+ "allternit-system-law",
+ "anyhow",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
  "tracing",
  "uuid",
 ]
@@ -519,6 +553,23 @@ dependencies = [
  "utime",
  "uuid",
  "walkdir",
+]
+
+[[package]]
+name = "allternit-harness-engineering"
+version = "0.1.0"
+dependencies = [
+ "allternit-system-law",
+ "anyhow",
+ "chrono",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

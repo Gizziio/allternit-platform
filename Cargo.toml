@@ -35,6 +35,20 @@ members = [
     "domains/agent/allternit-agent-workspace/allternit-agent-workspace",
     "services/memory",
     "services/memory/data/memory-fabric",
+    # Referenced by workspace.dependencies but previously outside the workspace
+    "platform/contracts/capsule/capsule-system/allternit-capsule",
+    "platform/contracts/capsule/capsule-system/allternit-capsule-sdk",
+    "platform/protocols/canvas-protocol",
+    "services/memory/data/history-ledger",
+    "domains/governance/identity-access-control/policy-engine",
+    "domains/governance/identity-access-control/policy-tier-gating",
+    "platform/protocols/communication/kernel-messaging",
+    "domains/governance/governance-workflows/core-governance",
+    "domains/governance/security-network/security-hardening",
+    "domains/governance/identity-access-control/purpose-binding",
+    "domains/kernel/drivers/ontology-runtime",
+    "platform/sdk/adapters/rust/skills",
+    "api/gateway/routing",
 ]
 
 [workspace.package]
@@ -74,6 +88,7 @@ allternit-system-law = { path = "domains/kernel/drivers/system-law" }
 allternit-kernel-contracts = { path = "domains/kernel/core/kernel-contracts" }
 allternit-skills = { path = "platform/sdk/adapters/rust/skills" }
 allternit-tools-gateway = { path = "api/gateway/routing" }
+allternit-harness-engineering = { path = "domains/kernel/drivers/harness-engineering" }
 mcp = { path = "mcp/core" }
 mcp-client = { path = "mcp/mcp-client" }
 
