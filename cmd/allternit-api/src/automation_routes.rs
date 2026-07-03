@@ -1534,3 +1534,137 @@ pub fn automation_router() -> Router<Arc<AppState>> {
         )
         .route("/automation/loops/:id/run", post(run_loop))
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tests
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::DbHandle;
+
+    fn test_db() -> (String, DbHandle) {
+        let id = uuid::Uuid::new_v4().to_string();
+        let path = std::env::temp_dir().join(format!("allternit-schedule-test-{}.db", id));
+        let db = DbHandle::new(path.clone()).unwrap();
+        (path.to_string_lossy().to_string(), db)
+    }
+
+    fn cleanup(path: &str) {
+        let _ = std::fs::remove_file(path);
+    }
+
+    fn insert_test_routine(conn: &rusqlite::Connection, id: &str, user_id: &str) {
+        conn.execute(
+            "INSERT INTO routines (id, user_id, name, status, schedule_type, schedule_expression, timezone, execution_domain, config, created_at, updated_at)
+             VALUES (?1, ?2, 'Test Routine', 'active', 'cron', '0 9 * * *', 'UTC', 'local', '{}', datetime('now'), datetime('now'))",
+            rusqlite::params![id, user_id],
+        ).unwrap();
+    }
+
+    fn insert_test_run(conn: &rusqlite::Connection, id: &str, routine_id: &str, status: &str, duration_ms: i32, scheduled_at: &str) {
+        conn.execute(
+            "INSERT INTO routine_runs (id, routine_id, status, scheduled_at, duration_ms, attempt, triggered_by)
+             VALUES (?1, ?2, ?3, ?4, ?5, 1, 'schedule')",
+            rusqlite::params![id, routine_id, status, scheduled_at, duration_ms],
+        ).unwrap();
+    }
+
+    #[test]
+    fn test_routine_metrics_aggregation() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+        let routine_id = "routine-1";
+        let user_id = "user-1";
+
+        insert_test_routine(&conn, routine_id, user_id);
+        insert_test_run(&conn, "run-1", routine_id, "completed", 100, "2024-01-01T10:00:00Z");
+        insert_test_run(&conn, "run-2", routine_id, "completed", 200, "2024-01-01T11:00:00Z");
+        insert_test_run(&conn, "run-3", routine_id, "failed", 0, "2024-01-01T12:00:00Z");
+
+        let metrics: RoutineMetrics = conn
+            .query_row(
+                "SELECT
+                    COUNT(*),
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END),
+                    COUNT(CASE WHEN status = 'failed' THEN 1 END),
+                    AVG(CASE WHEN status = 'completed' THEN duration_ms END),
+                    (SELECT status FROM routine_runs WHERE routine_id = ?1 ORDER BY scheduled_at DESC LIMIT 1),
+                    (SELECT scheduled_at FROM routine_runs WHERE routine_id = ?1 ORDER BY scheduled_at DESC LIMIT 1)
+                 FROM routine_runs WHERE routine_id = ?1",
+                [routine_id],
+                |row| {
+                    let total_runs: i64 = row.get(0)?;
+                    let successful_runs: i64 = row.get(1)?;
+                    let failed_runs: i64 = row.get(2)?;
+                    Ok(RoutineMetrics {
+                        routine_id: routine_id.to_string(),
+                        total_runs,
+                        successful_runs,
+                        failed_runs,
+                        success_rate: successful_runs as f64 / total_runs as f64,
+                        average_duration_ms: row.get(3)?,
+                        last_run_status: row.get(4)?,
+                        last_run_at: row.get(5)?,
+                    })
+                },
+            )
+            .unwrap();
+
+        assert_eq!(metrics.total_runs, 3);
+        assert_eq!(metrics.successful_runs, 2);
+        assert_eq!(metrics.failed_runs, 1);
+        assert!((metrics.success_rate - 0.6667).abs() < 0.01);
+        assert!(metrics.average_duration_ms.unwrap() >= 150.0);
+        assert_eq!(metrics.last_run_status.as_deref(), Some("failed"));
+        cleanup(&path);
+    }
+
+    #[test]
+    fn test_routine_metrics_empty_runs() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+        let routine_id = "routine-empty";
+        let user_id = "user-empty";
+
+        insert_test_routine(&conn, routine_id, user_id);
+
+        let metrics: RoutineMetrics = conn
+            .query_row(
+                "SELECT
+                    COUNT(*),
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END),
+                    COUNT(CASE WHEN status = 'failed' THEN 1 END),
+                    AVG(CASE WHEN status = 'completed' THEN duration_ms END),
+                    (SELECT status FROM routine_runs WHERE routine_id = ?1 ORDER BY scheduled_at DESC LIMIT 1),
+                    (SELECT scheduled_at FROM routine_runs WHERE routine_id = ?1 ORDER BY scheduled_at DESC LIMIT 1)
+                 FROM routine_runs WHERE routine_id = ?1",
+                [routine_id],
+                |row| {
+                    let total_runs: i64 = row.get(0)?;
+                    let successful_runs: i64 = row.get(1)?;
+                    let failed_runs: i64 = row.get(2)?;
+                    Ok(RoutineMetrics {
+                        routine_id: routine_id.to_string(),
+                        total_runs,
+                        successful_runs,
+                        failed_runs,
+                        success_rate: if total_runs > 0 { successful_runs as f64 / total_runs as f64 } else { 0.0 },
+                        average_duration_ms: row.get(3)?,
+                        last_run_status: row.get(4)?,
+                        last_run_at: row.get(5)?,
+                    })
+                },
+            )
+            .unwrap();
+
+        assert_eq!(metrics.total_runs, 0);
+        assert_eq!(metrics.successful_runs, 0);
+        assert_eq!(metrics.failed_runs, 0);
+        assert_eq!(metrics.success_rate, 0.0);
+        assert!(metrics.average_duration_ms.is_none());
+        assert!(metrics.last_run_status.is_none());
+        cleanup(&path);
+    }
+}

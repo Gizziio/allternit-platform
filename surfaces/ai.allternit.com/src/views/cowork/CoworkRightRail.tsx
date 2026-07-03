@@ -12,7 +12,7 @@
  * All content derived from liveMessages — zero hardcoded placeholders.
  */
 
-import React, { memo, useCallback, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CaretRight,
   CaretDown,
