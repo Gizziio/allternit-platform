@@ -1684,12 +1684,6 @@ importers:
         specifier: ^5.3.0
         version: 5.9.3
 
-  platform/sdk/typescript/allternit-capsule-sdk:
-    devDependencies:
-      typescript:
-        specifier: ^5.4.5
-        version: 5.9.3
-
   platform/types/visual-state:
     devDependencies:
       typescript:

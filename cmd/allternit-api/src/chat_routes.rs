@@ -16,7 +16,7 @@ use tokio::process::Command;
 use tracing::{error, info};
 use uuid::Uuid;
 
-use crate::AppState;
+use crate::{AppState, default_model};
 
 /// Chat request from frontend
 #[derive(Debug, Deserialize)]
@@ -45,11 +45,12 @@ async fn handle_agent_chat(
     info!(chat_id = %request.chat_id, "Received chat request, running subprocess agent");
 
     let assistant_message_id = format!("msg_{}", Uuid::new_v4().simple());
+    let (_default_provider, default_model_id) = default_model();
     let raw_model_id = request
         .model_id
         .as_deref()
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or("claude-sonnet-4-6");
+        .unwrap_or(&default_model_id);
     // Strip provider prefix (e.g. "claude-cli/claude-sonnet-4-6" → "claude-sonnet-4-6")
     let model_id = raw_model_id
         .rsplit_once('/')
