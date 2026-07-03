@@ -14,7 +14,6 @@ use axum::{
     Json,
 };
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, TokenData, Validation};
-use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -32,12 +31,8 @@ const USER_NAME_HEADER: &str = "x-allternit-user-name";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
-/// Clerk JWKS URL — derived from the publishable key domain.
-/// Key pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ decodes to clerk.platform.allternit.com
-const CLERK_JWKS_URL: &str = "https://clerk.platform.allternit.com/.well-known/jwks.json";
-
-/// Default expected JWT issuer.
-const CLERK_ISSUER: &str = "https://clerk.platform.allternit.com";
+const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.platform.allternit.com/.well-known/jwks.json";
+const DEFAULT_CLERK_ISSUER: &str = "https://clerk.platform.allternit.com";
 
 /// How long to cache JWKS before refreshing
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(3600);
@@ -57,8 +52,8 @@ pub struct AuthConfig {
 impl Default for AuthConfig {
     fn default() -> Self {
         Self {
-            clerk_jwks_url: CLERK_JWKS_URL.to_string(),
-            clerk_issuer: CLERK_ISSUER.to_string(),
+            clerk_jwks_url: DEFAULT_CLERK_JWKS_URL.to_string(),
+            clerk_issuer: DEFAULT_CLERK_ISSUER.to_string(),
         }
     }
 }
@@ -140,7 +135,7 @@ struct CachedJwks {
 pub struct JwksManager {
     cache: RwLock<Option<CachedJwks>>,
     client: reqwest::Client,
-    config: AuthConfig,
+    jwks_url: String,
 }
 
 impl JwksManager {
@@ -151,17 +146,19 @@ impl JwksManager {
                 .timeout(JWKS_FETCH_TIMEOUT)
                 .build()
                 .expect("Failed to build HTTP client"),
-            config: config.clone(),
+            jwks_url: config.clerk_jwks_url.clone(),
         }
     }
 
-    /// Returns `true` when a non-expired JWKS cache is available.
+    /// Returns `true` when a JWKS fetch has succeeded recently enough to be usable.
     pub async fn is_ready(&self) -> bool {
         let cache = self.cache.read().await;
-        cache
-            .as_ref()
-            .map(|c| c.fetched_at.elapsed() < JWKS_CACHE_TTL)
-            .unwrap_or(false)
+        if let Some(ref cached) = *cache {
+            // Ready when we have keys, or when the last successful fetch is still fresh.
+            !cached.keys.is_empty() || cached.fetched_at.elapsed() < JWKS_CACHE_TTL
+        } else {
+            false
+        }
     }
 
     /// Get a JWK by key ID, fetching from Clerk if necessary
@@ -196,11 +193,10 @@ impl JwksManager {
     }
 
     async fn fetch_jwks(&self) -> Result<HashMap<String, JwkKey>, AuthError> {
-        let jwks_url = &self.config.clerk_jwks_url;
-        info!("Fetching JWKS from {}", jwks_url);
+        info!("Fetching JWKS from {}", self.jwks_url);
         let resp = self
             .client
-            .get(jwks_url)
+            .get(&self.jwks_url)
             .send()
             .await
             .map_err(|e| AuthError::JwksFetch(e.to_string()))?;
@@ -306,6 +302,7 @@ impl IntoResponse for AuthError {
 pub async fn verify_token(
     jwks: &JwksManager,
     token: &str,
+    config: &AuthConfig,
 ) -> Result<AuthUser, AuthError> {
     // Decode header to get key ID
     let header = decode_header(token)
@@ -334,8 +331,7 @@ pub async fn verify_token(
 
     // Validate token
     let mut validation = Validation::new(Algorithm::RS256);
-    // Clerk tokens are issued by the Clerk instance
-    validation.set_issuer(&[jwks.config.clerk_issuer.as_str()]);
+    validation.set_issuer(&[&config.clerk_issuer]);
     // Accept tokens with or without audience
     validation.validate_aud = false;
 
@@ -429,12 +425,13 @@ fn extract_desktop_bootstrap_user(headers: &HeaderMap) -> Option<AuthUser> {
     let _desktop_token = extract_header_string(headers, DESKTOP_ACCESS_TOKEN_HEADER)?;
     let email = extract_header_string(headers, USER_EMAIL_HEADER);
     let name = extract_header_string(headers, USER_NAME_HEADER);
+    let tenant_id = extract_header_string(headers, "x-allternit-tenant-id");
     Some(AuthUser {
         user_id,
         email,
         name,
         avatar_url: None,
-        tenant_id: None,
+        tenant_id,
     })
 }
 
@@ -459,7 +456,7 @@ pub async fn auth_middleware(
 
     // Try Clerk JWT first
     if let Some(token) = extract_bearer_token(request.headers()) {
-        match verify_token(&state.jwks, &token).await {
+        match verify_token(&state.jwks, &token, &state.auth_config).await {
             Ok(user) => {
                 // Ensure user exists in local DB
                 if let Err(e) = ensure_user_in_db(&state.db, &user) {
@@ -489,7 +486,7 @@ pub async fn optional_auth_middleware(
     next: Next,
 ) -> Response {
     if let Some(token) = extract_bearer_token(request.headers()) {
-        if let Ok(user) = verify_token(&state.jwks, &token).await {
+        if let Ok(user) = verify_token(&state.jwks, &token, &state.auth_config).await {
             let _ = ensure_user_in_db(&state.db, &user);
             request.extensions_mut().insert(user);
         }
@@ -513,11 +510,14 @@ pub fn get_user(headers: &HeaderMap) -> Option<AuthUser> {
     let name = headers.get("x-allternit-user-name")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
+    let tenant_id = headers.get("x-allternit-tenant-id")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
     Some(AuthUser {
         user_id: user_id.to_string(),
         email,
         name,
         avatar_url: None,
-        tenant_id: None,
+        tenant_id,
     })
 }
