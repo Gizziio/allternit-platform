@@ -58,6 +58,7 @@ import { ChatInputProvider } from "@/providers/chat-input-provider";
 import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
 import { ChatModelsProvider } from "@/providers/chat-models-provider";
 import { ModelSelectionProvider } from "@/providers/model-selection-provider";
+import { useDefaultModelSelection } from "@/hooks/use-default-model-selection";
 import { ModelPicker } from "@/components/model-picker";
 
 const VideoEditorView = lazy(() => import("./video/VideoEditorView").then((m) => ({ default: m.VideoEditorView })));
@@ -312,6 +313,7 @@ function TabLoadingState({ label = "Loading workspace…" }: { label?: string })
 
 export default function DesignModeView({ initialTab, initialDesignMd, initialStream }: DesignModeViewProps) {
   useNav();
+  const defaultSelection = useDefaultModelSelection();
   // Bridge mode tab selection to canvas/renderer opening (parity with Chat/Cowork)
   useModeCanvasBridge({ surface: 'design' });
   const hasInstallContext = Boolean(initialDesignMd || initialStream);
@@ -745,7 +747,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                 <ChatInputProvider>
                   <PromptInputProvider>
                     <ChatModelsProvider>
-                      <ModelSelectionProvider>
+                      <ModelSelectionProvider defaultSelection={defaultSelection}>
                         <DesignChatPanel
                           activeProject={activeProject}
                           backendMessages={backendMessages}

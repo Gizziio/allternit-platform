@@ -275,12 +275,12 @@ impl PurposeBindingEngine {
             .ok_or_else(|| PurposeBindingError::WihNotFound(wih_id.to_string()))?;
 
         // Check tool denied
-        if scope.denied_tools.contains(&tool_id) {
+        if scope.denied_tools.iter().any(|t| t == tool_id) {
             return Ok(false);
         }
 
         // Check tool allowed (if allowlist exists)
-        if !scope.allowed_tools.is_empty() && !scope.allowed_tools.contains(&tool_id) {
+        if !scope.allowed_tools.is_empty() && !scope.allowed_tools.iter().any(|t| t == tool_id) {
             return Ok(false);
         }
 

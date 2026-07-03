@@ -39,38 +39,43 @@ Passes completed:
   - services/orchestration/control-plane/allternit-control/control-plane
   - services/orchestration/control-plane/unified-registry/artifact-registry
 
-Remaining orphan crates: 21
+Remaining orphan crates: 1
 
 ## Remaining orphans by size
 
 | Path | Package | Rust files | Rust LOC | Last commit | Referenced by |
 |------|---------|------------|----------|-------------|---------------|
-| cmd/launcher | allternit-platform-launcher | 1 | 246 | 2026-07-03 | — |
-| domains/governance/garbage-collection/gc-agents | allternit-gc-agents | 4 | 2322 | 2026-04-25 | — |
-| domains/kernel/drivers/allternit-parity | allternit-parity | 8 | 2059 | 2026-04-25 | — |
-| domains/kernel/drivers/evaluation-harness | allternit-evaluation-harness | 9 | 3037 | 2026-04-25 | — |
-| domains/kernel/drivers/hooks-system | allternit-hooks-system | 1 | 838 | 2026-04-25 | — |
-| domains/kernel/drivers/purpose-binding-core | allternit-purpose-binding-core | 1 | 530 | 2026-04-25 | — |
-| infrastructure/executor/bridge-systems/io-daemon | allternit-io-daemon | 4 | 716 | 2026-07-01 | — |
-| infrastructure/providers/vendor-integration/wrappers | allternit-vendor-wrappers | 1 | 520 | 2026-04-25 | — |
-| infrastructure/vps-node | allternit-node | 11 | 5544 | 2026-07-01 | — |
-| platform/protocols/transport-sms | allternit-transport-sms | 1 | 655 | 2026-04-25 | — |
-| platform/sdk/allternit-skill-portability | allternit-skill-portability | 8 | 1676 | 2026-04-25 | — |
-| services/memory/data/allternit-memory-provider | allternit-memory-provider | 3 | 789 | 2026-04-25 | — |
-| services/memory/data/ars-contexta/native | ars-contexta-nlp | 5 | 522 | 2026-04-25 | — |
-| services/ml/pattern-service | pattern-service | 4 | 219 | 2026-07-01 | — |
-| services/ml/prompt-pack-service | prompt-pack-service | 10 | 1844 | 2026-07-01 | — |
-| services/orchestration/control-plane/allternit-agent-orchestration/hooks | allternit-hooks | 3 | 1167 | 2026-04-25 | — |
-| services/orchestration/orchestration/budget-metering | allternit-budget-metering | 1 | 608 | 2026-04-25 | — |
-| services/orchestration/orchestration/byoc-edge-runner | allternit-edge-runner | 1 | 521 | 2026-04-25 | — |
-| services/orchestration/orchestration/conflict-arbitration | allternit-conflict-arbitration | 1 | 530 | 2026-04-25 | — |
-| services/orchestration/orchestration/node-registry | allternit-node-registry | 1 | 594 | 2026-04-25 | — |
-| services/tools/kernel-tools | allternit-tools | 4 | 410 | 2026-07-01 | — |
-| services/ui/browser-view-service | allternit-browser-view-service | 3 | 979 | 2026-04-25 | — |
+| cmd/launcher | allternit-platform-launcher | 1 | 246 | 2026-07-03 | standalone workspace |
+
+## Resolved in this pass
+
+- Integrated 20 standalone orphans into the workspace:
+  - domains/governance/garbage-collection/gc-agents
+  - domains/kernel/drivers/hooks-system
+  - domains/kernel/drivers/purpose-binding-core
+  - infrastructure/executor/bridge-systems/io-daemon
+  - infrastructure/providers/vendor-integration/wrappers
+  - platform/protocols/transport-sms
+  - platform/sdk/allternit-skill-portability
+  - services/memory/data/allternit-memory-provider
+  - services/ml/pattern-service
+  - services/ml/prompt-pack-service
+  - services/orchestration/control-plane/allternit-agent-orchestration/hooks
+  - services/orchestration/orchestration/budget-metering
+  - services/orchestration/orchestration/conflict-arbitration
+  - services/orchestration/orchestration/node-registry
+  - services/tools/kernel-tools
+  - domains/kernel/drivers/allternit-parity
+  - domains/kernel/drivers/evaluation-harness
+  - infrastructure/vps-node (allternit-node)
+  - services/orchestration/orchestration/byoc-edge-runner
+  - services/ui/browser-view-service
+- Fixed compile error in purpose-binding-core (String vs &str contains checks).
+- Archived `ars-contexta-nlp` to `archive/rust-orphans/ars-contexta-nlp` due to unresolved `tch` version conflict.
 
 ## Recommended next actions
 
-1. Continue integrating remaining 31 orphans with clean dependency graphs.
-2. Evaluate large subsystems (>5000 LOC) such as allternit-providers, allternit-runtime, allternit-node, and allternit-embodiment for packaging as separate repos like `rails`.
-3. Audit `cmd/launcher` for the missing embed pipeline before re-enabling.
-4. Resolve `ars-contexta-nlp` `tch` version conflict or archive it.
+1. Build the embed pipeline for `cmd/launcher` (`api/embed/allternit-api`, `cmd/shell-ui/dist`) and re-enable it in the root workspace.
+2. Evaluate large subsystems (>5000 LOC) such as `allternit-providers`, `allternit-runtime`, `allternit-node`, and `allternit-embodiment` for packaging as separate repos like `rails`.
+3. Audit `allternit-desktop` for design/layout/feature gaps.
+4. Implement tasks/cron execution infrastructure.

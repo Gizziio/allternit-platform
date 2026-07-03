@@ -74,22 +74,22 @@ export interface SaveProviderResponse {
 
 export const setupApi = {
   getConfig(): Promise<SetupConfigResponse> {
-    return api.get('/onboarding/config');
+    return api.get('/api/onboarding/config');
   },
 
   saveConfig(config: UserConfig): Promise<{ success: boolean }> {
-    return api.post('/onboarding/config', config);
+    return api.post('/api/onboarding/config', config);
   },
 
   discover(): Promise<DiscoveryResponse> {
-    return api.get('/onboarding/discover');
+    return api.get('/api/onboarding/discover');
   },
 
   validateKey(provider: string, key: string): Promise<ValidateKeyResponse> {
-    return api.post('/onboarding/validate-key', { provider, key });
+    return api.post('/api/onboarding/validate-key', { provider, key });
   },
 
   saveProvider(payload: SaveProviderPayload): Promise<SaveProviderResponse> {
-    return api.post('/onboarding/provider', payload);
+    return api.post('/api/onboarding/provider', payload);
   },
 };

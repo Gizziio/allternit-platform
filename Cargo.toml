@@ -88,6 +88,26 @@ members = [
     "services/memory/state/memory",
     "domains/governance/audit-logging/core-audit",
     "domains/governance/identity-access-control/core-policy",
+    "domains/governance/garbage-collection/gc-agents",
+    "domains/kernel/drivers/allternit-parity",
+    "domains/kernel/drivers/evaluation-harness",
+    "domains/kernel/drivers/hooks-system",
+    "domains/kernel/drivers/purpose-binding-core",
+    "infrastructure/vps-node",
+    "services/orchestration/orchestration/byoc-edge-runner",
+    "services/ui/browser-view-service",
+    "infrastructure/executor/bridge-systems/io-daemon",
+    "infrastructure/providers/vendor-integration/wrappers",
+    "platform/protocols/transport-sms",
+    "platform/sdk/allternit-skill-portability",
+    "services/memory/data/allternit-memory-provider",
+    "services/ml/pattern-service",
+    "services/ml/prompt-pack-service",
+    "services/orchestration/control-plane/allternit-agent-orchestration/hooks",
+    "services/orchestration/orchestration/budget-metering",
+    "services/orchestration/orchestration/conflict-arbitration",
+    "services/orchestration/orchestration/node-registry",
+    "services/tools/kernel-tools",
     "domains/kernel/allternit-intent-graph-kernel/allternit-intent-graph-kernel",
     "domains/kernel/allternit-presentation-kernel",
     "domains/kernel/drivers/ivkge-advanced",
@@ -192,6 +212,26 @@ allternit-kernel-compat = { path = "domains/kernel/core/kernel-compat" }
 allternit-packaging = { path = "domains/kernel/service/allternit-ops/packaging" }
 allternit-artifact-registry = { path = "services/orchestration/control-plane/unified-registry/artifact-registry" }
 allternit-control-plane = { path = "services/orchestration/control-plane/allternit-control/control-plane" }
+allternit-gc-agents = { path = "domains/governance/garbage-collection/gc-agents" }
+allternit-hooks-system = { path = "domains/kernel/drivers/hooks-system" }
+allternit-purpose-binding-core = { path = "domains/kernel/drivers/purpose-binding-core" }
+allternit-parity = { path = "domains/kernel/drivers/allternit-parity" }
+allternit-evaluation-harness = { path = "domains/kernel/drivers/evaluation-harness" }
+allternit-node = { path = "infrastructure/vps-node" }
+allternit-edge-runner = { path = "services/orchestration/orchestration/byoc-edge-runner" }
+allternit-browser-view-service = { path = "services/ui/browser-view-service" }
+allternit-io-daemon = { path = "infrastructure/executor/bridge-systems/io-daemon" }
+allternit-vendor-wrappers = { path = "infrastructure/providers/vendor-integration/wrappers" }
+allternit-transport-sms = { path = "platform/protocols/transport-sms" }
+allternit-skill-portability = { path = "platform/sdk/allternit-skill-portability" }
+allternit-memory-provider = { path = "services/memory/data/allternit-memory-provider" }
+pattern-service = { path = "services/ml/pattern-service" }
+prompt-pack-service = { path = "services/ml/prompt-pack-service" }
+allternit-hooks = { path = "services/orchestration/control-plane/allternit-agent-orchestration/hooks" }
+allternit-budget-metering = { path = "services/orchestration/orchestration/budget-metering" }
+allternit-conflict-arbitration = { path = "services/orchestration/orchestration/conflict-arbitration" }
+allternit-node-registry = { path = "services/orchestration/orchestration/node-registry" }
+allternit-tools = { path = "services/tools/kernel-tools" }
 allternit-meta-swarm = { path = "domains/agent-swarm/core" }
 allternit-rlm = { path = "domains/kernel/drivers/allternit-rlm" }
 allternit-providers = { path = "domains/kernel/drivers/allternit-providers" }

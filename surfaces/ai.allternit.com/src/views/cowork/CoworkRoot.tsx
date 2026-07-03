@@ -43,6 +43,7 @@ import { ChatInputProvider } from '@/providers/chat-input-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
 import { ChatModelsProvider } from '@/providers/chat-models-provider';
 import { ModelSelectionProvider } from '@/providers/model-selection-provider';
+import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { useModelSelection } from '@/providers/model-selection-provider';
 import {
   buildAgentConversationContext,
@@ -353,7 +354,7 @@ function CoworkRootContent() {
     return (
       <div style={{ position: 'relative', height: '100%', isolation: 'isolate' }}>
         <CoworkAnimatedBackground />
-        <ModelSelectionProvider>
+        <ModelSelectionProvider defaultSelection={defaultSelection}>
           <CoworkLaunchpad
             onStartChat={handleStartCowork}
             onResumeThread={(newSessionId) => {
@@ -378,7 +379,7 @@ function CoworkRootContent() {
           <ChatInputProvider>
             <PromptInputProvider>
               <ChatModelsProvider>
-                <ModelSelectionProvider>
+                <ModelSelectionProvider defaultSelection={defaultSelection}>
                   <div style={{ position: 'relative', height: '100%', isolation: 'isolate' }}>
                     <CoworkAnimatedBackground />
                     <AgentModeBackdrop
@@ -682,6 +683,7 @@ interface CoworkComposeEventDetail {
 }
 
 function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpdate }: CoworkChatProps) {
+  const defaultSelection = useDefaultModelSelection();
   const { selection: modelSelection, selectModel, startSelection } = useModelSelection();
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('cowork');

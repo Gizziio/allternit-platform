@@ -65,9 +65,6 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
       {embeddedAgentStrip}
 
       {/* No-provider banner — shown when nothing is connected */}
-      <div className="fixed top-2 right-2 bg-red-600 text-white text-xs p-2 z-50 rounded">
-        modelSelection: {modelSelection ? `${modelSelection.providerId}/${modelSelection.modelId}` : 'null'}
-      </div>
       {!modelSelection && !isAgentSessionEmbedded && (
         <div className="w-full mb-6 p-[14px_18px] rounded-2xl flex items-center gap-3.5 border border-solid border-[color-mix(in_srgb,var(--accent-chat)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent-chat)_6%,var(--surface-panel,var(--bg-secondary)))]">
           <div className="size-9 rounded-[10px] shrink-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--accent-chat)_12%,transparent)] text-[var(--accent-chat)]">

@@ -14,6 +14,7 @@ import { ChatInputProvider } from '@/providers/chat-input-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
 import { ChatModelsProvider } from '@/providers/chat-models-provider';
 import { ModelSelectionProvider } from '@/providers/model-selection-provider';
+import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { useCodeModeStore } from './CodeModeStore';
 import type { CodeWorkspaceRecord } from './CodeModeStore';
 
@@ -27,6 +28,7 @@ interface CodeThreadViewProps {
 }
 
 export function CodeThreadView({ workspace }: CodeThreadViewProps) {
+  const defaultSelection = useDefaultModelSelection();
   const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(true);
   const [previewWidth, setPreviewWidth] = useState(PREVIEW_DEFAULT_WIDTH);
   const [showDashboard, setShowDashboard] = useState(true);
@@ -148,7 +150,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                 <ChatInputProvider>
                   <PromptInputProvider>
                     <ChatModelsProvider>
-                      <ModelSelectionProvider>
+                      <ModelSelectionProvider defaultSelection={defaultSelection}>
                         <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} />
                       </ModelSelectionProvider>
                     </ChatModelsProvider>
