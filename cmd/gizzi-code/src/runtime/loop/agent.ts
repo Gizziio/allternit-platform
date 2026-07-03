@@ -26,10 +26,18 @@ const HarnessConfigSchema = z.object({
   byok: z
     .object({
       keys: z
-        .record(z.enum(["anthropic", "openai", "google"]), z.string())
+        .object({
+          anthropic: z.string().optional(),
+          openai: z.string().optional(),
+          google: z.string().optional(),
+        })
         .optional(),
       baseURLs: z
-        .record(z.enum(["anthropic", "openai", "google"]), z.string())
+        .object({
+          anthropic: z.string().optional(),
+          openai: z.string().optional(),
+          google: z.string().optional(),
+        })
         .optional(),
     })
     .optional(),

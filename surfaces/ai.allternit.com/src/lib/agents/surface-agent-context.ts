@@ -10,7 +10,7 @@ import { useAgentStore } from "./agent.store";
 import type { Agent } from "./agent.types";
 import { getAgentSessionDescriptor } from "./session-metadata";
 
-type AgentLike = Pick<Agent, "id" | "name" | "provider" | "model" | "config"> | null;
+type AgentLike = Pick<Agent, "id" | "name" | "provider" | "model" | "config" | "allowedSurfaces"> | null;
 
 export interface AgentConversationContext {
   conversationMode: "llm" | "agent";
@@ -53,6 +53,20 @@ export function useSurfaceAgentModeEnabled(surface: AgentModeSurface): boolean {
   return Boolean(activeId && session) && descriptor.sessionMode === "agent";
 }
 
+/**
+ * Returns true when an agent explicitly allows running on the given surface.
+ * An agent with no allowedSurfaces is treated as certified for every surface
+ * (backwards compatibility), matching the registry enabled_modes default.
+ */
+export function isAgentAllowedOnSurface(
+  agent: Pick<Agent, "allowedSurfaces"> | null | undefined,
+  surface: AgentModeSurface,
+): boolean {
+  if (!agent) return false;
+  if (!agent.allowedSurfaces || agent.allowedSurfaces.length === 0) return true;
+  return agent.allowedSurfaces.includes(surface);
+}
+
 export function useSurfaceAgentSelection(surface: AgentModeSurface) {
   const agentModeEnabled = useSurfaceAgentModeEnabled(surface);
   const selectedAgentId = useAgentSurfaceModeStore(
@@ -60,18 +74,22 @@ export function useSurfaceAgentSelection(surface: AgentModeSurface) {
   );
   const agents = useAgentStore((state) => state.agents);
 
-  const selectedAgent = useMemo(
-    () =>
-      selectedAgentId
-        ? agents.find((agent) => agent.id === selectedAgentId) ?? null
-        : null,
-    [agents, selectedAgentId],
+  const allowedAgents = useMemo(
+    () => agents.filter((agent) => isAgentAllowedOnSurface(agent, surface)),
+    [agents, surface],
   );
+
+  const selectedAgent = useMemo(() => {
+    if (!selectedAgentId) return null;
+    const agent = agents.find((agent) => agent.id === selectedAgentId) ?? null;
+    return isAgentAllowedOnSurface(agent, surface) ? agent : null;
+  }, [agents, selectedAgentId, surface]);
 
   return {
     agentModeEnabled,
-    selectedAgentId,
+    selectedAgentId: selectedAgent ? selectedAgentId : null,
     selectedAgent,
+    allowedAgents,
   };
 }
 
