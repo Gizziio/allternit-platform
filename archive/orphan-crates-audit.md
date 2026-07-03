@@ -1,15 +1,16 @@
 # Orphan Rust Crate Audit
 
-Generated: 2026-07-03 12:37
+Generated: 2026-07-03 12:40
 
 Passes completed:
-- Archived 8 tiny dead stubs to `archive/rust-orphans/`.
+- Archived 8 tiny dead stubs.
 - Archived 19 additional dead stubs.
-- Integrated memory subsystem: 8 crates added to workspace members.
+- Integrated memory subsystem: 8 crates.
 - Integrated 15 clean orphans without broken dependency paths.
-- Skipped ars-contexta-nlp due to conflicting `tch` versions (needs dependency cleanup).
+- Archived 8 orphans that referenced already-archived crates (including security-network, environment-spec, kernel-service, marketplace, etc.).
+- Skipped ars-contexta-nlp due to conflicting `tch` versions.
 
-Remaining orphan crates: 57
+Remaining orphan crates: 48
 
 ## Remaining orphans by size
 
@@ -20,12 +21,9 @@ Remaining orphan crates: 57
 | domains/agent/allternit-embodiment | allternit-embodiment | 1 | 2943 | 2026-07-03 | — |
 | domains/governance/evidence-management/receipts-schema | allternit-receipts-schema | 4 | 1554 | 2026-04-25 | — |
 | domains/governance/garbage-collection/gc-agents | allternit-gc-agents | 4 | 2322 | 2026-04-25 | — |
-| domains/governance/security-network | allternit-federation | 9 | 4834 | 2026-07-01 | — |
-| domains/governance/security-network/terminal | allternit-terminal | 1 | 1229 | 2026-07-01 | — |
 | domains/governance/security-quality-assurance/evals | allternit-evals | 1 | 1823 | 2026-04-25 | — |
 | domains/kernel/core/kernel-compat | allternit-kernel-compat | 1 | 892 | 2026-04-25 | — |
 | domains/kernel/drivers/allternit-acp-driver/allternit-acp-driver | allternit-acp-driver | 10 | 1921 | 2026-04-25 | — |
-| domains/kernel/drivers/allternit-environment-spec | allternit-environment-spec | 19 | 5727 | 2026-07-01 | — |
 | domains/kernel/drivers/allternit-parity | allternit-parity | 8 | 2059 | 2026-04-25 | — |
 | domains/kernel/drivers/allternit-providers | allternit-providers | 14 | 6306 | 2026-04-25 | — |
 | domains/kernel/drivers/allternit-rlm | allternit-rlm | 9 | 3462 | 2026-07-01 | — |
@@ -37,20 +35,15 @@ Remaining orphan crates: 57
 | domains/kernel/drivers/hooks-system | allternit-hooks-system | 1 | 838 | 2026-04-25 | — |
 | domains/kernel/drivers/purpose-binding-core | allternit-purpose-binding-core | 1 | 530 | 2026-04-25 | — |
 | domains/kernel/service/allternit-local-compute/executor | executor | 1 | 705 | 2026-04-25 | — |
-| domains/kernel/service/allternit-local-compute/local-inference | allternit-local-inference | 4 | 559 | 2026-04-25 | — |
 | domains/kernel/service/allternit-ops/packaging | allternit-packaging | 1 | 1462 | 2026-04-25 | — |
-| domains/kernel/service/autonomous-code-factory | allternit-autonomous-code-factory | 1 | 538 | 2026-04-25 | — |
 | infrastructure/chrome-stream/runtime | allternit-browser-runtime | 4 | 1353 | 2026-04-25 | — |
 | infrastructure/executor/bridge-systems/io-daemon | allternit-io-daemon | 4 | 716 | 2026-07-01 | — |
 | infrastructure/providers/vendor-integration/wrappers | allternit-vendor-wrappers | 1 | 520 | 2026-04-25 | — |
 | infrastructure/scheduler | allternit-scheduler | 5 | 1222 | 2026-04-25 | — |
 | infrastructure/scheduler/cron-parser | allternit-cron-parser | 1 | 506 | 2026-04-25 | — |
 | infrastructure/vps-node | allternit-node | 11 | 5544 | 2026-07-01 | — |
-| platform/contracts/capsule/capsule-system/allternit-capsule-compiler | capsule_compiler | 1 | 692 | 2026-04-25 | — |
 | platform/contracts/capsule/capsule-system/allternit-capsule-runtime | capsule-runtime | 9 | 914 | 2026-07-02 | — |
-| platform/contracts/schemas/allternit-capsule-spec | capsule_spec | 1 | 395 | 2026-04-25 | path:services/orchestration/orchestration/kernel-service |
 | platform/protocols/transport-sms | allternit-transport-sms | 1 | 655 | 2026-04-25 | — |
-| platform/sdk/adapters/rust/marketplace | marketplace | 11 | 3105 | 2026-04-25 | — |
 | platform/sdk/allternit-skill-portability | allternit-skill-portability | 8 | 1676 | 2026-04-25 | — |
 | services/memory/data/allternit-memory-provider | allternit-memory-provider | 3 | 789 | 2026-04-25 | — |
 | services/memory/data/ars-contexta/native | ars-contexta-nlp | 5 | 522 | 2026-04-25 | — |
@@ -63,9 +56,8 @@ Remaining orphan crates: 57
 | services/orchestration/orchestration/budget-metering | allternit-budget-metering | 1 | 608 | 2026-04-25 | — |
 | services/orchestration/orchestration/byoc-edge-runner | allternit-edge-runner | 1 | 521 | 2026-04-25 | — |
 | services/orchestration/orchestration/conflict-arbitration | allternit-conflict-arbitration | 1 | 530 | 2026-04-25 | — |
-| services/orchestration/orchestration/kernel-service | kernel | 83 | 22363 | 2026-07-02 | — |
 | services/orchestration/orchestration/node-registry | allternit-node-registry | 1 | 594 | 2026-04-25 | — |
-| services/process-driver | allternit-process-driver | 1 | 429 | 2026-07-01 | path:domains/kernel/drivers/allternit-environment-spec |
+| services/process-driver | allternit-process-driver | 1 | 429 | 2026-07-01 | — |
 | services/registry/apps-registry | allternit-registry-apps | 2 | 905 | 2026-04-25 | path:domains/kernel/service/allternit-local-compute/executor |
 | services/registry/framework-registry | framework | 4 | 1088 | 2026-07-01 | — |
 | services/registry/functions-registry | allternit-registry-functions | 2 | 545 | 2026-04-25 | path:domains/kernel/service/allternit-local-compute/executor |
@@ -75,6 +67,6 @@ Remaining orphan crates: 57
 
 ## Recommended next actions
 
-1. Fix broken path references in remaining orphans (old directory structure `1-kernel`, `2-governance`, `3-adapters`, `4-services`) and integrate coherent subsystems.
+1. Fix broken path references in remaining orphans (old directory structure) and integrate coherent subsystems.
 2. For orphans with broken references to archived crates, archive those orphans too.
 3. Evaluate large subsystems (>5000 LOC) for packaging as separate repos like `rails`.
