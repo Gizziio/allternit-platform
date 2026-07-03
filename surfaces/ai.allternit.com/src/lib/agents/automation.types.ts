@@ -27,6 +27,7 @@ export type RoutineStatus = 'active' | 'paused' | 'disabled' | 'error';
 export type LoopStatus = RoutineStatus;
 
 export type ScheduleType = 'cron' | 'interval' | 'once' | 'manual';
+export type ExecutionDomain = 'local' | 'cloud';
 
 export interface Routine {
   id: string;
@@ -41,6 +42,7 @@ export interface Routine {
   schedule_type: ScheduleType;
   schedule_expression: string;
   timezone?: string;
+  execution_domain: ExecutionDomain;
   config: Record<string, unknown>;
   tags?: string[];
   metadata?: Record<string, unknown>;
@@ -64,6 +66,7 @@ export interface Loop {
   status: LoopStatus;
   schedule_type: ScheduleType;
   schedule_expression: string;
+  execution_domain: ExecutionDomain;
   config: Record<string, unknown>;
   tags?: string[];
   metadata?: Record<string, unknown>;
@@ -125,6 +128,7 @@ export interface CreateRoutineInput {
   goal_id?: string;
   description?: string;
   timezone?: string;
+  execution_domain?: ExecutionDomain;
   config?: Record<string, unknown>;
   tags?: string[];
   metadata?: Record<string, unknown>;
@@ -140,6 +144,7 @@ export interface UpdateRoutineInput {
   schedule_type?: ScheduleType;
   schedule_expression?: string;
   timezone?: string;
+  execution_domain?: ExecutionDomain;
   agent_id?: string;
   config?: Record<string, unknown>;
   tags?: string[];
@@ -158,6 +163,7 @@ export interface CreateLoopInput {
   goal_id?: string;
   session_id?: string;
   description?: string;
+  execution_domain?: ExecutionDomain;
   config?: Record<string, unknown>;
   tags?: string[];
   metadata?: Record<string, unknown>;
@@ -170,6 +176,7 @@ export interface UpdateLoopInput {
   status?: LoopStatus;
   schedule_type?: ScheduleType;
   schedule_expression?: string;
+  execution_domain?: ExecutionDomain;
   agent_id?: string;
   config?: Record<string, unknown>;
   tags?: string[];

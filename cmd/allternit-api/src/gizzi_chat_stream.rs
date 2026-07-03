@@ -174,6 +174,22 @@ fn chat_event_stream(
                                     return;
                                 }
                             }
+                            "session.error" => {
+                                let error = props.get("error").cloned().unwrap_or(json!({"message": "Unknown Gizzi error"}));
+                                let error_text = error.get("message").and_then(|v| v.as_str()).unwrap_or("Gizzi session error");
+                                yield Ok(Event::default().data(json!({
+                                    "type": "error",
+                                    "messageId": message_id,
+                                    "error": error_text,
+                                }).to_string()));
+                                yield Ok(Event::default().data(json!({
+                                    "type": "finish",
+                                    "messageId": message_id,
+                                    "status": "error",
+                                    "metadata": { "status": "error" }
+                                }).to_string()));
+                                return;
+                            }
                             _ => {}
                         }
                     }

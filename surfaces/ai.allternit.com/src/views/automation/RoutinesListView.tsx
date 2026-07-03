@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Routine, ScheduleType } from '@/lib/agents/automation.types';
+import type { Routine, ScheduleType, ExecutionDomain } from '@/lib/agents/automation.types';
 import {
   listRoutines,
   createRoutine,
@@ -48,6 +48,7 @@ export function RoutinesListView() {
     schedule_type: ScheduleType;
     schedule_expression: string;
     timezone: string;
+    execution_domain: ExecutionDomain;
     agent_id: string;
   }>({
     name: '',
@@ -55,6 +56,7 @@ export function RoutinesListView() {
     schedule_type: 'cron',
     schedule_expression: '0 9 * * *',
     timezone: 'UTC',
+    execution_domain: 'local',
     agent_id: '',
   });
 
@@ -82,6 +84,7 @@ export function RoutinesListView() {
       schedule_type: 'cron',
       schedule_expression: '0 9 * * *',
       timezone: 'UTC',
+      execution_domain: 'local',
       agent_id: '',
     });
   };
@@ -96,6 +99,7 @@ export function RoutinesListView() {
         schedule_type: form.schedule_type,
         schedule_expression: form.schedule_expression,
         timezone: form.timezone || undefined,
+        execution_domain: form.execution_domain,
         agent_id: form.agent_id || undefined,
       });
       resetForm();
@@ -116,6 +120,7 @@ export function RoutinesListView() {
         schedule_type: form.schedule_type,
         schedule_expression: form.schedule_expression,
         timezone: form.timezone || undefined,
+        execution_domain: form.execution_domain,
         agent_id: form.agent_id || undefined,
       });
       setEditingRoutine(null);
@@ -155,6 +160,7 @@ export function RoutinesListView() {
       schedule_type: routine.schedule_type,
       schedule_expression: routine.schedule_expression,
       timezone: routine.timezone || 'UTC',
+      execution_domain: routine.execution_domain || 'local',
       agent_id: routine.agent_id || '',
     });
     setIsCreating(false);
@@ -257,6 +263,21 @@ export function RoutinesListView() {
                   placeholder="UTC"
                   className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                 />
+              </div>
+              <div>
+                <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Execution Domain</Label>
+                <Select
+                  value={form.execution_domain}
+                  onValueChange={(value) => setForm((f) => ({ ...f, execution_domain: value as ExecutionDomain }))}
+                >
+                  <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                    <SelectItem value="local">Local (this device)</SelectItem>
+                    <SelectItem value="cloud">Cloud (always-on)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Agent</Label>
@@ -392,6 +413,12 @@ export function RoutinesListView() {
                 </span>
                 <span>{routine.schedule_expression}</span>
                 {routine.timezone && <span>{routine.timezone}</span>}
+                <span
+                  className="px-2 py-1 rounded border border-[var(--border-subtle)]"
+                  style={{ color: routine.execution_domain === 'cloud' ? 'var(--accent-primary)' : 'inherit' }}
+                >
+                  {routine.execution_domain}
+                </span>
                 <span>Updated {formatRelativeTime(routine.updated_at)}</span>
               </div>
             </GlassSurface>

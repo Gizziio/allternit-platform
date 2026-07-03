@@ -55,6 +55,18 @@ fn inject_provider_keys(
     harness: Option<serde_json::Value>,
     provider_id: &str,
 ) -> Option<serde_json::Value> {
+    // Only inject API keys for BYOK-style harnesses. Subprocess, local, and cloud
+    // harnesses carry their own auth (CLI env, base URL tokens, OAuth) and must
+    // not be converted into a BYOK shape.
+    let mode = harness
+        .as_ref()
+        .and_then(|h| h.get("mode"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("byok");
+    if mode != "byok" {
+        return harness;
+    }
+
     let key = secrets::get_secret(&secrets::provider_account(provider_id))?;
 
     let mut harness = harness.unwrap_or_else(|| {

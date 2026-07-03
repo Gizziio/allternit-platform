@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Loop, ScheduleType } from '@/lib/agents/automation.types';
+import type { Loop, ScheduleType, ExecutionDomain } from '@/lib/agents/automation.types';
 import {
   listLoops,
   createLoop,
@@ -49,6 +49,7 @@ export function LoopsListView() {
     schedule_expression: string;
     session_id: string;
     expires_at: string;
+    execution_domain: ExecutionDomain;
     agent_id: string;
   }>({
     name: '',
@@ -57,6 +58,7 @@ export function LoopsListView() {
     schedule_expression: '5m',
     session_id: '',
     expires_at: '',
+    execution_domain: 'local',
     agent_id: '',
   });
 
@@ -85,6 +87,7 @@ export function LoopsListView() {
       schedule_expression: '5m',
       session_id: '',
       expires_at: '',
+      execution_domain: 'local',
       agent_id: '',
     });
   };
@@ -100,6 +103,7 @@ export function LoopsListView() {
         schedule_expression: form.schedule_expression,
         session_id: form.session_id || undefined,
         expires_at: form.expires_at || undefined,
+        execution_domain: form.execution_domain,
         agent_id: form.agent_id || undefined,
       });
       resetForm();
@@ -120,6 +124,7 @@ export function LoopsListView() {
         schedule_type: form.schedule_type,
         schedule_expression: form.schedule_expression,
         expires_at: form.expires_at || undefined,
+        execution_domain: form.execution_domain,
         agent_id: form.agent_id || undefined,
       });
       setEditingLoop(null);
@@ -160,6 +165,7 @@ export function LoopsListView() {
       schedule_expression: loop.schedule_expression,
       session_id: loop.session_id || '',
       expires_at: loop.expires_at ? loop.expires_at.slice(0, 10) : '',
+      execution_domain: loop.execution_domain || 'local',
       agent_id: loop.agent_id || '',
     });
     setIsCreating(false);
@@ -271,6 +277,21 @@ export function LoopsListView() {
                   onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
                   className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                 />
+              </div>
+              <div>
+                <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Execution Domain</Label>
+                <Select
+                  value={form.execution_domain}
+                  onValueChange={(value) => setForm((f) => ({ ...f, execution_domain: value as ExecutionDomain }))}
+                >
+                  <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                    <SelectItem value="local">Local (this device)</SelectItem>
+                    <SelectItem value="cloud">Cloud (always-on)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Agent</Label>
@@ -407,6 +428,12 @@ export function LoopsListView() {
                 <span>{loop.schedule_expression}</span>
                 {loop.session_id && <span>Session: {loop.session_id}</span>}
                 {loop.expires_at && <span>Expires: {new Date(loop.expires_at).toLocaleDateString()}</span>}
+                <span
+                  className="px-2 py-1 rounded border border-[var(--border-subtle)]"
+                  style={{ color: loop.execution_domain === 'cloud' ? 'var(--accent-primary)' : 'inherit' }}
+                >
+                  {loop.execution_domain}
+                </span>
                 <span>Updated {formatRelativeTime(loop.updated_at)}</span>
               </div>
             </GlassSurface>

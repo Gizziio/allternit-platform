@@ -62,6 +62,7 @@ pub struct Routine {
     pub schedule_type: String,
     pub schedule_expression: String,
     pub timezone: Option<String>,
+    pub execution_domain: String,
     pub config: serde_json::Value,
     pub tags: Option<Vec<String>>,
     pub metadata: Option<serde_json::Value>,
@@ -86,6 +87,7 @@ pub struct Loop {
     pub status: String,
     pub schedule_type: String,
     pub schedule_expression: String,
+    pub execution_domain: String,
     pub config: serde_json::Value,
     pub tags: Option<Vec<String>>,
     pub metadata: Option<serde_json::Value>,
@@ -166,6 +168,8 @@ pub struct CreateRoutineRequest {
     #[serde(default)]
     pub timezone: Option<String>,
     #[serde(default)]
+    pub execution_domain: Option<String>,
+    #[serde(default)]
     pub config: Option<serde_json::Value>,
     #[serde(default)]
     pub tags: Option<Vec<String>>,
@@ -193,6 +197,8 @@ pub struct UpdateRoutineRequest {
     pub schedule_expression: Option<String>,
     #[serde(default)]
     pub timezone: Option<String>,
+    #[serde(default)]
+    pub execution_domain: Option<String>,
     #[serde(default)]
     pub config: Option<serde_json::Value>,
     #[serde(default)]
@@ -223,6 +229,8 @@ pub struct CreateLoopRequest {
     #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
+    pub execution_domain: Option<String>,
+    #[serde(default)]
     pub config: Option<serde_json::Value>,
     #[serde(default)]
     pub tags: Option<Vec<String>>,
@@ -244,6 +252,8 @@ pub struct UpdateLoopRequest {
     pub schedule_type: Option<String>,
     #[serde(default)]
     pub schedule_expression: Option<String>,
+    #[serde(default)]
+    pub execution_domain: Option<String>,
     #[serde(default)]
     pub config: Option<serde_json::Value>,
     #[serde(default)]
@@ -651,7 +661,7 @@ async fn list_goal_children(
     let routines: Vec<Routine> = {
         let mut stmt = conn
             .prepare(
-                "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at
+                "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, execution_domain, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at
                  FROM routines WHERE goal_id = ?1 AND user_id = ?2 ORDER BY created_at DESC",
             )
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -666,7 +676,7 @@ async fn list_goal_children(
     let loops: Vec<Loop> = {
         let mut stmt = conn
             .prepare(
-                "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, config, tags, metadata, expires_at, created_at, updated_at
+                "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, execution_domain, config, tags, metadata, expires_at, created_at, updated_at
                  FROM loops WHERE goal_id = ?1 AND user_id = ?2 ORDER BY created_at DESC",
             )
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -702,14 +712,15 @@ fn row_to_routine(row: &rusqlite::Row) -> Result<Routine, rusqlite::Error> {
         schedule_type: row.get(9)?,
         schedule_expression: row.get(10)?,
         timezone: row.get(11)?,
-        config: row.get::<_, String>(12).map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null))?,
-        tags: row.get::<_, Option<String>>(13)?.map(|s| serde_json::from_str(&s).unwrap_or_default()),
-        metadata: row.get::<_, Option<String>>(14)?.map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
-        max_runs: row.get(15)?,
-        timeout_seconds: row.get(16)?,
-        max_retries: row.get(17)?,
-        created_at: row.get(18)?,
-        updated_at: row.get(19)?,
+        execution_domain: row.get(12)?,
+        config: row.get::<_, String>(13).map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null))?,
+        tags: row.get::<_, Option<String>>(14)?.map(|s| serde_json::from_str(&s).unwrap_or_default()),
+        metadata: row.get::<_, Option<String>>(15)?.map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
+        max_runs: row.get(16)?,
+        timeout_seconds: row.get(17)?,
+        max_retries: row.get(18)?,
+        created_at: row.get(19)?,
+        updated_at: row.get(20)?,
     })
 }
 
@@ -725,7 +736,7 @@ async fn list_routines(
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at
+            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, execution_domain, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at
              FROM routines WHERE user_id = ?1 ORDER BY created_at DESC",
         )
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -768,6 +779,7 @@ async fn create_routine(
         schedule_type: req.schedule_type.clone(),
         schedule_expression: req.schedule_expression.clone(),
         timezone: req.timezone.clone(),
+        execution_domain: req.execution_domain.clone().unwrap_or_else(|| "local".to_string()),
         config: config.clone(),
         tags: req.tags.clone(),
         metadata: req.metadata.clone(),
@@ -805,8 +817,8 @@ async fn create_routine(
     })?;
 
     conn.execute(
-        "INSERT INTO routines (id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)",
+        "INSERT INTO routines (id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, execution_domain, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
         params![
             &routine.id,
             &routine.user_id,
@@ -820,6 +832,7 @@ async fn create_routine(
             &routine.schedule_type,
             &routine.schedule_expression,
             &routine.timezone,
+            &routine.execution_domain,
             routine.config.to_string(),
             routine.tags.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
             routine.metadata.as_ref().map(|m| m.to_string()),
@@ -856,7 +869,7 @@ async fn get_routine(
 
     let routine = conn
         .query_row(
-            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at
+            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, execution_domain, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at
              FROM routines WHERE id = ?1 AND user_id = ?2",
             [&id, &user.user_id],
             row_to_routine,
@@ -912,14 +925,15 @@ async fn update_routine(
             schedule_type = COALESCE(?4, schedule_type),
             schedule_expression = COALESCE(?5, schedule_expression),
             timezone = COALESCE(?6, timezone),
-            config = COALESCE(?7, config),
-            tags = COALESCE(?8, tags),
-            metadata = COALESCE(?9, metadata),
-            max_runs = COALESCE(?10, max_runs),
-            timeout_seconds = COALESCE(?11, timeout_seconds),
-            max_retries = COALESCE(?12, max_retries),
-            updated_at = ?13
-         WHERE id = ?14 AND user_id = ?15",
+            execution_domain = COALESCE(?7, execution_domain),
+            config = COALESCE(?8, config),
+            tags = COALESCE(?9, tags),
+            metadata = COALESCE(?10, metadata),
+            max_runs = COALESCE(?11, max_runs),
+            timeout_seconds = COALESCE(?12, timeout_seconds),
+            max_retries = COALESCE(?13, max_retries),
+            updated_at = ?14
+         WHERE id = ?15 AND user_id = ?16",
         (
             req.name.as_ref(),
             req.description.as_ref(),
@@ -927,6 +941,7 @@ async fn update_routine(
             req.schedule_type.as_ref(),
             req.schedule_expression.as_ref(),
             req.timezone.as_ref(),
+            req.execution_domain.as_ref(),
             Some(config.to_string()),
             req.tags.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
             req.metadata.as_ref().map(|m| m.to_string()),
@@ -1098,12 +1113,13 @@ fn row_to_loop(row: &rusqlite::Row) -> Result<Loop, rusqlite::Error> {
         status: row.get(9)?,
         schedule_type: row.get(10)?,
         schedule_expression: row.get(11)?,
-        config: row.get::<_, String>(12).map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null))?,
-        tags: row.get::<_, Option<String>>(13)?.map(|s| serde_json::from_str(&s).unwrap_or_default()),
-        metadata: row.get::<_, Option<String>>(14)?.map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
-        expires_at: row.get(15)?,
-        created_at: row.get(16)?,
-        updated_at: row.get(17)?,
+        execution_domain: row.get(12)?,
+        config: row.get::<_, String>(13).map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null))?,
+        tags: row.get::<_, Option<String>>(14)?.map(|s| serde_json::from_str(&s).unwrap_or_default()),
+        metadata: row.get::<_, Option<String>>(15)?.map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
+        expires_at: row.get(16)?,
+        created_at: row.get(17)?,
+        updated_at: row.get(18)?,
     })
 }
 
@@ -1119,7 +1135,7 @@ async fn list_loops(
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, config, tags, metadata, expires_at, created_at, updated_at
+            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, execution_domain, config, tags, metadata, expires_at, created_at, updated_at
              FROM loops WHERE user_id = ?1 ORDER BY created_at DESC",
         )
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1162,6 +1178,7 @@ async fn create_loop(
         status: "active".to_string(),
         schedule_type: req.schedule_type.clone(),
         schedule_expression: req.schedule_expression.clone(),
+        execution_domain: req.execution_domain.clone().unwrap_or_else(|| "local".to_string()),
         config: config.clone(),
         tags: req.tags.clone(),
         metadata: req.metadata.clone(),
@@ -1197,7 +1214,7 @@ async fn create_loop(
     })?;
 
     conn.execute(
-        "INSERT INTO loops (id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, config, tags, metadata, expires_at, created_at, updated_at)
+        "INSERT INTO loops (id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, execution_domain, config, tags, metadata, expires_at, created_at, updated_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
         params![
             &loop_item.id,
@@ -1212,6 +1229,7 @@ async fn create_loop(
             &loop_item.status,
             &loop_item.schedule_type,
             &loop_item.schedule_expression,
+            &loop_item.execution_domain,
             loop_item.config.to_string(),
             loop_item.tags.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
             loop_item.metadata.as_ref().map(|m| m.to_string()),
@@ -1246,7 +1264,7 @@ async fn get_loop(
 
     let loop_item = conn
         .query_row(
-            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, config, tags, metadata, expires_at, created_at, updated_at
+            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, execution_domain, config, tags, metadata, expires_at, created_at, updated_at
              FROM loops WHERE id = ?1 AND user_id = ?2",
             [&id, &user.user_id],
             row_to_loop,
@@ -1301,18 +1319,20 @@ async fn update_loop(
             status = COALESCE(?3, status),
             schedule_type = COALESCE(?4, schedule_type),
             schedule_expression = COALESCE(?5, schedule_expression),
-            config = COALESCE(?6, config),
-            tags = COALESCE(?7, tags),
-            metadata = COALESCE(?8, metadata),
-            expires_at = COALESCE(?9, expires_at),
-            updated_at = ?10
-         WHERE id = ?11 AND user_id = ?12",
+            execution_domain = COALESCE(?6, execution_domain),
+            config = COALESCE(?7, config),
+            tags = COALESCE(?8, tags),
+            metadata = COALESCE(?9, metadata),
+            expires_at = COALESCE(?10, expires_at),
+            updated_at = ?11
+         WHERE id = ?12 AND user_id = ?13",
         (
             req.name.as_ref(),
             req.description.as_ref(),
             req.status.as_ref(),
             req.schedule_type.as_ref(),
             req.schedule_expression.as_ref(),
+            req.execution_domain.as_ref(),
             Some(config.to_string()),
             req.tags.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
             req.metadata.as_ref().map(|m| m.to_string()),

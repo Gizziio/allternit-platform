@@ -393,10 +393,30 @@ export function ChatView({
             logger.error({ err: error }, 'Failed to start swarm run');
           }
         }
+        return;
       }
     }
-    // Rest of handleSend implementation...
-  }, [mentionAgentId, chatId]);
+
+    // Resolve or create a real backend session, then stream the message through Gizzi.
+    let sessionId = embeddedAgentSession.sessionId || chatId;
+    const hasLiveSession = Boolean(sessionId && sessionId.startsWith('ses_'));
+
+    try {
+      if (!hasLiveSession) {
+        sessionId = await useChatSessionStore.getState().createSession({
+          name: text.trim().slice(0, 60) || 'New Session',
+          sessionMode: 'regular',
+        });
+      }
+
+      if (sessionId) {
+        useChatSessionStore.getState().setActiveSession(sessionId);
+        await sendNativeMessageStream(sessionId, { text: text.trim() });
+      }
+    } catch (error) {
+      logger.error({ err: error }, 'Failed to send chat message');
+    }
+  }, [mentionAgentId, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream]);
 
   const handleStop = useCallback(() => {
     const activeSessionId = embeddedAgentSession.sessionId || chatId;
