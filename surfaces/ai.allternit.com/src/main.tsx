@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from '@/design/ThemeProvider'
 import { PlatformAuthProvider } from '@/lib/platform-auth-client'
 import { FetchInterceptorProvider } from '@/lib/FetchInterceptorProvider'
+import { CompanyConfigProvider } from '@/providers/company-config-provider'
 import AppRoutes from './routes'
 
 // Global styles
@@ -15,11 +16,13 @@ import '@/styles/globals.css'
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
     <ThemeProvider>
-      <PlatformAuthProvider>
-        <FetchInterceptorProvider>
-          <AppRoutes />
-        </FetchInterceptorProvider>
-      </PlatformAuthProvider>
+      <CompanyConfigProvider>
+        <PlatformAuthProvider>
+          <FetchInterceptorProvider>
+            <AppRoutes />
+          </FetchInterceptorProvider>
+        </PlatformAuthProvider>
+      </CompanyConfigProvider>
     </ThemeProvider>
   </BrowserRouter>
 )

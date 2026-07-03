@@ -164,14 +164,26 @@ fn scan_skill_directory(root: &Path, source: &str, out: &mut Vec<DiscoveredSkill
             }
         }
 
-        // Fallback: try SKILL.md title
+        // Fallback: parse SKILL.md frontmatter / first heading
         if manifest_value.is_none() {
             let skill_md = path.join("SKILL.md");
             if let Ok(raw) = std::fs::read_to_string(&skill_md) {
-                if let Some(line) = raw.lines().next() {
-                    let trimmed = line.trim_start_matches("#").trim();
-                    if !trimmed.is_empty() {
-                        name = trimmed.to_string();
+                let in_frontmatter = raw.starts_with("---");
+                let mut passed_frontmatter = false;
+                for line in raw.lines() {
+                    if in_frontmatter && !passed_frontmatter {
+                        if line == "---" {
+                            passed_frontmatter = true;
+                        }
+                        continue;
+                    }
+                    let trimmed = line.trim();
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+                    if trimmed.starts_with('#') {
+                        name = trimmed.trim_start_matches('#').trim().to_string();
+                        break;
                     }
                 }
             }

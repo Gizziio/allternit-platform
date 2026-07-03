@@ -315,7 +315,7 @@ wit-component = "0.21"
 semver = "1.0"
 rand = "0.8"
 regex = "1.0"
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4.0", features = ["derive", "env"] }
 portable-pty = "0.8"
 which = "6.0"
 walkdir = "2.5"

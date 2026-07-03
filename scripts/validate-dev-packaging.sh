@@ -20,10 +20,11 @@ mkdir -p "$TMP_DIR/Contents/MacOS" "$TMP_DIR/Contents/Resources"
 cp "$API_BIN" "$TMP_DIR/Contents/MacOS/allternit-api"
 
 # Generate a minimal company.json that bakes in company standards.
-cat > "$TMP_DIR/Contents/Resources/company.json" <<'EOF'
+# The gateway URL points at the temporary API port used for validation.
+cat > "$TMP_DIR/Contents/Resources/company.json" <<EOF
 {
   "tenantId": "alpackaged",
-  "gatewayUrl": "http://localhost:8013",
+  "gatewayUrl": "http://localhost:18013",
   "terminalServerUrl": "http://127.0.0.1:4096",
   "railsUrl": "http://127.0.0.1:3021",
   "railsWorkspaceId": "default"

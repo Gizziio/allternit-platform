@@ -12,6 +12,8 @@ import { ModeProvider, useMode } from '../providers/mode-provider';
 import { GlobalDropzoneProvider } from '../components/GlobalDropzone';
 import { OnboardingPortal } from '../components/onboarding';
 import { useOnboardingStore } from '../stores/onboarding-store';
+import { setupApi } from '@/services/setup-api';
+import { shouldRunWizard } from '@/lib/wizard-check';
 import { ShellCanvas } from './ShellCanvas';
 import { ShellOverlayLayer } from './ShellOverlayLayer';
 import { VisionGlass } from './VisionGlass';
@@ -578,19 +580,49 @@ function OnboardingGate(): React.ReactNode | null {
   const hasCompleted = useOnboardingStore((s) => s.hasCompletedOnboarding);
   const hasHydrated = useOnboardingStore((s) => s.hasHydrated);
   const resetOnboarding = useOnboardingStore((s) => s.resetOnboarding);
+  const completeOnboarding = useOnboardingStore((s) => s.completeOnboarding);
+  const [backendChecked, setBackendChecked] = useState(false);
 
   useEffect(() => {
     if (!hasHydrated) return;
+
+    // Desktop first-launch hint
     const desktop = window.allternit?.app;
     if (desktop?.isFirstLaunch) {
       desktop.isFirstLaunch().then((isFirst: boolean) => {
         if (isFirst) resetOnboarding();
       }).catch(() => {});
     }
-  }, [hasHydrated, resetOnboarding]);
 
-  if (isPlatformAuthDisabled()) return null;
+    // OpenClaw-style wizard version check against the server-side user config.
+    // If onboarding is incomplete or the app version has changed, force the wizard.
+    // If the server already records a completed wizard for this version, sync that
+    // to local state so users do not see the wizard again after clearing storage.
+    let cancelled = false;
+    setupApi
+      .getConfig()
+      .then((config) => {
+        if (cancelled) return;
+        if (shouldRunWizard(config.user.onboardingComplete, config.user.wizard)) {
+          resetOnboarding();
+        } else {
+          completeOnboarding();
+        }
+      })
+      .catch(() => {
+        // Offline or misconfigured: fall back to local store state.
+      })
+      .finally(() => {
+        if (!cancelled) setBackendChecked(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, resetOnboarding, completeOnboarding]);
+
   if (!hasHydrated) return null;
+  if (!backendChecked) return null;
   if (hasCompleted) return null;
   return <OnboardingPortal />;
 }

@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
+import pkg from './package.json'
 
 export default defineConfig({
   plugins: [
@@ -15,6 +16,7 @@ export default defineConfig({
   ].filter(Boolean as any),
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    __APP_VERSION__: JSON.stringify(pkg.version),
   },
   envPrefix: 'VITE_',
   resolve: {

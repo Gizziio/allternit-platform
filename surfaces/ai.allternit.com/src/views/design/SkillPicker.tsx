@@ -39,7 +39,7 @@ export function SkillPicker({ initialMode, onSelect, onClose }: SkillPickerProps
   const [scenario, setScenario] = useState<SkillScenario | 'all'>('all');
 
   const options: UseSkillsOptions = useMemo(() => {
-    const opts: UseSkillsOptions = { refreshInterval: 0 };
+    const opts: UseSkillsOptions = { refreshInterval: 3000 };
     if (mode !== 'all') opts.mode = mode;
     if (scenario !== 'all') opts.scenario = scenario;
     if (query.trim()) opts.query = query.trim();

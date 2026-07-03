@@ -47,20 +47,48 @@ The binary is produced at:
 target/release/allternit-scheduler
 ```
 
-## Install as an always-on service
+## Install as an always-on service (recommended: wizard)
 
-We provide platform-specific service definitions in `infrastructure/scheduler/services/`.
+The easiest way is the interactive setup wizard:
 
-### Linux (systemd)
+```bash
+./infrastructure/scheduler/services/install-scheduler.sh
+```
 
-1. Copy the binary to a permanent location:
+The wizard will:
+
+1. Ask for explicit permission to enable cloud scheduling.
+2. Prompt for the database URL, control-plane API URL, and operator API key.
+3. Ask for the execution mode (`api` or `local`).
+4. Install the binary and create the correct service for your OS.
+5. Show you how to start and check the service.
+
+### Unattended / automated installs
+
+If you are automating setup (e.g., in CI or a server provisioning script), set the required values as environment variables and run:
+
+```bash
+export ALLTERNIT_SCHEDULER_UNATTENDED=true
+export ALLTERNIT_SCHEDULER_DATABASE_URL=sqlite:///var/lib/allternit/allternit-cloud.db
+export ALLTERNIT_SCHEDULER_API_URL=http://127.0.0.1:3001
+export ALLTERNIT_SCHEDULER_API_KEY=your-operator-api-key
+export ALLTERNIT_SCHEDULER_EXECUTION_MODE=api
+export ALLTERNIT_SCHEDULER_POLL_INTERVAL_SECS=60
+./infrastructure/scheduler/services/install-scheduler.sh
+```
+
+### Manual install (Linux systemd)
+
+If you prefer to configure the service by hand:
+
+1. Copy the binary:
 
 ```bash
 sudo cp target/release/allternit-scheduler /usr/local/bin/allternit-scheduler
 sudo chmod +x /usr/local/bin/allternit-scheduler
 ```
 
-2. Create a config directory and place your environment file:
+2. Create the environment file:
 
 ```bash
 sudo mkdir -p /etc/allternit-scheduler
@@ -71,6 +99,7 @@ ALLTERNIT_SCHEDULER_API_KEY=your-operator-api-key
 ALLTERNIT_SCHEDULER_POLL_INTERVAL_SECS=60
 ALLTERNIT_SCHEDULER_EXECUTION_MODE=api
 EOF
+sudo chmod 600 /etc/allternit-scheduler/env
 ```
 
 3. Install the systemd service:
@@ -81,14 +110,14 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now allternit-scheduler
 ```
 
-4. Verify it is running:
+4. Verify:
 
 ```bash
 sudo systemctl status allternit-scheduler
 sudo journalctl -u allternit-scheduler -f
 ```
 
-### macOS (launchd)
+### Manual install (macOS launchd)
 
 1. Copy the binary:
 
@@ -96,7 +125,7 @@ sudo journalctl -u allternit-scheduler -f
 sudo cp target/release/allternit-scheduler /usr/local/bin/allternit-scheduler
 ```
 
-2. Install the launchd plist as a user agent (runs while you are logged in):
+2. Edit the plist template with your values, then install it:
 
 ```bash
 mkdir -p ~/Library/LaunchAgents
@@ -105,7 +134,7 @@ launchctl load ~/Library/LaunchAgents/com.allternit.scheduler.plist
 launchctl start com.allternit.scheduler
 ```
 
-For a system-wide daemon that runs even when no user is logged in, place the plist in `/Library/LaunchDaemons/` and configure a dedicated user.
+For a system-wide daemon, place the plist in `/Library/LaunchDaemons/` and configure a dedicated user.
 
 ### Docker / container platforms
 

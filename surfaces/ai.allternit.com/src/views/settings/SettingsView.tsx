@@ -55,6 +55,7 @@ import { usePlatformUser, usePlatformSignOut, usePlatformSessions, PlatformSignI
 import { useThemeStore } from '@/design/ThemeStore';
 import { LocalModelManager } from '@/components/models/LocalModelManager';
 import { InfrastructureSettings } from './InfrastructureSettings';
+import { ServiceUrlSettings } from './ServiceUrlSettings';
 import { SETTINGS_NAV_ITEMS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
 import { cn } from '@/lib/utils';
 
@@ -1895,6 +1896,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const renderGizziioCodePanel = () => (
     <div className="max-w-xl">
+      <section className="mb-10">
+        <ToastProvider>
+          <ServiceUrlSettings />
+        </ToastProvider>
+      </section>
+
       <section className="mb-10">
         <ToggleItem label="Allow bypass permissions mode" value={bypassPermissions} onChange={setBypassPermissions} description="Bypass all permission checks (Developer only)" />
         <ToggleItem label="Draw attention on notifications" value={drawAttentionNotifications} onChange={setDrawAttentionNotifications} description="Bounce dock icon on important agent notifications" />

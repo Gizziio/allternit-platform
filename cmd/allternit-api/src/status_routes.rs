@@ -33,9 +33,10 @@ async fn status_handler(State(state): State<Arc<AppState>>) -> Json<StatusRespon
     let checked_at = chrono::Utc::now().to_rfc3339();
     let mut services = Vec::new();
 
-    // Probe Gateway (Rust API itself)
-    let gateway_url = state.config.gateway_url();
-    services.push(probe_service("Gateway", "gateway", &format!("{}/health", gateway_url)).await);
+    // Probe Gateway (Rust API itself). Use 127.0.0.1 explicitly so the self-check
+    // is independent of how `localhost` resolves (IPv4 vs IPv6) on the host.
+    let port = state.config.api_port();
+    services.push(probe_service("Gateway", "gateway", &format!("http://127.0.0.1:{}/health/live", port)).await);
 
     // Probe Gizzi Runtime
     let gizzi_url = state.config.terminal_server_url();

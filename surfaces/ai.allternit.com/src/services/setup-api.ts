@@ -15,6 +15,13 @@ export interface CompanyConfig {
   tenantId: string;
 }
 
+export interface WizardState {
+  lastRunAt?: string;
+  lastRunVersion?: string;
+  lastRunCommand?: string;
+  lastRunMode?: string;
+}
+
 export interface UserConfig {
   defaultModel?: string;
   terminalServerUrl?: string;
@@ -26,6 +33,7 @@ export interface UserConfig {
   embeddingUrl?: string;
   agentWorkdir?: string;
   cronDaemonUrl?: string;
+  wizard?: WizardState;
 }
 
 export interface SetupConfigResponse {

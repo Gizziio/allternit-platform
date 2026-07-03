@@ -41,6 +41,8 @@ pass "API binary found"
 
 [[ -f "$COMPANY_CONFIG" ]] || fail "Company config not found at $COMPANY_CONFIG"
 pass "Company config found"
+echo "Contents of $COMPANY_CONFIG:"
+cat "$COMPANY_CONFIG"
 
 # Validate company.json has required keys
 for key in tenantId gatewayUrl terminalServerUrl; do
@@ -78,24 +80,28 @@ trap cleanup EXIT
 
 # Wait for API health
 for i in $(seq 1 30); do
-    if curl -fs "http://127.0.0.1:$API_PORT/health" >/dev/null 2>&1; then
+    if curl -fs "http://127.0.0.1:$API_PORT/health/live" >/dev/null 2>&1; then
         break
     fi
     sleep 1
 done
-curl -fs "http://127.0.0.1:$API_PORT/health" >/dev/null || fail "API did not start"
-pass "API started and health endpoint responds"
+curl -fsS "http://127.0.0.1:$API_PORT/health/live" >/dev/null || fail "API did not start"
+pass "API started and liveness endpoint responds"
 
 # Check onboarding config reflects a default model
-DEFAULT_MODEL=$(curl -fs "http://127.0.0.1:$API_PORT/api/onboarding/config" | python3 -c "import json,sys; print(json.load(sys.stdin)['user']['defaultModel'] or '')")
+CONFIG_RESPONSE=$(curl -fs "http://127.0.0.1:$API_PORT/api/onboarding/config")
+DEFAULT_MODEL=$(echo "$CONFIG_RESPONSE" | python3 -c "import json,sys; print(json.load(sys.stdin)['user']['defaultModel'] or '')")
+GATEWAY_URL=$(echo "$CONFIG_RESPONSE" | python3 -c "import json,sys; print(json.load(sys.stdin)['company']['gatewayUrl'] or '')")
 if [[ -z "$DEFAULT_MODEL" ]]; then
     fail "No default brain model configured"
 fi
-pass "Default brain model configured: $DEFAULT_MODEL"
+pass "Default brain model configured: $DEFAULT_MODEL (gateway: $GATEWAY_URL)"
 
 # Check Gizzi runtime is reachable from the API
-STATUS=$(curl -fs "http://127.0.0.1:$API_PORT/status" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('overall',''))")
+STATUS_RESPONSE=$(curl -fs "http://127.0.0.1:$API_PORT/status")
+STATUS=$(echo "$STATUS_RESPONSE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('overall',''))")
 if [[ "$STATUS" != "operational" && "$STATUS" != "degraded" ]]; then
+    echo "Status response: $STATUS_RESPONSE"
     fail "API status check failed: $STATUS"
 fi
 pass "API status is $STATUS"

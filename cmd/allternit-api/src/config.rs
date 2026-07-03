@@ -114,6 +114,24 @@ pub struct UserConfig {
     /// Cron daemon URL.
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
+
+    /// First-start wizard tracking (OpenClaw-style versioning).
+    #[serde(rename = "wizard")]
+    pub wizard: Option<WizardState>,
+}
+
+/// Tracks when the first-start / env wizard last ran so the app can prompt
+/// again after updates or when the wizard schema changes.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct WizardState {
+    #[serde(rename = "lastRunAt")]
+    pub last_run_at: Option<String>,
+    #[serde(rename = "lastRunVersion")]
+    pub last_run_version: Option<String>,
+    #[serde(rename = "lastRunCommand")]
+    pub last_run_command: Option<String>,
+    #[serde(rename = "lastRunMode")]
+    pub last_run_mode: Option<String>,
 }
 
 /// Merged runtime configuration. Code reads from this struct instead of calling
@@ -381,7 +399,7 @@ fn load_company_config() -> CompanyConfig {
         if let Ok(text) = std::fs::read_to_string(path) {
             match serde_json::from_str::<CompanyConfig>(&text) {
                 Ok(config) => {
-                    info!(path = %path.display(), "Loaded company config");
+                    info!(path = %path.display(), ?config, "Loaded company config");
                     return config;
                 }
                 Err(err) => {
@@ -479,6 +497,8 @@ pub struct SaveUserConfigPayload {
     pub agent_workdir: Option<String>,
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
+    #[serde(rename = "wizard")]
+    pub wizard: Option<WizardState>,
 }
 
 impl From<SaveUserConfigPayload> for UserConfig {
@@ -494,6 +514,7 @@ impl From<SaveUserConfigPayload> for UserConfig {
             embedding_url: payload.embedding_url,
             agent_workdir: payload.agent_workdir,
             cron_daemon_url: payload.cron_daemon_url,
+            wizard: payload.wizard,
         }
     }
 }

@@ -53,6 +53,7 @@ import { MatrixLogo } from '../ai-elements/MatrixLogo';
 import { AuthPreview } from '../auth/AuthPreview';
 import { setupApi } from '@/services/setup-api';
 import type { SaveProviderPayload } from '@/services/setup-api';
+import { buildWizardState } from '@/lib/wizard-check';
 import {
   testSSHConnection,
   installBackend,
@@ -1347,7 +1348,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   async function selectDiscovered(m: DiscoveredModel) {
     onUpdate({ defaultProvider: m.source, defaultModelId: m.modelId });
 
-    const isCli = m.source === 'claude' || m.source === 'codex' || m.source === 'ollama';
+    const isCli = m.badge === 'CLI';
     const payload: SaveProviderPayload = {
       provider: m.source,
       name: m.source,
@@ -2204,6 +2205,7 @@ export function OnboardingFlow() {
       await setupApi.saveConfig({
         defaultModel,
         onboardingComplete: true,
+        wizard: buildWizardState('onboard', data.infraType),
       });
     } catch (err) {
       // Continue completing onboarding locally even if the backend save fails;

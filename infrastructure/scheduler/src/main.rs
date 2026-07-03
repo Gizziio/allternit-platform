@@ -101,27 +101,27 @@ impl std::str::FromStr for MisfirePolicy {
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Database URL
-    #[arg(short, long)]
+    #[arg(short, long, env = "ALLTERNIT_SCHEDULER_DATABASE_URL")]
     database_url: Option<String>,
-    
+
     /// Control plane API URL
-    #[arg(short, long, default_value = "http://localhost:3001")]
+    #[arg(short, long, env = "ALLTERNIT_SCHEDULER_API_URL", default_value = "http://localhost:3001")]
     api_url: String,
-    
+
     /// API key for authentication
-    #[arg(long)]
+    #[arg(long, env = "ALLTERNIT_SCHEDULER_API_KEY")]
     api_key: Option<String>,
-    
+
     /// Polling interval in seconds
-    #[arg(long, default_value = "60")]
+    #[arg(long, env = "ALLTERNIT_SCHEDULER_POLL_INTERVAL_SECS", default_value = "60")]
     poll_interval_secs: u64,
-    
+
     /// Misfire policy
-    #[arg(long, default_value = "fire_once")]
+    #[arg(long, env = "ALLTERNIT_SCHEDULER_MISFIRE_POLICY", default_value = "fire_once")]
     misfire_policy: String,
 
     /// Execution mode: api (cloud) or local (run commands directly)
-    #[arg(long, default_value = "api")]
+    #[arg(long, env = "ALLTERNIT_SCHEDULER_EXECUTION_MODE", default_value = "api")]
     execution_mode: String,
 
     /// Run once and exit (for testing)

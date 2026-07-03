@@ -9,17 +9,19 @@
     <array>
         <string>/usr/local/bin/allternit-scheduler</string>
         <string>--database-url</string>
-        <string>sqlite:///Users/REPLACE_ME/.allternit/allternit-cloud.db</string>
+        <string>REPLACE_ME_DATABASE_URL</string>
         <string>--api-url</string>
-        <string>http://127.0.0.1:3001</string>
+        <string>REPLACE_ME_API_URL</string>
         <string>--execution-mode</string>
-        <string>api</string>
+        <string>REPLACE_ME_EXECUTION_MODE</string>
+        <string>--poll-interval-secs</string>
+        <string>REPLACE_ME_POLL_INTERVAL</string>
     </array>
 
     <key>EnvironmentVariables</key>
     <dict>
         <key>ALLTERNIT_SCHEDULER_API_KEY</key>
-        <string>REPLACE_ME</string>
+        <string>REPLACE_ME_API_KEY</string>
     </dict>
 
     <key>RunAtLoad</key>
@@ -27,8 +29,8 @@
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/REPLACE_ME/Library/Logs/allternit-scheduler.log</string>
+    <string>REPLACE_ME_LOG_DIR/allternit-scheduler.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/REPLACE_ME/Library/Logs/allternit-scheduler.log</string>
+    <string>REPLACE_ME_LOG_DIR/allternit-scheduler.log</string>
 </dict>
 </plist>

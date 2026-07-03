@@ -24,7 +24,7 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::AppState;
-use crate::config::{save_user_config, SaveUserConfigPayload, UserConfig};
+use crate::config::{save_user_config, AppConfig, SaveUserConfigPayload, UserConfig};
 use crate::secrets;
 
 pub fn onboarding_router() -> Router<Arc<AppState>> {
@@ -61,8 +61,10 @@ struct CompanyConfigResponse {
     tenant_id: String,
 }
 
-async fn get_config(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    let app_config = &state.config;
+async fn get_config(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
+    // Reload from disk each time so wizard/settings changes are visible immediately
+    // without requiring an API restart.
+    let app_config = AppConfig::load();
     let company = CompanyConfigResponse {
         clerk_publishable_key: app_config.clerk_publishable_key(),
         gateway_url: app_config.gateway_url(),
@@ -410,6 +412,9 @@ async fn onboarding_discover(State(state): State<Arc<AppState>>) -> impl IntoRes
     let claude_cli = discover_cli("claude", &["--version"]).await;
     let codex_cli = discover_cli("codex", &["--version"]).await;
     let ollama_cli = discover_cli("ollama", &["--version"]).await;
+    let kimi_cli = discover_cli("kimi", &["--version"]).await;
+    let aider_cli = discover_cli("aider", &["--version"]).await;
+    let openrouter_cli = discover_cli("openrouter", &["--version"]).await;
 
     Json(json!({
         "ollama": {
@@ -425,6 +430,9 @@ async fn onboarding_discover(State(state): State<Arc<AppState>>) -> impl IntoRes
             claude_cli,
             codex_cli,
             ollama_cli,
+            kimi_cli,
+            aider_cli,
+            openrouter_cli,
         ],
     }))
 }

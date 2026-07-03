@@ -48,9 +48,42 @@ function getAllSkills(): SkillRecord[] {
 }
 
 export async function fetchSkills(query: SkillsQuery = {}): Promise<SkillRecord[]> {
-  // Simulate async API call; in LTS this will be a fetch to /api/design/skills
-  await Promise.resolve();
+  // Start from bundled + locally registered skills, then merge daemon-discovered
+  // skills so file-system changes are reflected on every poll.
   let skills = getAllSkills();
+
+  try {
+    const discovered = await discoverSkills();
+    const discoveredRecords: SkillRecord[] = discovered.skills.map((s) => {
+      const manifest = s.manifest ?? {};
+      return {
+        id: s.id,
+        name: s.name,
+        description: manifest.description?.toString() ?? `Discovered ${s.source} skill`,
+        triggers: Array.isArray(manifest.triggers) ? manifest.triggers.map(String) : [s.name],
+        mode: (manifest.mode?.toString() as SkillMode) ?? 'prototype',
+        scenario: (manifest.scenario?.toString() as SkillScenario) ?? 'design',
+        preview: { type: 'markdown' as const, reload: 'debounce-300' as const },
+        designSystem: { requires: false },
+        craft: { requires: [] },
+        inputs: [],
+        parameters: [],
+        outputs: { primary: 'artifact' },
+        capabilitiesRequired: [],
+        body: '',
+        upstream: s.source,
+        assetDir: s.path,
+      };
+    });
+    const map = new Map(skills.map((s) => [s.id, s]));
+    for (const skill of discoveredRecords) {
+      map.set(skill.id, skill);
+    }
+    skills = Array.from(map.values());
+  } catch {
+    // Daemon discovery is optional; fall back to bundled/local skills.
+  }
+
   if (query.mode) {
     skills = skills.filter((s) => s.mode === query.mode);
   }

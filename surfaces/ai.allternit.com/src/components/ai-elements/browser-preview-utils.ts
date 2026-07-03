@@ -96,8 +96,14 @@ export function extractPreviewCandidatesFromToolPart(
   const candidates: PreviewCandidate[] = [];
   const seenUrls = new Set<string>();
 
-  if ("result" in part) {
-    collectPreviewCandidates(part.result, candidates, seenUrls);
+  const output =
+    "result" in part
+      ? part.result
+      : "output" in part
+        ? part.output
+        : undefined;
+  if (output !== undefined) {
+    collectPreviewCandidates(output, candidates, seenUrls);
   }
 
   if (candidates.length === 0 && isRecord(part.input)) {

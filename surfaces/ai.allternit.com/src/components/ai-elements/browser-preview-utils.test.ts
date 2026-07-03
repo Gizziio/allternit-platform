@@ -22,7 +22,7 @@ describe("browser-preview-utils", () => {
       toolName: "web_search",
       state: "output-available",
       input: { query: "ai sdk docs" },
-      result: {
+      output: {
         results: [
           {
             title: "AI SDK Docs",
@@ -47,7 +47,7 @@ describe("browser-preview-utils", () => {
       toolName: "agentBrowser",
       state: "output-available",
       input: { url: "https://example.com/pricing" },
-      result: "opened",
+      output: "opened",
     } satisfies Extract<ExtendedUIPart, { type: "dynamic-tool" }>;
 
     expect(extractPreviewCandidatesFromToolPart(part)).toEqual([
@@ -66,7 +66,7 @@ describe("browser-preview-utils", () => {
         toolName: "web_search",
         state: "output-available",
         input: { query: "docs" },
-        result: {
+        output: {
           results: [
             {
               title: "Reference",

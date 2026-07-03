@@ -1,6 +1,10 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["@testing-library/jest-dom", "vitest/globals"]
+  },
   "include": [
+    "src/lib/globals.d.ts",
     "src/lib/ai/rust-stream-adapter.ts",
     "src/lib/ai/rust-stream-adapter.test.ts",
     "src/views/ChatViewV2.tsx",
@@ -8,7 +12,6 @@
     "src/components/ai-elements/*.tsx"
   ],
   "exclude": [
-    "node_modules",
-    "**/*.d.ts"
+    "node_modules"
   ]
 }
