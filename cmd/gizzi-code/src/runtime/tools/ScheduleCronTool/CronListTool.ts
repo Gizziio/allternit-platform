@@ -8,7 +8,6 @@ import {
   buildCronListPrompt,
 } from './prompt.js'
 import { getApiConfig, listApiCronJobs } from './apiCron.js'
-import { ensureCronService } from './cronService.js'
 
 const inputSchema = lazySchema(() => z.strictObject({}))
 type InputSchema = ReturnType<typeof inputSchema>
@@ -58,33 +57,18 @@ export const CronListTool = buildTool({
   async call() {
     const apiConfig = getApiConfig()
 
-    if (apiConfig) {
-      const jobs = await listApiCronJobs(apiConfig)
-      return {
-        data: {
-          jobs: jobs.map(job => ({
-            id: job.id,
-            schedule: job.schedule,
-            prompt: job.prompt,
-            status: job.status,
-            scope: job.scope,
-          })),
-        },
-      }
+    const jobs = await listApiCronJobs(apiConfig)
+    return {
+      data: {
+        jobs: jobs.map(job => ({
+          id: job.id,
+          schedule: job.schedule,
+          prompt: job.prompt,
+          status: job.status,
+          scope: job.scope,
+        })),
+      },
     }
-
-    ensureCronService()
-    const jobs = CronService.list().map(job => ({
-      id: job.id,
-      schedule:
-        job.schedule.type === 'cron'
-          ? job.schedule.expression
-          : `interval:${job.schedule.seconds}s`,
-      prompt: (job.config as { prompt?: string }).prompt ?? job.name,
-      status: job.status,
-      scope: (job as { scope?: string }).scope,
-    }))
-    return { data: { jobs } }
   },
   mapToolResultToToolResultBlockParam(output, toolUseID) {
     return {

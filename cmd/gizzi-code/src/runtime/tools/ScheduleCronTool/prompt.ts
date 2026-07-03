@@ -37,7 +37,7 @@ Only use minute 0 or 30 when the user names that exact time and clearly means it
 
 ## Scope
 
-- persistent (default): stored in the local cron database and survives restarts
+- persistent (default): stored in the Allternit platform and survives restarts
 - session: lives only for this session and is cleaned up when it ends
 
 Recurring tasks auto-expire after ${DEFAULT_MAX_AGE_DAYS} days to bound session lifetime. Tell the user about the ${DEFAULT_MAX_AGE_DAYS}-day limit when scheduling recurring jobs.
@@ -46,7 +46,7 @@ Returns a job ID you can pass to ${CRON_DELETE_TOOL_NAME}.`
 }
 
 export function buildCronDeletePrompt(): string {
-  return `Cancel a cron job previously scheduled with ${CRON_CREATE_TOOL_NAME}. Removes it from the local cron store.`
+  return `Cancel a cron job previously scheduled with ${CRON_CREATE_TOOL_NAME}. Removes it from the Allternit platform.`
 }
 
 export function buildCronListPrompt(): string {

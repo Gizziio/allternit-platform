@@ -9,7 +9,6 @@ import {
   DEFAULT_MAX_AGE_DAYS,
 } from './prompt.js'
 import { createApiCronJob, getApiConfig } from './apiCron.js'
-import { ensureCronService } from './cronService.js'
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
@@ -72,37 +71,10 @@ export const CronCreateTool = buildTool({
   async call({ cron, prompt, recurring = true, scope = 'persistent' }) {
     const apiConfig = getApiConfig()
 
-    if (apiConfig) {
-      const maxRuns = recurring ? undefined : 1
-      const job = await createApiCronJob(apiConfig, {
-        schedule: cron,
-        prompt,
-        scope,
-      })
-      return {
-        data: {
-          id: job.id,
-          schedule: cron,
-          recurring,
-          scope,
-        },
-      }
-    }
-
-    ensureCronService()
-
-    const maxRuns = recurring ? undefined : 1
-    const job = CronService.create({
-      name: prompt.slice(0, 80),
-      description: prompt,
-      type: 'agent',
+    const job = await createApiCronJob(apiConfig, {
       schedule: cron,
+      prompt,
       scope,
-      maxRuns,
-      config: {
-        prompt,
-      },
-      tags: ['cron-tool'],
     })
 
     return {
@@ -118,7 +90,7 @@ export const CronCreateTool = buildTool({
     const scopeNote =
       output.scope === 'session'
         ? 'Session-only (cleaned up when this session ends)'
-        : 'Persisted to local cron database'
+        : 'Persisted to the Allternit platform'
     return {
       tool_use_id: toolUseID,
       type: 'tool_result',

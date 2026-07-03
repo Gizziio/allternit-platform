@@ -8,7 +8,6 @@ import {
   buildCronDeletePrompt,
 } from './prompt.js'
 import { deleteApiCronJob, getApiConfig } from './apiCron.js'
-import { ensureCronService } from './cronService.js'
 
 const inputSchema = lazySchema(() =>
   z.strictObject({
@@ -51,19 +50,7 @@ export const CronDeleteTool = buildTool({
   async call({ id }) {
     const apiConfig = getApiConfig()
 
-    if (apiConfig) {
-      await deleteApiCronJob(apiConfig, id)
-      return { data: { id } }
-    }
-
-    ensureCronService()
-    const existed = CronService.get(id)
-    if (!existed) {
-      return {
-        data: { id },
-      }
-    }
-    CronService.delete(id)
+    await deleteApiCronJob(apiConfig, id)
     return { data: { id } }
   },
   mapToolResultToToolResultBlockParam(output, toolUseID) {

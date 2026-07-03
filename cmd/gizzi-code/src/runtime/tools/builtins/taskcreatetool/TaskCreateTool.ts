@@ -1,18 +1,8 @@
 // @ts-nocheck
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import {
-  executeTaskCreatedHooks,
-  getTaskCreatedHookMessage,
-} from '../../../utils/hooks.js'
 import { lazySchema } from '../../../utils/lazySchema.js'
-import {
-  createTask,
-  deleteTask,
-  getTaskListId,
-  isTodoV2Enabled,
-} from '../../../utils/tasks.js'
-import { getAgentName, getTeamName } from '../../../utils/teammate.js'
+import { isTodoV2Enabled } from '../../../utils/tasks.js'
 import {
   createApiTask,
   getApiConfig,
@@ -83,65 +73,15 @@ export const TaskCreateTool = buildTool({
   renderToolUseMessage() {
     return null
   },
-  async call({ subject, description, activeForm, metadata }, context) {
+  async call({ subject, description, metadata }, context) {
     const apiConfig = getApiConfig()
 
-    if (apiConfig) {
-      const apiTask = await createApiTask(apiConfig, {
-        title: subject,
-        description,
-        status: 'pending',
-        metadata: localMetadataToApiMetadata(metadata, [], []),
-      })
-
-      context.setAppState(prev => {
-        if (prev.expandedView === 'tasks') return prev
-        return { ...prev, expandedView: 'tasks' as const }
-      })
-
-      return {
-        data: {
-          task: {
-            id: apiTask.id,
-            subject,
-          },
-        },
-      }
-    }
-
-    const taskId = await createTask(getTaskListId(), {
-      subject,
+    const apiTask = await createApiTask(apiConfig, {
+      title: subject,
       description,
-      activeForm,
       status: 'pending',
-      owner: undefined,
-      blocks: [],
-      blockedBy: [],
-      metadata,
+      metadata: localMetadataToApiMetadata(metadata, [], []),
     })
-
-    const blockingErrors: string[] = []
-    const generator = executeTaskCreatedHooks(
-      taskId,
-      subject,
-      description,
-      getAgentName(),
-      getTeamName(),
-      undefined,
-      context?.abortController?.signal,
-      undefined,
-      context,
-    )
-    for await (const result of generator) {
-      if (result.blockingError) {
-        blockingErrors.push(getTaskCreatedHookMessage(result.blockingError))
-      }
-    }
-
-    if (blockingErrors.length > 0) {
-      await deleteTask(getTaskListId(), taskId)
-      throw new Error(blockingErrors.join('\n'))
-    }
 
     // Auto-expand task list when creating tasks
     context.setAppState(prev => {
@@ -152,7 +92,7 @@ export const TaskCreateTool = buildTool({
     return {
       data: {
         task: {
-          id: taskId,
+          id: apiTask.id,
           subject,
         },
       },

@@ -1,13 +1,13 @@
 /**
  * Allternit Platform API client for task/cron sync.
  *
- * When ALLTERNIT_API_URL is set, the task and cron tools can persist to the
- * Allternit platform instead of (or in addition to) local files. This makes
- * schedules durable across restarts and accessible from the web UI.
+ * Task and cron state lives in the Allternit platform (allternit-api). There is
+ * no local-file fallback in the runtime tools; the API is always the source of
+ * truth. Local dev uses http://127.0.0.1:8013 by default.
  *
  * Auth precedence:
  * 1. ALLTERNIT_API_TOKEN as a Bearer token (Clerk JWT in production)
- * 2. Local dev fallback: x-allternit-user-id + x-allternit-desktop-access-token
+ * 2. Local dev: x-allternit-user-id + x-allternit-desktop-access-token
  */
 
 const DEFAULT_API_URL = 'http://127.0.0.1:8013'
@@ -20,7 +20,7 @@ export type AllternitApiConfig = {
   userName?: string
 }
 
-export function getAllternitApiConfig(): AllternitApiConfig | null {
+export function getAllternitApiConfig(): AllternitApiConfig {
   const baseUrl = (
     process.env.ALLTERNIT_API_URL ||
     process.env.ALLTERNIT_API_BASE_URL ||
@@ -36,11 +36,6 @@ export function getAllternitApiConfig(): AllternitApiConfig | null {
     'gizzi-local'
   ).trim()
 
-  // If the user explicitly disables platform sync, stay local.
-  if (process.env.ALLTERNIT_API_URL === 'none') {
-    return null
-  }
-
   return {
     baseUrl,
     token,
@@ -48,10 +43,6 @@ export function getAllternitApiConfig(): AllternitApiConfig | null {
     userEmail: process.env.ALLTERNIT_USER_EMAIL?.trim(),
     userName: process.env.ALLTERNIT_USER_NAME?.trim(),
   }
-}
-
-export function isAllternitApiEnabled(): boolean {
-  return getAllternitApiConfig() !== null
 }
 
 function getHeaders(config: AllternitApiConfig): Record<string, string> {

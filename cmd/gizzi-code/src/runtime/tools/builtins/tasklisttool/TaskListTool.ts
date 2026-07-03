@@ -2,12 +2,7 @@
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '@/Tool.js'
 import { lazySchema } from '../../../utils/lazySchema.js'
-import {
-  getTaskListId,
-  isTodoV2Enabled,
-  listTasks,
-  TaskStatusSchema,
-} from '../../../utils/tasks.js'
+import { isTodoV2Enabled, TaskStatusSchema } from '../../../utils/tasks.js'
 import {
   apiTaskToLocalTask,
   getApiConfig,
@@ -71,33 +66,11 @@ export const TaskListTool = buildTool({
   async call() {
     const apiConfig = getApiConfig()
 
-    if (apiConfig) {
-      const response = await listApiTasks(apiConfig)
-      const allTasks = response.tasks.map(apiTaskToLocalTask)
-      const resolvedTaskIds = new Set(
-        allTasks.filter(t => t.status === 'completed').map(t => t.id),
-      )
-      const tasks = allTasks.map(task => ({
-        id: task.id,
-        subject: task.subject,
-        status: task.status,
-        owner: task.owner,
-        blockedBy: task.blockedBy.filter(id => !resolvedTaskIds.has(id)),
-      }))
-      return { data: { tasks } }
-    }
-
-    const taskListId = getTaskListId()
-
-    const allTasks = (await listTasks(taskListId)).filter(
-      t => !t.metadata?._internal,
-    )
-
-    // Build a set of resolved task IDs for filtering
+    const response = await listApiTasks(apiConfig)
+    const allTasks = response.tasks.map(apiTaskToLocalTask)
     const resolvedTaskIds = new Set(
       allTasks.filter(t => t.status === 'completed').map(t => t.id),
     )
-
     const tasks = allTasks.map(task => ({
       id: task.id,
       subject: task.subject,

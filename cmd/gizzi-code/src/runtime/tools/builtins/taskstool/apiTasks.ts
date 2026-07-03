@@ -9,11 +9,7 @@ import {
   type ApiTask,
 } from '../../../services/api/allternitApi.js'
 
-export function isApiTasksEnabled(): boolean {
-  return getAllternitApiConfig() !== null
-}
-
-export function getApiConfig(): AllternitApiConfig | null {
+export function getApiConfig(): AllternitApiConfig {
   return getAllternitApiConfig()
 }
 

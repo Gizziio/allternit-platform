@@ -20,9 +20,9 @@ use uuid::Uuid;
 use crate::auth::get_user;
 use crate::AppState;
 
-fn gizzi_base() -> String {
-    std::env::var("TERMINAL_SERVER_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:4096".to_string())
+fn cron_daemon_base() -> String {
+    std::env::var("ALLTERNIT_CRON_DAEMON_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:3031".to_string())
         .trim_end_matches('/')
         .to_string()
 }
@@ -258,89 +258,89 @@ pub struct UpdateLoopRequest {
 // Helper: gizzi cron bridge
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async fn gizzi_create_job(
+async fn cron_daemon_create_job(
     client: &reqwest::Client,
     job: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
-    let url = format!("{}/v1/cron/jobs", gizzi_base());
+    let url = format!("{}/jobs", cron_daemon_base());
     let res = client
         .post(&url)
         .json(&job)
         .send()
         .await
-        .map_err(|e| format!("gizzi cron create failed: {}", e))?;
+        .map_err(|e| format!("cron daemon create failed: {}", e))?;
 
     if !res.status().is_success() {
         let text = res.text().await.unwrap_or_default();
-        return Err(format!("gizzi cron create error: {}", text));
+        return Err(format!("cron daemon create error: {}", text));
     }
 
     res.json::<serde_json::Value>()
         .await
-        .map_err(|e| format!("gizzi cron create decode failed: {}", e))
+        .map_err(|e| format!("cron daemon create decode failed: {}", e))
 }
 
-async fn gizzi_update_job(
+async fn cron_daemon_update_job(
     client: &reqwest::Client,
-    gizzi_job_id: &str,
+    daemon_job_id: &str,
     job: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
-    let url = format!("{}/v1/cron/jobs/{}", gizzi_base(), gizzi_job_id);
+    let url = format!("{}/jobs/{}", cron_daemon_base(), daemon_job_id);
     let res = client
-        .put(&url)
+        .patch(&url)
         .json(&job)
         .send()
         .await
-        .map_err(|e| format!("gizzi cron update failed: {}", e))?;
+        .map_err(|e| format!("cron daemon update failed: {}", e))?;
 
     if !res.status().is_success() {
         let text = res.text().await.unwrap_or_default();
-        return Err(format!("gizzi cron update error: {}", text));
+        return Err(format!("cron daemon update error: {}", text));
     }
 
     res.json::<serde_json::Value>()
         .await
-        .map_err(|e| format!("gizzi cron update decode failed: {}", e))
+        .map_err(|e| format!("cron daemon update decode failed: {}", e))
 }
 
-async fn gizzi_delete_job(
+async fn cron_daemon_delete_job(
     client: &reqwest::Client,
-    gizzi_job_id: &str,
+    daemon_job_id: &str,
 ) -> Result<(), String> {
-    let url = format!("{}/v1/cron/jobs/{}", gizzi_base(), gizzi_job_id);
+    let url = format!("{}/jobs/{}", cron_daemon_base(), daemon_job_id);
     let res = client
         .delete(&url)
         .send()
         .await
-        .map_err(|e| format!("gizzi cron delete failed: {}", e))?;
+        .map_err(|e| format!("cron daemon delete failed: {}", e))?;
 
     if !res.status().is_success() {
         let text = res.text().await.unwrap_or_default();
-        return Err(format!("gizzi cron delete error: {}", text));
+        return Err(format!("cron daemon delete error: {}", text));
     }
 
     Ok(())
 }
 
-async fn gizzi_run_job(
+async fn cron_daemon_run_job(
     client: &reqwest::Client,
-    gizzi_job_id: &str,
+    daemon_job_id: &str,
 ) -> Result<serde_json::Value, String> {
-    let url = format!("{}/v1/cron/jobs/{}/run", gizzi_base(), gizzi_job_id);
+    let url = format!("{}/jobs/{}/run", cron_daemon_base(), daemon_job_id);
     let res = client
         .post(&url)
         .send()
         .await
-        .map_err(|e| format!("gizzi cron run failed: {}", e))?;
+        .map_err(|e| format!("cron daemon run failed: {}", e))?;
 
     if !res.status().is_success() {
         let text = res.text().await.unwrap_or_default();
-        return Err(format!("gizzi cron run error: {}", text));
+        return Err(format!("cron daemon run error: {}", text));
     }
 
     res.json::<serde_json::Value>()
         .await
-        .map_err(|e| format!("gizzi cron run decode failed: {}", e))
+        .map_err(|e| format!("cron daemon run decode failed: {}", e))
 }
 
 async fn resolve_agent_harness(db: &crate::db::DbHandle, agent_id: &str) -> Option<serde_json::Value> {
@@ -362,7 +362,7 @@ async fn resolve_agent_harness(db: &crate::db::DbHandle, agent_id: &str) -> Opti
     .flatten()
 }
 
-fn build_gizzi_job_from_routine(
+fn build_daemon_job_from_routine(
     routine: &Routine,
     job_type: &str,
     harness_config: Option<serde_json::Value>,
@@ -389,7 +389,7 @@ fn build_gizzi_job_from_routine(
     })
 }
 
-fn build_gizzi_job_from_loop(loop_item: &Loop, job_type: &str, harness_config: Option<serde_json::Value>) -> serde_json::Value {
+fn build_daemon_job_from_loop(loop_item: &Loop, job_type: &str, harness_config: Option<serde_json::Value>) -> serde_json::Value {
     json!({
         "name": loop_item.name,
         "description": loop_item.description,
@@ -783,17 +783,18 @@ async fn create_routine(
     } else {
         None
     };
-    let gizzi_job = build_gizzi_job_from_routine(&routine, &job_type, harness_config);
+    let daemon_job = build_daemon_job_from_routine(&routine, &job_type, harness_config);
     let client = reqwest::Client::new();
-    let gizzi_res = gizzi_create_job(&client, gizzi_job).await;
+    let daemon_res = cron_daemon_create_job(&client, daemon_job).await;
 
-    let gizzi_job_id = match gizzi_res {
+    let daemon_job_id = match daemon_res {
         Ok(res) => res
-            .get("id")
+            .get("job")
+            .and_then(|v| v.get("id"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
         Err(e) => {
-            warn!("failed to create gizzi routine job: {}", e);
+            warn!("failed to create daemon routine job: {}", e);
             None
         }
     };
@@ -812,7 +813,7 @@ async fn create_routine(
             &routine.workspace_id,
             &routine.agent_id,
             &routine.goal_id,
-            &gizzi_job_id,
+            &daemon_job_id,
             &routine.name,
             &routine.description,
             &routine.status,
@@ -834,10 +835,10 @@ async fn create_routine(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    info!("routine created: {} gizzi_job_id={:?}", id, gizzi_job_id);
+    info!("routine created: {} daemon_job_id={:?}", id, daemon_job_id);
 
     Ok(Json(Routine {
-        gizzi_job_id,
+        gizzi_job_id: daemon_job_id,
         ..routine
     }))
 }
@@ -949,10 +950,10 @@ async fn update_routine(
         } else {
             None
         };
-        let gizzi_job = build_gizzi_job_from_routine(&updated_routine, &job_type, harness_config);
+        let gizzi_job = build_daemon_job_from_routine(&updated_routine, &job_type, harness_config);
         let client = reqwest::Client::new();
-        if let Err(e) = gizzi_update_job(&client, &gizzi_job_id, gizzi_job).await {
-            warn!("failed to update gizzi routine job: {}", e);
+        if let Err(e) = cron_daemon_update_job(&client, &gizzi_job_id, gizzi_job).await {
+            warn!("failed to update daemon routine job: {}", e);
         }
     }
 
@@ -980,8 +981,8 @@ async fn delete_routine(
 
     if let Some(gizzi_job_id) = gizzi_job_id {
         let client = reqwest::Client::new();
-        if let Err(e) = gizzi_delete_job(&client, &gizzi_job_id).await {
-            warn!("failed to delete gizzi routine job: {}", e);
+        if let Err(e) = cron_daemon_delete_job(&client, &gizzi_job_id).await {
+            warn!("failed to delete daemon routine job: {}", e);
         }
     }
 
@@ -1019,7 +1020,7 @@ async fn run_routine(
 
     let gizzi_job_id = gizzi_job_id.ok_or(StatusCode::BAD_REQUEST)?;
     let client = reqwest::Client::new();
-    let run = gizzi_run_job(&client, &gizzi_job_id)
+    let run = cron_daemon_run_job(&client, &gizzi_job_id)
         .await
         .map_err(|e| {
             warn!("routine run failed: {}", e);
@@ -1174,17 +1175,18 @@ async fn create_loop(
     } else {
         None
     };
-    let gizzi_job = build_gizzi_job_from_loop(&loop_item, &job_type, harness_config);
+    let daemon_job = build_daemon_job_from_loop(&loop_item, &job_type, harness_config);
     let client = reqwest::Client::new();
-    let gizzi_res = gizzi_create_job(&client, gizzi_job).await;
+    let daemon_res = cron_daemon_create_job(&client, daemon_job).await;
 
-    let gizzi_job_id = match gizzi_res {
+    let daemon_job_id = match daemon_res {
         Ok(res) => res
-            .get("id")
+            .get("job")
+            .and_then(|v| v.get("id"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string()),
         Err(e) => {
-            warn!("failed to create gizzi loop job: {}", e);
+            warn!("failed to create daemon loop job: {}", e);
             None
         }
     };
@@ -1203,7 +1205,7 @@ async fn create_loop(
             &loop_item.workspace_id,
             &loop_item.agent_id,
             &loop_item.goal_id,
-            &gizzi_job_id,
+            &daemon_job_id,
             &loop_item.session_id,
             &loop_item.name,
             &loop_item.description,
@@ -1223,10 +1225,10 @@ async fn create_loop(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    info!("loop created: {} gizzi_job_id={:?}", id, gizzi_job_id);
+    info!("loop created: {} daemon_job_id={:?}", id, daemon_job_id);
 
     Ok(Json(Loop {
-        gizzi_job_id,
+        gizzi_job_id: daemon_job_id,
         ..loop_item
     }))
 }
@@ -1332,10 +1334,10 @@ async fn update_loop(
         } else {
             None
         };
-        let gizzi_job = build_gizzi_job_from_loop(&updated_loop, &job_type, harness_config);
+        let gizzi_job = build_daemon_job_from_loop(&updated_loop, &job_type, harness_config);
         let client = reqwest::Client::new();
-        if let Err(e) = gizzi_update_job(&client, &gizzi_job_id, gizzi_job).await {
-            warn!("failed to update gizzi loop job: {}", e);
+        if let Err(e) = cron_daemon_update_job(&client, &gizzi_job_id, gizzi_job).await {
+            warn!("failed to update daemon loop job: {}", e);
         }
     }
 
@@ -1363,8 +1365,8 @@ async fn delete_loop(
 
     if let Some(gizzi_job_id) = gizzi_job_id {
         let client = reqwest::Client::new();
-        if let Err(e) = gizzi_delete_job(&client, &gizzi_job_id).await {
-            warn!("failed to delete gizzi loop job: {}", e);
+        if let Err(e) = cron_daemon_delete_job(&client, &gizzi_job_id).await {
+            warn!("failed to delete daemon loop job: {}", e);
         }
     }
 
@@ -1402,7 +1404,7 @@ async fn run_loop(
 
     let gizzi_job_id = gizzi_job_id.ok_or(StatusCode::BAD_REQUEST)?;
     let client = reqwest::Client::new();
-    let run = gizzi_run_job(&client, &gizzi_job_id)
+    let run = cron_daemon_run_job(&client, &gizzi_job_id)
         .await
         .map_err(|e| {
             warn!("loop run failed: {}", e);

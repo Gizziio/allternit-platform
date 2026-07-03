@@ -11,11 +11,7 @@ import {
   type ApiRoutine,
 } from '../../services/api/allternitApi.js'
 
-export function isApiCronEnabled(): boolean {
-  return getAllternitApiConfig() !== null
-}
-
-export function getApiConfig(): AllternitApiConfig | null {
+export function getApiConfig(): AllternitApiConfig {
   return getAllternitApiConfig()
 }
 

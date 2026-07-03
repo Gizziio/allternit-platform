@@ -2,12 +2,7 @@
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '@/Tool.js'
 import { lazySchema } from '../../../utils/lazySchema.js'
-import {
-  getTask,
-  getTaskListId,
-  isTodoV2Enabled,
-  TaskStatusSchema,
-} from '../../../utils/tasks.js'
+import { isTodoV2Enabled, TaskStatusSchema } from '../../../utils/tasks.js'
 import {
   apiTaskToLocalTask,
   getApiConfig,
@@ -79,50 +74,23 @@ export const TaskGetTool = buildTool({
   async call({ taskId }) {
     const apiConfig = getApiConfig()
 
-    if (apiConfig) {
-      try {
-        const apiTask = await getApiTask(apiConfig, taskId)
-        const task = apiTaskToLocalTask(apiTask)
-        return {
-          data: {
-            task: {
-              id: task.id,
-              subject: task.subject,
-              description: task.description,
-              status: task.status,
-              blocks: task.blocks,
-              blockedBy: task.blockedBy,
-            },
-          },
-        }
-      } catch {
-        return { data: { task: null } }
-      }
-    }
-
-    const taskListId = getTaskListId()
-
-    const task = await getTask(taskListId, taskId)
-
-    if (!task) {
+    try {
+      const apiTask = await getApiTask(apiConfig, taskId)
+      const task = apiTaskToLocalTask(apiTask)
       return {
         data: {
-          task: null,
+          task: {
+            id: task.id,
+            subject: task.subject,
+            description: task.description,
+            status: task.status,
+            blocks: task.blocks,
+            blockedBy: task.blockedBy,
+          },
         },
       }
-    }
-
-    return {
-      data: {
-        task: {
-          id: task.id,
-          subject: task.subject,
-          description: task.description,
-          status: task.status,
-          blocks: task.blocks,
-          blockedBy: task.blockedBy,
-        },
-      },
+    } catch {
+      return { data: { task: null } }
     }
   },
   mapToolResultToToolResultBlockParam(content, toolUseID) {

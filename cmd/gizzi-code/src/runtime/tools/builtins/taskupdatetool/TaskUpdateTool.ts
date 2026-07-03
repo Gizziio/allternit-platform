@@ -1,29 +1,8 @@
 // @ts-nocheck
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import { isAgentSwarmsEnabled } from '../../../utils/agentSwarmsEnabled.js'
-import {
-  executeTaskCompletedHooks,
-  getTaskCompletedHookMessage,
-} from '../../../utils/hooks.js'
 import { lazySchema } from '../../../utils/lazySchema.js'
-import {
-  blockTask,
-  deleteTask,
-  getTask,
-  getTaskListId,
-  isTodoV2Enabled,
-  type TaskStatus,
-  TaskStatusSchema,
-  updateTask,
-} from '../../../utils/tasks.js'
-import {
-  getAgentId,
-  getAgentName,
-  getTeammateColor,
-  getTeamName,
-} from '../../../utils/teammate.js'
-import { writeToMailbox } from '../../../utils/teammateMailbox.js'
+import { isTodoV2Enabled, TaskStatusSchema } from '../../../utils/tasks.js'
 import {
   apiTaskToLocalTask,
   deleteApiTask,
@@ -130,7 +109,6 @@ export const TaskUpdateTool = buildTool({
       taskId,
       subject,
       description,
-      activeForm,
       status,
       owner,
       addBlocks,
@@ -147,124 +125,10 @@ export const TaskUpdateTool = buildTool({
       return { ...prev, expandedView: 'tasks' as const }
     })
 
-    if (apiConfig) {
-      let existingApiTask: Awaited<ReturnType<typeof getApiTask>>
-      try {
-        existingApiTask = await getApiTask(apiConfig, taskId)
-      } catch {
-        return {
-          data: {
-            success: false,
-            taskId,
-            updatedFields: [],
-            error: 'Task not found',
-          },
-        }
-      }
-      const existingTask = apiTaskToLocalTask(existingApiTask)
-
-      if (status === 'deleted') {
-        await deleteApiTask(apiConfig, taskId)
-        return {
-          data: {
-            success: true,
-            taskId,
-            updatedFields: ['deleted'],
-            statusChange: { from: existingTask.status, to: 'deleted' },
-          },
-        }
-      }
-
-      const apiUpdates: {
-        title?: string
-        description?: string
-        status?: string
-        assignee_id?: string
-        assignee_name?: string
-        metadata?: string
-      } = {}
-      const updatedFields: string[] = []
-
-      if (subject !== undefined && subject !== existingTask.subject) {
-        apiUpdates.title = subject
-        updatedFields.push('subject')
-      }
-      if (
-        description !== undefined &&
-        description !== existingTask.description
-      ) {
-        apiUpdates.description = description
-        updatedFields.push('description')
-      }
-      if (owner !== undefined && owner !== existingTask.owner) {
-        apiUpdates.assignee_id = owner
-        updatedFields.push('owner')
-      }
-      if (status !== undefined && status !== existingTask.status) {
-        apiUpdates.status = localStatusToApiStatus(status)
-        updatedFields.push('status')
-      }
-
-      const mergedMetadata: Record<string, unknown> = {
-        ...(existingTask.metadata ?? {}),
-      }
-      if (metadata !== undefined) {
-        for (const [key, value] of Object.entries(metadata)) {
-          if (value === null) {
-            delete mergedMetadata[key]
-          } else {
-            mergedMetadata[key] = value
-          }
-        }
-      }
-
-      let newBlocks = existingTask.blocks
-      if (addBlocks && addBlocks.length > 0) {
-        newBlocks = [
-          ...new Set([...existingTask.blocks, ...addBlocks]),
-        ]
-        updatedFields.push('blocks')
-      }
-      let newBlockedBy = existingTask.blockedBy
-      if (addBlockedBy && addBlockedBy.length > 0) {
-        newBlockedBy = [
-          ...new Set([...existingTask.blockedBy, ...addBlockedBy]),
-        ]
-        updatedFields.push('blockedBy')
-      }
-
-      if (
-        Object.keys(apiUpdates).length > 0 ||
-        addBlocks?.length ||
-        addBlockedBy?.length ||
-        metadata !== undefined
-      ) {
-        apiUpdates.metadata = localMetadataToApiMetadata(
-          mergedMetadata,
-          newBlocks,
-          newBlockedBy,
-        )
-        await updateApiTask(apiConfig, taskId, apiUpdates)
-      }
-
-      return {
-        data: {
-          success: true,
-          taskId,
-          updatedFields,
-          statusChange:
-            status !== undefined && status !== existingTask.status
-              ? { from: existingTask.status, to: status }
-              : undefined,
-        },
-      }
-    }
-
-    const taskListId = getTaskListId()
-
-    // Check if task exists
-    const existingTask = await getTask(taskListId, taskId)
-    if (!existingTask) {
+    let existingApiTask: Awaited<ReturnType<typeof getApiTask>>
+    try {
+      existingApiTask = await getApiTask(apiConfig, taskId)
+    } catch {
       return {
         data: {
           success: false,
@@ -274,173 +138,86 @@ export const TaskUpdateTool = buildTool({
         },
       }
     }
+    const existingTask = apiTaskToLocalTask(existingApiTask)
 
+    if (status === 'deleted') {
+      await deleteApiTask(apiConfig, taskId)
+      return {
+        data: {
+          success: true,
+          taskId,
+          updatedFields: ['deleted'],
+          statusChange: { from: existingTask.status, to: 'deleted' },
+        },
+      }
+    }
+
+    const apiUpdates: {
+      title?: string
+      description?: string
+      status?: string
+      assignee_id?: string
+      assignee_name?: string
+      metadata?: string
+    } = {}
     const updatedFields: string[] = []
 
-    // Update basic fields if provided and different from current value
-    const updates: {
-      subject?: string
-      description?: string
-      activeForm?: string
-      status?: TaskStatus
-      owner?: string
-      metadata?: Record<string, unknown>
-    } = {}
     if (subject !== undefined && subject !== existingTask.subject) {
-      updates.subject = subject
+      apiUpdates.title = subject
       updatedFields.push('subject')
     }
-    if (description !== undefined && description !== existingTask.description) {
-      updates.description = description
+    if (
+      description !== undefined &&
+      description !== existingTask.description
+    ) {
+      apiUpdates.description = description
       updatedFields.push('description')
     }
-    if (activeForm !== undefined && activeForm !== existingTask.activeForm) {
-      updates.activeForm = activeForm
-      updatedFields.push('activeForm')
-    }
     if (owner !== undefined && owner !== existingTask.owner) {
-      updates.owner = owner
+      apiUpdates.assignee_id = owner
       updatedFields.push('owner')
     }
-    // Auto-set owner when a teammate marks a task as in_progress without
-    // explicitly providing an owner. This ensures the task list can match
-    // todo items to teammates for showing activity status.
-    if (
-      isAgentSwarmsEnabled() &&
-      status === 'in_progress' &&
-      owner === undefined &&
-      !existingTask.owner
-    ) {
-      const agentName = getAgentName()
-      if (agentName) {
-        updates.owner = agentName
-        updatedFields.push('owner')
-      }
+    if (status !== undefined && status !== existingTask.status) {
+      apiUpdates.status = localStatusToApiStatus(status)
+      updatedFields.push('status')
+    }
+
+    const mergedMetadata: Record<string, unknown> = {
+      ...(existingTask.metadata ?? {}),
     }
     if (metadata !== undefined) {
-      const merged = { ...(existingTask.metadata ?? {}) }
       for (const [key, value] of Object.entries(metadata)) {
         if (value === null) {
-          delete merged[key]
+          delete mergedMetadata[key]
         } else {
-          merged[key] = value
+          mergedMetadata[key] = value
         }
       }
-      updates.metadata = merged
-      updatedFields.push('metadata')
-    }
-    if (status !== undefined) {
-      // Handle deletion - delete the task file and return early
-      if (status === 'deleted') {
-        const deleted = await deleteTask(taskListId, taskId)
-        return {
-          data: {
-            success: deleted,
-            taskId,
-            updatedFields: deleted ? ['deleted'] : [],
-            error: deleted ? undefined : 'Failed to delete task',
-            statusChange: deleted
-              ? { from: existingTask.status, to: 'deleted' }
-              : undefined,
-          },
-        }
-      }
-
-      // For regular status updates, validate and apply if different
-      if (status !== existingTask.status) {
-        // Run TaskCompleted hooks when marking a task as completed
-        if (status === 'completed') {
-          const blockingErrors: string[] = []
-
-          const generator = executeTaskCompletedHooks(
-            taskId,
-            existingTask.subject,
-            existingTask.description,
-            getAgentName(),
-            getTeamName(),
-            undefined,
-            context?.abortController?.signal,
-            undefined,
-            context,
-          )
-
-          for await (const result of generator) {
-            if (result.blockingError) {
-              blockingErrors.push(
-                getTaskCompletedHookMessage(result.blockingError),
-              )
-            }
-          }
-
-          if (blockingErrors.length > 0) {
-            return {
-              data: {
-                success: false,
-                taskId,
-                updatedFields: [],
-                error: blockingErrors.join('\n'),
-              },
-            }
-          }
-        }
-
-        updates.status = status
-        updatedFields.push('status')
-      }
     }
 
-    if (Object.keys(updates).length > 0) {
-      await updateTask(taskListId, taskId, updates)
-    }
-
-    // Notify new owner via mailbox when ownership changes
-    if (updates.owner && isAgentSwarmsEnabled()) {
-      const senderName = getAgentName() || 'team-lead'
-      const senderColor = getTeammateColor()
-      const assignmentMessage = JSON.stringify({
-        type: 'task_assignment',
-        taskId,
-        subject: existingTask.subject,
-        description: existingTask.description,
-        assignedBy: senderName,
-        timestamp: new Date().toISOString(),
-      })
-      await writeToMailbox(
-        updates.owner,
-        {
-          from: senderName,
-          text: assignmentMessage,
-          timestamp: new Date().toISOString(),
-          color: senderColor,
-        },
-        taskListId,
-      )
-    }
-
-    // Add blocks if provided and not already present
+    let newBlocks = existingTask.blocks
     if (addBlocks && addBlocks.length > 0) {
-      const newBlocks = addBlocks.filter(
-        id => !existingTask.blocks.includes(id),
-      )
-      for (const blockId of newBlocks) {
-        await blockTask(taskListId, taskId, blockId)
-      }
-      if (newBlocks.length > 0) {
-        updatedFields.push('blocks')
-      }
+      newBlocks = [...new Set([...existingTask.blocks, ...addBlocks])]
+      updatedFields.push('blocks')
+    }
+    let newBlockedBy = existingTask.blockedBy
+    if (addBlockedBy && addBlockedBy.length > 0) {
+      newBlockedBy = [...new Set([...existingTask.blockedBy, ...addBlockedBy])]
+      updatedFields.push('blockedBy')
     }
 
-    // Add blockedBy if provided and not already present (reverse: the blocker blocks this task)
-    if (addBlockedBy && addBlockedBy.length > 0) {
-      const newBlockedBy = addBlockedBy.filter(
-        id => !existingTask.blockedBy.includes(id),
+    if (
+      Object.keys(apiUpdates).length > 0 ||
+      addBlocks?.length ||
+      addBlockedBy?.length ||
+      metadata !== undefined
+    ) {
+      apiUpdates.metadata = localMetadataToApiMetadata(
+        mergedMetadata,
+        newBlocks,
+        newBlockedBy,
       )
-      for (const blockerId of newBlockedBy) {
-        await blockTask(taskListId, blockerId, taskId)
-      }
-      if (newBlockedBy.length > 0) {
-        updatedFields.push('blockedBy')
-      }
+      await updateApiTask(apiConfig, taskId, apiUpdates)
     }
 
     return {
@@ -449,8 +226,8 @@ export const TaskUpdateTool = buildTool({
         taskId,
         updatedFields,
         statusChange:
-          updates.status !== undefined
-            ? { from: existingTask.status, to: updates.status }
+          status !== undefined && status !== existingTask.status
+            ? { from: existingTask.status, to: status }
             : undefined,
       },
     }
@@ -474,17 +251,7 @@ export const TaskUpdateTool = buildTool({
       }
     }
 
-    let resultContent = `Updated task #${taskId} ${updatedFields.join(', ')}`
-
-    // Add reminder for teammates when they complete a task (supports in-process teammates)
-    if (
-      statusChange?.to === 'completed' &&
-      getAgentId() &&
-      isAgentSwarmsEnabled()
-    ) {
-      resultContent +=
-        '\n\nTask completed. Call TaskList now to find your next available task or see if your work unblocked others.'
-    }
+    const resultContent = `Updated task #${taskId} ${updatedFields.join(', ')}`
 
     return {
       tool_use_id: toolUseID,
