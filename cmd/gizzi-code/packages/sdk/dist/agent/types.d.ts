@@ -27,4 +27,48 @@ export interface AgentOptions {
     capabilities?: string[];
     persistencePath?: string;
 }
-//# sourceMappingURL=types.d.ts.map
+export type AgentProfileCapability =
+  | 'execute_code'
+  | 'file_search'
+  | 'context'
+  | 'mcp_tools'
+  | 'deferred_tools'
+  | 'artifacts'
+  | 'actions'
+  | 'chain'
+  | 'web_search'
+  | 'computer_use'
+  | 'filesystem';
+export interface AgentModelConfig {
+    provider: string;
+    model: string;
+    temperature?: number;
+    maxContextTokens?: number;
+    maxOutputTokens?: number;
+    maxSteps?: number;
+}
+export interface AgentToolPolicy {
+    builtInToolIds: string[];
+    mcpServerIds: string[];
+    allowedMcpToolIds: string[];
+    deferredToolIds: string[];
+}
+export interface AgentArtifactPolicy {
+    enabled: boolean;
+    customPromptMode?: boolean;
+}
+export interface AgentProfile {
+    agentId: string;
+    version: string;
+    avatarUrl?: string;
+    instructions?: string;
+    modelConfig: AgentModelConfig;
+    capabilities: Partial<Record<AgentProfileCapability, boolean>>;
+    toolPolicy: AgentToolPolicy;
+    files?: {
+        contextFileIds: string[];
+        searchFileIds: string[];
+        codeInterpreterFileIds: string[];
+    };
+    artifactPolicy?: AgentArtifactPolicy;
+}
