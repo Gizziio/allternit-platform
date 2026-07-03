@@ -414,11 +414,17 @@ fn load_user_config() -> UserConfig {
 fn company_config_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
 
-    // Packaged app bundle path (sibling to the binary).
+    // Packaged app bundle paths.
+    // macOS .app: Contents/MacOS/<binary> -> Contents/Resources/company.json
+    // Generic layout: <binary_dir>/resources/company.json or <binary_dir>/company.json
     if let Ok(exe) = std::env::current_exe() {
         if let Some(exe_dir) = exe.parent() {
             paths.push(exe_dir.join("resources").join("company.json"));
             paths.push(exe_dir.join("company.json"));
+            if let Some(bundle_dir) = exe_dir.parent() {
+                paths.push(bundle_dir.join("Resources").join("company.json"));
+                paths.push(bundle_dir.join("resources").join("company.json"));
+            }
         }
     }
 
