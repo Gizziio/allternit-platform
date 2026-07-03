@@ -13,12 +13,9 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
-sha2 = "0.10"
+sha2 = { workspace = true }
 allternit-memory-fabric = { workspace = true }
-
-# NOTE: The following dependency is referenced by source code but does not yet
-# exist in the workspace:
-# - allternit-evolution-layer
+allternit-evolution-layer = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

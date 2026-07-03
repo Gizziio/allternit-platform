@@ -54,6 +54,14 @@ members = [
     "platform/sdk/rust/sdk-policy",
     "platform/sdk/rust/sdk-transport",
     "api/gateway/routing",
+    "platform/types/allternit-substrate",
+    "domains/kernel/core/runtime-execution-core",
+    "services/orchestration/control-plane/allternit-control/context-router",
+    "domains/kernel/drivers/evolution-layer",
+    "services/memory/data/memory-kernel",
+    "services/memory/observation",
+    "services/memory/state/history",
+    "services/memory/state/memory",
     "worktree-manager",
 ]
 
@@ -98,6 +106,15 @@ allternit-sdk-apps = { path = "platform/sdk/rust/sdk-apps" }
 allternit-sdk-functions = { path = "platform/sdk/rust/sdk-functions" }
 allternit-sdk-policy = { path = "platform/sdk/rust/sdk-policy" }
 allternit-sdk-transport = { path = "platform/sdk/rust/sdk-transport" }
+
+allternit-substrate = { path = "platform/types/allternit-substrate" }
+allternit-runtime-core = { path = "domains/kernel/core/runtime-execution-core" }
+allternit-context-router = { path = "services/orchestration/control-plane/allternit-control/context-router" }
+allternit-evolution-layer = { path = "domains/kernel/drivers/evolution-layer" }
+allternit-memory-kernel = { path = "services/memory/data/memory-kernel" }
+allternit-observation = { path = "services/memory/observation" }
+history = { path = "services/memory/state/history" }
+allternit-memory = { path = "services/memory/state/memory" }
 allternit-tools-gateway = { path = "api/gateway/routing" }
 allternit-harness-engineering = { path = "domains/kernel/drivers/harness-engineering" }
 mcp = { path = "mcp/core" }
@@ -152,6 +169,9 @@ async-stream = "0.3"
 # Database
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite"] }
 redis = { version = "0.24", features = ["aio", "tokio-comp"] }
+
+lru = "0.12"
+qdrant-client = "1.9"
 
 # WASM
 wasmtime = "21.0"

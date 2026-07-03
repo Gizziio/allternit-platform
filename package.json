@@ -42,6 +42,7 @@
     "prune:pnpm": "pnpm store prune",
     "sweep:rust": "cargo sweep -r -t 14 || echo 'Install cargo-sweep with: cargo install cargo-sweep'",
     "clean:all-safe": "pnpm run clean && pnpm run clean:rust-standalone && pnpm run prune:pnpm",
+    "maintenance:cleanup": "bash scripts/maintenance/cleanup.sh",
     "shell": "pnpm --filter @allternit/desktop dev",
     "shell:web": "pnpm --filter @allternit/desktop dev",
     "shell:desktop": "pnpm --filter @allternit/desktop dev",

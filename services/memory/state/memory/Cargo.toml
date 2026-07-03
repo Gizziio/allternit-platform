@@ -19,22 +19,14 @@ allternit-history = { workspace = true }
 allternit-messaging = { workspace = true }
 allternit-policy = { workspace = true }
 allternit-memory-fabric = { workspace = true }
+allternit-context-router = { workspace = true }
 async-trait = { workspace = true }
-
-# NOTE: The following crates are referenced by source code but are not yet
-# available in the workspace. They are preserved here as comments for the
-# planned re-integration of the advanced memory service:
-# - allternit-context-router
-# - allternit-runtime-core
-# - allternit-sdk-core
-# - allternit-sdk-transport
-qdrant-client = "1.9"
+qdrant-client = { workspace = true }
 redis = { workspace = true }
 sqlx = { workspace = true }
-futures = "0.3"
-sha2 = "0.10"
-hex = "0.4"
-lru = "0.12"
+futures = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
