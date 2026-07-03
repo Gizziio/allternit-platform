@@ -6,7 +6,7 @@
 //! Rust API remains a thin gateway instead of becoming a competing session DB.
 
 use axum::{
-    extract::{Path, Query},
+    extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response, sse::Sse},
     routing::{get, post},
@@ -14,12 +14,14 @@ use axum::{
 };
 use futures::Stream;
 use reqwest::Client;
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
 use tracing::warn;
 
 use crate::AppState;
+use crate::db::DbHandle;
 
 fn gizzi_base() -> String {
     std::env::var("TERMINAL_SERVER_URL")
@@ -438,16 +440,36 @@ async fn list_sessions(
     .into_response()
 }
 
-async fn create_session(headers: HeaderMap, Json(body): Json<CreateSessionBody>) -> impl IntoResponse {
+async fn resolve_agent_harness(db: &DbHandle, agent_id: &str) -> Option<serde_json::Value> {
+    let db = db.clone();
+    let agent_id = agent_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect().ok()?;
+        let harness: String = conn
+            .query_row(
+                "SELECT harness_config FROM agents WHERE id = ?1",
+                params![agent_id],
+                |row| row.get(0),
+            )
+            .ok()?;
+        serde_json::from_str::<serde_json::Value>(&harness).ok()
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
+async fn create_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<CreateSessionBody>,
+) -> impl IntoResponse {
     let client = gizzi_client(&headers);
     let mut payload = serde_json::Map::new();
     payload.insert(
         "title".to_string(),
         json!(body.name.unwrap_or_else(|| "New Session".to_string())),
     );
-    if let Some(agent_id) = body.agent_id {
-        payload.insert("agentID".to_string(), json!(agent_id));
-    }
     let surface = body.origin_surface.or_else(|| {
         body.metadata
             .as_ref()
@@ -457,6 +479,17 @@ async fn create_session(headers: HeaderMap, Json(body): Json<CreateSessionBody>)
     });
     if let Some(ref s) = surface {
         payload.insert("surface".to_string(), json!(s));
+    }
+
+    // Resolve platform agent harness config and forward it into the gizzi session.
+    let agent_harness = if let Some(ref agent_id) = body.agent_id {
+        payload.insert("agentID".to_string(), json!(agent_id));
+        resolve_agent_harness(&state.db, agent_id).await
+    } else {
+        None
+    };
+    if let Some(harness) = agent_harness {
+        payload.insert("harness".to_string(), harness);
     }
     let session = match gizzi_json::<GizziSessionInfo>(
         &client,
