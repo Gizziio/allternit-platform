@@ -895,8 +895,11 @@ async function initializeBundledMode(): Promise<void> {
       }
     }
 
-    serviceState.platform = { status: 'up', detail: isDev ? 'Dev on port ${PORTS.DEV_UI}' : 'ai.allternit.com' };
-    pushServiceState();
+    // Preserve offline/static detail if we fell back; otherwise set the normal label.
+    if (serviceState.platform.detail !== 'Offline mode (local static)') {
+      serviceState.platform = { status: 'up', detail: isDev ? `Dev on port ${PORTS.DEV_UI}` : 'ai.allternit.com' };
+      pushServiceState();
+    }
 
     activePlatformUrl = platformUrl;
     process.env.ALLTERNIT_OAUTH_BASE_URL = platformUrl;
