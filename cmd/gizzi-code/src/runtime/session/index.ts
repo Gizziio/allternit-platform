@@ -74,6 +74,7 @@ export namespace Session {
       permission: row.permission ?? undefined,
       agentID: (row as any).agent_id ?? undefined,
       surface: ((row as any).surface as Info["surface"]) ?? undefined,
+      harness: (row as any).harness ?? undefined,
       time: {
         created: row.time_created,
         updated: row.time_updated,
@@ -101,6 +102,7 @@ export namespace Session {
       permission: info.permission,
       agent_id: info.agentID,
       surface: info.surface ?? null,
+      harness: info.harness ?? null,
       time_created: info.time.created,
       time_updated: info.time.updated,
       time_compacting: info.time.compacting,
@@ -157,6 +159,39 @@ export namespace Session {
         .optional(),
       agentID: z.string().optional(),
       surface: z.enum(["chat", "cowork", "code", "browser"]).optional(),
+      harness: z
+        .object({
+          mode: z.enum(["byok", "cloud", "local", "subprocess"]),
+          byok: z
+            .object({
+              anthropic: z
+                .object({ apiKey: z.string(), baseURL: z.string().optional() })
+                .optional(),
+              openai: z
+                .object({ apiKey: z.string(), baseURL: z.string().optional() })
+                .optional(),
+              google: z
+                .object({ apiKey: z.string(), baseURL: z.string().optional() })
+                .optional(),
+            })
+            .optional(),
+          cloud: z
+            .object({
+              baseURL: z.string(),
+              accessToken: z.string(),
+              refreshToken: z.string().optional(),
+            })
+            .optional(),
+          local: z.object({ baseURL: z.string() }).optional(),
+          subprocess: z
+            .object({
+              command: z.string(),
+              cwd: z.string().optional(),
+              env: z.record(z.string(), z.string()).optional(),
+            })
+            .optional(),
+        })
+        .optional(),
     })
     
   export type Info = z.output<typeof Info>
@@ -224,6 +259,7 @@ export namespace Session {
         permission: Info.shape.permission,
         agentID: z.string().optional(),
         surface: Info.shape.surface,
+        harness: Info.shape.harness,
       })
       .optional(),
     async (input) => {
@@ -234,6 +270,7 @@ export namespace Session {
         permission: input?.permission,
         agentID: input?.agentID,
         surface: input?.surface,
+        harness: input?.harness,
       })
     },
   )
@@ -303,6 +340,7 @@ export namespace Session {
     permission?: PermissionNext.Ruleset
     agentID?: string
     surface?: Info["surface"]
+    harness?: Info["harness"]
   }) {
     const result: Info = {
       id: Identifier.descending("session", input.id),
@@ -315,6 +353,7 @@ export namespace Session {
       permission: input.permission,
       agentID: input.agentID,
       surface: input.surface,
+      harness: input.harness,
       time: {
         created: Date.now(),
         updated: Date.now(),

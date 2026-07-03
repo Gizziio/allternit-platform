@@ -29,6 +29,17 @@ export const SessionTable = sqliteTable(
     permission: text({ mode: "json" }).$type<PermissionNext.Ruleset>(),
     agent_id: text(),
     surface: text(),
+    harness: text({ mode: "json" }).$type<{
+      mode: "byok" | "cloud" | "local" | "subprocess"
+      byok?: {
+        anthropic?: { apiKey: string; baseURL?: string }
+        openai?: { apiKey: string; baseURL?: string }
+        google?: { apiKey: string; baseURL?: string }
+      }
+      cloud?: { baseURL: string; accessToken: string; refreshToken?: string }
+      local?: { baseURL: string }
+      subprocess?: { command: string; cwd?: string; env?: Record<string, string> }
+    }>(),
     pinned: integer(),
     ...Timestamps,
     time_compacting: integer(),

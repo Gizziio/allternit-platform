@@ -1,0 +1,1 @@
+ALTER TABLE session ADD COLUMN IF NOT EXISTS harness TEXT;
