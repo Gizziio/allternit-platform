@@ -193,7 +193,7 @@ async function createWorkspace(
     if (!filePath.includes('/')) return true;
     
     // Check which layer this file belongs to
-    if (filePath.startsWith('.allternit/brain/') || filePath.startsWith('.allternit/memory/')) {
+    if (filePath.startsWith('.allternit/cognitive/') || filePath.startsWith('.allternit/brain/') || filePath.startsWith('.allternit/memory/')) {
       return finalLayers.cognitive;
     }
     if (filePath.startsWith('.allternit/identity/')) {
@@ -313,6 +313,29 @@ function generateFromInlineTemplate(
       }
     }, null, 2),
 
+    'cognitive/COGNITIVE.md': `# COGNITIVE.md — {{agent_name}}'s Cognitive Layer
+
+## Overview
+This layer contains the agent's reasoning, memory, and learning systems.
+
+## Current Focus
+${variables.agent_description || 'Ready to assist with tasks'}
+
+## Active Tasks
+- [ ] Initialize and learn about the workspace
+- [ ] Ready for first interaction
+
+## Task Graph
+*To be populated based on interactions*
+
+## Review Criteria
+*To be defined based on agent purpose*
+
+## Memory Systems
+- Working memory: active session context
+- Long-term memory: persistent facts and patterns
+- Episodic memory: conversation history and outcomes`,
+
     'brain/BRAIN.md': `# BRAIN.md — {{agent_name}}'s Cognitive Core
 
 ## Current Focus
@@ -430,7 +453,30 @@ ${safeJSONParse<string[]>(variables.tools || '[]', []).map((t: string) => `- ${t
 
 ### Weekly
 - [ ] Performance review
-- [ ] Archive old data`
+- [ ] Archive old data`,
+
+    'business/BUSINESS.md': `# BUSINESS.md — {{agent_name}}'s Business Layer
+
+## Purpose
+${variables.agent_description || 'To assist the user effectively'}
+
+## Success Metrics
+- Task completion rate
+- User satisfaction
+- Accuracy of outputs
+- Efficiency of execution
+
+## Key Stakeholders
+- User: primary beneficiary of agent outputs
+- Platform: Allternit runtime and governance
+
+## Value Proposition
+*Define the unique value this agent provides*
+
+## Escalation Paths
+- Technical issues: platform support
+- Safety concerns: governance policy review
+- Scope questions: refer to IDENTITY.md and PLAYBOOK.md`
   };
 
   const key = templatePath.replace('template://', '');
