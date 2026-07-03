@@ -1,0 +1,13 @@
+# Generated build artifacts. Run `npm run build` to produce.
+dist/
+release/
+
+# Logs
+*.log
+
+# Electron build cache
+.node-gyp
+
+# OS files
+.DS_Store
+Thumbs.db
