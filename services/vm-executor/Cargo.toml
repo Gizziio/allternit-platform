@@ -2,10 +2,22 @@
 name = "allternit-vm-executor"
 version = "0.1.0"
 edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Allternit VM Executor - Thin orchestrator over execution drivers"
 
 [lib]
 name = "allternit_vm_executor"
 path = "src/lib.rs"
 
 [dependencies]
-allternit-driver-interface = { path = "../../platform/contracts/driver-interface" }
+allternit-driver-interface = { workspace = true }
+
+async-trait = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
