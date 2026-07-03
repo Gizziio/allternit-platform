@@ -65,6 +65,7 @@ import {
   resolveOpenClawRegistration,
   useAgentStore,
   useAgentsWithSwarms,
+  isAgentAllowedOnSurface,
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
@@ -508,8 +509,12 @@ export function ChatComposer({
   const filteredMentionAgents = useMemo(() => {
     if (!mentionOpen) return [];
     const q = mentionQuery.toLowerCase();
-    return agents.filter((a) => a.name.toLowerCase().includes(q));
-  }, [mentionOpen, mentionQuery, agents]);
+    return agents.filter(
+      (a) =>
+        a.name.toLowerCase().includes(q) &&
+        isAgentAllowedOnSurface(a, agentModeSurface ?? 'chat'),
+    );
+  }, [mentionOpen, mentionQuery, agents, agentModeSurface]);
 
   const handleSelectMentionAgent = useCallback((agent: Agent) => {
     const lastAtIndex = input.lastIndexOf('@');
