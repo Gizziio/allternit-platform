@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowSquareOut, DownloadSimple, DeviceMobile, DeviceTablet, Monitor, MagnifyingGlassMinus, MagnifyingGlassPlus, ArrowsOut, Sliders, FileHtml, FilePdf, FileZip, Presentation } from "@phosphor-icons/react";
+import { ArrowSquareOut, DownloadSimple, DeviceMobile, DeviceTablet, Monitor, MagnifyingGlassMinus, MagnifyingGlassPlus, ArrowsOut, Sliders, FileHtml, FilePdf, FileZip, Presentation, VideoCamera } from "@phosphor-icons/react";
 import { parseEditModeConfig, updateEditModeTokensInHtml, type EditModeToken, type EditModeConfig } from "../../lib/design/editmode-parser";
-import { exportArtifact, type ExportFormat } from "../../lib/design/artifact-export";
+import { exportArtifact, exportMp4, type ExportFormat } from "../../lib/design/artifact-export";
 import { cn } from "@/lib/utils";
 
 // ── Viewport presets ───────────────────────────────────────────────────────────
@@ -164,13 +164,18 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
                 { id: 'html' as ExportFormat, label: 'HTML', icon: <FileHtml size={13} /> },
                 { id: 'pdf' as ExportFormat, label: 'PDF', icon: <FilePdf size={13} /> },
                 { id: 'zip' as ExportFormat, label: 'ZIP bundle', icon: <FileZip size={13} /> },
-                { id: 'pptx' as ExportFormat, label: 'PPTX scaffold', icon: <Presentation size={13} /> },
+                { id: 'pptx' as ExportFormat, label: 'PPTX', icon: <Presentation size={13} /> },
+                { id: 'mp4' as ExportFormat, label: 'MP4 (scaffold)', icon: <VideoCamera size={13} /> },
               ].map((fmt) => (
                 <button
                   key={fmt.id}
                   type="button"
                   onClick={() => {
-                    exportArtifact(fmt.id, { html, title, identifier }).catch(() => {});
+                    if (fmt.id === 'mp4' && iframeRef.current) {
+                      exportMp4({ html, title, identifier, iframe: iframeRef.current }).catch(() => {});
+                    } else {
+                      exportArtifact(fmt.id, { html, title, identifier }).catch(() => {});
+                    }
                     setShowExportMenu(false);
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] cursor-pointer border-none bg-transparent"

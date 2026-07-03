@@ -1,0 +1,15 @@
+{
+  "id": "editorial-cover",
+  "name": "Editorial Cover Image",
+  "version": "1.0.0",
+  "description": "One-shot editorial cover image prompt for social, blog hero, or magazine covers.",
+  "category": "image-templates",
+  "author": "nexu-io/open-design",
+  "tags": ["image", "editorial", "cover"],
+  "preview": { "type": "image" },
+  "inputs": [
+    { "name": "subject", "type": "string", "required": true, "label": "Subject" },
+    { "name": "mood", "type": "enum", "values": ["dramatic", "soft", "minimal", "retro"], "default": "minimal", "label": "Mood" }
+  ],
+  "capabilities": []
+}

@@ -3,9 +3,11 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Link, ArrowRight, CheckCircle, WarningCircle, Spinner, Palette, Tag, Code, BracketsCurly, FileCss } from "@phosphor-icons/react";
+import { X, Link, ArrowRight, CheckCircle, WarningCircle, Spinner, Palette, Tag, Code, BracketsCurly, FileCss, FolderOpen, FileText, FileZip } from "@phosphor-icons/react";
 import type { DesignSystem } from "../../lib/design/design-registry";
 import { extractCssVars, extractTailwindTokens, extractDtcgTokens, type ExtractedToken } from "../../lib/design/token-extractor";
+import { resolveDesignSystemFromFile, resolveDesignSystemFromDirectory, resolvedDesignToDesignSystem } from "../../lib/design/design-system-resolver";
+import { importClaudeDesignZip } from "../../lib/design/claude-design-import";
 import { cn } from "../../lib/utils";
 
 interface Props {
@@ -14,7 +16,7 @@ interface Props {
 }
 
 type Phase = "input" | "loading" | "preview" | "error";
-type Tab = "url" | "tokens";
+type Tab = "url" | "tokens" | "local" | "claude-zip";
 type SourceType = "css" | "tailwind" | "dtcg";
 
 export function DesignImportModal({ onClose, onImport }: Props) {
@@ -105,6 +107,57 @@ export function DesignImportModal({ onClose, onImport }: Props) {
     onClose();
   }
 
+  async function handleResolveFromFile() {
+    try {
+      const resolved = await resolveDesignSystemFromFile();
+      if (resolved) onImport(resolvedDesignToDesignSystem(resolved));
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setPhase("error");
+    }
+  }
+
+  async function handleResolveFromDirectory() {
+    try {
+      const resolved = await resolveDesignSystemFromDirectory();
+      if (resolved) onImport(resolvedDesignToDesignSystem(resolved));
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setPhase("error");
+    }
+  }
+
+  async function handleClaudeDesignZip(file: File) {
+    try {
+      const result = await importClaudeDesignZip(file);
+      if (result.designSystem) {
+        onImport(result.designSystem);
+      } else if (result.html) {
+        const title = result.title || 'Claude Design Import';
+        onImport({
+          id: `claude-design-${Date.now()}`,
+          name: title,
+          description: 'Imported from Claude Design ZIP',
+          vibe: 'Imported',
+          author: 'claude-design',
+          installs: 0,
+          likes: 0,
+          views: 0,
+          forks: 0,
+          tags: ['claude-design', 'import'],
+          designMd: `# ${title}\n\nImported from Claude Design ZIP.`,
+          previewColors: ['#111111', '#ffffff', '#888888'],
+        });
+      } else {
+        setErrorMsg('No DESIGN.md or HTML artifact found in the ZIP.');
+        setPhase('error');
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : String(err));
+      setPhase('error');
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -150,6 +203,18 @@ export function DesignImportModal({ onClose, onImport }: Props) {
             className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "tokens" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#e27c59)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
           >
             Extract Tokens
+          </button>
+          <button type="button"
+            onClick={() => setActiveTab("local")}
+            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "local" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#e27c59)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
+          >
+            Local DESIGN.md
+          </button>
+          <button type="button"
+            onClick={() => setActiveTab("claude-zip")}
+            className={cn("flex-1 p-3 border-none text-[12px] font-bold cursor-pointer border-b-2 border-solid transition-colors duration-200", activeTab === "claude-zip" ? "bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] border-[var(--accent-primary,#e27c59)]" : "bg-transparent text-[var(--text-secondary,#666)] border-transparent")}
+          >
+            Claude ZIP
           </button>
         </div>
 
@@ -352,6 +417,50 @@ export function DesignImportModal({ onClose, onImport }: Props) {
                     </button>
                   </motion.div>
                 )}
+              </motion.div>
+            )}
+
+            {/* ─── Local DESIGN.md Tab ───────────────────────────── */}
+            {activeTab === "local" && (
+              <motion.div key="local" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div className="text-[13px] text-[var(--text-secondary,#666)] mb-4 leading-relaxed">
+                  Load a DESIGN.md directly from your computer. The resolver looks for <code className="text-[11px] font-mono bg-black/5 px-1 rounded">DESIGN.md</code> in the selected directory, or in <code className="text-[11px] font-mono bg-black/5 px-1 rounded">design-system/DESIGN.md</code>.
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button type="button"
+                    onClick={handleResolveFromFile}
+                    className="w-full p-3 rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] text-[13px] font-bold flex items-center justify-center gap-2 cursor-pointer hover:bg-black/5 transition-colors"
+                  >
+                    <FileText size={16} /> Select DESIGN.md file
+                  </button>
+                  <button type="button"
+                    onClick={handleResolveFromDirectory}
+                    className="w-full p-3 rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] text-[13px] font-bold flex items-center justify-center gap-2 cursor-pointer hover:bg-black/5 transition-colors"
+                  >
+                    <FolderOpen size={16} /> Select project directory
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ─── Claude Design ZIP Tab ─────────────────────────── */}
+            {activeTab === "claude-zip" && (
+              <motion.div key="claude-zip" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div className="text-[13px] text-[var(--text-secondary,#666)] mb-4 leading-relaxed">
+                  Import a ZIP exported from Claude Design. The importer extracts DESIGN.md, the artifact HTML, and conversation metadata.
+                </div>
+                <label className="w-full p-3 rounded-[10px] border border-solid border-[var(--border-default,rgba(0,0,0,0.12))] bg-[var(--bg-secondary,#f9f9f9)] text-[var(--text-primary,#111)] text-[13px] font-bold flex items-center justify-center gap-2 cursor-pointer hover:bg-black/5 transition-colors">
+                  <FileZip size={16} /> Select Claude Design ZIP
+                  <input
+                    type="file"
+                    accept=".zip,application/zip,application/x-zip-compressed"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleClaudeDesignZip(file);
+                    }}
+                  />
+                </label>
               </motion.div>
             )}
           </AnimatePresence>

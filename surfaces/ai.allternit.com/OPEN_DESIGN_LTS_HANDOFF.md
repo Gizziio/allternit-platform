@@ -55,13 +55,21 @@ This branch forks the **Open Design skill/craft/protocol layer** into Allternit 
 
 ---
 
+## What was closed in the second pass
+
+1. **Real PPTX export** — `src/lib/design/artifact-export.ts` extracts slide text from HTML and builds a real `.pptx` via `pptxgenjs`.
+2. **Project file workspace** — `ProjectFileWorkspace.tsx` + `project-file-store.ts` provides a virtual file tree per project backed by IndexedDB.
+3. **Live parameter sliders** — `SkillParameterPanel.tsx` renders `od.parameters` sliders and re-prompts the agent on "Apply and re-plan".
+4. **Plugin marketplace** — `plugin-manifest.ts`, `bundled-plugins.ts`, `PluginPicker.tsx`, and three sample plugins with `open-design.json` manifests.
+5. **Local DESIGN.md resolver** — `design-system-resolver.ts` plus "Local DESIGN.md" tab in `DesignImportModal`.
+6. **Claude Design ZIP import** — `claude-design-import.ts` plus "Claude ZIP" tab in `DesignImportModal`.
+7. **HyperFrames / MP4 scaffolding** — `hyperframes-export.ts` captures the artifact iframe to a WebM/MP4 via `MediaRecorder`.
+
 ## LTS gaps still to close
 
-To reach full parity with `nexu-io/open-design`, the following remain for future LTS work:
-
-1. **Daemon-side skill discovery (partially addressed by local FS picker)**
-   - Browser-side File System Access API picker is wired into SkillPicker.
-   - LTS: add server-side scan via `/api/design/skills` or existing Allternit API for non-browser contexts.
+1. **Daemon-side skill discovery**
+   - Server-side scan of `~/.claude/skills/`, `./skills/`, `./.claude/skills/` with priority merging.
+   - Expose via `/api/design/skills` or existing Allternit API surface.
    - Watch filesystem with `chokidar` in dev; re-index on `SIGHUP` in production.
 
 2. **Agent adapter pool**
@@ -69,33 +77,14 @@ To reach full parity with `nexu-io/open-design`, the following remain for future
    - Spawn CLI with skill context + DESIGN.md + CWD set to artifact workspace.
    - Stream stdout/stderr as structured events.
 
-3. **Project file workspace**
-   - Artifact file tree UI (read/write files next to the preview).
-   - Plain files on disk under daemon-managed storage per root `AGENTS.md`.
-
-4. **Plugin marketplace**
-   - Parse `open-design.json` manifest spec.
-   - Category browsing: scenarios, image-templates, video-templates, design-systems, atoms, examples.
-   - Per-agent install scripts (`od mcp install <agent>` equivalent).
-
-5. **Full PPTX export**
-   - Use `pptxgenjs` to build real slides from `slides.json` when a deck skill produces one.
-
-6. **MP4 / HyperFrames export**
-   - Integrate `hyperframes-html` renderer for HTML→MP4 motion graphics.
-
-7. **Comment-mode surgical edits**
+3. **Comment-mode surgical edits**
    - Targeted patching via agent comment protocol; requires agent capability gating.
 
-8. **Live parameter sliders**
-   - Render `od.parameters` as sliders; re-prompt agent on change.
+4. **Full HyperFrames timeline**
+   - Keyframe timelines, WebGL compositing, layer animations beyond simple iframe capture.
 
-9. **Design system resolver**
-   - Resolve `./DESIGN.md`, `./design-system/DESIGN.md`, or user-configured path.
-   - Hot-reload on file change.
-
-10. **Claude Design ZIP import**
-    - `/api/import/claude-design` route to unpack and convert OD sessions.
+5. **Per-agent plugin install scripts**
+   - `od mcp install <agent>` equivalent wiring into agent skill directories.
 
 ---
 
@@ -110,13 +99,22 @@ To reach full parity with `nexu-io/open-design`, the following remain for future
 | `src/lib/design/craft-loader.ts` | Craft reference loader |
 | `src/lib/design/studio-system-prompt.ts` | Prompt composer |
 | `src/lib/design/todo-progress.ts` | Plan progress parser |
-| `src/lib/design/artifact-export.ts` | Export pipelines |
+| `src/lib/design/artifact-export.ts` | Export pipelines (HTML/PDF/ZIP/PPTX/MP4) |
+| `src/lib/design/hyperframes-export.ts` | MP4 iframe capture scaffolding |
+| `src/lib/design/project-file-store.ts` | Virtual project file persistence |
+| `src/lib/design/plugin-manifest.ts` | Plugin `open-design.json` parser |
+| `src/lib/design/design-system-resolver.ts` | Local DESIGN.md resolver |
+| `src/lib/design/claude-design-import.ts` | Claude Design ZIP importer |
 | `src/views/design/SkillPicker.tsx` | Skill picker UI |
 | `src/views/design/NewProjectScreen.tsx` | Project start with skill inputs |
+| `src/views/design/ProjectFileWorkspace.tsx` | Project file workspace UI |
+| `src/views/design/PluginPicker.tsx` | Plugin marketplace picker |
 | `src/components/design/TodoProgressCard.tsx` | Progress card UI |
+| `src/components/design/SkillParameterPanel.tsx` | Live parameter sliders |
 | `src/components/design/ArtifactPreviewPane.tsx` | Export controls |
 | `craft/*.md` | Universal craft references |
 | `skills/*/SKILL.md` | Bundled open-design skills |
+| `plugins/*/*/open-design.json` | Bundled plugin manifests |
 
 ---
 

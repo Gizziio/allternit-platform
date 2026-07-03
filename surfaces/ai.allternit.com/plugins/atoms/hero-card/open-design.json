@@ -1,0 +1,18 @@
+{
+  "id": "hero-card",
+  "name": "Hero Card",
+  "version": "1.0.0",
+  "description": "Reusable hero card UI atom with headline, subheadline, CTA, and background treatment.",
+  "category": "atoms",
+  "author": "nexu-io/open-design",
+  "tags": ["ui", "atom", "hero"],
+  "preview": { "type": "html", "entry": "index.html" },
+  "inputs": [
+    { "name": "headline", "type": "string", "required": true, "label": "Headline" },
+    { "name": "cta", "type": "string", "default": "Get started", "label": "CTA label" }
+  ],
+  "pipelines": [
+    { "name": "html", "format": "html" }
+  ],
+  "capabilities": []
+}

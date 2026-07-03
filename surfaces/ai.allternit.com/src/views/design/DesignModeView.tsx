@@ -5,7 +5,7 @@ import React, { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRe
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
 import { Paperclip, Sliders, MagicWand, Sun, Moon, Scissors,
-  UsersThree, TreeStructure, Target, Megaphone, ShieldCheck, UploadSimple, Plus
+  UsersThree, TreeStructure, Target, Megaphone, ShieldCheck, UploadSimple, Plus, PuzzlePiece
 } from "@phosphor-icons/react";
 import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
@@ -13,7 +13,14 @@ import { useDesignSessionStore, useDesignSessionActions, createDesignSession } f
 import { useDesignTabStore } from "../../stores/design-tab.store";
 import { NewProjectScreen } from './NewProjectScreen';
 import { SkillPicker } from './SkillPicker';
+import { SkillParameterPanel } from '../../components/design/SkillParameterPanel';
+import { SurgicalEditPanel } from '../../components/design/SurgicalEditPanel';
+import { AgentAdapterPanel } from '../../components/design/AgentAdapterPanel';
+import { PluginPicker } from './PluginPicker';
 import type { SkillRecord } from '../../lib/design/skill-registry';
+import type { PluginManifest } from '../../lib/design/plugin-manifest';
+import type { SurgicalComment } from '../../lib/design/surgical-edit';
+import { buildSurgicalEditPrompt } from '../../lib/design/surgical-edit';
 
 // Imports for built features
 import { DesignMdRenderer } from "../../lib/openui/DesignMdRenderer";
@@ -63,6 +70,8 @@ const ContentPipelineView = lazy(() => import("./ContentPipelineView").then((m) 
 const DesignTldrawCanvas = lazy(() => import("./DesignTldrawCanvas").then((m) => ({ default: m.DesignTldrawCanvas })));
 const LiveArtifactEditor = lazy(() => import("./LiveArtifactEditor").then((m) => ({ default: m.LiveArtifactEditor })));
 const OrbitView = lazy(() => import("./OrbitView").then((m) => ({ default: m.OrbitView })));
+const ProjectFileWorkspace = lazy(() => import("./ProjectFileWorkspace").then((m) => ({ default: m.ProjectFileWorkspace })));
+const HyperFramesTimelineEditor = lazy(() => import("./HyperFramesTimelineEditor").then((m) => ({ default: m.HyperFramesTimelineEditor })));
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -75,7 +84,7 @@ type ProjectType =
   | 'content-engine'
   | 'template'
   | 'other';
-type CanvasTab = 'system' | 'files' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit';
+type CanvasTab = 'files' | 'system' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit' | 'hyperframes';
 type Specialist = 'architect' | 'growth' | 'purist' | 'creative';
 type OfficeDocType = 'slides' | 'spreadsheet' | 'document';
 
@@ -116,6 +125,7 @@ function buildDirectProject(initialTab: CanvasTab): Project {
     fidelity: 'high',
     activeTabId: initialTab,
     tabs: [
+      { id: 'files', label: 'Files', type: 'files' as CanvasTab },
       { id: 'questions', label: 'Discovery', type: 'questions' },
       { id: 'mobile', label: 'Mobile View', type: 'mobile' },
       { id: 'video', label: 'Video Editor', type: 'video' },
@@ -130,6 +140,7 @@ function buildDirectProject(initialTab: CanvasTab): Project {
       { id: 'handoff', label: 'Handoff', type: 'handoff' },
       { id: 'live', label: 'Live', type: 'live' as CanvasTab },
       { id: 'orbit', label: 'Orbit', type: 'orbit' as CanvasTab },
+      { id: 'hyperframes', label: 'HyperFrames', type: 'hyperframes' as CanvasTab },
     ],
   };
 }
@@ -330,6 +341,23 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   const [showSkillPicker, setShowSkillPicker] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<SkillRecord | null>(null);
   const [skillValues, setSkillValues] = useState<Record<string, unknown>>({});
+  const [showPluginPicker, setShowPluginPicker] = useState(false);
+  const [surgicalComments, setSurgicalComments] = useState<SurgicalComment[]>([]);
+  const { selectedAgent } = useSurfaceAgentSelection('design');
+  const [skillParameters, setSkillParameters] = useState<Record<string, number>>({});
+
+  // Initialize parameter defaults when skill selection changes.
+  useEffect(() => {
+    if (!selectedSkill) {
+      setSkillParameters({});
+      return;
+    }
+    const defaults: Record<string, number> = {};
+    for (const p of selectedSkill.parameters) {
+      defaults[p.name] = p.default;
+    }
+    setSkillParameters(defaults);
+  }, [selectedSkill]);
 
   const pendingProject = useDesignTabStore(s => s.pendingProject);
   const clearPendingProject = useDesignTabStore(s => s.clearPendingProject);
@@ -407,6 +435,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       id: Date.now().toString(), name: config.name, type: config.type as ProjectType,
       specialist: 'architect', fidelity: 'high', activeTabId: isContent ? 'graph' : 'questions',
       tabs: [
+        { id: 'files',   label: 'Files',          type: 'files'     as CanvasTab },
         { id: 'questions', label: 'Discovery',     type: 'questions' as CanvasTab },
         { id: 'sketch',    label: 'Canvas',         type: 'sketch'    as CanvasTab },
         { id: 'system',    label: 'Design System',  type: 'system'    as CanvasTab },
@@ -423,6 +452,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
         { id: 'market',  label: 'Marketplace',  type: 'market'  as CanvasTab },
         { id: 'live',    label: 'Live',         type: 'live'    as CanvasTab },
         { id: 'orbit',   label: 'Orbit',        type: 'orbit'   as CanvasTab },
+        { id: 'hyperframes', label: 'HyperFrames', type: 'hyperframes' as CanvasTab },
       ]
     });
     const dir = config.direction;
@@ -435,7 +465,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       skillBody: skill?.body,
       skillName: skill?.name,
       craftRequirements: skill?.craft.requires,
-      skillValues: config.skillValues,
+      skillValues: { ...config.skillValues, ...skillParameters },
       isDeckSession: config.type === 'slides' || skill?.mode === 'deck',
     });
     const sessionId = await createDesignSession({ name: config.name, sessionMode: 'agent', systemPrompt });
@@ -444,7 +474,8 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     } else if (skill) {
       const opener = skill.examplePrompt ?? `Run the ${skill.name} skill for this project.`;
       const inputs = skill.inputs.map((i) => `${i.label ?? i.name}: ${config.skillValues?.[i.name] ?? i.default ?? ''}`).join('\n');
-      await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}Please begin with the skill workflow.` });
+      const params = skill.parameters.map((p) => `${p.label ?? p.name}: ${skillParameters[p.name] ?? p.default}`).join('\n');
+      await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Please begin with the skill workflow.` });
     } else {
       const dirContext = dir ? ` The visual direction is "${dir.label}" — ${dir.mood}. Key references: ${dir.references.join(', ')}.` : '';
       await sendMessageStream(sessionId, { text: `I am starting a ${config.type} project called "${config.name}".${dirContext} Please begin with a discovery brief.` });
@@ -507,6 +538,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, paddingLeft: "12px", borderLeft: "1px solid var(--border-subtle)", marginLeft: "8px" }}>
                  <button type="button" onClick={() => { setActiveProject(null); setActiveTab('questions'); setSelectedSkill(null); setSkillValues({}); }} title="New Project" style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px", height: "28px", borderRadius: "8px", background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={12} weight="bold" /> New</button>
                  <button type="button" onClick={() => setShowImport(true)} title="Import design system" style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><UploadSimple size={14} /></button>
+                 <button type="button" onClick={() => setShowPluginPicker(true)} title="Plugin marketplace" style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><PuzzlePiece size={14} /></button>
                  <button type="button" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Light mode" : "Dark mode"} style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{darkMode ? <Sun size={14} /> : <Moon size={14} />}</button>
                  <button type="button" onClick={() => { setShowClipboard(!showClipboard); setShowTweaks(false); }} title="Design Clipboard" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showClipboard ? "var(--accent-primary)" : "transparent", color: showClipboard ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Scissors size={14} /></button>
                  <button type="button" onClick={() => { setShowTweaks(!showTweaks); setShowClipboard(false); }} title="Live Tokens" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showTweaks ? "var(--accent-primary)" : "transparent", color: showTweaks ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Sliders size={14} /></button>
@@ -521,6 +553,13 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   )}
                   <ErrorBoundary>
                   {/* Full-bleed tabs — no padding wrapper */}
+                  {activeTab === 'files' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <Suspense fallback={<TabLoadingState label="Loading file workspace…" />}>
+                        <ProjectFileWorkspace projectId={activeProject.id} />
+                      </Suspense>
+                    </div>
+                  )}
                   {activeTab === 'sketch' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
                       <Suspense fallback={<TabLoadingState label="Loading canvas…" />}>
@@ -609,9 +648,16 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                       </Suspense>
                     </div>
                   )}
+                  {activeTab === 'hyperframes' && (
+                    <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
+                      <Suspense fallback={<TabLoadingState label="Loading HyperFrames timeline…" />}>
+                        <HyperFramesTimelineEditor projectId={activeProject.id} />
+                      </Suspense>
+                    </div>
+                  )}
                   </ErrorBoundary>
                   {/* Padded tabs */}
-                  {!['sketch', 'system', 'handoff', 'mobile', 'video', 'docs', 'market', 'brand', 'graph', 'pipeline', 'live', 'orbit'].includes(activeTab) && (
+                  {!['sketch', 'system', 'handoff', 'mobile', 'video', 'docs', 'market', 'brand', 'graph', 'pipeline', 'live', 'orbit', 'hyperframes'].includes(activeTab) && (
                     <div style={{ flex: 1, overflowY: 'auto', padding: '40px' }}>
                       {activeTab === 'team' && <DesignTeamWorkspace projectName={activeProject?.name} />}
                       {activeTab === 'questions' && (
@@ -667,7 +713,35 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
           </div>
         </Panel>
         <PanelResizeHandle />
-        <Panel defaultSize={25} minSize={20}>
+        <Panel defaultSize={25} minSize={20} style={{ display: 'flex', flexDirection: 'column' }}>
+          {selectedSkill && (
+            <div style={{ padding: '12px 12px 0' }}>
+              <SkillParameterPanel
+                skill={selectedSkill}
+                values={skillParameters}
+                onChange={setSkillParameters}
+                onReplan={() => {
+                  if (!activeSessionId || !selectedSkill) return;
+                  const params = selectedSkill.parameters.map((p) => `${p.label ?? p.name}: ${skillParameters[p.name] ?? p.default}`).join('\n');
+                  sendMessageStream(activeSessionId, { text: `Update the ${selectedSkill.name} skill with these revised parameters and continue:\n${params}` });
+                }}
+              />
+            </div>
+          )}
+          <div style={{ padding: '12px 12px 0' }}>
+            <SurgicalEditPanel
+              comments={surgicalComments}
+              onChange={setSurgicalComments}
+              onApply={() => {
+                if (!activeSessionId) return;
+                const prompt = buildSurgicalEditPrompt(designMd ?? '', surgicalComments);
+                if (prompt) sendMessageStream(activeSessionId, { text: prompt });
+              }}
+            />
+          </div>
+          <div style={{ padding: '12px 12px 0' }}>
+            <AgentAdapterPanel />
+          </div>
           <ChatIdProvider
             chatId={activeSessionId || 'design'}
             isPersisted={Boolean(activeSessionId)}
@@ -713,6 +787,21 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
               });
             }
           }}
+        />
+      )}
+
+      {showPluginPicker && (
+        <PluginPicker
+          agent={selectedAgent ?? undefined}
+          onSelect={(plugin) => {
+            setShowPluginPicker(false);
+            if (activeSessionId) {
+              sendMessageStream(activeSessionId, {
+                text: `[Plugin: ${plugin.name}]\n${plugin.description}\n\nRun this plugin workflow for the active project.`,
+              });
+            }
+          }}
+          onClose={() => setShowPluginPicker(false)}
         />
       )}
     </div>

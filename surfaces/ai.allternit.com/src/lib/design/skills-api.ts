@@ -2,9 +2,8 @@
  * Client-side skills API for Allternit Design mode.
  *
  * Returns bundled open-design skills plus any local skills the user has
- * imported via the File System Access API. In the LTS future this can be
- * swapped to call `/api/design/skills` to scan `~/.claude/skills/`,
- * `./skills/`, and a daemon-managed registry.
+ * imported via the File System Access API, and discovered skills from the
+ * daemon-side scan of ~/.claude/skills/, ./skills/, and ./.claude/skills/.
  */
 
 import { BUNDLED_SKILLS, getBundledSkillById } from './bundled-skills';
@@ -14,6 +13,20 @@ export interface SkillsQuery {
   mode?: SkillMode;
   scenario?: SkillScenario;
   query?: string;
+}
+
+export interface DiscoveredSkill {
+  id: string;
+  name: string;
+  path: string;
+  source: string;
+  manifest?: Record<string, unknown>;
+}
+
+export interface DiscoverSkillsResponse {
+  skills: DiscoveredSkill[];
+  scanned_paths: string[];
+  total: number;
 }
 
 let localSkillCache: SkillRecord[] | null = null;
@@ -59,4 +72,18 @@ export async function fetchSkills(query: SkillsQuery = {}): Promise<SkillRecord[
 export async function fetchSkillById(id: string): Promise<SkillRecord | null> {
   await Promise.resolve();
   return getAllSkills().find((s) => s.id === id) ?? null;
+}
+
+/**
+ * Ask the daemon to scan the canonical skill directories and return any
+ * discovered Open Design / Claude skills.
+ */
+export async function discoverSkills(cwd?: string): Promise<DiscoverSkillsResponse> {
+  const params = new URLSearchParams();
+  if (cwd) params.set('cwd', cwd);
+  const res = await fetch(`/api/design/skills/discover?${params.toString()}`);
+  if (!res.ok) {
+    return { skills: [], scanned_paths: [], total: 0 };
+  }
+  return res.json();
 }

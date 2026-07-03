@@ -1,0 +1,17 @@
+{
+  "id": "od-react-export",
+  "name": "React Export",
+  "version": "1.0.0",
+  "description": "Export an Allternit Design artifact to a React component tree with the active DESIGN.md bound as CSS variables.",
+  "category": "scenarios",
+  "author": "nexu-io/open-design",
+  "tags": ["react", "export", "code"],
+  "preview": { "type": "markdown", "entry": "README.md" },
+  "inputs": [
+    { "name": "component_name", "type": "string", "required": true, "label": "Component name" }
+  ],
+  "pipelines": [
+    { "name": "react-zip", "format": "zip" }
+  ],
+  "capabilities": ["file_write"]
+}
