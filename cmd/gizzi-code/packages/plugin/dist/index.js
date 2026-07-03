@@ -1,2 +1,2 @@
-// @allternit/plugin — runtime entry (types only, no runtime code)
-export {}
+export {};
+//# sourceMappingURL=index.js.map

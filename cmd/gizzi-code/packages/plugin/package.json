@@ -14,8 +14,16 @@
       "types": "./dist/tool.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@allternit/sdk": "file:../../../../sdk/allternit-sdk"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "zod": "4.3.6"
   }
 }
