@@ -69,6 +69,7 @@
     "files": [
       "dist/**/*",
       "build/**/*",
+      "static/**/*",
       "!build/entitlements*",
       "!**/*.map"
     ],

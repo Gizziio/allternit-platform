@@ -1313,6 +1313,15 @@ function toggleMiniWindow(): void {
 // Tray
 // ============================================================================
 
+function showConnectionSettings(): void {
+  if (!mainWindow) {
+    mainWindow = createMainWindow();
+  }
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.loadFile(join(__dirname, '../../static/connect.html'));
+}
+
 function createTray(): void {
   const iconPath = join(__dirname, '../../build/tray-icon.png');
   if (!fs.existsSync(iconPath)) return;
@@ -1373,8 +1382,7 @@ async function updateTrayMenu(): Promise<void> {
     { 
       label: 'Connection Settings...', 
       click: () => {
-        mainWindow?.show();
-        // Navigate to settings
+        showConnectionSettings();
       }
     },
     ...(permItem ? [permItem, { type: 'separator' } as Electron.MenuItemConstructorOptions] : []),
@@ -1910,14 +1918,25 @@ ipcMain.handle('connection:get-backend', () => {
   return { mode: backend.mode, url: activeBackendUrl };
 });
 
-ipcMain.handle('connection:set-backend', (_event, config: { mode: 'bundled' | 'remote'; remoteUrl?: string }) => {
+ipcMain.handle('connection:set-backend', async (_event, config: { mode: 'bundled' | 'remote' | 'development'; remoteUrl?: string }) => {
   const nextBackend = { ...store.get('backend'), ...config };
   store.set('backend', nextBackend);
   void authManager.updateBackendProfile({
     mode: nextBackend.mode,
     remoteUrl: nextBackend.remoteUrl,
   });
-  mainWindow?.webContents.send('connection:state', config);
+
+  // Resolve the new active backend URL so subsequent connection tests and
+  // SDK consumers point at the right place.
+  if (nextBackend.mode === 'remote' && nextBackend.remoteUrl) {
+    activeBackendUrl = nextBackend.remoteUrl;
+  } else if (nextBackend.mode === 'development') {
+    activeBackendUrl = 'http://localhost:3013';
+  } else {
+    activeBackendUrl = 'http://localhost:8013';
+  }
+
+  mainWindow?.webContents.send('connection:state', { mode: nextBackend.mode, url: activeBackendUrl });
 });
 
 // ============================================================================

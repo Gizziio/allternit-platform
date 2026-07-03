@@ -282,13 +282,17 @@
     const connectBtn = document.getElementById('connect-btn');
     const statusEl = document.getElementById('status');
 
+    if (!window.allternit) {
+      showStatus('Desktop API not available. Please restart the app.', 'error');
+    }
+
     // Mode switching
     modeBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         modeBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentMode = btn.dataset.mode;
-        
+
         if (currentMode === 'local') {
           localInputs.style.display = 'block';
           vpsInputs.style.display = 'none';
@@ -313,8 +317,8 @@
       testBtn.disabled = true;
 
       try {
-        const result = await window.allternitDesktop.connection.test();
-        
+        const result = await window.allternit.connection.test();
+
         if (result.status === 'connected') {
           showStatus(`✓ Connected to ${result.url}`, 'success');
         } else {
@@ -334,23 +338,17 @@
       showStatus('Connecting...', 'loading');
 
       try {
-        const config = currentMode === 'local' 
-          ? {
-              mode: 'local',
-              localPort: parseInt(document.getElementById('local-port').value),
-              vpsUrl: ''
-            }
-          : {
-              mode: 'vps',
-              localPort: 4096,
-              vpsUrl: document.getElementById('vps-url').value
-            };
+        // Map UI modes to backend config modes.
+        const config = currentMode === 'local'
+          ? { mode: 'bundled' }
+          : { mode: 'remote', remoteUrl: document.getElementById('vps-url').value.trim() };
 
-        const result = await window.allternitDesktop.connection.setBackend(config);
-        
+        await window.allternit.connection.setBackend(config);
+        const result = await window.allternit.connection.test();
+
         if (result.status === 'connected') {
           showStatus('Connected! Loading Allternit...', 'success');
-          // Main process will reload the window to the platform UI
+          // Main process will reload the window to the platform UI.
         } else {
           showStatus(`Failed to connect: ${result.lastError || 'Unknown error'}`, 'error');
           isConnecting = false;
@@ -363,45 +361,30 @@
       }
     }
 
-    // Auto-discover on load
-    async function autoDiscover() {
-      try {
-        const discovered = await window.allternitDesktop.connection.discover();
-        if (discovered) {
-          const port = new URL(discovered).port;
-          document.getElementById('local-port').value = port;
-          showStatus(`Found Allternit running on port ${port}`, 'success');
-        }
-      } catch (err) {
-        console.log('No local Allternit found');
-      }
-    }
-
     testBtn.addEventListener('click', testConnection);
     connectBtn.addEventListener('click', connect);
     document.getElementById('docs-link').addEventListener('click', (e) => {
       e.preventDefault();
-      window.allternitDesktop.shell.openExternal('https://docs.allternit.com/setup');
+      window.allternit.shell.openExternal('https://docs.allternit.com/setup');
     });
 
     // Load saved config
     async function loadConfig() {
       try {
-        const backend = await window.allternitDesktop.connection.getBackend();
-        if (backend.mode === 'vps' && backend.vpsUrl) {
+        const backend = await window.allternit.connection.getBackend();
+        if (backend.mode === 'remote' && backend.url) {
           modeBtns[1].click();
-          document.getElementById('vps-url').value = backend.vpsUrl;
+          document.getElementById('vps-url').value = backend.url;
         } else {
-          document.getElementById('local-port').value = backend.localPort;
+          // Local/bundled/development mode defaults to local UI.
+          document.getElementById('local-port').value = '4096';
         }
       } catch (err) {
         console.error('Failed to load config:', err);
       }
     }
 
-    // Initialize
     loadConfig();
-    autoDiscover();
   </script>
 </body>
 </html>

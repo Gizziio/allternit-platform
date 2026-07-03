@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { Plug, Spinner, CheckCircle, XCircle } from '@phosphor-icons/react';
+import { Plug, ArrowsClockwise, CheckCircle, XCircle } from '@phosphor-icons/react';
 import { detectAdapters, listAdapters, type AdapterKind, type AdapterDetectionResult, spawnAdapter } from '../../lib/design/agent-adapters-api';
 
 export function AgentAdapterPanel() {
@@ -45,7 +45,7 @@ export function AgentAdapterPanel() {
           disabled={loading}
           style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-primary)', background: 'transparent', border: 'none', cursor: 'pointer' }}
         >
-          {loading ? <Spinner size={12} /> : 'Detect'}
+          {loading ? <ArrowsClockwise size={12} /> : 'Detect'}
         </button>
       </div>
 
