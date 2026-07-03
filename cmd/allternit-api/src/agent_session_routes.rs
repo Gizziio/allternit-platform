@@ -22,6 +22,7 @@ use tracing::warn;
 
 use crate::AppState;
 use crate::db::DbHandle;
+use crate::default_model;
 
 fn gizzi_base() -> String {
     std::env::var("TERMINAL_SERVER_URL")

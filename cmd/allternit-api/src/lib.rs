@@ -104,3 +104,16 @@ pub struct AppState {
     /// Office add-in runtime bindings and sessions
     pub office_runtime: OfficeRuntimeState,
 }
+
+/// Return the default LLM provider/model pair used when a request does not
+/// specify one. Configurable via `ALLTERNIT_DEFAULT_MODEL` as
+/// `provider-id/model-id`. Falls back to `kimi-for-coding/kimi-k2`.
+pub fn default_model() -> (String, String) {
+    let raw = std::env::var("ALLTERNIT_DEFAULT_MODEL")
+        .unwrap_or_else(|_| "kimi-for-coding/kimi-k2".to_string());
+    if let Some((provider, model)) = raw.split_once('/') {
+        (provider.trim().to_string(), model.trim().to_string())
+    } else {
+        ("kimi-for-coding".to_string(), raw.trim().to_string())
+    }
+}

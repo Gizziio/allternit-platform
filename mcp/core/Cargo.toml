@@ -27,8 +27,8 @@ sqlx = { workspace = true }
 bytes = "1.5"
 
 # Allternit SDK dependencies
-allternit-sdk-core = { path = "../../platform/sdk/typescript/sdk-core" }
-allternit-sdk-policy = { path = "../../platform/sdk/typescript/sdk-policy" }
+allternit-sdk-core = { path = "../../platform/sdk/rust/sdk-core" }
+allternit-sdk-policy = { path = "../../platform/sdk/rust/sdk-policy" }
 
 [dev-dependencies]
 tokio-test = "0.4"
