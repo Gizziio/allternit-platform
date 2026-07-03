@@ -51,6 +51,22 @@ pub struct CompanyConfig {
     /// Company branding / tenant marker.
     #[serde(rename = "tenantId")]
     pub tenant_id: Option<String>,
+
+    /// URL of the Rails service (ledger/gate/leases). Baked into packaged apps.
+    #[serde(rename = "railsUrl")]
+    pub rails_url: Option<String>,
+
+    /// Rails workspace ID for this packaged deployment.
+    #[serde(rename = "railsWorkspaceId")]
+    pub rails_workspace_id: Option<String>,
+
+    /// Default directory for VM storage. Baked into packaged apps.
+    #[serde(rename = "vmDir")]
+    pub vm_dir: Option<String>,
+
+    /// URL of the cron daemon. Usually baked in; users can override.
+    #[serde(rename = "cronDaemonUrl")]
+    pub cron_daemon_url: Option<String>,
 }
 
 /// User-level configuration. Written by the onboarding wizard and the settings
@@ -78,6 +94,26 @@ pub struct UserConfig {
     /// Whether onboarding has been completed.
     #[serde(rename = "onboardingComplete")]
     pub onboarding_complete: Option<bool>,
+
+    /// Local Ollama base URL (e.g. http://localhost:11434).
+    #[serde(rename = "ollamaUrl")]
+    pub ollama_url: Option<String>,
+
+    /// Allternit memory service URL.
+    #[serde(rename = "memoryUrl")]
+    pub memory_url: Option<String>,
+
+    /// Embedding service URL.
+    #[serde(rename = "embeddingUrl")]
+    pub embedding_url: Option<String>,
+
+    /// Agent working directory.
+    #[serde(rename = "agentWorkdir")]
+    pub agent_workdir: Option<String>,
+
+    /// Cron daemon URL.
+    #[serde(rename = "cronDaemonUrl")]
+    pub cron_daemon_url: Option<String>,
 }
 
 /// Merged runtime configuration. Code reads from this struct instead of calling
@@ -214,6 +250,86 @@ impl AppConfig {
             .unwrap_or(false)
     }
 
+    /// URL of the Rails service.
+    pub fn rails_url(&self) -> String {
+        std::env::var("ALLTERNIT_RAILS_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.rails_url.clone())
+            .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
+    }
+
+    /// Rails workspace ID for this deployment.
+    pub fn rails_workspace_id(&self) -> String {
+        std::env::var("ALLTERNIT_RAILS_WORKSPACE_ID")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.rails_workspace_id.clone())
+            .unwrap_or_else(|| "default".to_string())
+    }
+
+    /// Directory used for VM storage.
+    pub fn vm_dir(&self) -> Option<PathBuf> {
+        std::env::var("ALLTERNIT_VM_DIR")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.vm_dir.clone())
+            .map(PathBuf::from)
+    }
+
+    /// Ollama base URL.
+    pub fn ollama_url(&self) -> String {
+        std::env::var("OLLAMA_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.ollama_url.clone())
+            .unwrap_or_else(|| "http://localhost:11434".to_string())
+    }
+
+    /// Memory service URL.
+    pub fn memory_url(&self) -> String {
+        std::env::var("ALLTERNIT_MEMORY_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.memory_url.clone())
+            .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
+    }
+
+    /// Embedding service URL.
+    pub fn embedding_url(&self) -> String {
+        std::env::var("ALLTERNIT_EMBEDDING_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.embedding_url.clone())
+            .unwrap_or_else(|| self.ollama_url())
+    }
+
+    /// Agent working directory.
+    pub fn agent_workdir(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_AGENT_WORKDIR")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.agent_workdir.clone())
+    }
+
+    /// Cron daemon URL.
+    pub fn cron_daemon_url(&self) -> String {
+        std::env::var("ALLTERNIT_CRON_DAEMON_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.cron_daemon_url.clone())
+            .or_else(|| self.company.cron_daemon_url.clone())
+            .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
+    }
+
+    /// Gizzi runtime port. Used when a full URL is not supplied.
+    pub fn gizzi_port(&self) -> u16 {
+        std::env::var("GIZZI_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(4096)
+    }
+
     /// Apply env-variable overrides to the in-memory config. This keeps the
     /// existing dev/CI workflow working while the file-based config becomes
     /// the primary path for packaged users.
@@ -226,6 +342,31 @@ impl AppConfig {
         if let Ok(v) = std::env::var("TERMINAL_SERVER_URL") {
             if !v.is_empty() {
                 self.user.terminal_server_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("OLLAMA_URL") {
+            if !v.is_empty() {
+                self.user.ollama_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_MEMORY_URL") {
+            if !v.is_empty() {
+                self.user.memory_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_EMBEDDING_URL") {
+            if !v.is_empty() {
+                self.user.embedding_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_AGENT_WORKDIR") {
+            if !v.is_empty() {
+                self.user.agent_workdir = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_CRON_DAEMON_URL") {
+            if !v.is_empty() {
+                self.user.cron_daemon_url = Some(v);
             }
         }
     }
@@ -319,6 +460,16 @@ pub struct SaveUserConfigPayload {
     pub provider_api_keys: Option<serde_json::Map<String, serde_json::Value>>,
     #[serde(rename = "onboardingComplete")]
     pub onboarding_complete: Option<bool>,
+    #[serde(rename = "ollamaUrl")]
+    pub ollama_url: Option<String>,
+    #[serde(rename = "memoryUrl")]
+    pub memory_url: Option<String>,
+    #[serde(rename = "embeddingUrl")]
+    pub embedding_url: Option<String>,
+    #[serde(rename = "agentWorkdir")]
+    pub agent_workdir: Option<String>,
+    #[serde(rename = "cronDaemonUrl")]
+    pub cron_daemon_url: Option<String>,
 }
 
 impl From<SaveUserConfigPayload> for UserConfig {
@@ -329,6 +480,11 @@ impl From<SaveUserConfigPayload> for UserConfig {
             gateway_url: payload.gateway_url,
             provider_api_keys: payload.provider_api_keys,
             onboarding_complete: payload.onboarding_complete,
+            ollama_url: payload.ollama_url,
+            memory_url: payload.memory_url,
+            embedding_url: payload.embedding_url,
+            agent_workdir: payload.agent_workdir,
+            cron_daemon_url: payload.cron_daemon_url,
         }
     }
 }
