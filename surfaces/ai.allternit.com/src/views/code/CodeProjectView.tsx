@@ -15,6 +15,7 @@ import {
   InstructionItem,
 } from '../BaseProjectView';
 import { useCodeModeStore } from './CodeModeStore';
+import { useCodeSessionStore, createCodeSession } from './CodeSessionStore';
 import { ChatComposer } from '../chat/ChatComposer';
 import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
 import {
@@ -83,15 +84,30 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleSend = (text: string): void => {
+  const createAndStreamCodeSession = async (text: string) => {
+    if (!text.trim() || !currentWorkspaceId) return;
+    const sessionId = await createCodeSession({
+      name: text.slice(0, 64) || 'New Code Thread',
+      workspaceId: currentWorkspaceId,
+    });
+    useCodeSessionStore.getState().setActiveSession(sessionId);
+    await useCodeSessionStore.getState().sendMessageStream(sessionId, { text });
+  };
+
+  const handleSend = async (text: string): Promise<void> => {
     if (!text.trim() || !currentWorkspaceId) return;
     setComposerInput('');
+    await createAndStreamCodeSession(text);
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleNewThread = (): void => {
+  const handleNewThread = async (): Promise<void> => {
     if (!currentWorkspaceId) return;
-    createSession('New Thread', currentWorkspaceId);
+    const sessionId = await createCodeSession({
+      name: 'New Thread',
+      workspaceId: currentWorkspaceId,
+    });
+    useCodeSessionStore.getState().setActiveSession(sessionId);
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 

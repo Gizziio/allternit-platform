@@ -5,6 +5,9 @@ edition = "2021"
 description = "OpenClaw subprocess host with parity capture integration"
 authors = ["allternit Team"]
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(ALL_TESTS_DISABLED)'] }
+
 [lib]
 name = "allternit_openclaw_host"
 path = "src/lib.rs"
