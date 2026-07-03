@@ -62,6 +62,21 @@ members = [
     "services/memory/observation",
     "services/memory/state/history",
     "services/memory/state/memory",
+    "domains/governance/audit-logging/core-audit",
+    "domains/governance/identity-access-control/core-policy",
+    "domains/kernel/allternit-intent-graph-kernel/allternit-intent-graph-kernel",
+    "domains/kernel/allternit-presentation-kernel",
+    "domains/kernel/drivers/ivkge-advanced",
+    "domains/kernel/drivers/multimodal-streaming",
+    "domains/kernel/drivers/swarm-advanced",
+    "domains/kernel/drivers/tambo-integration",
+    "domains/kernel/drivers/tambo-napi",
+    "domains/kernel/service/allternit-local-compute/local-inference-gguf",
+    "domains/kernel/service/environment-standardization",
+    "domains/kernel/service/multimodal-streaming",
+    "infrastructure/local",
+    "platform/protocols/allternit-protocol",
+    "services/gateway/stdio",
     "worktree-manager",
 ]
 
@@ -115,6 +130,22 @@ allternit-memory-kernel = { path = "services/memory/data/memory-kernel" }
 allternit-observation = { path = "services/memory/observation" }
 history = { path = "services/memory/state/history" }
 allternit-memory = { path = "services/memory/state/memory" }
+
+audit-log = { path = "domains/governance/audit-logging/core-audit" }
+policy = { path = "domains/governance/identity-access-control/core-policy" }
+intent-graph-kernel = { path = "domains/kernel/allternit-intent-graph-kernel/allternit-intent-graph-kernel" }
+presentation-kernel = { path = "domains/kernel/allternit-presentation-kernel" }
+allternit-ivkge-advanced = { path = "domains/kernel/drivers/ivkge-advanced" }
+allternit-multimodal-streaming = { path = "domains/kernel/drivers/multimodal-streaming" }
+allternit-swarm-advanced = { path = "domains/kernel/drivers/swarm-advanced" }
+allternit-tambo-integration = { path = "domains/kernel/drivers/tambo-integration" }
+allternit-tambo-napi = { path = "domains/kernel/drivers/tambo-napi" }
+local-inference = { path = "domains/kernel/service/allternit-local-compute/local-inference-gguf" }
+allternit-environment = { path = "domains/kernel/service/environment-standardization" }
+multimodal-streaming-execution = { path = "domains/kernel/service/multimodal-streaming" }
+allternit-multi-region = { path = "infrastructure/local" }
+allternit-protocol = { path = "platform/protocols/allternit-protocol" }
+gateway-stdio = { path = "services/gateway/stdio" }
 allternit-tools-gateway = { path = "api/gateway/routing" }
 allternit-harness-engineering = { path = "domains/kernel/drivers/harness-engineering" }
 mcp = { path = "mcp/core" }

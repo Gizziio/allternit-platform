@@ -11,7 +11,7 @@ pub mod failover;
 pub mod load_balancer;
 
 pub use types::*;
-pub use replication::CrossRegionReplicator;
+pub use replication::ReplicationEngine;
 pub use health::HealthMonitor;
 pub use failover::FailoverManager;
 pub use load_balancer::LoadBalancer;
