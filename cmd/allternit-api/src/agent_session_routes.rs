@@ -94,6 +94,47 @@ fn provider_id_from_model(model: &serde_json::Value) -> Option<String> {
     None
 }
 
+/// Verify that the requested agent is allowed to run on the requested surface.
+/// Returns `Ok(())` when allowed, or `Err(message)` when blocked.
+fn agent_allowed_on_surface(
+    db: &DbHandle,
+    agent_id: &str,
+    surface: Option<&str>,
+) -> Result<(), String> {
+    let Some(surface) = surface else {
+        return Ok(());
+    };
+
+    let conn = db.connect().map_err(|e| e.to_string())?;
+    let enabled: Option<String> = conn
+        .query_row(
+            "SELECT enabled_modes FROM agents WHERE id = ?1",
+            params![agent_id],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
+    let Some(enabled) = enabled else {
+        return Err(format!("Agent {} not found", agent_id));
+    };
+
+    let modes: Vec<String> = serde_json::from_str(&enabled).unwrap_or_default();
+    // Normalize surface names: gizzi uses some different names.
+    let normalized_surface = match surface {
+        "chat" | "cowork" | "code" | "browser" | "design" => surface,
+        _ => surface,
+    };
+
+    if modes.iter().any(|m| m == normalized_surface || m == "all") {
+        Ok(())
+    } else {
+        Err(format!(
+            "Agent {} is not enabled for surface '{}'",
+            agent_id, normalized_surface
+        ))
+    }
+}
+
 pub fn agent_session_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/agent-sessions", get(list_sessions).post(create_session))
@@ -555,8 +596,13 @@ async fn create_session(
     }
 
     // Resolve platform agent harness config and forward it into the gizzi session.
-    let agent_harness = if let Some(ref agent_id) = body.agent_id {
+    if let Some(ref agent_id) = body.agent_id {
+        if let Err(err) = agent_allowed_on_surface(&state.db, agent_id, surface.as_deref()) {
+            return (StatusCode::FORBIDDEN, Json(json!({"error": err}))).into_response();
+        }
         payload.insert("agentID".to_string(), json!(agent_id));
+    }
+    let agent_harness = if let Some(ref agent_id) = body.agent_id {
         resolve_agent_harness(&state.db, agent_id).await
     } else {
         None

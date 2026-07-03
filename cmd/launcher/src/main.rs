@@ -5,7 +5,7 @@
 //! single-file executable that "just works" when double-clicked.
 
 use anyhow::{Context, Result};
-use axum::{Router, routing::get};
+use axum::Router;
 use include_dir::{Dir, include_dir};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -14,16 +14,17 @@ use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 use tower_http::services::ServeDir;
 
-// Embed the API binary and UI assets at compile time
-// These are compressed and embedded into the final binary
-static EMBEDDED_API: &[u8] = include_bytes!("../../api/embed/allternit-api");
-static UI_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../shell-ui/dist");
+// Embed the API binary and UI assets at compile time.
+// These artifacts are produced by `script/build-embed.sh` (or the equivalent CI step)
+// and placed in the `embed/` directory at the crate root before compiling the launcher.
+static EMBEDDED_API: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/embed/allternit-api"));
+static UI_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/embed/ui");
 
 const API_PORT: u16 = 3010;
 const UI_PORT: u16 = 3456;
 
 struct LauncherState {
-    temp_dir: PathBuf,
+    _temp_dir: PathBuf,
     api_process: Arc<Mutex<Option<Child>>>,
 }
 
@@ -53,7 +54,7 @@ async fn main() -> Result<()> {
     let api_process = start_api_server(&api_path).context("Failed to start API")?;
     
     let state = Arc::new(LauncherState {
-        temp_dir: temp_dir.clone(),
+        _temp_dir: temp_dir.clone(),
         api_process: Arc::new(Mutex::new(Some(api_process))),
     });
 
@@ -102,9 +103,9 @@ async fn main() -> Result<()> {
 fn create_temp_dir() -> Result<PathBuf> {
     // Use a consistent directory name so we don't re-extract every time
     let cache_dir = dirs::cache_dir()
-        .or_else(|| std::env::temp_dir().into())
+        .unwrap_or_else(std::env::temp_dir)
         .join("allternit-platform");
-    
+
     std::fs::create_dir_all(&cache_dir)?;
     Ok(cache_dir)
 }
@@ -233,14 +234,13 @@ fn open_browser(url: String) {
 /// Cleanup on shutdown
 async fn cleanup(state: Arc<LauncherState>) {
     // Kill API process
-    if let Ok(mut guard) = state.api_process.lock().await {
-        if let Some(mut child) = guard.take() {
-            let _ = child.kill();
-            let _ = child.wait();
-        }
+    let mut guard = state.api_process.lock().await;
+    if let Some(mut child) = guard.take() {
+        let _ = child.kill();
+        let _ = child.wait();
     }
-    
-    // Note: We don't delete temp dir on purpose - 
+
+    // Note: We don't delete temp dir on purpose -
     // it caches the extraction for faster startup next time
     println!("   ✓ Cleanup complete");
 }

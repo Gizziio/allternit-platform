@@ -4,21 +4,51 @@ Single-binary launcher that embeds the Rust API server and UI assets and self-ex
 
 ## Status
 
-**Temporarily disabled from the workspace build.**
+Buildable as a standalone crate. It is intentionally **not** part of the root workspace because compiling it requires pre-built embed artifacts that are produced by the embed pipeline.
 
-The launcher relies on two build-time artifacts that are not currently produced by the repository:
+## Embed Pipeline
 
-- `allternit/api/embed/allternit-api` — the compiled API binary to embed
-- `allternit/cmd/shell-ui/dist` — the built UI assets to embed
+The launcher embeds two artifacts at compile time:
 
-Until an embed pipeline (e.g., a `build.rs` or CI step) creates these files, the crate cannot compile because `include_bytes!` and `include_dir!` require the paths to exist at compile time.
+1. `embed/allternit-api` — the compiled `allternit-api` release binary.
+2. `embed/ui` — the built static UI assets from `surfaces/ai.allternit.com`.
 
-## History
+### Building the artifacts
 
-This crate was previously duplicated at `allternit/api/kernel/launcher`. That copy has been removed; this directory (`allternit/cmd/launcher`) is now the canonical home.
+From the repository root:
 
-## To re-enable
+```bash
+./cmd/launcher/script/build-embed.sh
+```
 
-1. Add a build step that produces the artifacts above.
-2. Uncomment `"allternit/cmd/launcher"` in the workspace `Cargo.toml`.
-3. Verify with `cargo build --release -p allternit-platform-launcher`.
+This script:
+
+- Builds `allternit-api` in release mode (`cargo build --release -p allternit-api`).
+- Builds the UI (`pnpm install && pnpm build` in `surfaces/ai.allternit.com`).
+- Copies both artifacts into `cmd/launcher/embed/`.
+
+### Building the launcher
+
+After the embed artifacts exist:
+
+```bash
+cd cmd/launcher
+cargo build --release -p allternit-platform-launcher
+```
+
+The resulting binary is at `target/release/allternit-platform-launcher`.
+
+## Why standalone?
+
+`include_bytes!` and `include_dir!` require the embed paths to exist at compile time. Keeping `cmd/launcher` as its own workspace lets the root workspace (`cargo check --workspace`) pass without forcing every developer to build the full UI and API binary first.
+
+## Runtime behavior
+
+On first run the launcher:
+
+1. Extracts the embedded API binary and UI assets to the user's cache directory.
+2. Starts the API server on port `3010`.
+3. Starts a minimal static-file UI server on port `3456`.
+4. Opens the user's browser to the UI.
+
+Press `Ctrl+C` to stop both servers.
