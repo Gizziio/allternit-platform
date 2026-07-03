@@ -38,7 +38,9 @@ import { usePendingPermissions, usePendingQuestions } from "@/lib/agents";
 import { useRuntimeExecutionMode } from "@/hooks/useRuntimeExecutionMode";
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
 import { useModelSelection } from "@/providers/model-selection-provider";
-import { useAgentStore, type Agent } from "@/lib/agents";
+import { useAgentStore, type Agent, isAgentAllowedOnSurface } from "@/lib/agents";
+import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
+import { useAgentSurfaceModeStore } from "@/stores/agent-surface-mode.store";
 import { HarnessConfigPanel } from "@/views/cowork/HarnessConfigPanel";
 import { ChatIdProvider } from "@/providers/chat-id-provider";
 import { DataStreamProvider } from "@/providers/data-stream-provider";
@@ -705,13 +707,10 @@ function DesignChatPanel({
   composerSeed: string;
   onComposerSeedChange: (seed: string) => void;
 }) {
-  const { agents } = useAgentStore();
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const { agentModeEnabled, selectedAgentId, selectedAgent, allowedAgents } =
+    useSurfaceAgentSelection('design');
+  const setSelectedAgent = useAgentSurfaceModeStore((s) => s.setSelectedAgent);
   const [showHarness, setShowHarness] = useState(false);
-  const selectedAgent = useMemo(
-    () => agents.find((a) => a.id === selectedAgentId) || null,
-    [agents, selectedAgentId],
-  );
 
   const handleSend = async (text: string) => {
     if (!text.trim() || !activeSessionId) return;
@@ -737,7 +736,7 @@ function DesignChatPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <select
             value={selectedAgentId || ''}
-            onChange={(e) => setSelectedAgentId(e.target.value || null)}
+            onChange={(e) => setSelectedAgent('design', e.target.value || null)}
             style={{
               background: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
@@ -748,7 +747,7 @@ function DesignChatPanel({
             }}
           >
             <option value="">No agent selected</option>
-            {agents.map((agent: Agent) => (
+            {allowedAgents.map((agent: Agent) => (
               <option key={agent.id} value={agent.id}>
                 {agent.name}
               </option>
@@ -803,6 +802,7 @@ function DesignChatPanel({
           isLoading={isStreaming}
           placeholder={selectedAgent ? `Message ${selectedAgent.name}...` : 'Describe your design request...'}
           seedText={composerSeed}
+          agentModeSurface="design"
         />
       </div>
     </div>

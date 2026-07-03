@@ -22,6 +22,7 @@ import {
   deleteRoutine,
   runRoutine,
 } from '@/lib/automation-api';
+import { useAgentStore } from '@/lib/agents';
 import { formatRelativeTime } from '@/lib/time';
 
 const statusColor: Record<string, string> = {
@@ -39,18 +40,22 @@ export function RoutinesListView() {
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
 
+  const { agents } = useAgentStore();
+
   const [form, setForm] = useState<{
     name: string;
     description: string;
     schedule_type: ScheduleType;
     schedule_expression: string;
     timezone: string;
+    agent_id: string;
   }>({
     name: '',
     description: '',
     schedule_type: 'cron',
     schedule_expression: '0 9 * * *',
     timezone: 'UTC',
+    agent_id: '',
   });
 
   const fetchRoutines = async () => {
@@ -77,6 +82,7 @@ export function RoutinesListView() {
       schedule_type: 'cron',
       schedule_expression: '0 9 * * *',
       timezone: 'UTC',
+      agent_id: '',
     });
   };
 
@@ -90,6 +96,7 @@ export function RoutinesListView() {
         schedule_type: form.schedule_type,
         schedule_expression: form.schedule_expression,
         timezone: form.timezone || undefined,
+        agent_id: form.agent_id || undefined,
       });
       resetForm();
       setIsCreating(false);
@@ -109,6 +116,7 @@ export function RoutinesListView() {
         schedule_type: form.schedule_type,
         schedule_expression: form.schedule_expression,
         timezone: form.timezone || undefined,
+        agent_id: form.agent_id || undefined,
       });
       setEditingRoutine(null);
       resetForm();
@@ -147,6 +155,7 @@ export function RoutinesListView() {
       schedule_type: routine.schedule_type,
       schedule_expression: routine.schedule_expression,
       timezone: routine.timezone || 'UTC',
+      agent_id: routine.agent_id || '',
     });
     setIsCreating(false);
   };
@@ -248,6 +257,30 @@ export function RoutinesListView() {
                   placeholder="UTC"
                   className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                 />
+              </div>
+              <div>
+                <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Agent</Label>
+                <Select
+                  value={form.agent_id || 'none'}
+                  onValueChange={(value) => setForm((f) => ({ ...f, agent_id: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                    <SelectItem value="none">No agent selected</SelectItem>
+                    {agents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.agent_id && (
+                  <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
+                    Harness: {agents.find((a) => a.id === form.agent_id)?.harness?.mode || 'cloud'}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex gap-3 pt-2">

@@ -7,9 +7,11 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { useAgentStore, type Agent } from '@/lib/agents';
+import { useSurfaceAgentSelection } from '@/lib/agents/surface-agent-context';
+import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
 import { HarnessConfigPanel } from '@/views/cowork/HarnessConfigPanel';
 import { GlassCard } from '@/design/glass/GlassCard';
 import { Button } from '@/components/ui/button';
@@ -88,14 +90,12 @@ export function OperatorBrowserView() {
   const [selectedTask, setSelectedTask] = useState<BrowserTask | null>(null);
   const [url, setUrl] = useState('https://');
   const [isCreating, setIsCreating] = useState(false);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [showHarness, setShowHarness] = useState(false);
 
   const { agents } = useAgentStore();
-  const selectedAgent = useMemo(
-    () => agents.find((a) => a.id === selectedAgentId) || null,
-    [agents, selectedAgentId],
-  );
+  const { selectedAgentId, selectedAgent, allowedAgents } =
+    useSurfaceAgentSelection('browser');
+  const setSelectedAgent = useAgentSurfaceModeStore((s) => s.setSelectedAgent);
 
   // Check operator health on mount
   useEffect(() => {
@@ -134,6 +134,7 @@ export function OperatorBrowserView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url,
+          agent_id: selectedAgentId || undefined,
           actions: [
             { type: 'navigate', url },
             { type: 'screenshot' },
@@ -277,11 +278,11 @@ export function OperatorBrowserView() {
               <select
                 id="browser-agent"
                 value={selectedAgentId || ''}
-                onChange={(e) => setSelectedAgentId(e.target.value || null)}
+                onChange={(e) => setSelectedAgent('browser', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg text-sm border bg-[var(--bg-secondary)] text-[var(--text-primary)] border-[var(--border-primary)] focus:outline-none"
               >
                 <option value="">No agent selected</option>
-                {agents.map((agent: Agent) => (
+                {allowedAgents.map((agent: Agent) => (
                   <option key={agent.id} value={agent.id}>
                     {agent.name}
                   </option>

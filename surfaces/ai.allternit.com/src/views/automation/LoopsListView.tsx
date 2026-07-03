@@ -22,6 +22,7 @@ import {
   deleteLoop,
   runLoop,
 } from '@/lib/automation-api';
+import { useAgentStore } from '@/lib/agents';
 import { formatRelativeTime } from '@/lib/time';
 
 const statusColor: Record<string, string> = {
@@ -39,6 +40,8 @@ export function LoopsListView() {
   const [editingLoop, setEditingLoop] = useState<Loop | null>(null);
   const [runningId, setRunningId] = useState<string | null>(null);
 
+  const { agents } = useAgentStore();
+
   const [form, setForm] = useState<{
     name: string;
     description: string;
@@ -46,6 +49,7 @@ export function LoopsListView() {
     schedule_expression: string;
     session_id: string;
     expires_at: string;
+    agent_id: string;
   }>({
     name: '',
     description: '',
@@ -53,6 +57,7 @@ export function LoopsListView() {
     schedule_expression: '5m',
     session_id: '',
     expires_at: '',
+    agent_id: '',
   });
 
   const fetchLoops = async () => {
@@ -80,6 +85,7 @@ export function LoopsListView() {
       schedule_expression: '5m',
       session_id: '',
       expires_at: '',
+      agent_id: '',
     });
   };
 
@@ -94,6 +100,7 @@ export function LoopsListView() {
         schedule_expression: form.schedule_expression,
         session_id: form.session_id || undefined,
         expires_at: form.expires_at || undefined,
+        agent_id: form.agent_id || undefined,
       });
       resetForm();
       setIsCreating(false);
@@ -113,6 +120,7 @@ export function LoopsListView() {
         schedule_type: form.schedule_type,
         schedule_expression: form.schedule_expression,
         expires_at: form.expires_at || undefined,
+        agent_id: form.agent_id || undefined,
       });
       setEditingLoop(null);
       resetForm();
@@ -152,6 +160,7 @@ export function LoopsListView() {
       schedule_expression: loop.schedule_expression,
       session_id: loop.session_id || '',
       expires_at: loop.expires_at ? loop.expires_at.slice(0, 10) : '',
+      agent_id: loop.agent_id || '',
     });
     setIsCreating(false);
   };
@@ -262,6 +271,30 @@ export function LoopsListView() {
                   onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
                   className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                 />
+              </div>
+              <div>
+                <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Agent</Label>
+                <Select
+                  value={form.agent_id || 'none'}
+                  onValueChange={(value) => setForm((f) => ({ ...f, agent_id: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                    <SelectItem value="none">No agent selected</SelectItem>
+                    {agents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.agent_id && (
+                  <p className="text-xs mt-1.5" style={{ color: 'var(--text-tertiary)' }}>
+                    Harness: {agents.find((a) => a.id === form.agent_id)?.harness?.mode || 'cloud'}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex gap-3 pt-2">

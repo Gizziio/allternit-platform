@@ -140,6 +140,7 @@ export interface UpdateRoutineInput {
   schedule_type?: ScheduleType;
   schedule_expression?: string;
   timezone?: string;
+  agent_id?: string;
   config?: Record<string, unknown>;
   tags?: string[];
   metadata?: Record<string, unknown>;
@@ -169,6 +170,7 @@ export interface UpdateLoopInput {
   status?: LoopStatus;
   schedule_type?: ScheduleType;
   schedule_expression?: string;
+  agent_id?: string;
   config?: Record<string, unknown>;
   tags?: string[];
   metadata?: Record<string, unknown>;
