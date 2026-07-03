@@ -34,8 +34,10 @@ members = [
     "services/orchestration/control-plane/unified-registry/registry",
     "domains/agent/allternit-agent-workspace/allternit-agent-workspace",
     "domains/agent-swarm/core",
+    "domains/kernel/drivers/allternit-acp-driver/allternit-acp-driver",
     "domains/kernel/drivers/allternit-providers",
     "domains/kernel/drivers/allternit-rlm",
+    "domains/kernel/drivers/allternit-runtime",
     "domains/kernel/drivers/context-pack-builder",
     "domains/kernel/drivers/dag-wih-integration",
     "domains/kernel/service/allternit-local-compute/executor",
@@ -56,6 +58,12 @@ members = [
     "services/memory/data/history-ledger",
     "domains/governance/identity-access-control/policy-engine",
     "domains/governance/identity-access-control/policy-tier-gating",
+    "domains/governance/security-quality-assurance/evals",
+    "domains/agent/allternit-embodiment",
+    "domains/kernel/core/kernel-compat",
+    "domains/kernel/service/allternit-ops/packaging",
+    "services/orchestration/control-plane/allternit-control/control-plane",
+    "services/orchestration/control-plane/unified-registry/artifact-registry",
     "platform/protocols/communication/kernel-messaging",
     "domains/governance/governance-workflows/core-governance",
     "domains/governance/security-network/security-hardening",
@@ -72,6 +80,8 @@ members = [
     "domains/kernel/core/runtime-execution-core",
     "services/orchestration/control-plane/allternit-control/context-router",
     "domains/kernel/drivers/evolution-layer",
+    "domains/kernel/drivers/harness-engineering",
+    "services/process-driver",
     "services/memory/data/memory-kernel",
     "services/memory/observation",
     "services/memory/state/history",
@@ -176,9 +186,17 @@ allternit-cron-parser = { path = "infrastructure/scheduler/cron-parser" }
 allternit-cloud-api = { path = "cmd/allternit-cloud-api" }
 
 allternit-receipts-schema = { path = "domains/governance/evidence-management/receipts-schema" }
+allternit-evals = { path = "domains/governance/security-quality-assurance/evals" }
+allternit-embodiment = { path = "domains/agent/allternit-embodiment" }
+allternit-kernel-compat = { path = "domains/kernel/core/kernel-compat" }
+allternit-packaging = { path = "domains/kernel/service/allternit-ops/packaging" }
+allternit-artifact-registry = { path = "services/orchestration/control-plane/unified-registry/artifact-registry" }
+allternit-control-plane = { path = "services/orchestration/control-plane/allternit-control/control-plane" }
 allternit-meta-swarm = { path = "domains/agent-swarm/core" }
 allternit-rlm = { path = "domains/kernel/drivers/allternit-rlm" }
 allternit-providers = { path = "domains/kernel/drivers/allternit-providers" }
+allternit-acp-driver = { path = "domains/kernel/drivers/allternit-acp-driver/allternit-acp-driver" }
+allternit-runtime = { path = "domains/kernel/drivers/allternit-runtime" }
 allternit-context-pack-builder = { path = "domains/kernel/drivers/context-pack-builder" }
 allternit-dag-wih-integration = { path = "domains/kernel/drivers/dag-wih-integration" }
 executor = { path = "domains/kernel/service/allternit-local-compute/executor" }

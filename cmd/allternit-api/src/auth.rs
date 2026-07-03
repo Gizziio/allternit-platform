@@ -96,6 +96,42 @@ pub struct AuthUser {
     pub tenant_id: Option<String>,
 }
 
+/// Build a default local user for dev/test mode.
+fn local_dev_user(tenant_id: Option<String>) -> AuthUser {
+    AuthUser {
+        user_id: "local-dev-user".to_string(),
+        email: Some("dev@allternit.local".to_string()),
+        name: Some("Local Developer".to_string()),
+        avatar_url: None,
+        tenant_id,
+    }
+}
+
+/// Returns true when the request appears to originate from the same machine.
+fn is_localhost_origin(headers: &HeaderMap) -> bool {
+    let host = headers
+        .get("host")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let origin = headers
+        .get("origin")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let referer = headers
+        .get("referer")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let local = |s: &str| {
+        s.contains("://127.0.0.1")
+            || s.contains("://localhost")
+            || s.starts_with("127.0.0.1:")
+            || s.starts_with("localhost:")
+    };
+
+    local(host) || local(origin) || local(referer)
+}
+
 /// Clerk JWT claims
 #[derive(Debug, Serialize, Deserialize)]
 struct ClerkClaims {
@@ -484,8 +520,34 @@ pub async fn auth_middleware(
                 request.extensions_mut().insert(user);
                 return next.run(request).await;
             }
-            Err(e) => return e.into_response(),
+            Err(e) => {
+                // Local development bypass: if the token is invalid but we're
+                // running in local dev mode from localhost, fall back to the
+                // default local user instead of hard-failing. This handles
+                // stale localStorage tokens during development.
+                if state.config.local_dev_bypass()
+                    && is_localhost_origin(request.headers())
+                {
+                    warn!(error = %e, "JWT verification failed; falling back to local dev user");
+                } else {
+                    return e.into_response();
+                }
+            }
         }
+    }
+
+    // Local development bypass: when enabled and the request is from localhost,
+    // treat it as the default local user. This keeps the packaged-app and
+    // browser dev flows working without distributing Clerk tokens to devs.
+    if state.config.local_dev_bypass() && is_localhost_origin(request.headers()) {
+        let user = local_dev_user(Some(state.config.tenant_id()));
+        if let Err(e) = ensure_user_in_db(&state.db, &user) {
+            return e.into_response();
+        }
+        let headers = request.headers_mut();
+        insert_user_headers(headers, &user);
+        request.extensions_mut().insert(user);
+        return next.run(request).await;
     }
 
     AuthError::MissingToken.into_response()

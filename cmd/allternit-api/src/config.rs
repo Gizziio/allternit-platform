@@ -90,9 +90,18 @@ pub struct AppConfig {
 
 impl AppConfig {
     /// Load company + user config from disk and apply env overrides.
+    /// If the user config has no default model but the Gizzi runtime config
+    /// does, mirror it so the UI and API agree on which brain to use.
     pub fn load() -> Self {
         let company = load_company_config();
-        let user = load_user_config();
+        let mut user = load_user_config();
+
+        if user.default_model.is_none() {
+            if let Some(model) = read_gizzi_default_model() {
+                info!(model = %model, "Mirroring Gizzi default model into user config");
+                user.default_model = Some(model);
+            }
+        }
 
         let mut config = Self { company, user };
         config.apply_env_overrides();
@@ -193,6 +202,16 @@ impl AppConfig {
     /// Whether onboarding has been completed.
     pub fn onboarding_complete(&self) -> bool {
         self.user.onboarding_complete.unwrap_or(false)
+    }
+
+    /// When true, requests originating from localhost without a Clerk token are
+    /// accepted as a default local user. This is intended only for local
+    /// development and packaged-app smoke tests; it is disabled by default.
+    pub fn local_dev_bypass(&self) -> bool {
+        std::env::var("ALLTERNIT_LOCAL_DEV_BYPASS")
+            .ok()
+            .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+            .unwrap_or(false)
     }
 
     /// Apply env-variable overrides to the in-memory config. This keeps the
@@ -312,4 +331,34 @@ impl From<SaveUserConfigPayload> for UserConfig {
             onboarding_complete: payload.onboarding_complete,
         }
     }
+}
+
+/// Best-effort read of the default model from the Gizzi runtime user config.
+/// This lets the Allternit UI reflect a brain that was already configured
+/// directly in Gizzi without requiring the user to re-run the wizard.
+/// Falls back to the first provider/model entry when no explicit default is set.
+fn read_gizzi_default_model() -> Option<String> {
+    let path = gizzi_user_config_path();
+    let text = std::fs::read_to_string(&path).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+
+    if let Some(model) = value.get("model").and_then(|v| v.as_str()) {
+        return Some(model.to_string());
+    }
+
+    // Infer default from the first provider's first model.
+    value.get("provider")?.as_object()?.iter().next().and_then(|(provider_id, provider)| {
+        let model_id = provider
+            .get("models")
+            .and_then(|m| m.as_object())
+            .and_then(|m| m.keys().next())
+            .cloned()?;
+        Some(format!("{}/{}", provider_id, model_id))
+    })
+}
+
+fn gizzi_user_config_path() -> PathBuf {
+    dirs::config_dir()
+        .map(|p| p.join("gizzi").join("gizzi.json"))
+        .unwrap_or_else(|| PathBuf::from(".config/gizzi/gizzi.json"))
 }

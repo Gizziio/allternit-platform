@@ -88,7 +88,11 @@ impl AcpBrainRuntime {
 
 #[async_trait]
 impl BrainRuntime for AcpBrainRuntime {
-    async fn create_session(&self, req: CreateSession) -> Result<SessionHandle, RuntimeError> {
+    async fn create_session(
+        &self,
+        tenant_id: String,
+        req: CreateSession,
+    ) -> Result<SessionHandle, RuntimeError> {
         // Validate source + event_mode
         req.validate()?;
 
@@ -96,6 +100,7 @@ impl BrainRuntime for AcpBrainRuntime {
 
         let handle = SessionHandle {
             id: session_id.clone(),
+            tenant_id,
             profile_id: req.profile_id,
             model_id: req.model_id,
             source: req.source,
@@ -116,6 +121,7 @@ impl BrainRuntime for AcpBrainRuntime {
 
     async fn send_prompt(
         &self,
+        _tenant_id: &str,
         _session: &SessionHandle,
         _prompt: Prompt,
     ) -> Result<NormalizedResponse, RuntimeError> {
@@ -125,6 +131,7 @@ impl BrainRuntime for AcpBrainRuntime {
 
     async fn send_prompt_stream(
         &self,
+        _tenant_id: &str,
         _session: &SessionHandle,
         _prompt: Prompt,
     ) -> Result<mpsc::Receiver<StreamEvent>, RuntimeError> {
@@ -134,19 +141,28 @@ impl BrainRuntime for AcpBrainRuntime {
 
     async fn send_tool_result(
         &self,
+        _tenant_id: &str,
         _session: &SessionHandle,
         _result: ToolResult,
     ) -> Result<(), RuntimeError> {
         Ok(())
     }
 
-    async fn close_session(&self, session: SessionHandle) -> Result<(), RuntimeError> {
+    async fn close_session(
+        &self,
+        _tenant_id: &str,
+        session: SessionHandle,
+    ) -> Result<(), RuntimeError> {
         self.sessions.write().await.remove(&session.id);
         info!("Closed ACP session: {}", session.id);
         Ok(())
     }
 
-    async fn session_status(&self, session_id: &str) -> Result<SessionHandle, RuntimeError> {
+    async fn session_status(
+        &self,
+        _tenant_id: &str,
+        session_id: &str,
+    ) -> Result<SessionHandle, RuntimeError> {
         self.sessions
             .read()
             .await
@@ -155,7 +171,10 @@ impl BrainRuntime for AcpBrainRuntime {
             .ok_or_else(|| RuntimeError::SessionNotFound(session_id.to_string()))
     }
 
-    async fn list_sessions(&self) -> Result<Vec<SessionHandle>, RuntimeError> {
+    async fn list_sessions(
+        &self,
+        _tenant_id: &str,
+    ) -> Result<Vec<SessionHandle>, RuntimeError> {
         Ok(self.sessions.read().await.values().map(|s| s.handle.clone()).collect())
     }
 }

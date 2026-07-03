@@ -35,9 +35,6 @@ allternit-driver-interface = { path = "../../platform/contracts/driver-interface
 allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 allternit-session-manager = { path = "../../services/session-manager" }
 
-[target.'cfg(target_os = "macos")'.dependencies]
-allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
-
 # WebSocket
 tokio-tungstenite = { workspace = true }
 futures = "0.3"
@@ -57,7 +54,6 @@ async-trait = "0.1"
 hostname = "0.4"
 hex = "0.4"
 once_cell = { workspace = true }
-keyring = "3"
 
 # HTTP middleware
 tower-http = { workspace = true, features = ["fs", "cors"] }
@@ -82,6 +78,16 @@ base64 = "0.22"
 
 # PDF Rendering dependencies
 printpdf = "0.6"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
+keyring = { version = "3", features = ["apple-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3", features = ["linux-native-sync-persistent"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3", features = ["windows-native"] }
 
 # Testing
 [dev-dependencies]

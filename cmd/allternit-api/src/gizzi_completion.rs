@@ -86,12 +86,17 @@ pub async fn complete(
         }
     };
 
-    // Send the message.
-    let mut parts = vec![json!({ "type": "text", "text": prompt })];
-    if let Some(system_text) = system {
-        parts.insert(0, json!({ "type": "system", "text": system_text }));
-    }
-    let message_payload = json!({ "parts": parts });
+    // Send the message. Gizzi message parts only accept a fixed set of types,
+    // and "system" is not one of them, so we prepend the system prompt to the
+    // user text if one was provided.
+    let full_prompt = if let Some(system_text) = system {
+        format!("{system_text}\n\n{prompt}")
+    } else {
+        prompt.to_string()
+    };
+    let message_payload = json!({
+        "parts": [{ "type": "text", "text": full_prompt }]
+    });
 
     if let Err(err) = client
         .post(format!("{}/v1/session/{}/message", gizzi, session_id))
