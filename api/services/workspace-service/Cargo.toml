@@ -21,3 +21,6 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 chrono = { workspace = true, features = ["serde"] }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+tower = { workspace = true }
