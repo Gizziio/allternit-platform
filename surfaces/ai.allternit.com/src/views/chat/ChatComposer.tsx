@@ -2085,7 +2085,7 @@ export function ChatComposer({
       
       {showAgentMenu && agentModeSurface && (
         <AgentSelectorDropdown
-          agents={agents}
+          agents={agents.filter((a) => isAgentAllowedOnSurface(a, agentModeSurface))}
           isLoading={isLoadingAgents}
           selectedAgent={selectedSurfaceAgentId}
           workspaceArtifacts={characterArtifacts}

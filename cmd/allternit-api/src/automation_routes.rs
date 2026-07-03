@@ -343,9 +343,29 @@ async fn gizzi_run_job(
         .map_err(|e| format!("gizzi cron run decode failed: {}", e))
 }
 
+async fn resolve_agent_harness(db: &crate::db::DbHandle, agent_id: &str) -> Option<serde_json::Value> {
+    let db = db.clone();
+    let agent_id = agent_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect().ok()?;
+        let harness: String = conn
+            .query_row(
+                "SELECT harness_config FROM agents WHERE id = ?1",
+                params![agent_id],
+                |row| row.get(0),
+            )
+            .ok()?;
+        serde_json::from_str::<serde_json::Value>(&harness).ok()
+    })
+    .await
+    .ok()
+    .flatten()
+}
+
 fn build_gizzi_job_from_routine(
     routine: &Routine,
     job_type: &str,
+    harness_config: Option<serde_json::Value>,
 ) -> serde_json::Value {
     json!({
         "name": routine.name,
@@ -359,6 +379,8 @@ fn build_gizzi_job_from_routine(
         },
         "config": routine.config,
         "scope": "persistent",
+        "agentId": routine.agent_id,
+        "harness": harness_config,
         "tags": routine.tags,
         "metadata": routine.metadata,
         "maxRuns": routine.max_runs,
@@ -367,7 +389,7 @@ fn build_gizzi_job_from_routine(
     })
 }
 
-fn build_gizzi_job_from_loop(loop_item: &Loop, job_type: &str) -> serde_json::Value {
+fn build_gizzi_job_from_loop(loop_item: &Loop, job_type: &str, harness_config: Option<serde_json::Value>) -> serde_json::Value {
     json!({
         "name": loop_item.name,
         "description": loop_item.description,
@@ -380,6 +402,8 @@ fn build_gizzi_job_from_loop(loop_item: &Loop, job_type: &str) -> serde_json::Va
         "config": loop_item.config,
         "scope": "session",
         "sessionId": loop_item.session_id,
+        "agentId": loop_item.agent_id,
+        "harness": harness_config,
         "expiresAt": loop_item.expires_at,
         "tags": loop_item.tags,
         "metadata": loop_item.metadata,
@@ -754,7 +778,12 @@ async fn create_routine(
         updated_at: now.clone(),
     };
 
-    let gizzi_job = build_gizzi_job_from_routine(&routine, &job_type);
+    let harness_config = if let Some(ref agent_id) = routine.agent_id {
+        resolve_agent_harness(&state.db, agent_id).await
+    } else {
+        None
+    };
+    let gizzi_job = build_gizzi_job_from_routine(&routine, &job_type, harness_config);
     let client = reqwest::Client::new();
     let gizzi_res = gizzi_create_job(&client, gizzi_job).await;
 
@@ -915,7 +944,12 @@ async fn update_routine(
 
     if let Some(gizzi_job_id) = existing.1 {
         let updated_routine = get_routine(State(state.clone()), headers.clone(), Path(id.clone())).await?.0;
-        let gizzi_job = build_gizzi_job_from_routine(&updated_routine, &job_type);
+        let harness_config = if let Some(ref agent_id) = updated_routine.agent_id {
+            resolve_agent_harness(&state.db, agent_id).await
+        } else {
+            None
+        };
+        let gizzi_job = build_gizzi_job_from_routine(&updated_routine, &job_type, harness_config);
         let client = reqwest::Client::new();
         if let Err(e) = gizzi_update_job(&client, &gizzi_job_id, gizzi_job).await {
             warn!("failed to update gizzi routine job: {}", e);
@@ -1135,7 +1169,12 @@ async fn create_loop(
         updated_at: now.clone(),
     };
 
-    let gizzi_job = build_gizzi_job_from_loop(&loop_item, &job_type);
+    let harness_config = if let Some(ref agent_id) = loop_item.agent_id {
+        resolve_agent_harness(&state.db, agent_id).await
+    } else {
+        None
+    };
+    let gizzi_job = build_gizzi_job_from_loop(&loop_item, &job_type, harness_config);
     let client = reqwest::Client::new();
     let gizzi_res = gizzi_create_job(&client, gizzi_job).await;
 
@@ -1288,7 +1327,12 @@ async fn update_loop(
 
     if let Some(gizzi_job_id) = existing.1 {
         let updated_loop = get_loop(State(state.clone()), headers.clone(), Path(id.clone())).await?.0;
-        let gizzi_job = build_gizzi_job_from_loop(&updated_loop, &job_type);
+        let harness_config = if let Some(ref agent_id) = updated_loop.agent_id {
+            resolve_agent_harness(&state.db, agent_id).await
+        } else {
+            None
+        };
+        let gizzi_job = build_gizzi_job_from_loop(&updated_loop, &job_type, harness_config);
         let client = reqwest::Client::new();
         if let Err(e) = gizzi_update_job(&client, &gizzi_job_id, gizzi_job).await {
             warn!("failed to update gizzi loop job: {}", e);

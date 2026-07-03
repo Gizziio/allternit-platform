@@ -174,6 +174,16 @@ export {
 export { useAgent } from "./use-agent";
 
 export { useAgentsWithSwarms } from "./use-agents-with-swarms";
+
+export {
+  useSurfaceAgentModeEnabled,
+  useSurfaceAgentSelection,
+  isAgentAllowedOnSurface,
+  buildAgentConversationContext,
+} from "./surface-agent-context";
+export type {
+  AgentConversationContext,
+} from "./surface-agent-context";
 export { swarmToAgent, isSwarmAgentId, getSwarmIdFromAgent } from "./swarm-as-agent";
 // useA2ADelegation is not exported from ./use-a2a-delegation
 
