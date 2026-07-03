@@ -1,225 +1,133 @@
-# Allternitchitech Voice Service
+# Voice Service
 
-Text-to-Speech and Voice Cloning service powered by Chatterbox (Resemble AI).
+HTTP API service for voice synthesis and recognition. The Rust implementation
+in this crate provides a lightweight, simulated voice API that mirrors the
+contract of the full Python/Chatterbox voice wrapper in `api/main.py`.
 
-## Architecture
+## Scope
 
-This service consists of two parts:
-1. **FastAPI Python Service** (`api/main.py`) - Wraps Chatterbox models
-2. **Rust Client Library** (`src/`) - Type-safe HTTP client for Rust applications
+- **Text-to-Speech (TTS)** — generate simulated speech metadata.
+- **Speech-to-Text (STT)** — accept audio uploads and return simulated
+  transcriptions.
+- **Session management** — create and track TTS/STT sessions.
+- **Model introspection** — list TTS voices and STT models.
 
-## Setup
+The `api/` directory still contains the Python FastAPI service backed by
+Chatterbox, XTTS, Piper, and Whisper. The Rust service here is the standalone
+Cargo package and is what `cargo build --workspace` produces.
 
-### Prerequisites
-
-- Python 3.10+
-- Rust toolchain
-- Chatterbox dependencies (will install from requirements.txt)
-
-### Installation
-
-```bash
-# Install Python dependencies
-cd api
-pip install -r requirements.txt
-
-# Build Rust client
-cargo build --release
-```
-
-## Usage
-
-### Starting the FastAPI Service
+## Running
 
 ```bash
-# Using the start script
-./start.sh
+# Run the Rust service on port 8001
+cargo run -p voice-service
 
-# Or manually
-cd api
-uvicorn main:app --host 0.0.0.0 --port 8001
+# Run tests
+cargo test -p voice-service
 ```
 
-### Environment Variables
+The service binds to `0.0.0.0:8001` by default.
 
-- `PORT`: Port to listen on (default: 8001)
-- `AUDIO_OUTPUT_DIR`: Directory for generated audio files (default: /tmp/voice-service)
-- `PRELOAD_MODEL`: Preload Chatterbox model on startup (default: false)
-- `VOICE_PRESET_JSON`: Inline JSON manifest of voice presets
-- `VOICE_PRESET_PATH`: Path to a JSON voice preset manifest
-- `PRELOAD_VOICE_PROMPTS`: Preload all voice preset assets on startup (default: true)
-- `XTTS_MODEL_ID`: Override the XTTS model id (default: tts_models/multilingual/multi-dataset/xtts_v2)
-- `XTTS_DEVICE`: Force XTTS device (cpu, cuda, mps)
-- `PRELOAD_XTTS_MODEL`: Preload XTTS model on startup (default: false)
-- `PIPER_BIN`: Absolute path to the `piper` binary (fallback uses `piper` in PATH)
-- `PIPER_FALLBACK_MODEL`: URL or local path to a Piper `.onnx` model used as fallback
-- `PIPER_FALLBACK_CONFIG`: Optional config path/URL for the Piper fallback voice
-- `PRELOAD_PIPER_FALLBACK`: Preload the Piper fallback assets on startup (default: false)
+## API Endpoints
 
-### API Endpoints
+### Health
 
-#### Health Check
 ```bash
 GET /health
+GET /v1/health
 ```
 
-#### List Models
+### TTS
+
+List voices:
+
 ```bash
-GET /v1/voice/models
+GET /v1/voices
+GET /v1/voices/:id
 ```
 
-#### List Voices
-```bash
-GET /v1/voice/voices
-```
+Text-to-speech:
 
-#### Text-to-Speech
 ```bash
-POST /v1/voice/tts
+POST /v1/tts
 {
   "text": "Hello world",
-  "voice": "default",
-  "format": "wav",
-  "use_paralinguistic": true
+  "voice_id": "default"
 }
 ```
 
-#### Voice Cloning
+Streaming TTS:
+
 ```bash
-POST /v1/voice/clone
+POST /v1/tts/stream
 {
-  "text": "Hello world",
-  "reference_audio_url": "/v1/voice/audio/ref_audio.wav",
-  "format": "wav"
+  "text": "Hello world"
 }
 ```
 
-#### Upload Reference Audio
+### STT
+
+List models:
+
 ```bash
-POST /v1/voice/upload
+GET /v1/stt/models
+```
+
+Speech-to-text (multipart):
+
+```bash
+POST /v1/stt
 Content-Type: multipart/form-data
-file: <audio_file>
+audio: <audio_bytes>
+language: en
 ```
 
-## Voice Preset Manifest
+Streaming STT:
 
-Provide `VOICE_PRESET_JSON` or `VOICE_PRESET_PATH` with entries like:
-
-```json
-[
-  {
-    "id": "calm",
-    "label": "Calm (Chatterbox)",
-    "engine": "chatterbox",
-    "prompt": "https://example.com/voices/calm.wav"
-  },
-  {
-    "id": "narrator",
-    "label": "Narrator (XTTS)",
-    "engine": "xtts_v2",
-    "speaker_wav": "https://example.com/voices/narrator.wav",
-    "language": "en"
-  },
-  {
-    "id": "piper-amy",
-    "label": "Amy (Piper)",
-    "engine": "piper",
-    "model": "/models/en_US-amy-medium.onnx",
-    "config": "/models/en_US-amy-medium.onnx.json"
-  }
-]
+```bash
+POST /v1/stt/stream
 ```
 
-Notes:
-- Chatterbox presets use `prompt` audio for voice conditioning.
-- XTTS presets use `speaker_wav` for voice cloning.
-- Piper presets expect a `.onnx` model and a matching `.json` config (the config should sit next to the model).
+### Sessions
 
-## Voice Pack License Checklist
+```bash
+GET    /v1/sessions
+POST   /v1/sessions        { "mode": "tts" }
+GET    /v1/sessions/:id
+DELETE /v1/sessions/:id
+```
 
-Before shipping voice packs, verify:
-- The license permits commercial use and redistribution of derived audio.
-- The voice prompt source has consent for synthetic voice generation.
-- The dataset or speaker audio terms allow model conditioning or cloning.
-- You keep a record of source URLs and licenses alongside the manifest.
+### Stats
 
-## Rust Client Usage
+```bash
+GET /v1/stats
+```
+
+See [spec/API.md](./spec/API.md) for the full API contract.
+
+## Rust Client
+
+The crate also exposes a small HTTP client for the Python voice service in
+`src/client.rs`:
 
 ```rust
 use voice_service::{VoiceClient, TTSRequest};
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = VoiceClient::default();
-
-    let request = TTSRequest {
-        text: "Hello from Rust!".to_string(),
-        voice: "default".to_string(),
-        format: "wav".to_string(),
-        use_paralinguistic: true,
-    };
-
-    let response = client.text_to_speech(request).await?;
-    println!("Audio URL: {}", response.audio_url);
-    println!("Duration: {}s", response.duration);
-
-    Ok(())
-}
+let client = VoiceClient::default();
+let request = TTSRequest {
+    text: "Hello from Rust".to_string(),
+    voice: "default".to_string(),
+    format: "wav".to_string(),
+    use_paralinguistic: true,
+};
+let response = client.text_to_speech(request).await?;
 ```
 
-## Integration with Kernel
+## Testing
 
-The voice service can be integrated with the Allternitchitech kernel as a tool:
-
-```rust
-// In kernel's ToolExecutor
-use voice_service::{VoiceClient, TTSRequest};
-
-async fn execute_voice_tts(text: String) -> Result<AudioResult> {
-    let client = VoiceClient::default();
-    let request = TTSRequest {
-        text,
-        voice: "default".to_string(),
-        format: "wav".to_string(),
-        use_paralinguistic: true,
-    };
-
-    let response = client.text_to_speech(request).await?;
-    Ok(AudioResult {
-        url: response.audio_url,
-        duration: response.duration,
-    })
-}
+```bash
+cargo test -p voice-service
 ```
 
-## Paralinguistic Tags
-
-Chatterbox Turbo supports paralinguistic tags for more natural speech:
-- `[laugh]`
-- `[chuckle]`
-- `[cough]`
-
-Example:
-```json
-{
-  "text": "Hi there [chuckle], how can I help you today?"
-}
-```
-
-## Troubleshooting
-
-### Model fails to load
-- Ensure all dependencies are installed: `pip install -r requirements.txt`
-- Check system memory - Chatterbox Turbo requires ~1-2GB RAM
-- XTTS requires `TTS` and will download weights on first use
-- Piper requires the `piper` CLI and a valid `.onnx` + `.json` model pair
-
-### Audio generation fails
-- Check if the model is loaded: `GET /health`
-- Verify input text is not empty
-- Check disk space in `AUDIO_OUTPUT_DIR`
-
-### Import errors (Python)
-- The language server may show import warnings for `chatterbox` and `torchaudio`
-- These are false positives - the modules will be available at runtime
-- Verify by running: `python -c "from chatterbox.tts_turbo import ChatterboxTurboTTS"`
+Integration tests live in `tests/integration.rs` and exercise the router via
+Tower's `ServiceExt::oneshot`, so no network port is required.
