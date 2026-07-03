@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.com/schemas/tools-gateway/execute-tool-response.json",
+  "title": "ExecuteToolResponse",
+  "type": "object",
+  "required": ["success", "output", "error", "io_captured", "policy_enforced"],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "True when execution completed without error"
+    },
+    "output": {
+      "type": ["object", "null"],
+      "description": "Tool output when successful"
+    },
+    "error": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/ToolError" }
+      ],
+      "description": "Error details when execution failed"
+    },
+    "io_captured": {
+      "type": "boolean",
+      "description": "Whether the call was journaled"
+    },
+    "policy_enforced": {
+      "type": "boolean",
+      "description": "Whether policy was evaluated"
+    }
+  },
+  "$defs": {
+    "ToolError": {
+      "type": "object",
+      "required": ["code", "message", "details"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Machine-readable error code"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable error message"
+        },
+        "details": {
+          "type": ["object", "null"],
+          "description": "Optional structured error details"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

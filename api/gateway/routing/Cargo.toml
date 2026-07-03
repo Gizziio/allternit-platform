@@ -42,3 +42,4 @@ sha2 = "0.10"
 
 [dev-dependencies]
 sqlx = { workspace = true, features = ['chrono', 'uuid'] }
+tower = { workspace = true }

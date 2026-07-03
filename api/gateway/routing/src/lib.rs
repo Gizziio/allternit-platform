@@ -1,4 +1,5 @@
 pub mod mcp_bridge;
+pub mod service;
 
 use allternit_history::HistoryLedger;
 use allternit_messaging::{EventEnvelope, MessagingSystem};

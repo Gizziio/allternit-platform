@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.com/schemas/tools-gateway/tool-execution-request.json",
+  "title": "ToolExecutionRequest",
+  "type": "object",
+  "required": ["tool_id", "input", "identity_id", "session_id", "tenant_id"],
+  "properties": {
+    "tool_id": {
+      "type": "string",
+      "description": "Tool identifier"
+    },
+    "input": {
+      "type": "object",
+      "description": "Tool-specific input payload"
+    },
+    "identity_id": {
+      "type": "string",
+      "description": "Identity requesting execution"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session scope"
+    },
+    "tenant_id": {
+      "type": "string",
+      "description": "Tenant scope"
+    },
+    "run_id": {
+      "type": ["string", "null"],
+      "description": "Run scope used for filesystem isolation"
+    },
+    "workflow_id": {
+      "type": ["string", "null"],
+      "description": "Workflow identifier"
+    },
+    "node_id": {
+      "type": ["string", "null"],
+      "description": "Workflow node identifier"
+    },
+    "wih_id": {
+      "type": ["string", "null"],
+      "description": "Workflow invocation handle"
+    },
+    "write_scope": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/WriteScope" }
+      ]
+    },
+    "capsule_run": {
+      "type": ["boolean", "null"],
+      "description": "Whether this is a capsule-scoped run"
+    },
+    "trace_id": {
+      "type": ["string", "null"],
+      "description": "Trace / correlation identifier"
+    },
+    "retry_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of retry attempts so far"
+    },
+    "idempotency_key": {
+      "type": ["string", "null"],
+      "description": "Idempotency key required for side-effecting tools"
+    }
+  },
+  "$defs": {
+    "WriteScope": {
+      "type": "object",
+      "required": ["root", "allowed_globs"],
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "Root directory for filesystem access"
+        },
+        "allowed_globs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Glob patterns allowed under root"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

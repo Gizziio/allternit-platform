@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.com/schemas/tools-gateway/health-response.json",
+  "title": "HealthResponse",
+  "type": "object",
+  "required": ["status", "service", "version", "ontology_compliance"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "description": "Service status, e.g. 'ok'"
+    },
+    "service": {
+      "type": "string",
+      "description": "Service identifier"
+    },
+    "version": {
+      "type": "string",
+      "description": "Crate version"
+    },
+    "ontology_compliance": {
+      "type": "boolean",
+      "description": "Whether the service asserts LAW-ONT-002 compliance"
+    }
+  },
+  "additionalProperties": false
+}

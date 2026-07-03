@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.com/schemas/tools-gateway/tool-definition.json",
+  "title": "ToolDefinition",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "description",
+    "tool_type",
+    "command",
+    "endpoint",
+    "input_schema",
+    "output_schema",
+    "side_effects",
+    "idempotency_behavior",
+    "retryable",
+    "failure_classification",
+    "safety_tier",
+    "resource_limits"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique tool identifier"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "tool_type": {
+      "type": "string",
+      "enum": ["Local", "Http", "Mpc", "Sdk", "Subprocess", "Mcp"],
+      "description": "Adapter used to execute the tool"
+    },
+    "command": {
+      "type": "string",
+      "description": "Command for local tools"
+    },
+    "endpoint": {
+      "type": "string",
+      "description": "Endpoint for HTTP tools"
+    },
+    "input_schema": {
+      "type": "object",
+      "description": "JSON Schema describing valid inputs"
+    },
+    "output_schema": {
+      "type": "object",
+      "description": "JSON Schema describing valid outputs"
+    },
+    "side_effects": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Declared side-effect categories"
+    },
+    "idempotency_behavior": {
+      "type": "string"
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "failure_classification": {
+      "type": "string"
+    },
+    "safety_tier": {
+      "type": "string",
+      "enum": ["T0", "T1", "T2", "T3", "T4"],
+      "description": "T0=read-only, T4=actuation"
+    },
+    "resource_limits": {
+      "$ref": "#/$defs/ResourceLimits"
+    },
+    "subprocess": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/SubprocessSpec" }
+      ]
+    }
+  },
+  "$defs": {
+    "ResourceLimits": {
+      "type": "object",
+      "required": ["network", "filesystem", "time_limit"],
+      "properties": {
+        "cpu": {
+          "type": ["string", "null"]
+        },
+        "memory": {
+          "type": ["string", "null"]
+        },
+        "network": {
+          "$ref": "#/$defs/NetworkAccess"
+        },
+        "filesystem": {
+          "$ref": "#/$defs/FilesystemAccess"
+        },
+        "time_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Timeout in seconds"
+        }
+      },
+      "additionalProperties": false
+    },
+    "NetworkAccess": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["None", "Unrestricted"]
+        },
+        {
+          "type": "object",
+          "required": ["DomainAllowlist"],
+          "properties": {
+            "DomainAllowlist": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "FilesystemAccess": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["None"]
+        },
+        {
+          "type": "object",
+          "required": ["Allowlist"],
+          "properties": {
+            "Allowlist": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["ReadWrite"],
+          "properties": {
+            "ReadWrite": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "SubprocessSpec": {
+      "type": "object",
+      "required": ["worker_id"],
+      "properties": {
+        "worker_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

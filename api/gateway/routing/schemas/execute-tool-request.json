@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.com/schemas/tools-gateway/execute-tool-request.json",
+  "title": "ExecuteToolRequest",
+  "type": "object",
+  "required": ["tool_id", "input", "correlation_id", "run_id", "wih_id"],
+  "properties": {
+    "tool_id": {
+      "type": "string",
+      "description": "Registered tool identifier"
+    },
+    "input": {
+      "type": "object",
+      "description": "Tool-specific input payload"
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Idempotency / trace correlation key"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Run scope used for filesystem isolation"
+    },
+    "wih_id": {
+      "type": "string",
+      "description": "Workflow invocation handle context"
+    }
+  },
+  "additionalProperties": false
+}

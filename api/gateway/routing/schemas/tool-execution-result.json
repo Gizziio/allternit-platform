@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.com/schemas/tools-gateway/tool-execution-result.json",
+  "title": "ToolExecutionResult",
+  "type": "object",
+  "required": [
+    "execution_id",
+    "tool_id",
+    "input",
+    "stdout",
+    "stderr",
+    "execution_time_ms",
+    "resources_used",
+    "timestamp"
+  ],
+  "properties": {
+    "execution_id": {
+      "type": "string",
+      "description": "Unique execution identifier"
+    },
+    "tool_id": {
+      "type": "string"
+    },
+    "input": {
+      "type": "object"
+    },
+    "output": {
+      "type": ["object", "null"]
+    },
+    "error": {
+      "type": ["string", "null"]
+    },
+    "stdout": {
+      "type": "string"
+    },
+    "stderr": {
+      "type": "string"
+    },
+    "exit_code": {
+      "type": ["integer", "null"]
+    },
+    "execution_time_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "resources_used": {
+      "$ref": "#/$defs/ResourceUsage"
+    },
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix epoch seconds"
+    }
+  },
+  "$defs": {
+    "ResourceUsage": {
+      "type": "object",
+      "required": ["cpu_time_ms", "memory_peak_kb", "network_bytes", "filesystem_ops"],
+      "properties": {
+        "cpu_time_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "memory_peak_kb": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "network_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "filesystem_ops": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
