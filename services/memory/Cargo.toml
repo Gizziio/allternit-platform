@@ -2,8 +2,12 @@
 name = "allternit-simple-memory"
 version = "0.1.0"
 edition = "2021"
-description = "Simple memory service for the Allternitchitech platform"
+description = "Simple memory service for the Allternit platform"
 license = "MIT"
+
+[[bin]]
+name = "allternit-simple-memory"
+path = "src/main.rs"
 
 [dependencies]
 tokio = { workspace = true }
@@ -12,15 +16,10 @@ serde_json = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-allternit-memory = { workspace = true }
-allternit-sdk-core = { workspace = true }
-allternit-sdk-functions = { workspace = true }
-allternit-sdk-policy = { workspace = true }
-allternit-sdk-transport = { workspace = true }
 axum = { workspace = true, features = ["macros"] }
 tower = { workspace = true, features = ["util"] }
 tower-http = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
-sqlx = { workspace = true }
-allternit-memory-provider = { path = "data/allternit-memory-provider", features = [] }
 async-trait = { workspace = true }
+reqwest = { workspace = true }
+allternit-memory-fabric = { workspace = true }

@@ -1,10 +1,9 @@
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, error, debug};
+use tracing::{info, debug};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use async_trait::async_trait;
-use allternit_memory_provider::{
+use allternit_memory_fabric::{
     MemoryProvider, MemoryError, MemoryCapabilities, QueryCapabilities,
     PerformanceCharacteristics, BackendType, MemoryQuery, MemoryEntry
 };

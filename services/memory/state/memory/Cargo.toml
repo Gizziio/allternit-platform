@@ -18,11 +18,16 @@ tracing-subscriber = { workspace = true }
 allternit-history = { workspace = true }
 allternit-messaging = { workspace = true }
 allternit-policy = { workspace = true }
-allternit-context-router = { workspace = true }
-allternit-runtime-core = { workspace = true }
-allternit-sdk-core = { workspace = true }
-allternit-sdk-transport = { workspace = true }
+allternit-memory-fabric = { workspace = true }
 async-trait = { workspace = true }
+
+# NOTE: The following crates are referenced by source code but are not yet
+# available in the workspace. They are preserved here as comments for the
+# planned re-integration of the advanced memory service:
+# - allternit-context-router
+# - allternit-runtime-core
+# - allternit-sdk-core
+# - allternit-sdk-transport
 qdrant-client = "1.9"
 redis = { workspace = true }
 sqlx = { workspace = true }

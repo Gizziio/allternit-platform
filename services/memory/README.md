@@ -1,223 +1,119 @@
-# Allternitchitech Memory Service
+# Allternit Memory & Data Fabric
 
-**Location**: `4-services/memory/`  
-**Domain**: Layer 4 - Services (Memory & Persistence)
+**Location**: `services/memory/`  
+**Domain**: Layer 4 — Services (Memory & Persistence)
 
 ---
 
-## Structure
+## Overview
+
+This directory contains the unified memory and data fabric for the Allternit
+platform. The canonical Rust implementation is **`allternit-memory-fabric`**
+(`services/memory/data/memory-fabric`), which provides:
+
+- A common [`MemoryProvider`] trait for all memory backends.
+- A [`MemoryPlane`] / [`MemoryRouter`] for routing operations across multiple
+  backends with fallback.
+- An append-only, hash-chained [`HistoryLedger`] for auditability.
+- A built-in in-memory provider for testing and simple deployments.
+
+The TypeScript **Memory Agent** (`services/memory/agent/`) remains the primary
+long-term memory implementation (SQLite + vector search + local LLM
+consolidation). Rust services consume it through the HTTP adapter in the
+top-level `services/memory` crate, which implements the fabric's
+[`MemoryProvider`] trait.
+
+---
+
+## Layout
 
 ```
-4-services/memory/
+services/memory/
+├── Cargo.toml                  # Top-level Rust service (HTTP adapter + simple provider)
+├── src/
+│   ├── lib.rs                  # Simple in-memory MemoryProvider
+│   ├── main.rs                 # Service binary
+│   └── memory_agent_adapter.rs # HTTP client to TypeScript agent
 ├── agent/                      # TypeScript Always-On Memory Agent
-│   ├── src/
-│   │   ├── orchestrator.ts     # Root agent coordinator
-│   │   ├── http-server.ts      # HTTP API (port 3201)
-│   │   ├── ingest-agent.ts     # File ingestion
-│   │   ├── consolidate-agent.ts # Pattern finding
-│   │   ├── query-agent.ts      # Query synthesis
-│   │   ├── pipelines/          # Data ingestion pipelines
-│   │   ├── store/              # SQLite + Vector store
-│   │   ├── models/             # Ollama integration
-│   │   └── utils/              # Decay, Knowledge Graph, Event Bus
-│   ├── daemon/                 # Background service manager
-│   ├── package.json
-│   └── README.md               # Agent-specific docs
-│
-├── src/                        # Rust Memory Service
-│   ├── lib.rs                  # MemoryProvider trait
-│   ├── memory_agent_adapter.rs # HTTP adapter to TypeScript agent
-│   └── ...
-├── observation/                # Memory observation module
-├── state/                      # Memory state management
-└── Cargo.toml                  # Rust dependencies
+├── data/
+│   ├── memory-fabric/          # Unified Rust memory fabric (allternit-memory-fabric)
+│   ├── history-ledger/         # Original ledger crate (allternit-history)
+│   │                           # Logic now lives in memory-fabric; kept for compat.
+│   ├── allternit-memory-provider/ # Original trait crate; superseded by memory-fabric
+│   ├── memory-kernel/          # Three-layer memory model (experimental)
+│   └── ars-contexta/           # Node.js native NLP module
+├── observation/                # Event observation service (uses memory-fabric ledger)
+├── state/
+│   ├── history/                # WASM-event history ledger (experimental)
+│   └── memory/                 # Advanced tiered memory service (experimental)
+├── docs/
+│   └── ARCHITECTURE.md         # Detailed architecture (this tree)
+└── spec/
+    └── MEMORY_FABRIC_SPEC.md   # Fabric specification (this tree)
 ```
 
 ---
 
-## Components
+## Quick Start
 
-### 1. TypeScript Memory Agent (`agent/`)
+### Build the fabric
 
-**Always-on AI memory agent with local LLM (Ollama + Qwen 3.5)**
-
-- **HTTP API**: Port 3201
-- **Models**: Qwen 3.5:2b, Qwen 3.5:4b
-- **Storage**: SQLite + Vector embeddings
-- **Features**:
-  - File watching & auto-ingestion
-  - Intelligent consolidation
-  - Natural language queries
-  - Knowledge graph
-  - Event bus
-
-**Quick Start:**
 ```bash
-cd 4-services/memory/agent
+cargo check -p allternit-memory-fabric
+cargo test -p allternit-memory-fabric
+```
+
+### Use the fabric in a Rust crate
+
+```rust
+use allternit_memory_fabric::{MemoryFabric, MemoryProvider, MemoryQuery};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let fabric = MemoryFabric::new_in_memory().await?;
+    fabric.store("greeting", serde_json::json!("hello")).await?;
+    let value = fabric.retrieve("greeting").await?;
+    println!("{:?}", value);
+    Ok(())
+}
+```
+
+### Start the TypeScript Memory Agent
+
+```bash
+cd services/memory/agent
 pnpm install
 pnpm run start:http
 ```
 
-### 2. Rust Memory Service (`src/`)
-
-**MemoryProvider trait implementation for Rust services**
-
-- Implements `allternit-memory-provider` trait
-- HTTP client to TypeScript agent
-- Used by kernel-service, gateway, etc.
-
-**Usage:**
-```rust
-use allternit_memory_provider::MemoryAgentAdapter;
-
-let adapter = MemoryAgentAdapter::with_url("http://localhost:3201")?;
-let result = adapter.query(&MemoryQuery { query: "Hello".to_string() }).await?;
-```
-
 ---
 
-## Architecture
+## Relationship Between Rust Fabric and TypeScript Agent
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│              Memory Service (Layer 4)                    │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  ┌────────────────┐      ┌────────────────┐            │
-│  │  Rust Services │◄────►│ TypeScript     │            │
-│  │  (HTTP Client) │ HTTP │ Agent (Daemon) │            │
-│  └────────────────┘      └────────────────┘            │
-│         │                      │                        │
-│    Port 3201            SQLite + Ollama                │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Rust Services (Layer 4)                   │
+│  ┌─────────────────┐      ┌──────────────────────────────┐ │
+│  │ MemoryProvider  │◄────►│ allternit-memory-fabric      │ │
+│  │ implementations │      │ (traits, ledger, in-memory)  │ │
+│  └─────────────────┘      └──────────────────────────────┘ │
+│           │                              │                  │
+│  ┌────────┴────────────────┐  ┌─────────┴────────┐         │
+│  │ InMemoryProvider        │  │ HTTP Adapter     │         │
+│  │ (simple / dev / tests)  │  │ (TypeScript agent)│        │
+│  └─────────────────────────┘  └─────────┬────────┘         │
+└─────────────────────────────────────────┼──────────────────┘
+                                          │ HTTP
+┌─────────────────────────────────────────┼──────────────────┐
+│              TypeScript Memory Agent    │                  │
+│  (SQLite + vector index + Ollama/Qwen) ◄┘                  │
+└────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## API Endpoints
-
-### TypeScript Agent (Port 3201)
-
-```
-GET  /health              - Health check
-GET  /stats               - Statistics
-GET  /metrics             - Prometheus metrics
-POST /api/query           - Natural language query
-POST /api/ingest          - Ingest content
-GET  /api/search          - Search memories
-GET  /api/vector/search   - Vector similarity search
-POST /api/consolidate     - Trigger consolidation
-```
-
-### Rust Service (Library)
-
-```rust
-// MemoryProvider trait methods
-async fn store(&self, key: &str, value: Value) -> Result<(), MemoryError>;
-async fn query(&self, query: &MemoryQuery) -> Result<Vec<MemoryEntry>, MemoryError>;
-async fn retrieve(&self, key: &str) -> Result<Option<Value>, MemoryError>;
-```
-
----
-
-## Integration Points
-
-### With Kernel Service (Layer 4 → Layer 1)
-
-```rust
-// 4-services/orchestration/kernel-service/src/orchestrator/service.rs
-use allternit_memory_provider::MemoryAgentAdapter;
-
-let memory = MemoryAgentAdapter::with_url("http://localhost:3201")?;
-
-// Query before task execution
-let context = memory.query(&MemoryQuery {
-    query: "Previous DAG executions".to_string(),
-    limit: Some(10),
-    ..Default::default()
-}).await?;
-```
-
-### With Gateway (Layer 4 → Layer 4)
-
-```python
-# 4-services/gateway/src/main.py
-@app.post("/api/v1/memory/query")
-async def memory_query(request: MemoryQueryRequest):
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{MEMORY_URL}/api/query",
-            json={"question": request.question}
-        )
-        return response.json()
-```
-
-### With CLI (Layer 7 → Layer 4)
-
-```bash
-# 7-apps/cli/src/commands/memory.rs
-allternit memory query "What tools were used recently?"
-allternit memory stats
-allternit memory consolidate
-```
-
----
-
-## Data Flow
-
-```
-Agent Workspace Files
-    ↓
-Receipts, WIH, Session States
-    ↓
-Ingestion Pipelines (agent/src/pipelines/)
-    ↓
-Memory Agent (LLM Processing with Qwen 3.5)
-    ↓
-SQLite Database + Vector Index
-    ↓
-HTTP API (Port 3201)
-    ↓
-Rust Services (via MemoryProvider trait)
-    ↓
-Kernel, Gateway, CLI, etc.
-```
-
----
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# Memory Agent
-MEMORY_HTTP_PORT=3201
-MEMORY_WATCH_DIRECTORY=./inbox
-MEMORY_DATABASE_PATH=./memory.db
-MEMORY_OLLAMA_HOST=<VPS_IP or localhost>
-MEMORY_OLLAMA_PORT=11434
-MEMORY_INGEST_MODEL=qwen3.5:2b
-MEMORY_CONSOLIDATE_MODEL=qwen3.5:4b
-```
-
-### Ollama Setup
-
-**Local:**
-```bash
-ollama pull qwen3.5:2b
-ollama pull qwen3.5:4b
-```
-
-**VPS:**
-```bash
-# On VPS
-curl -o setup.sh https://raw.githubusercontent.com/allternit/allternit/main/4-services/memory/agent/scripts/setup-ollama-vps.sh
-sudo ./setup-ollama.sh
-
-# On local machine
-export OLLAMA_HOST=http://<VPS_IP>:11434
-```
+- **Rust fabric** is the source of truth for typed interfaces, audit ledgers,
+  and provider routing.
+- **TypeScript agent** is the source of truth for long-term semantic memory,
+  embeddings, and LLM-driven consolidation.
 
 ---
 
@@ -225,44 +121,26 @@ export OLLAMA_HOST=http://<VPS_IP>:11434
 
 | Document | Location | Purpose |
 |----------|----------|---------|
-| Agent README | `agent/README.md` | User setup guide |
+| Architecture | `docs/ARCHITECTURE.md` | Design and component relationships |
+| Specification | `spec/MEMORY_FABRIC_SPEC.md` | Trait contracts and data formats |
+| Agent README | `agent/README.md` | TypeScript agent setup |
 | Integration Guide | `agent/INTEGRATION_GUIDE.md` | Developer integration |
-| Implementation Summary | `agent/IMPLEMENTATION_SUMMARY.md` | Feature list |
-| VPS Setup | `agent/VPS_OLLAMA_SETUP.md` | Ollama on VPS |
-| Qwen 3.5 Update | `agent/QWEN35_UPDATE.md` | Model info |
 
 ---
 
-## Testing
+## Consolidation Notes
 
-```bash
-# Start agent
-cd 4-services/memory/agent
-pnpm run start:http
-
-# Test health
-curl http://localhost:3201/health
-
-# Test query
-curl -X POST http://localhost:3201/api/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What do we know about DAG validation?"}'
-
-# CLI test
-allternit memory stats
-```
-
----
-
-## Related Services
-
-- **Kernel Service** (`4-services/orchestration/kernel-service/`) - Task execution with memory context
-- **Gateway** (`4-services/gateway/`) - External API access to memory
-- **CLI** (`7-apps/cli/`) - Command-line interface
-- **Ollama** (External) - Local LLM runtime
+- `allternit-memory-fabric` now centralizes the trait interface previously in
+  `data/allternit-memory-provider` and the ledger logic previously in
+  `data/history-ledger`.
+- `services/memory/Cargo.toml` no longer references missing SDK crates.
+- `services/memory/observation` now depends on `allternit-memory-fabric`.
+- Experimental crates (`state/memory`, `state/history`, `data/memory-kernel`)
+  remain in the tree but are not included in the workspace until their missing
+  SDK/policy/router dependencies are available.
 
 ---
 
 **Layer**: 4 (Services)  
 **Domain**: Memory & Persistence  
-**Status**: Production Ready ✅
+**Status**: Unified fabric active ✅

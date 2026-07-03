@@ -12,8 +12,7 @@ use tracing::{info, Level};
 use tracing_subscriber;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-use allternit_history::{HistoryLedger};
-use tempfile::NamedTempFile;
+use allternit_memory_fabric::{HistoryLedger};
 
 #[derive(Clone)]
 struct AppState {
@@ -181,7 +180,7 @@ async fn main() {
     // Initialize components (in a real system, these would be properly configured)
     let temp_path = format!("/tmp/observation_{}.jsonl", Uuid::new_v4());
     let history_ledger = Arc::new(std::sync::Mutex::new(
-        allternit_history::HistoryLedger::new(&temp_path).unwrap(),
+        allternit_memory_fabric::HistoryLedger::new(&temp_path).unwrap(),
     ));
 
     let app_state = AppState {

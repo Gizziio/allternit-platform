@@ -14,7 +14,11 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 sha2 = "0.10"
-allternit-evolution-layer = { workspace = true }
+allternit-memory-fabric = { workspace = true }
+
+# NOTE: The following dependency is referenced by source code but does not yet
+# exist in the workspace:
+# - allternit-evolution-layer
 
 [dev-dependencies]
 tokio-test = "0.4"
