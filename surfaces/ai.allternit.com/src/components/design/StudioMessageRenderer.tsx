@@ -7,6 +7,8 @@ import { splitOnQuestionForms, FormSegment } from "../../lib/openui/question-for
 import { ArtifactPreviewPane } from "./ArtifactPreviewPane";
 import { QuestionFormView } from "./QuestionFormView";
 import { lintGeneratedHtml, type LintResult } from "../../lib/design/html-linter";
+import { parseTodoProgress } from "../../lib/design/todo-progress";
+import { TodoProgressCard } from "./TodoProgressCard";
 import { cn } from "@/lib/utils";
 
 interface ChatMessage {
@@ -114,9 +116,11 @@ export function StudioMessageRenderer({ message, isLast, onSubmitForm }: Props) 
 
   // Layer 1: split on <artifact> blocks
   const artifactSegments: MessageSegment[] = splitOnArtifacts(content);
+  const todoProgress = parseTodoProgress(content);
 
   return (
     <div className="flex flex-col gap-3">
+      {todoProgress.totalCount > 0 && <TodoProgressCard progress={todoProgress} />}
       {artifactSegments.map((seg, i) => {
         if (seg.kind === "artifact") {
           const artifactHtml = htmlOverrides[seg.artifact.identifier] ?? seg.artifact.content;

@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { ArrowSquareOut, DownloadSimple, DeviceMobile, DeviceTablet, Monitor, MagnifyingGlassMinus, MagnifyingGlassPlus, ArrowsOut, Sliders } from "@phosphor-icons/react";
+import { ArrowSquareOut, DownloadSimple, DeviceMobile, DeviceTablet, Monitor, MagnifyingGlassMinus, MagnifyingGlassPlus, ArrowsOut, Sliders, FileHtml, FilePdf, FileZip, Presentation } from "@phosphor-icons/react";
 import { parseEditModeConfig, updateEditModeTokensInHtml, type EditModeToken, type EditModeConfig } from "../../lib/design/editmode-parser";
+import { exportArtifact, type ExportFormat } from "../../lib/design/artifact-export";
 import { cn } from "@/lib/utils";
 
 // ── Viewport presets ───────────────────────────────────────────────────────────
@@ -21,16 +22,6 @@ function openInNewTab(html: string) {
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank");
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
-}
-
-function exportHtml(html: string, identifier: string) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${identifier}.html`;
-  a.click();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
@@ -56,6 +47,7 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
   const [editConfig, setEditConfig] = useState<EditModeConfig | null>(null);
   const [editTokens, setEditTokens] = useState<EditModeToken[]>([]);
   const [showEditPanel, setShowEditPanel] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const vp = VIEWPORTS.find(v => v.id === viewport)!;
 
@@ -83,6 +75,16 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, [updateFit]);
+
+  useEffect(() => {
+    if (!showExportMenu) return;
+    function onClick(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-export-menu]')) setShowExportMenu(false);
+    }
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, [showExportMenu]);
 
   function updateToken(id: string, value: string | number) {
     const updated = editTokens.map(t => t.id === id ? { ...t, value } : t);
@@ -152,9 +154,33 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
         <button type="button" onClick={() => openInNewTab(html)} className="flex items-center gap-1 bg-transparent border border-solid border-[var(--border-subtle)] rounded-md p-[4px_8px] cursor-pointer text-[var(--text-secondary)] text-[12px] font-medium hover:bg-white/5 transition-colors" title="Open in new tab">
           <ArrowSquareOut size={12} /> Open
         </button>
-        <button type="button" onClick={() => exportHtml(html, identifier)} className="flex items-center gap-1 bg-transparent border border-solid border-[var(--border-subtle)] rounded-md p-[4px_8px] cursor-pointer text-[var(--text-secondary)] text-[12px] font-medium hover:bg-white/5 transition-colors" title="Export HTML">
-          <DownloadSimple size={12} /> Export
-        </button>
+        <div className="relative" data-export-menu>
+          <button type="button" onClick={() => setShowExportMenu(p => !p)} className="flex items-center gap-1 bg-transparent border border-solid border-[var(--border-subtle)] rounded-md p-[4px_8px] cursor-pointer text-[var(--text-secondary)] text-[12px] font-medium hover:bg-white/5 transition-colors" title="Export artifact">
+            <DownloadSimple size={12} /> Export
+          </button>
+          {showExportMenu && (
+            <div className="absolute right-0 top-full mt-1 z-20 bg-[var(--surface-panel)] border border-solid border-[var(--border-subtle)] rounded-lg shadow-lg py-1 min-w-[140px]">
+              {[
+                { id: 'html' as ExportFormat, label: 'HTML', icon: <FileHtml size={13} /> },
+                { id: 'pdf' as ExportFormat, label: 'PDF', icon: <FilePdf size={13} /> },
+                { id: 'zip' as ExportFormat, label: 'ZIP bundle', icon: <FileZip size={13} /> },
+                { id: 'pptx' as ExportFormat, label: 'PPTX scaffold', icon: <Presentation size={13} /> },
+              ].map((fmt) => (
+                <button
+                  key={fmt.id}
+                  type="button"
+                  onClick={() => {
+                    exportArtifact(fmt.id, { html, title, identifier }).catch(() => {});
+                    setShowExportMenu(false);
+                  }}
+                  className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-[12px] text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] cursor-pointer border-none bg-transparent"
+                >
+                  {fmt.icon} {fmt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {editConfig && editConfig.tokens.length > 0 && (
           <>

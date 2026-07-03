@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{title}}</title>
+  <style>
+    :root { --bg: #fff; --surface: #fafafa; --fg: #111; --muted: #666; --border: #e5e5e5; --accent: #111; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--fg); }
+    .stage { display: flex; height: 100%; width: 100%; transition: transform 0.4s ease; }
+    .slide { flex: 0 0 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 64px; }
+    h1 { font-size: clamp(36px, 5vw, 64px); line-height: 1.05; margin: 0 0 20px; }
+    p { font-size: 22px; line-height: 1.45; color: var(--muted); max-width: 720px; margin: 0; }
+    .counter { position: fixed; bottom: 24px; right: 24px; font-size: 14px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="slide"><h1>{{title}}</h1><p>First slide body.</p></div>
+    <div class="slide"><h1>Slide 2</h1><p>Body.</p></div>
+  </div>
+  <div class="counter"><span id="current">1</span> / <span id="total">2</span></div>
+  <script>
+    let index = 0;
+    const stage = document.getElementById('stage');
+    const slides = document.querySelectorAll('.slide');
+    function update() { stage.style.transform = `translateX(-${index * 100}%)`; document.getElementById('current').textContent = index + 1; document.getElementById('total').textContent = slides.length; localStorage.setItem('deck-index', String(index)); }
+    document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' && index < slides.length - 1) { index++; update(); } if (e.key === 'ArrowLeft' && index > 0) { index--; update(); } });
+    update();
+  </script>
+</body>
+</html>

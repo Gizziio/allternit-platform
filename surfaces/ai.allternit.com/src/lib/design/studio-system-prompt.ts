@@ -19,6 +19,7 @@
 import { renderDirectionFormBody, renderDirectionSpecBlock } from './directions';
 import { DECK_FRAMEWORK_DIRECTIVE, DECK_STAGE_SKELETON_HTML } from './deck-framework';
 import { getAnimationSystemPromptBlock } from './animation-engine';
+import { loadCraftRequirements } from './craft-loader';
 
 // ─── Base identity ────────────────────────────────────────────────────────────
 
@@ -300,6 +301,10 @@ export interface ComposeStudioPromptInput {
   designSystemTitle?: string;
   skillBody?: string;
   skillName?: string;
+  /** Craft slugs to inject between DESIGN.md and skill body. */
+  craftRequirements?: string[];
+  /** Filled values for the skill's declared inputs. */
+  skillValues?: Record<string, unknown>;
   /** When true, injects the <deck-stage> skeleton and slide directives. */
   isDeckSession?: boolean;
   /** When true, injects the animation engine directive (Stage/Sprite/Easing). */
@@ -311,6 +316,8 @@ export function composeStudioSystemPrompt({
   designSystemTitle,
   skillBody,
   skillName,
+  craftRequirements,
+  skillValues,
   isDeckSession,
   isAnimationSession,
 }: ComposeStudioPromptInput = {}): string {
@@ -326,9 +333,21 @@ export function composeStudioSystemPrompt({
     );
   }
 
+  if (craftRequirements?.length) {
+    const craftBody = loadCraftRequirements(craftRequirements);
+    if (craftBody.trim()) {
+      parts.push(
+        `\n\n---\n\n## Craft references (universal rules)\n\n${craftBody.trim()}`,
+      );
+    }
+  }
+
   if (skillBody?.trim()) {
+    const valuesBlock = skillValues && Object.keys(skillValues).length
+      ? `\n\nSkill inputs provided by the user:\n${Object.entries(skillValues).map(([k, v]) => `- ${k}: ${v}`).join('\n')}`
+      : '';
     parts.push(
-      `\n\n---\n\n## Active skill${skillName ? ` — ${skillName}` : ''}\n\nFollow this skill workflow exactly. The skill's instructions override softer wording elsewhere in this prompt.\n\n${skillBody.trim()}`,
+      `\n\n---\n\n## Active skill${skillName ? ` — ${skillName}` : ''}\n\nFollow this skill workflow exactly. The skill's instructions override softer wording elsewhere in this prompt.${valuesBlock}\n\n${skillBody.trim()}`,
     );
   }
 

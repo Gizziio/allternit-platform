@@ -1,7 +1,9 @@
 "use client";
 import React, { useState } from 'react';
-import { ArrowRight, Palette, Layout, Slideshow, DeviceMobile, Browsers, Megaphone, CaretDown } from '@phosphor-icons/react';
+import { ArrowRight, Palette, Layout, Slideshow, DeviceMobile, Browsers, Megaphone, CaretDown, Robot, X } from '@phosphor-icons/react';
 import { DESIGN_DIRECTIONS, type DesignDirection } from '../../lib/design/directions';
+import type { SkillRecord } from '../../lib/design/skill-registry';
+import { SKILL_MODE_LABELS } from '../../lib/design/skill-registry';
 
 // ── Project types ──────────────────────────────────────────────────────────────
 
@@ -20,12 +22,22 @@ const CORE_DIRECTION_IDS = ['editorial-monocle', 'modern-minimal', 'warm-soft', 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface NewProjectScreenProps {
-  onStart: (config: { name: string; type: string; direction: DesignDirection }) => void;
+  onStart: (config: { name: string; type: string; direction: DesignDirection; skill?: SkillRecord; skillValues?: Record<string, unknown> }) => void;
+  selectedSkill?: SkillRecord | null;
+  onSelectSkill?: (skill: SkillRecord | null) => void;
+  skillValues?: Record<string, unknown>;
+  onChangeSkillValues?: (values: Record<string, unknown>) => void;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
+export function NewProjectScreen({
+  onStart,
+  selectedSkill,
+  onSelectSkill,
+  skillValues,
+  onChangeSkillValues,
+}: NewProjectScreenProps) {
   const [name, setName] = useState('');
   const [selectedType, setSelectedType] = useState('prototype');
   const [selectedDirection, setSelectedDirection] = useState('modern-minimal');
@@ -39,7 +51,13 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
 
   function handleStart() {
     if (!canStart) return;
-    onStart({ name: name.trim(), type: selectedType, direction });
+    onStart({
+      name: name.trim(),
+      type: selectedType,
+      direction,
+      skill: selectedSkill ?? undefined,
+      skillValues: selectedSkill ? (skillValues ?? {}) : undefined,
+    });
   }
 
   return (
@@ -102,6 +120,63 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
                 );
               })}
             </div>
+          </Section>
+
+          {/* Skill */}
+          <Section label="Open Design skill">
+            {!selectedSkill ? (
+              <button
+                type="button"
+                onClick={() => onSelectSkill?.(null)}
+                style={{
+                  width: '100%', padding: '14px 16px', borderRadius: 12,
+                  border: '1.5px dashed var(--border-default)', background: 'transparent',
+                  color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                }}
+              >
+                <Robot size={16} />
+                Pick a skill (optional)
+              </button>
+            ) : (
+              <div style={{
+                padding: 14, borderRadius: 12, border: '1.5px solid var(--accent-primary)',
+                background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent-primary)' }}>
+                      {selectedSkill.name}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                      {SKILL_MODE_LABELS[selectedSkill.mode]} · {selectedSkill.description.slice(0, 90)}
+                      {selectedSkill.description.length > 90 ? '…' : ''}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onSelectSkill?.(null)}
+                    style={{
+                      width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border-subtle)',
+                      background: 'transparent', color: 'var(--text-secondary)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                    }}
+                  ><X size={14} /></button>
+                </div>
+                {selectedSkill.inputs.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+                    {selectedSkill.inputs.map((input) => (
+                      <SkillInputField
+                        key={input.name}
+                        input={input}
+                        value={skillValues?.[input.name] ?? input.default ?? ''}
+                        onChange={(value) => onChangeSkillValues?.({ ...(skillValues ?? {}), [input.name]: value })}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </Section>
 
           {/* Visual direction */}
@@ -168,6 +243,80 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 // ── Direction card ─────────────────────────────────────────────────────────────
+
+function SkillInputField({ input, value, onChange }: { input: SkillRecord['inputs'][number]; value: unknown; onChange: (value: unknown) => void }) {
+  const label = input.label ?? input.name;
+  const id = `skill-input-${input.name}`;
+  if (input.type === 'boolean') {
+    return (
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={Boolean(value)}
+          onChange={(e) => onChange(e.target.checked)}
+          style={{ width: 16, height: 16, accentColor: 'var(--accent-primary)' }}
+        />
+        {label}
+      </label>
+    );
+  }
+  if (input.type === 'enum' && input.values && input.values.length > 0) {
+    return (
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</div>
+        <select
+          value={String(value)}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 12px', borderRadius: 8,
+            border: '1px solid var(--border-default)', background: 'var(--bg-primary)',
+            color: 'var(--text-primary)', fontSize: 13,
+          }}
+        >
+          {input.values.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+      </div>
+    );
+  }
+  if (input.type === 'integer') {
+    return (
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</div>
+        <input
+          type="number"
+          min={input.min}
+          max={input.max}
+          value={Number(value)}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{
+            width: '100%', padding: '10px 12px', borderRadius: 8,
+            border: '1px solid var(--border-default)', background: 'var(--bg-primary)',
+            color: 'var(--text-primary)', fontSize: 13,
+          }}
+        />
+      </div>
+    );
+  }
+  const isTextarea = input.type === 'text' || input.type === 'string';
+  const InputTag = isTextarea ? 'textarea' : 'input';
+  return (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</div>
+      <InputTag
+        id={id}
+        value={String(value)}
+        onChange={(e) => onChange(e.currentTarget.value)}
+        placeholder={input.placeholder ?? ''}
+        style={{
+          width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
+          border: '1px solid var(--border-default)', background: 'var(--bg-primary)',
+          color: 'var(--text-primary)', fontSize: 13, minHeight: isTextarea ? 80 : undefined,
+          resize: isTextarea ? 'vertical' : undefined,
+        }}
+      />
+    </div>
+  );
+}
 
 function DirectionCard({ direction, active, onSelect }: { direction: DesignDirection; active: boolean; onSelect: () => void }) {
   const swatchKeys: (keyof typeof direction.palette)[] = ['bg', 'surface', 'fg', 'accent'];

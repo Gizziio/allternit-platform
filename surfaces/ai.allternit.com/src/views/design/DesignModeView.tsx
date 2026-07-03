@@ -12,6 +12,8 @@ import { useNav } from "../../nav/useNav";
 import { useDesignSessionStore, useDesignSessionActions, createDesignSession } from "./DesignSessionStore";
 import { useDesignTabStore } from "../../stores/design-tab.store";
 import { NewProjectScreen } from './NewProjectScreen';
+import { SkillPicker } from './SkillPicker';
+import type { SkillRecord } from '../../lib/design/skill-registry';
 
 // Imports for built features
 import { DesignMdRenderer } from "../../lib/openui/DesignMdRenderer";
@@ -325,6 +327,9 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   const [showClipboard, setShowClipboard] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [installedDesignId, setInstalledDesignId] = useState<string | null>(null);
+  const [showSkillPicker, setShowSkillPicker] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<SkillRecord | null>(null);
+  const [skillValues, setSkillValues] = useState<Record<string, unknown>>({});
 
   const pendingProject = useDesignTabStore(s => s.pendingProject);
   const clearPendingProject = useDesignTabStore(s => s.clearPendingProject);
@@ -395,8 +400,9 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     }
   }
 
-  async function startProject(config: { name: string; type: string; direction?: import('../../lib/design/directions').DesignDirection }) {
+  async function startProject(config: { name: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; skill?: SkillRecord; skillValues?: Record<string, unknown> }) {
     const isContent = config.type === 'content-engine';
+    const skill = config.skill;
     setActiveProject({
       id: Date.now().toString(), name: config.name, type: config.type as ProjectType,
       specialist: 'architect', fidelity: 'high', activeTabId: isContent ? 'graph' : 'questions',
@@ -424,13 +430,21 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       ? `## Visual Direction: ${dir.label}\n${dir.mood}\n\nDisplay font: ${dir.displayFont}\nBody font: ${dir.bodyFont}${dir.monoFont ? `\nMono font: ${dir.monoFont}` : ''}\n\nPalette:\n- Background: ${dir.palette.bg}\n- Surface: ${dir.palette.surface}\n- Foreground: ${dir.palette.fg}\n- Accent: ${dir.palette.accent}\n\nReferences: ${dir.references.join(', ')}\n\nPosture:\n${dir.posture.map(p => `- ${p}`).join('\n')}`
       : undefined;
     const systemPrompt = composeStudioSystemPrompt({
-      designSystemBody: directionMd,
-      designSystemTitle: dir?.label,
-      isDeckSession: config.type === 'slides',
+      designSystemBody: designMd ?? directionMd,
+      designSystemTitle: installedDesignId ? 'Installed design system' : dir?.label,
+      skillBody: skill?.body,
+      skillName: skill?.name,
+      craftRequirements: skill?.craft.requires,
+      skillValues: config.skillValues,
+      isDeckSession: config.type === 'slides' || skill?.mode === 'deck',
     });
     const sessionId = await createDesignSession({ name: config.name, sessionMode: 'agent', systemPrompt });
     if (isContent) {
       await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] I am starting a Content Engine project called "${config.name}". Please run skill_graph_ops action="sync" to read /content-skill-graph/index.md.` });
+    } else if (skill) {
+      const opener = skill.examplePrompt ?? `Run the ${skill.name} skill for this project.`;
+      const inputs = skill.inputs.map((i) => `${i.label ?? i.name}: ${config.skillValues?.[i.name] ?? i.default ?? ''}`).join('\n');
+      await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}Please begin with the skill workflow.` });
     } else {
       const dirContext = dir ? ` The visual direction is "${dir.label}" — ${dir.mood}. Key references: ${dir.references.join(', ')}.` : '';
       await sendMessageStream(sessionId, { text: `I am starting a ${config.type} project called "${config.name}".${dirContext} Please begin with a discovery brief.` });
@@ -444,7 +458,24 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   };
   if (showWizard) return <StudioOnboardingWizard onComplete={completeWizard} onSkip={completeWizard} />;
   if (showCutscene) return <StudioOnboarding onComplete={() => setShowCutscene(false)} />;
-  if (!activeProject) return <NewProjectScreen onStart={startProject} />;
+  if (!activeProject) return (
+    <>
+      <NewProjectScreen
+        onStart={startProject}
+        selectedSkill={selectedSkill}
+        onSelectSkill={(skill) => { if (!skill) setShowSkillPicker(true); else setSelectedSkill(skill); }}
+        skillValues={skillValues}
+        onChangeSkillValues={setSkillValues}
+      />
+      {showSkillPicker && (
+        <SkillPicker
+          initialMode={selectedSkill?.mode}
+          onSelect={(skill) => { setSelectedSkill(skill); setShowSkillPicker(false); }}
+          onClose={() => setShowSkillPicker(false)}
+        />
+      )}
+    </>
+  );
 
   const themeOverride = darkMode ? {} : {
     '--bg-primary': '#fdfcf9',
@@ -474,7 +505,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                </div>
                {/* Fixed action buttons */}
                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, paddingLeft: "12px", borderLeft: "1px solid var(--border-subtle)", marginLeft: "8px" }}>
-                 <button type="button" onClick={() => { setActiveProject(null); setActiveTab('questions'); }} title="New Project" style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px", height: "28px", borderRadius: "8px", background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={12} weight="bold" /> New</button>
+                 <button type="button" onClick={() => { setActiveProject(null); setActiveTab('questions'); setSelectedSkill(null); setSkillValues({}); }} title="New Project" style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px", height: "28px", borderRadius: "8px", background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={12} weight="bold" /> New</button>
                  <button type="button" onClick={() => setShowImport(true)} title="Import design system" style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><UploadSimple size={14} /></button>
                  <button type="button" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Light mode" : "Dark mode"} style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{darkMode ? <Sun size={14} /> : <Moon size={14} />}</button>
                  <button type="button" onClick={() => { setShowClipboard(!showClipboard); setShowTweaks(false); }} title="Design Clipboard" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showClipboard ? "var(--accent-primary)" : "transparent", color: showClipboard ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Scissors size={14} /></button>

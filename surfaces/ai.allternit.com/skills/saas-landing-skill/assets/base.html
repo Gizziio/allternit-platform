@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{product_name}}</title>
+  <style>
+    :root { --bg: #fff; --surface: #fafafa; --fg: #111; --muted: #666; --border: #e5e5e5; --accent: #111; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--fg); }
+    section { padding: 80px 24px; max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: clamp(40px, 6vw, 72px); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 20px; }
+    p.lead { font-size: 20px; line-height: 1.5; color: var(--muted); max-width: 640px; margin: 0 0 28px; }
+    .btn { display: inline-flex; padding: 14px 24px; background: var(--accent); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 700; }
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-top: 64px; }
+    .feature { padding: 24px; border: 1px solid var(--border); border-radius: 14px; }
+  </style>
+</head>
+<body>
+  <section>
+    <h1>{{product_name}}</h1>
+    <p class="lead">{{tagline}}</p>
+    <a href="#" class="btn">Get started</a>
+  </section>
+  <section>
+    <div class="features">
+      <div class="feature"><h3>Feature One</h3><p>Replace with specific capability.</p></div>
+      <div class="feature"><h3>Feature Two</h3><p>Replace with specific capability.</p></div>
+      <div class="feature"><h3>Feature Three</h3><p>Replace with specific capability.</p></div>
+    </div>
+  </section>
+</body>
+</html>
