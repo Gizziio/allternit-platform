@@ -2022,23 +2022,6 @@ ipcMain.handle('vm-setup:get-vm-status', async (): Promise<'running' | 'stopped'
 });
 
 // ============================================================================
-// IPC: Chrome embed (side-by-side browser)
-// Stubs — full implementation requires chrome-embed/ wiring in a future pass.
-// ============================================================================
-
-ipcMain.handle('chrome:launch', () => ({
-  success: false,
-  error: 'Chrome embed not yet available in this build',
-}));
-
-ipcMain.handle('chrome:navigate', () => ({
-  success: false,
-  error: 'Chrome embed not yet available in this build',
-}));
-
-ipcMain.handle('chrome:close', () => ({ success: false }));
-
-// ============================================================================
 // IPC: Extension Bridge
 // Lets the renderer subscribe to Chrome extension messages and send responses.
 // ============================================================================

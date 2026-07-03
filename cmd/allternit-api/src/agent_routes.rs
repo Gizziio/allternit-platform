@@ -218,12 +218,62 @@ fn json_to_string(value: Option<serde_json::Value>) -> Option<String> {
     value.map(|v| v.to_string())
 }
 
+/// Validate that an agent satisfies the platform creation checklist.
+/// Returns `Ok(())` when valid, or `Err(message)` with the first failure.
+fn validate_agent_against_checklist(body: &CreateAgentBody) -> Result<(), String> {
+    if body.name.trim().len() < 3 {
+        return Err("Agent name must be at least 3 characters".to_string());
+    }
+    if body.description.as_deref().unwrap_or("").trim().len() < 10 {
+        return Err("Agent description must be at least 10 characters".to_string());
+    }
+    if body.agent_type.as_deref().unwrap_or("").trim().is_empty() {
+        return Err("Agent type is required".to_string());
+    }
+    if body.model.trim().is_empty() {
+        return Err("Model is required".to_string());
+    }
+    if body.provider.trim().is_empty() {
+        return Err("Provider is required".to_string());
+    }
+
+    let harness_mode = body
+        .harness_config
+        .as_ref()
+        .and_then(|h| h.get("mode"))
+        .and_then(|v| v.as_str());
+    match harness_mode {
+        Some("byok") | Some("cloud") | Some("local") | Some("subprocess") => {}
+        _ => return Err("Harness mode must be one of: byok, cloud, local, subprocess".to_string()),
+    }
+
+    let has_surface = body
+        .enabled_modes
+        .as_ref()
+        .and_then(|v| v.as_array())
+        .map(|arr| !arr.is_empty())
+        .unwrap_or(false);
+    if !has_surface {
+        return Err("At least one enabled surface is required".to_string());
+    }
+
+    if body.trust_tier.as_deref().unwrap_or("").trim().is_empty() {
+        return Err("Trust tier is required".to_string());
+    }
+
+    Ok(())
+}
+
 async fn create_agent(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
     Json(body): Json<CreateAgentBody>,
 ) -> impl IntoResponse {
+    if let Err(err) = validate_agent_against_checklist(&body) {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": err}))).into_response();
+    }
+
     let id = uuid::Uuid::new_v4().to_string();
     let db = state.db.clone();
     let id2 = id.clone();
@@ -446,6 +496,23 @@ async fn update_agent(
     Path(id): Path<String>,
     Json(body): Json<UpdateAgentBody>,
 ) -> impl IntoResponse {
+    if let Some(ref name) = body.name {
+        if name.trim().len() < 3 {
+            return (StatusCode::BAD_REQUEST, Json(json!({"error": "Agent name must be at least 3 characters"}))).into_response();
+        }
+    }
+    if let Some(ref harness) = body.harness_config {
+        let mode = harness.get("mode").and_then(|v| v.as_str());
+        if !matches!(mode, Some("byok") | Some("cloud") | Some("local") | Some("subprocess")) {
+            return (StatusCode::BAD_REQUEST, Json(json!({"error": "Harness mode must be one of: byok, cloud, local, subprocess"}))).into_response();
+        }
+    }
+    if let Some(ref modes) = body.enabled_modes {
+        if modes.as_array().map(|a| a.is_empty()).unwrap_or(true) {
+            return (StatusCode::BAD_REQUEST, Json(json!({"error": "At least one enabled surface is required"}))).into_response();
+        }
+    }
+
     let db = state.db.clone();
     let user_id = user.user_id;
 

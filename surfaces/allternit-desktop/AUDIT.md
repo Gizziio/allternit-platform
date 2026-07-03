@@ -56,7 +56,7 @@ Scope: `surfaces/allternit-desktop` — Electron shell for the Allternit platfor
 
 | Feature | Location | Gap |
 |---------|----------|-----|
-| Chrome side-by-side embed | `unified-main.ts:2029` | `chrome:launch`, `chrome:navigate`, `chrome:close` return `success: false`. Requires `chrome-embed/` wiring. |
+| Chrome side-by-side embed | Removed from preload/main (2026-07-03) | Was advertised but unimplemented; removed until `chrome-embed/` wiring is ready. |
 
 ## IPC Contract Check
 
@@ -78,7 +78,7 @@ Scope: `surfaces/allternit-desktop` — Electron shell for the Allternit platfor
 
 ## Recommendations
 
-1. Implement Chrome embed or remove the API from preload until ready.
+1. ~~Implement Chrome embed or remove the API from preload until ready.~~ Done: removed from preload and main IPC.
 2. Centralize port/configuration constants.
 3. Add a smoke test that starts Electron in CI with `--disable-gpu` and verifies the splash window loads.
 4. Gitignore `dist/` and `release/`; build them in CI.

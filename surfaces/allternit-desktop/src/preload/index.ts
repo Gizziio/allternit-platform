@@ -260,16 +260,6 @@ const tunnelAPI = {
   },
 };
 
-// ─── Chrome side-by-side embed ────────────────────────────────────────────────
-
-const chromeAPI = {
-  launch: (url: string): Promise<{ success: boolean; pid?: number; debugPort?: number; error?: string }> =>
-    ipcRenderer.invoke('chrome:launch', url),
-  navigate: (url: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke('chrome:navigate', url),
-  close: (): Promise<{ success: boolean }> => ipcRenderer.invoke('chrome:close'),
-};
-
 // ─── Permission Guide ─────────────────────────────────────────────────────────
 
 type PermissionPanel = 'accessibility' | 'screen-recording';
@@ -462,7 +452,6 @@ const allternitDesktopAPI = {
   auth: authAPI,
   shell: shellAPI,
   theme: themeAPI,
-  chrome: chromeAPI,
   extension: extensionAPI,
   tunnel: tunnelAPI,
   permissionGuide: permissionGuideAPI,

@@ -195,12 +195,6 @@ export interface TunnelAPI {
   onStateChange(handler: (state: TunnelState) => void): () => void;
 }
 
-export interface ChromeAPI {
-  launch(url: string): Promise<{ success: boolean; pid?: number; debugPort?: number; error?: string }>;
-  navigate(url: string): Promise<{ success: boolean; error?: string }>;
-  close(): Promise<{ success: boolean }>;
-}
-
 export type PermissionPanel = 'accessibility' | 'screen-recording';
 export interface PermissionStatus {
   accessibility: 'granted' | 'denied' | 'unknown' | 'not-applicable';
@@ -324,7 +318,6 @@ export interface AllternitDesktopAPI {
   auth: AuthAPI;
   shell: ShellAPI;
   theme: ThemeAPI;
-  chrome: ChromeAPI;
   extension: ExtensionAPI;
   tunnel: TunnelAPI;
   permissionGuide: PermissionGuideAPI;
