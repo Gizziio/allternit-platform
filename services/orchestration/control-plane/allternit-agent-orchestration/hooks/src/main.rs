@@ -5,7 +5,9 @@ use axum::{
     Router,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 
 #[derive(Clone)]
@@ -108,6 +110,11 @@ trait HookRegistry: Send + Sync {
         condition: &str,
         context: &serde_json::Value,
     ) -> Result<bool, Box<dyn std::error::Error>>;
+    async fn get_statistics(&self) -> Result<HookStatistics, Box<dyn std::error::Error>>;
+    async fn record_execution(
+        &self,
+        results: &[HookResult],
+    ) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 #[async_trait::async_trait]
@@ -400,7 +407,7 @@ impl HookService {
 
     async fn log_event(
         &self,
-        action: &HookAction,
+        _action: &HookAction,
         event: &Event,
     ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         // Log to audit trail
@@ -580,15 +587,7 @@ impl HookService {
     }
 
     pub async fn get_statistics(&self) -> Result<HookStatistics, Box<dyn std::error::Error>> {
-        // In a real implementation, this would query actual statistics
-        // For now, return mock statistics
-        Ok(HookStatistics {
-            total_hooks: 0,
-            active_hooks: 0,
-            triggered_hooks_today: 0,
-            execution_errors_today: 0,
-            average_execution_time_ms: 0.0,
-        })
+        self.registry.get_statistics().await
     }
 }
 
@@ -764,11 +763,31 @@ async fn handle_health_check() -> Result<axum::Json<HealthResponse>, StatusCode>
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    // Initialize services (in a real implementation, these would be actual service instances)
-    let hook_registry: Arc<dyn HookRegistry> = Arc::new(MockHookRegistry::new());
-    let event_bus: Arc<dyn EventBus> = Arc::new(MockEventBus::new());
-    let policy_engine: Arc<dyn PolicyEngine> = Arc::new(MockPolicyEngine::new());
-    let audit_logger: Arc<dyn AuditLogger> = Arc::new(MockAuditLogger::new());
+    let config = HookServiceConfig {
+        max_hooks_per_user: 100,
+        max_conditions_complexity: 1000,
+        enable_sandboxing: false,
+        default_timeout_ms: 5000,
+        audit_logging_enabled: true,
+    };
+
+    let hook_registry: Arc<dyn HookRegistry> = Arc::new(InMemoryHookRegistry::new());
+    let policy_engine: Arc<dyn PolicyEngine> = Arc::new(InMemoryPolicyEngine::new());
+    let audit_logger: Arc<dyn AuditLogger> = Arc::new(InMemoryAuditLogger::new());
+
+    let hook_service = Arc::new(HookService::new(
+        config,
+        hook_registry.clone(),
+        Arc::new(NoopEventBus),
+        policy_engine.clone(),
+        audit_logger.clone(),
+    ));
+
+    let event_bus: Arc<dyn EventBus> = Arc::new(InMemoryEventBus::new(
+        hook_service,
+        hook_registry.clone(),
+        audit_logger.clone(),
+    ));
 
     let app_state = Arc::new(AppState {
         hook_registry,
@@ -793,28 +812,44 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-// Mock implementations for demonstration
-struct MockHookRegistry;
+// In-memory implementations
+struct InMemoryHookRegistry {
+    hooks: RwLock<Vec<HookDefinition>>,
+    triggered_count: AtomicU32,
+    error_count: AtomicU32,
+    total_execution_time_ms: AtomicU32,
+}
 
-impl MockHookRegistry {
+impl InMemoryHookRegistry {
     fn new() -> Self {
-        Self
+        Self {
+            hooks: RwLock::new(Vec::new()),
+            triggered_count: AtomicU32::new(0),
+            error_count: AtomicU32::new(0),
+            total_execution_time_ms: AtomicU32::new(0),
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl HookRegistry for MockHookRegistry {
+impl HookRegistry for InMemoryHookRegistry {
     async fn register_hook(&self, hook: HookDefinition) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Registering hook: {}", hook.name);
+        let mut hooks = self.hooks.write().await;
+        if let Some(existing) = hooks.iter_mut().find(|h| h.id == hook.id) {
+            *existing = hook;
+        } else {
+            hooks.push(hook);
+        }
         Ok(())
     }
 
     async fn unregister_hook(
         &self,
         hook_id: &str,
-        user_id: &str,
+        _user_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Unregistering hook: {} for user: {}", hook_id, user_id);
+        let mut hooks = self.hooks.write().await;
+        hooks.retain(|h| h.id != hook_id);
         Ok(())
     }
 
@@ -822,42 +857,24 @@ impl HookRegistry for MockHookRegistry {
         &self,
         event_type: &str,
     ) -> Result<Vec<HookDefinition>, Box<dyn std::error::Error>> {
-        println!("Getting hooks for event type: {}", event_type);
-        // Return some mock hooks for demonstration
-        if event_type == "session_start" {
-            Ok(vec![HookDefinition {
-                id: "mock_hook_1".to_string(),
-                name: "Session Start Notification".to_string(),
-                description: "Sends notification when session starts".to_string(),
-                event_type: "session_start".to_string(),
-                condition: "true".to_string(), // Always trigger
-                action: HookAction {
-                    action_type: "notification".to_string(),
-                    target: "session_started".to_string(),
-                    parameters: None,
-                },
-                enabled: true,
-                owner_id: "mock_user".to_string(),
-                created_at: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
-                updated_at: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
-            }])
-        } else {
-            Ok(vec![])
-        }
+        let hooks = self.hooks.read().await;
+        Ok(hooks
+            .iter()
+            .filter(|h| h.event_type == event_type && h.enabled)
+            .cloned()
+            .collect())
     }
 
     async fn get_user_hooks(
         &self,
         user_id: &str,
     ) -> Result<Vec<HookDefinition>, Box<dyn std::error::Error>> {
-        println!("Getting hooks for user: {}", user_id);
-        Ok(vec![]) // Return empty for now
+        let hooks = self.hooks.read().await;
+        Ok(hooks
+            .iter()
+            .filter(|h| h.owner_id == user_id)
+            .cloned()
+            .collect())
     }
 
     async fn update_hook(
@@ -866,7 +883,31 @@ impl HookRegistry for MockHookRegistry {
         updates: HookUpdates,
         user_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Updating hook: {} for user: {}", hook_id, user_id);
+        let mut hooks = self.hooks.write().await;
+        let hook = hooks
+            .iter_mut()
+            .find(|h| h.id == hook_id && h.owner_id == user_id)
+            .ok_or("Hook not found")?;
+
+        if let Some(name) = updates.name {
+            hook.name = name;
+        }
+        if let Some(description) = updates.description {
+            hook.description = description;
+        }
+        if let Some(condition) = updates.condition {
+            hook.condition = condition;
+        }
+        if let Some(action) = updates.action {
+            hook.action = action;
+        }
+        if let Some(enabled) = updates.enabled {
+            hook.enabled = enabled;
+        }
+        hook.updated_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
         Ok(())
     }
 
@@ -875,35 +916,90 @@ impl HookRegistry for MockHookRegistry {
         condition: &str,
         context: &serde_json::Value,
     ) -> Result<bool, Box<dyn std::error::Error>> {
-        // Very basic condition evaluation for demo
-        Ok(condition == "true" || context.to_string().contains(condition))
+        let condition = condition.trim();
+        if condition == "true" || condition.is_empty() {
+            return Ok(true);
+        }
+        if condition == "false" {
+            return Ok(false);
+        }
+        Ok(context.to_string().to_lowercase().contains(&condition.to_lowercase()))
+    }
+
+    async fn get_statistics(&self) -> Result<HookStatistics, Box<dyn std::error::Error>> {
+        let hooks = self.hooks.read().await;
+        let total_hooks = hooks.len();
+        let active_hooks = hooks.iter().filter(|h| h.enabled).count();
+        let triggered = self.triggered_count.load(Ordering::Relaxed);
+        let errors = self.error_count.load(Ordering::Relaxed);
+        let total_time = self.total_execution_time_ms.load(Ordering::Relaxed);
+        let average_execution_time_ms = if triggered > 0 {
+            total_time as f64 / triggered as f64
+        } else {
+            0.0
+        };
+        Ok(HookStatistics {
+            total_hooks,
+            active_hooks,
+            triggered_hooks_today: triggered,
+            execution_errors_today: errors,
+            average_execution_time_ms,
+        })
+    }
+
+    async fn record_execution(
+        &self,
+        results: &[HookResult],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let triggered = results.len() as u32;
+        let errors = results.iter().filter(|r| !r.success).count() as u32;
+        let total_time: u64 = results.iter().map(|r| r.execution_time_ms).sum();
+        self.triggered_count.fetch_add(triggered, Ordering::Relaxed);
+        self.error_count.fetch_add(errors, Ordering::Relaxed);
+        self.total_execution_time_ms
+            .fetch_add(total_time as u32, Ordering::Relaxed);
+        Ok(())
     }
 }
 
-struct MockEventBus;
+struct InMemoryEventBus {
+    hook_service: Arc<HookService>,
+    registry: Arc<dyn HookRegistry>,
+    audit_logger: Arc<dyn AuditLogger>,
+}
 
-impl MockEventBus {
-    fn new() -> Self {
-        Self
+impl InMemoryEventBus {
+    fn new(
+        hook_service: Arc<HookService>,
+        registry: Arc<dyn HookRegistry>,
+        audit_logger: Arc<dyn AuditLogger>,
+    ) -> Self {
+        Self {
+            hook_service,
+            registry,
+            audit_logger,
+        }
     }
 }
 
 #[async_trait::async_trait]
-impl EventBus for MockEventBus {
+impl EventBus for InMemoryEventBus {
     async fn publish(&self, event: Event) -> Result<(), Box<dyn std::error::Error>> {
-        println!(
-            "Publishing event: {} from {}",
-            event.event_type, event.source
-        );
+        self.audit_logger
+            .log(&format!(
+                "EVENT_PUBLISHED: type={} source={}",
+                event.event_type, event.source
+            ))
+            .await?;
         Ok(())
     }
 
     async fn subscribe(
         &self,
-        event_type: &str,
-        handler: Box<dyn EventHandler>,
+        _event_type: &str,
+        _handler: Box<dyn EventHandler>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!("Subscribing to event type: {}", event_type);
+        // In-memory bus does not support external subscriptions in this implementation.
         Ok(())
     }
 
@@ -911,88 +1007,78 @@ impl EventBus for MockEventBus {
         &self,
         event: &Event,
     ) -> Result<Vec<HookResult>, Box<dyn std::error::Error>> {
-        println!("Triggering hooks for event: {}", event.event_type);
-
-        // Get matching hooks
-        let matching_hooks = {
-            let registry: MockHookRegistry = MockHookRegistry::new();
-            registry.get_hooks_for_event(&event.event_type).await?
-        };
-
-        let mut results = Vec::new();
-        for hook in matching_hooks {
-            if hook.enabled {
-                // For demo, just create a mock result
-                results.push(HookResult {
-                    hook_id: hook.id,
-                    success: true,
-                    result: Some(serde_json::json!({
-                        "message": "Hook executed successfully",
-                        "event_type": &event.event_type,
-                        "source": &event.source,
-                    })),
-                    error: None,
-                    execution_time_ms: 10, // Simulated execution time
-                });
-            }
-        }
-
+        let results = self.hook_service.trigger_event(event.clone()).await?;
+        self.registry.record_execution(&results).await?;
         Ok(results)
     }
 }
 
-struct MockPolicyEngine;
+struct InMemoryPolicyEngine;
 
-impl MockPolicyEngine {
+impl InMemoryPolicyEngine {
     fn new() -> Self {
         Self
     }
 }
 
 #[async_trait::async_trait]
-impl PolicyEngine for MockPolicyEngine {
+impl PolicyEngine for InMemoryPolicyEngine {
     async fn check_permission(
         &self,
-        user_id: &str,
-        agent_id: &str,
-        action: &str,
+        _user_id: &str,
+        _agent_id: &str,
+        _action: &str,
     ) -> Result<bool, Box<dyn std::error::Error>> {
-        println!(
-            "Checking permission: user={} agent={} action={}",
-            user_id, agent_id, action
-        );
-        // For demo, allow all permissions
         Ok(true)
     }
 
     async fn requires_confirmation(
         &self,
-        user_id: &str,
-        agent_id: &str,
+        _user_id: &str,
+        _agent_id: &str,
         action: &str,
     ) -> Result<bool, Box<dyn std::error::Error>> {
-        println!(
-            "Checking confirmation requirement: user={} agent={} action={}",
-            user_id, agent_id, action
-        );
-        // For demo, require confirmation for sensitive actions
         Ok(action.contains("finance") || action.contains("payment"))
     }
 }
 
-struct MockAuditLogger;
+struct InMemoryAuditLogger;
 
-impl MockAuditLogger {
+impl InMemoryAuditLogger {
     fn new() -> Self {
         Self
     }
 }
 
 #[async_trait::async_trait]
-impl AuditLogger for MockAuditLogger {
+impl AuditLogger for InMemoryAuditLogger {
     async fn log(&self, event: &str) -> Result<(), Box<dyn std::error::Error>> {
-        println!("AUDIT: {}", event);
+        tracing::info!("{}", event);
         Ok(())
+    }
+}
+
+struct NoopEventBus;
+
+#[async_trait::async_trait]
+impl EventBus for NoopEventBus {
+    async fn publish(&self, _event: Event) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
+
+    async fn subscribe(
+        &self,
+        _event_type: &str,
+        _handler: Box<dyn EventHandler>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
+
+    async fn trigger_hooks_for_event(
+        &self,
+        _event: &Event,
+    ) -> Result<Vec<HookResult>, Box<dyn std::error::Error>> {
+        Ok(vec![])
     }
 }
 
@@ -1000,3 +1086,5 @@ impl AuditLogger for MockAuditLogger {
 trait EventHandler: Send + Sync {
     fn handle(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>>;
 }
+
+
