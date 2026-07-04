@@ -1266,7 +1266,7 @@ async fn operator_events(
 
     let client = reqwest::Client::new();
     let stream = async_stream::try_stream! {
-        let mut resp = client.get(format!("http://127.0.0.1:3005/events/{}", request_id))
+        let resp = client.get(format!("http://127.0.0.1:3005/events/{}", request_id))
             .send()
             .await
             .map_err(|e| anyhow::anyhow!(e))?;

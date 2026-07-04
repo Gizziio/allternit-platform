@@ -70,6 +70,7 @@ struct Cli {
 
 /// Test case definition
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct TestCase {
     id: String,
     method: String,
@@ -211,7 +212,6 @@ async fn main() -> Result<()> {
     info!("");
 
     // Capture test cases
-    let results: Vec<CaptureResult> = Vec::new();
     let mut summary = CaptureReport {
         timestamp: chrono::Utc::now().to_rfc3339(),
         total_cases: 0,
