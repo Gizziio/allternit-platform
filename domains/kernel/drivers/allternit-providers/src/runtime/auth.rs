@@ -572,15 +572,17 @@ pub struct ValidateModelRequest {
 pub use super::models::ValidateModelResponse;
 
 impl ProviderAuthRegistry {
-    /// Validate a model ID with the runtime
-    /// For now, this is a placeholder that does basic format validation
-    /// In the future, this will query the runtime
+    /// Validate a model ID with the provider's model adapter.
+    ///
+    /// For providers that support model discovery, this checks the discovered
+    /// model list. For all other providers it delegates to the provider-specific
+    /// adapter, which may accept freeform opaque model IDs.
     pub async fn validate_model(
         &self,
         provider_id: &str,
-        _model_id: &str,
+        model_id: &str,
     ) -> anyhow::Result<ValidateModelResponse> {
-        let config = self
+        let _config = self
             .get(provider_id)
             .ok_or_else(|| anyhow!("Unknown provider: {}", provider_id))?;
 
@@ -598,9 +600,7 @@ impl ProviderAuthRegistry {
             });
         }
 
-        // For now: accept any non-empty string as valid
-        // Future: query runtime via ACP or CLI command
-        if _model_id.trim().is_empty() {
+        if model_id.trim().is_empty() {
             return Ok(ValidateModelResponse {
                 valid: false,
                 model: None,
@@ -609,14 +609,9 @@ impl ProviderAuthRegistry {
             });
         }
 
-        // Model IDs are opaque - we don't parse them
-        // The runtime will reject invalid IDs during session/prompt
-        Ok(ValidateModelResponse {
-            valid: true,
-            model: None,
-            suggested: None,
-            message: None,
-        })
+        // Delegate to the model adapter registry for real validation.
+        let adapters = super::models::ModelAdapterRegistry::new();
+        Ok(adapters.validate_model(provider_id, model_id).await)
     }
 }
 
