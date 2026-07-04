@@ -1,16 +1,21 @@
 "use client";
 import React, { useState } from 'react';
-import { ChatTeardropText, Check, X } from '@phosphor-icons/react';
+import { ChatTeardropText, Check, X, Warning } from '@phosphor-icons/react';
 import type { SurgicalComment } from '../../lib/design/surgical-edit';
 import { generateCommentId } from '../../lib/design/surgical-edit';
+import type { Agent } from '@/lib/agents/agent.types';
 
 interface SurgicalEditPanelProps {
   comments: SurgicalComment[];
   onChange: (comments: SurgicalComment[]) => void;
   onApply: () => void;
+  agent?: Agent;
+  artifactHtml?: string;
 }
 
-export function SurgicalEditPanel({ comments, onChange, onApply }: SurgicalEditPanelProps) {
+export function SurgicalEditPanel({ comments, onChange, onApply, agent, artifactHtml }: SurgicalEditPanelProps) {
+  const canSurgicalEdit = !agent || (agent.capabilities ?? []).includes('surgical-edit');
+  const hasArtifact = Boolean(artifactHtml && artifactHtml.trim().length > 0);
   const [target, setTarget] = useState('');
   const [body, setBody] = useState('');
   const openCount = comments.filter((c) => !c.resolved).length;
@@ -41,6 +46,7 @@ export function SurgicalEditPanel({ comments, onChange, onApply }: SurgicalEditP
     <div style={{
       background: 'var(--surface-panel)', border: '1px solid var(--border-subtle)',
       borderRadius: 12, padding: '12px 14px', marginBottom: 16,
+      opacity: canSurgicalEdit ? 1 : 0.75,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <ChatTeardropText size={16} color="var(--accent-primary)" weight="bold" />
@@ -52,11 +58,29 @@ export function SurgicalEditPanel({ comments, onChange, onApply }: SurgicalEditP
         )}
       </div>
 
+      {!canSurgicalEdit && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(234,179,8,0.12)', marginBottom: 12 }}>
+          <Warning size={14} color="#eab308" weight="fill" />
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            {agent?.name ?? 'This agent'} does not have the <strong>surgical-edit</strong> capability. Add it in the agent harness to enable targeted edits.
+          </span>
+        </div>
+      )}
+
+      {!hasArtifact && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: 'var(--surface-hover)', marginBottom: 12 }}>
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            Generate an artifact first to attach surgical edits.
+          </span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
         <input
           aria-label="Target selector"
           value={target}
           onChange={(e) => setTarget(e.target.value)}
+          disabled={!canSurgicalEdit || !hasArtifact}
           placeholder="Target: e.g. hero heading, pricing card"
           style={{
             width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8,
@@ -67,6 +91,7 @@ export function SurgicalEditPanel({ comments, onChange, onApply }: SurgicalEditP
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          disabled={!canSurgicalEdit || !hasArtifact}
           placeholder="Instruction: e.g. make this 48px and use the accent color"
           style={{
             width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8,
@@ -77,12 +102,12 @@ export function SurgicalEditPanel({ comments, onChange, onApply }: SurgicalEditP
         <button
           type="button"
           onClick={addComment}
-          disabled={!target.trim() || !body.trim()}
+          disabled={!canSurgicalEdit || !hasArtifact || !target.trim() || !body.trim()}
           style={{
             padding: '8px 12px', borderRadius: 8, border: 'none',
-            background: target.trim() && body.trim() ? 'var(--accent-primary)' : 'var(--surface-hover)',
-            color: target.trim() && body.trim() ? '#fff' : 'var(--text-tertiary)',
-            fontSize: 12, fontWeight: 700, cursor: target.trim() && body.trim() ? 'pointer' : 'default',
+            background: canSurgicalEdit && hasArtifact && target.trim() && body.trim() ? 'var(--accent-primary)' : 'var(--surface-hover)',
+            color: canSurgicalEdit && hasArtifact && target.trim() && body.trim() ? '#fff' : 'var(--text-tertiary)',
+            fontSize: 12, fontWeight: 700, cursor: canSurgicalEdit && hasArtifact && target.trim() && body.trim() ? 'pointer' : 'default',
           }}
         >
           Add comment
@@ -107,7 +132,7 @@ export function SurgicalEditPanel({ comments, onChange, onApply }: SurgicalEditP
                   <div style={{ fontSize: 12, color: 'var(--text-primary)', marginTop: 4 }}>{comment.body}</div>
                 </div>
                 <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                  {!comment.resolved && (
+                  {!comment.resolved && canSurgicalEdit && (
                     <button
                       type="button"
                       onClick={() => resolve(comment.id)}
@@ -130,9 +155,12 @@ export function SurgicalEditPanel({ comments, onChange, onApply }: SurgicalEditP
         <button
           type="button"
           onClick={onApply}
+          disabled={!canSurgicalEdit || !hasArtifact}
           style={{
             width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--accent-primary)',
-            background: 'var(--accent-primary)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            background: canSurgicalEdit && hasArtifact ? 'var(--accent-primary)' : 'var(--surface-hover)',
+            color: canSurgicalEdit && hasArtifact ? '#fff' : 'var(--text-tertiary)', fontSize: 12, fontWeight: 700,
+            cursor: canSurgicalEdit && hasArtifact ? 'pointer' : 'default',
           }}
         >
           Apply {openCount} surgical edit{openCount === 1 ? '' : 's'}

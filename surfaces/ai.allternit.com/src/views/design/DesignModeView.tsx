@@ -33,6 +33,7 @@ import { DesignImportModal } from "./DesignImportModal";
 import { StudioMessageRenderer } from "../../components/design/StudioMessageRenderer";
 import { composeStudioSystemPrompt } from "../../lib/design/studio-system-prompt";
 import { ErrorBoundary } from "../../components/design/ErrorBoundary";
+import { splitOnArtifacts } from "../../lib/openui/artifact-parser";
 
 // Parity with Chat/Cowork composer stack
 import { ChatComposer, type ChatAttachment } from "../chat/ChatComposer";
@@ -378,6 +379,23 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     '--design-spacing-unit': `${tokens.spacing}px`,
     '--design-type-fontFamily': tokens.font
   } as React.CSSProperties), [tokens]);
+
+  // Latest artifact HTML for surgical edits / HyperFrames / plugin previews.
+  const latestArtifactHtml = useMemo(() => {
+    for (let i = backendMessages.length - 1; i >= 0; i--) {
+      const msg = backendMessages[i];
+      if (msg.role !== 'assistant') continue;
+      const content = typeof msg.content === 'string' ? msg.content : '';
+      const segments = splitOnArtifacts(content);
+      for (let j = segments.length - 1; j >= 0; j--) {
+        const seg = segments[j];
+        if (seg.kind === 'artifact' && seg.artifact.type === 'text/html') {
+          return seg.artifact.content;
+        }
+      }
+    }
+    return '';
+  }, [backendMessages]);
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
@@ -726,10 +744,12 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
           <div style={{ padding: '12px 12px 0' }}>
             <SurgicalEditPanel
               comments={surgicalComments}
+              agent={selectedAgent ?? undefined}
+              artifactHtml={latestArtifactHtml}
               onChange={setSurgicalComments}
               onApply={() => {
                 if (!activeSessionId) return;
-                const prompt = buildSurgicalEditPrompt(designMd ?? '', surgicalComments);
+                const prompt = buildSurgicalEditPrompt(latestArtifactHtml, surgicalComments);
                 if (prompt) sendMessageStream(activeSessionId, { text: prompt });
               }}
             />
