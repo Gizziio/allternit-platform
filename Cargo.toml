@@ -6,7 +6,7 @@ members = [
     "cmd/allternit-api",
     "cmd/allternit-cloud-api",
     "cmd/allternit-cloud-wizard",
-    # "cmd/launcher",  # DISABLED: requires missing embed pipeline (api/embed/allternit-api, shell-ui/dist). See cmd/launcher/README.md
+    "cmd/launcher",
     "rails",
     "rails/cli",
     "domains/kernel/core/kernel-contracts",

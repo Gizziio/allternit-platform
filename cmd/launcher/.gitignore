@@ -1,0 +1,3 @@
+# Embed artifacts are produced by the release pipeline (script/build-embed.sh).
+# Placeholder files may be created locally by build.rs for `cargo check`.
+/embed/

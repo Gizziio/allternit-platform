@@ -44,12 +44,5 @@ objc = "0.2"
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["shellapi", "winuser"] }
 
-[profile.release]
-opt-level = 3
-lto = true
-strip = true
-codegen-units = 1
 
-# Standalone crate: not part of the root workspace (embed pipeline is not ready).
-[workspace]
 
