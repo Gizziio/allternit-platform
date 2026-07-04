@@ -91,7 +91,17 @@ impl CloudProvider for MockProvider {
     }
 
     async fn get_instance(&self, _id: String) -> Result<Instance, CloudError> {
-        unimplemented!()
+        Ok(Instance {
+            id: "i-mock".to_string(),
+            name: "test-instance".to_string(),
+            public_ip: Some("203.0.113.42".to_string()),
+            private_ip: Some("10.0.0.5".to_string()),
+            region: "us-test".to_string(),
+            instance_type: "small".to_string(),
+            status: InstanceStatus::Running,
+            created_at: Utc::now(),
+            ssh_key: None,
+        })
     }
 }
 

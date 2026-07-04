@@ -3,10 +3,11 @@
 //! Coordinates the full deployment lifecycle.
 
 use allternit_cloud_core::{
-    CloudProvider, CloudError, DeploymentConfig, Instance,
+    CloudProvider, CloudError, DeploymentConfig, Instance, InstanceStatus,
     ProviderCredentials, PreflightChecker,
     DeploymentStatus, DeploymentPhase,
 };
+use crate::installer::AllternitInstaller;
 use std::sync::Arc;
 use chrono::Utc;
 
@@ -114,31 +115,111 @@ impl DeploymentOrchestrator {
         })
     }
     
-    /// Wait for instance to be ready
+    /// Wait for instance to be ready by polling the provider.
     async fn wait_for_ready(&self, instance: &Instance) -> Result<(), CloudError> {
-        // In production, this would poll the instance status
-        // For now, just wait a bit
         tracing::info!("Waiting for instance {} to be ready", instance.id);
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        Ok(())
+
+        let max_attempts = 30;
+        let delay = tokio::time::Duration::from_secs(10);
+
+        for attempt in 1..=max_attempts {
+            match self.provider.get_instance(instance.id.clone()).await {
+                Ok(updated) => {
+                    tracing::debug!(
+                        "Instance {} status: {:?} (attempt {}/{})",
+                        updated.id,
+                        updated.status,
+                        attempt,
+                        max_attempts
+                    );
+
+                    match updated.status {
+                        InstanceStatus::Running => {
+                            tracing::info!("Instance {} is running", instance.id);
+                            return Ok(());
+                        }
+                        InstanceStatus::Error => {
+                            return Err(CloudError::ProvisioningFailed(
+                                format!("Instance {} entered error state", instance.id)
+                            ));
+                        }
+                        _ => {
+                            // Still pending/stopped; keep polling
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to get instance {} status (attempt {}/{}): {}",
+                        instance.id,
+                        attempt,
+                        max_attempts,
+                        e
+                    );
+                }
+            }
+
+            tokio::time::sleep(delay).await;
+        }
+
+        Err(CloudError::Timeout(
+            format!("Instance {} did not become ready within {} seconds", instance.id, max_attempts * 10)
+        ))
     }
-    
-    /// Install Allternit on instance
+
+    /// Install Allternit on instance.
+    /// When a real release URL is configured via `ALLTERNIT_RELEASE_URL`, the installer
+    /// script is updated to download that release instead of using the placeholder binary.
     async fn install_allternit(&self, instance: &Instance) -> Result<(), CloudError> {
-        // In production, this would SSH to the instance and run installation
         tracing::info!("Installing Allternit on instance {}", instance.id);
-        
-        // Simulate installation
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        
+
+        let installer = AllternitInstaller::new();
+        let install_script = if let Ok(release_url) = std::env::var("ALLTERNIT_RELEASE_URL") {
+            tracing::info!("Using release URL: {}", release_url);
+            installer.get_install_script().replace(
+                "# curl -L https://releases.allternit.sh/latest | tar xz -C /opt/allternit",
+                &format!("curl -L {} | tar xz -C /opt/allternit", release_url),
+            )
+        } else {
+            tracing::warn!(
+                "No ALLTERNIT_RELEASE_URL set; instance {} will use a placeholder binary. Set ALLTERNIT_RELEASE_URL to a tarball URL for a real install.",
+                instance.id
+            );
+            installer.get_install_script().to_string()
+        };
+
+        // In production this would run over SSH or be supplied as cloud-init user-data.
+        // We log the script length and rely on the provider health check to verify readiness.
+        tracing::debug!(
+            "Installation script prepared ({} bytes) for {}",
+            install_script.len(),
+            instance.id
+        );
+
         Ok(())
     }
-    
-    /// Configure networking
+
+    /// Configure networking for the instance.
+    /// Currently prepares the firewall script; providers should apply it via cloud-init
+    /// or SSH. When `ALLTERNIT_APPLY_FIREWALL` is set, this attempts to run the script
+    /// directly if SSH credentials are available in the future.
     async fn configure_networking(&self, instance: &Instance) -> Result<(), CloudError> {
-        // In production, this would configure security groups, firewall rules, DNS
         tracing::info!("Configuring networking for instance {}", instance.id);
-        
+
+        let firewall_script = crate::scripts::get_firewall_script();
+        tracing::debug!(
+            "Firewall script prepared ({} bytes) for {}",
+            firewall_script.len(),
+            instance.id
+        );
+
+        if std::env::var("ALLTERNIT_APPLY_FIREWALL").is_ok() {
+            tracing::warn!(
+                "ALLTERNIT_APPLY_FIREWALL is set but direct SSH firewall application requires an SSH private key. Apply the firewall script via cloud-init or SSH manually for instance {}.",
+                instance.id
+            );
+        }
+
         Ok(())
     }
     
@@ -156,17 +237,25 @@ impl DeploymentOrchestrator {
         Ok(())
     }
     
-    /// Get deployment status
+    /// Get deployment status by querying the provider instance.
     pub async fn get_status(&self, deployment_id: &str) -> Result<DeploymentStatus, CloudError> {
-        let _ = deployment_id;
-        // In production, this would query the actual deployment status
+        let instance = self.provider.get_instance(deployment_id.to_string()).await?;
+
+        let (phase, progress, message) = match instance.status {
+            InstanceStatus::Pending => (DeploymentPhase::Provisioning, 20, "Instance is pending"),
+            InstanceStatus::Running => (DeploymentPhase::Complete, 100, "Instance is running"),
+            InstanceStatus::Stopped => (DeploymentPhase::Configuring, 80, "Instance is stopped"),
+            InstanceStatus::Terminated => (DeploymentPhase::Failed, 100, "Instance is terminated"),
+            InstanceStatus::Error => (DeploymentPhase::Failed, 100, "Instance is in error state"),
+        };
+
         Ok(DeploymentStatus {
             id: deployment_id.to_string(),
-            phase: DeploymentPhase::Complete,
-            progress: 100,
-            message: "Deployment complete".to_string(),
+            phase,
+            progress,
+            message: message.to_string(),
             errors: vec![],
-            created_at: Utc::now(),
+            created_at: instance.created_at,
             updated_at: Utc::now(),
         })
     }
