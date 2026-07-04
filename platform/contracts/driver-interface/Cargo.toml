@@ -1,9 +1,15 @@
 [package]
 name = "allternit-driver-interface"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-description = "Allternit Execution Driver Interface - Core abstraction for execution substrates"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Execution driver interface - core abstraction for execution substrates (process, micro-VM, container, WASM)"
+authors = ["Allternit Team"]
+repository = "https://github.com/Gizziio/allternit-driver-interface"
+homepage = "https://github.com/Gizziio/allternit-driver-interface"
+keywords = ["execution", "driver", "vm", "container", "sandbox"]
+categories = ["os", "virtualization"]
+rust-version = "1.80"
 
 [dependencies]
 async-trait = { workspace = true }

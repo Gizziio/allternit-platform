@@ -24,6 +24,11 @@
   ],
   "author": "Allternit",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gizziio/allternit-api-client"
+  },
+  "homepage": "https://github.com/Gizziio/allternit-api-client",
   "publishConfig": {
     "access": "public"
   },
