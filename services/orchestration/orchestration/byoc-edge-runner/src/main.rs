@@ -14,10 +14,13 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::process::Command;
 use tokio::sync::RwLock;
-use tracing::{error, info, warn};
+use tokio::time::timeout;
+use tracing::{error, info};
 use uuid::Uuid;
 
 /// Allternit Edge Runner configuration
@@ -346,10 +349,11 @@ impl EdgeRunner {
         tokio::spawn(async move {
             let start_time = std::time::Instant::now();
 
-            // Execute tool
-            let result = Self::execute_tool(&client, &control_plane_url, &task).await;
+            // Execute tool locally on the edge node
+            let mut result = Self::execute_tool(&task).await;
 
             let execution_time_ms = start_time.elapsed().as_millis() as u64;
+            result.execution_time_ms = execution_time_ms;
 
             // Update worker state
             {
@@ -370,49 +374,91 @@ impl EdgeRunner {
         });
     }
 
-    /// Execute a tool
-    async fn execute_tool(
-        client: &reqwest::Client,
-        control_plane_url: &str,
-        task: &WorkerTask,
-    ) -> ToolExecutionResult {
-        let url = format!("{}/api/v1/tools/execute", control_plane_url);
-        
-        let payload = serde_json::json!({
-            "tool_id": task.tool_id,
-            "input": task.input,
-        });
+    /// Execute a tool locally on the edge node.
+    ///
+    /// Supported tool IDs:
+    /// - `shell`: runs the command in `input.command` with optional `input.args`.
+    /// - `http.request`: performs an HTTP request described by `input.method`,
+    ///   `input.url`, and optional `input.body`/`input.headers`.
+    /// - Additional tool IDs can be registered here without delegating to the control plane.
+    async fn execute_tool(task: &WorkerTask) -> ToolExecutionResult {
+        let timeout_duration = Duration::from_secs(task.timeout_seconds.max(1));
 
-        match client.post(&url).json(&payload).send().await {
-            Ok(response) => {
-                if response.status().is_success() {
-                    match response.json::<serde_json::Value>().await {
-                        Ok(output) => ToolExecutionResult {
-                            task_id: task.task_id.clone(),
-                            worker_id: task.worker_id.clone(),
-                            success: true,
-                            output: Some(output),
-                            error: None,
-                            execution_time_ms: 0,
-                        },
-                        Err(e) => ToolExecutionResult {
-                            task_id: task.task_id.clone(),
-                            worker_id: task.worker_id.clone(),
-                            success: false,
-                            output: None,
-                            error: Some(format!("Failed to parse response: {}", e)),
-                            execution_time_ms: 0,
-                        },
-                    }
-                } else {
-                    ToolExecutionResult {
-                        task_id: task.task_id.clone(),
-                        worker_id: task.worker_id.clone(),
-                        success: false,
-                        output: None,
-                        error: Some(format!("Tool execution failed: {}", response.status())),
-                        execution_time_ms: 0,
-                    }
+        let result = timeout(timeout_duration, Self::run_tool_inner(task)).await;
+
+        match result {
+            Ok(output) => output,
+            Err(_) => ToolExecutionResult {
+                task_id: task.task_id.clone(),
+                worker_id: task.worker_id.clone(),
+                success: false,
+                output: None,
+                error: Some(format!("Tool execution timed out after {}s", task.timeout_seconds)),
+                execution_time_ms: 0,
+            },
+        }
+    }
+
+    async fn run_tool_inner(task: &WorkerTask) -> ToolExecutionResult {
+        match task.tool_id.as_str() {
+            "shell" => Self::execute_shell_tool(task).await,
+            "http.request" => Self::execute_http_tool(task).await,
+            other => ToolExecutionResult {
+                task_id: task.task_id.clone(),
+                worker_id: task.worker_id.clone(),
+                success: false,
+                output: None,
+                error: Some(format!("Unknown tool_id: {}", other)),
+                execution_time_ms: 0,
+            },
+        }
+    }
+
+    async fn execute_shell_tool(task: &WorkerTask) -> ToolExecutionResult {
+        let command_str = task.input.get("command").and_then(|v| v.as_str());
+        let args = task
+            .input
+            .get("args")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        let Some(command_str) = command_str else {
+            return ToolExecutionResult {
+                task_id: task.task_id.clone(),
+                worker_id: task.worker_id.clone(),
+                success: false,
+                output: None,
+                error: Some("shell tool requires input.command".to_string()),
+                execution_time_ms: 0,
+            };
+        };
+
+        let mut command = Command::new(command_str);
+        command.args(&args);
+        command.stdout(Stdio::piped());
+        command.stderr(Stdio::piped());
+
+        match command.output().await {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                let success = output.status.success();
+                ToolExecutionResult {
+                    task_id: task.task_id.clone(),
+                    worker_id: task.worker_id.clone(),
+                    success,
+                    output: Some(serde_json::json!({
+                        "exit_code": output.status.code(),
+                        "stdout": stdout,
+                        "stderr": stderr,
+                    })),
+                    error: if success { None } else { Some(stderr) },
+                    execution_time_ms: 0,
                 }
             }
             Err(e) => ToolExecutionResult {
@@ -420,7 +466,91 @@ impl EdgeRunner {
                 worker_id: task.worker_id.clone(),
                 success: false,
                 output: None,
-                error: Some(format!("Request failed: {}", e)),
+                error: Some(format!("Failed to spawn shell command: {}", e)),
+                execution_time_ms: 0,
+            },
+        }
+    }
+
+    async fn execute_http_tool(task: &WorkerTask) -> ToolExecutionResult {
+        let method = task
+            .input
+            .get("method")
+            .and_then(|v| v.as_str())
+            .unwrap_or("GET");
+        let Some(url) = task.input.get("url").and_then(|v| v.as_str()) else {
+            return ToolExecutionResult {
+                task_id: task.task_id.clone(),
+                worker_id: task.worker_id.clone(),
+                success: false,
+                output: None,
+                error: Some("http.request tool requires input.url".to_string()),
+                execution_time_ms: 0,
+            };
+        };
+
+        let client = match reqwest::Client::builder()
+            .timeout(Duration::from_secs(task.timeout_seconds.max(1)))
+            .build()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                return ToolExecutionResult {
+                    task_id: task.task_id.clone(),
+                    worker_id: task.worker_id.clone(),
+                    success: false,
+                    output: None,
+                    error: Some(format!("Failed to build HTTP client: {}", e)),
+                    execution_time_ms: 0,
+                }
+            }
+        };
+
+        let mut request = client.request(reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::GET), url);
+
+        if let Some(headers) = task.input.get("headers").and_then(|v| v.as_object()) {
+            for (key, value) in headers {
+                if let Some(value_str) = value.as_str() {
+                    request = request.header(key, value_str);
+                }
+            }
+        }
+
+        if let Some(body) = task.input.get("body") {
+            request = request.json(body);
+        }
+
+        match request.send().await {
+            Ok(response) => {
+                let status = response.status().as_u16();
+                match response.text().await {
+                    Ok(text) => ToolExecutionResult {
+                        task_id: task.task_id.clone(),
+                        worker_id: task.worker_id.clone(),
+                        success: status < 400,
+                        output: Some(serde_json::json!({
+                            "status": status,
+                            "body": text,
+                        })),
+                        error: if status < 400 { None } else { Some(format!("HTTP {} error", status)) },
+                        execution_time_ms: 0,
+                    },
+                    Err(e) => ToolExecutionResult {
+                        task_id: task.task_id.clone(),
+                        worker_id: task.worker_id.clone(),
+                        success: false,
+                        output: None,
+                        error: Some(format!("Failed to read HTTP response: {}", e)),
+                        execution_time_ms: 0,
+                    },
+                }
+            }
+            Err(e) => ToolExecutionResult {
+                task_id: task.task_id.clone(),
+                worker_id: task.worker_id.clone(),
+                success: false,
+                output: None,
+                error: Some(format!("HTTP request failed: {}", e)),
                 execution_time_ms: 0,
             },
         }
@@ -459,30 +589,53 @@ impl EdgeRunner {
         Ok(())
     }
 
-    /// Get CPU percent (placeholder - would use system metrics)
+    /// Get current CPU usage percent using sysinfo.
     fn get_cpu_percent() -> Option<f32> {
-        // In production, would use sysinfo or similar
-        None
+        let mut system = sysinfo::System::new_all();
+        system.refresh_cpu();
+        // Allow sysinfo a moment to sample CPU usage.
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        system.refresh_cpu();
+        let cpus = system.cpus();
+        if cpus.is_empty() {
+            return None;
+        }
+        let total = cpus.iter().map(|cpu| cpu.cpu_usage()).sum::<f32>();
+        Some(total / cpus.len() as f32)
     }
 
-    /// Get memory percent (placeholder)
+    /// Get current memory usage percent using sysinfo.
     fn get_memory_percent() -> Option<f32> {
-        None
+        let mut system = sysinfo::System::new_all();
+        system.refresh_memory();
+        let total = system.total_memory();
+        if total == 0 {
+            return None;
+        }
+        Some((system.used_memory() as f32 / total as f32) * 100.0)
     }
 
-    /// Get disk percent (placeholder)
+    /// Get current root disk usage percent using sysinfo.
     fn get_disk_percent() -> Option<f32> {
+        let disks = sysinfo::Disks::new_with_refreshed_list();
+        for disk in disks.list() {
+            let total = disk.total_space();
+            if total > 0 {
+                let used = total.saturating_sub(disk.available_space());
+                return Some((used as f32 / total as f32) * 100.0);
+            }
+        }
         None
     }
 
-    /// Get CPU cores (placeholder)
+    /// Get CPU core count using sysinfo.
     fn get_cpu_cores() -> Option<f32> {
-        None
+        Some(sysinfo::System::new_all().cpus().len() as f32)
     }
 
-    /// Get memory MB (placeholder)
+    /// Get total memory in megabytes using sysinfo.
     fn get_memory_mb() -> Option<u64> {
-        None
+        Some(sysinfo::System::new_all().total_memory() / 1024)
     }
 
     /// Compute node fingerprint
