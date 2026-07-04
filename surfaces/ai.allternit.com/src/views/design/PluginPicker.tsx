@@ -1,9 +1,9 @@
 "use client";
 import React, { useMemo, useState } from 'react';
-import { X, MagnifyingGlass, PuzzlePiece, Download } from '@phosphor-icons/react';
+import { X, MagnifyingGlass, PuzzlePiece, Download, Lightning, Warning, Check } from '@phosphor-icons/react';
 import { BUNDLED_PLUGINS, getBundledPluginById } from '../../lib/design/bundled-plugins';
 import type { PluginManifest } from '../../lib/design/plugin-manifest';
-import { downloadInstallScript } from '../../lib/design/plugin-install-scripts';
+import { downloadInstallScript, installPluginViaApi } from '../../lib/design/plugin-install-scripts';
 import type { Agent } from '@/lib/agents/agent.types';
 
 interface PluginPickerProps {
@@ -25,6 +25,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 export function PluginPicker({ onSelect, onClose, agent }: PluginPickerProps) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('all');
+  const [installingId, setInstallingId] = useState<string | null>(null);
+  const [installResult, setInstallResult] = useState<{ id: string; ok: boolean; message: string } | null>(null);
+
+  const canInstall = !agent || (agent.capabilities ?? []).includes('plugin-install');
 
   const categories = useMemo(() => {
     const set = new Set(BUNDLED_PLUGINS.map((p) => p.category ?? 'utility'));
@@ -155,25 +159,77 @@ export function PluginPicker({ onSelect, onClose, agent }: PluginPickerProps) {
                         </div>
                       )}
                       {agent && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadInstallScript({ agent, plugin });
-                          }}
-                          title={`Download install script for ${agent.name}`}
-                          style={{
-                            marginTop: 10,
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '6px 10px', borderRadius: 8,
-                            border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)',
-                            color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Download size={12} />
-                          Install script for {agent.name}
-                        </button>
+                        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {!canInstall && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 6, background: 'rgba(234,179,8,0.12)' }}>
+                              <Warning size={12} color="#eab308" weight="fill" />
+                              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
+                                Add the <strong>plugin-install</strong> capability to {agent.name} to install directly.
+                              </span>
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                downloadInstallScript({ agent, plugin });
+                              }}
+                              title={`Download install script for ${agent.name}`}
+                              style={{
+                                flex: 1,
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                padding: '6px 10px', borderRadius: 8,
+                                border: '1px solid var(--border-subtle)', background: 'var(--bg-primary)',
+                                color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Download size={12} />
+                              Script
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!canInstall || installingId === plugin.id}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                setInstallingId(plugin.id);
+                                setInstallResult(null);
+                                try {
+                                  const result = await installPluginViaApi({ agent, plugin });
+                                  setInstallResult({ id: plugin.id, ok: true, message: result.message });
+                                } catch (err: any) {
+                                  setInstallResult({ id: plugin.id, ok: false, message: err.message ?? 'Install failed' });
+                                } finally {
+                                  setInstallingId(null);
+                                }
+                              }}
+                              title={`Install ${plugin.name} into ${agent.name}'s skill directory`}
+                              style={{
+                                flex: 1,
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                padding: '6px 10px', borderRadius: 8,
+                                border: '1px solid var(--border-subtle)',
+                                background: canInstall && installingId !== plugin.id ? 'var(--accent-primary)' : 'var(--surface-hover)',
+                                color: canInstall && installingId !== plugin.id ? '#fff' : 'var(--text-tertiary)', fontSize: 11, fontWeight: 700,
+                                cursor: canInstall && installingId !== plugin.id ? 'pointer' : 'default',
+                              }}
+                            >
+                              {installingId === plugin.id ? (
+                                <span style={{ width: 12, height: 12, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                              ) : (
+                                <Lightning size={12} weight="fill" />
+                              )}
+                              Install
+                            </button>
+                          </div>
+                          {installResult?.id === plugin.id && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 6, background: installResult.ok ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)' }}>
+                              {installResult.ok ? <Check size={12} color="#22c55e" weight="bold" /> : <Warning size={12} color="#ef4444" weight="fill" />}
+                              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{installResult.message}</span>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </button>
                   ))}

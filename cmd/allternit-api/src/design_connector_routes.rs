@@ -99,6 +99,7 @@ pub fn design_connector_router() -> Router<Arc<AppState>> {
         .route("/design/adapters", get(list_adapters))
         .route("/design/adapters/detect", post(detect_adapters))
         .route("/design/adapters/spawn", post(spawn_adapter))
+        .route("/design/plugins/install", post(install_plugin))
 }
 
 async fn list_composio_connections(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -531,4 +532,97 @@ async fn spawn_adapter(
             "error": format!("Failed to spawn adapter {}: {}", kind.id, err),
         })),
     }
+}
+
+// ─── Plugin Install ──────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallPluginRequest {
+    pub agent_id: String,
+    pub agent_name: Option<String>,
+    pub target: Option<String>,
+    pub workspace_path: Option<String>,
+    pub plugin: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstallPluginResponse {
+    pub installed: bool,
+    pub path: String,
+    pub target: String,
+    pub message: String,
+}
+
+fn normalize_plugin_id(id: &str) -> String {
+    id.replace(|c: char| !c.is_alphanumeric() && c != '-' && c != '_', "-")
+        .to_lowercase()
+}
+
+fn plugin_install_dir(plugin: &serde_json::Value, target: &str, workspace_path: Option<&str>) -> Option<PathBuf> {
+    let base = normalize_plugin_id(plugin.get("id")?.as_str()?);
+    let dir = match target {
+        "claude-desktop" => dirs::home_dir()?.join(".claude").join("skills").join(&base),
+        "codex-cli" => PathBuf::from(workspace_path.unwrap_or(".")).join("skills").join(&base),
+        "allternit-local" => PathBuf::from(workspace_path.unwrap_or(".")).join(".allternit").join("plugins").join(&base),
+        "generic-mcp" => PathBuf::from(workspace_path.unwrap_or(".")).join("mcp-plugins").join(&base),
+        _ => PathBuf::from(workspace_path.unwrap_or(".")).join("skills").join(&base),
+    };
+    Some(dir)
+}
+
+fn manifest_filename(target: &str) -> &'static str {
+    match target {
+        "claude-desktop" | "codex-cli" => "open-design.json",
+        _ => "manifest.json",
+    }
+}
+
+async fn install_plugin(
+    State(_state): State<Arc<AppState>>,
+    Json(req): Json<InstallPluginRequest>,
+) -> impl IntoResponse {
+    let target = req.target.as_deref().unwrap_or("claude-desktop");
+    let Some(dir) = plugin_install_dir(&req.plugin, target, req.workspace_path.as_deref()) else {
+        return Json(json!({
+            "error": "Could not resolve plugin install directory.",
+        }));
+    };
+
+    if let Err(err) = tokio::fs::create_dir_all(&dir).await {
+        return Json(json!({
+            "error": format!("Failed to create plugin directory: {}", err),
+        }));
+    }
+
+    let manifest_path = dir.join(manifest_filename(target));
+    let manifest_body = match serde_json::to_string_pretty(&req.plugin) {
+        Ok(body) => body,
+        Err(err) => {
+            return Json(json!({
+                "error": format!("Failed to serialize plugin manifest: {}", err),
+            }));
+        }
+    };
+
+    if let Err(err) = tokio::fs::write(&manifest_path, manifest_body).await {
+        return Json(json!({
+            "error": format!("Failed to write plugin manifest: {}", err),
+        }));
+    }
+
+    // Write a lightweight SKILL.md stub so the directory is recognized by skill scanners.
+    let name = req.plugin.get("name").and_then(|v| v.as_str()).unwrap_or("Plugin");
+    let skill_md = format!(
+        "# {}\n\nAuto-installed Open Design plugin for agent {}.\n",
+        name,
+        req.agent_name.as_deref().unwrap_or(&req.agent_id)
+    );
+    let _ = tokio::fs::write(dir.join("SKILL.md"), skill_md).await;
+
+    Json(json!(InstallPluginResponse {
+        installed: true,
+        path: manifest_path.to_string_lossy().to_string(),
+        target: target.to_string(),
+        message: format!("Installed {} to {}", name, dir.to_string_lossy()),
+    }))
 }

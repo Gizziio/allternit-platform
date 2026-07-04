@@ -7,6 +7,7 @@ use sqlx::FromRow;
 /// Schedule status
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
 #[sqlx(rename_all = "snake_case")]
+#[allow(dead_code)]
 pub enum ScheduleStatus {
     Active,
     Paused,
@@ -15,6 +16,7 @@ pub enum ScheduleStatus {
 
 /// Schedule record from database
 #[derive(Debug, Clone, FromRow)]
+#[allow(dead_code)]
 pub struct Schedule {
     pub id: String,
     pub name: String,
@@ -38,6 +40,7 @@ pub struct Schedule {
 
 /// Schedule trigger record
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ScheduleTrigger {
     /// Schedule ID
     pub schedule_id: String,
@@ -52,7 +55,9 @@ pub struct ScheduleTrigger {
 }
 
 /// Create schedule request
+/// Reserved for a future scheduler HTTP CRUD API.
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct CreateScheduleRequest {
     pub name: String,
     pub description: Option<String>,
@@ -65,7 +70,9 @@ pub struct CreateScheduleRequest {
 }
 
 /// Schedule response
+/// Reserved for a future scheduler HTTP CRUD API.
 #[derive(Debug, Clone, Serialize)]
+#[allow(dead_code)]
 pub struct ScheduleResponse {
     pub id: String,
     pub name: String,
@@ -78,6 +85,7 @@ pub struct ScheduleResponse {
     pub run_count: i32,
 }
 
+#[allow(dead_code)]
 impl From<Schedule> for ScheduleResponse {
     fn from(s: Schedule) -> Self {
         Self {
@@ -95,15 +103,17 @@ impl From<Schedule> for ScheduleResponse {
 }
 
 /// Calculate next run time from a cron expression
+#[allow(dead_code)]
 pub fn calculate_next_run(cron_expr: &str, after: Option<DateTime<Utc>>) -> Option<DateTime<Utc>> {
     // Use the cron parser to get next occurrence
     allternit_cron_parser::next_occurrence(cron_expr, after)
 }
 
 /// Parse natural language schedule
+#[allow(dead_code)]
 pub fn parse_schedule(input: &str) -> Result<(String, String), String> {
     let parsed = allternit_cron_parser::parse(input)
         .map_err(|e| format!("Failed to parse schedule: {}", e))?;
-    
+
     Ok((parsed.expression, parsed.description))
 }

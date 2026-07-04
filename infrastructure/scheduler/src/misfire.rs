@@ -56,8 +56,6 @@ fn parse_schedule_policy(policy: &str) -> Option<MisfirePolicy> {
 
 /// Calculate how many runs were missed
 fn calculate_missed_count(schedule: &Schedule) -> usize {
-    use chrono::Duration;
-    
     let now = chrono::Utc::now();
     let last_run = schedule.last_run_at.unwrap_or(schedule.created_at);
     let next_run = schedule.next_run_at.unwrap_or(now);

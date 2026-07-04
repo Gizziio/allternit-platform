@@ -664,7 +664,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   {activeTab === 'hyperframes' && (
                     <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
                       <Suspense fallback={<TabLoadingState label="Loading HyperFrames timeline…" />}>
-                        <HyperFramesTimelineEditor projectId={activeProject.id} />
+                        <HyperFramesTimelineEditor projectId={activeProject.id} artifactHtml={latestArtifactHtml} />
                       </Suspense>
                     </div>
                   )}

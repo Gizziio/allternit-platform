@@ -5,23 +5,19 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use sqlx::{Pool, Sqlite, SqlitePool};
-use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
 use tokio::time::interval;
 use tracing::{debug, error, info, warn};
+use uuid::Uuid;
 
 use crate::misfire::{handle_misfire, MisfireAction};
-use crate::scheduler::{Schedule, ScheduleTrigger};
+use crate::scheduler::Schedule;
 use crate::SchedulerConfig;
 
 /// Scheduler daemon
 pub struct SchedulerDaemon {
     config: SchedulerConfig,
     db: Pool<Sqlite>,
-    /// Track scheduled triggers
-    triggers: Arc<RwLock<HashMap<String, ScheduleTrigger>>>,
     /// HTTP client for API calls
     http_client: reqwest::Client,
 }
@@ -43,7 +39,6 @@ impl SchedulerDaemon {
         Ok(Self {
             config,
             db,
-            triggers: Arc::new(RwLock::new(HashMap::new())),
             http_client,
         })
     }
@@ -324,14 +319,39 @@ impl SchedulerDaemon {
     
     /// Record a schedule trigger for auditing
     async fn record_trigger(&self, schedule: &Schedule, run_id: &str, success: bool) -> Result<()> {
-        // This could write to a trigger_history table
-        // For now, just log it
-        if success {
-            debug!("Recorded trigger: schedule={}, run_id={}", schedule.id, run_id);
+        let run_id = if run_id.is_empty() {
+            None
         } else {
-            warn!("Recorded failed trigger: schedule={}", schedule.id);
+            Some(run_id)
+        };
+
+        let result = sqlx::query(
+            "INSERT INTO trigger_history (id, schedule_id, run_id, triggered_at, success, error_message, metadata)
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(Uuid::new_v4().to_string())
+        .bind(&schedule.id)
+        .bind(run_id)
+        .bind(Utc::now())
+        .bind(success)
+        .bind(None::<String>)
+        .bind(None::<String>)
+        .execute(&self.db)
+        .await;
+
+        match result {
+            Ok(_) => {
+                if success {
+                    debug!("Recorded trigger: schedule={}, run_id={:?}", schedule.id, run_id);
+                } else {
+                    warn!("Recorded failed trigger: schedule={}", schedule.id);
+                }
+            }
+            Err(e) => {
+                warn!("Failed to write trigger_history for schedule {}: {}", schedule.id, e);
+            }
         }
-        
+
         Ok(())
     }
     

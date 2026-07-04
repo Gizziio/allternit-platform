@@ -7,9 +7,7 @@
 
 use anyhow::Result;
 use clap::Parser;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{error, info, warn};
+use tracing::info;
 
 mod daemon;
 mod misfire;

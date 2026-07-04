@@ -218,3 +218,50 @@ export function downloadInstallScript(options: InstallScriptOptions): void {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+export interface InstallPluginApiResult {
+  installed: boolean;
+  path: string;
+  target: string;
+  message: string;
+}
+
+/**
+ * Ask the daemon to install a plugin into the target agent's skill directory.
+ * This is the end-to-end equivalent of `od mcp install <agent>`.
+ */
+export async function installPluginViaApi(options: InstallScriptOptions): Promise<InstallPluginApiResult> {
+  const target = options.target ?? detectTarget(options.agent);
+  const manifest = {
+    id: options.plugin.id,
+    name: options.plugin.name,
+    version: options.plugin.version ?? '0.0.1',
+    description: options.plugin.description,
+    category: options.plugin.category,
+    author: options.plugin.author,
+    upstream: options.plugin.upstream,
+    tags: options.plugin.tags,
+    preview: options.plugin.preview,
+    inputs: options.plugin.inputs,
+    pipelines: options.plugin.pipelines,
+    capabilities: options.plugin.capabilities,
+  };
+
+  const res = await fetch('/api/design/plugins/install', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agent_id: options.agent.id,
+      agent_name: options.agent.name,
+      target,
+      workspace_path: options.workspacePath,
+      plugin: manifest,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Install failed: ${res.status}`);
+  }
+  return res.json();
+}
