@@ -2,7 +2,14 @@
 name = "allternit-cron-parser"
 version = "0.1.0"
 edition = "2021"
-description = "Natural language schedule parser for Allternit - converts human-readable descriptions to cron expressions"
+description = "Natural language schedule parser - converts human-readable descriptions to cron expressions"
+authors = ["Allternit Team"]
+license = "MIT"
+repository = "https://github.com/Gizziio/allternit-cron-parser"
+homepage = "https://github.com/Gizziio/allternit-cron-parser"
+keywords = ["cron", "schedule", "parser", "natural-language", "recurrence"]
+categories = ["date-and-time", "parser-implementations"]
+rust-version = "1.80"
 
 [dependencies]
 chrono = { workspace = true }

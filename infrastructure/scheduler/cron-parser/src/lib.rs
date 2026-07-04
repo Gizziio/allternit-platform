@@ -437,7 +437,7 @@ pub fn next_occurrence(cron_expr: &str, after: Option<DateTime<Utc>>) -> Option<
     };
 
     let schedule = Schedule::from_str(&expression).ok()?;
-    schedule.upcoming(Utc).next()
+    schedule.after(&after).next()
 }
 
 /// Validate a cron expression
