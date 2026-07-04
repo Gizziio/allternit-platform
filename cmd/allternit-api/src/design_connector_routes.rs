@@ -15,8 +15,77 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
 
 use crate::AppState;
+
+/// Daemon-side cache for discovered Open Design skills.
+/// Refreshes on a polling interval in dev and can be invalidated by SIGHUP in
+/// production so skill discovery is fast and hot-reloads without restarting the
+/// API.
+#[derive(Debug, Clone)]
+pub struct DesignSkillCache {
+    inner: Arc<RwLock<DesignSkillCacheInner>>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct DesignSkillCacheInner {
+    skills: Vec<DiscoveredSkill>,
+    scanned_paths: Vec<String>,
+    total: usize,
+    refreshed_at: Option<Instant>,
+}
+
+impl DesignSkillCache {
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(RwLock::new(DesignSkillCacheInner::default())),
+        }
+    }
+
+    pub async fn get(&self, cwd: Option<&str>) -> DiscoverSkillsResponse {
+        // Return cached result if fresh (< 5s) to avoid filesystem churn.
+        let is_fresh = {
+            let guard = self.inner.read().await;
+            guard.refreshed_at.map_or(false, |t| t.elapsed() < Duration::from_secs(5))
+        };
+
+        if !is_fresh {
+            self.refresh(cwd).await;
+        }
+
+        let guard = self.inner.read().await;
+        DiscoverSkillsResponse {
+            skills: guard.skills.clone(),
+            scanned_paths: guard.scanned_paths.clone(),
+            total: guard.total,
+        }
+    }
+
+    pub async fn refresh(&self, cwd: Option<&str>) {
+        let paths = discover_skills_paths(cwd);
+        let mut skills = Vec::new();
+        let scanned: Vec<String> = paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
+
+        for path in &paths {
+            let source = if path.starts_with(dirs::home_dir().unwrap_or_default().join(".claude")) {
+                "claude-desktop"
+            } else if path.ends_with("skills") && path.components().count() <= 3 {
+                "codex-cli"
+            } else {
+                "allternit-local"
+            };
+            scan_skill_directory(path, source, &mut skills);
+        }
+
+        let mut guard = self.inner.write().await;
+        guard.skills = skills;
+        guard.scanned_paths = scanned;
+        guard.total = guard.skills.len();
+        guard.refreshed_at = Some(Instant::now());
+    }
+}
 
 pub fn design_connector_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -200,32 +269,11 @@ fn scan_skill_directory(root: &Path, source: &str, out: &mut Vec<DiscoveredSkill
 }
 
 async fn discover_skills(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Query(query): Query<DiscoverSkillsQuery>,
 ) -> impl IntoResponse {
-    let paths = discover_skills_paths(query.cwd.as_deref());
-    let mut skills = Vec::new();
-    let scanned: Vec<String> = paths
-        .iter()
-        .map(|p| p.to_string_lossy().to_string())
-        .collect();
-
-    for path in &paths {
-        let source = if path.starts_with(dirs::home_dir().unwrap_or_default().join(".claude")) {
-            "claude-desktop"
-        } else if path.ends_with("skills") && path.components().count() <= 3 {
-            "codex-cli"
-        } else {
-            "allternit-local"
-        };
-        scan_skill_directory(path, source, &mut skills);
-    }
-
-    Json(DiscoverSkillsResponse {
-        total: skills.len(),
-        scanned_paths: scanned,
-        skills,
-    })
+    let response = state.design_skill_cache.get(query.cwd.as_deref()).await;
+    Json(response)
 }
 
 // ─── Agent Adapter Detection / Spawning ──────────────────────────────────────
@@ -286,6 +334,22 @@ fn adapter_kinds() -> Vec<AdapterKind> {
             optional_env: vec!["CODEX_SKILLS_PATH".to_string()],
         },
         AdapterKind {
+            id: "cursor-agent".to_string(),
+            name: "Cursor Agent".to_string(),
+            description: "Cursor agent CLI adapter.".to_string(),
+            runtime: "subprocess".to_string(),
+            required_env: vec![],
+            optional_env: vec!["CURSOR_API_KEY".to_string()],
+        },
+        AdapterKind {
+            id: "kimi-cli".to_string(),
+            name: "Kimi CLI".to_string(),
+            description: "Moonshot Kimi agent CLI adapter.".to_string(),
+            runtime: "subprocess".to_string(),
+            required_env: vec![],
+            optional_env: vec!["KIMI_API_KEY".to_string()],
+        },
+        AdapterKind {
             id: "allternit-local".to_string(),
             name: "Allternit Local".to_string(),
             description: "In-process Allternit design runtime adapter.".to_string(),
@@ -311,6 +375,17 @@ async fn list_adapters(State(_state): State<Arc<AppState>>) -> impl IntoResponse
     }))
 }
 
+fn command_on_path(cmd: &str) -> Option<PathBuf> {
+    let path_env = std::env::var("PATH").unwrap_or_default();
+    for dir in path_env.split(':') {
+        let candidate = Path::new(dir).join(cmd);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
 async fn detect_adapters(
     State(_state): State<Arc<AppState>>,
     Json(req): Json<DetectAdaptersRequest>,
@@ -323,7 +398,7 @@ async fn detect_adapters(
     let cwd = req.cwd.as_deref().map(Path::new);
 
     // Claude Desktop
-    if home.join(".claude").is_dir() {
+    if home.join(".claude").is_dir() || command_on_path("claude").is_some() {
         available.push("claude-desktop".to_string());
         env.insert(
             "CLAUDE_CONFIG_PATH".to_string(),
@@ -334,15 +409,27 @@ async fn detect_adapters(
     }
 
     // Codex CLI
-    let has_codex_skills = cwd.map(|p| p.join("skills").is_dir()).unwrap_or(false)
-        || home.join(".codex").is_dir();
-    if has_codex_skills || std::env::var("OPENAI_API_KEY").is_ok() {
+    if command_on_path("codex").is_some() {
         available.push("codex-cli".to_string());
         if let Ok(v) = std::env::var("OPENAI_API_KEY") {
             env.insert("OPENAI_API_KEY".to_string(), v);
         }
     } else {
         missing.push("codex-cli".to_string());
+    }
+
+    // Cursor agent
+    if command_on_path("cursor-agent").is_some() || home.join(".cursor").is_dir() {
+        available.push("cursor-agent".to_string());
+    } else {
+        missing.push("cursor-agent".to_string());
+    }
+
+    // Kimi CLI
+    if command_on_path("kimi").is_some() {
+        available.push("kimi-cli".to_string());
+    } else {
+        missing.push("kimi-cli".to_string());
     }
 
     // Allternit local
@@ -384,18 +471,64 @@ async fn spawn_adapter(
         }));
     };
 
-    let command = match kind.id.as_str() {
-        "claude-desktop" => Some("open -a 'Claude Desktop'".to_string()),
-        "codex-cli" => Some("codex".to_string()),
-        "allternit-local" => Some("allternit-local".to_string()),
-        "generic-mcp" => std::env::var("MCP_COMMAND").ok(),
-        _ => None,
+    let cwd = req.cwd.as_deref().map(PathBuf::from).unwrap_or_else(|| {
+        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+    });
+
+    let mut env_vars: HashMap<String, String> = std::env::vars().collect();
+    if let Some(extra) = req.env {
+        env_vars.extend(extra);
+    }
+
+    let (program, args) = match kind.id.as_str() {
+        "claude-desktop" => ("open".to_string(), vec!["-a".to_string(), "Claude Desktop".to_string()]),
+        "codex-cli" => ("codex".to_string(), vec![]),
+        "cursor-agent" => ("cursor-agent".to_string(), vec![]),
+        "kimi-cli" => ("kimi".to_string(), vec![]),
+        "allternit-local" => ("allternit-local".to_string(), vec![]),
+        "generic-mcp" => {
+            let cmd = std::env::var("MCP_COMMAND").unwrap_or_default();
+            let mut parts = cmd.split_whitespace().map(|s| s.to_string());
+            let program = parts.next().unwrap_or_default();
+            (program, parts.collect())
+        }
+        _ => {
+            return Json(json!({
+                "error": format!("Adapter {} cannot be spawned", kind.id),
+            }));
+        }
     };
 
-    Json(json!(SpawnAdapterResponse {
-        kind: kind.id.clone(),
-        status: "spawned".to_string(),
-        command,
-        pid: None,
-    }))
+    if program.is_empty() {
+        return Json(json!({
+            "error": format!("No command configured for adapter {}", kind.id),
+        }));
+    }
+
+    let mut cmd = tokio::process::Command::new(&program);
+    cmd.args(&args)
+        .current_dir(&cwd)
+        .envs(&env_vars)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped());
+
+    match cmd.spawn() {
+        Ok(mut child) => {
+            let pid = child.id();
+            // Detach the child so it keeps running after this request completes.
+            tokio::spawn(async move {
+                let _ = child.wait().await;
+            });
+            Json(json!(SpawnAdapterResponse {
+                kind: kind.id.clone(),
+                status: "spawned".to_string(),
+                command: Some(format!("{} {}", program, args.join(" ")).trim().to_string()),
+                pid,
+            }))
+        }
+        Err(err) => Json(json!({
+            "error": format!("Failed to spawn adapter {}: {}", kind.id, err),
+        })),
+    }
 }

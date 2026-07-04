@@ -27,6 +27,7 @@ import {
   Shield,
   Robot,
   Info,
+  SlidersHorizontal,
 } from '@phosphor-icons/react';
 
 type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'about';
@@ -54,6 +55,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'extensions', label: 'Extensions', icon: React.createElement(PuzzlePiece, { size: 18 }), group: 'products' },
   { id: 'infrastructure', label: 'Infrastructure', icon: React.createElement(Cloud, { size: 18 }), group: 'infrastructure' },
   { id: 'vps', label: 'VPS Connections', icon: React.createElement(HardDrives, { size: 18 }), group: 'infrastructure' },
+  { id: 'environment', label: 'Environment', icon: React.createElement(SlidersHorizontal, { size: 18 }), group: 'infrastructure' },
   { id: 'security', label: 'Security', icon: React.createElement(Shield, { size: 18 }), group: 'infrastructure' },
   { id: 'agents', label: 'Agents', icon: React.createElement(Robot, { size: 18 }), group: 'infrastructure' },
   { id: 'about', label: 'About', icon: React.createElement(Info, { size: 18 }), group: 'about' },

@@ -56,6 +56,7 @@ import { useThemeStore } from '@/design/ThemeStore';
 import { LocalModelManager } from '@/components/models/LocalModelManager';
 import { InfrastructureSettings } from './InfrastructureSettings';
 import { ServiceUrlSettings } from './ServiceUrlSettings';
+import { EnvironmentSettings } from './EnvironmentSettings';
 import { SETTINGS_NAV_ITEMS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
 import { cn } from '@/lib/utils';
 
@@ -2023,6 +2024,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'usage': return renderUsagePanel();
       case 'diagnostics': return <DiagnosticsPanel />;
       case 'infrastructure': return <ToastProvider><InfrastructureSettings initialTab={infrastructureTab as any} /></ToastProvider>;
+      case 'environment': return <ToastProvider><EnvironmentSettings /></ToastProvider>;
       case 'security': return <ToastProvider>{renderSecurityPanel()}</ToastProvider>;
       case 'agents': return <ToastProvider>{renderAgentsPanel()}</ToastProvider>;
       case 'about': return renderAboutPanel();

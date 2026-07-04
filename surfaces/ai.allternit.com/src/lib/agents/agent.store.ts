@@ -26,6 +26,8 @@ import type {
   GateReview,
 } from './agent.types';
 import * as agentService from './agent.service';
+import { validateAgentCreationChecklist } from './agent-creation-checklist';
+import { useAgentSurfaceModeStore, type AgentModeSurface } from '@/stores/agent-surface-mode.store';
 import type {
   CharacterArtifactFile,
   CharacterCompiledConfig,
@@ -301,6 +303,14 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       createAgent: async (input) => {
         set({ isCreating: true, error: null });
         try {
+          const checklist = validateAgentCreationChecklist(input);
+          if (!checklist.isValid) {
+            const failed = checklist.items
+              .filter((i) => i.required && !i.satisfied)
+              .map((i) => i.label)
+              .join(', ');
+            throw new Error(`Agent creation checklist incomplete: ${failed}`);
+          }
           const agent = await agentService.createAgent(input);
           set(state => ({ 
             agents: [agent, ...state.agents],
@@ -322,12 +332,45 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       updateAgent: async (agentId, updates) => {
         set({ error: null });
         try {
+          const current = get().agents.find((a) => a.id === agentId);
+          if (current) {
+            const merged: Record<string, unknown> = {
+              ...current,
+              ...updates,
+              // Deep merge character layer if provided
+              characterLayer: updates.characterLayer
+                ? { ...(current.characterLayer || {}), ...updates.characterLayer }
+                : current.characterLayer,
+            };
+            const checklist = validateAgentCreationChecklist(merged as Partial<CreateAgentInput>);
+            if (!checklist.isValid) {
+              const failed = checklist.items
+                .filter((i) => i.required && !i.satisfied)
+                .map((i) => i.label)
+                .join(', ');
+              throw new Error(`Agent update checklist incomplete: ${failed}`);
+            }
+          }
           const updated = await agentService.updateAgent(agentId, updates);
-          set(state => ({
-            agents: state.agents.map(a => a.id === agentId ? updated : a),
-            isEditing: null,
-            viewMode: 'detail'
-          }));
+          set(state => {
+            const nextAgents = state.agents.map(a => a.id === agentId ? updated : a);
+            // Clear surface selections where this agent is no longer allowed.
+            const surfaceStore = useAgentSurfaceModeStore.getState();
+            const surfaces: AgentModeSurface[] = ['chat', 'cowork', 'code', 'browser', 'design'];
+            for (const surface of surfaces) {
+              if (surfaceStore.selectedAgentIdBySurface[surface] === agentId) {
+                const allowed = (updated.allowedSurfaces || []).includes(surface);
+                if (!allowed) {
+                  surfaceStore.setSelectedAgent(surface, null);
+                }
+              }
+            }
+            return {
+              agents: nextAgents,
+              isEditing: null,
+              viewMode: 'detail'
+            };
+          });
         } catch (err) {
           set({ 
             error: err instanceof Error ? err.message : 'Failed to update agent' 

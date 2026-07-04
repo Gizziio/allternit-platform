@@ -36,6 +36,17 @@ export function swarmToAgent(swarm: AgentSwarm): Agent {
     updatedAt: new Date().toISOString(),
     source: "organization",
     swarmId: swarm.id,
+    harness: { mode: "cloud" },
+    allowedSurfaces: ["chat", "cowork"],
+    trustTier: "standard",
+    writeScope: "workspace",
+    characterLayer: {
+      identity: { setup: "operations", className: "Swarm Orchestrator", specialtySkills: swarm.agents.map((a) => a.role), temperament: "balanced", personalityTraits: [], backstory: "" },
+      roleCard: { domain: swarm.strategy, inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
+      voice: { style: "", rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
+      progression: { class: "Swarm Orchestrator", relevantStats: [], level: { maxLevel: 99, xpFormula: "linear" } },
+      avatar: { type: "mascot", mascot: { template: "bot" }, style: { primaryColor: "#8b5cf6", accentColor: "#1e1c1a" } },
+    },
     agentCard: {
       tagline: `${swarm.agents.length}-agent ${swarm.strategy} swarm`,
       capabilityDescription: `Collaborative swarm using ${swarm.strategy} strategy. Agents: ${swarm.agents.map((a) => a.role).join(", ")}`,

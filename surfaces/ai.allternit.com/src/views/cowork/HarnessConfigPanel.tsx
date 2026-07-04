@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import GlassSurface from '@/design/GlassSurface';
 import type { HarnessConfig, HarnessBYOKConfig } from '@/lib/agents/agent.types';
+import { updateAgent } from '@/lib/agents/agent.service';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('HarnessConfigPanel');
 
 interface HarnessConfigPanelProps {
   agentId: string;
@@ -30,6 +34,7 @@ const HarnessConfigPanel: React.FC<HarnessConfigPanelProps> = ({
     return defaultHarness;
   });
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (value) setConfig(value);
@@ -82,13 +87,21 @@ const HarnessConfigPanel: React.FC<HarnessConfigPanelProps> = ({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(`allternit-harness-${agentId}`, JSON.stringify(config));
     }
     onChange?.(config);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaveError(null);
+    try {
+      await updateAgent(agentId, { harness: config });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save harness';
+      logger.error({ err }, 'Failed to persist harness config');
+      setSaveError(message);
+    }
   };
 
   const envToString = (env?: Record<string, string>) =>
@@ -256,10 +269,15 @@ const HarnessConfigPanel: React.FC<HarnessConfigPanelProps> = ({
         )}
 
         <div className="flex justify-end items-center gap-3">
+          {saveError && (
+            <span style={{ color: 'var(--status-error)' }} className="text-sm font-medium">
+              {saveError}
+            </span>
+          )}
           {saved && <span style={{ color: 'var(--status-success)' }} className="text-sm font-medium">Saved Successfully!</span>}
           <button
             type="button"
-            onClick={handleSave}
+            onClick={() => { void handleSave(); }}
             className="px-6 py-2 rounded-lg font-medium text-sm transition-colors"
             style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--ui-text-inverse)' }}
           >

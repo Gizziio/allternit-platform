@@ -5,7 +5,7 @@
  * This is the core service for the agent lifecycle.
  */
 
-import { getAgent, createAgent } from './agent.service';
+import { getAgent, createAgent, normalizeCreateAgentInput } from './agent.service';
 import { filesApi } from './files-api';
 import type {
   CreateAgentInput,
@@ -172,8 +172,9 @@ async function createWorkspace(
   } : template.layers;
 
   // First, create the agent record
+  const normalizedInput = normalizeCreateAgentInput(input);
   const agent = await createAgent({
-    ...input,
+    ...normalizedInput,
     ownerId: userContext?.userId || 'system',
     workspaceId: generateWorkspaceId(input.name)
   });
@@ -634,7 +635,18 @@ async function importWorkspace(
     description: (manifest.description as string) || `Imported from ${file.name}`,
     type: 'worker',
     model: (manifest.model as string) || 'gpt-4o',
-    provider: (manifest.provider as 'openai' | 'anthropic' | 'local' | 'custom') || 'openai'
+    provider: (manifest.provider as 'openai' | 'anthropic' | 'local' | 'custom') || 'openai',
+    harness: { mode: 'cloud' },
+    allowedSurfaces: ['chat'],
+    trustTier: 'standard',
+    writeScope: 'workspace',
+    characterLayer: {
+      identity: { setup: 'generalist', className: 'Imported Agent', specialtySkills: [], temperament: 'balanced', personalityTraits: [], backstory: '' },
+      roleCard: { domain: 'general', inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
+      voice: { style: '', rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
+      progression: { class: 'Imported Agent', relevantStats: [], level: { maxLevel: 99, xpFormula: 'linear' } },
+      avatar: { type: 'mascot', mascot: { template: 'bot' }, style: { primaryColor: '#6366f1', accentColor: '#1e1c1a' } },
+    },
   };
 
   const workspace = await createWorkspace(input, 'allternit-standard', userContext);

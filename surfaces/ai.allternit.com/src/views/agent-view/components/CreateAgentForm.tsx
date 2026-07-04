@@ -355,16 +355,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
     return validateAgentCreationChecklist(input);
   }, [formData, characterLayer]);
 
-  const isReadyForCreate = useMemo(() => {
-    return (
-      formData.name && 
-      formData.name.length >= 3 &&
-      formData.description && 
-      formData.description.length >= 10 &&
-      blueprint.setup &&
-      blueprint.specialtySkills.length >= 1
-    );
-  }, [formData.name, formData.description, blueprint]);
+  const isReadyForCreate = useMemo(() => checklist.isValid, [checklist.isValid]);
 
   const stepValidation = useMemo(() => ({
     identity: !!(formData.name && formData.name.length >= 3 && formData.description && formData.description.length >= 10),
@@ -779,11 +770,16 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                 Agent Type
               </h3>
               <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
-                {AGENT_TYPES.map((type) => (
+                {AGENT_TYPES.map((type) => {
+                  const disabled = type.id === 'sub-agent' && orchestrators.length === 0;
+                  return (
                   <button
                     key={type.id}
                     type="button"
-                    className={`rounded-[10px] border border-solid p-4 text-left transition-all duration-200 cursor-pointer ${
+                    disabled={disabled}
+                    className={`rounded-[10px] border border-solid p-4 text-left transition-all duration-200 ${
+                      disabled ? 'opacity-50 cursor-not-allowed bg-[var(--bg-primary)]' : 'cursor-pointer'
+                    } ${
                       formData.type === type.id ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10' : 'border-[var(--border-subtle)] bg-transparent'
                     }`}
                     onClick={() =>
@@ -803,7 +799,8 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
                     </div>
                     <p className="text-[12px] text-[var(--text-secondary)] m-0">{type.description}</p>
                   </button>
-                ))}
+                );
+                })}
               </div>
             </div>
 

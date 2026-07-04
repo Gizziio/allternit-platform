@@ -147,6 +147,17 @@ export function buildOpenClawImportInput(
     tools: [],
     maxIterations: 10,
     temperature: 0.7,
+    harness: { mode: "cloud" },
+    allowedSurfaces: ["chat"],
+    trustTier: "standard",
+    writeScope: "workspace",
+    characterLayer: {
+      identity: { setup: "generalist", className: "OpenClaw Import", specialtySkills: [], temperament: "balanced", personalityTraits: [], backstory: "" },
+      roleCard: { domain: "openclaw workspace", inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
+      voice: { style: "", rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
+      progression: { class: "OpenClaw Import", relevantStats: [], level: { maxLevel: 99, xpFormula: "linear" } },
+      avatar: { type: "mascot", mascot: { template: "bot" }, style: { primaryColor: "#6366f1", accentColor: "#1e1c1a" } },
+    },
     config: {
       source: "openclaw",
       fallbackModels,

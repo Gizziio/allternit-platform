@@ -70,6 +70,7 @@ pub mod workflow_routes;
 pub mod workspace_routes;
 
 use auth::{AuthConfig, JwksManager};
+use design_connector_routes::DesignSkillCache;
 use config::AppConfig;
 use db::DbHandle;
 use rails::RailsState;
@@ -121,6 +122,8 @@ pub struct AppState {
     pub webhook_secret: Option<String>,
     /// Office add-in runtime bindings and sessions
     pub office_runtime: OfficeRuntimeState,
+    /// Daemon-side Open Design skill cache with hot-reload semantics.
+    pub design_skill_cache: DesignSkillCache,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

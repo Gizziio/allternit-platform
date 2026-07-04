@@ -146,7 +146,57 @@ export async function getAgent(agentId: string): Promise<Agent> {
   }
 }
 
+export function normalizeCreateAgentInput(input: CreateAgentInput): CreateAgentInput {
+  const allowedSurfaces = input.allowedSurfaces?.length
+    ? input.allowedSurfaces
+    : ['chat' as const];
+  return {
+    ...input,
+    type: input.type || 'worker',
+    harness: input.harness || { mode: 'cloud' as const },
+    allowedSurfaces,
+    trustTier: input.trustTier || 'standard',
+    writeScope: input.writeScope || 'workspace',
+    characterLayer: input.characterLayer || {
+      identity: {
+        setup: 'generalist' as const,
+        className: 'Generalist',
+        specialtySkills: [],
+        temperament: 'balanced' as const,
+        personalityTraits: [],
+        backstory: '',
+      },
+      roleCard: {
+        domain: input.name || 'general',
+        inputs: [],
+        outputs: [],
+        definitionOfDone: [],
+        hardBans: [],
+        escalation: [],
+        metrics: [],
+      },
+      voice: {
+        style: '',
+        rules: [],
+        microBans: [],
+        tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 },
+      },
+      progression: {
+        class: 'Generalist',
+        relevantStats: [],
+        level: { maxLevel: 99, xpFormula: 'linear' },
+      },
+      avatar: {
+        type: 'mascot' as const,
+        mascot: { template: 'bot' as const },
+        style: { primaryColor: '#6366f1', accentColor: '#1e1c1a' },
+      },
+    },
+  };
+}
+
 export async function createAgent(input: CreateAgentInput): Promise<Agent> {
+  input = normalizeCreateAgentInput(input);
   // Validate input with Zod
   try {
     validateCreateAgentInput(input);

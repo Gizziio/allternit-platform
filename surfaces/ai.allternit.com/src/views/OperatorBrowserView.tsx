@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { useAgentStore, type Agent } from '@/lib/agents';
 import { useSurfaceAgentSelection } from '@/lib/agents/surface-agent-context';
@@ -19,6 +19,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  useBrowserSessionStore,
+  useBrowserSessionActions,
+  createBrowserSession,
+} from './browser/BrowserSessionStore';
+import { ChatComposer } from './chat/ChatComposer';
+import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
+import { ChatIdProvider } from '@/providers/chat-id-provider';
+import { DataStreamProvider } from '@/providers/data-stream-provider';
+import { MessageTreeProvider } from '@/providers/message-tree-provider';
+import { ChatInputProvider } from '@/providers/chat-input-provider';
+import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
+import { ChatModelsProvider } from '@/providers/chat-models-provider';
+import { ModelSelectionProvider } from '@/providers/model-selection-provider';
 import {
   Globe,
   Play,
@@ -97,12 +111,38 @@ export function OperatorBrowserView() {
     useSurfaceAgentSelection('browser');
   const setSelectedAgent = useAgentSurfaceModeStore((s) => s.setSelectedAgent);
 
+  const defaultSelection = useDefaultModelSelection();
+  const { sendMessageStream, loadSessions, setActiveSession } = useBrowserSessionActions();
+  const activeSessionId = useBrowserSessionStore((s) => s.activeSessionId);
+  const activeSession = useBrowserSessionStore((s) =>
+    (s.sessions ?? []).find((x) => x.id === activeSessionId)
+  );
+  const backendMessages = activeSession?.messages || [];
+  const isStreaming = useBrowserSessionStore(
+    (s) => s.streamingBySession[activeSessionId || '']?.isStreaming
+  );
+
   // Check operator health on mount
   useEffect(() => {
     checkOperatorHealth();
     const interval = setInterval(checkOperatorHealth, 30000); // Check every 30s
     return () => clearInterval(interval);
   }, []);
+
+  // Load sessions on mount and create a default browser session if none exists.
+  useEffect(() => {
+    void loadSessions();
+  }, [loadSessions]);
+
+  useEffect(() => {
+    if (activeSessionId) return;
+    let cancelled = false;
+    void (async () => {
+      const id = await createBrowserSession({ name: 'Browser session', sessionMode: 'agent' });
+      if (!cancelled) setActiveSession(id);
+    })();
+    return () => { cancelled = true; };
+  }, [activeSessionId, setActiveSession]);
 
   const checkOperatorHealth = async () => {
     try {
@@ -459,9 +499,104 @@ export function OperatorBrowserView() {
               </div>
             </div>
           )}
+          <ChatIdProvider
+            chatId={activeSessionId || 'browser'}
+            isPersisted={Boolean(activeSessionId)}
+            source="local"
+          >
+            <DataStreamProvider>
+              <MessageTreeProvider>
+                <ChatInputProvider>
+                  <PromptInputProvider>
+                    <ChatModelsProvider>
+                      <ModelSelectionProvider defaultSelection={defaultSelection}>
+                        <BrowserChatPanel
+                          activeSessionId={activeSessionId}
+                          sendMessageStream={sendMessageStream}
+                          isStreaming={isStreaming}
+                          backendMessages={backendMessages}
+                        />
+                      </ModelSelectionProvider>
+                    </ChatModelsProvider>
+                  </PromptInputProvider>
+                </ChatInputProvider>
+              </MessageTreeProvider>
+            </DataStreamProvider>
+          </ChatIdProvider>
         </div>
       </div>
     </GlassSurface>
+  );
+}
+
+function BrowserChatPanel({
+  activeSessionId,
+  sendMessageStream,
+  isStreaming,
+  backendMessages,
+}: {
+  activeSessionId: string | null;
+  sendMessageStream: (sessionId: string, message: { text: string }) => Promise<any>;
+  isStreaming: boolean;
+  backendMessages: any[];
+}) {
+  const { selectedAgent } = useSurfaceAgentSelection('browser');
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      if (!text.trim() || !activeSessionId) return;
+      await sendMessageStream(activeSessionId, { text });
+    },
+    [activeSessionId, sendMessageStream]
+  );
+
+  return (
+    <div className="h-96 flex flex-col border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+      <div className="px-4 py-2 border-b border-[var(--border-subtle)] flex items-center justify-between">
+        <span className="text-sm font-semibold">Browser Chat</span>
+        {selectedAgent && (
+          <span className="text-xs text-[var(--text-tertiary)]">
+            Agent: {selectedAgent.name}
+          </span>
+        )}
+      </div>
+      <ScrollArea className="flex-1 px-4 py-2">
+        <div className="space-y-2">
+          {backendMessages.length === 0 && (
+            <div className="text-xs text-[var(--text-tertiary)] text-center py-4">
+              Ask the browser agent to navigate, extract, or summarize a page.
+            </div>
+          )}
+          {backendMessages.map((message: any, index: number) => (
+            <div
+              key={message.id || index}
+              className={cn(
+                'p-3 rounded-lg text-sm',
+                message.role === 'user'
+                  ? 'bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]'
+                  : 'bg-[var(--surface-hover)] text-[var(--text-primary)]'
+              )}
+            >
+              {typeof message.content === 'string'
+                ? message.content
+                : JSON.stringify(message.content)}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+      <div className="p-3 border-t border-[var(--border-subtle)]">
+        <ChatComposer
+          onSend={handleSend}
+          isLoading={isStreaming}
+          placeholder={
+            selectedAgent
+              ? `Message ${selectedAgent.name}...`
+              : 'Ask the browser agent...'
+          }
+          agentModeSurface="browser"
+        />
+      </div>
+    </div>
   );
 }
 

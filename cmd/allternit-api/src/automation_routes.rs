@@ -27,6 +27,17 @@ fn cron_daemon_base() -> String {
         .to_string()
 }
 
+fn normalize_execution_domain(domain: Option<String>) -> String {
+    match domain.as_deref() {
+        Some("cloud") | Some("hybrid") => "cloud".to_string(),
+        _ => "local".to_string(),
+    }
+}
+
+fn uses_cloud_scheduler(domain: &str) -> bool {
+    domain == "cloud" || domain == "hybrid"
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Domain Types
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -778,6 +789,8 @@ async fn create_routine(
         .unwrap_or("agent")
         .to_string();
 
+    let execution_domain = normalize_execution_domain(req.execution_domain.clone());
+
     let routine = Routine {
         id: id.clone(),
         user_id: user.user_id.clone(),
@@ -791,7 +804,7 @@ async fn create_routine(
         schedule_type: req.schedule_type.clone(),
         schedule_expression: req.schedule_expression.clone(),
         timezone: req.timezone.clone(),
-        execution_domain: req.execution_domain.clone().unwrap_or_else(|| "local".to_string()),
+        execution_domain,
         config: config.clone(),
         tags: req.tags.clone(),
         metadata: req.metadata.clone(),
@@ -802,25 +815,27 @@ async fn create_routine(
         updated_at: now.clone(),
     };
 
-    let harness_config = if let Some(ref agent_id) = routine.agent_id {
-        resolve_agent_harness(&state.db, agent_id).await
+    let daemon_job_id = if uses_cloud_scheduler(&routine.execution_domain) {
+        let harness_config = if let Some(ref agent_id) = routine.agent_id {
+            resolve_agent_harness(&state.db, agent_id).await
+        } else {
+            None
+        };
+        let daemon_job = build_daemon_job_from_routine(&routine, &job_type, harness_config);
+        let client = reqwest::Client::new();
+        match cron_daemon_create_job(&client, daemon_job).await {
+            Ok(res) => res
+                .get("job")
+                .and_then(|v| v.get("id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            Err(e) => {
+                warn!("failed to create daemon routine job: {}", e);
+                None
+            }
+        }
     } else {
         None
-    };
-    let daemon_job = build_daemon_job_from_routine(&routine, &job_type, harness_config);
-    let client = reqwest::Client::new();
-    let daemon_res = cron_daemon_create_job(&client, daemon_job).await;
-
-    let daemon_job_id = match daemon_res {
-        Ok(res) => res
-            .get("job")
-            .and_then(|v| v.get("id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string()),
-        Err(e) => {
-            warn!("failed to create daemon routine job: {}", e);
-            None
-        }
     };
 
     let conn = state.db.connect().map_err(|e| {
@@ -905,12 +920,13 @@ async fn update_routine(
 
     let existing = conn
         .query_row(
-            "SELECT config, gizzi_job_id FROM routines WHERE id = ?1 AND user_id = ?2",
+            "SELECT config, gizzi_job_id, execution_domain FROM routines WHERE id = ?1 AND user_id = ?2",
             [&id, &user.user_id],
             |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, Option<String>>(1)?,
+                    row.get::<_, String>(2)?,
                 ))
             },
         )
@@ -926,6 +942,8 @@ async fn update_routine(
         .and_then(|v| v.as_str())
         .unwrap_or("agent")
         .to_string();
+
+    let new_execution_domain = req.execution_domain.as_ref().map(|d| normalize_execution_domain(Some(d.clone())));
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -953,7 +971,7 @@ async fn update_routine(
             req.schedule_type.as_ref(),
             req.schedule_expression.as_ref(),
             req.timezone.as_ref(),
-            req.execution_domain.as_ref(),
+            new_execution_domain.as_ref(),
             Some(config.to_string()),
             req.tags.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
             req.metadata.as_ref().map(|m| m.to_string()),
@@ -970,17 +988,66 @@ async fn update_routine(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    if let Some(gizzi_job_id) = existing.1 {
-        let updated_routine = get_routine(State(state.clone()), headers.clone(), Path(id.clone())).await?.0;
+    let updated_routine = get_routine(State(state.clone()), headers.clone(), Path(id.clone())).await?.0;
+    let old_uses_cloud = uses_cloud_scheduler(&existing.2);
+    let new_uses_cloud = uses_cloud_scheduler(&updated_routine.execution_domain);
+
+    if old_uses_cloud && new_uses_cloud {
+        if let Some(ref gizzi_job_id) = existing.1 {
+            let harness_config = if let Some(ref agent_id) = updated_routine.agent_id {
+                resolve_agent_harness(&state.db, agent_id).await
+            } else {
+                None
+            };
+            let gizzi_job = build_daemon_job_from_routine(&updated_routine, &job_type, harness_config);
+            let client = reqwest::Client::new();
+            if let Err(e) = cron_daemon_update_job(&client, gizzi_job_id, gizzi_job).await {
+                warn!("failed to update daemon routine job: {}", e);
+            }
+        }
+    } else if old_uses_cloud && !new_uses_cloud {
+        if let Some(ref gizzi_job_id) = existing.1 {
+            let client = reqwest::Client::new();
+            if let Err(e) = cron_daemon_delete_job(&client, gizzi_job_id).await {
+                warn!("failed to delete daemon routine job on domain change: {}", e);
+            }
+        }
+        conn.execute(
+            "UPDATE routines SET gizzi_job_id = NULL, updated_at = ?1 WHERE id = ?2 AND user_id = ?3",
+            (&now, &id, &user.user_id),
+        )
+        .map_err(|e| {
+            warn!("failed to clear gizzi_job_id: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    } else if !old_uses_cloud && new_uses_cloud {
         let harness_config = if let Some(ref agent_id) = updated_routine.agent_id {
             resolve_agent_harness(&state.db, agent_id).await
         } else {
             None
         };
-        let gizzi_job = build_daemon_job_from_routine(&updated_routine, &job_type, harness_config);
+        let daemon_job = build_daemon_job_from_routine(&updated_routine, &job_type, harness_config);
         let client = reqwest::Client::new();
-        if let Err(e) = cron_daemon_update_job(&client, &gizzi_job_id, gizzi_job).await {
-            warn!("failed to update daemon routine job: {}", e);
+        let daemon_job_id = match cron_daemon_create_job(&client, daemon_job).await {
+            Ok(res) => res
+                .get("job")
+                .and_then(|v| v.get("id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            Err(e) => {
+                warn!("failed to create daemon routine job on domain change: {}", e);
+                None
+            }
+        };
+        if let Some(daemon_job_id) = daemon_job_id {
+            conn.execute(
+                "UPDATE routines SET gizzi_job_id = ?1, updated_at = ?2 WHERE id = ?3 AND user_id = ?4",
+                (&daemon_job_id, &now, &id, &user.user_id),
+            )
+            .map_err(|e| {
+                warn!("failed to set gizzi_job_id: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
         }
     }
 
@@ -1037,13 +1104,18 @@ async fn run_routine(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let gizzi_job_id: Option<String> = conn
+    let (gizzi_job_id, execution_domain): (Option<String>, String) = conn
         .query_row(
-            "SELECT gizzi_job_id FROM routines WHERE id = ?1 AND user_id = ?2",
+            "SELECT gizzi_job_id, execution_domain FROM routines WHERE id = ?1 AND user_id = ?2",
             [&id, &user.user_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    if !uses_cloud_scheduler(&execution_domain) {
+        warn!("routine {} is local-domain; run via local scheduler", id);
+        return Err(StatusCode::NOT_IMPLEMENTED);
+    }
 
     let gizzi_job_id = gizzi_job_id.ok_or(StatusCode::BAD_REQUEST)?;
     let client = reqwest::Client::new();
@@ -1235,6 +1307,8 @@ async fn create_loop(
         .unwrap_or("agent")
         .to_string();
 
+    let execution_domain = normalize_execution_domain(req.execution_domain.clone());
+
     let loop_item = Loop {
         id: id.clone(),
         user_id: user.user_id.clone(),
@@ -1248,7 +1322,7 @@ async fn create_loop(
         status: "active".to_string(),
         schedule_type: req.schedule_type.clone(),
         schedule_expression: req.schedule_expression.clone(),
-        execution_domain: req.execution_domain.clone().unwrap_or_else(|| "local".to_string()),
+        execution_domain,
         config: config.clone(),
         tags: req.tags.clone(),
         metadata: req.metadata.clone(),
@@ -1257,25 +1331,27 @@ async fn create_loop(
         updated_at: now.clone(),
     };
 
-    let harness_config = if let Some(ref agent_id) = loop_item.agent_id {
-        resolve_agent_harness(&state.db, agent_id).await
+    let daemon_job_id = if uses_cloud_scheduler(&loop_item.execution_domain) {
+        let harness_config = if let Some(ref agent_id) = loop_item.agent_id {
+            resolve_agent_harness(&state.db, agent_id).await
+        } else {
+            None
+        };
+        let daemon_job = build_daemon_job_from_loop(&loop_item, &job_type, harness_config);
+        let client = reqwest::Client::new();
+        match cron_daemon_create_job(&client, daemon_job).await {
+            Ok(res) => res
+                .get("job")
+                .and_then(|v| v.get("id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            Err(e) => {
+                warn!("failed to create daemon loop job: {}", e);
+                None
+            }
+        }
     } else {
         None
-    };
-    let daemon_job = build_daemon_job_from_loop(&loop_item, &job_type, harness_config);
-    let client = reqwest::Client::new();
-    let daemon_res = cron_daemon_create_job(&client, daemon_job).await;
-
-    let daemon_job_id = match daemon_res {
-        Ok(res) => res
-            .get("job")
-            .and_then(|v| v.get("id"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string()),
-        Err(e) => {
-            warn!("failed to create daemon loop job: {}", e);
-            None
-        }
     };
 
     let conn = state.db.connect().map_err(|e| {
@@ -1358,12 +1434,13 @@ async fn update_loop(
 
     let existing = conn
         .query_row(
-            "SELECT config, gizzi_job_id FROM loops WHERE id = ?1 AND user_id = ?2",
+            "SELECT config, gizzi_job_id, execution_domain FROM loops WHERE id = ?1 AND user_id = ?2",
             [&id, &user.user_id],
             |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, Option<String>>(1)?,
+                    row.get::<_, String>(2)?,
                 ))
             },
         )
@@ -1379,6 +1456,8 @@ async fn update_loop(
         .and_then(|v| v.as_str())
         .unwrap_or("agent")
         .to_string();
+
+    let new_execution_domain = req.execution_domain.as_ref().map(|d| normalize_execution_domain(Some(d.clone())));
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1402,7 +1481,7 @@ async fn update_loop(
             req.status.as_ref(),
             req.schedule_type.as_ref(),
             req.schedule_expression.as_ref(),
-            req.execution_domain.as_ref(),
+            new_execution_domain.as_ref(),
             Some(config.to_string()),
             req.tags.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
             req.metadata.as_ref().map(|m| m.to_string()),
@@ -1417,17 +1496,66 @@ async fn update_loop(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    if let Some(gizzi_job_id) = existing.1 {
-        let updated_loop = get_loop(State(state.clone()), headers.clone(), Path(id.clone())).await?.0;
+    let updated_loop = get_loop(State(state.clone()), headers.clone(), Path(id.clone())).await?.0;
+    let old_uses_cloud = uses_cloud_scheduler(&existing.2);
+    let new_uses_cloud = uses_cloud_scheduler(&updated_loop.execution_domain);
+
+    if old_uses_cloud && new_uses_cloud {
+        if let Some(ref gizzi_job_id) = existing.1 {
+            let harness_config = if let Some(ref agent_id) = updated_loop.agent_id {
+                resolve_agent_harness(&state.db, agent_id).await
+            } else {
+                None
+            };
+            let gizzi_job = build_daemon_job_from_loop(&updated_loop, &job_type, harness_config);
+            let client = reqwest::Client::new();
+            if let Err(e) = cron_daemon_update_job(&client, gizzi_job_id, gizzi_job).await {
+                warn!("failed to update daemon loop job: {}", e);
+            }
+        }
+    } else if old_uses_cloud && !new_uses_cloud {
+        if let Some(ref gizzi_job_id) = existing.1 {
+            let client = reqwest::Client::new();
+            if let Err(e) = cron_daemon_delete_job(&client, gizzi_job_id).await {
+                warn!("failed to delete daemon loop job on domain change: {}", e);
+            }
+        }
+        conn.execute(
+            "UPDATE loops SET gizzi_job_id = NULL, updated_at = ?1 WHERE id = ?2 AND user_id = ?3",
+            (&now, &id, &user.user_id),
+        )
+        .map_err(|e| {
+            warn!("failed to clear loop gizzi_job_id: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    } else if !old_uses_cloud && new_uses_cloud {
         let harness_config = if let Some(ref agent_id) = updated_loop.agent_id {
             resolve_agent_harness(&state.db, agent_id).await
         } else {
             None
         };
-        let gizzi_job = build_daemon_job_from_loop(&updated_loop, &job_type, harness_config);
+        let daemon_job = build_daemon_job_from_loop(&updated_loop, &job_type, harness_config);
         let client = reqwest::Client::new();
-        if let Err(e) = cron_daemon_update_job(&client, &gizzi_job_id, gizzi_job).await {
-            warn!("failed to update daemon loop job: {}", e);
+        let daemon_job_id = match cron_daemon_create_job(&client, daemon_job).await {
+            Ok(res) => res
+                .get("job")
+                .and_then(|v| v.get("id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            Err(e) => {
+                warn!("failed to create daemon loop job on domain change: {}", e);
+                None
+            }
+        };
+        if let Some(daemon_job_id) = daemon_job_id {
+            conn.execute(
+                "UPDATE loops SET gizzi_job_id = ?1, updated_at = ?2 WHERE id = ?3 AND user_id = ?4",
+                (&daemon_job_id, &now, &id, &user.user_id),
+            )
+            .map_err(|e| {
+                warn!("failed to set loop gizzi_job_id: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
         }
     }
 
@@ -1484,13 +1612,18 @@ async fn run_loop(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let gizzi_job_id: Option<String> = conn
+    let (gizzi_job_id, execution_domain): (Option<String>, String) = conn
         .query_row(
-            "SELECT gizzi_job_id FROM loops WHERE id = ?1 AND user_id = ?2",
+            "SELECT gizzi_job_id, execution_domain FROM loops WHERE id = ?1 AND user_id = ?2",
             [&id, &user.user_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    if !uses_cloud_scheduler(&execution_domain) {
+        warn!("loop {} is local-domain; run via local scheduler", id);
+        return Err(StatusCode::NOT_IMPLEMENTED);
+    }
 
     let gizzi_job_id = gizzi_job_id.ok_or(StatusCode::BAD_REQUEST)?;
     let client = reqwest::Client::new();
@@ -1502,6 +1635,51 @@ async fn run_loop(
         })?;
 
     Ok(Json(run))
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LocalSchedules {
+    pub routines: Vec<Routine>,
+    pub loops: Vec<Loop>,
+}
+
+async fn list_local_schedules(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+) -> Result<Json<LocalSchedules>, StatusCode> {
+    let user = get_user(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
+    let conn = state.db.connect().map_err(|e| {
+        warn!("db error: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let mut routines_stmt = conn
+        .prepare(
+            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, execution_domain, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at
+             FROM routines WHERE user_id = ?1 AND execution_domain = 'local' ORDER BY updated_at DESC",
+        )
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let routines = routines_stmt
+        .query_map([&user.user_id], row_to_routine)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut loops_stmt = conn
+        .prepare(
+            "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, execution_domain, config, tags, metadata, expires_at, created_at, updated_at
+             FROM loops WHERE user_id = ?1 AND execution_domain = 'local' ORDER BY updated_at DESC",
+        )
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let loops = loops_stmt
+        .query_map([&user.user_id], row_to_loop)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(LocalSchedules { routines, loops }))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1533,6 +1711,8 @@ pub fn automation_router() -> Router<Arc<AppState>> {
             get(get_loop).put(update_loop).delete(delete_loop),
         )
         .route("/automation/loops/:id/run", post(run_loop))
+        // Local scheduler poll endpoint
+        .route("/automation/local-schedules", get(list_local_schedules))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1665,6 +1845,72 @@ mod tests {
         assert_eq!(metrics.success_rate, 0.0);
         assert!(metrics.average_duration_ms.is_none());
         assert!(metrics.last_run_status.is_none());
+        cleanup(&path);
+    }
+
+    #[test]
+    fn test_execution_domain_normalization() {
+        assert_eq!(normalize_execution_domain(Some("local".to_string())), "local");
+        assert_eq!(normalize_execution_domain(Some("cloud".to_string())), "cloud");
+        assert_eq!(normalize_execution_domain(Some("hybrid".to_string())), "cloud");
+        assert_eq!(normalize_execution_domain(Some("invalid".to_string())), "local");
+        assert_eq!(normalize_execution_domain(None), "local");
+
+        assert!(uses_cloud_scheduler("cloud"));
+        assert!(uses_cloud_scheduler("hybrid"));
+        assert!(!uses_cloud_scheduler("local"));
+        assert!(!uses_cloud_scheduler("unknown"));
+    }
+
+    #[test]
+    fn test_local_schedules_query() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+
+        conn.execute(
+            "INSERT INTO routines (id, user_id, name, status, schedule_type, schedule_expression, timezone, execution_domain, config, created_at, updated_at)
+             VALUES ('r-local', 'user-1', 'Local Routine', 'active', 'cron', '0 9 * * *', 'UTC', 'local', '{}', datetime('now'), datetime('now'))",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO routines (id, user_id, name, status, schedule_type, schedule_expression, timezone, execution_domain, config, created_at, updated_at)
+             VALUES ('r-cloud', 'user-1', 'Cloud Routine', 'active', 'cron', '0 10 * * *', 'UTC', 'cloud', '{}', datetime('now'), datetime('now'))",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO loops (id, user_id, name, status, schedule_type, schedule_expression, execution_domain, config, created_at, updated_at)
+             VALUES ('l-local', 'user-1', 'Local Loop', 'active', 'interval', '5m', 'local', '{}', datetime('now'), datetime('now'))",
+            [],
+        ).unwrap();
+
+        let mut routines_stmt = conn
+            .prepare(
+                "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, name, description, status, schedule_type, schedule_expression, timezone, execution_domain, config, tags, metadata, max_runs, timeout_seconds, max_retries, created_at, updated_at
+                 FROM routines WHERE user_id = ?1 AND execution_domain = 'local' ORDER BY updated_at DESC",
+            )
+            .unwrap();
+        let routines: Vec<Routine> = routines_stmt
+            .query_map(["user-1"], row_to_routine)
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        let mut loops_stmt = conn
+            .prepare(
+                "SELECT id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, execution_domain, config, tags, metadata, expires_at, created_at, updated_at
+                 FROM loops WHERE user_id = ?1 AND execution_domain = 'local' ORDER BY updated_at DESC",
+            )
+            .unwrap();
+        let loops: Vec<Loop> = loops_stmt
+            .query_map(["user-1"], row_to_loop)
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(routines.len(), 1);
+        assert_eq!(routines[0].id, "r-local");
+        assert_eq!(loops.len(), 1);
+        assert_eq!(loops[0].id, "l-local");
         cleanup(&path);
     }
 }

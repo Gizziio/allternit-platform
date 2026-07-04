@@ -43,6 +43,17 @@ export function useAgentSeeding() {
             maxIterations: 10,
             temperature: 0.7,
             source: 'personal',
+            harness: { mode: 'cloud' },
+            allowedSurfaces: ['chat', 'cowork', 'code', 'design', 'browser'],
+            trustTier: 'standard',
+            writeScope: 'workspace',
+            characterLayer: {
+              identity: { setup: 'generalist', className: 'Assistant', specialtySkills: ['help', 'navigation'], temperament: 'balanced', personalityTraits: ['friendly', 'helpful'], backstory: 'The default Allternit platform assistant.' },
+              roleCard: { domain: 'platform assistance', inputs: ['questions', 'commands'], outputs: ['answers', 'guidance'], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
+              voice: { style: 'helpful and concise', rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.6, empathy: 0.6, directness: 0.6 } },
+              progression: { class: 'Assistant', relevantStats: [], level: { maxLevel: 99, xpFormula: 'linear' } },
+              avatar: { type: 'mascot', mascot: { template: 'gizzi' }, style: { primaryColor: '#06b6d4', accentColor: '#1e1c1a' } },
+            },
           });
           await agentWorkspaceService.create({
             name: 'Gizzi',
@@ -95,6 +106,17 @@ export function useAgentSeeding() {
               maxIterations: 10,
               temperature: 0.3,
               source: 'vendor',
+              harness: { mode: 'cloud' },
+              allowedSurfaces: ['chat'],
+              trustTier: 'standard',
+              writeScope: 'workspace',
+              characterLayer: {
+                identity: { setup: 'generalist', className: 'Specialist', specialtySkills: seed.capabilities, temperament: 'balanced', personalityTraits: [], backstory: '' },
+                roleCard: { domain: seed.capabilities.join(', '), inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
+                voice: { style: '', rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
+                progression: { class: 'Specialist', relevantStats: [], level: { maxLevel: 99, xpFormula: 'linear' } },
+                avatar: { type: 'mascot', mascot: { template: 'bot' }, style: { primaryColor: '#6366f1', accentColor: '#1e1c1a' } },
+              },
             });
           } catch (e) {
             logger.error({ err: e }, `Failed to seed vendor agent ${seed.name}:`);
@@ -131,6 +153,17 @@ export function useAgentSeeding() {
               maxIterations: 10,
               temperature: 0.4,
               source: 'organization',
+              harness: { mode: 'cloud' },
+              allowedSurfaces: ['chat'],
+              trustTier: 'standard',
+              writeScope: 'workspace',
+              characterLayer: {
+                identity: { setup: 'generalist', className: 'Specialist', specialtySkills: seed.capabilities, temperament: 'balanced', personalityTraits: [], backstory: '' },
+                roleCard: { domain: seed.capabilities.join(', '), inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
+                voice: { style: '', rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
+                progression: { class: 'Specialist', relevantStats: [], level: { maxLevel: 99, xpFormula: 'linear' } },
+                avatar: { type: 'mascot', mascot: { template: 'bot' }, style: { primaryColor: '#8b5cf6', accentColor: '#1e1c1a' } },
+              },
             });
           } catch (e) {
             logger.error({ err: e }, `Failed to seed org agent ${seed.name}:`);

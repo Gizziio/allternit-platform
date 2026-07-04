@@ -6,6 +6,7 @@ import {
   type SendMessageOptions,
   type ModeSessionMessage,
 } from '@/lib/agents/mode-session-store';
+import { useShallow } from 'zustand/react/shallow';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('DesignSessionStore');
@@ -88,21 +89,23 @@ export function useDesignTotalUnreadCount() {
 // ---------------------------------------------------------------------------
 
 export function useDesignSessionActions() {
-  return useDesignSessionStore((state) => ({
-    createSession: state.createSession,
-    deleteSession: state.deleteSession,
-    updateSession: state.updateSession,
-    setActiveSession: state.setActiveSession,
-    sendMessage: state.sendMessage,
-    sendMessageStream: state.sendMessageStream,
-    loadSessions: state.loadSessions,
-    refreshContext: state.refreshContext,
-    setSessionMode: state.setSessionMode,
-    connectSessionSync: state.connectSessionSync,
-    disconnectSessionSync: state.disconnectSessionSync,
-    markSessionRead: state.markSessionRead,
-    abortGeneration: state.abortGeneration,
-  }));
+  return useDesignSessionStore(
+    useShallow((state) => ({
+      createSession: state.createSession,
+      deleteSession: state.deleteSession,
+      updateSession: state.updateSession,
+      setActiveSession: state.setActiveSession,
+      sendMessage: state.sendMessage,
+      sendMessageStream: state.sendMessageStream,
+      loadSessions: state.loadSessions,
+      refreshContext: state.refreshContext,
+      setSessionMode: state.setSessionMode,
+      connectSessionSync: state.connectSessionSync,
+      disconnectSessionSync: state.disconnectSessionSync,
+      markSessionRead: state.markSessionRead,
+      abortGeneration: state.abortGeneration,
+    }))
+  );
 }
 
 // ---------------------------------------------------------------------------

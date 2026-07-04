@@ -35,15 +35,18 @@ export function MessageTreeProvider({ children, initialMessages = [] }: MessageT
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [threadEpoch, setThreadEpoch] = useState(0);
 
-  const [prevChatId, setPrevChatId] = useState(chatId);
-  if (chatId !== prevChatId) {
-    setPrevChatId(chatId);
-    if (isPersisted) {
-      setMessages(initialMessages);
-      setThreadEpoch(0);
-      setDataStream([]);
+  const prevChatIdRef = useRef(chatId);
+
+  useEffect(() => {
+    if (chatId !== prevChatIdRef.current) {
+      prevChatIdRef.current = chatId;
+      if (isPersisted) {
+        setMessages(initialMessages);
+        setThreadEpoch(0);
+        setDataStream([]);
+      }
     }
-  }
+  }, [chatId, isPersisted, initialMessages, setDataStream]);
 
   // Build parent->children mapping
   const childrenMap = useMemo(() => {

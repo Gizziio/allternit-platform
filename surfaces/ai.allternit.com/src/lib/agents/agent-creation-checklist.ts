@@ -27,6 +27,13 @@ export const AGENT_CREATION_CHECKLIST: ChecklistItem[] = [
       Boolean(input.type),
   },
   {
+    id: 'subAgentParent',
+    label: 'Sub-agent Parent',
+    description: 'Sub-agents must be assigned to an orchestrator parent.',
+    required: true,
+    validate: (input) => input.type !== 'sub-agent' || Boolean(input.parentAgentId),
+  },
+  {
     id: 'character',
     label: 'Character',
     description: 'Character layer includes setup, temperament, and role card.',

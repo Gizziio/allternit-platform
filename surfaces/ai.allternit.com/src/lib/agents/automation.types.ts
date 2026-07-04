@@ -110,6 +110,11 @@ export interface GoalChildren {
   loops: Loop[];
 }
 
+export interface LocalSchedules {
+  routines: Routine[];
+  loops: Loop[];
+}
+
 export interface CreateGoalInput {
   title: string;
   workspace_id?: string;

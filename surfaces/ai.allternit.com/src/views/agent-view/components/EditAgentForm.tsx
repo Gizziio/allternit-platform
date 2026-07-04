@@ -3,31 +3,60 @@
 import React, { useState } from "react";
 import { CheckCircle } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import type { Agent, HarnessConfig } from "@/lib/agents/agent.types";
+import type { Agent, HarnessConfig, AppMode, AgentType } from "@/lib/agents/agent.types";
 import { STUDIO_THEME } from "../AgentView.constants";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { validateAgentCreationChecklist } from "@/lib/agents";
 
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('EditAgentForm');
 
 const HARNESS_MODES = ['cloud', 'byok', 'local', 'subprocess'] as const;
+const SURFACES: AppMode[] = ['chat', 'cowork', 'code', 'design', 'browser'];
+const AGENT_TYPES: AgentType[] = ['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer'];
+const TRUST_TIERS: NonNullable<Agent['trustTier']>[] = ['safe', 'low', 'standard', 'elevated', 'admin', 'critical'];
 
 export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () => void }) {
   const { updateAgent } = useAgentStore();
   const [name, setName] = useState(agent.name);
   const [description, setDescription] = useState(agent.description);
+  const [type, setType] = useState<AgentType>(agent.type);
   const [harness, setHarness] = useState<HarnessConfig>(agent.harness ?? { mode: 'cloud' });
+  const [allowedSurfaces, setAllowedSurfaces] = useState<AppMode[]>(agent.allowedSurfaces ?? ['chat']);
+  const [trustTier, setTrustTier] = useState<Agent['trustTier']>(agent.trustTier ?? 'standard');
+  const [writeScope, setWriteScope] = useState(agent.writeScope ?? 'workspace');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checklistError, setChecklistError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setChecklistError(null);
+    const updates = { name, description, type, harness, allowedSurfaces, trustTier, writeScope };
+    const merged = { ...agent, ...updates };
+    const checklist = validateAgentCreationChecklist(merged);
+    if (!checklist.isValid) {
+      const failed = checklist.items
+        .filter((i) => i.required && !i.satisfied)
+        .map((i) => i.label)
+        .join(', ');
+      setChecklistError(`Checklist incomplete: ${failed}`);
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await updateAgent(agent.id, { name, description, harness });
+      await updateAgent(agent.id, updates);
       onCancel();
     } catch (err) {
       console.error("Failed to update agent:", err);
@@ -62,6 +91,69 @@ export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () 
               style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label style={{ color: STUDIO_THEME.textSecondary }}>Type</Label>
+            <Select value={type} onValueChange={(value) => setType(value as AgentType)}>
+              <SelectTrigger style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {AGENT_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label style={{ color: STUDIO_THEME.textSecondary }}>Allowed Surfaces</Label>
+            <div className="flex flex-wrap gap-3">
+              {SURFACES.map((surface) => (
+                <label key={surface} className="flex items-center gap-2 text-[var(--text-primary)]">
+                  <Checkbox
+                    checked={allowedSurfaces.includes(surface)}
+                    onCheckedChange={(checked) => {
+                      setAllowedSurfaces((prev) =>
+                        checked ? [...prev, surface] : prev.filter((s) => s !== surface)
+                      );
+                    }}
+                  />
+                  <span className="capitalize">{surface}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label style={{ color: STUDIO_THEME.textSecondary }}>Trust Tier</Label>
+              <Select value={trustTier} onValueChange={(value) => setTrustTier(value as Agent['trustTier'])}>
+                <SelectTrigger style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRUST_TIERS.map((tier) => (
+                    <SelectItem key={tier} value={tier}>{tier.charAt(0).toUpperCase() + tier.slice(1)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label style={{ color: STUDIO_THEME.textSecondary }}>Write Scope</Label>
+              <Input
+                value={writeScope}
+                onChange={(e) => setWriteScope(e.target.value)}
+                style={{ background: STUDIO_THEME.bg, borderColor: STUDIO_THEME.borderSubtle, color: STUDIO_THEME.textPrimary }}
+              />
+            </div>
+          </div>
+
+          {checklistError && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-[var(--status-error)] text-sm">
+              {checklistError}
+            </div>
+          )}
 
           <div className="space-y-4 pt-2">
             <Label style={{ color: STUDIO_THEME.textPrimary }}>Harness Mode</Label>

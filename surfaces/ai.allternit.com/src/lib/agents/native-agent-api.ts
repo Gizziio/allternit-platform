@@ -57,6 +57,10 @@ const getAgentChatBase = () => getGatewayOrigin() ? `${getGatewayOrigin()}/api/v
 /** Agent context passed through to the backend with each message */
 export interface AgentContext {
   agentId?: string;
+  agentName?: string;
+  agentProvider?: string;
+  agentModel?: string;
+  harness?: import('./agent.types').HarnessConfig;
   systemPrompt?: string;
   identityContext?: {
     trustTiers?: string[];

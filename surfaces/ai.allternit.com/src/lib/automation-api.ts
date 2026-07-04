@@ -18,6 +18,7 @@ import type {
   UpdateRoutineInput,
   RoutineRun,
   RoutineMetrics,
+  LocalSchedules,
   Loop,
   CreateLoopInput,
   UpdateLoopInput,
@@ -77,6 +78,10 @@ export async function getRoutineMetrics(id: string): Promise<RoutineMetrics> {
 
 export async function listLoops(): Promise<Loop[]> {
   return api.get<Loop[]>('/api/v1/automation/loops');
+}
+
+export async function listLocalSchedules(): Promise<LocalSchedules> {
+  return api.get<LocalSchedules>('/api/v1/automation/local-schedules');
 }
 
 export async function createLoop(input: CreateLoopInput): Promise<Loop> {

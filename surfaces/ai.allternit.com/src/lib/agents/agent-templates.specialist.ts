@@ -3971,12 +3971,54 @@ function createAgentFromTemplate(
 ): CreateAgentInput | null {
   const template = getTemplateById(templateId);
   if (!template) return null;
-  
+  const categorySurfaces: Record<AgentCategory, import('./agent.types').AppMode[]> = {
+    engineering: ['chat', 'code'],
+    design: ['chat', 'design'],
+    marketing: ['chat'],
+    product: ['chat', 'cowork'],
+    testing: ['chat', 'code'],
+    support: ['chat'],
+    business: ['chat', 'cowork'],
+    specialized: ['chat'],
+    'agent-types': ['chat', 'cowork'],
+    'communication-styles': ['chat'],
+    'task-types': ['chat'],
+    'general-assistant': ['chat'],
+  };
+
+  const categoryMap: Record<AgentCategory, import('./agent.types').Agent['category']> = {
+    engineering: 'engineering',
+    design: 'design',
+    marketing: 'marketing',
+    product: 'product',
+    testing: 'engineering',
+    support: 'operations',
+    business: 'operations',
+    specialized: 'general',
+    'agent-types': 'general',
+    'communication-styles': 'general',
+    'task-types': 'general',
+    'general-assistant': 'general',
+  };
+
   return {
     name: template.name,
     description: template.description,
     ...template.agentConfig,
     systemPrompt: template.systemPrompt,
+    harness: { mode: 'cloud' },
+    allowedSurfaces: categorySurfaces[template.category] || ['chat'],
+    trustTier: 'standard',
+    writeScope: 'workspace',
+    category: categoryMap[template.category],
+    tags: template.tags,
+    characterLayer: {
+      identity: { setup: template.characterSetup, className: template.role, specialtySkills: [], temperament: 'balanced', personalityTraits: [], backstory: '' },
+      roleCard: { domain: template.role, inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
+      voice: { style: '', rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
+      progression: { class: template.role, relevantStats: [], level: { maxLevel: 99, xpFormula: 'linear' } },
+      avatar: { type: 'mascot', mascot: { template: 'bot' }, style: { primaryColor: '#6366f1', accentColor: '#1e1c1a' } },
+    },
     ...overrides,
   };
 }

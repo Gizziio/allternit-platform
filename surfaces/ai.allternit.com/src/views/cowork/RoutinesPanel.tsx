@@ -1,36 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowsClockwise, Play, Plus, Trash } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
-
-interface RoutineStep {
-  command: string;
-  status: 'pending' | 'running' | 'done' | 'failed';
-}
-
-interface Routine {
-  id: string;
-  name: string;
-  steps: RoutineStep[];
-  trigger?: string;
-  schedule?: string;
-  state: 'defined' | 'running' | 'completed' | 'failed';
-}
+import {
+  listRoutines,
+  createRoutine,
+  deleteRoutine,
+  runRoutine,
+} from '@/lib/automation-api';
+import type { Routine, RoutineStatus } from '@/lib/agents/automation.types';
 
 const RoutinesPanel: React.FC = () => {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newRoutineName, setNewRoutineName] = useState('');
-  const [newRoutineSteps, setNewRoutineSteps] = useState('');
-  const [newRoutineTrigger, setNewRoutineTrigger] = useState('');
+  const [newRoutineDescription, setNewRoutineDescription] = useState('');
+  const [newScheduleType, setNewScheduleType] = useState<'cron' | 'interval' | 'once' | 'manual'>('cron');
+  const [newScheduleExpression, setNewScheduleExpression] = useState('0 9 * * *');
+  const [newExecutionDomain, setNewExecutionDomain] = useState<'local' | 'cloud'>('local');
+  const [newConfigJson, setNewConfigJson] = useState('{}');
 
   const fetchRoutines = async () => {
     try {
-      const res = await fetch('/api/v1/automations/routines');
-      if (res.ok) {
-        const data = await res.json();
-        setRoutines(data);
-      }
+      const data = await listRoutines();
+      setRoutines(data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -46,7 +39,7 @@ const RoutinesPanel: React.FC = () => {
 
   const handleRun = async (id: string) => {
     try {
-      await fetch(`/api/v1/automations/routines/${id}/run`, { method: 'POST' });
+      await runRoutine(id);
       fetchRoutines();
     } catch (e) {
       console.error(e);
@@ -55,7 +48,7 @@ const RoutinesPanel: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/v1/automations/routines/${id}`, { method: 'DELETE' });
+      await deleteRoutine(id);
       fetchRoutines();
     } catch (e) {
       console.error(e);
@@ -66,29 +59,29 @@ const RoutinesPanel: React.FC = () => {
     e.preventDefault();
     if (!newRoutineName.trim()) return;
 
-    const stepCommands = newRoutineSteps
-      .split('\n')
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    const steps = stepCommands.map(command => ({
-      command,
-      status: 'pending' as const,
-    }));
+    let config: Record<string, unknown> = {};
+    try {
+      config = JSON.parse(newConfigJson || '{}');
+    } catch {
+      alert('Config must be valid JSON');
+      return;
+    }
 
     try {
-      await fetch('/api/v1/automations/routines', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newRoutineName,
-          steps,
-          trigger: newRoutineTrigger || null,
-        }),
+      await createRoutine({
+        name: newRoutineName,
+        description: newRoutineDescription || undefined,
+        schedule_type: newScheduleType,
+        schedule_expression: newScheduleExpression,
+        execution_domain: newExecutionDomain,
+        config,
       });
       setNewRoutineName('');
-      setNewRoutineSteps('');
-      setNewRoutineTrigger('');
+      setNewRoutineDescription('');
+      setNewScheduleType('cron');
+      setNewScheduleExpression('0 9 * * *');
+      setNewExecutionDomain('local');
+      setNewConfigJson('{}');
       setShowCreateForm(false);
       fetchRoutines();
     } catch (e) {
@@ -96,11 +89,12 @@ const RoutinesPanel: React.FC = () => {
     }
   };
 
-  const getStepStatusColor = (status: RoutineStep['status']) => {
+  const getStatusColor = (status: RoutineStatus) => {
     switch (status) {
-      case 'done': return 'var(--status-success)';
-      case 'running': return 'var(--accent-primary)';
-      case 'failed': return 'var(--status-warning)';
+      case 'active': return 'var(--status-success)';
+      case 'paused': return 'var(--status-warning)';
+      case 'error': return 'var(--status-error, var(--status-warning))';
+      case 'disabled': return 'var(--text-tertiary)';
       default: return 'var(--text-tertiary)';
     }
   };
@@ -115,7 +109,7 @@ const RoutinesPanel: React.FC = () => {
           </div>
           <div>
             <h1 style={{ color: 'var(--text-primary)' }} className="text-2xl font-semibold">Routines</h1>
-            <p style={{ color: 'var(--text-secondary)' }} className="text-sm">Manage and execute multi-step workflows</p>
+            <p style={{ color: 'var(--text-secondary)' }} className="text-sm">Manage and execute scheduled multi-step workflows</p>
           </div>
         </div>
         <button
@@ -145,27 +139,68 @@ const RoutinesPanel: React.FC = () => {
               />
             </div>
             <div>
-              <label style={{ color: 'var(--text-primary)' }} className="text-sm font-semibold block mb-1">Trigger Condition (Optional)</label>
+              <label style={{ color: 'var(--text-primary)' }} className="text-sm font-semibold block mb-1">Description</label>
               <input
                 type="text"
-                value={newRoutineTrigger}
-                onChange={e => setNewRoutineTrigger(e.target.value)}
-                placeholder="e.g. git-push"
+                value={newRoutineDescription}
+                onChange={e => setNewRoutineDescription(e.target.value)}
+                placeholder="What this routine does"
                 className="w-full px-3 py-2 rounded-lg text-sm border focus:outline-none"
                 style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
               />
             </div>
-            <div>
-              <label style={{ color: 'var(--text-primary)' }} className="text-sm font-semibold block mb-1">Steps (One command per line)</label>
-              <textarea
-                value={newRoutineSteps}
-                onChange={e => setNewRoutineSteps(e.target.value)}
-                placeholder="bun run build&#10;bun test"
-                rows={4}
-                className="w-full px-3 py-2 rounded-lg text-sm border focus:outline-none"
-                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label style={{ color: 'var(--text-primary)' }} className="text-sm font-semibold block mb-1">Schedule Type</label>
+                <select
+                  value={newScheduleType}
+                  onChange={e => setNewScheduleType(e.target.value as typeof newScheduleType)}
+                  className="w-full px-3 py-2 rounded-lg text-sm border focus:outline-none"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
+                >
+                  <option value="cron">cron</option>
+                  <option value="interval">interval</option>
+                  <option value="once">once</option>
+                  <option value="manual">manual</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ color: 'var(--text-primary)' }} className="text-sm font-semibold block mb-1">Expression</label>
+                <input
+                  type="text"
+                  value={newScheduleExpression}
+                  onChange={e => setNewScheduleExpression(e.target.value)}
+                  placeholder={newScheduleType === 'cron' ? '0 9 * * *' : '10m'}
+                  className="w-full px-3 py-2 rounded-lg text-sm border focus:outline-none"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label style={{ color: 'var(--text-primary)' }} className="text-sm font-semibold block mb-1">Execution Domain</label>
+                <select
+                  value={newExecutionDomain}
+                  onChange={e => setNewExecutionDomain(e.target.value as typeof newExecutionDomain)}
+                  className="w-full px-3 py-2 rounded-lg text-sm border focus:outline-none"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
+                >
+                  <option value="local">local</option>
+                  <option value="cloud">cloud</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ color: 'var(--text-primary)' }} className="text-sm font-semibold block mb-1">Config (JSON)</label>
+                <input
+                  type="text"
+                  value={newConfigJson}
+                  onChange={e => setNewConfigJson(e.target.value)}
+                  placeholder='{"steps":["bun run build"]}'
+                  className="w-full px-3 py-2 rounded-lg text-sm border focus:outline-none"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
+                />
+              </div>
             </div>
             <div className="flex gap-3 justify-end mt-2">
               <button
@@ -200,15 +235,24 @@ const RoutinesPanel: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 style={{ color: 'var(--text-primary)' }} className="text-lg font-semibold">{routine.name}</h3>
-                  {routine.trigger && (
-                    <p style={{ color: 'var(--text-secondary)' }} className="text-xs mt-1">Trigger: {routine.trigger}</p>
+                  {routine.description && (
+                    <p style={{ color: 'var(--text-secondary)' }} className="text-sm mt-1">{routine.description}</p>
                   )}
+                  <p style={{ color: 'var(--text-tertiary)' }} className="text-xs mt-1">
+                    {routine.schedule_type} · {routine.schedule_expression} · {routine.execution_domain}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <span
+                    className="px-2 py-1 text-xs font-semibold rounded-full"
+                    style={{ backgroundColor: getStatusColor(routine.status), color: '#ffffff' }}
+                  >
+                    {routine.status}
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleRun(routine.id)}
-                    disabled={routine.state === 'running'}
+                    disabled={routine.status === 'disabled'}
                     className="p-2 rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
                     style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--ui-text-inverse)' }}
                   >
@@ -225,17 +269,14 @@ const RoutinesPanel: React.FC = () => {
                 </div>
               </div>
 
-              {/* Steps */}
-              <div className="flex flex-col gap-2 mt-2">
-                {routine.steps.map((step, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getStepStatusColor(step.status) }} />
-                    <code style={{ color: 'var(--text-primary)' }} className="px-1.5 py-0.5 rounded text-xs bg-[var(--bg-secondary)]">
-                      {step.command}
-                    </code>
-                  </div>
-                ))}
-              </div>
+              {routine.config && Object.keys(routine.config).length > 0 && (
+                <pre
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
+                  className="text-xs p-3 rounded-lg overflow-x-auto border font-mono"
+                >
+                  {JSON.stringify(routine.config, null, 2)}
+                </pre>
+              )}
             </GlassSurface>
           ))
         )}

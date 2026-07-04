@@ -78,6 +78,10 @@ function coerceAgent(value: unknown): Agent | null {
 
   const now = new Date().toISOString();
 
+  const allowedSurfaces = Array.isArray(value.allowedSurfaces) && value.allowedSurfaces.length > 0
+    ? value.allowedSurfaces.map(String)
+    : ["chat"];
+
   return {
     id: value.id,
     name: value.name,
@@ -128,6 +132,11 @@ function coerceAgent(value: unknown): Agent | null {
       value.source === "vendor" || value.source === "organization"
         ? value.source
         : "personal",
+    harness: isRecord(value.harness) ? (value.harness as unknown as Agent["harness"]) : { mode: "cloud" },
+    allowedSurfaces: allowedSurfaces as Agent["allowedSurfaces"],
+    trustTier: typeof value.trustTier === "string" ? (value.trustTier as unknown as Agent["trustTier"]) : "standard",
+    writeScope: typeof value.writeScope === "string" ? value.writeScope : "workspace",
+    characterLayer: isRecord(value.characterLayer) ? (value.characterLayer as unknown as Agent["characterLayer"]) : undefined,
   };
 }
 
@@ -182,6 +191,7 @@ function localAgentId(): string {
 
 function toAgent(input: CreateAgentInput): Agent {
   const now = new Date().toISOString();
+  const allowedSurfaces = input.allowedSurfaces?.length ? input.allowedSurfaces : ["chat" as const];
 
   return {
     id: localAgentId(),
@@ -198,6 +208,17 @@ function toAgent(input: CreateAgentInput): Agent {
     temperature: input.temperature ?? 0.7,
     voice: input.voice,
     source: input.source || "personal",
+    harness: input.harness || { mode: "cloud" },
+    allowedSurfaces,
+    trustTier: input.trustTier || "standard",
+    writeScope: input.writeScope || "workspace",
+    characterLayer: input.characterLayer || {
+      identity: { setup: "generalist", className: "Agent", specialtySkills: [], temperament: "balanced", personalityTraits: [], backstory: "" },
+      roleCard: { domain: "general", inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
+      voice: { style: "", rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
+      progression: { class: "Agent", relevantStats: [], level: { maxLevel: 99, xpFormula: "linear" } },
+      avatar: { type: "mascot", mascot: { template: "bot" }, style: { primaryColor: "#6366f1", accentColor: "#1e1c1a" } },
+    },
     config: {
       ...(isRecord(input.config) ? input.config : {}),
       localRegistry: {
@@ -296,6 +317,11 @@ export function updateLocalAgent(
             ...(isRecord(updates.config) ? updates.config : {}),
           }
         : current.config,
+    harness: updates.harness !== undefined ? updates.harness : current.harness,
+    allowedSurfaces: updates.allowedSurfaces !== undefined ? updates.allowedSurfaces : current.allowedSurfaces,
+    trustTier: updates.trustTier !== undefined ? updates.trustTier : current.trustTier,
+    writeScope: updates.writeScope !== undefined ? updates.writeScope : current.writeScope,
+    characterLayer: updates.characterLayer !== undefined ? updates.characterLayer : current.characterLayer,
     updatedAt: new Date().toISOString(),
   };
 

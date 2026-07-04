@@ -1,0 +1,16 @@
+{
+  "$schema": "https://allternit.io/schemas/company-config.json",
+  "_comment": "Company-level configuration baked into packaged Allternit Platform apps. These values standardize auth, endpoints, and encryption across every host computer. End users should not edit these; use the Settings UI or user config instead.",
+  "tenantId": "allternit-default",
+  "gatewayUrl": "http://localhost:8013",
+  "terminalServerUrl": "http://127.0.0.1:4096",
+  "railsUrl": "http://127.0.0.1:8080",
+  "railsWorkspaceId": "default",
+  "cronDaemonUrl": "http://127.0.0.1:4096/cron",
+  "vmDir": "",
+  "clerkPublishableKey": "",
+  "clerkJwksUrl": "",
+  "clerkIssuer": "",
+  "clerkWebhookSecret": "",
+  "encryptionKey": ""
+}

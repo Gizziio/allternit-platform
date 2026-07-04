@@ -27,6 +27,8 @@ import {
   type BackendMessage,
   type AgentContext,
 } from './native-agent-api';
+import { useAgentStore } from './agent.store';
+import type { HarnessConfig } from './agent.types';
 import { subscribeSSE } from '../sse/global-sse-manager';
 import { createModuleLogger } from '@/lib/logger';
 
@@ -482,9 +484,17 @@ async function streamMessageWithContext(
     const contextPack = session._contextPack || await buildContextPackForSession(session);
     if (contextPack) {
       session._contextPack = contextPack;
+      // Look up agent runtime/harness config
+      const agent = session.metadata.agentId
+        ? useAgentStore.getState().agents.find((a) => a.id === session.metadata.agentId)
+        : undefined;
       // Convert to API context format
       agentContext = {
         agentId: contextPack.agentId,
+        agentName: contextPack.agentName || agent?.name,
+        agentProvider: agent?.provider,
+        agentModel: agent?.model,
+        harness: agent?.harness,
         systemPrompt: contextPack.systemPrompt,
         identityContext: {
           trustTiers: contextPack.trustTiers as unknown as string[],
@@ -1362,13 +1372,24 @@ export function createModeSessionStore(config: StoreConfig) {
 
             try {
               const backendSessions = await sessionApi.listSessions();
-              
+              const currentSessions = get().sessions;
+
               const sessions = backendSessions
                 .filter((s) => {
                   const metadata = s.metadata as ModeSession['metadata'] | undefined;
                   return metadata?.originSurface === config.originSurface;
                 })
-                .map(mapBackendSession);
+                .map((backend) => {
+                  const mapped = mapBackendSession(backend);
+                  const local = currentSessions.find((s) => s.id === mapped.id);
+                  if (local) {
+                    // Preserve locally streamed messages and context that the
+                    // backend list endpoint does not return.
+                    mapped.messages = local.messages.length > 0 ? local.messages : mapped.messages;
+                    mapped._contextPack = local._contextPack ?? mapped._contextPack;
+                  }
+                  return mapped;
+                });
 
               // Rebuild context packs for agent sessions
               for (const session of sessions) {
@@ -1379,7 +1400,7 @@ export function createModeSessionStore(config: StoreConfig) {
 
               const currentActiveId = get().activeSessionId;
               // Merge in-memory sessions that aren't in the backend list yet (e.g. newly created optimistic sessions)
-              const inMemoryOnly = get().sessions.filter(s => !sessions.some(bs => bs.id === s.id));
+              const inMemoryOnly = currentSessions.filter(s => !sessions.some(bs => bs.id === s.id));
               const merged = [...sessions, ...inMemoryOnly];
               // Keep activeSessionId if the active session is in the merged list; otherwise clear it
               const newActiveId = merged.some(s => s.id === currentActiveId) ? currentActiveId : null;

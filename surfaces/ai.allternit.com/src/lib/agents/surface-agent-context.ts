@@ -5,10 +5,12 @@ import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useCodeSessionStore } from "@/views/code/CodeSessionStore";
 import { useCoworkSessionStore } from "@/views/cowork/CoworkSessionStore";
 import { useDesignSessionStore } from "@/views/design/DesignSessionStore";
+import { useBrowserSessionStore } from "@/views/browser/BrowserSessionStore";
 
 import { useAgentStore } from "./agent.store";
 import type { Agent } from "./agent.types";
 import { getAgentSessionDescriptor } from "./session-metadata";
+import { useEffect } from "react";
 
 type AgentLike = Pick<Agent, "id" | "name" | "provider" | "model" | "config" | "allowedSurfaces"> | null;
 
@@ -31,20 +33,24 @@ export function useSurfaceAgentModeEnabled(surface: AgentModeSurface): boolean {
   const codeSessionId = useCodeSessionStore((s) => s.activeSessionId);
   const coworkSessionId = useCoworkSessionStore((s) => s.activeSessionId);
   const designSessionId = useDesignSessionStore((s) => s.activeSessionId);
+  const browserSessionId = useBrowserSessionStore((s) => s.activeSessionId);
   const chatSessions = useChatSessionStore((s) => s.sessions);
   const codeSessions = useCodeSessionStore((s) => s.sessions);
   const coworkSessions = useCoworkSessionStore((s) => s.sessions);
   const designSessions = useDesignSessionStore((s) => s.sessions);
+  const browserSessions = useBrowserSessionStore((s) => s.sessions);
 
   const activeId =
     surface === "code" ? codeSessionId :
     surface === "cowork" ? coworkSessionId :
     surface === "design" ? designSessionId :
+    surface === "browser" ? browserSessionId :
     chatSessionId;
   const sessions =
     surface === "code" ? codeSessions :
     surface === "cowork" ? coworkSessions :
     surface === "design" ? designSessions :
+    surface === "browser" ? browserSessions :
     chatSessions;
 
   const session = activeId ? (sessions.find((s) => s.id === activeId) ?? null) : null;
@@ -55,15 +61,15 @@ export function useSurfaceAgentModeEnabled(surface: AgentModeSurface): boolean {
 
 /**
  * Returns true when an agent explicitly allows running on the given surface.
- * An agent with no allowedSurfaces is treated as certified for every surface
- * (backwards compatibility), matching the registry enabled_modes default.
+ * An agent with no allowedSurfaces is no longer treated as certified for every
+ * surface; it is denied until the owner enables at least one surface.
  */
 export function isAgentAllowedOnSurface(
   agent: Pick<Agent, "allowedSurfaces"> | null | undefined,
   surface: AgentModeSurface,
 ): boolean {
   if (!agent) return false;
-  if (!agent.allowedSurfaces || agent.allowedSurfaces.length === 0) return true;
+  if (!agent.allowedSurfaces || agent.allowedSurfaces.length === 0) return false;
   return agent.allowedSurfaces.includes(surface);
 }
 
@@ -73,6 +79,7 @@ export function useSurfaceAgentSelection(surface: AgentModeSurface) {
     (state) => state.selectedAgentIdBySurface[surface],
   );
   const agents = useAgentStore((state) => state.agents);
+  const setSelectedAgent = useAgentSurfaceModeStore((state) => state.setSelectedAgent);
 
   const allowedAgents = useMemo(
     () => agents.filter((agent) => isAgentAllowedOnSurface(agent, surface)),
@@ -84,6 +91,13 @@ export function useSurfaceAgentSelection(surface: AgentModeSurface) {
     const agent = agents.find((agent) => agent.id === selectedAgentId) ?? null;
     return isAgentAllowedOnSurface(agent, surface) ? agent : null;
   }, [agents, selectedAgentId, surface]);
+
+  // Clear stale selection when the selected agent is no longer allowed on this surface.
+  useEffect(() => {
+    if (selectedAgentId && !selectedAgent) {
+      setSelectedAgent(surface, null);
+    }
+  }, [selectedAgentId, selectedAgent, surface, setSelectedAgent]);
 
   return {
     agentModeEnabled,

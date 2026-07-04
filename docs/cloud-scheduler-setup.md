@@ -18,6 +18,20 @@ Cloud scheduling is **not** a fallback for the local scheduler. When you create 
 
 If you do not install the cloud scheduler, cloud-domain schedules simply will not run. The system will not silently fall back to local execution.
 
+## How domain routing works
+
+When a routine or loop is created or updated, the platform uses the `execution_domain` field to decide where the schedule is registered:
+
+| Domain | API behavior | Where it runs |
+|--------|--------------|---------------|
+| `local` | No cloud daemon job is created. The schedule is exposed via `GET /api/v1/automation/local-schedules` for the desktop / Gizzi Code local scheduler to poll and execute. | Allternit Desktop or Gizzi Code process on the user's machine |
+| `cloud` | A job is created in the cloud scheduler daemon. The daemon triggers the job directly. | `allternit-scheduler` service |
+| `hybrid` | Currently routed the same as `cloud`. The cloud scheduler triggers execution; future versions may dispatch back to the local agent. | `allternit-scheduler` service |
+
+Manual runs through the API (`POST /automation/routines/:id/run` and `POST /automation/loops/:id/run`) return HTTP 501 for local-domain schedules, because local execution must be driven by the local scheduler, not the cloud API.
+
+Changing a schedule's domain after creation is supported: the platform creates or deletes the cloud daemon job as needed and clears or sets `gizzi_job_id` accordingly.
+
 ## What the scheduler needs
 
 To run continuously, the scheduler needs:

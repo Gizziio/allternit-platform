@@ -10,6 +10,9 @@ import { api } from '@/integration/api-client';
 
 export interface CompanyConfig {
   clerkPublishableKey?: string;
+  clerkJwksUrl?: string;
+  clerkIssuer?: string;
+  clerkWebhookSecret?: string;
   gatewayUrl: string;
   terminalServerUrl: string;
   tenantId: string;

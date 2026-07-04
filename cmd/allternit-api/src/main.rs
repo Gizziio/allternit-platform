@@ -14,6 +14,7 @@ use axum::Router;
 use axum::http::{HeaderName, Method, header};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 
@@ -40,7 +41,7 @@ use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
-use allternit_api::design_connector_routes::design_connector_router;
+use allternit_api::design_connector_routes::{design_connector_router, DesignSkillCache};
 use allternit_api::cowork::background_service::CoworkBackgroundService;
 use allternit_api::cowork::routes::{background_router, CoworkBgState};
 use allternit_api::cowork_routes::cowork_router;
@@ -151,6 +152,20 @@ async fn main() {
         allternit_api::office_routes::load_runtime_file()
     ));
 
+    // Open Design skill cache — daemon-side discovery with hot-reload.
+    let design_skill_cache = DesignSkillCache::new();
+    {
+        let cache = design_skill_cache.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(5));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                interval.tick().await;
+                cache.refresh(None).await;
+            }
+        });
+    }
+
     // Create application state
     let state = Arc::new(AppState {
         config: app_config.clone(),
@@ -165,6 +180,7 @@ async fn main() {
         cowork_run_manager,
         webhook_secret,
         office_runtime,
+        design_skill_cache,
     });
 
     // ── Build V1 API routes (all merged, then nested under /api/v1) ───────────
@@ -306,6 +322,20 @@ async fn main() {
     info!("  - Event Stream:   WS /stream/ws/*");
     info!("  - Terminal:       POST /terminal/*");
     info!("  - Webhooks:       POST /webhooks/clerk/*");
+
+    // Re-index Open Design skills on SIGHUP in production without restarting.
+    {
+        let cache = Arc::clone(&state).design_skill_cache.clone();
+        tokio::spawn(async move {
+            let mut sig = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
+                .expect("SIGHUP handler");
+            loop {
+                sig.recv().await;
+                info!("SIGHUP received, re-indexing Open Design skills");
+                cache.refresh(None).await;
+            }
+        });
+    }
 
     axum::serve(listener, app).await.unwrap();
 }

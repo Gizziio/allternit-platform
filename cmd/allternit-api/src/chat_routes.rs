@@ -25,6 +25,13 @@ pub struct ChatRequest {
     pub message: String,
     #[serde(rename = "runtimeModelId")]
     pub model_id: Option<String>,
+    #[serde(rename = "agentProvider")]
+    pub agent_provider: Option<String>,
+    #[serde(rename = "agentModel")]
+    pub agent_model: Option<String>,
+    #[serde(rename = "agentName")]
+    pub agent_name: Option<String>,
+    pub harness: Option<serde_json::Value>,
     #[serde(flatten)]
     pub context: serde_json::Value,
 }
@@ -53,6 +60,10 @@ async fn handle_agent_chat(
         &request.chat_id,
         &request.message,
         request.model_id.as_deref(),
+        request.agent_provider.as_deref(),
+        request.agent_model.as_deref(),
+        request.agent_name.as_deref(),
+        request.harness.as_ref(),
     )
     .await
 }

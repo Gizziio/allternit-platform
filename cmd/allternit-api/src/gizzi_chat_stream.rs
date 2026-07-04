@@ -17,21 +17,30 @@ use tracing::{info, warn};
 
 /// Parse a frontend model reference into a Gizzi `{ providerID, modelID }`
 /// object. Accepts `provider/model`, `provider::model`, or a bare model id.
-fn parse_model_ref(raw: Option<&str>) -> serde_json::Value {
+/// Falls back to the agent's configured provider/model when available.
+fn parse_model_ref(
+    raw: Option<&str>,
+    agent_provider: Option<&str>,
+    agent_model: Option<&str>,
+) -> serde_json::Value {
     let raw = raw.unwrap_or_default().trim();
-    if raw.is_empty() {
-        let (provider, model) = crate::default_model();
+    if !raw.is_empty() {
+        let normalized = raw.replace("::", "/");
+        if let Some((provider, model)) = normalized.rsplit_once('/') {
+            return json!({ "providerID": provider, "modelID": model });
+        }
+        // Bare model id — try to inherit the agent/default provider.
+        let default_provider = crate::default_model().0;
+        let provider = agent_provider.unwrap_or(default_provider.as_str());
+        return json!({ "providerID": provider, "modelID": normalized });
+    }
+
+    if let (Some(provider), Some(model)) = (agent_provider, agent_model) {
         return json!({ "providerID": provider, "modelID": model });
     }
 
-    let normalized = raw.replace("::", "/");
-    if let Some((provider, model)) = normalized.rsplit_once('/') {
-        return json!({ "providerID": provider, "modelID": model });
-    }
-
-    // Bare model id — try to inherit the default provider.
-    let (provider, _) = crate::default_model();
-    json!({ "providerID": provider, "modelID": normalized })
+    let (provider, model) = crate::default_model();
+    json!({ "providerID": provider, "modelID": model })
 }
 
 /// Translate a Gizzi event-bus stream into frontend SSE events.
@@ -223,12 +232,108 @@ fn chat_event_stream(
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
+/// Configure a Gizzi provider from an agent harness config. Non-fatal — if the
+/// harness cannot be registered we still attempt the chat with the resolved
+/// model reference so the UI degrades gracefully.
+async fn configure_harness_on_gizzi(
+    client: &Client,
+    base: &str,
+    harness: Option<&serde_json::Value>,
+    model: &serde_json::Value,
+) {
+    let Some(harness) = harness else { return };
+    let mode = harness
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("cloud");
+    if mode == "cloud" {
+        return;
+    }
+
+    let provider_id = model
+        .get("providerID")
+        .and_then(|v| v.as_str())
+        .unwrap_or("custom");
+
+    let auth_body = match mode {
+        "byok" => {
+            let byok = harness.get("byok").and_then(|v| v.as_object());
+            let (_provider, key) = byok
+                .and_then(|map| {
+                    for p in ["anthropic", "openai", "google"] {
+                        if let Some(cfg) = map.get(p).and_then(|c| c.as_object()) {
+                            if let Some(api_key) = cfg.get("apiKey").and_then(|k| k.as_str()) {
+                                return Some((p, api_key));
+                            }
+                        }
+                    }
+                    None
+                })
+                .unwrap_or((provider_id, ""));
+            if key.is_empty() {
+                warn!(mode = %mode, "BYOK harness missing API key");
+                return;
+            }
+            json!({ "type": "api", "key": key })
+        }
+        "local" => {
+            let base_url = harness
+                .get("local")
+                .and_then(|v| v.as_object())
+                .and_then(|o| o.get("baseURL"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("http://127.0.0.1:11434");
+            json!({ "type": "api", "key": "local", "baseURL": base_url })
+        }
+        "subprocess" => {
+            let (command, cwd) = harness
+                .get("subprocess")
+                .and_then(|v| v.as_object())
+                .map(|o| {
+                    (
+                        o.get("command").and_then(|v| v.as_str()).unwrap_or(""),
+                        o.get("cwd").and_then(|v| v.as_str()).unwrap_or(""),
+                    )
+                })
+                .unwrap_or(("", ""));
+            if command.is_empty() {
+                warn!(mode = %mode, "Subprocess harness missing command");
+                return;
+            }
+            json!({ "type": "api", "key": "subprocess", "subprocess_cmd": command, "cwd": cwd })
+        }
+        _ => {
+            warn!(mode = %mode, "Unknown harness mode");
+            return;
+        }
+    };
+
+    let url = format!("{}/auth/{}", base, urlencoding::encode(provider_id));
+    match client.put(&url).json(&auth_body).send().await {
+        Ok(res) if res.status().is_success() => {
+            info!(provider_id = %provider_id, mode = %mode, "Configured harness auth on Gizzi");
+        }
+        Ok(res) => {
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            warn!(status = %status, body = %body, "Failed to configure harness auth");
+        }
+        Err(err) => {
+            warn!(error = %err, "Could not reach Gizzi auth endpoint");
+        }
+    }
+}
+
 /// Send a chat message to a Gizzi session and stream the response back.
 pub async fn stream_chat_through_gizzi(
     gizzi_base: &str,
     session_id: &str,
     message: &str,
     runtime_model_id: Option<&str>,
+    agent_provider: Option<&str>,
+    agent_model: Option<&str>,
+    _agent_name: Option<&str>,
+    harness: Option<&serde_json::Value>,
 ) -> Response {
     let base = gizzi_base.trim_end_matches('/');
     let client = Client::builder()
@@ -236,7 +341,7 @@ pub async fn stream_chat_through_gizzi(
         .build()
         .unwrap_or_else(|_| Client::new());
 
-    let model = parse_model_ref(runtime_model_id);
+    let model = parse_model_ref(runtime_model_id, agent_provider, agent_model);
     let model_id = model
         .get("modelID")
         .and_then(|v| v.as_str())
@@ -245,6 +350,9 @@ pub async fn stream_chat_through_gizzi(
             let (_, m) = crate::default_model();
             m
         });
+
+    // For non-cloud harness modes, push credentials/config to Gizzi first.
+    configure_harness_on_gizzi(&client, base, harness, &model).await;
 
     // Subscribe to events *before* sending the message so we don't miss deltas.
     let event_resp = match client

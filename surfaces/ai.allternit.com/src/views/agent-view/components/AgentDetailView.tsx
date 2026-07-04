@@ -238,7 +238,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                 }}>
                   {agent.name}
                 </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <span style={{
                     padding: '3px 10px',
                     borderRadius: '999px',
@@ -250,6 +250,48 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   }}>
                     {agent.type || 'worker'}
                   </span>
+                  {(agent.allowedSurfaces || []).map((surface) => (
+                    <span key={surface} style={{
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      background: 'var(--bg-primary)',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      color: STUDIO_THEME.textSecondary,
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'capitalize',
+                    }}>
+                      {surface}
+                    </span>
+                  ))}
+                  {agent.trustTier && (
+                    <span style={{
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      background: 'var(--bg-primary)',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      color: STUDIO_THEME.textSecondary,
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'capitalize',
+                    }}>
+                      {agent.trustTier}
+                    </span>
+                  )}
+                  {agent.writeScope && (
+                    <span style={{
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      background: 'var(--bg-primary)',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      color: STUDIO_THEME.textSecondary,
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      textTransform: 'capitalize',
+                    }}>
+                      {agent.writeScope}
+                    </span>
+                  )}
                   {eventStreamConnected && (
                     <span style={{
                       padding: '2px 8px',
