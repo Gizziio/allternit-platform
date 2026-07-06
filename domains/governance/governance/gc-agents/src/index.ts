@@ -80,7 +80,7 @@ async function initializeTreeSitter(): Promise<boolean> {
   if (TreeSitter && TypeScriptGrammar) return true;
   
   try {
-    const tsModule = await import('tree-sitter');
+    const tsModule = (await import('tree-sitter')) as unknown as typeof import('tree-sitter');
     TreeSitter = tsModule;
     const typescriptModule = await import('tree-sitter-typescript');
     TypeScriptGrammar = (typescriptModule as { default: (parser: unknown) => unknown }).default(tsModule.Parser);

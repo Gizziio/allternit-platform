@@ -67,6 +67,13 @@ pub struct CompanyConfig {
     /// URL of the cron daemon. Usually baked in; users can override.
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
+
+    /// When true, the packaged app runs in self-hosted mode. Clerk JWT
+    /// verification is skipped and the desktop bootstrap headers are trusted
+    /// instead. This is for deployments where the app bundle is the authority
+    /// and there is no external Clerk tenant.
+    #[serde(rename = "selfHosted")]
+    pub self_hosted: Option<bool>,
 }
 
 /// User-level configuration. Written by the onboarding wizard and the settings
@@ -266,6 +273,16 @@ impl AppConfig {
             .ok()
             .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
             .unwrap_or(false)
+    }
+
+    /// When true, the app is running in self-hosted mode. Clerk is not required
+    /// and the desktop bootstrap headers are trusted. Packaged apps can set this
+    /// in company.json to avoid distributing Clerk keys.
+    pub fn self_hosted(&self) -> bool {
+        std::env::var("ALLTERNIT_SELF_HOSTED")
+            .ok()
+            .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+            .unwrap_or_else(|| self.company.self_hosted.unwrap_or(false))
     }
 
     /// URL of the Rails service.

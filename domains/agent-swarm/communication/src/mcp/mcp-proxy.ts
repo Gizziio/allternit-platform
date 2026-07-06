@@ -244,10 +244,10 @@ export class MCPProxy {
  */
 export function createMCPProxy(config: MCPProxyConfig): MCPProxy {
   return new MCPProxy({
+    ...config,
     injectSender: config.injectSender ?? true,
     injectChannel: config.injectChannel ?? true,
     logLevel: config.logLevel ?? 'info',
-    ...config,
   });
 }
 

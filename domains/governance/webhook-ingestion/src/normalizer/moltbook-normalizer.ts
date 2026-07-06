@@ -228,8 +228,8 @@ function buildContent(payload: MoltbookWebhookPayload): NormalizedWebhookEvent['
 /**
  * Map Moltbook action to normalized action type
  */
-function mapActionType(action: string): NormalizedWebhookEvent['action']['type'] {
-  const typeMap: Record<string, NormalizedWebhookEvent['action']['type']> = {
+function mapActionType(action: string): 'created' | 'updated' | 'deleted' | 'closed' | 'opened' | 'commented' | 'mentioned' {
+  const typeMap: Record<string, ReturnType<typeof mapActionType>> = {
     created: 'created',
     received: 'created',
     verified: 'updated',

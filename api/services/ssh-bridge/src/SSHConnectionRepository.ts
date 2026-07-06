@@ -76,12 +76,12 @@ export class CredentialEncryption {
 
   encrypt(plaintext: string): { ciphertext: string; iv: string; authTag: string } {
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(this.algorithm, this.key, iv);
-    
+    const cipher = crypto.createCipheriv(this.algorithm, this.key, iv) as any;
+
     let encrypted = cipher.update(plaintext, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
-    const authTag = cipher.getAuthTag();
+
+    const authTag = cipher.getAuthTag() as Buffer;
 
     return {
       ciphertext: encrypted,
@@ -95,8 +95,8 @@ export class CredentialEncryption {
       this.algorithm,
       this.key,
       Buffer.from(iv, 'hex')
-    );
-    
+    ) as any;
+
     decipher.setAuthTag(Buffer.from(authTag, 'hex'));
     
     let decrypted = decipher.update(ciphertext, 'hex', 'utf8');

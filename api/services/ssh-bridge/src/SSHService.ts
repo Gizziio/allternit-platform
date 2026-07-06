@@ -178,9 +178,9 @@ export class SSHService extends EventEmitter {
 
     const result = await ssh.execCommand(command, {
       cwd: options?.cwd,
-      env: options?.env,
-      onStdout: options?.onStdout,
-      onStderr: options?.onStderr,
+      execOptions: options?.env ? { env: options.env } : undefined,
+      onStdout: options?.onStdout ? (chunk: Buffer) => options.onStdout!(chunk.toString('utf8')) : undefined,
+      onStderr: options?.onStderr ? (chunk: Buffer) => options.onStderr!(chunk.toString('utf8')) : undefined,
     });
 
     return {
@@ -245,11 +245,11 @@ export class SSHService extends EventEmitter {
 
     // Check Docker
     const dockerResult = await ssh.execCommand('which docker');
-    const dockerInstalled = dockerResult.exitCode === 0;
+    const dockerInstalled = dockerResult.code === 0;
 
     // Check Allternit Agent
     const allternitResult = await ssh.execCommand('which allternit-node');
-    const allternitInstalled = allternitResult.exitCode === 0;
+    const allternitInstalled = allternitResult.code === 0;
 
     let allternitVersion: string | undefined;
     if (allternitInstalled) {
@@ -296,7 +296,7 @@ export class SSHService extends EventEmitter {
       // Check if Docker is installed
       logAndEmit('Checking Docker installation...');
       const dockerCheck = await ssh.execCommand('which docker');
-      if (dockerCheck.exitCode !== 0) {
+      if (dockerCheck.code !== 0) {
         logAndEmit('Docker not found. Installing Docker...');
         await this.installDocker(ssh, logAndEmit);
       } else {
@@ -315,14 +315,14 @@ export class SSHService extends EventEmitter {
         }
       );
 
-      if (installResult.exitCode !== 0) {
-        throw new Error(`Installation failed with exit code ${installResult.exitCode}`);
+      if (installResult.code !== 0) {
+        throw new Error(`Installation failed with exit code ${installResult.code}`);
       }
 
       // Verify installation
       logAndEmit('Verifying installation...');
       const verifyResult = await ssh.execCommand('allternit-node --version');
-      if (verifyResult.exitCode === 0) {
+      if (verifyResult.code === 0) {
         logAndEmit(`Allternit Agent installed successfully: ${verifyResult.stdout.trim()}`);
       }
 
@@ -363,7 +363,7 @@ export class SSHService extends EventEmitter {
 
     const result = await ssh.execCommand(installScript);
     
-    if (result.exitCode !== 0) {
+    if (result.code !== 0) {
       throw new Error(`Docker installation failed: ${result.stderr}`);
     }
     

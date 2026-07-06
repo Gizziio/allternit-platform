@@ -248,6 +248,7 @@ export interface FailoverRegion {
   endpoint: string;
   healthy: boolean;
   priority: number;
+  promote?: () => Promise<void>;
 }
 
 /// Failover event

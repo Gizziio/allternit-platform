@@ -32,7 +32,7 @@ export class MentionParser {
 
     // Create pattern with appropriate flags
     const flags = this.config.caseSensitive ? 'g' : 'gi';
-    this.pattern = new RegExp(this.config.pattern.source, flags);
+    this.pattern = new RegExp(this.config.pattern?.source ?? DEFAULT_MENTION_REGEX.source, flags);
   }
 
   /**
@@ -161,7 +161,7 @@ export class MentionParser {
     // Rebuild pattern if changed
     if (config.pattern) {
       const flags = this.config.caseSensitive ? 'g' : 'gi';
-      this.pattern = new RegExp(this.config.pattern.source, flags);
+      this.pattern = new RegExp(config.pattern.source, flags);
     }
   }
 

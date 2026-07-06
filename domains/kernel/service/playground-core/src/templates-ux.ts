@@ -4,20 +4,16 @@
  * High-leverage UX templates for visual agent workflows.
  */
 
-import type { ContextBundle, PlaygroundTemplateType, PlaygroundOutputs } from './types';
+import type { ContextBundle, PlaygroundTemplateType, PlaygroundOutputs, SitemapNode, CopyVariant } from './types';
 
 // ============================================================================
 // Template 3: Site Structure Audit
 // ============================================================================
 
-export interface SitemapNode {
-  url: string;
-  depth: number;
-  parent?: string;
-  children?: string[];
+type SiteAuditSitemapNode = SitemapNode & {
   traffic?: number;
   conversions?: number;
-}
+};
 
 export interface SiteAuditConfig {
   detectOrphans: boolean;
@@ -26,7 +22,7 @@ export interface SiteAuditConfig {
 }
 
 export function createSiteAuditTemplate(
-  sitemap: SitemapNode[],
+  sitemap: SiteAuditSitemapNode[],
   config?: SiteAuditConfig
 ) {
   const template: PlaygroundTemplateType = 'site-structure-audit';
@@ -120,13 +116,6 @@ export function createComponentVariationTemplate(
 // ============================================================================
 // Template 5: Copy Review
 // ============================================================================
-
-export interface CopyVariant {
-  id: string;
-  baseline: string;
-  variants: string[];
-  constraints?: Array<{ type: string; value: unknown }>;
-}
 
 export interface CopyReviewConfig {
   toneConstraints?: string[];

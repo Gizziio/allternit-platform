@@ -122,6 +122,15 @@ export interface DeduplicationStore {
    * Clear all entries (for testing)
    */
   clear(): Promise<void>;
+
+  /**
+   * Get store statistics
+   */
+  getStats(): Promise<{
+    total: number;
+    byStatus: Record<string, number>;
+    bySource: Record<string, number>;
+  }>;
 }
 
 /**

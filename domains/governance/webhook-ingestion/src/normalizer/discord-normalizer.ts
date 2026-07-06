@@ -203,8 +203,8 @@ function buildContent(payload: DiscordWebhookPayload): NormalizedWebhookEvent['c
 /**
  * Map Discord action to normalized action type
  */
-function mapActionType(action: string): NormalizedWebhookEvent['action']['type'] {
-  const typeMap: Record<string, NormalizedWebhookEvent['action']['type']> = {
+function mapActionType(action: string): 'created' | 'updated' | 'deleted' | 'closed' | 'opened' | 'commented' | 'mentioned' {
+  const typeMap: Record<string, ReturnType<typeof mapActionType>> = {
     create: 'created',
     update: 'updated',
     delete: 'deleted',
@@ -272,7 +272,7 @@ export function requiresAgentAction(payload: DiscordWebhookPayload): boolean {
   ]);
   
   // Check for @mentions
-  const hasMention = payload.message?.mentions && payload.message.mentions.length > 0;
+  const hasMention = !!(payload.message?.mentions && payload.message.mentions.length > 0);
   
   return actionEvents.has(payload.eventType) || hasMention;
 }

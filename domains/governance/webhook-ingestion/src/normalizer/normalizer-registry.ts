@@ -153,7 +153,7 @@ export function normalizeCustomWebhook(payload: CustomWebhookPayload): Normalize
 export const normalizerRegistry = new NormalizerRegistry();
 
 // Register custom normalizer
-normalizerRegistry.register('custom', normalizeCustomWebhook);
+normalizerRegistry.register('custom', normalizeCustomWebhook as NormalizerFn);
 
 /**
  * Normalize any webhook payload

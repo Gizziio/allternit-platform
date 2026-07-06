@@ -47,11 +47,11 @@ export function normalizeGitHubWebhook(
   const normalizedAction = ACTION_MAP[action as string] || action;
   
   // Build actor
-  const actor = sender
+  const actor: NormalizedWebhookEvent['actor'] = sender
     ? {
         id: String(sender.id),
         name: sender.login,
-        type: sender.type === 'Bot' ? 'bot' : 'human' as const,
+        type: sender.type === 'Bot' ? 'bot' : 'human',
       }
     : undefined;
   
@@ -154,7 +154,7 @@ function buildTarget(
       return {
         type: 'repository',
         id: payload.repository.name,
-        name: `Release: ${payload.rawPayload.release?.['tag_name'] || 'unknown'}`,
+        name: `Release: ${(payload.rawPayload.release as Record<string, string> | undefined)?.['tag_name'] || 'unknown'}`,
         url: payload.repository.url,
       };
     
@@ -238,8 +238,8 @@ function buildContent(payload: GitHubWebhookPayload): NormalizedWebhookEvent['co
 /**
  * Map normalized action to action type
  */
-function mapActionType(action: string): NormalizedWebhookEvent['action']['type'] {
-  const typeMap: Record<string, NormalizedWebhookEvent['action']['type']> = {
+function mapActionType(action: string): 'created' | 'updated' | 'deleted' | 'closed' | 'opened' | 'commented' | 'mentioned' {
+  const typeMap: Record<string, ReturnType<typeof mapActionType>> = {
     opened: 'opened',
     created: 'created',
     updated: 'updated',

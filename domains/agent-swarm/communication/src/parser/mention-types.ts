@@ -27,7 +27,7 @@ export interface MentionParserConfig {
   /** Known agent IDs */
   knownAgents?: string[];
   /** Case sensitive matching */
-  caseSensitive: boolean;
+  caseSensitive?: boolean;
 }
 
 /**

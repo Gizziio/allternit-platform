@@ -14,6 +14,7 @@
  *   ALLTERNIT_RAILS_WORKSPACE_ID     - Rails workspace ID (default: default)
  *   ALLTERNIT_CRON_DAEMON_URL        - Cron daemon URL (default: http://127.0.0.1:4096/cron)
  *   ALLTERNIT_VM_DIR                 - VM storage directory (optional)
+ *   ALLTERNIT_SELF_HOSTED            - Self-hosted mode, skips Clerk (default: false)
  *   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY - Clerk publishable key (optional)
  *   CLERK_JWKS_URL                   - Clerk JWKS URL (optional)
  *   CLERK_ISSUER                     - Clerk JWT issuer (optional)
@@ -62,6 +63,7 @@ function main() {
     clerkJwksUrl: getEnv('CLERK_JWKS_URL', ''),
     clerkIssuer: getEnv('CLERK_ISSUER', ''),
     clerkWebhookSecret: getEnv('CLERK_WEBHOOK_SECRET', ''),
+    selfHosted: getEnv('ALLTERNIT_SELF_HOSTED', 'false').toLowerCase() === 'true',
     encryptionKey,
   };
 
@@ -73,8 +75,11 @@ function main() {
   if (usingGeneratedKey) {
     console.log('Generated a new encryption key. Save ALLTERNIT_ENCRYPTION_KEY if you want deterministic builds.');
   }
-  if (!config.clerkPublishableKey) {
-    console.log('No Clerk publishable key set. The app will run with local-dev auth bypass unless you configure Clerk.');
+  if (!config.clerkPublishableKey && !config.selfHosted) {
+    console.log('No Clerk publishable key set and selfHosted is false. Set ALLTERNIT_SELF_HOSTED=true for packaged apps without Clerk.');
+  }
+  if (config.selfHosted) {
+    console.log('Self-hosted mode enabled. Clerk JWT verification will be skipped.');
   }
 }
 

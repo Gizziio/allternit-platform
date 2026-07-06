@@ -550,6 +550,31 @@ pub async fn auth_middleware(
         return next.run(request).await;
     }
 
+    // Self-hosted bypass: packaged apps that ship without Clerk keys trust the
+    // local desktop bootstrap headers or localhost origin.
+    if state.config.self_hosted() {
+        if let Some(user) = extract_desktop_bootstrap_user(request.headers()) {
+            if let Err(e) = ensure_user_in_db(&state.db, &user) {
+                return e.into_response();
+            }
+            let headers = request.headers_mut();
+            insert_user_headers(headers, &user);
+            request.extensions_mut().insert(user);
+            return next.run(request).await;
+        }
+
+        if is_localhost_origin(request.headers()) {
+            let user = local_dev_user(Some(state.config.tenant_id()));
+            if let Err(e) = ensure_user_in_db(&state.db, &user) {
+                return e.into_response();
+            }
+            let headers = request.headers_mut();
+            insert_user_headers(headers, &user);
+            request.extensions_mut().insert(user);
+            return next.run(request).await;
+        }
+    }
+
     AuthError::MissingToken.into_response()
 }
 

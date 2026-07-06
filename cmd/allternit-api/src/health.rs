@@ -35,6 +35,10 @@ impl HealthState for Arc<crate::AppState> {
     }
 
     async fn jwks_ready(&self) -> bool {
+        // In self-hosted mode the app does not rely on Clerk JWKS.
+        if self.config.self_hosted() {
+            return true;
+        }
         self.jwks.is_ready().await
     }
 
@@ -98,7 +102,7 @@ async fn health_handler<S: HealthState>(State(state): State<S>) -> impl IntoResp
         jwks: state.jwks_ready().await,
         gizzi: state.gizzi_healthy().await,
     };
-    let ready = readiness(checks);
+    let ready = readiness(checks.clone());
 
     let body = Json(HealthResponse {
         status: if ready { "healthy" } else { "degraded" },
@@ -125,7 +129,7 @@ async fn ready_handler<S: HealthState>(State(state): State<S>) -> impl IntoRespo
         jwks: state.jwks_ready().await,
         gizzi: state.gizzi_healthy().await,
     };
-    let ready = readiness(checks);
+    let ready = readiness(checks.clone());
 
     let body = Json(ReadyResponse {
         status: if ready { "ready" } else { "not_ready" },

@@ -294,7 +294,7 @@ export class RailsEventEmitter {
     const required = ['eventId', 'timestamp', 'actor', 'type', 'payload'];
     
     for (const field of required) {
-      if (!(event as Record<string, unknown>)[field]) {
+      if (!(event as unknown as Record<string, unknown>)[field]) {
         throw new Error(`Missing required field: ${field}`);
       }
     }

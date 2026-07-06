@@ -10,7 +10,7 @@
  * WIH: GAP-78/GAP-79, Agent: T3-A4
  */
 
-import type { Insight, Entity, Note, NoteLink, Task, Session } from '../types.js';
+import type { Insight, Entity, Note, NoteLink, Task, Session } from '../index.js';
 
 // ============================================================================
 // Self Space - Agent Identity
@@ -379,9 +379,12 @@ export class ThreeSpaceArchitecture {
   }
 
   getOrphanedNotes(): Note[] {
-    const linkedIds = new Set(this.notesSpace.links.map(l => l.target));
-    linkedIds.add(...this.notesSpace.links.map(l => l.source));
-    
+    const linkedIds = new Set<string>();
+    for (const link of this.notesSpace.links) {
+      linkedIds.add(link.target);
+      linkedIds.add(link.source);
+    }
+
     return Array.from(this.notesSpace.notes.values()).filter(
       n => !linkedIds.has(n.id) && n.links.length === 0
     );
@@ -565,7 +568,7 @@ export class ThreeSpaceArchitecture {
 
   private indexNoteTags(note: Note): void {
     for (const tag of note.tags) {
-      const index = this.notesSpace.tags.get(tag) || {
+      const index: TagIndex = this.notesSpace.tags.get(tag) || {
         tag,
         notes: [],
         frequency: 0,
@@ -588,22 +591,3 @@ export class ThreeSpaceArchitecture {
     }
   }
 }
-
-// Export all types
-export type {
-  SelfSpace,
-  AgentIdentity,
-  AgentPreferences,
-  WorkingMemory,
-  NotesSpace,
-  MapOfContent,
-  TagIndex,
-  GraphStatistics,
-  OpsSpace,
-  Workflow,
-  WorkflowStep,
-  WorkflowTrigger,
-  Automation,
-  TaskScheduler,
-  ScheduledTask,
-};

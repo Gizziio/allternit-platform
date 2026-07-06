@@ -14,7 +14,8 @@ import { normalizeWebhook, isSourceSupported } from '../normalizer/normalizer-re
 import { verifySignatureForSource, verifyHmacSignature } from '../security/hmac-verifier.js';
 import { AllowlistValidator, createDefaultAllowlistValidator } from '../security/allowlist-validator.js';
 import { RateLimiter, createWebhookRateLimiter } from '../security/rate-limiter.js';
-import { createDeduplicationStore, type DeduplicationStore } from '../idempotency/deduplication-store.js';
+import { createDeduplicationStore } from '../idempotency/deduplication-store.js';
+import type { DeduplicationStore } from '../types/idempotency.types.js';
 import { generateIdempotencyKey } from '../idempotency/key-generator.js';
 import { RailsEventEmitter, createRailsEventEmitter, type RailsEventEmitter as RailsEventEmitterType } from '../rails/event-emitter.js';
 import { ReceiptRecorder, createReceiptRecorder } from '../rails/receipt-recorder.js';
@@ -139,7 +140,7 @@ export class WebhookServer {
     }
     
     // Parse body
-    const rawBody = request.rawBody || JSON.stringify(request.body);
+    const rawBody = (request as { rawBody?: string }).rawBody || JSON.stringify(request.body);
     let payload: WebhookPayload;
     
     try {
@@ -402,7 +403,6 @@ export class WebhookServer {
       source: source as WebhookSource,
       timestamp,
       rawPayload: body as Record<string, unknown>,
-      rawPayload: body,
     };
     
     // Parse based on source
@@ -418,6 +418,7 @@ export class WebhookServer {
       default:
         return {
           ...basePayload,
+          source: 'custom' as const,
           eventType: 'custom.event',
           customData: body as Record<string, unknown>,
         };
@@ -434,7 +435,7 @@ export class WebhookServer {
     const eventType = `${body.action || 'unknown'}.${body.sender ? 'event' : 'unknown'}`;
     
     return {
-      ...base as WebhookPayload,
+      ...(base as unknown as Partial<WebhookPayload>),
       eventType: body['x-github-event'] as string || 'push',
       repository: {
         fullName: (body.repository as Record<string, unknown>)?.full_name as string || '',
@@ -459,7 +460,7 @@ export class WebhookServer {
     base: Record<string, unknown>
   ): WebhookPayload {
     return {
-      ...base as WebhookPayload,
+      ...(base as unknown as Partial<WebhookPayload>),
       eventType: 'message.create',
       guild: body.guild_id ? {
         id: String(body.guild_id),
@@ -492,7 +493,7 @@ export class WebhookServer {
     base: Record<string, unknown>
   ): WebhookPayload {
     return {
-      ...base as WebhookPayload,
+      ...(base as unknown as Partial<WebhookPayload>),
       eventType: body.type as string || 'room.message.created',
       room: body.room ? {
         id: (body.room as Record<string, unknown>)?.id as string,
@@ -516,7 +517,7 @@ export class WebhookServer {
     base: Record<string, unknown>
   ): WebhookPayload {
     return {
-      ...base as WebhookPayload,
+      ...(base as unknown as Partial<WebhookPayload>),
       eventType: body.type as string || 'post.created',
       post: body.post ? {
         id: (body.post as Record<string, unknown>)?.id as string,

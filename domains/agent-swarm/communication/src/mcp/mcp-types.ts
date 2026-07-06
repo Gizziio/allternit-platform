@@ -84,7 +84,7 @@ export interface MCPSessionContext {
   channel?: {
     id: string;
     name: string;
-    type: 'room' | 'direct' | 'thread';
+    type?: 'room' | 'direct' | 'thread';
   };
   /** Correlation ID for tracing */
   correlationId?: string;
@@ -104,6 +104,7 @@ export interface MCPProxyConfig {
   defaultChannel?: {
     id: string;
     name: string;
+    type?: 'room' | 'direct' | 'thread';
   };
   /** Enable sender injection */
   injectSender: boolean;
