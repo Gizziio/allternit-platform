@@ -7,6 +7,7 @@ import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
+import { PORTS, notebookUrl } from './config.js';
 
 const DATA_DIR = path.join(os.homedir(), '.allternit', 'services', 'open-notebook');
 const BIN_DIR = path.join(os.homedir(), '.allternit', 'bin');
@@ -55,7 +56,7 @@ export class NotebookManager {
     for (let i = 0; i < 60; i++) {
       await new Promise(r => setTimeout(r, 1000));
       if (this.isReady) {
-        console.log('[NotebookManager] Research backend ready on port 5055');
+        console.log(`[NotebookManager] Research backend ready on port ${PORTS.NOTEBOOK}`);
         this.startHealthCheck();
         return true;
       }
@@ -77,7 +78,7 @@ export class NotebookManager {
   private startHealthCheck(): void {
     this.healthCheckInterval = setInterval(async () => {
       try {
-        const res = await fetch('http://127.0.0.1:5055/health');
+        const res = await fetch(notebookUrl('/health'));
         if (!res.ok) throw new Error('Health check failed');
       } catch {
         console.warn('[NotebookManager] Health check failed, backend may need restart');

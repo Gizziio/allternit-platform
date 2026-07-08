@@ -21,7 +21,7 @@ import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
 import { gizziManager } from './gizzi-manager.js';
-import { PORTS, URLS, devUiUrl, apiUrl } from './config.js';
+import { PORTS, URLS, devUiUrl, apiUrl, notebookUrl, staticUiUrl } from './config.js';
 import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus } from './mini-apps-manager.js';
 
 import { tunnelManager } from './tunnel-manager.js';
@@ -680,19 +680,19 @@ function createMainWindow(): BrowserWindow {
       sandbox: true,
       // Secure by default: API calls are routed through the allternit-api
       // custom protocol handler (registered in app.whenReady) which proxies
-      // to localhost:8013 without mixed-content issues.
+      // to the local API without mixed-content issues.
       allowRunningInsecureContent: false,
     },
   });
 
   // Redirect all /api/* requests from the platform URL to the allternit-api
   // custom protocol. The protocol handler (registered globally) proxies to
-  // http://localhost:8013 and injects auth headers. This avoids mixed-content
+  // the local API URL and injects auth headers. This avoids mixed-content
   // blocking without allowRunningInsecureContent.
   const platformOrigin = activePlatformUrl;
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
     if (details.url.startsWith(`${platformOrigin}/api/`)) {
-      const redirectURL = details.url.replace(platformOrigin, 'allternit-api://localhost:${PORTS.API}');
+      const redirectURL = details.url.replace(platformOrigin, `allternit-api://localhost:${PORTS.API}`);
       callback({ redirectURL });
       return;
     }
@@ -780,7 +780,7 @@ async function initializeApp(): Promise<void> {
   
   // Determine which mode to use
   if (backendConfig.mode === 'development') {
-    // Development mode - connect to localhost:4096
+    // Development mode - connect to the local Gizzi runtime
     await initializeDevelopmentMode();
   } else if (backendConfig.mode === 'remote' && backendConfig.remoteUrl) {
     // Remote mode - connect to user VPS
@@ -864,14 +864,14 @@ async function initializeBundledMode(): Promise<void> {
     //              We always load the remote URL (Claude Desktop model).
     //              API calls are redirected to localhost via injected config.
     // Offline:    If remote URL is unreachable, fall back to local static files
-    //              served by the Rust API at localhost:8013.
+    //              served by the Rust API at the local API URL.
     let platformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
 
     if (!isDev) {
       const remoteReachable = await isUrlReachable(platformUrl, 5000);
       if (!remoteReachable) {
         log.warn(`[Main] Remote platform ${platformUrl} is unreachable — falling back to local static UI`);
-        platformUrl = URLS.API;
+        platformUrl = staticUiUrl();
         serviceState.platform = { status: 'up', detail: 'Offline mode (local static)' };
       } else {
         serviceState.platform = { status: 'up', detail: 'ai.allternit.com' };
@@ -1100,10 +1100,10 @@ async function initializeDevelopmentMode(): Promise<void> {
 // Extension Bridge — TCP server for native messaging host
 // The Chrome extension connects via chrome.runtime.connectNative('com.allternit.desktop').
 // Chrome spawns native-host/native-host as a child process; it then connects back
-// here over TCP on port 3011 to relay messages bidirectionally.
+// here over TCP on port EXTENSION_BRIDGE to relay messages bidirectionally.
 // ============================================================================
 
-const EXTENSION_BRIDGE_PORT = 3011;
+const EXTENSION_BRIDGE_PORT = PORTS.EXTENSION_BRIDGE;
 
 /**
  * Pending HTTP relay requests waiting for a response from the extension.
@@ -1165,15 +1165,15 @@ function startExtensionBridge(): void {
 // ============================================================================
 // ACU Extension Relay — HTTP endpoint for the Computer-Use engine
 //
-// ACU (Python, port 8760) cannot connect to TCP 3011 directly because that
+// ACU (Python, port 8760) cannot connect to TCP EXTENSION_BRIDGE directly because that
 // port is owned exclusively by this process as a server for the native host.
-// Instead ACU POSTs to http://127.0.0.1:3012/extension/send and this handler
+// Instead ACU POSTs to http://127.0.0.1:ACU_RELAY/extension/send and this handler
 // forwards the message onto the extension socket.
 //
-// Port: ACU_EXTENSION_RELAY_PORT env var, default 3012
+// Port: ACU_EXTENSION_RELAY_PORT env var, default PORTS.ACU_RELAY
 // ============================================================================
 
-const ACU_RELAY_PORT = parseInt(process.env['ACU_EXTENSION_RELAY_PORT'] ?? '3012', 10);
+const ACU_RELAY_PORT = parseInt(process.env['ACU_EXTENSION_RELAY_PORT'] ?? String(PORTS.ACU_RELAY), 10);
 
 function startAcuExtensionRelay(): void {
   const RELAY_TIMEOUT_MS = parseInt(process.env['ACU_EXTENSION_TIMEOUT_MS'] ?? '15000', 10);
@@ -1692,7 +1692,7 @@ ipcMain.handle('research:get-status', () => notebookManager.getStatus());
 ipcMain.handle('research:start', async () => {
   const result = await notebookManager.start();
   serviceState.research = result
-    ? { status: 'up', detail: 'Connected on http://127.0.0.1:5055' }
+    ? { status: 'up', detail: `Connected on ${notebookUrl()}` }
     : { status: 'down', detail: 'Failed to start' };
   pushServiceState();
   return result;

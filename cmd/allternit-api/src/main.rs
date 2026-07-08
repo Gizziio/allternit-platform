@@ -60,7 +60,7 @@ use allternit_api::mcp_routes::mcp_router;
 use allternit_api::oauth_routes::oauth_router;
 use allternit_api::office_routes::office_router;
 use allternit_api::onboarding_routes::onboarding_router;
-use allternit_api::platform_static::platform_router;
+use allternit_api::platform_static::platform_service;
 use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rails::{rails_router, RailsState};
@@ -234,7 +234,6 @@ async fn main() {
         .nest("/stream", stream_router())
         .nest("/terminal", terminal_router())
         .nest("/mcp", mcp_router())
-        .nest("/platform", platform_router())
         .nest("/metrics", metrics_router())
         .nest("/api", h5i_router())
         .nest("/api", oauth_router())
@@ -252,12 +251,22 @@ async fn main() {
         ));
 
     // ── Public routes (no authentication required) ────────────────────────────
-    let public = Router::new()
+    let mut public = Router::new()
         .nest("/health", health_router())
         .nest("/api", web_proxy_router())
         .merge(status_router())
-        .merge(webhook_router())
-        .merge(fallback_router());
+        .merge(webhook_router());
+
+    // Mount the offline platform UI at `/` when a static export is available.
+    // This is intentionally last among the explicit public routes so that
+    // `/health`, `/api`, `/status` and webhooks are served by their own routers.
+    // Unknown paths fall back to `index.html` for SPA client-side routing.
+    // When no static export is present, keep the 501 "not implemented" fallback.
+    if let Some(service) = platform_service() {
+        public = public.nest_service("/", service);
+    } else {
+        public = public.merge(fallback_router());
+    }
 
     // Combine protected + public, then apply state
     let mut app = protected.merge(public).with_state(state.clone());
