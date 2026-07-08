@@ -16,7 +16,8 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
   },
   "peerDependencies": {
     "react": "^18.0.0",

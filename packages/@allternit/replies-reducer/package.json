@@ -14,7 +14,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build": "tsc"
   },
   "dependencies": {
     "@allternit/replies-contract": "workspace:*"

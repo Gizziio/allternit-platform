@@ -16,7 +16,7 @@
     "dev": "tsc --watch",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src"
   },
   "keywords": [
     "browser",

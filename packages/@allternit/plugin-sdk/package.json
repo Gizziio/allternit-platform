@@ -4,6 +4,13 @@
   "description": "Universal plugin runtime for LLM platforms - build once, run anywhere",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "allternit-plugin": "./bin/allternit-plugin.js"
   },
@@ -18,7 +25,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint src",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",
     "postversion": "git push && git push --tags"
