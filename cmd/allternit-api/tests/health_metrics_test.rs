@@ -25,6 +25,7 @@ async fn body_json(response: axum::response::Response) -> Value {
 struct TestState {
     db: bool,
     jwks: bool,
+    gizzi: bool,
 }
 
 #[async_trait]
@@ -36,12 +37,31 @@ impl HealthState for TestState {
     async fn jwks_ready(&self) -> bool {
         self.jwks
     }
+
+    async fn gizzi_healthy(&self) -> bool {
+        self.gizzi
+    }
 }
 
 #[tokio::test]
 async fn test_metrics_endpoint_renders_prometheus_text() {
-    let app = metrics_router::<()>();
-    let response = app
+    // Record at least one request so the histogram/counter families appear in the output.
+    let app = Router::new()
+        .route("/test", get(|| async { "ok" }))
+        .layer(axum::middleware::from_fn(metrics_middleware));
+
+    app.clone()
+        .oneshot(
+            Request::builder()
+                .uri("/test")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let metrics_app = metrics_router::<()>();
+    let response = metrics_app
         .oneshot(
             Request::builder()
                 .uri("/metrics")
@@ -53,8 +73,6 @@ async fn test_metrics_endpoint_renders_prometheus_text() {
 
     assert_eq!(response.status(), 200);
     let text = body_text(response).await;
-    // At minimum the histogram should be registered. The counter only appears
-    // after it has been incremented by a request.
     assert!(
         text.contains("http_request_duration_seconds"),
         "expected request duration histogram in metrics output"
@@ -103,6 +121,7 @@ async fn test_health_live_returns_ok() {
     let app = health_router::<TestState>().with_state(TestState {
         db: true,
         jwks: true,
+        gizzi: true,
     });
     let response = app
         .oneshot(
@@ -124,6 +143,7 @@ async fn test_health_ready_when_healthy() {
     let app = health_router::<TestState>().with_state(TestState {
         db: true,
         jwks: true,
+        gizzi: true,
     });
     let response = app
         .oneshot(
@@ -140,6 +160,7 @@ async fn test_health_ready_when_healthy() {
     assert_eq!(json["status"], "ready");
     assert_eq!(json["checks"]["db"], true);
     assert_eq!(json["checks"]["jwks"], true);
+    assert_eq!(json["checks"]["gizzi"], true);
 }
 
 #[tokio::test]
@@ -147,6 +168,7 @@ async fn test_health_ready_when_db_unhealthy() {
     let app = health_router::<TestState>().with_state(TestState {
         db: false,
         jwks: true,
+        gizzi: true,
     });
     let response = app
         .oneshot(
@@ -163,6 +185,7 @@ async fn test_health_ready_when_db_unhealthy() {
     assert_eq!(json["status"], "not_ready");
     assert_eq!(json["checks"]["db"], false);
     assert_eq!(json["checks"]["jwks"], true);
+    assert_eq!(json["checks"]["gizzi"], true);
 }
 
 #[tokio::test]
@@ -170,6 +193,7 @@ async fn test_health_aggregate() {
     let healthy_app = health_router::<TestState>().with_state(TestState {
         db: true,
         jwks: true,
+        gizzi: true,
     });
     let response = healthy_app
         .oneshot(
@@ -186,10 +210,12 @@ async fn test_health_aggregate() {
     assert_eq!(json["live"], true);
     assert_eq!(json["ready"]["db"], true);
     assert_eq!(json["ready"]["jwks"], true);
+    assert_eq!(json["ready"]["gizzi"], true);
 
     let degraded_app = health_router::<TestState>().with_state(TestState {
         db: true,
         jwks: false,
+        gizzi: true,
     });
     let response = degraded_app
         .oneshot(
@@ -205,4 +231,5 @@ async fn test_health_aggregate() {
     assert_eq!(json["status"], "degraded");
     assert_eq!(json["live"], true);
     assert_eq!(json["ready"]["jwks"], false);
+    assert_eq!(json["ready"]["gizzi"], true);
 }
