@@ -427,7 +427,7 @@ impl EdgeRunner {
             })
             .unwrap_or_default();
 
-        let Some(command_str) = command_str else {
+        let Some(command_str) = command_str.filter(|s| !s.is_empty()) else {
             return ToolExecutionResult {
                 task_id: task.task_id.clone(),
                 worker_id: task.worker_id.clone(),
@@ -644,6 +644,76 @@ impl EdgeRunner {
         hasher.update(node_id.as_bytes());
         hasher.update(secret.as_bytes());
         format!("{:x}", hasher.finalize())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn shell_task(command: &str, args: &[&str], timeout: u64) -> WorkerTask {
+        WorkerTask {
+            task_id: "task-1".to_string(),
+            worker_id: "worker-1".to_string(),
+            tool_id: "shell".to_string(),
+            input: serde_json::json!({
+                "command": command,
+                "args": args,
+            }),
+            timeout_seconds: timeout,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_shell_tool_success() {
+        let result = EdgeRunner::execute_tool(&shell_task("echo", &["hello"], 5)).await;
+        assert!(result.success);
+        let output = result.output.expect("output missing");
+        assert_eq!(output["exit_code"], 0);
+        assert_eq!(output["stdout"].as_str().unwrap().trim(), "hello");
+    }
+
+    #[tokio::test]
+    async fn test_shell_tool_failure() {
+        let result = EdgeRunner::execute_tool(&shell_task("false", &[], 5)).await;
+        assert!(!result.success);
+        let output = result.output.expect("output missing");
+        assert_ne!(output["exit_code"], 0);
+    }
+
+    #[tokio::test]
+    async fn test_shell_tool_timeout() {
+        let result = EdgeRunner::execute_tool(&shell_task("sleep", &["10"], 1)).await;
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("timed out"));
+    }
+
+    #[tokio::test]
+    async fn test_shell_tool_missing_command() {
+        let result = EdgeRunner::execute_tool(&shell_task("", &[], 5)).await;
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("requires input.command"));
+    }
+
+    #[tokio::test]
+    async fn test_unknown_tool() {
+        let task = WorkerTask {
+            task_id: "task-1".to_string(),
+            worker_id: "worker-1".to_string(),
+            tool_id: "not_a_tool".to_string(),
+            input: serde_json::json!({}),
+            timeout_seconds: 5,
+        };
+        let result = EdgeRunner::execute_tool(&task).await;
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("Unknown tool_id"));
+    }
+
+    #[test]
+    fn test_metrics_are_present() {
+        // These should not panic and should return Some values on a healthy system.
+        assert!(EdgeRunner::get_cpu_cores().is_some());
+        assert!(EdgeRunner::get_memory_mb().is_some());
     }
 }
 

@@ -1087,4 +1087,143 @@ trait EventHandler: Send + Sync {
     fn handle(&self, event: &Event) -> Result<(), Box<dyn std::error::Error>>;
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_hook(id: &str, event_type: &str, condition: &str, enabled: bool) -> HookDefinition {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        HookDefinition {
+            id: id.to_string(),
+            name: "Test Hook".to_string(),
+            description: "Test".to_string(),
+            event_type: event_type.to_string(),
+            condition: condition.to_string(),
+            action: HookAction {
+                action_type: "logging".to_string(),
+                target: "audit".to_string(),
+                parameters: None,
+            },
+            enabled,
+            owner_id: "user-1".to_string(),
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_registry_crud() {
+        let registry = InMemoryHookRegistry::new();
+        let hook = sample_hook("hook-1", "session_start", "true", true);
+
+        registry.register_hook(hook.clone()).await.unwrap();
+        let user_hooks = registry.get_user_hooks("user-1").await.unwrap();
+        assert_eq!(user_hooks.len(), 1);
+
+        let event_hooks = registry.get_hooks_for_event("session_start").await.unwrap();
+        assert_eq!(event_hooks.len(), 1);
+
+        registry.unregister_hook("hook-1", "user-1").await.unwrap();
+        let user_hooks = registry.get_user_hooks("user-1").await.unwrap();
+        assert!(user_hooks.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_update_hook() {
+        let registry = InMemoryHookRegistry::new();
+        let hook = sample_hook("hook-1", "session_start", "true", true);
+        registry.register_hook(hook).await.unwrap();
+
+        registry
+            .update_hook(
+                "hook-1",
+                HookUpdates {
+                    name: Some("Updated".to_string()),
+                    description: None,
+                    condition: None,
+                    action: None,
+                    enabled: Some(false),
+                },
+                "user-1",
+            )
+            .await
+            .unwrap();
+
+        let event_hooks = registry.get_hooks_for_event("session_start").await.unwrap();
+        assert!(event_hooks.is_empty());
+
+        let user_hooks = registry.get_user_hooks("user-1").await.unwrap();
+        assert_eq!(user_hooks[0].name, "Updated");
+        assert!(!user_hooks[0].enabled);
+    }
+
+    #[tokio::test]
+    async fn test_condition_evaluation() {
+        let registry = InMemoryHookRegistry::new();
+        let context = serde_json::json!({ "message": "hello world" });
+
+        assert!(registry.evaluate_condition("true", &context).await.unwrap());
+        assert!(!registry.evaluate_condition("false", &context).await.unwrap());
+        assert!(registry.evaluate_condition("hello", &context).await.unwrap());
+        assert!(!registry.evaluate_condition("goodbye", &context).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_trigger_event_records_stats() {
+        let registry: Arc<dyn HookRegistry> = Arc::new(InMemoryHookRegistry::new());
+        let policy_engine: Arc<dyn PolicyEngine> = Arc::new(InMemoryPolicyEngine::new());
+        let audit_logger: Arc<dyn AuditLogger> = Arc::new(InMemoryAuditLogger::new());
+
+        let hook_service = Arc::new(HookService::new(
+            HookServiceConfig {
+                max_hooks_per_user: 10,
+                max_conditions_complexity: 1000,
+                enable_sandboxing: false,
+                default_timeout_ms: 1000,
+                audit_logging_enabled: true,
+            },
+            registry.clone(),
+            Arc::new(NoopEventBus),
+            policy_engine.clone(),
+            audit_logger.clone(),
+        ));
+
+        let event_bus: Arc<dyn EventBus> = Arc::new(InMemoryEventBus::new(
+            hook_service.clone(),
+            registry.clone(),
+            audit_logger.clone(),
+        ));
+
+        let hook = sample_hook("hook-1", "session_start", "true", true);
+        registry.register_hook(hook).await.unwrap();
+
+        let event = Event {
+            id: "evt-1".to_string(),
+            event_type: "session_start".to_string(),
+            payload: serde_json::json!({}),
+            source: "test".to_string(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            user_id: Some("user-1".to_string()),
+            agent_id: None,
+            metadata: serde_json::json!({}),
+        };
+
+        let results = event_bus.trigger_hooks_for_event(&event).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(results[0].success);
+
+        let stats = registry.get_statistics().await.unwrap();
+        assert_eq!(stats.total_hooks, 1);
+        assert_eq!(stats.active_hooks, 1);
+        assert_eq!(stats.triggered_hooks_today, 1);
+        assert_eq!(stats.execution_errors_today, 0);
+    }
+}
+
 
