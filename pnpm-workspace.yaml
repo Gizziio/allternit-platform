@@ -56,8 +56,6 @@ packages:
 
   # Exclusions
   - '!cmd/*/sdks'
-  - '!packages/@allternit/adapters/src/**'
-  - '!surfaces/ai.allternit.com/adapters-ts/**'
 
 onlyBuiltDependencies:
   - '@whiskeysockets/baileys'

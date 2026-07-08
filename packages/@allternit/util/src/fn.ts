@@ -1,0 +1,2 @@
+// @allternit/util stub
+export {}
