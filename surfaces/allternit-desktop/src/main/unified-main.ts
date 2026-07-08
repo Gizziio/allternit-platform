@@ -21,6 +21,7 @@ import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
 import { gizziManager } from './gizzi-manager.js';
+import { gizziDaemonManager } from './gizzi-daemon-manager.js';
 import { PORTS, URLS, devUiUrl, apiUrl, notebookUrl, staticUiUrl } from './config.js';
 import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus } from './mini-apps-manager.js';
 
@@ -991,6 +992,42 @@ async function initializeBundledMode(): Promise<void> {
       });
     }
 
+    // ── First-launch: optional always-on cloud scheduler daemon ────────────
+    // Gizzi Code can run as a background daemon so scheduled tasks and cron
+    // jobs survive app restarts. On first launch we ask once; the user can
+    // change this later from Settings.
+    if (isFirstLaunch) {
+      mainWindow.webContents.once('did-finish-load', async () => {
+        try {
+          const daemonStatus = await gizziDaemonManager.getStatus();
+          if (daemonStatus.installed) return;
+
+          const { response } = await dialog.showMessageBox(mainWindow!, {
+            type: 'info',
+            title: 'Enable Cloud Scheduling?',
+            message: 'Allow Allternit to install a small background daemon?',
+            detail:
+              'This lets Allternit run scheduled tasks and cron jobs even when the desktop app is closed. You can change this anytime in Settings.',
+            buttons: ['Enable Scheduling', 'Not Now'],
+            defaultId: 0,
+            cancelId: 1,
+          });
+
+          if (response === 0) {
+            const password = gizziManager.getPassword();
+            if (!password) {
+              log.warn('[Main] Cannot install daemon: no gizzi password available');
+              return;
+            }
+            await gizziDaemonManager.install(password, activeBackendUrl);
+            mainWindow?.webContents.send('gizzi-daemon:status', await gizziDaemonManager.getStatus());
+          }
+        } catch (err) {
+          log.error('[Main] Daemon onboarding failed:', err);
+        }
+      });
+    }
+
     // ── Service Watchdog: Maintain backend health ──────────────────────────
     setInterval(async () => {
       try {
@@ -1898,6 +1935,56 @@ ipcMain.handle('sidecar:restart', async () => {
     return true;
   } catch {
     return false;
+  }
+});
+
+// ============================================================================
+// IPC: Gizzi Code Always-On Daemon (cloud scheduling)
+// ============================================================================
+
+ipcMain.handle('gizzi-daemon:status', async () => gizziDaemonManager.getStatus());
+
+ipcMain.handle('gizzi-daemon:install', async () => {
+  const password = gizziManager.getPassword();
+  if (!password) {
+    return { success: false, error: 'No gizzi password available' };
+  }
+  try {
+    await gizziDaemonManager.install(password, activeBackendUrl);
+    return { success: true, status: await gizziDaemonManager.getStatus() };
+  } catch (err) {
+    log.error('[IPC] gizzi-daemon:install failed:', err);
+    return { success: false, error: (err as Error).message };
+  }
+});
+
+ipcMain.handle('gizzi-daemon:start', async () => {
+  try {
+    await gizziDaemonManager.start();
+    return { success: true, status: await gizziDaemonManager.getStatus() };
+  } catch (err) {
+    log.error('[IPC] gizzi-daemon:start failed:', err);
+    return { success: false, error: (err as Error).message };
+  }
+});
+
+ipcMain.handle('gizzi-daemon:stop', async () => {
+  try {
+    await gizziDaemonManager.stop();
+    return { success: true, status: await gizziDaemonManager.getStatus() };
+  } catch (err) {
+    log.error('[IPC] gizzi-daemon:stop failed:', err);
+    return { success: false, error: (err as Error).message };
+  }
+});
+
+ipcMain.handle('gizzi-daemon:uninstall', async () => {
+  try {
+    await gizziDaemonManager.uninstall();
+    return { success: true, status: await gizziDaemonManager.getStatus() };
+  } catch (err) {
+    log.error('[IPC] gizzi-daemon:uninstall failed:', err);
+    return { success: false, error: (err as Error).message };
   }
 });
 

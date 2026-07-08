@@ -157,6 +157,7 @@ export namespace Server {
             },
           }),
         )
+        .get("/health", (c) => c.json({ status: "ok", service: "gizzi-code" }))
         .get("/golden-stream", (c) => {
           c.header("Content-Type", "application/x-ndjson; charset=utf-8")
           c.header("Cache-Control", "no-cache, no-transform")
@@ -254,6 +255,10 @@ export namespace Server {
           },
         )
         .route("/auth/terminal/clerk", TerminalClerkAuthRoutes())
+        // Cron routes do not require a project context; mount them before the
+        // global Instance.provide middleware so the scheduler can be reached
+        // even when no project directory is valid.
+        .route("/cron", CronRoutes())
         .use(async (c, next) => {
           if (c.req.path === "/log") return next()
           const raw = c.req.query("directory") || c.req.header("x-gizzi-directory") || c.req.header("x-gizzi-directory") || process.cwd()
@@ -300,7 +305,6 @@ export namespace Server {
         .route("/tui", TuiRoutes())
         .route("/agent", AgentRoutes())
         .route("/command", CommandRoutes())
-        .route("/cron", CronRoutes())
         .route("/ars-contexta", ArsContextaRoutes())
         .route("/web-proxy", WebProxyRoutes())
         .route("/user", UserRoutes())
