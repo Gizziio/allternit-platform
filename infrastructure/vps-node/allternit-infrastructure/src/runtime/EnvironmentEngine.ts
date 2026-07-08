@@ -483,25 +483,7 @@ export class EnvironmentEngine extends EventEmitter {
   }
 }
 
-// Types needed from other modules
-interface Connection {
-  id: string;
-  type: 'local' | 'ssh';
-  execute: (command: string) => Promise<CommandResult>;
-  transferFile: (localPath: string, remotePath: string) => Promise<void>;
-  close: () => Promise<void>;
-}
-
-interface DevContainerTemplate {
-  name: string;
-  image?: string;
-  dockerfile?: string;
-  features?: string[];
-  ports?: number[];
-  postCreateCommand?: string;
-  customizations?: Record<string, unknown>;
-}
-
+// Additional local types
 interface Container {
   id: string;
   image: string;
