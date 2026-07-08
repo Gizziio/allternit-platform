@@ -19,6 +19,7 @@ export {
   CommandResult,
   LogEntry,
 } from './EnvironmentEngine';
+import type { Connection } from './TargetAdapter';
 
 // DevContainer runtime
 export {
