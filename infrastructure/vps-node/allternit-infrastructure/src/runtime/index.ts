@@ -20,6 +20,7 @@ export {
   LogEntry,
 } from './EnvironmentEngine';
 import type { Connection } from './TargetAdapter';
+import type { Target } from './EnvironmentEngine';
 
 // DevContainer runtime
 export {
