@@ -181,7 +181,7 @@ export class TargetAdapter {
       const installCmd = `
         ARCH=$(uname -m) && 
         [ "$ARCH" = "x86_64" ] && ARCH="amd64" || true &&
-        curl -fsSL https://github.com/kata-containers/kata-containers/releases/download/3.2.0/kata-static-3.2.0-${ARCH}.tar.xz | \
+        curl -fsSL https://github.com/kata-containers/kata-containers/releases/download/3.2.0/kata-static-3.2.0-\${ARCH}.tar.xz | \
           sudo tar -xJ -C / &&
         sudo ln -sf /opt/kata/bin/containerd-shim-kata-v2 /usr/local/bin/containerd-shim-kata-v2 &&
         sudo ln -sf /opt/kata/bin/kata-runtime /usr/local/bin/kata-runtime
@@ -227,7 +227,7 @@ export class TargetAdapter {
       ARCH=$(uname -m) &&
       [ "$ARCH" = "x86_64" ] && ARCH="x86_64" || ARCH="aarch64" &&
       latest=$(curl -s https://api.github.com/repos/firecracker-microvm/firecracker/releases/latest | grep tag_name | cut -d '"' -f 4) &&
-      curl -L https://github.com/firecracker-microvm/firecracker/releases/download/\${latest}/firecracker-\${latest}-${ARCH}.tgz | \
+      curl -L https://github.com/firecracker-microvm/firecracker/releases/download/\${latest}/firecracker-\${latest}-\${ARCH}.tgz | \
         tar -xz -C /tmp &&
       sudo mv /tmp/release-v*/firecracker-* /usr/local/bin/firecracker &&
       sudo mv /tmp/release-v*/jailer-* /usr/local/bin/jailer
@@ -374,7 +374,7 @@ export class TargetAdapter {
             const startTime = Date.now();
             
             return new Promise((resolveExec, rejectExec) => {
-              ssh.exec(command, { cwd: options?.cwd, env: options?.env }, (err, stream) => {
+              ssh.exec(command, { execOptions: { env: options?.env } }, (err, stream) => {
                 if (err) {
                   rejectExec(err);
                   return;
