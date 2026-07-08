@@ -25,22 +25,22 @@
         "src/*"
       ],
       "@allternit/visual-state": [
-        "../../3-adapters/ts/allternit-visual-state/src/index.ts"
+        "../../packages/@allternit/visual-state/src/index.ts"
       ],
       "@allternit/visual-state/*": [
-        "../../3-adapters/ts/allternit-visual-state/src/*"
+        "../../packages/@allternit/visual-state/src/*"
       ],
       "@allternit/avatar-adapters": [
-        "../../3-adapters/ts/allternit-avatar-adapters/src/index.ts"
+        "../../packages/@allternit/avatar-adapters/src/index.ts"
       ],
       "@allternit/avatar-adapters/*": [
-        "../../3-adapters/ts/allternit-avatar-adapters/src/*"
+        "../../packages/@allternit/avatar-adapters/src/*"
       ],
       "@allternit/governor": [
-        "../../2-governance/governor/src/index.ts"
+        "../../domains/governance/governor/src/index.ts"
       ],
       "@allternit/governor/*": [
-        "../../2-governance/governor/src/*"
+        "../../domains/governance/governor/src/*"
       ],
       "@allternit/cowork-engine": [
         "../../packages/@allternit/cowork-engine/src/index.ts"

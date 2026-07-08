@@ -22,8 +22,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@allternit/visual-state/types': path.resolve(__dirname, './adapters-ts/allternit-visual-state/src/types/index.ts'),
-      '@allternit/visual-state': path.resolve(__dirname, './adapters-ts/allternit-visual-state/src/index.ts'),
     },
   },
   build: {
