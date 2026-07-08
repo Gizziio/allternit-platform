@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
-import { DevContainerRuntime } from './DevContainerRuntime';
+import { DevContainerRuntime, DevContainerTemplate } from './DevContainerRuntime';
 import { NixRuntime } from './NixRuntime';
 import { SandboxRuntime } from './SandboxRuntime';
-import { TargetAdapter } from './TargetAdapter';
+import { TargetAdapter, Connection } from './TargetAdapter';
 
 export interface ProvisionConfig {
   id: string;

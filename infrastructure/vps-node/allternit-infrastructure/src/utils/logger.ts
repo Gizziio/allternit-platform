@@ -67,3 +67,5 @@ export class Logger {
     this.log('error', message, ...args);
   }
 }
+
+export const logger = new Logger('default');

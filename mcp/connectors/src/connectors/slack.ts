@@ -7,8 +7,8 @@ export class SlackConnector extends BaseConnector {
   readonly description = 'Slack API integration';
   
   readonly configSchema = {
-    token: { type: 'string', required: true, secret: true },
-    signingSecret: { type: 'string', required: false, secret: true }
+    token: { type: 'string' as const, required: true, secret: true },
+    signingSecret: { type: 'string' as const, required: false, secret: true }
   };
   
   private client: any = null;

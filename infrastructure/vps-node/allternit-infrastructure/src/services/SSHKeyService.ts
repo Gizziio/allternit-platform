@@ -147,12 +147,12 @@ export class SSHKeyService {
    */
   async importKey(data: SSHKeyImport): Promise<SSHKey> {
     // Validate key format
-    if (!data.publicKey.startsWith('ssh-') && !data.publicKey.startsWith('ecdsa-')) {
+    if (!data.public_key.startsWith('ssh-') && !data.public_key.startsWith('ecdsa-')) {
       throw new ValidationError('Invalid public key format');
     }
 
-    const fingerprint = generateFingerprint(data.publicKey);
-    const keyType = this.detectKeyType(data.publicKey);
+    const fingerprint = generateFingerprint(data.public_key);
+    const keyType = this.detectKeyType(data.public_key);
 
     // Check if key already exists
     const existing = await query('SELECT id FROM ssh_keys WHERE fingerprint = $1', [fingerprint]);
@@ -175,7 +175,7 @@ export class SSHKeyService {
       [
         id,
         data.name,
-        data.publicKey,
+        data.public_key,
         encryptedPrivateKey,
         fingerprint,
         keyType,

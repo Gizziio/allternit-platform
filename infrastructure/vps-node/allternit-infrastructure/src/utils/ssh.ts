@@ -172,7 +172,7 @@ export async function uploadFile(
         return;
       }
 
-      sftp.fastPut(localPath, remotePath, (err: Error | undefined) => {
+      sftp.fastPut(localPath, remotePath, (err: Error | null | undefined) => {
         if (err) {
           reject(new SSHConnectionError(`Failed to upload file: ${err.message}`));
         } else {
@@ -199,7 +199,7 @@ export async function downloadFile(
         return;
       }
 
-      sftp.fastGet(remotePath, localPath, (err: Error | undefined) => {
+      sftp.fastGet(remotePath, localPath, (err: Error | null | undefined) => {
         if (err) {
           reject(new SSHConnectionError(`Failed to download file: ${err.message}`));
         } else {

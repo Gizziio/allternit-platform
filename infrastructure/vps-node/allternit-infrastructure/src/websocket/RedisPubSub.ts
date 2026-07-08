@@ -128,12 +128,12 @@ export class RedisPubSub extends EventEmitter {
     const disconnectPromises: Promise<void>[] = [];
 
     if (this.publisher) {
-      disconnectPromises.push(this.publisher.quit());
+      disconnectPromises.push(this.publisher.quit().then(() => undefined));
       this.publisher = null;
     }
 
     if (this.subscriber) {
-      disconnectPromises.push(this.subscriber.quit());
+      disconnectPromises.push(this.subscriber.quit().then(() => undefined));
       this.subscriber = null;
     }
 

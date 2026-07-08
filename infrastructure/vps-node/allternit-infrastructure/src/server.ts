@@ -16,7 +16,7 @@ import { connect as connectRedis } from './config/redis';
 export async function createServer() {
   // Create Fastify instance
   const fastify = Fastify({
-    logger: config.server.isDevelopment ? logger : false,
+    logger: config.server.isDevelopment ? (logger as any) : false,
     trustProxy: true,
     connectionTimeout: 30000,
     keepAliveTimeout: 60000,
@@ -144,7 +144,7 @@ export async function createServer() {
   });
 
   // Initialize WebSocket service
-  WebSocketService.initialize(fastify);
+  WebSocketService.initialize(fastify as any);
 
   // Register API routes
   await fastify.register(routes);

@@ -7,8 +7,8 @@ export class GitHubConnector extends BaseConnector {
   readonly description = 'GitHub API integration';
   
   readonly configSchema = {
-    token: { type: 'string', required: true, secret: true },
-    baseUrl: { type: 'string', required: false, default: 'https://api.github.com' }
+    token: { type: 'string' as const, required: true, secret: true },
+    baseUrl: { type: 'string' as const, required: false, default: 'https://api.github.com' }
   };
   
   private octokit: any = null;

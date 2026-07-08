@@ -7,12 +7,12 @@ export class PostgreSQLConnector extends BaseConnector {
   readonly description = 'PostgreSQL database connector';
   
   readonly configSchema = {
-    host: { type: 'string', required: true, default: 'localhost' },
-    port: { type: 'number', required: true, default: 5432 },
-    database: { type: 'string', required: true },
-    user: { type: 'string', required: true },
-    password: { type: 'string', required: true, secret: true },
-    ssl: { type: 'boolean', required: false, default: false }
+    host: { type: 'string' as const, required: true, default: 'localhost' },
+    port: { type: 'number' as const, required: true, default: 5432 },
+    database: { type: 'string' as const, required: true },
+    user: { type: 'string' as const, required: true },
+    password: { type: 'string' as const, required: true, secret: true },
+    ssl: { type: 'boolean' as const, required: false, default: false }
   };
   
   private client: any = null;

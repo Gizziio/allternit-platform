@@ -217,7 +217,7 @@ export class CloudProviderService {
         }
       }
 
-      await this.updateDeploymentStatus(deployment.id, { progress: 30 });
+      await this.updateDeploymentStatus(deployment.id, { status: 'provisioning', progress: 30 });
 
       // Create instance
       const instanceResult = await provider.createInstance({
