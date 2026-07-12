@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield,
-  FileCheck,
+  FileText as FileCheck,
   Lock,
   Target,
   Warning,

@@ -29,6 +29,50 @@ use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
+const ALIASES_JSON: &str = include_str!("../assets/connector_id_aliases.json");
+
+/// Hand-curated Allternit-catalog-id -> open-connector-provider-id mappings.
+/// Loaded once from `assets/connector_id_aliases.json`; missing entries mean
+/// the catalog id is served honestly as `connectable:false`.
+fn aliases() -> &'static HashMap<String, String> {
+    static A: OnceLock<HashMap<String, String>> = OnceLock::new();
+    A.get_or_init(|| {
+        let raw: Value = serde_json::from_str(ALIASES_JSON).unwrap_or_else(|_| json!({}));
+        raw.as_object()
+            .map(|o| {
+                o.iter()
+                    .filter(|(k, _)| !k.starts_with('_'))
+                    .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_string())))
+                    .collect()
+            })
+            .unwrap_or_default()
+    })
+}
+
+/// Reverse lookup: sidecar provider id -> Allternit catalog id. Used when the
+/// sidecar reports live connections under its own spelling.
+fn reverse_aliases() -> &'static HashMap<String, String> {
+    static R: OnceLock<HashMap<String, String>> = OnceLock::new();
+    R.get_or_init(|| aliases().iter().map(|(k, v)| (v.clone(), k.clone())).collect())
+}
+
+/// Map an Allternit catalog connector id to the sidecar provider id that
+/// actually implements the same service. Returns the original id when no alias
+/// exists (the sidecar may still lack the provider, which is reported honestly).
+pub fn sidecar_id(allternit_id: &str) -> String {
+    aliases()
+        .get(allternit_id)
+        .cloned()
+        .unwrap_or_else(|| allternit_id.to_string())
+}
+
+/// Map a sidecar provider id back to an Allternit catalog id when the sidecar
+/// reports a live connection. Returns `None` only for unmapped sidecar-only
+/// providers; callers should fall back to the sidecar id in that case.
+pub fn allternit_id(sidecar_id: &str) -> Option<String> {
+    reverse_aliases().get(sidecar_id).cloned()
+}
+
 /// Base URL of the sidecar. `dev-stack-watch.cjs` always sets this; the
 /// fallback matches its default port.
 fn sidecar_url() -> String {
@@ -132,7 +176,9 @@ pub struct ProviderSummary {
 }
 
 /// Sidecar `GET /api/providers`, reduced to a slim per-service map and cached
-/// for 60s. The catalog only changes when the sidecar restarts.
+/// for 60s. The catalog only changes when the sidecar restarts. Keys are
+/// **Allternit catalog ids** (after applying reverse aliases), so callers in
+/// `connector_routes.rs` can look providers up with the original catalog id.
 pub async fn provider_summaries() -> Result<Arc<HashMap<String, ProviderSummary>>, ProxyError> {
     static CACHE: OnceLock<tokio::sync::Mutex<Option<(Instant, Arc<HashMap<String, ProviderSummary>>)>>> =
         OnceLock::new();
@@ -168,8 +214,10 @@ pub async fn provider_summaries() -> Result<Arc<HashMap<String, ProviderSummary>
                 .and_then(|v| v.as_str())
                 .unwrap_or(service)
                 .to_string();
+            // Expose under the Allternit catalog spelling when one exists.
+            let key = allternit_id(service).unwrap_or_else(|| service.to_string());
             map.insert(
-                service.to_string(),
+                key,
                 ProviderSummary { auth_types, executable_actions, display_name },
             );
         }
@@ -235,7 +283,9 @@ pub async fn invalidate_caches() {
 /// This user's live sidecar connections: `GET /v1/apps` (runtime scope),
 /// filtered client-side to `alias == user_id`. The sidecar is single-user and
 /// returns every connection; the filter is what preserves per-user isolation.
-/// Returns (service, account_label) pairs.
+/// Returns (Allternit catalog id, account_label) pairs, with sidecar service
+/// ids reverse-mapped to Allternit catalog ids so `connector_routes.rs` can
+/// match them against the catalog without leaking the sidecar spelling.
 pub async fn list_user_connections(user_id: &str) -> Result<Vec<(String, String)>, ProxyError> {
     let url = format!("{}/v1/apps", sidecar_url());
     let mut req = client().get(&url);
@@ -266,7 +316,9 @@ pub async fn list_user_connections(user_id: &str) -> Result<Vec<(String, String)
                         .or_else(|| a.get("displayName").and_then(|v| v.as_str()))
                         .unwrap_or("")
                         .to_string();
-                    Some((service.to_string(), label))
+                    // Report the connection under the Allternit catalog spelling.
+                    let key = allternit_id(service).unwrap_or_else(|| service.to_string());
+                    Some((key, label))
                 })
                 .collect()
         })
