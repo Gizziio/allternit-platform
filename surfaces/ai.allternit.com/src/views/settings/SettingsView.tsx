@@ -63,6 +63,7 @@ import { LocalModelManager } from '@/components/models/LocalModelManager';
 import { InfrastructureSettings } from './InfrastructureSettings';
 import { ServiceUrlSettings } from './ServiceUrlSettings';
 import { EnvironmentSettings } from './EnvironmentSettings';
+import { listOwnedConnectors } from '@/lib/design/owned-connector';
 import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
 import { SettingsRow } from '@/components/settings/SettingsRow';
 import { Toggle } from '@/components/settings/Toggle';
@@ -745,9 +746,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setConnectorsLoading(true);
     setConnectorsError(null);
     try {
-      const res = await fetch('/api/v1/cowork/connectors');
-      const data = await res.json();
-      setConnectors(data.connectors ?? []);
+      // Real connector standard (ADR-0043): cmd/allternit-api/src/connector_routes.rs
+      // + the open-connector sidecar. Was /api/v1/cowork/connectors, the now-removed
+      // 15-package env-var-only system's status endpoint.
+      const owned = await listOwnedConnectors();
+      setConnectors(
+        owned.map((c) => ({
+          id: c.id,
+          name: c.name,
+          category: c.category || 'general',
+          status: c.connection?.status === 'connected' ? 'connected' : 'unconfigured',
+        })),
+      );
     } catch {
       setConnectorsError('Failed to load connectors');
       setConnectors([]);
