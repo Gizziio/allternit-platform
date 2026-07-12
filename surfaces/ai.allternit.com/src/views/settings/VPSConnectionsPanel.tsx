@@ -10,7 +10,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ArrowClockwise, Warning } from '@phosphor-icons/react';
-import { SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { STATUS, TEXT } from '@/design/allternit.tokens';
+import { SectionHeading } from '@/components/settings/SectionHeading';
+import { QUIET_BUTTON_CLASS } from '@/components/settings/buttonStyles';
+import { cn } from '@/lib/utils';
 import { VPSConnectionModal } from '@/components/vps';
 import { SSHConnectionsList, type SSHConnection } from '@/components/ssh';
 import type { SSHConnectionFormData, SSHConnectionTestResult } from '@/components/ssh';
@@ -262,7 +265,7 @@ export function VPSConnectionsPanel() {
   // Handle provider selection - navigate to cloud deploy wizard
   const handleSelectProvider = useCallback((providerId: string) => {
     navigate(`/cloud-deploy?provider=${providerId}`);
-  }, [router]);
+  }, [navigate]);
 
   return (
     <div style={{ maxWidth: '900px' }}>
@@ -276,15 +279,7 @@ export function VPSConnectionsPanel() {
           border: '1px solid var(--ui-border-muted)',
         }}
       >
-        <h2 style={{ 
-          fontSize: '20px', 
-          fontWeight: '600', 
-          color: '#fff',
-          margin: '0 0 8px 0',
-          letterSpacing: '-0.3px',
-        }}>
-          VPS Connections
-        </h2>
+        <SectionHeading className="mb-2">VPS connections</SectionHeading>
         <p style={{ 
           fontSize: '14px', 
           color: TEXT.secondary, 
@@ -314,20 +309,10 @@ export function VPSConnectionsPanel() {
         >
           <Warning size={18} weight="fill" />
           <span style={{ flex: 1 }}>{error}</span>
-          <button type="button" 
+          <button
+            type="button"
             onClick={() => setError(null)}
-            style={{ 
-              padding: '4px 10px',
-              borderRadius: '6px',
-              border: 'none',
-              background: 'rgba(239,68,68,0.15)',
-              color: STATUS.error,
-              fontSize: '12px',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.25)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
+            className={QUIET_BUTTON_CLASS}
           >
             Dismiss
           </button>
@@ -349,31 +334,7 @@ export function VPSConnectionsPanel() {
       >
         <button type="button"
           onClick={() => setIsModalOpen(true)}
-          style={{
-            padding: '10px 18px',
-            borderRadius: '8px',
-            border: 'none',
-            background: SAND[500],
-            color: 'var(--ui-text-inverse)',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s',
-            boxShadow: '0 2px 8px rgba(196,154,122,0.25)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#c49a7a';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(196,154,122,0.35)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = SAND[500];
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(196,154,122,0.25)';
-          }}
+          className={QUIET_BUTTON_CLASS}
         >
           <Plus size={18} weight="bold" />
           Add Connection
@@ -381,37 +342,13 @@ export function VPSConnectionsPanel() {
 
         <div style={{ flex: 1 }} />
 
-        <button type="button"
+        <button
+          type="button"
           onClick={loadConnections}
           disabled={isLoading}
-          style={{
-            padding: '10px 16px',
-            borderRadius: '8px',
-            border: '1px solid var(--ui-border-default)',
-            background: 'transparent',
-            color: 'var(--ui-text-muted)',
-            fontSize: '13px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            opacity: isLoading ? 0.5 : 1,
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            if (!isLoading) {
-              e.currentTarget.style.background = 'var(--surface-hover)';
-              e.currentTarget.style.color = '#fff';
-              e.currentTarget.style.borderColor = 'var(--ui-border-strong)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = 'var(--ui-text-muted)';
-            e.currentTarget.style.borderColor = 'var(--ui-border-default)';
-          }}
+          className={QUIET_BUTTON_CLASS}
         >
-          <ArrowClockwise size={16} className={isLoading ? 'animate-spin' : undefined} />
+          <ArrowClockwise size={16} className={cn(isLoading && 'animate-spin')} />
           Refresh
         </button>
       </div>

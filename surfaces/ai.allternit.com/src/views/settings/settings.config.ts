@@ -52,6 +52,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'appearance', label: 'Appearance', icon: React.createElement(Palette, { size: 18 }), group: 'platform' },
   { id: 'models', label: 'Models', icon: React.createElement(Cpu, { size: 18 }), group: 'platform' },
   { id: 'api-keys', label: 'API Keys', icon: React.createElement(Key, { size: 18 }), group: 'platform' },
+  { id: 'plugins', label: 'Allternit Plugins', icon: React.createElement(Package, { size: 18 }), group: 'platform' },
   { id: 'shortcuts', label: 'Shortcuts', icon: React.createElement(Keyboard, { size: 18 }), group: 'platform' },
   { id: 'permissions', label: 'Permissions', icon: React.createElement(ShieldCheck, { size: 18 }), group: 'platform' },
   { id: 'diagnostics', label: 'Diagnostics', icon: React.createElement(Activity, { size: 18 }), group: 'platform' },
@@ -65,7 +66,6 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'agents', label: 'Agents', icon: React.createElement(Robot, { size: 18 }), group: 'infrastructure' },
   { id: 'skills', label: 'Skills', icon: React.createElement(Sparkle, { size: 18 }), group: 'customize' },
   { id: 'connectors', label: 'Connectors', icon: React.createElement(PlugsConnected, { size: 18 }), group: 'customize' },
-  { id: 'plugins', label: 'Plugins', icon: React.createElement(Package, { size: 18 }), group: 'customize' },
   { id: 'about', label: 'About', icon: React.createElement(Info, { size: 18 }), group: 'about' },
 ];
 

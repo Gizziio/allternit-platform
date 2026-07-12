@@ -15,6 +15,9 @@ import {
 } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { SectionHeading } from '@/components/settings/SectionHeading';
+import { SkeletonRow } from '@/components/settings/SkeletonRow';
+import { QUIET_BUTTON_CLASS } from '@/components/settings/buttonStyles';
 import { setupApi, type SetupConfigResponse, type UserConfig } from '@/services/setup-api';
 import { useToast } from '@/components/ui/toast-provider';
 
@@ -234,8 +237,8 @@ export function EnvironmentSettings(): React.ReactNode {
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-[13px] text-[var(--text-tertiary)]">
-        Loading environment configuration…
+      <div className="py-8">
+        <SkeletonRow lines={6} />
       </div>
     );
   }
@@ -243,16 +246,12 @@ export function EnvironmentSettings(): React.ReactNode {
   return (
     <div className="max-w-xl">
       <section className="mb-8">
-        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-black mb-4 opacity-60">
-          Service Endpoints
-        </div>
+        <SectionHeading>Service endpoints</SectionHeading>
         {renderFields(ENV_FIELDS)}
       </section>
 
       <section className="mb-8">
-        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-black mb-4 opacity-60">
-          Authentication (Company)
-        </div>
+        <SectionHeading>Authentication (company)</SectionHeading>
         {renderFields(COMPANY_ENV_FIELDS)}
         <p className="mt-4 text-[11px] text-[var(--text-tertiary)] leading-relaxed">
           Auth values are normally baked into the app bundle via{' '}
@@ -268,12 +267,7 @@ export function EnvironmentSettings(): React.ReactNode {
           type="button"
           onClick={handleSave}
           disabled={isSaving || dirty.size === 0}
-          className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all active:scale-95',
-            dirty.size === 0
-              ? 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] cursor-not-allowed'
-              : 'bg-[var(--accent-primary)] text-white hover:opacity-90'
-          )}
+          className={QUIET_BUTTON_CLASS}
         >
           {isSaving ? (
             <>Saving…</>

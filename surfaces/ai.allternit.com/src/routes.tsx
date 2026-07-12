@@ -48,6 +48,11 @@ const AppLoader = () => (
 
 const HomePage = lazy(() => import('./pages/HomePage'))
 const ShellPage = lazy(() => import('./pages/ShellPage'))
+const SettingsPreviewPage = lazy(() =>
+  import('./views/settings/SettingsView').then((mod) => ({
+    default: () => <mod.SettingsView initialSection="infrastructure" />,
+  }))
+)
 const SessionsPage = lazy(() => import('./pages/SessionsPage'))
 const SignInPage = lazy(() => import('./pages/SignInPage'))
 const SignUpPage = lazy(() => import('./pages/SignUpPage'))
@@ -77,6 +82,7 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/shell" element={<ShellPage />} />
+        <Route path="/settings-preview" element={<SettingsPreviewPage />} />
         <Route path="/shell/sessions" element={<SessionsPage />} />
         <Route path="/shell/new" element={<Navigate to="/shell" replace />} />
         <Route path="/sign-in" element={<SignInPage />} />

@@ -2,54 +2,24 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSettingsState } from '@/hooks/useSettingsState';
-import { motion, AnimatePresence } from 'framer-motion';
 
 import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
 import { BrainsPanel } from '@/components/settings/BrainsPanel';
 import {
-  GearSix,
   Cpu,
-  Info,
-  Plus,
   Sun,
   Moon,
   DeviceMobile,
-  User,
   HardDrives,
-  Shield,
   Cloud,
-  Lock,
-  Target,
-  Recycle,
-  FileCode,
-  Code,
   Warning,
   X,
-  Play,
-  ChartBar,
-  Clock,
-  Lightning,
   CaretRight,
   CaretDown,
   CheckCircle,
-  XCircle,
   ArrowsClockwise,
-  GitBranch,
-  Stack,
-  FileText as FileCheck,
-  Eye,
-  ThumbsUp,
-  ThumbsDown,
-  ClockCounterClockwise,
-  Copy,
   ShieldCheck,
-  FileText,
-  CircleNotch,
-  Globe,
-  Question,
-  ArrowUpRight,
   DownloadSimple,
-  Gift,
   MagnifyingGlass,
   Sparkle,
   PlugsConnected,
@@ -76,7 +46,10 @@ import { EmptyState } from '@/components/settings/EmptyState';
 import { MonoChip } from '@/components/settings/MonoChip';
 import { AgentOpsPanel } from './AgentOpsPanel';
 import { SecurityPanel } from './SecurityPanel';
+import { SkillsSettingsPanel } from './SkillsSettingsPanel';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS, SETTINGS_SELECT_CLASS } from '@/components/settings/buttonStyles';
+import { useFeaturePlugins } from '@/plugins/useFeaturePlugins';
+import { BUNDLED_SKILLS } from '@/lib/design/bundled-skills';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -529,19 +502,22 @@ const DiagnosticsPanel = () => {
 };
 
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ 
-  initialSection = 'signin',
-  initialTab 
+export const SettingsView: React.FC<SettingsViewProps> = ({
+  initialSection,
+  initialTab
 }) => {
-  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
+  // Guard against unknown section ids arriving via event detail
+  const safeInitialSection: SettingsSection = SETTINGS_SECTION_MAP[initialSection ?? ''] ?? 'signin';
+  const [activeSection, setActiveSection] = useState<SettingsSection>(safeInitialSection);
   const [navQuery, setNavQuery] = useState('');
   const [infrastructureTab, setInfrastructureTab] = useState<string | undefined>(initialTab);
+  const featurePlugins = useFeaturePlugins();
 
   // Inline state adjustment for initialSection change
-  const [prevInitialSection, setPrevInitialSection] = useState(initialSection);
-  if (initialSection !== prevInitialSection) {
-    setPrevInitialSection(initialSection);
-    if (initialSection) setActiveSection(initialSection);
+  const [prevInitialSection, setPrevInitialSection] = useState(safeInitialSection);
+  if (safeInitialSection !== prevInitialSection) {
+    setPrevInitialSection(safeInitialSection);
+    setActiveSection(safeInitialSection);
   }
 
   // Inline state adjustment for initialTab change
@@ -600,6 +576,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [gizziRevokeState, setGizziRevokeState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [autoUpdateExtensions, setAutoUpdateExtensions] = useSettingsState('extensions.autoUpdateExtensions', true);
   const [useBuiltinNode, setUseBuiltinNode] = useSettingsState('extensions.useBuiltinNode', true);
+  const [disabledSkillIds, setDisabledSkillIds] = useSettingsState<string[]>('plugins.disabledSkills', []);
 
   // Privacy
   const [locationMetadata, setLocationMetadata] = useSettingsState('privacy.locationMetadata', false);
@@ -772,206 +749,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   }, [activeSection, connectors.length, connectorsError, fetchConnectors]);
 
-  const renderSecurityPanel = () => (
-    <div className="max-w-4xl">
-      <div className="flex gap-0 border-b border-solid border-white/10 mb-8 overflow-x-auto no-scrollbar">
-        {[
-          { id: 'overview', label: 'Overview', icon: Shield },
-          { id: 'policies', label: 'Policies', icon: FileCheck, count: policies.filter((p: any) => p.status === 'active').length },
-          { id: 'gating', label: 'Approvals', icon: Lock, count: approvals.filter((a: any) => a.status === 'pending').length },
-          { id: 'purpose', label: 'Purpose Binding', icon: Target },
-          { id: 'compliance', label: 'Compliance', icon: FileCheck },
-        ].map((tab: any) => (
-          <button type="button"
-            key={tab.id}
-            onClick={() => setSecurityTab(tab.id)}
-            className={cn(
-              "p-4 px-6 border-none bg-transparent text-[13px] font-bold cursor-pointer flex items-center gap-2.5 transition-all whitespace-nowrap relative border-b-2 border-solid",
-              securityTab === tab.id ? "text-[var(--accent-primary)] border-[var(--accent-primary)]" : "text-[var(--ui-text-muted)] border-transparent hover:text-[var(--text-secondary)]"
-            )}
-          >
-            <tab.icon size={18} weight={securityTab === tab.id ? "fill" : "regular"} />
-            {tab.label}
-            {tab.count > 0 && (
-              <span className={cn(
-                "p-0.5 px-2 rounded-full text-[11px] font-black tabular-nums",
-                securityTab === tab.id ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]" : "bg-rose-500 text-white"
-              )}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {securityLoading ? (
-        <div className="text-center py-20">
-          <ArrowsClockwise size={40} className="text-white/20 animate-spin mx-auto mb-4" />
-          <p className="text-[13px] text-[var(--ui-text-muted)] font-bold uppercase tracking-widest">Hardening Core…</p>
-        </div>
-      ) : (
-        <>
-          {securityTab === 'overview' && (
-            <div className="flex flex-col gap-6">
-              <div className="p-8 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)] shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
-                  <Shield size={120} weight="fill" />
-                </div>
-                <div className="flex items-center gap-6 relative z-10">
-                  <div className="size-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shadow-lg shadow-amber-500/10">
-                    <Shield size={32} weight="bold" />
-                  </div>
-                  <div>
-                    <div className="text-[12px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest opacity-60">Active Threat Level</div>
-                    <div className="text-3xl font-black text-amber-500 tracking-tight mt-1">MODERATE_RISK</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 gap-4">
-                <StatCard label="Active Policies" value={policies.filter((p: any) => p.status === 'active').length} color="var(--status-success)" />
-                <StatCard label="Open Violations" value={violations.filter((v: any) => v.status === 'open').length} color="var(--status-error)" />
-                <StatCard label="Pending Approvals" value={approvals.filter((a: any) => a.status === 'pending').length} color="var(--status-warning)" />
-                <StatCard label="Compliance" value={`${complianceStatus?.score || 0}%`} color="var(--status-info)" />
-              </div>
-
-              <div className="mt-4">
-                <h3 className="text-xs font-black text-[var(--ui-text-inverse)] m-0 mb-4 uppercase tracking-widest opacity-60">Security Audit Log</h3>
-                <div className="flex flex-col gap-2">
-                  {securityEvents.slice(0, 5).map((event: any) => (
-                    <div key={event.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-transparent hover:border-[var(--ui-border-muted)] transition-all flex items-center gap-4 group">
-                      <div className={cn(
-                        "size-9 rounded-lg flex items-center justify-center transition-colors",
-                        event.severity === 'critical' ? "bg-rose-500/10 text-rose-500" : "bg-amber-500/10 text-amber-500"
-                      )}>
-                        <Warning size={18} weight="fill" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-[var(--ui-text-inverse)] truncate">{event.title}</div>
-                        <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5 truncate">{event.description}</div>
-                      </div>
-                      <span className="text-[11px] font-mono text-[var(--ui-text-muted)] tabular-nums opacity-60 group-hover:opacity-100">{new Date(event.timestamp || event.createdAt).toLocaleTimeString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {securityTab === 'policies' && (
-            <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-base font-bold text-[var(--ui-text-inverse)] m-0">Governance Policies</h3>
-                <button type="button" className="p-2 px-4 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer active:scale-95 transition-transform">
-                  + New Policy
-                </button>
-              </div>
-              {policies.map((policy: any) => (
-                <div key={policy.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] hover:border-[var(--ui-border-default)] transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                        "size-11 rounded-xl flex items-center justify-center shadow-lg transition-colors",
-                        policy.status === 'active' ? "bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5" : "bg-zinc-800 text-zinc-500"
-                      )}>
-                        <Shield size={22} weight={policy.status === 'active' ? "fill" : "regular"} />
-                      </div>
-                      <div>
-                        <div className="text-[15px] font-bold text-[var(--ui-text-inverse)]">{policy.name}</div>
-                        <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5 font-semibold uppercase tracking-wider opacity-70">{policy.type} • {policy.enforcementMode}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={cn(
-                        "p-1 px-3 rounded-full text-[10px] font-black uppercase tracking-widest",
-                        policy.severity === 'critical' ? "bg-rose-500/20 text-rose-500" : "bg-amber-500/20 text-amber-500"
-                      )}>
-                        {policy.severity}
-                      </span>
-                      {policy.violationCount > 0 && (
-                        <span className="p-1 px-3 bg-rose-500/20 text-rose-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-solid border-rose-500/20">
-                          {policy.violationCount} violations
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {securityTab === 'gating' && (
-            <div className="flex flex-col gap-4">
-              <h3 className="text-base font-bold text-[var(--ui-text-inverse)] m-0 mb-2">Pending Approvals</h3>
-              {approvals.filter((a: any) => a.status === 'pending').map((approval: any) => (
-                <div key={approval.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between group hover:border-[var(--ui-border-default)] transition-colors">
-                  <div>
-                    <div className="text-[15px] font-bold text-[var(--ui-text-inverse)]">{approval.title}</div>
-                    <div className="text-[12px] text-[var(--ui-text-muted)] mt-1">Requested by <span className="text-[var(--accent-primary)] font-bold">{approval.requester?.agentName}</span> • {new Date(approval.createdAt).toLocaleDateString()}</div>
-                  </div>
-                  <div className="flex gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                    <button type="button" className="p-2 px-4 rounded-lg border border-solid border-rose-500/30 bg-transparent text-rose-500 text-[12px] font-bold cursor-pointer hover:bg-rose-500/10 active:scale-95 transition-all">Reject</button>
-                    <button type="button" className="p-2 px-4 rounded-lg border-none bg-emerald-600 text-white text-[12px] font-bold cursor-pointer hover:bg-emerald-500 active:scale-95 transition-all shadow-lg shadow-emerald-600/20">Approve</button>
-                  </div>
-                </div>
-              ))}
-              {approvals.filter((a: any) => a.status === 'pending').length === 0 && (
-                <div className="p-12 text-center bg-black/5 rounded-2xl border border-dashed border-white/10 text-[13px] text-[var(--ui-text-muted)] font-medium">
-                  Queue is clear. All agent actions are compliant.
-                </div>
-              )}
-            </div>
-          )}
-
-          {securityTab === 'purpose' && (
-            <div className="text-center py-24 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)]">
-              <Target size={64} className="text-white/10 mx-auto mb-6" weight="thin" />
-              <h3 className="text-lg font-bold text-[var(--ui-text-inverse)] m-0 mb-2">Purpose Binding Architecture</h3>
-              <p className="text-[14px] text-[var(--ui-text-muted)] max-w-sm mx-auto leading-relaxed">Agent goals are restricted to verified project scopes. Configure binding levels in the DAG / Project view.</p>
-              <button type="button" className="mt-8 p-2 px-6 rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--text-primary)] text-sm font-bold cursor-pointer hover:bg-white/5 transition-all">Open DAG Workspace</button>
-            </div>
-          )}
-
-          {securityTab === 'compliance' && (
-            <div className="flex flex-col gap-6">
-              <div className="p-10 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)] text-center shadow-2xl relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-primary)]/5 to-transparent pointer-events-none" />
-                <div className={cn(
-                  "text-6xl font-black tabular-nums tracking-tighter",
-                  complianceStatus?.score >= 80 ? "text-[var(--status-success)]" : complianceStatus?.score >= 60 ? "text-[var(--status-warning)]" : "text-[var(--status-error)]"
-                )}>
-                  {complianceStatus?.score || 0}%
-                </div>
-                <div className="text-[11px] font-black text-[var(--ui-text-muted)] uppercase tracking-[0.2em] mt-3 opacity-60">System Compliance Rating</div>
-              </div>
-              <div>
-                <h3 className="text-xs font-black text-[var(--ui-text-inverse)] m-0 mb-4 uppercase tracking-widest opacity-60">Enforced Frameworks</h3>
-                <div className="flex flex-col gap-2">
-                  {complianceStatus?.frameworks?.map((fw: any) => (
-                    <div key={fw.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                      <div className="text-sm font-bold text-[var(--ui-text-inverse)]">{fw.name}</div>
-                      <div className="flex items-center gap-6">
-                        <div className="w-32 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                          <div className={cn(
-                            "h-full rounded-full transition-all duration-1000 ease-in-out",
-                            fw.score >= 80 ? "bg-[var(--status-success)]" : fw.score >= 60 ? "bg-[var(--status-warning)]" : "bg-[var(--status-error)]"
-                          )} style={{ width: `${fw.score}%` }} />
-                        </div>
-                        <span className={cn(
-                          "text-sm font-black tabular-nums min-w-[3ch] text-right",
-                          fw.score >= 80 ? "text-[var(--status-success)]" : fw.score >= 60 ? "text-[var(--status-warning)]" : "text-[var(--status-error)]"
-                        )}>{fw.score}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
 
   const handleRevokeGizziAccess = async () => {
     setGizziRevokeState('loading');
@@ -1200,6 +977,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType } }));
   };
 
+  const handleExportData = () => {
+    const data: Record<string, unknown> = {};
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (!key || !key.startsWith('allternit')) continue;
+      const raw = window.localStorage.getItem(key);
+      try { data[key] = JSON.parse(raw ?? 'null'); } catch { data[key] = raw; }
+    }
+    const payload = { exportedAt: new Date().toISOString(), source: 'allternit-platform-settings', data };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `allternit-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const renderPrivacyPanel = () => (
     <div>
       <SectionHeading>Privacy</SectionHeading>
@@ -1221,36 +1016,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </SettingsRow>
 
       <SectionHeading>Your data</SectionHeading>
-      <SettingsRow label="Export data" description="Download a copy of your account data">
-        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>
+      <SettingsRow label="Export data" description="Download your local settings and preferences as JSON">
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={handleExportData}>
           <DownloadSimple size={14} /> Export
         </button>
       </SettingsRow>
-      <SettingsRow label="Shared chats" description="Manage chats you have shared with others">
-        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Manage</button>
-      </SettingsRow>
       <SettingsRow label="Memory preferences" description="Control what Allternit remembers between sessions">
-        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Manage</button>
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => {
+          window.dispatchEvent(new CustomEvent('allternit:close-settings'));
+          window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'memory' } }));
+        }}>Manage</button>
       </SettingsRow>
     </div>
   );
 
   const renderSkillsPanel = () => (
-    <div>
-      <PanelHeader title="Skills">
-        <button type="button" className="size-8 flex items-center justify-center rounded-lg border-none bg-transparent text-[var(--text-tertiary)] cursor-not-allowed" title="Not wired yet" disabled aria-label="Search skills">
-          <MagnifyingGlass size={16} />
-        </button>
-        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openView('memory')}>Browse</button>
-        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Add <CaretDown size={12} /></button>
-      </PanelHeader>
-      <EmptyState
-        icon={<Sparkle size={40} weight="thin" />}
-        caption="No skills installed yet."
-        ctaLabel="Browse skills"
-        onCtaClick={() => openView('memory')}
-      />
-    </div>
+    <SkillsSettingsPanel onBrowse={() => setActiveSection('plugins')} />
   );
 
   const renderConnectorsPanel = () => (
@@ -1296,23 +1077,93 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </div>
   );
 
-  const renderPluginsPanel = () => (
-    <div>
-      <PanelHeader title="Plugins">
-        <button type="button" className="size-8 flex items-center justify-center rounded-lg border-none bg-transparent text-[var(--text-tertiary)] cursor-not-allowed" title="Not wired yet" disabled aria-label="Search plugins">
-          <MagnifyingGlass size={16} />
-        </button>
-        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openView('plugins')}>Browse</button>
-        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Add <CaretDown size={12} /></button>
-      </PanelHeader>
-      <EmptyState
-        icon={<PuzzlePiece size={40} weight="thin" />}
-        caption="No plugins installed yet."
-        ctaLabel="Browse plugins"
-        onCtaClick={() => openView('plugins')}
-      />
-    </div>
+  const renderCapabilityRow = ({
+    id,
+    name,
+    description,
+    meta,
+    enabled,
+    onToggle,
+  }: {
+    id: string;
+    name: string;
+    description?: string;
+    meta?: string;
+    enabled: boolean;
+    onToggle: () => void;
+  }) => (
+    <SettingsRow key={id} label={name} description={description || meta || 'No description provided'}>
+      <div className="flex items-center gap-3">
+        {meta && <span className="hidden md:inline max-w-[150px] truncate text-[11px] text-[var(--text-tertiary)]">{meta}</span>}
+        <Toggle value={enabled} onChange={onToggle} />
+      </div>
+    </SettingsRow>
   );
+
+  const formatSkillName = (value: string) => value
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
+  const renderPluginsPanel = () => {
+    const skillRows = BUNDLED_SKILLS;
+    const pluginRows = featurePlugins.allPlugins;
+    const disabledSkills = new Set(disabledSkillIds);
+    const toggleSkill = (id: string) => {
+      setDisabledSkillIds((prev) => (
+        prev.includes(id)
+          ? prev.filter((skillId) => skillId !== id)
+          : [...prev, id]
+      ));
+    };
+
+    return (
+      <div>
+        <SectionHeading>Skills</SectionHeading>
+        {skillRows.length === 0 ? (
+          <EmptyState
+            icon={<Sparkle size={40} weight="thin" />}
+            caption="No skills installed."
+          />
+        ) : (
+          <div>
+            {skillRows.map((skill) => renderCapabilityRow({
+              id: skill.id,
+              name: formatSkillName(skill.name),
+              description: skill.description,
+              meta: [skill.mode, skill.assets?.length ? `${skill.assets.length} assets` : undefined].filter(Boolean).join(' · '),
+              enabled: !disabledSkills.has(skill.id),
+              onToggle: () => toggleSkill(skill.id),
+            }))}
+          </div>
+        )}
+
+        <SectionHeading>Plugins</SectionHeading>
+        {pluginRows.length === 0 ? (
+          <EmptyState
+            icon={<PuzzlePiece size={40} weight="thin" />}
+            caption="No plugins installed."
+          />
+        ) : (
+          <div>
+            {pluginRows.map((plugin) => renderCapabilityRow({
+              id: plugin.id,
+              name: plugin.name,
+              description: plugin.description,
+              meta: [
+                plugin.builtin ? 'Built in' : undefined,
+                plugin.category,
+                plugin.version,
+              ].filter(Boolean).join(' · '),
+              enabled: featurePlugins.enabledIds.has(plugin.id),
+              onToggle: () => featurePlugins.toggle(plugin.id),
+            }))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -1331,8 +1182,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'diagnostics': return <DiagnosticsPanel />;
       case 'infrastructure': return <ToastProvider><InfrastructureSettings initialTab={infrastructureTab as any} /></ToastProvider>;
       case 'environment': return <ToastProvider><EnvironmentSettings /></ToastProvider>;
-      case 'security': return <ToastProvider>{renderSecurityPanel()}</ToastProvider>;
-      case 'agents': return <ToastProvider>{renderAgentsPanel()}</ToastProvider>;
+      case 'security': return <SecurityPanel />;
+      case 'agents': return <AgentOpsPanel />;
       case 'about': return renderAboutPanel();
       case 'signin': return <ClerkAuthPanel />;
       case 'skills': return renderSkillsPanel();
@@ -1361,7 +1212,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label="Settings"
-        className="flex w-full max-w-[1000px] min-w-[600px] h-[80vh] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-solid border-white/10 bg-[var(--view-settings-bg,var(--surface-canvas))]"
+        className={cn(
+          "flex w-full min-w-[600px] h-[80vh] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-solid border-white/10 bg-[var(--view-settings-bg,var(--surface-canvas))]",
+          'max-w-[1000px]'
+        )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sidebar Nav */}

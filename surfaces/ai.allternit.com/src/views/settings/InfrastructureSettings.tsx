@@ -46,6 +46,11 @@ import type { InfrastructureEvent } from '@/api/infrastructure/websocket';
 // Import toast for notifications
 import { useToast } from '../../hooks/use-toast';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { SectionHeading } from '@/components/settings/SectionHeading';
+import { SkeletonRow } from '@/components/settings/SkeletonRow';
+import { EmptyState } from '@/components/settings/EmptyState';
+import { DESTRUCTIVE_BUTTON_CLASS, QUIET_BUTTON_CLASS } from '@/components/settings/buttonStyles';
+import { cn } from '@/lib/utils';
 
 // Import Environment Wizard
 import { EnvironmentWizard } from '../../components/environments/EnvironmentWizard';
@@ -615,15 +620,12 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
 
       {/* Quick Actions */}
       <div className="bg-[var(--surface-hover)] rounded-xl p-6 border border-solid border-[var(--ui-border-muted)]">
-        <h3 className="text-base font-semibold m-[0_0_16px_0] text-[var(--ui-text-primary)]">
-          Quick Actions
-        </h3>
+        <SectionHeading>Quick actions</SectionHeading>
         <div className="flex gap-3 flex-wrap">
           <ActionButton
             icon={<RocketLaunch size={18} />}
             label="Deploy to Cloud"
             onClick={() => setActiveTab('providers')}
-            primary
           />
           <ActionButton
             icon={<Code size={18} />}
@@ -645,16 +647,13 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
 
       {/* Recent Activity */}
       <div className="bg-[var(--surface-hover)] rounded-xl p-6 border border-solid border-[var(--ui-border-muted)]">
-        <h3 className="text-base font-semibold m-[0_0_16px_0] text-[var(--ui-text-primary)]">
-          Recent Activity
-        </h3>
+        <SectionHeading>Recent activity</SectionHeading>
         {deployments.length === 0 && environments.length === 0 ? (
           <EmptyState
-            icon={<HardDrives size={48} className="text-[#333]" />}
-            title="No infrastructure connected"
-            description="Deploy to a cloud provider or connect your VPS to get started."
-            action="Get Started"
-            onAction={() => setActiveTab('providers')}
+            icon={<HardDrives size={48} />}
+            caption="No infrastructure connected. Deploy to a cloud provider or connect your VPS to get started."
+            ctaLabel="Get Started"
+            onCtaClick={() => setActiveTab('providers')}
           />
         ) : (
           <div className="flex flex-col gap-3">
@@ -686,9 +685,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold m-[0_0_8px_0] text-[var(--ui-text-primary)]">
-            Cloud Providers
-          </h2>
+          <SectionHeading className="mt-0 mb-2">Cloud providers</SectionHeading>
           <p className="text-sm text-[var(--ui-text-secondary)] m-0">
             Deploy Allternit nodes to your preferred cloud provider
           </p>
@@ -697,9 +694,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           <button type="button"
             onClick={loadProviders}
             disabled={isLoadingProviders}
-            className="p-[8px_16px] rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] cursor-pointer flex items-center gap-1.5"
+            className={QUIET_BUTTON_CLASS}
           >
-            <ArrowsClockwise size={14} className={isLoadingProviders ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={14} className={cn(isLoadingProviders && 'animate-spin')} />
             Refresh
           </button>
         </div>
@@ -710,7 +707,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       )}
 
       {isLoadingProviders ? (
-        <LoadingState message="Loading cloud providers..." />
+        <SkeletonRow lines={4} />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4">
@@ -732,9 +729,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           {/* Deployments Section */}
           {deployments.length > 0 && (
             <div className="mt-8">
-              <h3 className="text-lg font-semibold m-[0_0_16px_0] text-[var(--ui-text-primary)]">
-                Active Deployments
-              </h3>
+              <SectionHeading>Active deployments</SectionHeading>
               <div className="flex flex-col gap-3">
                 {deployments.map(deployment => (
                   <DeploymentRow 
@@ -756,9 +751,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             <HardDrives size={24} className="text-[var(--accent-primary)]" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold m-[0_0_4px_0] text-[var(--ui-text-primary)]">
-              Bring Your Own Server
-            </h3>
+            <SectionHeading className="mt-0 mb-1">Bring your own server</SectionHeading>
             <p className="text-[14px] text-[var(--ui-text-secondary)] m-0">
               Already have a VPS? Connect it to Allternit in minutes.
             </p>
@@ -766,7 +759,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
         </div>
         <button type="button"
           onClick={() => setActiveTab('connections')}
-          className="p-[10px_20px] rounded-lg border border-solid border-[#d4b08c] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] text-sm font-medium cursor-pointer flex items-center gap-2"
+          className={QUIET_BUTTON_CLASS}
         >
           <Plus size={16} />
           Connect Existing VPS
@@ -779,9 +772,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold m-[0_0_8px_0] text-[var(--ui-text-primary)]">
-            VPS Connections
-          </h2>
+          <SectionHeading className="mt-0 mb-2">VPS connections</SectionHeading>
           <p className="text-sm text-[var(--ui-text-secondary)] m-0">
             Manage your connected servers and their status
           </p>
@@ -790,16 +781,16 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           <button type="button"
             onClick={loadVPSConnections}
             disabled={isLoadingVPS}
-            className="p-[8px_16px] rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] cursor-pointer flex items-center gap-1.5"
+            className={QUIET_BUTTON_CLASS}
           >
-            <ArrowsClockwise size={14} className={isLoadingVPS ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={14} className={cn(isLoadingVPS && 'animate-spin')} />
             Refresh
           </button>
           <button type="button"
             onClick={() => {
               window.dispatchEvent(new CustomEvent('allternit:open-vps-panel'));
             }}
-            className="p-[10px_20px] rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-sm font-semibold cursor-pointer flex items-center gap-2"
+            className={QUIET_BUTTON_CLASS}
           >
             <Plus size={16} />
             Add Connection
@@ -812,14 +803,13 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       )}
 
       {isLoadingVPS ? (
-        <LoadingState message="Loading VPS connections..." />
+        <SkeletonRow lines={4} />
       ) : connections.length === 0 ? (
         <EmptyState
-          icon={<HardDrives size={64} className="text-[#333]" />}
-          title="No VPS connections"
-          description="Connect your existing VPS to manage it through Allternit."
-          action="Connect VPS"
-          onAction={() => window.dispatchEvent(new CustomEvent('allternit:open-vps-panel'))}
+          icon={<HardDrives size={64} />}
+          caption="No VPS connections. Connect your existing VPS to manage it through Allternit."
+          ctaLabel="Connect VPS"
+          onCtaClick={() => window.dispatchEvent(new CustomEvent('allternit:open-vps-panel'))}
         />
       ) : (
         <div className="flex flex-col gap-3">
@@ -865,7 +855,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                 <button type="button"
                   onClick={() => handleTestConnection(conn.id)}
                   disabled={testingConnection === conn.id}
-                  className="p-2 rounded-md border-none bg-[var(--surface-hover)] text-[var(--ui-text-secondary)] cursor-pointer"
+                  className={QUIET_BUTTON_CLASS}
                   title="Test Connection"
                 >
                   {testingConnection === conn.id ? (
@@ -876,7 +866,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                 </button>
                 <button type="button"
                   onClick={() => handleDeleteConnection(conn.id)}
-                  className="p-2 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer"
+                  className={QUIET_BUTTON_CLASS}
                   title="Delete Connection"
                 >
                   <Trash size={18} />
@@ -890,15 +880,13 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       {/* SSH Keys Section */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold m-0 text-[var(--ui-text-primary)]">
-            SSH Keys
-          </h3>
+          <SectionHeading className="m-0">SSH keys</SectionHeading>
           <button type="button"
             onClick={loadSSHKeys}
             disabled={isLoadingSSHKeys}
-            className="p-[6px_12px] rounded-md border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[12px] cursor-pointer flex items-center gap-1"
+            className={QUIET_BUTTON_CLASS}
           >
-            <ArrowsClockwise size={12} className={isLoadingSSHKeys ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={12} className={cn(isLoadingSSHKeys && 'animate-spin')} />
             Refresh
           </button>
         </div>
@@ -908,12 +896,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
         )}
         
         {isLoadingSSHKeys ? (
-          <LoadingState message="Loading SSH keys..." />
+          <SkeletonRow lines={3} />
         ) : sshKeys.length === 0 ? (
-          <div className="p-8 text-center text-[var(--ui-text-muted)] bg-[var(--surface-hover)] rounded-xl border border-dashed border-[var(--ui-border-default)]">
-            <Key size={32} className="mb-2 opacity-50 mx-auto" />
-            <div className="text-sm">No SSH keys configured</div>
-          </div>
+          <EmptyState icon={<Key size={32} />} caption="No SSH keys configured" />
         ) : (
           <div className="bg-[var(--surface-hover)] rounded-xl border border-solid border-[var(--ui-border-muted)] overflow-hidden">
             {sshKeys.map((key, index) => (
@@ -934,7 +919,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                 </div>
                 <button type="button"
                   onClick={() => handleDeleteSSHKey(key.id)}
-                  className="p-1.5 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer"
+                  className={QUIET_BUTTON_CLASS}
                 >
                   <Trash size={16} />
                 </button>
@@ -950,9 +935,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold m-[0_0_8px_0] text-[var(--ui-text-primary)]">
-            Environment Templates
-          </h2>
+          <SectionHeading className="mt-0 mb-2">Environment templates</SectionHeading>
           <p className="text-sm text-[var(--ui-text-secondary)] m-0">
             Railway-style one-click environments. Devcontainers, Nix flakes, or sandbox VMs.
           </p>
@@ -963,7 +946,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
               setWizardInitialTemplate(undefined);
               setIsWizardOpen(true);
             }}
-            className="p-[10px_20px] rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-sm font-semibold cursor-pointer flex items-center gap-2"
+            className={QUIET_BUTTON_CLASS}
           >
             <Plus size={18} />
             New Environment
@@ -971,9 +954,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           <button type="button"
             onClick={loadEnvironments}
             disabled={isLoadingEnvironments || isLoadingTemplates}
-            className="p-[8px_16px] rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] cursor-pointer flex items-center gap-1.5"
+            className={QUIET_BUTTON_CLASS}
           >
-            <ArrowsClockwise size={14} className={isLoadingEnvironments || isLoadingTemplates ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={14} className={cn((isLoadingEnvironments || isLoadingTemplates) && 'animate-spin')} />
             Refresh
           </button>
         </div>
@@ -1003,7 +986,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
 
       {/* Templates Grid */}
       {isLoadingTemplates ? (
-        <LoadingState message="Loading templates..." />
+        <SkeletonRow lines={6} />
       ) : (
         <div className="grid grid-cols-3 gap-4">
           {filteredTemplates.map(template => (
@@ -1025,9 +1008,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       {/* Provisioned Environments */}
       {environments.length > 0 && (
         <div className="mt-8">
-          <h3 className="text-lg font-semibold m-[0_0_16px_0] text-[var(--ui-text-primary)]">
-            Provisioned Environments
-          </h3>
+          <SectionHeading>Provisioned environments</SectionHeading>
           <div className="flex flex-col gap-3">
             {environments.map(env => (
               <EnvironmentRow
@@ -1048,15 +1029,13 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             <Files size={24} className="text-[#666]" />
           </div>
           <div className="flex-1">
-            <h3 className="text-base font-semibold m-[0_0_4px_0] text-[var(--ui-text-primary)]">
-              Custom Configuration
-            </h3>
+            <SectionHeading className="mt-0 mb-1">Custom configuration</SectionHeading>
             <p className="text-sm text-[var(--ui-text-secondary)] m-0">
               Import devcontainer.json, flake.nix, or Dockerfile
             </p>
           </div>
           <button type="button"
-            className="p-[10px_20px] rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-primary)] text-sm cursor-pointer flex items-center gap-2"
+            className={QUIET_BUTTON_CLASS}
           >
             <Plus size={16} />
             Import
@@ -1089,9 +1068,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold m-[0_0_8px_0] text-[var(--ui-text-primary)]">
-            Allternit Nodes
-          </h2>
+          <SectionHeading className="mt-0 mb-2">Allternit nodes</SectionHeading>
           <p className="text-sm text-[var(--ui-text-secondary)] m-0">
             Compute nodes running the Allternit agent runtime ({instances.length} from cloud, {connections.length} from VPS)
           </p>
@@ -1100,14 +1077,14 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           <button type="button"
             onClick={loadDeployments}
             disabled={isLoadingDeployments}
-            className="p-[8px_16px] rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] cursor-pointer flex items-center gap-1.5"
+            className={QUIET_BUTTON_CLASS}
           >
-            <ArrowsClockwise size={14} className={isLoadingDeployments ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={14} className={cn(isLoadingDeployments && 'animate-spin')} />
             Refresh
           </button>
           <button type="button"
             onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-cloud-deploy'))}
-            className="p-[10px_20px] rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-sm font-semibold cursor-pointer flex items-center gap-2"
+            className={QUIET_BUTTON_CLASS}
           >
             <Plus size={16} />
             Deploy Node
@@ -1120,14 +1097,13 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       )}
 
       {isLoadingDeployments ? (
-        <LoadingState message="Loading nodes..." />
+        <SkeletonRow lines={5} />
       ) : nodes.length === 0 ? (
         <EmptyState
           icon={<Cpu size={64} className="text-[#333]" />}
-          title="No nodes installed"
-          description="Deploy an Allternit node to the cloud or install on your connected VPS."
-          action="Deploy Node"
-          onAction={() => window.dispatchEvent(new CustomEvent('allternit:open-cloud-deploy'))}
+          caption="No nodes installed. Deploy an Allternit node to the cloud or install on your connected VPS."
+          ctaLabel="Deploy Node"
+          onCtaClick={() => window.dispatchEvent(new CustomEvent('allternit:open-cloud-deploy'))}
         />
       ) : (
         <div className="flex flex-col gap-3">
@@ -1329,13 +1305,11 @@ function StatusCard({ title, value, icon, color, action, onAction, isLoading }: 
   );
 }
 
-function ActionButton({ icon, label, onClick, primary }: any) {
+function ActionButton({ icon, label, onClick }: any) {
   return (
     <button type="button"
       onClick={onClick}
-      className={`p-[12px_20px] rounded-[10px] text-sm font-medium cursor-pointer flex items-center gap-2 transition-[var(--transition-fast)] ${
-        primary ? 'border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]' : 'border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)]'
-      }`}
+      className={QUIET_BUTTON_CLASS}
     >
       {icon}
       {label}
@@ -1408,9 +1382,7 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
         <button type="button"
           onClick={onDeploy}
           disabled={!isAvailable || isDeploying}
-          className={`flex-[2] p-2.5 rounded-lg border-none text-[13px] font-semibold flex items-center justify-center gap-1.5 ${
-            isAvailable ? 'bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] cursor-pointer' : 'bg-[var(--ui-border-default)] text-[var(--ui-text-muted)] cursor-not-allowed'
-          } ${isDeploying ? 'opacity-70' : 'opacity-100'}`}
+          className={cn('flex-[2] justify-center', QUIET_BUTTON_CLASS, isDeploying && 'opacity-70')}
         >
           {isDeploying ? (
             <>
@@ -1537,22 +1509,6 @@ function InfoCard({ icon, title, description }: any) {
   );
 }
 
-function EmptyState({ icon, title, description, action, onAction }: any) {
-  return (
-    <div className="flex flex-col items-center justify-center p-[64px_32px] text-center">
-      <div className="mb-6">{icon}</div>
-      <h3 className="text-[18px] font-semibold m-[0_0_8px_0] text-[var(--ui-text-primary)]">{title}</h3>
-      <p className="text-[14px] text-[var(--ui-text-muted)] m-[0_0_24px_0] max-w-[400px]">{description}</p>
-      <button type="button"
-        onClick={onAction}
-        className="p-[10px_24px] rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-sm font-semibold cursor-pointer"
-      >
-        {action}
-      </button>
-    </div>
-  );
-}
-
 function ErrorAlert({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div className="flex items-center gap-3 p-4 bg-[var(--status-error-bg)] rounded-xl border border-solid border-[color-mix(in_srgb,var(--status-error)_20%,transparent)]">
@@ -1562,20 +1518,11 @@ function ErrorAlert({ message, onRetry }: { message: string; onRetry: () => void
       </div>
       <button type="button"
         onClick={onRetry}
-        className="p-[8px_16px] rounded-lg border border-solid border-[color-mix(in_srgb,var(--status-error)_40%,transparent)] bg-transparent text-[var(--status-error)] text-[13px] cursor-pointer flex items-center gap-1.5"
+        className={QUIET_BUTTON_CLASS}
       >
         <ArrowsClockwise size={14} />
         Retry
       </button>
-    </div>
-  );
-}
-
-function LoadingState({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center p-[64px_32px] gap-4">
-      <Spinner size={32} className="text-[#666] animate-spin" />
-      <p className="text-[14px] text-[var(--ui-text-muted)] m-0">{message}</p>
     </div>
   );
 }
@@ -1602,7 +1549,7 @@ function DeploymentRow({ deployment, onCancel }: { deployment: Deployment; onCan
       {(deployment.status as string) === 'pending' || (deployment.status as string) === 'provisioning' || (deployment.status as string) === 'configuring' ? (
         <button type="button"
           onClick={onCancel}
-          className="p-[8px_16px] rounded-md border-none bg-[var(--status-error-bg)] text-[var(--status-error)] text-[13px] cursor-pointer"
+          className={DESTRUCTIVE_BUTTON_CLASS}
         >
           Cancel
         </button>

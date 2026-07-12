@@ -75,6 +75,7 @@ const logger = createModuleLogger('ShellApp');
 // Lazy-loaded UI Components
 const IntegrationsPanel    = React.lazy(() => import('./IntegrationsPanel').then(m => ({ default: m.IntegrationsPanel })));
 const ControlCenter        = React.lazy(() => import('./ControlCenter').then(m => ({ default: m.ControlCenter })));
+const SettingsOverlay      = React.lazy(() => import('../views/settings/SettingsView').then(m => ({ default: m.SettingsView })));
 
 const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'browser',
@@ -314,17 +315,32 @@ function ShellAppInner(): React.ReactNode {
     installDesktopStreamingGuard();
   }, []);
 
-  useEffect(() => {
-    const handleOpenSettings = (): void => { open('settings'); };
-    window.addEventListener('allternit:open-settings', handleOpenSettings);
-    return () => window.removeEventListener('allternit:open-settings', handleOpenSettings);
-  }, [open]);
+  // Settings renders as an overlay above the active view (never replaces it),
+  // so closing returns to exactly what was on screen underneath.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined);
+  const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const handleCloseSettings = (): void => { open('chat'); };
+    const handleOpenSettings = (e: Event): void => {
+      const detail = (e as CustomEvent<{ section?: string; tab?: string }>).detail;
+      setSettingsSection(detail?.section);
+      setSettingsTab(detail?.tab);
+      setSettingsOpen(true);
+    };
+    window.addEventListener('allternit:open-settings', handleOpenSettings);
+    return () => window.removeEventListener('allternit:open-settings', handleOpenSettings);
+  }, []);
+
+  useEffect(() => {
+    const handleCloseSettings = (): void => {
+      setSettingsOpen(false);
+      setSettingsSection(undefined);
+      setSettingsTab(undefined);
+    };
     window.addEventListener('allternit:close-settings', handleCloseSettings);
     return () => window.removeEventListener('allternit:close-settings', handleCloseSettings);
-  }, [open]);
+  }, []);
 
   useEffect(() => {
     const handleOpenLabs = (): void => { open('labs'); };
@@ -565,10 +581,15 @@ function ShellAppInner(): React.ReactNode {
             setPluginPanelOpen(false);
             sessionStorage.setItem('allternit-settings-section', 'integrations');
             sessionStorage.setItem('allternit-settings-tab', 'connectors');
-            open('settings');
+            setSettingsOpen(true);
           }}
         />
-        
+
+        {settingsOpen && (
+          <React.Suspense fallback={null}>
+            <SettingsOverlay initialSection={settingsSection} initialTab={settingsTab} />
+          </React.Suspense>
+        )}
         <FloatingAvatar />
       </SessionProvider>
       </VoiceProvider>

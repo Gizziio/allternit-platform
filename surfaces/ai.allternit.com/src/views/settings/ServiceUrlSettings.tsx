@@ -4,6 +4,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowsClockwise, CheckCircle, ComputerTower, Globe, HardDrives, Memory, Wrench } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { SectionHeading } from '@/components/settings/SectionHeading';
+import { SkeletonRow } from '@/components/settings/SkeletonRow';
+import { QUIET_BUTTON_CLASS } from '@/components/settings/buttonStyles';
 import { setupApi, type SetupConfigResponse, type UserConfig } from '@/services/setup-api';
 import { useToast } from '@/components/ui/toast-provider';
 
@@ -148,8 +151,8 @@ export function ServiceUrlSettings(): React.ReactNode {
 
   if (isLoading) {
     return (
-      <div className="p-8 text-center text-[13px] text-[var(--text-tertiary)]">
-        Loading service configuration…
+      <div className="max-w-xl py-6">
+        <SkeletonRow lines={4} />
       </div>
     );
   }
@@ -157,9 +160,7 @@ export function ServiceUrlSettings(): React.ReactNode {
   return (
     <div className="max-w-xl">
       <section className="mb-8">
-        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-black mb-4 opacity-60">
-          Service Endpoints
-        </div>
+        <SectionHeading>Service endpoints</SectionHeading>
         <div className="space-y-5">
           {SERVICE_FIELDS.map((field) => {
             const company = companyValue(field);
@@ -208,12 +209,7 @@ export function ServiceUrlSettings(): React.ReactNode {
           type="button"
           onClick={handleSave}
           disabled={isSaving || dirty.size === 0}
-          className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all active:scale-95',
-            dirty.size === 0
-              ? 'bg-[var(--bg-secondary)] text-[var(--text-tertiary)] cursor-not-allowed'
-              : 'bg-[var(--accent-primary)] text-white hover:opacity-90'
-          )}
+          className={cn(QUIET_BUTTON_CLASS, dirty.size === 0 && 'text-[var(--text-tertiary)]')}
         >
           {isSaving ? (
             <>Saving…</>
