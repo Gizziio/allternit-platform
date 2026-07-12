@@ -63,6 +63,15 @@ describe('Browser Server', () => {
     expect(data.profiles[0].name).toBe('default');
   });
 
+  it('should expose unified browser run providers', async () => {
+    const response = await fetch(`http://127.0.0.1:${serverState.port}/v1/browser-runs/providers`);
+    expect(response.status).toBe(200);
+
+    const data = await response.json();
+    expect(Array.isArray(data.providers)).toBe(true);
+    expect(data.providers.some((provider: { provider?: string }) => provider.provider === 'local-playwright')).toBe(true);
+  });
+
   it('should respond to tabs endpoint (browser not running)', async () => {
     // Before browser is started, should return empty tabs or error
     const response = await fetch(`http://127.0.0.1:${serverState.port}/tabs`);

@@ -81,7 +81,7 @@ export function SkillPicker({ initialMode, onSelect, onClose }: SkillPickerProps
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em' }}>Pick a skill</h2>
             <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Open Design skills bind a workflow to your design system.
+              Allternit Design skills bind a workflow to your design system.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

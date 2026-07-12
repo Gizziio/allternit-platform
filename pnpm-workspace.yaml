@@ -56,6 +56,10 @@ packages:
 
   # Exclusions
   - '!cmd/*/sdks'
+  # Vendored third-party project with its own npm lockfile/scripts — see
+  # services/open-connector/PROVENANCE.md. Managed via plain npm, not pnpm.
+  - '!services/open-connector'
+  - '!services/open-connector/**'
 
 onlyBuiltDependencies:
   - '@whiskeysockets/baileys'

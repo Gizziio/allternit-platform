@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Routine, ScheduleType, ExecutionDomain } from '@/lib/agents/automation.types';
+import type { Routine, ScheduleType, ExecutionDomain, Goal } from '@/lib/agents/automation.types';
 import {
   listRoutines,
   createRoutine,
@@ -22,6 +22,7 @@ import {
   deleteRoutine,
   runRoutine,
   getRoutineMetrics,
+  listGoals,
 } from '@/lib/automation-api';
 import { useAgentStore } from '@/lib/agents';
 import { formatRelativeTime } from '@/lib/time';
@@ -36,6 +37,7 @@ const statusColor: Record<string, string> = {
 
 export function RoutinesListView() {
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [metrics, setMetrics] = useState<Record<string, RoutineMetrics>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +55,7 @@ export function RoutinesListView() {
     timezone: string;
     execution_domain: ExecutionDomain;
     agent_id: string;
+    goal_id: string;
   }>({
     name: '',
     description: '',
@@ -61,17 +64,19 @@ export function RoutinesListView() {
     timezone: 'UTC',
     execution_domain: 'local',
     agent_id: '',
+    goal_id: '',
   });
 
-  const fetchRoutines = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await listRoutines();
-      setRoutines(data);
+      const [routinesData, goalsData] = await Promise.all([listRoutines(), listGoals()]);
+      setRoutines(routinesData);
+      setGoals(goalsData);
       const metricsMap: Record<string, RoutineMetrics> = {};
       await Promise.all(
-        data.map(async (routine) => {
+        routinesData.map(async (routine) => {
           try {
             metricsMap[routine.id] = await getRoutineMetrics(routine.id);
           } catch {
@@ -88,7 +93,7 @@ export function RoutinesListView() {
   };
 
   useEffect(() => {
-    fetchRoutines();
+    fetchData();
   }, []);
 
   const resetForm = () => {
@@ -100,6 +105,7 @@ export function RoutinesListView() {
       timezone: 'UTC',
       execution_domain: 'local',
       agent_id: '',
+      goal_id: '',
     });
   };
 
@@ -115,10 +121,11 @@ export function RoutinesListView() {
         timezone: form.timezone || undefined,
         execution_domain: form.execution_domain,
         agent_id: form.agent_id || undefined,
+        goal_id: form.goal_id || undefined,
       });
       resetForm();
       setIsCreating(false);
-      await fetchRoutines();
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create routine');
     }
@@ -136,10 +143,11 @@ export function RoutinesListView() {
         timezone: form.timezone || undefined,
         execution_domain: form.execution_domain,
         agent_id: form.agent_id || undefined,
+        goal_id: form.goal_id || undefined,
       });
       setEditingRoutine(null);
       resetForm();
-      await fetchRoutines();
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update routine');
     }
@@ -148,7 +156,7 @@ export function RoutinesListView() {
   const handleDelete = async (id: string) => {
     try {
       await deleteRoutine(id);
-      await fetchRoutines();
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete routine');
     }
@@ -158,7 +166,7 @@ export function RoutinesListView() {
     try {
       setRunningId(id);
       await runRoutine(id);
-      await fetchRoutines();
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run routine');
     } finally {
@@ -176,6 +184,7 @@ export function RoutinesListView() {
       timezone: routine.timezone || 'UTC',
       execution_domain: routine.execution_domain || 'local',
       agent_id: routine.agent_id || '',
+      goal_id: routine.goal_id || '',
     });
     setIsCreating(false);
   };
@@ -317,6 +326,25 @@ export function RoutinesListView() {
                   </p>
                 )}
               </div>
+              <div>
+                <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Goal</Label>
+                <Select
+                  value={form.goal_id || 'none'}
+                  onValueChange={(value) => setForm((f) => ({ ...f, goal_id: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                    <SelectItem value="none">No goal selected</SelectItem>
+                    {goals.map((goal) => (
+                      <SelectItem key={goal.id} value={goal.id}>
+                        {goal.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex gap-3 pt-2">
               <Button
@@ -433,6 +461,18 @@ export function RoutinesListView() {
                 >
                   {routine.execution_domain}
                 </span>
+                {routine.goal_id && (
+                  <span className="px-2 py-1 rounded border border-[var(--border-subtle)]">
+                    Goal: {goals.find((g) => g.id === routine.goal_id)?.title || routine.goal_id}
+                  </span>
+                )}
+                {routine.agent_id && (
+                  <span className="px-2 py-1 rounded border border-[var(--border-subtle)]">
+                    Agent: {agents.find((a) => a.id === routine.agent_id)?.name || routine.agent_id}
+                    {' · '}
+                    {agents.find((a) => a.id === routine.agent_id)?.harness?.mode || 'cloud'}
+                  </span>
+                )}
                 {metrics[routine.id]?.total_runs > 0 && (
                   <>
                     <span>

@@ -46,6 +46,7 @@ import { errors } from "@/runtime/server/error"
 import { QuestionRoutes } from "@/runtime/server/routes/question"
 import { PermissionRoutes } from "@/runtime/server/routes/permission"
 import { GlobalRoutes } from "@/runtime/server/routes/global"
+import { CritiqueRoutes } from "@/runtime/server/routes/critique"
 import { AuthRoutes } from "@/runtime/server/routes/auth"
 import { AgentRoutes } from "@/runtime/server/routes/agent"
 import { CommandRoutes } from "@/runtime/server/routes/command"
@@ -192,6 +193,7 @@ export namespace Server {
           })
         })
         .route("/global", GlobalRoutes())
+        .route("/critique", CritiqueRoutes())
         .put(
           "/auth/:providerID",
           describeRoute({
@@ -261,6 +263,8 @@ export namespace Server {
         .route("/cron", CronRoutes())
         .use(async (c, next) => {
           if (c.req.path === "/log") return next()
+          // Cron routes are global and should not require a project directory.
+          if (c.req.path.startsWith("/cron")) return next()
           const raw = c.req.query("directory") || c.req.header("x-gizzi-directory") || c.req.header("x-gizzi-directory") || process.cwd()
           const directory = (() => {
             try {
@@ -405,14 +409,31 @@ export namespace Server {
             .route("/auth", AuthRoutes())
             .route("/auth/terminal/clerk", TerminalClerkAuthRoutes())
             .route("/global", GlobalRoutes())
+        .route("/critique", CritiqueRoutes())
             .route("/project", ProjectRoutes())
             .route("/experimental", ExperimentalRoutes())
             .route("/tui", TuiRoutes())
             .route("/workspace", WorkspaceRoutes()) as unknown as Hono,
         )
         .all("/*", async (c) => {
-          const path = c.req.path
+          const cloudProxyEnabled =
+            process.env.GIZZI_ENABLE_CLOUD_PROXY === "true" ||
+            process.env.GIZZI_ENABLE_CLOUD_PROXY === "1"
 
+          if (!cloudProxyEnabled) {
+            log.warn(
+              `No local route for ${c.req.method} ${c.req.path}; cloud proxy is disabled. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to app.gizzi.io.`
+            )
+            return c.json(
+              {
+                error: "not_found",
+                message: `No local handler for ${c.req.method} ${c.req.path}. Set GIZZI_ENABLE_CLOUD_PROXY=true to forward unknown routes to app.gizzi.io.`,
+              },
+              404
+            )
+          }
+
+          const path = c.req.path
           const response = await proxy(`https://app.gizzi.io${path}`, {
             ...c.req,
             headers: {

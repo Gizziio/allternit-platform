@@ -98,6 +98,39 @@ function getProviderDiscoveryUrl(): string {
   return '/api/v1/providers';
 }
 
+// Provider discovery is slow (~2-5s) and the composer remounts whenever the
+// code-mode canvas swaps sessions, which left the model pill stuck on
+// "Loading..." after every session switch. Cache the discovery payload in
+// memory + localStorage (10 min TTL) so remounts render models instantly and
+// refresh silently in the background.
+const PROVIDER_DISCOVERY_CACHE_KEY = 'allternit-provider-discovery-cache';
+const PROVIDER_DISCOVERY_TTL_MS = 10 * 60 * 1000;
+let providerDiscoveryMemoryCache: any[] | null = null;
+
+function readProviderDiscoveryCache(): any[] | null {
+  if (providerDiscoveryMemoryCache) return providerDiscoveryMemoryCache;
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(PROVIDER_DISCOVERY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ts?: number; models?: any[] };
+    if (!parsed?.models?.length) return null;
+    if (typeof parsed.ts === 'number' && Date.now() - parsed.ts > PROVIDER_DISCOVERY_TTL_MS) return null;
+    providerDiscoveryMemoryCache = parsed.models;
+    return parsed.models;
+  } catch {
+    return null;
+  }
+}
+
+function writeProviderDiscoveryCache(models: any[]): void {
+  providerDiscoveryMemoryCache = models;
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PROVIDER_DISCOVERY_CACHE_KEY, JSON.stringify({ ts: Date.now(), models }));
+  } catch {}
+}
+
 const THEME = {
   bg: 'var(--surface-canvas)',
   inputBg: 'var(--chat-composer-bg)',
@@ -640,8 +673,9 @@ export function ChatComposer({
     return getAgentModeSurfaceTheme(agentModeSurface);
   }, [agentModeSurface]);
 
-  const [terminalModels, setTerminalModels] = useState<any[]>([]);
-  const [terminalModelsLoading, setTerminalModelsLoading] = useState(true);
+  const cachedProviderModels = useMemo(() => readProviderDiscoveryCache(), []);
+  const [terminalModels, setTerminalModels] = useState<any[]>(cachedProviderModels ?? []);
+  const [terminalModelsLoading, setTerminalModelsLoading] = useState(cachedProviderModels === null);
 
   useEffect(() => {
     let cancelled = false;
@@ -664,7 +698,10 @@ export function ChatComposer({
             });
           });
         }
-        if (!cancelled && allModels.length > 0) setTerminalModels(allModels);
+        if (!cancelled && allModels.length > 0) {
+          setTerminalModels(allModels);
+          writeProviderDiscoveryCache(allModels);
+        }
       } catch {
       } finally {
         if (!cancelled) setTerminalModelsLoading(false);

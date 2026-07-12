@@ -68,7 +68,7 @@ export function PluginPicker({ onSelect, onClose, agent }: PluginPickerProps) {
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em' }}>Plugin marketplace</h2>
             <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-tertiary)' }}>
-              Open Design plugins extend the agent with reusable workflows.
+              Allternit Design plugins extend the agent with reusable workflows.
             </p>
           </div>
           <button type="button" onClick={onClose} style={iconButtonStyles}><X size={18} /></button>

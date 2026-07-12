@@ -6,7 +6,8 @@
  * Research, Reason, Reflect, Refine, Resolve, Respond
  */
 
-import { LlmClient, createLlmClient, LlmClientOptions } from '../llm/client.js';
+import { createLlmClient } from '../llm/client.js';
+import type { LlmClient, LlmClientOptions } from '../llm/types.js';
 
 /// Research result from R1
 export interface ResearchResult {
@@ -51,6 +52,13 @@ export class SixRsPipeline {
     this.llm = createLlmClient(options);
   }
 
+  private async runPrompt(prompt: string): Promise<string> {
+    const response = await this.llm.complete({
+      messages: [{ role: 'user', content: prompt }],
+    });
+    return response.content;
+  }
+
   /// R1: Research - Gather information
   async research(query: string): Promise<ResearchResult> {
     const prompt = `Research this topic thoroughly: ${query}
@@ -63,7 +71,7 @@ Provide:
 
 Format as JSON with: facts[], sources[], context, related[]`;
 
-    const response = await this.llm.generate(prompt);
+    const response = await this.runPrompt(prompt);
     return this.parseResearch(response);
   }
 
@@ -81,7 +89,7 @@ Provide:
 
 Format as JSON with: steps[], conclusion, confidence`;
 
-    const response = await this.llm.generate(prompt);
+    const response = await this.runPrompt(prompt);
     return this.parseReasoning(response);
   }
 
@@ -97,7 +105,7 @@ What are:
 
 Format as JSON with: implications[], edgeCases[], limitations[]`;
 
-    const response = await this.llm.generate(prompt);
+    const response = await this.runPrompt(prompt);
     return this.parseReflection(response);
   }
 
@@ -114,7 +122,7 @@ Provide:
 
 Format as JSON with: answer, improvements[]`;
 
-    const response = await this.llm.generate(prompt);
+    const response = await this.runPrompt(prompt);
     return this.parseRefinedAnswer(response);
   }
 
@@ -130,7 +138,7 @@ Provide:
 
 Format as JSON with: answer, confidence, reasoning`;
 
-    const response = await this.llm.generate(prompt);
+    const response = await this.runPrompt(prompt);
     return this.parseResolution(response);
   }
 

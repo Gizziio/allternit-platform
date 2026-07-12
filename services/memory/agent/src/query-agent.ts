@@ -4,9 +4,9 @@
  * Handles queries against the memory store and synthesizes answers
  */
 
-import { LocalModelManager } from '../models/local-model.js';
-import { MemoryStore } from '../store/sqlite-store.js';
-import type { Memory, Insight, QueryResult } from '../types/memory.types.js';
+import { LocalModelManager } from './models/local-model.js';
+import { MemoryStore } from './store/sqlite-store.js';
+import type { Memory, Insight, QueryResult } from './types/memory.types.js';
 
 /**
  * Query Agent configuration

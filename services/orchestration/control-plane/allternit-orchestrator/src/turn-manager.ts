@@ -16,14 +16,14 @@ export class TurnManager {
 
   async executeTurn(context: OrchestrationContext): Promise<AgentTurn> {
     const systemPrompt = await this.buildSystemPrompt(context);
-    
+
     // In a real implementation, this would call the LLM
     // For this implementation, we simulate a turn that might call desktop_control
-    
+
     return {
       role: 'assistant',
-      content: 'I will help you with that.',
-      toolCalls: [] 
+      content: 'I will help you with that. (' + systemPrompt.slice(0, 100) + ')',
+      toolCalls: []
     };
   }
 
@@ -41,6 +41,7 @@ export class TurnManager {
     return {
       callId: call.id,
       output: result.output,
+      success: !result.error,
       error: result.error
     };
   }

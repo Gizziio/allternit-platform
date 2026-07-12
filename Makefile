@@ -41,6 +41,7 @@ stop:
 	pkill -f "allternit-platform" || true
 	pkill -f "allternit-tools-gateway" || true
 	pkill -f "vite" || true
+	pkill -f "open-connector/src/server/index.ts" || true
 
 logs:
 	@echo "API Service:"

@@ -46,10 +46,10 @@ export interface RoutingResult {
 
 export class RouterAdapter {
   private plugins: Map<string, ProviderPlugin> = new Map();
-  // @ts-ignore
+  // @ts-expect-error - kernel wiring is stubbed for future G0200 contract integration
   private kernel: AllternitKernel;
-  // @ts-ignore
-  private policy: any; // Will load G0200 contract
+  // @ts-expect-error - policy wiring is stubbed for future G0200 contract integration
+  private policy: any;
 
   constructor(kernel: AllternitKernel) {
     this.plugins.set('anthropic', new AnthropicPlugin());

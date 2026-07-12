@@ -22,6 +22,7 @@ import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 import {
   sessionApi,
   chatApi,
+  canvasApi,
   NativeAgentApiError,
   type BackendSession,
   type BackendMessage,
@@ -31,6 +32,8 @@ import { useAgentStore } from './agent.store';
 import type { HarnessConfig } from './agent.types';
 import { subscribeSSE } from '../sse/global-sse-manager';
 import { createModuleLogger } from '@/lib/logger';
+import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
+import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -118,6 +121,7 @@ export interface SendMessageOptions {
     onToolCall?: (toolCall: unknown) => void;
     onToolResult?: (toolResult: unknown) => void;
     onToolError?: (toolError: unknown) => void;
+    onArtifact?: (artifact: ArtifactUIPart) => void;
     onDone?: () => void;
     onError?: (error: Error) => void;
   };
@@ -208,6 +212,42 @@ function upsertAgentElementsToolPart(
   return parts.map((part, partIndex) =>
     partIndex === index ? { ...part, ...nextPart } : part,
   );
+}
+
+async function persistArtifactToCanvas(
+  sessionId: string,
+  artifact: ArtifactUIPart,
+  artifactCanvasIds: Map<string, string>,
+): Promise<void> {
+  if (!isBackendSessionId(sessionId)) return;
+
+  const component = {
+    type: 'artifact',
+    artifactId: artifact.artifactId,
+    kind: artifact.kind,
+    title: artifact.title,
+    content: artifact.content,
+    url: artifact.url,
+  };
+
+  try {
+    const existingCanvasId = artifactCanvasIds.get(artifact.artifactId);
+    if (existingCanvasId) {
+      await canvasApi.updateCanvas(existingCanvasId, {
+        title: artifact.title,
+        components: [component],
+      });
+    } else {
+      const canvas = await canvasApi.createCanvas(sessionId, {
+        title: artifact.title,
+        components: [component],
+        metadata: { artifactId: artifact.artifactId, kind: artifact.kind },
+      });
+      artifactCanvasIds.set(artifact.artifactId, canvas.id);
+    }
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to persist artifact to canvas');
+  }
 }
 
 // ============================================================================
@@ -533,6 +573,9 @@ async function streamMessageWithContext(
       onToolError: (toolError) => {
         callbacks?.onToolError?.(toolError);
       },
+      onArtifact: (artifact) => {
+        callbacks?.onArtifact?.(artifact);
+      },
       onDone: () => {
         callbacks?.onDone?.();
       },
@@ -601,6 +644,26 @@ export interface ModeSessionState {
   // Legacy compatibility methods
   fetchMessages: (sessionId: string) => Promise<void>;
   fetchSessionCanvases: (sessionId: string) => Promise<void>;
+
+  // Canvas persistence
+  createCanvas: (
+    sessionId: string,
+    options?: {
+      title?: string;
+      components?: unknown[];
+      layout?: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
+    },
+  ) => Promise<string>;
+  updateCanvas: (
+    canvasId: string,
+    options: {
+      title?: string;
+      components?: unknown[];
+      layout?: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
+    },
+  ) => Promise<void>;
 
   // Agent mode integration
   appendOptimisticEvent: (sessionId: string, event: unknown) => void;
@@ -832,7 +895,7 @@ export function createModeSessionStore(config: StoreConfig) {
             set((state) => ({
               sessions: state.sessions.map((s) =>
                 s.id === sessionId
-                  ? { ...s, messages: [...s.messages, userMessage] }
+                  ? { ...s, messages: [...s.messages, userMessage], messageCount: s.messageCount + 1 }
                   : s
               ),
             }));
@@ -883,7 +946,7 @@ export function createModeSessionStore(config: StoreConfig) {
             set((state) => ({
               sessions: state.sessions.map((s) =>
                 s.id === sessionId
-                  ? { ...s, messages: [...s.messages, userMessage] }
+                  ? { ...s, messages: [...s.messages, userMessage], messageCount: s.messageCount + 1 }
                   : s
               ),
             }));
@@ -893,6 +956,7 @@ export function createModeSessionStore(config: StoreConfig) {
             let reasoningContent = '';
             let assistantToolParts: Array<Record<string, unknown>> = [];
             const assistantMessageId = `assistant-${Date.now()}`;
+            const artifactCanvasIds = new Map<string, string>();
 
             // Add placeholder assistant message IMMEDIATELY so React renders it
             // while isStreaming=true. Without this, when the backend responds in a
@@ -1033,10 +1097,38 @@ export function createModeSessionStore(config: StoreConfig) {
                   onToolResult: (toolResult) => {
                     deltaBuffer.push({ type: 'toolResult', toolResult });
                     scheduleDeltaFlush();
+
+                    // Generate-web-artifact tools emit a real ArtifactUIPart so the
+                    // canvas view can render them without requiring a backend artifact
+                    // event. This mirrors the behavior in rust-stream-adapter.ts.
+                    const tr = toolResult as { toolName?: string; result?: unknown } | undefined;
+                    if (tr?.toolName === 'generateWebArtifact' && tr.result && typeof tr.result === 'object') {
+                      const r = tr.result as { content?: string; kind?: string; title?: string };
+                      if (r.content) {
+                        const artifact: ArtifactUIPart = {
+                          type: 'artifact',
+                          artifactId: `artifact-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                          kind: (r.kind ?? 'html') as ArtifactUIPart['kind'],
+                          content: r.content,
+                          title: r.title ?? 'Generated Artifact',
+                        };
+                        void persistArtifactToCanvas(sessionId, artifact, artifactCanvasIds);
+                        emitArtifact(sessionId, artifact);
+                        options.callbacks?.onArtifact?.(artifact);
+                      }
+                    }
                   },
                   onToolError: (toolError) => {
                     deltaBuffer.push({ type: 'toolError', toolError });
                     scheduleDeltaFlush();
+                  },
+                  onArtifact: (artifact) => {
+                    // Persist artifact to backend canvas so it survives reloads
+                    // and can be reopened from any surface.
+                    void persistArtifactToCanvas(sessionId, artifact, artifactCanvasIds);
+                    // Broadcast to any open AllternitCanvasView for the same session.
+                    emitArtifact(sessionId, artifact);
+                    options.callbacks?.onArtifact?.(artifact);
                   },
                   onDone: () => {
                     // Flush any remaining deltas immediately
@@ -1111,6 +1203,9 @@ export function createModeSessionStore(config: StoreConfig) {
                         ...state.streamingBySession,
                         [sessionId]: { isStreaming: false, error: null, abortController: null },
                       },
+                      sessions: state.sessions.map((s) =>
+                        s.id === sessionId ? { ...s, messageCount: s.messageCount + 1 } : s
+                      ),
                     }));
                     options.callbacks?.onDone?.();
                   },
@@ -1278,9 +1373,21 @@ export function createModeSessionStore(config: StoreConfig) {
               const backendMessages = await sessionApi.listMessages(sessionId);
               const messages = backendMessages.map(mapBackendMessage);
               set((state) => ({
-                sessions: state.sessions.map((s) =>
-                  s.id === sessionId ? { ...s, messages } : s
-                ),
+                sessions: state.sessions.map((s) => {
+                  if (s.id !== sessionId) return s;
+                  // Never drop local messages when the backend is behind — e.g.
+                  // while a stream is in flight the optimistic user/assistant
+                  // messages exist only locally, and clobbering them unmounts the
+                  // thread. The backend wins once it has caught up.
+                  if (messages.length < s.messages.length) {
+                    const localIds = new Set(s.messages.map((m) => m.id));
+                    const missing = messages.filter((m) => !localIds.has(m.id));
+                    return missing.length
+                      ? { ...s, messages: [...missing, ...s.messages] }
+                      : s;
+                  }
+                  return { ...s, messages };
+                }),
               }));
             } catch (error) {
               logger.error({ err: error }, `[${config.name}] Failed to fetch messages`);
@@ -1288,35 +1395,65 @@ export function createModeSessionStore(config: StoreConfig) {
           },
 
           fetchSessionCanvases: async (sessionId: string) => {
-            const session = get().sessions.find(s => s.id === sessionId);
-            if (!session) return;
+            if (!isBackendSessionId(sessionId)) return;
 
             // Extract artifact IDs from all messages in this session
-            const canvasIds: string[] = [];
-            for (const msg of session.messages) {
-              try {
-                // Messages may embed artifact references in content or metadata
-                const meta = typeof msg.metadata === 'object' && msg.metadata ? msg.metadata as Record<string, unknown> : {};
-                if (meta.artifactId && typeof meta.artifactId === 'string') {
-                  canvasIds.push(meta.artifactId);
-                }
-                // Also check for inline artifact JSON in content
-                if (msg.content?.includes('"kind":"artifact"')) {
-                  const matches = msg.content.match(/"artifactId":"([^"]+)"/g) ?? [];
-                  matches.forEach(m => {
-                    const id = m.match(/"artifactId":"([^"]+)"/)?.[1];
-                    if (id) canvasIds.push(id);
-                  });
-                }
-              } catch { /* ignore parse errors */ }
+            const session = get().sessions.find(s => s.id === sessionId);
+            const messageCanvasIds: string[] = [];
+            if (session) {
+              for (const msg of session.messages) {
+                try {
+                  const meta = typeof msg.metadata === 'object' && msg.metadata ? msg.metadata as Record<string, unknown> : {};
+                  if (meta.artifactId && typeof meta.artifactId === 'string') {
+                    messageCanvasIds.push(meta.artifactId);
+                  }
+                  if (msg.content?.includes('"kind":"artifact"')) {
+                    const matches = msg.content.match(/"artifactId":"([^"]+)"/g) ?? [];
+                    matches.forEach(m => {
+                      const id = m.match(/"artifactId":"([^"]+)"/)?.[1];
+                      if (id) messageCanvasIds.push(id);
+                    });
+                  }
+                } catch { /* ignore parse errors */ }
+              }
             }
 
-            const unique = [...new Set(canvasIds)];
-            if (unique.length > 0) {
+            // Merge with persisted canvases from the backend
+            try {
+              const backendCanvases = await canvasApi.listCanvases(sessionId);
+              const backendIds = backendCanvases.map((c) => c.id);
+              const unique = [...new Set([...messageCanvasIds, ...backendIds])];
               set((state) => ({
                 sessionCanvases: { ...state.sessionCanvases, [sessionId]: unique },
               }));
+            } catch (error) {
+              logger.error({ err: error }, `[${config.name}] Failed to fetch canvases`);
+              // Fall back to message-extracted IDs
+              const unique = [...new Set(messageCanvasIds)];
+              if (unique.length > 0) {
+                set((state) => ({
+                  sessionCanvases: { ...state.sessionCanvases, [sessionId]: unique },
+                }));
+              }
             }
+          },
+
+          createCanvas: async (sessionId, options = {}) => {
+            if (!isBackendSessionId(sessionId)) {
+              throw new Error(`Cannot create a canvas before a live session exists: ${sessionId}`);
+            }
+            const canvas = await canvasApi.createCanvas(sessionId, options);
+            set((state) => ({
+              sessionCanvases: {
+                ...state.sessionCanvases,
+                [sessionId]: [...new Set([...(state.sessionCanvases[sessionId] ?? []), canvas.id])],
+              },
+            }));
+            return canvas.id;
+          },
+
+          updateCanvas: async (canvasId, options) => {
+            await canvasApi.updateCanvas(canvasId, options);
           },
 
           appendOptimisticEvent: (sessionId: string, event: unknown) => {
@@ -1681,21 +1818,31 @@ export function createModeSessionStore(config: StoreConfig) {
             // Only persist session metadata, NOT messages or streaming state.
             // Messages are rebuilt from SSE on page load. Persisting them causes
             // localStorage bloat (5-10MB limit) and stale state bugs.
-            sessions: state.sessions.map((s) => ({
-              id: s.id,
-              name: s.name,
-              description: s.description,
-              createdAt: s.createdAt,
-              updatedAt: s.updatedAt,
-              messageCount: s.messageCount,
-              metadata: s.metadata,
-              tags: s.tags,
-              // Explicitly strip large/runtime fields
-              messages: [],
-              _contextPack: undefined,
-            })),
-            activeSessionId: state.activeSessionId,
+            // Never persist optimistic temp sessions — if the backend create fails
+            // or the tab reloads mid-create, they would linger as zombie rows.
+            sessions: state.sessions
+              .filter((s) => !s.id.startsWith('temp-'))
+              .map((s) => ({
+                id: s.id,
+                name: s.name,
+                description: s.description,
+                createdAt: s.createdAt,
+                updatedAt: s.updatedAt,
+                messageCount: s.messageCount,
+                metadata: s.metadata,
+                tags: s.tags,
+                // Explicitly strip large/runtime fields
+                messages: [],
+                _contextPack: undefined,
+              })),
+            activeSessionId: state.activeSessionId?.startsWith('temp-') ? null : state.activeSessionId,
           }),
+          // Sweep any zombie temp sessions persisted by older builds.
+          onRehydrateStorage: () => (state) => {
+            if (!state) return;
+            state.sessions = state.sessions.filter((s) => !s.id.startsWith('temp-'));
+            if (state.activeSessionId?.startsWith('temp-')) state.activeSessionId = null;
+          },
         }
       ),
       { name: config.name }

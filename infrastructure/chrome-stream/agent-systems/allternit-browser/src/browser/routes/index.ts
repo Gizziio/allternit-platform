@@ -8,6 +8,7 @@ import type { createBrowserRouteContext } from '../server-context.js';
 import { registerBrowserBasicRoutes } from './basic.js';
 import { registerBrowserTabRoutes } from './tabs.js';
 import { registerBrowserAgentRoutes } from './agent.js';
+import { registerBrowserProtocolRoutes } from './protocol.js';
 
 export function registerBrowserRoutes(
   app: Express,
@@ -16,4 +17,5 @@ export function registerBrowserRoutes(
   registerBrowserBasicRoutes(app, ctx);
   registerBrowserTabRoutes(app, ctx);
   registerBrowserAgentRoutes(app, ctx);
+  registerBrowserProtocolRoutes(app, ctx);
 }

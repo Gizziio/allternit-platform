@@ -7,6 +7,15 @@
  * Coordinate with T3-A3 for claims graph entity format alignment.
  */
 
+import type {
+  Entity,
+  EntityType,
+  EntityRelation,
+  ExtractionResult,
+  NlpRequest,
+  NlpConfig,
+} from '../types.js';
+
 export type {
   Entity,
   EntityType,
@@ -24,12 +33,12 @@ export interface EntityExtractor {
    * Extract entities from text
    */
   extract(text: string, options?: ExtractOptions): Promise<ExtractionResult>;
-  
+
   /**
    * Check if extractor is ready
    */
   isReady(): boolean;
-  
+
   /**
    * Get supported entity types
    */

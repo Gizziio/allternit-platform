@@ -8,6 +8,7 @@
     "dev": "wxt",
     "build": "wxt build",
     "zip": "wxt zip",
+    "test": "vitest run",
     "postinstall": "wxt prepare"
   },
   "devDependencies": {
@@ -40,6 +41,7 @@
     "wxt": "^0.20.19"
   },
   "dependencies": {
+    "@allternit/computer-use-protocol": "workspace:*",
     "@page-agent/core": "workspace:*",
     "@page-agent/llms": "workspace:*",
     "@page-agent/page-controller": "workspace:*",

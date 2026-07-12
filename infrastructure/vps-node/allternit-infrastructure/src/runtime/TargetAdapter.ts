@@ -360,7 +360,8 @@ export class TargetAdapter {
     };
   }
 
-  private createSSHConnection(connId: string, target: Target): Promise<Connection> {
+  private async createSSHConnection(connId: string, target: Target): Promise<Connection> {
+    const privateKey = target.privateKey ? await fs.readFile(target.privateKey) : undefined;
     return new Promise((resolve, reject) => {
       const ssh = new Client();
       
@@ -374,7 +375,7 @@ export class TargetAdapter {
             const startTime = Date.now();
             
             return new Promise((resolveExec, rejectExec) => {
-              ssh.exec(command, { execOptions: { env: options?.env } }, (err, stream) => {
+              ssh.exec(command, { env: options?.env }, (err, stream) => {
                 if (err) {
                   rejectExec(err);
                   return;
@@ -445,7 +446,7 @@ export class TargetAdapter {
             ssh.end();
           },
 
-          isConnected: (): boolean => ssh.readyState === 'open',
+          isConnected: (): boolean => (ssh as any).readyState === 'open',
         };
 
         this.connections.set(connId, connection);
@@ -460,7 +461,7 @@ export class TargetAdapter {
         host: target.host,
         port: target.port || 22,
         username: target.username,
-        privateKey: target.privateKey ? await fs.readFile(target.privateKey) : undefined,
+        privateKey,
         readyTimeout: 20000,
       });
     });

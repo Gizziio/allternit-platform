@@ -1,7 +1,7 @@
 use axum::extract::Extension;
 use axum::{
     extract::Query,
-    http::{HeaderMap, StatusCode},
+    http::{header::CONTENT_TYPE, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{delete, get, head, post},
     Json, Router,
@@ -18,6 +18,7 @@ pub fn file_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/files/list", get(list_files))
         .route("/files/read", get(read_file))
+        .route("/files/raw", get(raw_file))
         .route("/files/exists", head(file_exists))
         .route("/files/mkdir", post(mkdir))
         .route("/files/delete", delete(delete_file))
@@ -91,6 +92,27 @@ async fn read_file(
     }
 }
 
+async fn raw_file(
+    Extension(user): Extension<AuthUser>,
+    Query(params): Query<PathQuery>,
+) -> Response {
+    let resolved = resolve_path(&params.path, &user.user_id);
+    let is_file = tokio::fs::metadata(&resolved)
+        .await
+        .map(|m| m.is_file())
+        .unwrap_or(false);
+    if !is_file {
+        return (StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))).into_response();
+    }
+    match tokio::fs::read(&resolved).await {
+        Ok(bytes) => {
+            let mime = mime_for(&resolved);
+            (StatusCode::OK, [(CONTENT_TYPE, mime)], bytes).into_response()
+        }
+        Err(_) => (StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))).into_response(),
+    }
+}
+
 async fn file_exists(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
@@ -161,6 +183,29 @@ async fn write_file(
     match tokio::fs::write(&resolved, body.content).await {
         Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Cannot write file"}))),
+    }
+}
+
+fn mime_for(path: &std::path::Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("svg") => "image/svg+xml",
+        Some("bmp") => "image/bmp",
+        Some("pdf") => "application/pdf",
+        Some("txt" | "md") => "text/plain; charset=utf-8",
+        Some("html" | "htm") => "text/html; charset=utf-8",
+        Some("css") => "text/css; charset=utf-8",
+        Some("js") => "text/javascript; charset=utf-8",
+        Some("json") => "application/json",
+        _ => "application/octet-stream",
     }
 }
 

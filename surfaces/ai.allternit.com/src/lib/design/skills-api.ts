@@ -109,7 +109,7 @@ export async function fetchSkillById(id: string): Promise<SkillRecord | null> {
 
 /**
  * Ask the daemon to scan the canonical skill directories and return any
- * discovered Open Design / Claude skills.
+ * discovered Allternit Design / Claude skills.
  */
 export async function discoverSkills(cwd?: string): Promise<DiscoverSkillsResponse> {
   const params = new URLSearchParams();

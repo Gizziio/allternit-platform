@@ -1,5 +1,5 @@
 /**
- * React hook for discovering Open Design skills with hot-reload semantics.
+ * React hook for discovering Allternit Design skills with hot-reload semantics.
  *
  * In the browser we cannot watch arbitrary filesystem paths, so we poll and
  * revalidate on window focus. In a future LTS daemon build this can swap to

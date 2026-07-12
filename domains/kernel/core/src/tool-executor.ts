@@ -34,7 +34,7 @@ function buildTenantContext(context?: ToolRequest['context']): TenantToolContext
   return {
     fs: {
       read: async (path: string) => {
-        const fullPath = path.startsWith('/') ? path : resolve(process.cwd(), path);
+        const fullPath = path.startsWith('/') ? path : resolve(tenantRoot, path);
         return (await readFile(fullPath, 'utf-8'));
       }
     },

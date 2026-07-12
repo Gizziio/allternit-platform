@@ -39,7 +39,7 @@ async function loadNativeModule(): Promise<NativeNlpModule | null> {
   
   try {
     // Try to load the native module
-    const mod = await import('../../native/index.js');
+    const mod = await import('../native/index.js');
     nativeModule = mod as NativeNlpModule;
     console.log('[RustBridge] Native module loaded:', nativeModule.initNativeModule());
     return nativeModule;

@@ -44,6 +44,7 @@ function parseArgs(): { transport: string; port?: number; host?: string } {
       case '--help':
         printHelp();
         process.exit(0);
+        break;
       case '--version':
       case '-v':
         console.log('allternit-gateway/1.0.0');

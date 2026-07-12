@@ -525,5 +525,4 @@ export function getClaimsGraph(): ClaimsGraph {
   return globalGraph;
 }
 
-// Re-export types
-export type { Claim, ClaimCategory, Evidence, ClaimEntity, VerificationResult, GraphQueryResult };
+

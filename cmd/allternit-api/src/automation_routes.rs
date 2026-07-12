@@ -38,6 +38,13 @@ fn uses_cloud_scheduler(domain: &str) -> bool {
     domain == "cloud" || domain == "hybrid"
 }
 
+/// Returns true when the schedule type can be represented as a Gizzi cron job.
+/// Gizzi cron only supports recurring schedules ('cron' and 'interval');
+/// manual and once-off jobs are stored locally and triggered by the user.
+fn is_recurring_schedule(schedule_type: &str) -> bool {
+    schedule_type == "cron" || schedule_type == "interval"
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Domain Types
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -376,6 +383,56 @@ async fn cron_daemon_run_job(
         .map_err(|e| format!("cron daemon run decode failed: {}", e))
 }
 
+/// Extract the daemon job id from a Gizzi cron response.
+/// Gizzi returns `{ "id": "...", ... }`, but some older versions may nest
+/// it under `job.id`; accept both shapes for backward compatibility.
+fn extract_daemon_job_id(res: &serde_json::Value) -> Option<String> {
+    res.get("id")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .or_else(|| {
+            res.get("job")
+                .and_then(|v| v.get("id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
+}
+
+/// Convert a platform interval expression (e.g. "5m", "1h") into seconds.
+/// Returns `None` when the expression is not a recognised interval shorthand.
+fn parse_interval_seconds(expression: &str) -> Option<i64> {
+    let s = expression.trim();
+    let num_end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
+    if num_end == 0 {
+        return None;
+    }
+    let num: i64 = s[..num_end].parse().ok()?;
+    let unit = s[num_end..].trim().to_lowercase();
+    let multiplier = match unit.as_str() {
+        "s" | "sec" | "secs" | "second" | "seconds" => 1,
+        "m" | "min" | "mins" | "minute" | "minutes" => 60,
+        "h" | "hr" | "hrs" | "hour" | "hours" => 60 * 60,
+        "d" | "day" | "days" => 60 * 60 * 24,
+        _ => return None,
+    };
+    Some(num * multiplier)
+}
+
+/// Build the schedule payload expected by Gizzi's CronService.
+/// Interval schedules are converted to `seconds`; cron schedules keep their
+/// expression so Gizzi can compute the next run time.
+fn build_gizzi_schedule(schedule_type: &str, schedule_expression: &str) -> serde_json::Value {
+    if schedule_type == "interval" {
+        if let Some(seconds) = parse_interval_seconds(schedule_expression) {
+            json!({ "type": "interval", "seconds": seconds })
+        } else {
+            json!({ "type": "cron", "expression": schedule_expression })
+        }
+    } else {
+        json!({ "type": "cron", "expression": schedule_expression })
+    }
+}
+
 async fn resolve_agent_harness(db: &crate::db::DbHandle, agent_id: &str) -> Option<serde_json::Value> {
     let db = db.clone();
     let agent_id = agent_id.to_string();
@@ -405,11 +462,7 @@ fn build_daemon_job_from_routine(
         "description": routine.description,
         "type": job_type,
         "status": routine.status,
-        "schedule": {
-            "type": routine.schedule_type,
-            "expression": routine.schedule_expression,
-            "timezone": routine.timezone,
-        },
+        "schedule": build_gizzi_schedule(&routine.schedule_type, &routine.schedule_expression),
         "config": routine.config,
         "scope": "persistent",
         "agentId": routine.agent_id,
@@ -428,10 +481,7 @@ fn build_daemon_job_from_loop(loop_item: &Loop, job_type: &str, harness_config: 
         "description": loop_item.description,
         "type": job_type,
         "status": loop_item.status,
-        "schedule": {
-            "type": loop_item.schedule_type,
-            "expression": loop_item.schedule_expression,
-        },
+        "schedule": build_gizzi_schedule(&loop_item.schedule_type, &loop_item.schedule_expression),
         "config": loop_item.config,
         "scope": "session",
         "sessionId": loop_item.session_id,
@@ -815,7 +865,7 @@ async fn create_routine(
         updated_at: now.clone(),
     };
 
-    let daemon_job_id = if uses_cloud_scheduler(&routine.execution_domain) {
+    let daemon_job_id = if uses_cloud_scheduler(&routine.execution_domain) && is_recurring_schedule(&routine.schedule_type) {
         let harness_config = if let Some(ref agent_id) = routine.agent_id {
             resolve_agent_harness(&state.db, agent_id).await
         } else {
@@ -824,11 +874,7 @@ async fn create_routine(
         let daemon_job = build_daemon_job_from_routine(&routine, &job_type, harness_config);
         let client = reqwest::Client::new();
         match cron_daemon_create_job(&client, daemon_job).await {
-            Ok(res) => res
-                .get("job")
-                .and_then(|v| v.get("id"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
+            Ok(res) => extract_daemon_job_id(&res),
             Err(e) => {
                 warn!("failed to create daemon routine job: {}", e);
                 None
@@ -1029,11 +1075,7 @@ async fn update_routine(
         let daemon_job = build_daemon_job_from_routine(&updated_routine, &job_type, harness_config);
         let client = reqwest::Client::new();
         let daemon_job_id = match cron_daemon_create_job(&client, daemon_job).await {
-            Ok(res) => res
-                .get("job")
-                .and_then(|v| v.get("id"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
+            Ok(res) => extract_daemon_job_id(&res),
             Err(e) => {
                 warn!("failed to create daemon routine job on domain change: {}", e);
                 None
@@ -1331,7 +1373,7 @@ async fn create_loop(
         updated_at: now.clone(),
     };
 
-    let daemon_job_id = if uses_cloud_scheduler(&loop_item.execution_domain) {
+    let daemon_job_id = if uses_cloud_scheduler(&loop_item.execution_domain) && is_recurring_schedule(&loop_item.schedule_type) {
         let harness_config = if let Some(ref agent_id) = loop_item.agent_id {
             resolve_agent_harness(&state.db, agent_id).await
         } else {
@@ -1340,11 +1382,7 @@ async fn create_loop(
         let daemon_job = build_daemon_job_from_loop(&loop_item, &job_type, harness_config);
         let client = reqwest::Client::new();
         match cron_daemon_create_job(&client, daemon_job).await {
-            Ok(res) => res
-                .get("job")
-                .and_then(|v| v.get("id"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
+            Ok(res) => extract_daemon_job_id(&res),
             Err(e) => {
                 warn!("failed to create daemon loop job: {}", e);
                 None
@@ -1361,7 +1399,7 @@ async fn create_loop(
 
     conn.execute(
         "INSERT INTO loops (id, user_id, workspace_id, agent_id, goal_id, gizzi_job_id, session_id, name, description, status, schedule_type, schedule_expression, execution_domain, config, tags, metadata, expires_at, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
         params![
             &loop_item.id,
             &loop_item.user_id,
@@ -1537,11 +1575,7 @@ async fn update_loop(
         let daemon_job = build_daemon_job_from_loop(&updated_loop, &job_type, harness_config);
         let client = reqwest::Client::new();
         let daemon_job_id = match cron_daemon_create_job(&client, daemon_job).await {
-            Ok(res) => res
-                .get("job")
-                .and_then(|v| v.get("id"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
+            Ok(res) => extract_daemon_job_id(&res),
             Err(e) => {
                 warn!("failed to create daemon loop job on domain change: {}", e);
                 None

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { GlassCard } from "../../design/GlassCard";
 import { OpenAIIcon, AnthropicIcon, OllamaIcon } from "../../components/icons/ModelIcons";
-import { CheckCircle, Warning, Gear, TerminalWindow, CircleNotch } from "@phosphor-icons/react";
+import { CheckCircle, Warning, Gear, TerminalWindow, CircleNotch, ArrowsClockwise } from "@phosphor-icons/react";
 import { api } from "@/integration/api-client";
 import type { ProviderInfo, ProviderAuthStatus } from "@/integration/api-client";
 
@@ -12,6 +12,7 @@ interface EngineEntry {
   status: 'ready' | 'missing' | 'unknown';
   modelCount: number;
   provider: string;
+  providerType?: string;
 }
 
 function providerIcon(id: string) {
@@ -21,49 +22,68 @@ function providerIcon(id: string) {
   return <TerminalWindow size={24} />;
 }
 
+function providerTypeLabel(p: ProviderInfo): string {
+  if (p.provider_type) {
+    return p.provider_type === 'local' ? 'Local' : p.provider_type === 'subprocess' ? 'CLI' : 'Cloud';
+  }
+  return p.id === 'ollama' ? 'Local' : 'Cloud';
+}
+
 export function ModelManagementView(): React.ReactNode {
   const [engines, setEngines] = useState<EngineEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const [providersRes, authRes] = await Promise.all([
-          api.listProviders(),
-          api.listProviderAuthStatus(),
-        ]);
-        if (cancelled) return;
+  const load = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    try {
+      const [providersRes, authRes, ollamaLive] = await Promise.all([
+        api.listProviders(),
+        api.listProviderAuthStatus(),
+        api.getOllamaLiveStatus().catch(() => ({ running: false, models: [] as string[] })),
+      ]);
+      if (signal?.aborted) return;
 
-        const authMap = new Map<string, ProviderAuthStatus['status']>();
-        for (const a of authRes.providers) {
-          authMap.set(a.provider_id, a.status);
-        }
-
-        const entries: EngineEntry[] = (providersRes.all as ProviderInfo[]).map((p) => {
-          const authStatus = authMap.get(p.id) ?? 'unknown';
-          return {
-            id: p.id,
-            name: p.name,
-            type: p.id === 'ollama' ? 'Local' : 'Cloud',
-            status: authStatus === 'ok' || authStatus === 'not_required' ? 'ready'
-              : authStatus === 'missing' ? 'missing'
-              : 'unknown',
-            modelCount: p.models?.length ?? 0,
-            provider: p.id,
-          };
-        });
-
-        setEngines(entries);
-      } catch {
-        // no-op — leave empty, no fake fallback
-      } finally {
-        if (!cancelled) setLoading(false);
+      const authMap = new Map<string, ProviderAuthStatus['status']>();
+      for (const a of authRes.providers) {
+        authMap.set(a.provider_id, a.status);
       }
+
+      const entries: EngineEntry[] = (providersRes.all as ProviderInfo[]).map((p) => {
+        const authStatus = authMap.get(p.id) ?? 'unknown';
+        const providerStatus = p.status ?? 'unknown';
+        const isOllama = p.id === 'ollama';
+        const ollamaReady = isOllama && ollamaLive.running;
+        const ollamaModels = isOllama ? ollamaLive.models.length : p.models?.length ?? 0;
+        return {
+          id: p.id,
+          name: p.name,
+          type: providerTypeLabel(p),
+          status: isOllama
+            ? ollamaReady ? 'ready' : 'unknown'
+            : authStatus === 'ok' || authStatus === 'not_required' ? 'ready'
+              : authStatus === 'missing' ? 'missing'
+              : providerStatus === 'active' ? 'ready'
+              : providerStatus === 'missing_key' ? 'missing'
+              : 'unknown',
+          modelCount: ollamaModels,
+          provider: p.id,
+          providerType: p.provider_type,
+        };
+      });
+
+      setEngines(entries);
+    } catch {
+      // no-op — leave empty, no fake fallback
+    } finally {
+      if (!signal?.aborted) setLoading(false);
     }
-    load();
-    return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   return (
     <div style={{ padding: 40, maxWidth: 1000, margin: '0 auto', height: '100%', overflow: 'auto' }}>
@@ -72,6 +92,20 @@ export function ModelManagementView(): React.ReactNode {
           <h1 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 8px 0' }}>Models & Engines</h1>
           <p style={{ opacity: 0.6, fontSize: 14 }}>Manage your cloud model providers and local runtimes.</p>
         </div>
+        <button
+          type="button"
+          onClick={() => load()}
+          disabled={loading}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-subtle)',
+            background: 'transparent', color: 'var(--text-secondary)', fontSize: 12,
+            fontWeight: 700, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1,
+          }}
+        >
+          <ArrowsClockwise size={14} className={loading ? 'animate-spin' : ''} />
+          Refresh
+        </button>
       </header>
 
       {loading ? (

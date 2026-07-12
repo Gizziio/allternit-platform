@@ -39,6 +39,7 @@ use allternit_api::audit_log_routes::audit_log_router;
 use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
+use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
 use allternit_api::design_connector_routes::{design_connector_router, DesignSkillCache};
@@ -53,6 +54,7 @@ use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
 use allternit_api::inbox_routes::inbox_router;
 use allternit_api::local_brain_routes::local_brain_router;
+use allternit_api::library_routes::library_router;
 use allternit_api::me_routes::me_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
@@ -109,6 +111,19 @@ async fn main() {
         .map(|d| d.join("allternit"))
         .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"));
     std::fs::create_dir_all(&data_dir).ok();
+
+    // Encryption-key status (read-only, never touches the keychain on the boot
+    // path, so startup can never hang on a keychain prompt). Precedence: env
+    // override (ALLTERNIT_ENCRYPTION_KEY / ENCRYPTION_KEY) → zero-touch keychain
+    // key written by the first-run wizard. The lazy read happens at token
+    // seal/open time; generation happens interactively in onboarding (E2).
+    if std::env::var("ALLTERNIT_ENCRYPTION_KEY").ok().filter(|s| !s.is_empty()).is_some()
+        || std::env::var("ENCRYPTION_KEY").ok().filter(|s| !s.is_empty()).is_some()
+    {
+        info!("Connector token encryption: key configured via env");
+    } else {
+        info!("Connector token encryption: will use zero-touch keychain key (first-run wizard) or plain: until then");
+    }
 
     // Initialize SQLite database
     let db_path = data_dir.join("allternit.db");
@@ -190,6 +205,7 @@ async fn main() {
         .merge(memory_router())
         .merge(me_router())
         .merge(local_brain_router())
+        .merge(library_router())
         .merge(workflow_router())
         .merge(ssh_router())
         .merge(swarm_router())
@@ -198,6 +214,7 @@ async fn main() {
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(agent_router())
         .merge(agent_session_router())
+        .merge(canvas_router())
         .merge(v1_router())
         .merge(task_routes::task_router())
         .merge(allternit_api::queue_routes::queue_router())
@@ -211,6 +228,7 @@ async fn main() {
         .merge(board_stream_router())
         .merge(runtime_backend_router())
         .merge(agents_v1_router())
+        .merge(allternit_api::connector_routes::connector_router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())
@@ -255,7 +273,12 @@ async fn main() {
         .nest("/health", health_router())
         .nest("/api", web_proxy_router())
         .merge(status_router())
-        .merge(webhook_router());
+        .merge(webhook_router())
+        // OAuth provider redirect targets — the browser arrives from the
+        // provider's consent screen with no Clerk JWT, so these must be
+        // public: the curated-3 loopback callback (moved out of the protected
+        // router) and the open-connector sidecar's `/oauth/callback` proxy.
+        .merge(allternit_api::connector_routes::connector_public_router());
 
     // Mount the offline platform UI at `/` when a static export is available.
     // This is intentionally last among the explicit public routes so that

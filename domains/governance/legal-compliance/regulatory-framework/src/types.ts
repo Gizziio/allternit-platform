@@ -285,61 +285,6 @@ export interface BeadsAdapterConfig {
 }
 
 /**
- * Beads adapter interface
- */
-export interface BeadsAdapter {
-  /**
-   * Get issue by ID
-   */
-  getIssue(id: string): Promise<BeadsIssue | null>;
-  
-  /**
-   * Create new issue
-   */
-  createIssue(issue: Omit<BeadsIssue, 'id' | 'createdAt'>): Promise<BeadsIssue>;
-  
-  /**
-   * Update issue
-   */
-  updateIssue(id: string, updates: Partial<BeadsIssue>): Promise<BeadsIssue>;
-  
-  /**
-   * Close issue
-   */
-  closeIssue(id: string, reason?: string): Promise<BeadsIssue>;
-  
-  /**
-   * List issues
-   */
-  listIssues(filter?: BeadsFilter): Promise<BeadsIssue[]>;
-  
-  /**
-   * Check if issue is ready for work
-   */
-  isReadyForWork(id: string): Promise<boolean>;
-  
-  /**
-   * Get dependencies for issue
-   */
-  getDependencies(id: string): Promise<BeadsIssue[]>;
-  
-  /**
-   * Sync with git
-   */
-  sync(): Promise<void>;
-  
-  /**
-   * Convert beads issue to WIH
-   */
-  toWih(issue: BeadsIssue): WihItem;
-  
-  /**
-   * Convert WIH to beads issue
-   */
-  fromWih(wih: WihItem): BeadsIssue;
-}
-
-/**
  * Beads filter
  */
 export interface BeadsFilter {

@@ -333,7 +333,7 @@ describe('MemoryStore', () => {
         summary: 'Summary 1',
         entities: [],
         topics: [],
-        importance: 'raw',
+        importance: 'low',
         status: 'raw',
         source: 'test',
         sourceType: 'text',

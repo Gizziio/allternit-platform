@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { ArrowSquareOut, DownloadSimple, DeviceMobile, DeviceTablet, Monitor, MagnifyingGlassMinus, MagnifyingGlassPlus, ArrowsOut, Sliders, FileHtml, FilePdf, FileZip, Presentation, VideoCamera } from "@phosphor-icons/react";
 import { parseEditModeConfig, updateEditModeTokensInHtml, type EditModeToken, type EditModeConfig } from "../../lib/design/editmode-parser";
 import { exportArtifact, exportMp4, type ExportFormat } from "../../lib/design/artifact-export";
+import { buildSrcdoc } from "../../lib/design/srcdoc";
 import { cn } from "@/lib/utils";
 
 // ── Viewport presets ───────────────────────────────────────────────────────────
@@ -107,6 +108,8 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
     const next = Math.min(2, Math.max(0.25, current + delta));
     setZoom(Math.round(next * 100));
   }
+
+  const srcdoc = buildSrcdoc(html);
 
   return (
     <div
@@ -217,7 +220,7 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
         >
           <iframe
             ref={iframeRef}
-            srcDoc={html}
+            srcDoc={srcdoc}
             sandbox="allow-scripts allow-same-origin allow-forms"
             className="border-none block size-full"
             title={title}

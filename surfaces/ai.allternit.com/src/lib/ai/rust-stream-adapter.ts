@@ -19,6 +19,7 @@ import type {
   McpAppToolDefinition,
 } from "./mcp/apps";
 import { createModuleLogger } from "@/lib/logger";
+import { emitArtifact } from "@/lib/canvas/canvas-artifact-events";
 
 const logger = createModuleLogger("rust-stream-adapter");
 
@@ -515,7 +516,20 @@ interface AdapterContext {
   hasStreamedDeltasByMessageId: Map<string, boolean>;
   pendingMcpAppPartsByToolCallId: Map<string, McpAppUIPart>;
   initialAssistantMetadata?: ChatMessageMetadata;
+  chatId?: string;
+  onArtifact?: (artifact: ArtifactUIPart) => void;
   setMessages: (updater: (prev: ChatMessage[]) => ChatMessage[], immediate?: boolean) => void;
+}
+
+function isBackendSessionId(sessionId: string): boolean {
+  return sessionId.startsWith('ses');
+}
+
+function broadcastArtifact(ctx: AdapterContext, artifact: ArtifactUIPart): void {
+  ctx.onArtifact?.(artifact);
+  if (ctx.chatId && isBackendSessionId(ctx.chatId)) {
+    emitArtifact(ctx.chatId, artifact);
+  }
 }
 
 function buildMcpAppPart(event: RustStreamEvent): McpAppUIPart | null {
@@ -941,6 +955,7 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
             title: r.title ?? "Generated Artifact",
           };
           ctx.assistantParts.push(artifactPart);
+          broadcastArtifact(ctx, artifactPart);
         }
       }
 
@@ -1222,6 +1237,7 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
     };
 
     ctx.assistantParts.push(artifactPart);
+    broadcastArtifact(ctx, artifactPart);
     updateMessageParts(ctx, true);
   },
 
@@ -1330,6 +1346,7 @@ export interface UseRustStreamAdapterReturn {
 export interface UseRustStreamAdapterOptions {
   initialMessages?: ChatMessage[];
   onMessagesChange?: (messages: ChatMessage[]) => void;
+  onArtifact?: (artifact: ArtifactUIPart) => void;
   onError?: (error: Error) => void;
   onFinish?: () => void;
 }
@@ -2035,6 +2052,8 @@ export function useRustStreamAdapter(
         hasStreamedDeltasByMessageId: new Map(),
         pendingMcpAppPartsByToolCallId: new Map(),
         initialAssistantMetadata: pendingAssistantMetadataRef.current ?? undefined,
+        chatId,
+        onArtifact: options.onArtifact,
         setMessages: throttledSetMessages,
       };
 

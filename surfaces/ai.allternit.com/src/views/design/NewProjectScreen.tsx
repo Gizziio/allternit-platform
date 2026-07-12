@@ -123,7 +123,7 @@ export function NewProjectScreen({
           </Section>
 
           {/* Skill */}
-          <Section label="Open Design skill">
+          <Section label="Allternit Design skill">
             {!selectedSkill ? (
               <button
                 type="button"

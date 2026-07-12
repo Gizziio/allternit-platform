@@ -14,13 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Loop, ScheduleType, ExecutionDomain } from '@/lib/agents/automation.types';
+import type { Loop, ScheduleType, ExecutionDomain, Goal } from '@/lib/agents/automation.types';
 import {
   listLoops,
   createLoop,
   updateLoop,
   deleteLoop,
   runLoop,
+  listGoals,
 } from '@/lib/automation-api';
 import { useAgentStore } from '@/lib/agents';
 import { formatRelativeTime } from '@/lib/time';
@@ -34,6 +35,7 @@ const statusColor: Record<string, string> = {
 
 export function LoopsListView() {
   const [loops, setLoops] = useState<Loop[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -51,6 +53,7 @@ export function LoopsListView() {
     expires_at: string;
     execution_domain: ExecutionDomain;
     agent_id: string;
+    goal_id: string;
   }>({
     name: '',
     description: '',
@@ -60,14 +63,16 @@ export function LoopsListView() {
     expires_at: '',
     execution_domain: 'local',
     agent_id: '',
+    goal_id: '',
   });
 
-  const fetchLoops = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await listLoops();
-      setLoops(data);
+      const [loopsData, goalsData] = await Promise.all([listLoops(), listGoals()]);
+      setLoops(loopsData);
+      setGoals(goalsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load loops');
     } finally {
@@ -76,7 +81,7 @@ export function LoopsListView() {
   };
 
   useEffect(() => {
-    fetchLoops();
+    fetchData();
   }, []);
 
   const resetForm = () => {
@@ -89,6 +94,7 @@ export function LoopsListView() {
       expires_at: '',
       execution_domain: 'local',
       agent_id: '',
+      goal_id: '',
     });
   };
 
@@ -105,10 +111,11 @@ export function LoopsListView() {
         expires_at: form.expires_at || undefined,
         execution_domain: form.execution_domain,
         agent_id: form.agent_id || undefined,
+        goal_id: form.goal_id || undefined,
       });
       resetForm();
       setIsCreating(false);
-      await fetchLoops();
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create loop');
     }
@@ -126,10 +133,11 @@ export function LoopsListView() {
         expires_at: form.expires_at || undefined,
         execution_domain: form.execution_domain,
         agent_id: form.agent_id || undefined,
+        goal_id: form.goal_id || undefined,
       });
       setEditingLoop(null);
       resetForm();
-      await fetchLoops();
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update loop');
     }
@@ -138,7 +146,7 @@ export function LoopsListView() {
   const handleDelete = async (id: string) => {
     try {
       await deleteLoop(id);
-      await fetchLoops();
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete loop');
     }
@@ -148,7 +156,7 @@ export function LoopsListView() {
     try {
       setRunningId(id);
       await runLoop(id);
-      await fetchLoops();
+      await fetchData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run loop');
     } finally {
@@ -167,6 +175,7 @@ export function LoopsListView() {
       expires_at: loop.expires_at ? loop.expires_at.slice(0, 10) : '',
       execution_domain: loop.execution_domain || 'local',
       agent_id: loop.agent_id || '',
+      goal_id: loop.goal_id || '',
     });
     setIsCreating(false);
   };
@@ -317,6 +326,25 @@ export function LoopsListView() {
                   </p>
                 )}
               </div>
+              <div>
+                <Label className="text-[var(--text-primary)] text-[13px] mb-2 block">Goal</Label>
+                <Select
+                  value={form.goal_id || 'none'}
+                  onValueChange={(value) => setForm((f) => ({ ...f, goal_id: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger className="bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[var(--bg-card)] border-[var(--border-subtle)]">
+                    <SelectItem value="none">No goal selected</SelectItem>
+                    {goals.map((goal) => (
+                      <SelectItem key={goal.id} value={goal.id}>
+                        {goal.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex gap-3 pt-2">
               <Button
@@ -434,6 +462,18 @@ export function LoopsListView() {
                 >
                   {loop.execution_domain}
                 </span>
+                {loop.goal_id && (
+                  <span className="px-2 py-1 rounded border border-[var(--border-subtle)]">
+                    Goal: {goals.find((g) => g.id === loop.goal_id)?.title || loop.goal_id}
+                  </span>
+                )}
+                {loop.agent_id && (
+                  <span className="px-2 py-1 rounded border border-[var(--border-subtle)]">
+                    Agent: {agents.find((a) => a.id === loop.agent_id)?.name || loop.agent_id}
+                    {' · '}
+                    {agents.find((a) => a.id === loop.agent_id)?.harness?.mode || 'cloud'}
+                  </span>
+                )}
                 <span>Updated {formatRelativeTime(loop.updated_at)}</span>
               </div>
             </GlassSurface>

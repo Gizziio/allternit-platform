@@ -12,6 +12,9 @@ const chromeProfile = '.wxt/chrome-data'
 mkdirSync(chromeProfile, { recursive: true })
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
+const stableExtensionKey =
+  process.env.ALLTERNIT_EXTENSION_KEY ||
+  'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAl+yHcREi6ng3diYTzYcAUPZwteD2XR8loc3+jCIbrU/+BJrg7BTcAZuXnOlmMj4i6S4FoK3qP/cdRoaPhudlYZD84L2QHDviihkX5lQG8Cmj+FhvANOZlj8+AKpRBOmLMX6pkBjdVMJJp2C4Qr/rq1LNgTu7yZPn43HjsJ2bcqDzJxyI5gGvN1yGl92JtIqDeH5HgVmKYbWMO+ODlnY2hbYS4Nytk+66jemTj+IOZNQHBkFe7owok49QkdRoy85qf08vQfHpplJyVRRB5wfCQcYiYrj1KH9NN+XbJXrCxzheJ8eSXuioBKf+NC3ON6zseUzFWs9VnsZhu08lcMZvNwIDAQAB'
 
 export default defineConfig({
   srcDir: 'src',
@@ -56,6 +59,7 @@ export default defineConfig({
     name: 'Allternit Extension',
     description: 'Unified browser automation and page agent for Allternit',
     version: pkg.version,
+    key: stableExtensionKey,
     permissions: [
       // browser-agent capabilities
       'activeTab',

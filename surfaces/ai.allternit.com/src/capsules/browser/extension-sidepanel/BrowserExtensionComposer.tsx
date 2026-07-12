@@ -4,9 +4,6 @@ import React, { useRef, useCallback, useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { ExtensionSidepanelComposerProps } from "./ExtensionSidepanelShell.types";
 import {
-  BACKGROUND,
-  TEXT,
-  BORDER,
   RADIUS,
   MODE_COLORS,
   TYPOGRAPHY,
@@ -112,8 +109,8 @@ export function BrowserExtensionComposer({
     <div
       style={{
         padding: "12px 16px",
-        borderTop: `1px solid ${BORDER.subtle}`,
-        background: BACKGROUND.primary,
+        borderTop: "1px solid var(--ui-border-muted)",
+        background: "var(--surface-panel)",
         position: "relative",
       }}
     >
@@ -149,8 +146,8 @@ export function BrowserExtensionComposer({
           display: "flex",
           alignItems: "flex-end",
           gap: 10,
-          background: BACKGROUND.secondary,
-          border: `1px solid ${BORDER.subtle}`,
+          background: "var(--surface-canvas)",
+          border: "1px solid var(--ui-border-default)",
           borderRadius: RADIUS.lg,
           padding: "10px 14px",
           transition: ANIMATION.fast,
@@ -162,7 +159,7 @@ export function BrowserExtensionComposer({
         }}
         onBlur={(e) => {
           const target = e.currentTarget;
-          target.style.borderColor = BORDER.subtle;
+          target.style.borderColor = "var(--ui-border-default)";
           target.style.boxShadow = "none";
         }}
         tabIndex={-1}
@@ -183,7 +180,7 @@ export function BrowserExtensionComposer({
             border: "none",
             fontSize: TYPOGRAPHY.size.sm,
             lineHeight: TYPOGRAPHY.lineHeight.normal,
-            color: TEXT.primary,
+            color: "var(--ui-text-primary)",
             fontFamily: TYPOGRAPHY.fontFamily.sans,
             minHeight: 22,
             maxHeight: 120,
@@ -206,12 +203,12 @@ export function BrowserExtensionComposer({
               ? "rgba(248,113,113,0.15)"
               : canSubmit
               ? browser.accent
-              : BACKGROUND.hover,
+              : "var(--surface-hover)",
             color: isRunning
               ? "#f87171"
               : canSubmit
-              ? BACKGROUND.primary
-              : TEXT.tertiary,
+              ? "#ffffff"
+              : "var(--ui-text-muted)",
             transition: ANIMATION.base,
             transform: canSubmit || isRunning ? "scale(1)" : "scale(0.95)",
           }}
@@ -254,12 +251,12 @@ export function BrowserExtensionComposer({
             <span style={{ fontSize: TYPOGRAPHY.size.xs, fontWeight: TYPOGRAPHY.weight.semibold, color: lastResult.success ? "#4ade80" : "#f87171" }}>
               {lastResult.success ? "Capture Complete" : "Capture Failed"}
             </span>
-            <button type="button" onClick={clearResult} style={{ padding: 2, border: "none", background: "transparent", cursor: "pointer", color: TEXT.tertiary }}>
+            <button type="button" onClick={clearResult} style={{ padding: 2, border: "none", background: "transparent", cursor: "pointer", color: "var(--ui-text-muted)" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
           {lastResult.success && lastResult.meta && (
-            <div style={{ fontSize: TYPOGRAPHY.size.xs, color: TEXT.secondary }}>
+            <div style={{ fontSize: TYPOGRAPHY.size.xs, color: "var(--ui-text-secondary)" }}>
               {lastResult.meta.title} · {lastResult.meta.colorCount} colors · {lastResult.meta.headingCount} headings · {lastResult.meta.imageCount} images · {lastResult.meta.linkCount} links
             </div>
           )}
@@ -271,13 +268,13 @@ export function BrowserExtensionComposer({
       {isCapturing && (
         <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${browser.accent}`, borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }} />
-          <span style={{ fontSize: TYPOGRAPHY.size.xs, color: TEXT.secondary }}>Capturing page…</span>
+          <span style={{ fontSize: TYPOGRAPHY.size.xs, color: "var(--ui-text-secondary)" }}>Capturing page…</span>
         </div>
       )}
       <div
         style={{
           fontSize: 12,
-          color: TEXT.tertiary,
+          color: "var(--ui-text-muted)",
           marginTop: 6,
           marginLeft: 4,
         }}

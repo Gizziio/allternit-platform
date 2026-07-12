@@ -1,0 +1,16 @@
+.private-docs/
+.tmp/
+.wrangler/
+wrangler.local.jsonc
+node_modules/
+dist/
+coverage/
+catalog/
+src/providers/registry.generated.ts
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+*.tsbuildinfo
+data/

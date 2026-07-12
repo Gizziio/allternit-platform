@@ -6,9 +6,10 @@
  * Knowledge graph for 249 research claims
  */
 
-import { Entity, EntityType } from '../nlp/types.js';
+import type { Entity, EntityType } from '../nlp/types.js';
 import { createEntityExtractor } from '../nlp/extractor.js';
-import { LlmClient, createLlmClient, LlmClientOptions } from '../llm/client.js';
+import { createLlmClient } from '../llm/client.js';
+import type { LlmClient, LlmClientOptions } from '../llm/types.js';
 
 /// Claim node in the graph
 export interface Claim {
@@ -36,7 +37,7 @@ export interface EntityNode {
 export interface Relationship {
   from: string;
   to: string;
-  type: 'supports' | 'contradicts' | 'extends' | 'uses' | 'scales_with' | 'related_to';
+  type: 'supports' | 'contradicts' | 'extends' | 'uses' | 'scales_with' | 'related_to' | 'enables' | 'reduces' | 'exhibits';
   strength: number;
   evidence?: string;
 }
@@ -180,8 +181,10 @@ ${Array.from(this.claims.values()).map(c => `- ${c.id}: ${c.statement}`).join('\
 Return IDs of relevant claims as JSON array.`;
       
       try {
-        const response = await this.llm.generate(searchPrompt);
-        const ids: string[] = JSON.parse(response);
+        const response = await this.llm.complete({
+          messages: [{ role: 'user', content: searchPrompt }],
+        });
+        const ids: string[] = JSON.parse(response.content);
         relevantClaims.push(...ids.map(id => this.claims.get(id)).filter((c): c is Claim => c !== undefined));
       } catch {
         // Return empty if parsing fails
@@ -190,11 +193,11 @@ Return IDs of relevant claims as JSON array.`;
 
     // Rank by relevance (simple: count entity matches)
     const ranked = relevantClaims.sort((a, b) => {
-      const aMatches = a.entities.filter(e => 
-        entities.entities.some(ex => ex.text.toLowerCase().includes(e.name.toLowerCase()))
+      const aMatches = a.entities.filter(e =>
+        entities.entities.some((ex: Entity) => ex.text.toLowerCase().includes(e.name.toLowerCase()))
       ).length;
-      const bMatches = b.entities.filter(e => 
-        entities.entities.some(ex => ex.text.toLowerCase().includes(e.name.toLowerCase()))
+      const bMatches = b.entities.filter(e =>
+        entities.entities.some((ex: Entity) => ex.text.toLowerCase().includes(e.name.toLowerCase()))
       ).length;
       return bMatches - aMatches;
     });

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@allternit/engine": "workspace:*",
-    "@allternit/governor": "workspace:*"
+    "@allternit/governor": "workspace:*",
+    "@allternit/browser": "workspace:*"
   }
 }

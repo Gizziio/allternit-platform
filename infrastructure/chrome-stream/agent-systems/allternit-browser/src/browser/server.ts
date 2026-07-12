@@ -32,7 +32,7 @@ export async function startBrowserServer(options: BrowserServerOptions): Promise
   
   registerBrowserRoutes(app, ctx);
   
-  const port = options.port || options.config.controlPort;
+  const port = options.port ?? options.config.controlPort;
   const host = options.host || '127.0.0.1';
   
   const server = await new Promise<any>((resolve, reject) => {
@@ -40,14 +40,17 @@ export async function startBrowserServer(options: BrowserServerOptions): Promise
     s.once('error', reject);
   });
   
+  const address = server.address();
+  const boundPort = typeof address === 'object' && address ? address.port : port;
+
   state = {
     server,
-    port,
+    port: boundPort,
     resolved: options.config,
     profiles: new Map(),
   };
   
-  console.log(`[Browser] Server listening on http://${host}:${port}/`);
+  console.log(`[Browser] Server listening on http://${host}:${boundPort}/`);
   
   return state;
 }

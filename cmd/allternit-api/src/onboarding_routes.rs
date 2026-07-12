@@ -47,6 +47,8 @@ struct ConfigResponse {
     user: UserConfig,
     #[serde(rename = "onboardingComplete")]
     onboarding_complete: bool,
+    #[serde(rename = "encryptionEnabled")]
+    encryption_enabled: bool,
 }
 
 #[derive(Serialize)]
@@ -59,6 +61,8 @@ struct CompanyConfigResponse {
     terminal_server_url: String,
     #[serde(rename = "tenantId")]
     tenant_id: String,
+    #[serde(rename = "selfHosted")]
+    self_hosted: bool,
 }
 
 async fn get_config(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -70,12 +74,14 @@ async fn get_config(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
         gateway_url: app_config.gateway_url(),
         terminal_server_url: app_config.terminal_server_url(),
         tenant_id: app_config.tenant_id(),
+        self_hosted: app_config.self_hosted(),
     };
     let user = app_config.user.clone();
     let response = ConfigResponse {
         company,
         user,
         onboarding_complete: app_config.onboarding_complete(),
+        encryption_enabled: crate::token_crypto::encryption_enabled(),
     };
     (StatusCode::OK, Json(response))
 }
@@ -94,7 +100,16 @@ async fn save_config(
     match save_user_config(&user) {
         Ok(()) => {
             info!(default_model = ?user.default_model, "Saved user config from wizard");
-            (StatusCode::OK, Json(json!({ "success": true })))
+            // Zero-touch encryption: completing the wizard guarantees a persistent
+            // key exists (env override or auto-generated in the OS keychain), so
+            // connector tokens are sealed from first run with no user action.
+            let enc_ok = crate::token_crypto::ensure_platform_key();
+            if enc_ok {
+                info!("Connector token encryption enabled after onboarding");
+            } else {
+                warn!("Connector token encryption could not be enabled (no env key; keychain write failed)");
+            }
+            (StatusCode::OK, Json(json!({ "success": true, "encryption_enabled": crate::token_crypto::encryption_enabled() })))
         }
         Err(err) => {
             warn!(error = %err, "Failed to save user config");
@@ -168,16 +183,27 @@ async fn save_provider(
     }
 
     // 2. Merge provider metadata into the Gizzi user config file.
-    let gizzi_path = gizzi_user_config_path();
+    let gizzi_path = crate::config::gizzi_user_config_path();
     let mut gizzi_config = read_gizzi_config(&gizzi_path);
 
     let provider_entry = build_provider_entry(&payload);
-    gizzi_config
+    let providers = gizzi_config
         .entry("provider")
         .or_insert_with(|| json!({}))
         .as_object_mut()
-        .unwrap()
-        .insert(provider_id.clone(), provider_entry);
+        .unwrap();
+    let merged = providers
+        .get(&provider_id)
+        .and_then(|v| v.as_object())
+        .cloned()
+        .unwrap_or_default();
+    let mut merged = merged;
+    if let Some(entry_map) = provider_entry.as_object() {
+        for (k, v) in entry_map {
+            merged.insert(k.clone(), v.clone());
+        }
+    }
+    providers.insert(provider_id.clone(), json!(merged));
 
     if payload.set_default {
         if let Some(model) = payload.default_model.as_ref().filter(|m| !m.is_empty()) {
@@ -234,17 +260,27 @@ fn build_provider_entry(payload: &SaveProviderPayload) -> serde_json::Value {
         entry.insert("npm".to_string(), json!(npm));
     }
 
-    let auth_type = payload
-        .auth_type
-        .as_deref()
-        .filter(|s| !s.is_empty())
-        .unwrap_or("api_key");
+    // A non-empty subprocess command unambiguously makes this a subprocess
+    // provider. This preserves CLI brains (Claude CLI, etc.) even when the
+    // frontend omits authType or sends the default "api_key".
+    let has_subprocess_cmd = payload
+        .subprocess_cmd
+        .as_ref()
+        .is_some_and(|c| !c.is_empty());
+
+    let auth_type = if has_subprocess_cmd {
+        "subprocess"
+    } else {
+        payload
+            .auth_type
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or("api_key")
+    };
     entry.insert("auth_type".to_string(), json!(auth_type));
 
-    if auth_type == "subprocess" {
-        if let Some(cmd) = payload.subprocess_cmd.as_ref().filter(|c| !c.is_empty()) {
-            entry.insert("subprocess_cmd".to_string(), json!(cmd));
-        }
+    if let Some(cmd) = payload.subprocess_cmd.as_ref().filter(|c| !c.is_empty()) {
+        entry.insert("subprocess_cmd".to_string(), json!(cmd));
     }
 
     let mut options = serde_json::Map::new();
@@ -268,11 +304,9 @@ fn build_provider_entry(payload: &SaveProviderPayload) -> serde_json::Value {
 // Gizzi config file helpers
 // ═══════════════════════════════════════════════════════════════════════════════
 
-fn gizzi_user_config_path() -> PathBuf {
-    dirs::config_dir()
-        .map(|p| p.join("gizzi").join("gizzi.json"))
-        .unwrap_or_else(|| PathBuf::from(".config/gizzi/gizzi.json"))
-}
+// The gizzi config path is resolved by `crate::config::gizzi_user_config_path()`
+// (shared with the runtime harness reader) so we never drift from the file the
+// gizzi-code runtime actually opens (~/.config/gizzi-code/config.json).
 
 fn read_gizzi_config(path: &PathBuf) -> serde_json::Map<String, serde_json::Value> {
     if let Ok(text) = std::fs::read_to_string(path) {
@@ -299,6 +333,149 @@ fn write_gizzi_config(
     }
     let text = serde_json::to_string_pretty(config)?;
     std::fs::write(path, text)
+}
+
+/// Register a CLI/subprocess brain in the Gizzi config and make it the platform
+/// default. Used by the one-click connect flow (`provider_routes`) so a successful
+/// Connect in either Settings or Onboarding immediately routes agents through the
+/// newly authenticated brain — one source of truth, no duplicate save logic on the
+/// frontend. Best-effort: failures are logged, not surfaced, because auth detection
+/// already succeeded and the brain is runnable regardless of default-model stamping.
+pub fn persist_cli_default(
+    state: &AppState,
+    provider_id: &str,
+    name: &str,
+    binary: &str,
+    model: &str,
+) {
+    let default_model = format!("{}/{}", provider_id, model);
+    let gizzi_path = crate::config::gizzi_user_config_path();
+    let mut gizzi_config = read_gizzi_config(&gizzi_path);
+
+    // Build the subprocess command exactly how gizzi's own discovery does it
+    // (cmd/gizzi-code/.../subprocess.ts): absolute binary path + the per-provider
+    // tail args. Storing the bare name (e.g. "claude") would clobber a working
+    // "/full/path/claude -p" entry and break headless/print-mode chat. Connect
+    // already validated the binary is on PATH, so resolution should succeed; if
+    // it doesn't we warn and fall back to the bare name rather than pretend.
+    let resolved = crate::provider_routes::command_on_path(binary)
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|| {
+            warn!(provider = %provider_id, binary, "CLI binary not on PATH at persist; storing bare name");
+            binary.to_string()
+        });
+    let tail = match binary {
+        "claude" | "kimi" | "qwen" | "agy" | "gemini" => "-p",
+        "gh" => "copilot suggest -t shell",
+        "llm" => "prompt",
+        "ollama" => "run",
+        _ => "",
+    };
+    let subprocess_cmd = if tail.is_empty() {
+        resolved
+    } else {
+        format!("{} {}", resolved, tail)
+    };
+
+    let providers = gizzi_config
+        .entry("provider")
+        .or_insert_with(|| json!({}))
+        .as_object_mut();
+    if let Some(providers) = providers {
+        let mut merged = providers
+            .get(provider_id)
+            .and_then(|v| v.as_object())
+            .cloned()
+            .unwrap_or_default();
+        merged.insert("name".to_string(), json!(name));
+        merged.insert("auth_type".to_string(), json!("subprocess"));
+        merged.insert("subprocess_cmd".to_string(), json!(subprocess_cmd));
+        let mut models = serde_json::Map::new();
+        models.insert(model.to_string(), json!({}));
+        merged.insert("models".to_string(), json!(models));
+        providers.insert(provider_id.to_string(), json!(merged));
+    }
+    gizzi_config.insert("model".to_string(), json!(default_model));
+
+    if let Err(err) = write_gizzi_config(&gizzi_path, &gizzi_config) {
+        warn!(provider = %provider_id, error = %err, "Failed to persist CLI provider to Gizzi config");
+        return;
+    }
+
+    let mut user = state.config.user.clone();
+    user.default_model = Some(default_model);
+    user.onboarding_complete = Some(true);
+    if let Err(err) = save_user_config(&user) {
+        warn!(provider = %provider_id, error = %err, "Failed to persist default model to user config");
+    } else {
+        info!(provider = %provider_id, "One-click connect: set default brain");
+    }
+}
+
+/// Register an API-key (OpenAI-compatible) brain in the Gizzi config and make it
+/// the platform default. Mirrors gizzi's config-provider shape (see the live
+/// `ollama` entry and `runtime/providers/provider.ts:595`, which forwards
+/// `provider.key` into `options.apiKey`). Used by key-based providers like Z.ai
+/// (GLM) so a one-click connect actually routes — no dead `needs_api_key` stub.
+#[allow(clippy::too_many_arguments)]
+pub fn persist_apikey_default(
+    state: &AppState,
+    provider_id: &str,
+    name: &str,
+    model: &str,
+    npm: &str,
+    base_url: &str,
+    api_key: &str,
+    model_name: &str,
+    context: u32,
+    output: u32,
+    tool_call: bool,
+) {
+    let default_model = format!("{}/{}", provider_id, model);
+    let gizzi_path = crate::config::gizzi_user_config_path();
+    let mut gizzi_config = read_gizzi_config(&gizzi_path);
+
+    let providers = gizzi_config
+        .entry("provider")
+        .or_insert_with(|| json!({}))
+        .as_object_mut();
+    if let Some(providers) = providers {
+        let mut models = serde_json::Map::new();
+        models.insert(
+            model.to_string(),
+            json!({
+                "id": model,
+                "name": model_name,
+                "limit": { "context": context, "output": output },
+                "tool_call": tool_call,
+            }),
+        );
+        providers.insert(
+            provider_id.to_string(),
+            json!({
+                "name": name,
+                "npm": npm,
+                "key": api_key,
+                "options": { "baseURL": base_url },
+                "models": models,
+            }),
+        );
+    }
+    gizzi_config.insert("model".to_string(), json!(default_model));
+
+    if let Err(err) = write_gizzi_config(&gizzi_path, &gizzi_config) {
+        warn!(provider = %provider_id, error = %err, "Failed to persist api-key provider to Gizzi config");
+        return;
+    }
+
+    let mut user = state.config.user.clone();
+    user.default_model = Some(default_model);
+    user.onboarding_complete = Some(true);
+    if let Err(err) = save_user_config(&user) {
+        warn!(provider = %provider_id, error = %err, "Failed to persist default model to user config");
+    } else {
+        info!(provider = %provider_id, "One-click connect: set default api-key brain");
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

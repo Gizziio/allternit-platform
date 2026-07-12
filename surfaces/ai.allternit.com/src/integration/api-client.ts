@@ -888,6 +888,16 @@ class AllternitApiClient {
   }
 
   /**
+   * Probe Ollama live on the server and return running state + installed models.
+   */
+  async getOllamaLiveStatus(): Promise<{
+    running: boolean;
+    models: string[];
+  }> {
+    return this.get('/api/v1/provider/ollama/status');
+  }
+
+  /**
    * Validate a model ID for a provider
    */
   async validateProviderModel(providerId: string, modelId: string): Promise<{
@@ -1195,21 +1205,33 @@ interface ModelInfo {
 export interface ProviderInfo {
   id: string;
   name: string;
+  provider_type?: 'api' | 'local' | 'subprocess';
+  base_url?: string | null;
+  api_key_set?: boolean;
   models: ModelInfo[];
+  status?: 'active' | 'missing_key' | 'offline' | 'ready_no_models' | 'unconfigured' | 'unknown';
 }
 
 interface ProviderListResponse {
   all: ProviderInfo[];
-  default: Record<string, string>;
-  connected: string[];
+  providers?: ProviderInfo[];
+  default?: Record<string, string>;
+  connected?: string[];
 }
 
 export interface ProviderAuthStatus {
   provider_id: string;
   status: 'ok' | 'missing' | 'expired' | 'unknown' | 'not_required';
   authenticated: boolean;
+  auth_required?: boolean;
   auth_profile_id: string | null;
   chat_profile_ids: string[];
+  details?: {
+    provider_type?: string;
+    base_url?: string | null;
+    api_key_set?: boolean;
+    model_count?: number;
+  };
 }
 
 export interface DiscoveredModel {

@@ -55,6 +55,7 @@ import {
 } from '../chat/ChatComposerEnhancements';
 import { usePendingPermissions, usePendingQuestions } from '@/lib/agents';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
+import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -69,7 +70,8 @@ const CODE_MODEL_NAMES: Record<string, string> = {
 };
 
 const CODE_CHAT_MODEL_FALLBACKS: Record<string, string> = {
-  'claude-code': 'claude-cli::claude-sonnet-4-6',
+  codex: 'codex-cli/codex-mini-latest',
+  'claude-code': 'claude-cli/claude-sonnet-4-6',
   'kimi-cli': 'kimi/kimi-k2',
 };
 
@@ -299,6 +301,19 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanv
 
   const [selectedModel, setSelectedModel] = useState('claude-code');
   const [selectedModelDisplayName, setSelectedModelDisplayName] = useState(CODE_MODEL_NAMES['claude-code']);
+  const userPickedModelRef = useRef(false);
+  const backendDefaultModel = useDefaultModelSelection();
+  // Unified brain: code mode follows the platform's configured default model
+  // (same brain as chat/cowork/design) until the user explicitly picks a
+  // different model in this surface.
+  useEffect(() => {
+    if (userPickedModelRef.current || !backendDefaultModel?.providerId) return;
+    const raw = backendDefaultModel.modelId
+      ? `${backendDefaultModel.providerId}/${backendDefaultModel.modelId}`
+      : backendDefaultModel.providerId;
+    setSelectedModel(raw);
+    setSelectedModelDisplayName(backendDefaultModel.modelName || raw);
+  }, [backendDefaultModel]);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [showWorkspacePicker, setShowWorkspacePicker] = useState(false);
   const [workspaceReady, setWorkspaceReady] = useState(false);
@@ -344,11 +359,18 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanv
     }
   }, [cachedMessages.length]);
 
+  // Auto-confirm the active workspace. The launchpad composer stays locked
+  // ("Choose a workspace folder to unlock the session...") until a workspace is
+  // confirmed — but a default workspace always exists, so requiring a manual
+  // folder pick before the first message made fresh sessions impossible to
+  // start. Like Claude Code/Codex defaulting to the current directory, unlock
+  // whenever a workspace is selected; only stay locked when none exists.
   useEffect(() => {
-    if (!isEmbeddedAgentSession && cachedMessages.length === 0) {
-      setWorkspaceReady(false);
+    if (isEmbeddedAgentSession || cachedMessages.length > 0) {
+      return;
     }
-  }, [activeSessionId, activeWorkspaceId, cachedMessages.length, isEmbeddedAgentSession]);
+    setWorkspaceReady(Boolean(activeWorkspaceId));
+  }, [activeWorkspaceId, cachedMessages.length, isEmbeddedAgentSession]);
 
   const applyComposerSeed = (prompt: string, options?: { closeAction?: boolean }): void => {
     setComposerSeed(prompt);
@@ -471,6 +493,7 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanv
       onDismissEmbeddedAgentSession={() => setActiveCodeSession(null)}
       onOpenConsole={handleOpenConsole}
       onSelectModel={(selection: { modelId: string; modelName?: string }) => {
+        userPickedModelRef.current = true;
         setSelectedModel(selection.modelId);
         setSelectedModelDisplayName(
           selection.modelName || CODE_MODEL_NAMES[selection.modelId] || selection.modelId,
@@ -653,12 +676,18 @@ function CodeSessionSurface({
   const effectiveWorkspaceReady = isEmbeddedAgentSession || workspaceReady;
   const hasMessages = displayMessages.length > 0;
   const codeSession = embeddedAgentSession?.session as CodeSession | null | undefined;
-  const embeddedAgentStrip = isEmbeddedAgentSession ? (
+  // Only sessions actually bound to an agent (agent metadata present) get the
+  // context strip — a plain code session must not render the agent card.
+  const hasAgentBinding = Boolean(
+    embeddedAgentSession.descriptor?.agentId || embeddedAgentSession.descriptor?.agentName,
+  );
+  const embeddedAgentStrip = isEmbeddedAgentSession && hasAgentBinding ? (
     <AgentContextStrip
       surface="code"
       sessionName={codeSession?.name || 'Agent Session'}
       sessionDescription={codeSession?.description}
       agentName={embeddedAgentSession?.descriptor?.agentName || selectedAgent?.name || undefined}
+      harnessMode={selectedAgent?.harness?.mode}
       statusLabel={getAgentSessionStatusLabel(codeSession)}
       messageCount={codeSession?.messageCount ?? displayMessages.length}
       workspaceScope={embeddedAgentSession?.descriptor?.workspaceScope}
@@ -1337,6 +1366,15 @@ function ComposerUtilityBar({
   workspaceSessions: ReturnType<typeof getSessionsForWorkspace>;
   workspaces: ReturnType<typeof useCodeModeStore.getState>['workspaces'];
 }) {
+  // Real chat sessions live in CodeSessionStore (the mode session store) — the
+  // selector reads it directly so it lists the sessions the composer creates.
+  const codeSessions = useCodeSessionStore((s) => s.sessions ?? []);
+  const activeCodeSessionId = useCodeSessionStore((s) => s.activeSessionId);
+  const setActiveCodeSession = useCodeSessionStore((s) => s.setActiveSession);
+  const activeCodeSession = useMemo(
+    () => codeSessions.find((s) => s.id === activeCodeSessionId) ?? null,
+    [activeCodeSessionId, codeSessions],
+  );
   return (
     <div
       style={{
@@ -1378,9 +1416,13 @@ function ComposerUtilityBar({
                     color: 'var(--text-primary)',
                   }}
                 >
-                  {activeSession?.title ?? 'Select session'}
+                  {activeCodeSession?.name ?? activeSession?.title ?? 'Select session'}
                 </span>
-                {activeSession ? (
+                {activeCodeSession ? (
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {activeCodeSession.metadata?.sessionMode === 'agent' ? 'agent' : 'chat'} / {activeCodeSession.messageCount ?? activeCodeSession.messages?.length ?? 0} messages
+                  </span>
+                ) : activeSession ? (
                   <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     {activeSession.mode} / {activeSession.state}
                   </span>
@@ -1391,7 +1433,68 @@ function ComposerUtilityBar({
           </button>
 
           {showSessionPicker ? (
-            <div role="button" tabIndex={0} style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleSessionPicker} />
+            <>
+              <div role="button" tabIndex={0} style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleSessionPicker} />
+              <div
+                data-testid="code-session-picker-list"
+                style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 8px)',
+                  left: 0,
+                  zIndex: 130,
+                  width: 300,
+                  maxHeight: 320,
+                  overflowY: 'auto',
+                  background: 'var(--surface-floating, #1a1d20)',
+                  border: '1px solid var(--ui-border-muted, rgba(255,255,255,0.1))',
+                  borderRadius: 12,
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
+                  padding: 6,
+                }}
+              >
+                {codeSessions.length === 0 ? (
+                  <div style={{ padding: '14px 12px', fontSize: 12, color: 'var(--text-tertiary)' }}>
+                    No sessions yet — send a message to start one.
+                  </div>
+                ) : codeSessions.map((session) => {
+                  const isActive = session.id === activeCodeSessionId;
+                  return (
+                    <button
+                      type="button"
+                      key={session.id}
+                      data-testid="code-session-picker-item"
+                      onClick={() => {
+                        setActiveCodeSession(session.id);
+                        onToggleSessionPicker();
+                      }}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: 2,
+                        width: '100%',
+                        padding: '9px 12px',
+                        border: 'none',
+                        borderRadius: 9,
+                        background: isActive ? 'var(--shell-item-active-bg, rgba(255,255,255,0.08))' : 'transparent',
+                        color: 'var(--text-primary)',
+                        fontSize: 13,
+                        fontWeight: isActive ? 700 : 500,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {session.name || 'Untitled Session'}
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {session.metadata?.sessionMode === 'agent' ? 'agent' : 'chat'} / {session.messageCount ?? session.messages?.length ?? 0} messages
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           ) : null}
         </div>
 

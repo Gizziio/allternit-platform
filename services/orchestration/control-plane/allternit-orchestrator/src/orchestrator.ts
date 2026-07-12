@@ -1,17 +1,12 @@
 import { OrchestrationContext, AgentTurn } from './types.js';
 import { TurnManager } from './turn-manager.js';
 import { ExecutionEngine } from '@allternit/engine';
-import { CDPBridge } from '../../allternit-browser/src/cdp-bridge.js';
-import { SkillGenerator } from '../../../2-governance/allternit-governor/src/skill-generator.js';
 
 export class AgentOrchestrator {
   private turnManager: TurnManager;
-  private cdpBridge: CDPBridge | null = null;
-  private skillGenerator: SkillGenerator;
 
   constructor(private engine: ExecutionEngine) {
     this.turnManager = new TurnManager(this.engine);
-    this.skillGenerator = new SkillGenerator();
   }
 
   async run(context: OrchestrationContext): Promise<AgentTurn[]> {

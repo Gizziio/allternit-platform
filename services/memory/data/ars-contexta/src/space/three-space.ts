@@ -504,6 +504,7 @@ export class ThreeSpaceArchitecture {
       content,
       tags: ['ingested'],
       links: [],
+      accessCount: 0,
       confidence: 1.0,
     });
 

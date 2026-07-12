@@ -102,6 +102,18 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     ],
   },
 
+  // ── Google Antigravity (agy CLI — subscription) ──────────────────────────
+  {
+    bin: "agy",
+    id: "antigravity",
+    name: "Antigravity (agy CLI — subscription)",
+    cmd: "agy -p",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [
+      { id: "antigravity", name: "Antigravity (default model)", context: 1000000, output: 65536 },
+    ],
+  },
+
   // ── GitHub Copilot ───────────────────────────────────────────────────────
   {
     bin: "gh",

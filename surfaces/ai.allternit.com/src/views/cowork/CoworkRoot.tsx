@@ -733,6 +733,38 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
   const createTask = useCoworkStore((state) => state.createTask);
   const setActiveTask = useCoworkStore((state) => state.setActiveTask);
   const bindSessionToTask = useCoworkStore((state) => state.bindSessionToTask);
+  const activeTaskSessionId = useCoworkStore(
+    (state) => state.tasks.find((t) => t.id === state.activeTaskId)?.sessionId ?? null,
+  );
+  const boundSessionStreaming = useCoworkSessionStore((state) =>
+    activeTaskSessionId
+      ? state.streamingBySession[activeTaskSessionId]?.isStreaming ?? false
+      : false,
+  );
+  const boundSessionReplyCount = useCoworkSessionStore((state) =>
+    activeTaskSessionId
+      ? state.sessions
+          .find((sess) => sess.id === activeTaskSessionId)
+          ?.messages.filter((m) => m.role === 'assistant').length ?? 0
+      : 0,
+  );
+
+  // Keep the bound task's status in sync with the runtime session lifecycle:
+  // pending → in_progress while the runtime is streaming, → completed once an
+  // assistant reply has landed. Without this, tasks stayed 'pending' forever
+  // even after the runtime answered.
+  useEffect(() => {
+    if (!activeTaskId || !activeTaskSessionId) return;
+    const task = useCoworkStore.getState().tasks.find((t) => t.id === activeTaskId);
+    if (!task || task.status === 'archived') return;
+    if (boundSessionStreaming && task.status !== 'in_progress') {
+      useCoworkStore.getState().updateTaskStatus(activeTaskId, 'in_progress');
+      return;
+    }
+    if (!boundSessionStreaming && boundSessionReplyCount > 0 && task.status !== 'completed') {
+      useCoworkStore.getState().updateTaskStatus(activeTaskId, 'completed');
+    }
+  }, [activeTaskId, activeTaskSessionId, boundSessionStreaming, boundSessionReplyCount]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasSentInitialMessage = useRef(false);
@@ -741,11 +773,11 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
   const selectedModel = modelSelection?.profileId ?? 'claude-cli/claude-sonnet-4-6';
   const runtimeModelId = modelSelection?.modelId;
   
-  // Use the SAME streaming adapter as Chat mode
+  // Legacy adapter kept only for the regenerate fallback; all sends route
+  // through CoworkSessionStore (mounted, persisted sessions).
   const {
     messages,
     isLoading,
-    submitMessage,
     regenerate,
     stop,
   } = useRustStreamAdapter({
@@ -866,21 +898,25 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
         return;
       }
 
-      const agentContext = buildAgentConversationContext({
-        agentModeEnabled,
-        agentId: selectedAgentId,
-        agent: selectedAgent,
-        chatId: sessionId,
-      });
-      submitMessage({
-        chatId: sessionId,
-        message: normalizedInitialMessage,
-        modelId: selectedModel,
-        runtimeModelId,
-        ...agentContext,
-      }).then(() => {
-        onInitialMessageSent?.();
-      });
+      // Same mounted-session path as handleSend: create a real cowork session,
+      // bind it to the task, then stream through CoworkSessionStore.
+      void (async () => {
+        try {
+          const nativeSessionId = await createNativeSession({
+            name: normalizedInitialMessage.slice(0, 60) || 'Cowork Session',
+            sessionMode: 'regular',
+          });
+          setActiveNativeSession(nativeSessionId);
+          const boundTaskId = useCoworkStore.getState().activeTaskId;
+          if (boundTaskId) bindSessionToTask(boundTaskId, nativeSessionId);
+          await sendNativeMessageStream(nativeSessionId, {
+            text: normalizedInitialMessage,
+            modelId: runtimeModelId,
+          });
+        } finally {
+          onInitialMessageSent?.();
+        }
+      })();
     }
   }, [
     agentModeEnabled,
@@ -890,11 +926,11 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
     runtimeModelId,
     selectedAgent,
     selectedAgentId,
-    selectedModel,
     ensureTaskForMessage,
     sendNativeMessageStream,
-    sessionId,
-    submitMessage,
+    createNativeSession,
+    setActiveNativeSession,
+    bindSessionToTask,
     ensureEmbeddedSession,
   ]);
 
@@ -939,31 +975,31 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
       }
     }
 
-    const agentContext = buildAgentConversationContext({
-      agentModeEnabled,
-      agentId: selectedAgentId,
-      agent: selectedAgent,
-      chatId: sessionId,
+    // Agent Off: route through a REAL mounted CoworkSessionStore session
+    // (same pattern as chat/code modes) instead of the detached
+    // useRustStreamAdapter path. This makes the session persisted/mountable,
+    // and lets the task-status sync observe streaming + replies.
+    const nativeSessionId = await createNativeSession({
+      name: normalizedText.slice(0, 60) || 'Cowork Session',
+      sessionMode: 'regular',
     });
-    
-    await submitMessage({
-      chatId: sessionId,
-      message: normalizedText,
-      modelId: selectedModel,
-      runtimeModelId,
-      ...agentContext,
+    setActiveNativeSession(nativeSessionId);
+    const boundTaskId = useCoworkStore.getState().activeTaskId;
+    if (boundTaskId) bindSessionToTask(boundTaskId, nativeSessionId);
+    await sendNativeMessageStream(nativeSessionId, {
+      text: normalizedText,
+      modelId: runtimeModelId,
     });
   }, [
     agentModeEnabled,
     embeddedAgentSession,
     ensureTaskForMessage,
     runtimeModelId,
-    selectedAgent,
     selectedAgentId,
-    selectedModel,
     sendNativeMessageStream,
-    sessionId,
-    submitMessage,
+    createNativeSession,
+    setActiveNativeSession,
+    bindSessionToTask,
     ensureEmbeddedSession,
   ]);
 

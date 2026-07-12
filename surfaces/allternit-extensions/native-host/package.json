@@ -5,8 +5,11 @@
   "private": true,
   "scripts": {
     "build": "bun build --compile --target=bun native-host.ts --outfile dist/native-host",
-    "register": "bash register.sh",
-    "unregister": "bash register.sh --uninstall"
+    "doctor": "node scripts/native-host-installer.mjs --doctor",
+    "register": "node scripts/native-host-installer.mjs",
+    "smoke:browser-mode": "node scripts/browser-mode-smoke.mjs",
+    "unregister": "node scripts/native-host-installer.mjs --uninstall",
+    "test": "node --test scripts/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

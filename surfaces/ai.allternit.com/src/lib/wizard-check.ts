@@ -4,21 +4,18 @@ import { APP_VERSION } from './app-version';
 /**
  * Decide whether the first-start env wizard should be shown.
  *
- * Mirrors the OpenClaw pattern: a `wizard` block in user config records the
- * last time the wizard ran (version, timestamp, command, mode). The wizard is
- * shown when:
- *   - it has never run, or
- *   - the app version has changed since it last ran, or
- *   - the user explicitly cleared onboarding.
+ * The server-side `user.onboardingComplete` flag is authoritative. The
+ * `wizard` block (version, timestamp, command, mode) is metadata recorded for
+ * analytics and future targeted upgrade prompts — it is never required to
+ * pass the gate. A missing or stale wizard block, or an app version bump,
+ * must NOT re-gate a completed onboarding: this is a self-hosted desktop app
+ * and a returning user must never be locked out behind the marketing flow.
  */
 export function shouldRunWizard(
   onboardingComplete: boolean | undefined,
-  wizard: WizardState | undefined,
+  _wizard: WizardState | undefined,
 ): boolean {
-  if (!onboardingComplete) return true;
-  if (!wizard?.lastRunAt) return true;
-  if (wizard.lastRunVersion !== APP_VERSION) return true;
-  return false;
+  return !onboardingComplete;
 }
 
 export function buildWizardState(command?: string, mode?: string): WizardState {

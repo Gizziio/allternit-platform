@@ -7,7 +7,8 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import chokidar from 'chokidar';
+import { watch } from 'chokidar';
+import type { FSWatcher } from 'chokidar';
 
 const INBOX_DIR = process.env.MEMORY_WATCH_DIRECTORY || './inbox';
 const PROCESSED_DIR = './inbox/.processed';
@@ -76,8 +77,8 @@ async function queueForIngestion(filePath) {
 async function startWatcher() {
     await setup();
     
-    const watcher = chokidar.watch(INBOX_DIR, {
-        ignored: [/(^|[\/\\])\../, /\.processed/], // Ignore dotfiles and processed
+    const watcher = watch(INBOX_DIR, {
+        ignored: [/(^|[/\\])\../, /\.processed/], // Ignore dotfiles and processed
         persistent: true,
         awaitWriteFinish: {
             stabilityThreshold: 2000, // Wait 2s after write completes

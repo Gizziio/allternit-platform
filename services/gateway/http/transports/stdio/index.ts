@@ -29,7 +29,7 @@ interface JsonRpcRequest {
   jsonrpc: '2.0';
   method: string;
   params?: Record<string, unknown>;
-  id?: string | number;
+  id?: string | number | null;
 }
 
 interface JsonRpcResponse {
@@ -40,13 +40,13 @@ interface JsonRpcResponse {
     message: string;
     data?: unknown;
   };
-  id?: string | number;
+  id?: string | number | null;
 }
 
 interface JsonRpcNotification {
   jsonrpc: '2.0';
   method: string;
-  params?: Record<string, unknown>;
+  params?: unknown;
 }
 
 // =============================================================================
@@ -149,17 +149,43 @@ export class StdioTransport {
    */
   private eventToMethod(eventType: EventType): string {
     const mapping: Record<EventType, string> = {
+      'server.connected': 'server/connected',
+      'server.heartbeat': 'server/heartbeat',
       'session.created': 'session/created',
+      'session.updated': 'session/updated',
+      'session.deleted': 'session/deleted',
+      'session.status_changed': 'session/status_changed',
       'session.resumed': 'session/resumed',
       'session.paused': 'session/paused',
       'session.completed': 'session/completed',
       'session.error': 'session/error',
+      'message.created': 'message/created',
+      'message.updated': 'message/updated',
+      'message.removed': 'message/removed',
       'chat.started': 'chat/started',
       'chat.delta': 'chat/delta',
       'chat.completed': 'chat/completed',
+      'part.created': 'part/created',
+      'part.updated': 'part/updated',
+      'part.delta': 'part/delta',
+      'part.removed': 'part/removed',
+      'tool.state_changed': 'tool/state_changed',
       'tool.call.started': 'tool/call_started',
       'tool.call.completed': 'tool/call_completed',
       'tool.call.error': 'tool/call_error',
+      'permission.requested': 'permission/requested',
+      'permission.resolved': 'permission/resolved',
+      'question.requested': 'question/requested',
+      'question.resolved': 'question/resolved',
+      'question.rejected': 'question/rejected',
+      'todo.updated': 'todo/updated',
+      'lsp.updated': 'lsp/updated',
+      'vcs.updated': 'vcs/updated',
+      'file_watch.updated': 'file_watch/updated',
+      'pty.output': 'pty/output',
+      'pty.exited': 'pty/exited',
+      'worktree.ready': 'worktree/ready',
+      'worktree.failed': 'worktree/failed',
       'artifact.created': 'artifact/created',
       'health.check': 'health/check',
       'error': 'error',
@@ -234,7 +260,7 @@ export class StdioTransport {
         return;
       }
       
-      const session = await this.core.createSession(profile_id, capsules, timeout);
+      const session = await this.core.createSession(profile_id, capsules as string[], timeout as number | undefined);
       this.sendResponse(id, {
         id: session.id,
         profile_id: session.profile_id,
@@ -311,7 +337,7 @@ export class StdioTransport {
   /**
    * Send a JSON-RPC response
    */
-  private sendResponse(id: string | number | undefined, result: unknown): void {
+  private sendResponse(id: string | number | null | undefined, result: unknown): void {
     const response: JsonRpcResponse = {
       jsonrpc: '2.0',
       result,
@@ -324,7 +350,7 @@ export class StdioTransport {
    * Send a JSON-RPC error
    */
   private sendError(
-    id: string | number | undefined,
+    id: string | number | null | undefined,
     code: number,
     message: string,
     data?: unknown

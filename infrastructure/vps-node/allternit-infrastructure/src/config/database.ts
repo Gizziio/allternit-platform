@@ -1,4 +1,4 @@
-import { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
+import { Pool, PoolClient, PoolConfig, QueryResult, QueryResultRow } from 'pg';
 import config from './index';
 import { logger } from '../utils/logger';
 
@@ -45,7 +45,7 @@ pool.on('error', (err: Error) => {
 /**
  * Execute a query with automatic connection handling
  */
-export async function query<T = any>(
+export async function query<T extends QueryResultRow = any>(
   text: string,
   params?: any[]
 ): Promise<QueryResult<T>> {
@@ -97,7 +97,7 @@ export async function getClient(): Promise<PoolClient> {
     client.query = async (...args: any[]) => {
       const start = Date.now();
       try {
-        const result = await originalQuery(...args);
+        const result = await (originalQuery as any)(...args);
         const duration = Date.now() - start;
         logger.debug('Client query executed', {
           query: typeof args[0] === 'string' ? args[0].substring(0, 100) : 'Parameterized query',

@@ -314,7 +314,7 @@ function getUserOS(): 'mac' | 'windows' | 'linux' {
 const inputClassName = "flex-1 px-3 py-2.5 rounded-lg text-[13px] bg-surface-canvas border border-ui-border-default text-ui-text-primary outline-none";
 
 
-function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial<WizardData>) => void }) {
+function InfraStep({ data, onUpdate, onLocalFound }: { data: WizardData; onUpdate: (d: Partial<WizardData>) => void; onLocalFound?: () => void }) {
   const [showPw, setShowPw] = useState(false);
   const [connStatus, setConnStatus] = useState<'idle' | 'testing' | 'ok' | 'err'>('idle');
   const [connMsg, setConnMsg] = useState('');
@@ -325,6 +325,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   const [localStatus, setLocalStatus] = useState<'checking' | 'found' | 'not-found'>('checking');
   const [localUrl, setLocalUrl] = useState<string | null>(null);
   const isElectron = isElectronDesktop();
+  const localFoundFiredRef = useRef(false);
   const [electronTunnel, setElectronTunnel] = useState<{ status: string; url?: string } | null>(null);
   const os = getUserOS();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -383,6 +384,15 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
       });
     } catch { return undefined; }
   }, [isElectron]);
+
+  // Zero-touch infra: once a local backend is confirmed on the default 'local' mode,
+  // notify the parent so it can auto-advance — the user never has to pick a mode.
+  useEffect(() => {
+    if (localStatus === 'found' && data.infraType === 'local' && !localFoundFiredRef.current) {
+      localFoundFiredRef.current = true;
+      onLocalFound?.();
+    }
+  }, [localStatus, data.infraType, onLocalFound]);
 
   const activateLocal = async () => {
     if (!localUrl) return;
@@ -1193,6 +1203,26 @@ const CLOUD_PROVIDERS = [
 type CloudProviderId = (typeof CLOUD_PROVIDERS)[number]['id'];
 type KeyStatus = 'idle' | 'checking' | 'valid' | 'invalid';
 
+// Subscription / OAuth CLI providers offered as one-click "Connect" buttons.
+// `cmd` is the non-interactive command registered with Gizzi for that brain;
+// `null` means the provider is API-key based (not a subprocess brain).
+type SubscriptionProviderId = 'claude-cli' | 'codex-cli' | 'qwen' | 'kimi' | 'antigravity' | 'zai';
+type ConnectState = 'idle' | 'starting' | 'pending' | 'needs_key' | 'success' | 'error';
+
+const SUBSCRIPTION_PROVIDERS: Array<{
+  id: SubscriptionProviderId;
+  name: string;
+  tagline: string;
+  cmd: string | null;
+}> = [
+  { id: 'claude-cli', name: 'Claude', tagline: 'Sign in with your Claude subscription', cmd: 'claude -p' },
+  { id: 'codex-cli', name: 'Codex', tagline: 'Sign in with your ChatGPT account', cmd: 'codex exec' },
+  { id: 'qwen', name: 'Qwen', tagline: 'Sign in with your qwen.ai account', cmd: 'qwen' },
+  { id: 'kimi', name: 'Kimi', tagline: 'Sign in with your Kimi membership', cmd: 'kimi' },
+  { id: 'antigravity', name: 'Antigravity', tagline: 'Sign in with Google (same flow as Gemini CLI)', cmd: 'agy' },
+  { id: 'zai', name: 'Z.ai', tagline: 'GLM Coding Plan — paste your console key', cmd: null },
+];
+
 function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial<WizardData>) => void }) {
   // Discovery state
   const [discovery, setDiscovery] = useState<DiscoveryResult | null>(null);
@@ -1205,6 +1235,16 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   const [keyModels, setKeyModels] = useState<Partial<Record<CloudProviderId, Array<{ id: string; name: string }>>>>({});
   const [keyError, setKeyError] = useState<Partial<Record<CloudProviderId, string>>>({});
   const [showKey, setShowKey] = useState<Partial<Record<CloudProviderId, boolean>>>({});
+
+  // Providers already authenticated on the backend (key in keychain / env / Gizzi
+  // config). These connect with one click — no key paste required.
+  const [configuredProviders, setConfiguredProviders] = useState<Set<CloudProviderId>>(new Set());
+
+  // Subscription/OAuth connect state per provider id.
+  const [connectState, setConnectState] = useState<Partial<Record<SubscriptionProviderId, ConnectState>>>({});
+  const [connectError, setConnectError] = useState<Partial<Record<SubscriptionProviderId, string>>>({});
+  // Inline key draft for key-based subscription providers (e.g. Z.ai Coding Plan).
+  const [subKeyDraft, setSubKeyDraft] = useState<Partial<Record<SubscriptionProviderId, string>>>({});
 
   const selected = data.defaultProvider;
 
@@ -1292,6 +1332,24 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
       })
       .catch(() => setDiscovery({ ollama: { running: false, models: [] }, lmstudio: { running: false, models: [] }, cli: [] }))
       .finally(() => setScanning(false));
+
+    // One-click: detect cloud providers already configured on this machine so the
+    // user can connect them without re-pasting a key.
+    setupApi
+      .listProviderAuthStatus()
+      .then((rows) => {
+        const ready = new Set<CloudProviderId>();
+        for (const r of rows) {
+          if (
+            r.authenticated &&
+            (r.provider_id === 'anthropic' || r.provider_id === 'openai' || r.provider_id === 'google')
+          ) {
+            ready.add(r.provider_id as CloudProviderId);
+          }
+        }
+        setConfiguredProviders(ready);
+      })
+      .catch(() => setConfiguredProviders(new Set()));
   }, []);
 
   // Validate an API key against the backend and persist the provider config.
@@ -1341,6 +1399,161 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
     } catch {
       setKeyStatus((s) => ({ ...s, [provider]: 'invalid' }));
       setKeyError((s) => ({ ...s, [provider]: 'Could not reach validation server' }));
+    }
+  }
+
+  // One-click connect for a provider that already has a saved key on this machine.
+  // The backend preserves the existing keychain key when apiKey is omitted, so this
+  // only refreshes metadata and sets the provider as the active default.
+  async function useConfiguredProvider(provider: CloudProviderId) {
+    setKeyStatus((s) => ({ ...s, [provider]: 'checking' }));
+    setKeyError((s) => ({ ...s, [provider]: undefined }));
+
+    try {
+      const discovered = await setupApi.discoverProviderModels(provider).catch(() => null);
+      const models = discovered?.supported ? discovered.models : [];
+      setKeyModels((s) => ({ ...s, [provider]: models }));
+      setKeyStatus((s) => ({ ...s, [provider]: 'valid' }));
+      onUpdate({ apiKeysConfigured: true, defaultProvider: provider });
+
+      const modelsMap: Record<string, unknown> = {};
+      models.forEach((m) => {
+        modelsMap[m.id] = {
+          id: m.id,
+          name: m.name,
+          tool_call: true,
+          limit: { context: 200000, output: 32000 },
+        };
+      });
+      const firstModel = models[0]?.id;
+      await setupApi.saveProvider({
+        provider,
+        authType: 'api_key',
+        models: modelsMap,
+        defaultModel: firstModel ? `${provider}/${firstModel}` : undefined,
+        setDefault: true,
+      }).catch(() => {
+        // Non-fatal: provider is already configured; persistence is recoverable in Settings.
+      });
+    } catch {
+      setKeyStatus((s) => ({ ...s, [provider]: 'invalid' }));
+      setKeyError((s) => ({ ...s, [provider]: 'Could not use saved key — re-enter it below' }));
+    }
+  }
+
+  // Register a CLI/subprocess brain as the active provider (no API key; the CLI
+  // holds the subscription token itself).
+  async function registerSubprocess(id: SubscriptionProviderId, name: string, cmd: string) {
+    setConnectState((s) => ({ ...s, [id]: 'success' }));
+    setConnectError((s) => ({ ...s, [id]: undefined }));
+    onUpdate({ defaultProvider: id, apiKeysConfigured: true });
+    await setupApi.saveProvider({
+      provider: id,
+      name,
+      authType: 'subprocess',
+      subprocessCmd: cmd,
+      defaultModel: `${id}/${name.toLowerCase()}`,
+      setDefault: true,
+    }).catch(() => {
+      // Selection is reflected in the UI; persistence is recoverable in Settings.
+    });
+  }
+
+  async function connectSubscription(p: { id: SubscriptionProviderId; name: string; cmd: string | null }) {
+    setConnectState((s) => ({ ...s, [p.id]: 'starting' }));
+    setConnectError((s) => ({ ...s, [p.id]: undefined }));
+
+    let res: Awaited<ReturnType<typeof setupApi.connectProvider>>;
+    try {
+      res = await setupApi.connectProvider(p.id);
+    } catch {
+      setConnectState((s) => ({ ...s, [p.id]: 'error' }));
+      setConnectError((s) => ({ ...s, [p.id]: 'Could not reach the setup server' }));
+      return;
+    }
+
+    if (res.status === 'already_connected') {
+      if (p.cmd) await registerSubprocess(p.id, p.name, p.cmd);
+      else setConnectState((s) => ({ ...s, [p.id]: 'success' }));
+      return;
+    }
+
+    if (res.status === 'needs_api_key') {
+      if (res.page) openInBrowser(res.page);
+      setConnectState((s) => ({ ...s, [p.id]: 'needs_key' }));
+      setConnectError((s) => ({ ...s, [p.id]: undefined }));
+      return;
+    }
+
+    if (res.status === 'not_installed') {
+      if (res.page) openInBrowser(res.page);
+      setConnectState((s) => ({ ...s, [p.id]: 'error' }));
+      setConnectError((s) => ({ ...s, [p.id]: `Install the ${p.name} CLI first, then try again.` }));
+      return;
+    }
+
+    // status === 'started': the CLI opened the browser sign-in. Poll until we
+    // auto-detect completion; the user can also confirm manually below.
+    if (res.page) openInBrowser(res.page);
+    setConnectState((s) => ({ ...s, [p.id]: 'pending' }));
+
+    const deadline = Date.now() + 3 * 60 * 1000;
+    const poll = async (): Promise<boolean> => {
+      try {
+        const st = await setupApi.connectProviderStatus(p.id);
+        if (st.status === 'success') {
+          if (p.cmd) await registerSubprocess(p.id, p.name, p.cmd);
+          else setConnectState((s) => ({ ...s, [p.id]: 'success' }));
+          return true;
+        }
+      } catch {
+        // keep polling until the deadline
+      }
+      return false;
+    };
+
+    const timer = window.setInterval(async () => {
+      if (Date.now() > deadline) {
+        window.clearInterval(timer);
+        return;
+      }
+      const done = await poll();
+      if (done) window.clearInterval(timer);
+    }, 2500);
+  }
+
+  async function confirmSubscription(p: { id: SubscriptionProviderId; name: string; cmd: string | null }) {
+    try {
+      await setupApi.confirmProviderConnect(p.id);
+    } catch {
+      // The CLI itself is the source of truth; let the user proceed regardless.
+    }
+    if (p.cmd) await registerSubprocess(p.id, p.name, p.cmd);
+    else setConnectState((s) => ({ ...s, [p.id]: 'success' }));
+  }
+
+  // Save an API key for a key-based subscription provider (e.g. Z.ai Coding Plan),
+  // then mark it active. The backend stores it in the OS keychain, never on disk.
+  async function saveSubscriptionKey(p: { id: SubscriptionProviderId; name: string }) {
+    const key = (subKeyDraft[p.id] ?? '').trim();
+    if (key.length < 10) return;
+    setConnectState((s) => ({ ...s, [p.id]: 'starting' }));
+    setConnectError((s) => ({ ...s, [p.id]: undefined }));
+    try {
+      await setupApi.saveProvider({
+        provider: p.id,
+        name: p.name,
+        apiKey: key,
+        authType: 'api_key',
+        baseURL: p.id === 'zai' ? 'https://api.z.ai/api/coding/paas/v4' : undefined,
+        defaultModel: p.id === 'zai' ? `${p.id}/glm-4.6` : undefined,
+        setDefault: true,
+      });
+      setConnectState((s) => ({ ...s, [p.id]: 'success' }));
+      onUpdate({ defaultProvider: p.id, apiKeysConfigured: true });
+    } catch {
+      setConnectState((s) => ({ ...s, [p.id]: 'error' }));
+      setConnectError((s) => ({ ...s, [p.id]: 'Could not save key — try again.' }));
     }
   }
 
@@ -1591,6 +1804,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
           const selectedModel = data.defaultModelId && data.defaultProvider === p.id
             ? data.defaultModelId : null;
           const sel = data.defaultProvider === p.id && isValid;
+          const alreadyConfigured = configuredProviders.has(p.id);
 
           return (
             <div key={p.id} className="mb-1.5">
@@ -1625,6 +1839,11 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                         <Check weight="bold" size={12} className="mr-0.5" /> Connected
                       </span>
                     )}
+                    {alreadyConfigured && !isValid && (
+                      <span className="flex items-center rounded bg-[color-mix(in_srgb,var(--accent-primary)_15%,transparent)] px-1.5 py-0.5 text-xs font-bold tracking-wider text-accent-primary">
+                        <Key weight="bold" size={12} className="mr-0.5" /> Saved key
+                      </span>
+                    )}
                   </div>
                   <div className="mt-px text-xs text-ui-text-muted">
                     {p.tagline}
@@ -1648,6 +1867,28 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                     className="overflow-hidden rounded-b-xl border-2 border-t-0 border-ui-border-default bg-surface-panel"
                   >
                     <div className="flex flex-col gap-2 p-3">
+                      {/* One-click: a saved key already exists for this provider */}
+                      {alreadyConfigured && !isValid && (
+                        <button type="button"
+                          onClick={() => useConfiguredProvider(p.id)}
+                          disabled={isChecking}
+                          className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-none px-3 py-2.5 text-[13px] font-bold transition-all duration-150 ${isChecking ? 'bg-surface-panel-muted text-ui-text-muted' : 'bg-accent-primary text-text-inverse'}`}
+                        >
+                          {isChecking ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+                              className="flex"
+                            >
+                              <ArrowClockwise size={13} />
+                            </motion.div>
+                          ) : (
+                            <Key weight="bold" size={14} />
+                          )}
+                          {isChecking ? 'Connecting…' : `Use saved ${p.name} key`}
+                        </button>
+                      )}
+
                       {/* Key input */}
                       <div className="relative">
                         <input aria-label="Configuration input" type={showKey[p.id] ? 'text' : 'password'}
@@ -1729,6 +1970,91 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Subscription (one-click sign in) section ── */}
+      <div>
+        <div className="mb-2 text-xs font-bold uppercase tracking-widest text-ui-text-muted">
+          Subscription (one-click sign in)
+        </div>
+
+        {SUBSCRIPTION_PROVIDERS.map((p) => {
+          const st = connectState[p.id] ?? 'idle';
+          const isBusy = st === 'starting' || st === 'pending';
+          const isDone = st === 'success' || data.defaultProvider === p.id;
+          const err = connectError[p.id];
+          return (
+            <div key={p.id} className="mb-1.5 rounded-xl bg-surface-panel p-3 outline-2 outline-ui-border-subtle">
+              <div className="flex items-center gap-3">
+                <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] font-mono text-xs font-bold text-accent-primary">
+                  {p.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-ui-text-primary">{p.name}</span>
+                    {isDone && (
+                      <span className="flex items-center rounded bg-[color-mix(in_srgb,#10b981_15%,transparent)] px-1.5 py-0.5 text-xs font-bold tracking-wider text-status-success">
+                        <Check weight="bold" size={12} className="mr-0.5" /> Connected
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-px text-xs text-ui-text-muted">{p.tagline}</div>
+                </div>
+                <button type="button"
+                  onClick={() => connectSubscription(p)}
+                  disabled={isBusy || isDone}
+                  className={`flex-shrink-0 cursor-pointer rounded border-none px-3 py-1.5 text-xs font-bold transition-all duration-150 ${isDone || isBusy ? 'bg-surface-panel-muted text-ui-text-muted' : 'bg-accent-primary text-text-inverse'}`}
+                >
+                  {isBusy ? (
+                    <span className="flex items-center gap-1.5">
+                      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }} className="flex">
+                        <ArrowClockwise size={12} />
+                      </motion.div>
+                      {st === 'pending' ? 'Waiting…' : 'Opening…'}
+                    </span>
+                  ) : isDone ? 'Connected' : 'Connect'}
+                </button>
+              </div>
+
+              {st === 'pending' && !isDone && (
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-surface-panel-muted px-2.5 py-2 text-xs text-ui-text-muted">
+                  <span>Finish sign-in in your browser, then</span>
+                  <button type="button"
+                    onClick={() => confirmSubscription(p)}
+                    className="cursor-pointer rounded border-none bg-accent-primary px-2.5 py-1 text-xs font-bold text-text-inverse"
+                  >
+                    I&apos;ve signed in
+                  </button>
+                </div>
+              )}
+
+              {st === 'needs_key' && !isDone && (
+                <div className="mt-2 flex items-center gap-2">
+                  <input aria-label={`${p.name} API key`} type="password"
+                    value={subKeyDraft[p.id] ?? ''}
+                    onChange={(e) => setSubKeyDraft((d) => ({ ...d, [p.id]: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveSubscriptionKey(p); }}
+                    placeholder={`Paste your ${p.name} console key`}
+                    className={`${inputClassName} min-w-0 flex-1 font-mono`}
+                  />
+                  <button type="button"
+                    onClick={() => saveSubscriptionKey(p)}
+                    disabled={(subKeyDraft[p.id] ?? '').trim().length < 10}
+                    className={`flex-shrink-0 cursor-pointer rounded border-none bg-accent-primary px-3 py-1.5 text-xs font-bold text-text-inverse ${(subKeyDraft[p.id] ?? '').trim().length < 10 ? 'opacity-40' : 'opacity-100'}`}
+                  >
+                    Save key
+                  </button>
+                </div>
+              )}
+
+              {err && st !== 'pending' && (
+                <div className="mt-2 rounded-lg bg-status-error-bg px-2.5 py-2 text-xs text-status-error">
+                  {err}
+                </div>
+              )}
             </div>
           );
         })}
@@ -2180,6 +2506,7 @@ export function OnboardingFlow() {
   });
 
   const direction = useRef(1);
+  const autoAdvancedInfraRef = useRef(false);
   const { completeOnboarding } = useOnboardingStore();
   const update = useCallback((d: Partial<WizardData>) => setData(p => ({ ...p, ...d })), []);
 
@@ -2285,7 +2612,14 @@ export function OnboardingFlow() {
                 className={isFullWidth ? '' : 'px-7 pb-6 pt-5'}
               >
                 {screen === 'welcome' && <WelcomeScreen onNext={goNext} />}
-                {screen === 'infra'   && <InfraStep data={data} onUpdate={update} />}
+                {screen === 'infra'   && <InfraStep data={data} onUpdate={update} onLocalFound={() => {
+                  // Self-hosted / local-desktop: a running local backend means there is
+                  // nothing for the user to choose — auto-advance past the infra step once.
+                  if (screen === 'infra' && data.infraType === 'local' && !autoAdvancedInfraRef.current) {
+                    autoAdvancedInfraRef.current = true;
+                    setTimeout(goNext, 700);
+                  }
+                }} />}
                 {screen === 'appearance' && <AppearanceStep theme={data.theme} onChange={(t) => update({ theme: t })} />}
                 {screen === 'modes'   && <ModesStep data={data} onUpdate={update} />}
                 {screen === 'done'    && <DoneScreen data={data} onFinish={finish} />}

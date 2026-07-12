@@ -14,7 +14,7 @@ import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import {
   UIv0Events,
-} from '../runtime/index.js';
+} from '../../runtime/index.js';
 
 // =============================================================================
 // Types
@@ -284,7 +284,7 @@ export class KernelAdapter extends EventEmitter {
     this._publish('pty.exited', {
       directory: pty.directory || '*',
       pty_id: id,
-      exit_code,
+      exit_code: exitCode,
       exited_at: new Date().toISOString(),
     });
 
@@ -412,7 +412,7 @@ export class KernelAdapter extends EventEmitter {
       data,
       timestamp: new Date().toISOString(),
     });
-    this.eventBus.emit(type, {
+    this.eventBus.emit(type as string, {
       type,
       data,
       timestamp: new Date().toISOString(),

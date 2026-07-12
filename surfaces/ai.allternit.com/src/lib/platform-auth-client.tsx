@@ -12,12 +12,19 @@ import {
 } from "@clerk/clerk-react"
 import { cn } from "@/lib/utils"
 import { useCompanyConfig } from "@/providers/company-config-provider"
+import {
+  env,
+  envFlag,
+  getBuildTimeClerkPublishableKey,
+  isClerkDisabledByEnv,
+  isDesktopAuthEnabled,
+} from "@/lib/env"
 
-const ENV_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? ""
-const SIGN_IN_URL = process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL ?? "/sign-in"
-const SIGN_UP_URL = process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL ?? "/sign-up"
-const desktopAuthEnabled = process.env.NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH === "1"
-const clerkDisabledByEnv = process.env.NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK === "1"
+const ENV_PUBLISHABLE_KEY = getBuildTimeClerkPublishableKey()
+const SIGN_IN_URL = env("NEXT_PUBLIC_CLERK_SIGN_IN_URL") ?? "/sign-in"
+const SIGN_UP_URL = env("NEXT_PUBLIC_CLERK_SIGN_UP_URL") ?? "/sign-up"
+const desktopAuthEnabled = isDesktopAuthEnabled()
+const clerkDisabledByEnv = isClerkDisabledByEnv()
 const DESKTOP_BROWSER_AUTH_PATH_PREFIXES = ["/sign-in", "/sign-up", "/oauth", "/terminal/clerk", "/clerk_"]
 
 type DesktopSession = {
@@ -217,7 +224,8 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const publishableKey = companyConfig?.clerkPublishableKey ?? ENV_PUBLISHABLE_KEY
-  const authDisabled = clerkDisabledByEnv || (!desktopAuthEnabled && !publishableKey)
+  const selfHosted = companyConfig?.selfHosted ?? false
+  const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
   if (desktopAuthEnabled && !browserAuthSurface) {
     const value = buildDesktopAuthValue(session, desktopIsLoaded)
@@ -413,7 +421,8 @@ export function PlatformSignIn(props: {
   const [error, setError] = useState<string | null>(null)
 
   const publishableKey = companyConfig?.clerkPublishableKey ?? ENV_PUBLISHABLE_KEY
-  const authDisabled = clerkDisabledByEnv || (!desktopAuthEnabled && !publishableKey)
+  const selfHosted = companyConfig?.selfHosted ?? false
+  const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
   if (desktopAuthEnabled && !browserAuthSurface) {
 
@@ -484,7 +493,8 @@ export function PlatformSignUp(props: {
   const { config: companyConfig } = useCompanyConfig()
 
   const publishableKey = companyConfig?.clerkPublishableKey ?? ENV_PUBLISHABLE_KEY
-  const authDisabled = clerkDisabledByEnv || (!desktopAuthEnabled && !publishableKey)
+  const selfHosted = companyConfig?.selfHosted ?? false
+  const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
   if (desktopAuthEnabled && !browserAuthSurface) {
     return (

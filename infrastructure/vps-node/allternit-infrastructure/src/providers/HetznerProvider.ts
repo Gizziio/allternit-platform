@@ -100,7 +100,7 @@ export class HetznerProvider extends BaseProvider {
 
       if (body) {
         const bodyString = JSON.stringify(body);
-        options.headers!['Content-Length'] = Buffer.byteLength(bodyString);
+        (options.headers as any)['Content-Length'] = Buffer.byteLength(bodyString);
       }
 
       const req = https.request(options, (res) => {
@@ -390,7 +390,7 @@ export class HetznerProvider extends BaseProvider {
         throw new CloudProviderError(`Unknown server type: ${instanceType}`, 'hetzner');
       }
 
-      const priceInfo = serverType.prices.find(p => p.location === region);
+      const priceInfo = serverType.prices.find((p: { location: string; price_hourly: { gross: string } }) => p.location === region);
       const hourlyPrice = priceInfo ? parseFloat(priceInfo.price_hourly.gross) : 0;
 
       return {

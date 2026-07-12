@@ -31,6 +31,42 @@ import { SubprocessLanguageModel } from "@/runtime/providers/adapters/loaders/su
 export namespace Provider {
   const log = Log.create({ service: "provider" })
 
+  // Per-provider HTTP concurrency cap. Configured via provider.options.concurrency
+  // (max simultaneous requests). Unset or <= 0 means uncapped (default behavior).
+  class Semaphore {
+    private active = 0
+    private queue: Array<() => void> = []
+    constructor(private readonly max: number) {}
+    async acquire(): Promise<void> {
+      if (this.active < this.max) {
+        this.active++
+        return
+      }
+      await new Promise<void>((resolve) =>
+        this.queue.push(() => {
+          this.active++
+          resolve()
+        }),
+      )
+    }
+    release() {
+      this.active = Math.max(0, this.active - 1)
+      const next = this.queue.shift()
+      if (next) next()
+    }
+  }
+
+  const providerSemaphores = new Map<string, Semaphore>()
+
+  function providerSemaphore(providerID: string, max: number): Semaphore {
+    let sem = providerSemaphores.get(providerID)
+    if (!sem) {
+      sem = new Semaphore(max)
+      providerSemaphores.set(providerID, sem)
+    }
+    return sem
+  }
+
   function loadBaseURL(model: Model, options: Record<string, any>) {
     const raw = options["baseURL"] ?? model.api.url
     if (typeof raw !== "string") return raw
@@ -597,11 +633,25 @@ export namespace Provider {
           }
         }
 
-        return fetchFn(input, {
+        const reqInit = {
           ...opts,
           // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
           timeout: false,
-        })
+        }
+
+        // Optional per-provider concurrency cap (provider.options.concurrency).
+        const cap = Number(options["concurrency"])
+        if (Number.isFinite(cap) && cap > 0) {
+          const sem = providerSemaphore(model.providerID, Math.floor(cap))
+          await sem.acquire()
+          try {
+            return await fetchFn(input, reqInit)
+          } finally {
+            sem.release()
+          }
+        }
+
+        return fetchFn(input, reqInit)
       }
 
       const bundledFn = BUNDLED_PROVIDERS[model.api.npm]

@@ -2,6 +2,7 @@ import { Server } from "@/runtime/server/server"
 import { cmd } from "@/cli/commands/cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Flag } from "@/runtime/context/flag/flag"
+import { init as initGlobal } from "@/runtime/context/global"
 
 export const ServeCommand = cmd({
   command: "serve",
@@ -11,6 +12,7 @@ export const ServeCommand = cmd({
     if (!Flag.GIZZI_SERVER_PASSWORD) {
       process.stderr.write("Warning: GIZZI_SERVER_PASSWORD is not set; server is unsecured.\n")
     }
+    await initGlobal()
     const opts = await resolveNetworkOptions(args)
     const server = Server.listen(opts)
     process.stderr.write(`gizzi server listening on http://${server.hostname}:${server.port}\n`)

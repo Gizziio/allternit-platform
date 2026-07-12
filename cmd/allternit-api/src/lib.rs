@@ -15,6 +15,7 @@ pub mod auth;
 pub mod backend_install_routes;
 pub mod board_routes;
 pub mod board_stream_routes;
+pub mod canvas_routes;
 pub mod chat_routes;
 pub mod config;
 pub mod conversation_routes;
@@ -36,9 +37,13 @@ pub mod analytics_routes;
 pub mod playground_routes;
 pub mod checkpoints_routes;
 pub mod design_connector_routes;
+pub mod connector_routes;
+pub mod open_connector_proxy;
+pub mod token_crypto;
 pub mod file_routes;
 pub mod inbox_routes;
 pub mod local_brain_routes;
+pub mod library_routes;
 pub mod me_routes;
 pub mod memory_routes;
 pub mod metrics;
@@ -128,10 +133,11 @@ pub struct AppState {
 
 /// Return the default LLM provider/model pair used when a request does not
 /// specify one. Reads from the unified app config (file + env overrides).
-/// Falls back to `kimi-for-coding/kimi-k2`.
+/// Returns empty strings when nothing is configured; callers fall back to the
+/// local Ollama brain rather than a hardcoded provider.
 pub fn default_model() -> (String, String) {
     APP_CONFIG
         .get()
         .map(|c| c.default_model())
-        .unwrap_or_else(|| ("kimi-for-coding".to_string(), "kimi-k2".to_string()))
+        .unwrap_or_else(|| (String::new(), String::new()))
 }

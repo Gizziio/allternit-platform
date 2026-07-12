@@ -301,7 +301,7 @@ export class SixRsPipeline {
    * Phase 4: Reweave
    * Link to existing knowledge
    */
-  private async reflect(
+  private async reweave(
     reflected: PhaseResult<{ content: string; insights: Insight[]; entities: Entity[]; relations: EntityRelation[] }>
   ): Promise<PhaseResult<{ content: string; insights: Insight[]; entities: Entity[]; relations: EntityRelation[]; links: NoteLink[] }>> {
     const start = Date.now();
@@ -512,5 +512,4 @@ export async function processWith6Rs(
   return pipeline.process(input);
 }
 
-// Export types
-export type { PipelineConfig, PhaseResult };
+

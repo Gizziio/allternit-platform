@@ -1373,7 +1373,7 @@ export function BrowserCapsuleEnhanced({
           <form onSubmit={handleNavigate} className="flex-1 min-w-0 relative flex items-center gap-2">
             <div className="flex items-center h-8 bg-[var(--bg-primary)] rounded-full px-4 flex-1">
               {activeTab && <Lock className="size-3.5 text-[var(--text-tertiary)] mr-2 shrink-0" />}
-              <input aria-label="Input" type="text" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onFocus={() => setUrlFocused(true)} onBlur={() => setTimeout(() => setUrlFocused(false), 200)} className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text-primary)] font-inherit min-w-0" placeholder={activeTab ? "Enter URL or search…" : "Search or type a URL"} />
+              <input aria-label="Input" type="text" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNavigate(); } }} onFocus={() => setUrlFocused(true)} onBlur={() => setTimeout(() => setUrlFocused(false), 200)} className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text-primary)] font-inherit min-w-0" placeholder={activeTab ? "Enter URL or search…" : "Search or type a URL"} />
             </div>
             <UrlAutocomplete query={urlInput} visible={urlFocused} onSelect={(url) => { setUrlInput(url); setUrlFocused(false); if (activeTabId) { updateTab(activeTabId, { url, title: url } as Partial<WebTab>); pushHistory(activeTabId, url); setTabLoading(activeTabId, true); setIframeLoaded(false); setIframeError(false); } else addTab(url); }} />
           </form>

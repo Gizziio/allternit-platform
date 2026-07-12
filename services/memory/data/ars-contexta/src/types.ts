@@ -263,6 +263,49 @@ export interface NlpConfig {
 }
 
 // ============================================================================
+// Three-Space Architecture Types
+// ============================================================================
+
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  links: string[];
+  createdAt: string;
+  updatedAt: string;
+  accessCount: number;
+  confidence: number;
+}
+
+export interface NoteLink {
+  source: string;
+  target: string;
+  type: 'reference' | 'related' | 'contradicts' | 'extends';
+  strength: number;
+}
+
+// ============================================================================
+// 6Rs Processing Pipeline Types
+// ============================================================================
+
+export type PipelinePhase = 'record' | 'reduce' | 'reflect' | 'reweave' | 'verify' | 'rethink';
+
+export interface PipelineInput {
+  rawContent: string;
+  source?: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PipelineOutput {
+  notes: Note[];
+  links: NoteLink[];
+  summary: string;
+  insights: Insight[];
+}
+
+// ============================================================================
 // Pipeline Integration Types
 // ============================================================================
 

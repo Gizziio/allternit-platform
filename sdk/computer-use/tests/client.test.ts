@@ -9,7 +9,7 @@ import { ApprovalHandler, ApprovalPredicates } from '../src/approvals';
 import { normalizeEndpoint, AllternitComputerUseError } from '../src/utils';
 
 // Mock fetch for testing
-global.fetch = jest.fn();
+global.fetch = jest.fn() as unknown as typeof fetch;
 
 const mockedFetch = fetch as jest.MockedFunction<typeof fetch>;
 
@@ -82,7 +82,7 @@ describe('AllternitComputerUseClient', () => {
       });
 
       expect(mockedFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/v1/execute',
+        'http://localhost:8080/v1/computer-use/execute',
         expect.objectContaining({
           method: 'POST',
           headers: expect.objectContaining({
@@ -262,7 +262,7 @@ describe('AllternitComputerUseClient', () => {
       const result = await client.getRun('test-run-123');
 
       expect(mockedFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/v1/runs/test-run-123',
+        'http://localhost:8080/v1/computer-use/runs/test-run-123',
         expect.objectContaining({
           method: 'GET',
         })
@@ -383,7 +383,7 @@ describe('AllternitComputerUseClient', () => {
       });
 
       expect(mockedFetch).toHaveBeenCalledWith(
-        'http://localhost:8080/v1/approve/test-run-123',
+        'http://localhost:8080/v1/computer-use/runs/test-run-123/approve',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({

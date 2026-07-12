@@ -16,7 +16,16 @@ import {
 // Dynamic import used below
 type FileHandle = any;
 const isNode = typeof process !== 'undefined' && process.versions && !!process.versions.node;
-const path = isNode ? (function() { try { return require('node:path'); } catch(e) { return null; } })() : null;
+function loadNodePath() {
+  if (!isNode) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('node:path');
+  } catch {
+    return null;
+  }
+}
+const path = loadNodePath();
 const pathShim = path || { resolve: (_a: string, b: string) => b, normalize: (a: string) => a };
 
 /**
@@ -550,8 +559,8 @@ export const PROTECTED_PATH_PATTERNS = [
   /\.env/i,                  // Environment files
   /\.ssh/i,                  // SSH keys
   /\.aws/i,                  // AWS credentials
-  /\.git[\/]/,               // Git internals
-  /node_modules[\/]/,        // Dependencies
+  /\.git[/]/,                // Git internals
+  /node_modules[/]/,         // Dependencies
   /\//,                      // Absolute paths (when not allowed)
 ];
 

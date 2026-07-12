@@ -433,7 +433,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
         style={viewMode === 'standard' ? { width: panelWidth } : {}}
       >
         {/* ── Header ── */}
-        <div className="h-[42px] bg-[rgba(12,11,10,0.96)] border-b border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] flex items-center p-0 px-3 gap-2 shrink-0">
+        <div className="h-[42px] bg-[var(--surface-panel)] border-b border-solid border-[var(--ui-border-muted)] flex items-center p-0 px-3 gap-2 shrink-0">
           {/* Status dot */}
           <div 
             className={cn(
@@ -447,7 +447,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           />
 
           <ContextWindowCard>
-            <button type="button" className="bg-transparent border-none p-0 cursor-pointer text-[12px] font-bold text-[rgba(212,176,140,0.45)] uppercase tracking-[0.12em] font-mono shrink-0">
+            <button type="button" className="bg-transparent border-none p-0 cursor-pointer text-[12px] font-bold text-[var(--ui-text-muted)] uppercase tracking-[0.12em] font-mono shrink-0">
               COMPUTER USE
             </button>
           </ContextWindowCard>
@@ -457,21 +457,21 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           {/* Message */}
           <span className={cn(
             "flex-1 text-[12px] overflow-hidden text-ellipsis whitespace-nowrap",
-            status === 'WaitingApproval' ? "text-[var(--status-warning)] font-semibold" : "text-[rgba(212,176,140,0.7)] font-normal"
+            status === 'WaitingApproval' ? "text-[var(--status-warning)] font-semibold" : "text-[var(--ui-text-secondary)] font-normal"
           )}>
             {lastEventMessage || goal || (status === 'Done' ? 'Task complete' : 'Waiting…')}
           </span>
 
           {/* Step counter */}
           {currentAction?.stepIndex != null && currentAction?.totalSteps != null && currentAction.totalSteps > 1 && (
-            <span className="text-[12px] text-[rgba(212,176,140,0.5)] font-mono font-bold shrink-0">
+            <span className="text-[12px] text-[var(--ui-text-muted)] font-mono font-bold shrink-0">
               {currentAction.stepIndex}/{currentAction.totalSteps}
             </span>
           )}
 
           {/* Adapter chip */}
           {adapterLabel && (
-            <span className="text-[12px] text-[rgba(255,255,255,0.22)] font-mono shrink-0">
+            <span className="text-[12px] text-[var(--ui-text-muted)] font-mono shrink-0">
               {adapterLabel}{currentLayer ? ` · ${currentLayer}` : ''}
             </span>
           )}
@@ -482,18 +482,18 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             title={viewMode === 'standard' ? 'Fit to viewport (fullscreen)' : 'Back to standard view'}
             className={cn(
               "size-[22px] flex items-center justify-center border border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] rounded-[5px] cursor-pointer shrink-0 transition-colors",
-              viewMode === 'full' ? "bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)]" : "bg-[rgba(212,176,140,0.06)]"
+              viewMode === 'full' ? "bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-[var(--accent-primary)]" : "bg-[var(--surface-hover)] text-[var(--ui-text-muted)]"
             )}
           >
             {viewMode === 'standard' ? (
               /* expand icon */
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M1 3.5V1h2.5M6.5 1H9v2.5M9 6.5V9H6.5M3.5 9H1V6.5" stroke="rgba(212,176,140,0.6)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M1 3.5V1h2.5M6.5 1H9v2.5M9 6.5V9H6.5M3.5 9H1V6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             ) : (
               /* compress icon */
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M3.5 1v2.5H1M9 3.5H6.5V1M6.5 9V6.5H9M1 6.5h2.5V9" stroke="rgba(212,176,140,0.8)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M3.5 1v2.5H1M9 3.5H6.5V1M6.5 9V6.5H9M1 6.5h2.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             )}
           </button>
@@ -502,7 +502,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           <button type="button" onClick={() => setShowAxTree((v) => !v)} title="Accessibility Tree"
             className={cn(
               "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
-              showAxTree ? "bg-[rgba(168,85,247,0.2)] border-[rgba(168,85,247,0.4)] text-[#a855f7]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+              showAxTree ? "bg-[rgba(168,85,247,0.2)] border-[rgba(168,85,247,0.4)] text-[#a855f7]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--ui-text-muted)]"
             )}>
             AX
           </button>
@@ -511,7 +511,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           <button type="button" onClick={() => { setShowWindows((v) => !v); if (!showWindows) void fetchWindows(); }} title="Open Windows"
             className={cn(
               "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
-              showWindows ? "bg-[rgba(59,130,246,0.2)] border-[rgba(59,130,246,0.4)] text-[var(--status-info)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+              showWindows ? "bg-[rgba(59,130,246,0.2)] border-[rgba(59,130,246,0.4)] text-[var(--status-info)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--ui-text-muted)]"
             )}>
             ⊞
           </button>
@@ -520,7 +520,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           <button type="button" onClick={() => { setShowNotifications((v) => !v); if (!showNotifications) void fetchNotifications(); }} title="Notifications"
             className={cn(
               "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
-              showNotifications ? "bg-[rgba(251,191,36,0.2)] border-[rgba(251,191,36,0.4)] text-[var(--status-warning)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+              showNotifications ? "bg-[rgba(251,191,36,0.2)] border-[rgba(251,191,36,0.4)] text-[var(--status-warning)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--ui-text-muted)]"
             )}>
             🔔
           </button>
@@ -529,7 +529,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           <button type="button" onClick={() => setDirectControlMode((v) => !v)} title="Direct click control"
             className={cn(
               "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
-              directControlMode ? "bg-[rgba(99,252,241,0.2)] border-[rgba(99,252,241,0.4)] text-[#63fcf1]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+              directControlMode ? "bg-[rgba(99,252,241,0.2)] border-[rgba(99,252,241,0.4)] text-[#0f766e]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--ui-text-muted)]"
             )}>
             ⊕ Direct
           </button>
@@ -538,7 +538,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           <button type="button" onClick={() => setShowConformance((v) => !v)} title="Conformance Dashboard"
             className={cn(
               "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
-              showConformance ? "bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.4)] text-[var(--status-success)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[rgba(255,255,255,0.3)]"
+              showConformance ? "bg-[rgba(34,197,94,0.2)] border-[rgba(34,197,94,0.4)] text-[var(--status-success)]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--ui-text-muted)]"
             )}>
             ✓ Conf
           </button>
@@ -547,10 +547,10 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           <button type="button"
             onClick={toggleAciSidecar}
             title="Minimize to input bar"
-            className="size-[22px] flex items-center justify-center bg-[rgba(212,176,140,0.06)] border border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] rounded-[5px] cursor-pointer shrink-0 transition-colors hover:bg-[rgba(212,176,140,0.12)]"
+            className="size-[22px] flex items-center justify-center bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded-[5px] cursor-pointer shrink-0 transition-colors hover:bg-[var(--surface-active)] text-[var(--ui-text-muted)]"
           >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M3 5h4M7 5L5 3M7 5L5 7" stroke="rgba(212,176,140,0.6)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M3 5h4M7 5L5 3M7 5L5 7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
         </div>
@@ -857,7 +857,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
       <style>{STYLES}</style>
       <div
         className={cn(
-          "flex items-center gap-2 p-1.5 px-3 bg-[rgba(12,11,10,0.88)] border-t border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] rounded-t-lg backdrop-blur-md animate-[aci-sidecar-slide-in_0.18s_ease_both]",
+          "flex items-center gap-2 p-1.5 px-3 bg-[var(--surface-panel)] border-t border-solid border-[var(--ui-border-muted)] rounded-t-lg backdrop-blur-md animate-[aci-sidecar-slide-in_0.18s_ease_both]",
           className
         )}
       >
@@ -875,7 +875,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
 
         {/* Label */}
         <ContextWindowCard>
-          <button type="button" className="bg-transparent border-none p-0 cursor-pointer text-[12px] font-bold text-[rgba(212,176,140,0.4)] uppercase tracking-[0.12em] font-mono shrink-0">
+          <button type="button" className="bg-transparent border-none p-0 cursor-pointer text-[12px] font-bold text-[var(--ui-text-muted)] uppercase tracking-[0.12em] font-mono shrink-0">
             Computer Use
           </button>
         </ContextWindowCard>
@@ -885,21 +885,21 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         {/* Message */}
         <span className={cn(
           "flex-1 text-[12px] overflow-hidden text-ellipsis whitespace-nowrap",
-          status === 'WaitingApproval' ? "text-[var(--status-warning)] font-semibold" : "text-[rgba(212,176,140,0.65)] font-normal"
+          status === 'WaitingApproval' ? "text-[var(--status-warning)] font-semibold" : "text-[var(--ui-text-secondary)] font-normal"
         )}>
           {message}
         </span>
 
         {/* Step counter */}
         {stepIndex != null && totalSteps != null && totalSteps > 1 && (
-          <span className="text-[12px] font-mono font-bold text-[rgba(212,176,140,0.4)] shrink-0">
+          <span className="text-[12px] font-mono font-bold text-[var(--ui-text-muted)] shrink-0">
             {stepIndex}/{totalSteps}
           </span>
         )}
 
         {/* Adapter */}
         {adapterLabel && (
-          <span className="text-[12px] font-mono text-white/20 shrink-0">
+          <span className="text-[12px] font-mono text-[var(--ui-text-muted)] shrink-0">
             {adapterLabel}
           </span>
         )}
@@ -908,7 +908,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         {status === 'WaitingApproval' && (
           <button type="button"
             onClick={() => approveAction?.()}
-            className="px-2 py-1 rounded bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] border border-solid border-[rgba(212,176,140,0.28)] text-[12px] font-bold text-[rgba(212,176,140,0.85)] tracking-[0.08em] uppercase cursor-pointer shrink-0 transition-colors hover:opacity-90"
+            className="px-2 py-1 rounded bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] border border-solid border-[color-mix(in_srgb,var(--accent-primary)_28%,transparent)] text-[12px] font-bold text-[var(--accent-primary)] tracking-[0.08em] uppercase cursor-pointer shrink-0 transition-colors hover:opacity-90"
           >
             Approve
           </button>
@@ -928,11 +928,11 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         <button type="button"
           onClick={toggleAciSidecar}
           title="Open live screen"
-          className="size-5 flex items-center justify-center bg-[rgba(212,176,140,0.06)] border border-solid border-[color-mix(in_srgb,var(--accent-primary)_10%,transparent)] rounded cursor-pointer shrink-0 transition-colors hover:bg-[rgba(212,176,140,0.12)]"
+          className="size-5 flex items-center justify-center bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded cursor-pointer shrink-0 transition-colors hover:bg-[var(--surface-active)] text-[var(--ui-text-muted)]"
         >
           {/* chevron-left → open panel from right */}
           <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-            <path d="M7 5H3M3 5l2-2M3 5l2 2" stroke="rgba(212,176,140,0.55)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7 5H3M3 5l2-2M3 5l2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
       </div>

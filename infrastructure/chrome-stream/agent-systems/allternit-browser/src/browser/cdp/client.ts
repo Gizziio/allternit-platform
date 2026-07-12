@@ -115,17 +115,23 @@ export class CDPClient {
 
 export async function getVersion(cdpUrl: string): Promise<any> {
   const response = await fetch(`${cdpUrl}/json/version`);
-  return response.json();
+  return parseJsonResponse(response);
 }
 
 export async function getTargets(cdpUrl: string): Promise<any[]> {
   const response = await fetch(`${cdpUrl}/json/list`);
-  return response.json();
+  return parseJsonResponse(response);
 }
 
 export async function createTarget(cdpUrl: string, url: string): Promise<{ targetId: string }> {
-  const response = await fetch(`${cdpUrl}/json/new?${encodeURIComponent(url)}`);
-  return response.json();
+  const response = await fetch(`${cdpUrl}/json/new?${encodeURIComponent(url)}`, {
+    method: 'PUT',
+  });
+  const target = await parseJsonResponse(response);
+  return {
+    ...target,
+    targetId: target.targetId ?? target.id,
+  };
 }
 
 export async function closeTarget(cdpUrl: string, targetId: string): Promise<void> {
@@ -134,4 +140,27 @@ export async function closeTarget(cdpUrl: string, targetId: string): Promise<voi
 
 export async function activateTarget(cdpUrl: string, targetId: string): Promise<void> {
   await fetch(`${cdpUrl}/json/activate/${targetId}`);
+}
+
+async function parseJsonResponse(response: Response): Promise<any> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (initialError) {
+    for (let index = 0; index < text.length; index += 1) {
+      const char = text[index];
+      if (char !== '[' && char !== '{') {
+        continue;
+      }
+
+      try {
+        return JSON.parse(text.slice(index));
+      } catch {
+        // Keep scanning. Some Chrome builds prepend non-JSON warnings that may
+        // themselves contain braces before the actual DevTools JSON payload.
+      }
+    }
+
+    throw initialError;
+  }
 }

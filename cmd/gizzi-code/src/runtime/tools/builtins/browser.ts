@@ -428,9 +428,9 @@ export const BrowserTool = Tool.define("browser", async (initCtx) => {
         .optional()
         .describe("Additional action-specific parameters (timeout, options, etc.)"),
       adapter_preference: z
-        .enum(["playwright", "browser-use", "cdp", "desktop"])
+        .enum(["extension-tab", "local-playwright", "browser-use", "stagehand", "playwright", "cdp", "desktop"])
         .optional()
-        .describe("Optional preference for which adapter to use (gateway may override)"),
+        .describe("Optional provider preference. Prefer canonical providers: extension-tab, local-playwright, browser-use, stagehand. Legacy aliases are accepted."),
     }),
     async execute(params: { action: string; target?: string; goal?: string; text?: string; parameters?: Record<string, unknown>; adapter_preference?: string }, ctx) {
       if (params.action === "execute" && !params.goal) {
@@ -471,7 +471,7 @@ export const BrowserTool = Tool.define("browser", async (initCtx) => {
           message_id: ctx.messageID,
           call_id: ctx.callID,
         },
-        adapter_preference: params.adapter_preference,
+        adapter_preference: normalizeProviderPreference(params.adapter_preference),
         llm_config: llmConfig,
       })
 
@@ -479,3 +479,10 @@ export const BrowserTool = Tool.define("browser", async (initCtx) => {
     },
   }
 })
+
+function normalizeProviderPreference(preference?: string): string | undefined {
+  if (!preference) return undefined
+  if (preference === "playwright" || preference === "cdp") return "local-playwright"
+  if (preference === "desktop") return "extension-tab"
+  return preference
+}

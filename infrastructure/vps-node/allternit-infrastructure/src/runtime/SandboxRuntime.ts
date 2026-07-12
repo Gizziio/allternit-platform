@@ -416,7 +416,7 @@ export class SandboxRuntime {
       }
 
       // Wait for VM to be ready
-      await this.waitForFirecrackerReady(sandbox.metadata.socketPath, conn);
+      await this.waitForFirecrackerReady(sandbox.metadata.socketPath as string, conn);
 
       sandbox.status = 'running';
       sandbox.startedAt = new Date();
@@ -564,13 +564,14 @@ export class SandboxRuntime {
     try {
       switch (sandbox.runtime) {
         case 'docker':
-        case 'kata':
+        case 'kata': {
           const info = await this.getDockerContainerInfo(
             sandbox.metadata.containerId as string, 
             conn
           );
           return info.status === 'running';
-        case 'firecracker':
+        }
+        case 'firecracker': {
           // Check if VM process is running
           const checkCmd = `pgrep -f "firecracker.*${sandbox.metadata.vmId}"`;
           if (conn) {
@@ -584,6 +585,7 @@ export class SandboxRuntime {
               return false;
             }
           }
+        }
         default:
           return false;
       }

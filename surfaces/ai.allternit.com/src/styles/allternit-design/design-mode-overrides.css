@@ -1,0 +1,84 @@
+/* ============================================================
+   Allternit Design look override
+   ============================================================
+   When .od-design-studio is applied to the DesignModeView root,
+   Allternit's existing CSS variables are remapped to Allternit Design
+   tokens. This gives the existing layout the Allternit Design palette,
+   radius, and shadow scale without duplicating components.
+   ============================================================ */
+
+.od-design-studio {
+  /* Backgrounds */
+  --bg-primary: var(--ad-bg);
+  --bg-secondary: var(--ad-bg-panel);
+  --bg-tertiary: var(--ad-bg-subtle);
+  --bg-hover: var(--ad-bg-fill-secondary);
+  --bg-active: var(--ad-bg-fill);
+  --bg-elevated: var(--ad-bg-elevated);
+
+  /* Text */
+  --text-primary: var(--ad-text-strong);
+  --text-secondary: var(--ad-text);
+  --text-tertiary: var(--ad-text-muted);
+
+  /* Borders */
+  --border-subtle: var(--ad-border-soft);
+  --border-default: var(--ad-border);
+  --border-primary: var(--ad-border-strong);
+
+  /* Accent */
+  --accent-primary: var(--ad-accent);
+  --accent-secondary: var(--ad-accent-strong);
+  --accent-chat: var(--ad-accent);
+
+  /* Surfaces */
+  --surface-panel: var(--ad-bg-panel);
+  --surface-hover: var(--ad-bg-fill-secondary);
+  --surface-active: var(--ad-bg-fill);
+  --surface-floating: var(--ad-bg-elevated);
+  --surface-floating-muted: var(--ad-bg-panel);
+  --surface-overlay: rgba(26, 25, 23, 0.18);
+  --surface-canvas: var(--ad-bg-app);
+
+  /* Shell */
+  --shell-frame-bg: var(--ad-bg-app);
+  --shell-panel-bg: var(--ad-bg-panel);
+  --shell-floating-bg: var(--ad-bg-elevated);
+  --shell-floating-border: var(--ad-border-soft);
+  --shell-divider: var(--ad-border-soft);
+  --shell-item-hover: var(--ad-bg-fill-secondary);
+  --shell-item-active-bg: var(--ad-accent-tint);
+  --shell-item-active-fg: var(--ad-accent-strong);
+  --shell-item-fg: var(--ad-text-strong);
+  --shell-item-muted: var(--ad-text-muted);
+  --shell-menu-bg: var(--ad-bg-elevated);
+  --shell-menu-border: var(--ad-border);
+  --shell-control-bg: var(--ad-bg-subtle);
+  --shell-control-active-bg: var(--ad-accent);
+  --shell-control-fg: var(--ad-text-strong);
+  --shell-control-muted-fg: var(--ad-text);
+  --shell-control-active-fg: var(--ad-text-strong);
+  --shell-overlay-backdrop: rgba(13, 12, 10, 0.18);
+
+  /* Radius */
+  --design-radius-card: var(--ad-radius-lg);
+
+  /* Font */
+  font-family: var(--ad-sans);
+}
+
+/* Rail / tab strip tweaks in Allternit Design mode */
+.od-design-studio [data-panel] > div > header {
+  background: var(--ad-bg-panel) !important;
+  border-bottom-color: var(--ad-border-soft) !important;
+}
+
+.od-design-studio [data-panel] > div > header button {
+  border-radius: var(--ad-radius-sm) var(--ad-radius-sm) 0 0 !important;
+}
+
+/* Chat panel in Allternit Design mode */
+.od-design-studio [data-panel]:last-child > div {
+  background: var(--ad-bg-panel) !important;
+  border-left-color: var(--ad-border-soft) !important;
+}

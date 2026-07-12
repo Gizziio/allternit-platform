@@ -1,0 +1,18 @@
+{
+  "id": "html-ppt-zhangzara-cartesian",
+  "name": "Cartesian Deck",
+  "version": "1.0.0",
+  "description": "Quiet warm-neutral 16:9 HTML deck with classical Playfair serifs — investment theses, white papers, advisory and longform research.",
+  "category": "examples",
+  "author": "Allternit Design",
+  "tags": ["deck", "slides", "editorial", "serif", "web", "html"],
+  "preview": { "type": "html", "entry": "example.html" },
+  "inputs": [
+    { "name": "title", "type": "string", "required": true, "label": "Deck title" },
+    { "name": "brief", "type": "text", "required": false, "label": "Narrative / sections" }
+  ],
+  "pipelines": [
+    { "name": "live-html", "format": "html" }
+  ],
+  "capabilities": ["prompt:inject", "fs:write"]
+}

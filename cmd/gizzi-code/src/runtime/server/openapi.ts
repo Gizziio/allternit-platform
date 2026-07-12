@@ -8,7 +8,7 @@ import {
 
 export { describeRoute, generateSpecs, openAPIRouteHandler, validator }
 
-export function resolver(schema: unknown) {
+export function resolver(schema: unknown): ReturnType<typeof baseResolver> {
   if (schema && typeof schema === "object" && "~standard" in schema) {
     return baseResolver(schema as never)
   }
@@ -19,6 +19,6 @@ export function resolver(schema: unknown) {
     return {
       type: "object",
       additionalProperties: true,
-    }
+    } as unknown as ReturnType<typeof baseResolver>
   }
 }

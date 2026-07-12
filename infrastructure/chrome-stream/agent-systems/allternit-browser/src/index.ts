@@ -23,9 +23,11 @@ export { registerBrowserRoutes } from './browser/routes/index.js';
 export { registerBrowserBasicRoutes } from './browser/routes/basic.js';
 export { registerBrowserTabRoutes } from './browser/routes/tabs.js';
 export { registerBrowserAgentRoutes } from './browser/routes/agent.js';
+export { registerBrowserProtocolRoutes } from './browser/routes/protocol.js';
 
 // CDP (Chrome DevTools Protocol)
 export { CDPClient } from './browser/cdp/client.js';
+export { CDPBridge } from './cdp-bridge.js';
 export {
   getTabs,
   openTab,
@@ -64,6 +66,33 @@ export {
   snapshotAriaViaPlaywright,
 } from './browser/playwright/snapshot.js';
 export { pdfViaPlaywright } from './browser/playwright/pdf.js';
+export { LocalPlaywrightProvider } from './protocol/local-provider.js';
+export type { LocalBrowserSessionBinding } from './protocol/local-provider.js';
+export { BrowserRunController } from './protocol/run-controller.js';
+export type {
+  BrowserRunControllerOptions,
+  ExecuteBrowserActionInput,
+  ExecuteBrowserActionResult,
+  StartBrowserRunInput,
+} from './protocol/run-controller.js';
+export {
+  ExtensionTabProvider,
+  RemoteBrowserProvider,
+  createBrowserUseProvider,
+  createStagehandProvider,
+  providerKind,
+} from './protocol/remote-provider.js';
+export type {
+  ExtensionTabProviderMessage,
+  ExtensionTabProviderOptions,
+  FetchLike,
+  RemoteBrowserProviderOptions,
+} from './protocol/remote-provider.js';
+export { compileBrowserTrajectoryToSkill } from './protocol/skill-factory.js';
+export type {
+  BrowserSkillPackage,
+  CompileBrowserSkillOptions,
+} from './protocol/skill-factory.js';
 
 // Canvas Host
 export {

@@ -73,6 +73,19 @@ export const GATEWAY_BASE_URL = resolveGatewayBaseUrl();
 // Canonical API base URL.
 export const API_BASE_URL = resolveApiBaseUrl();
 
+const DEFAULT_GIZZI_URL = 'http://127.0.0.1:4096';
+
+// Base URL for the gizzi-code runtime (brain) server. Honors the runtime-injected
+// __TERMINAL_SERVER_URL__ (used by the desktop shell) and falls back to the local default.
+export function gizziBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const g = (window as any).__TERMINAL_SERVER_URL__ || (globalThis as any).__TERMINAL_SERVER_URL__;
+    if (g) return stripTrailingSlash(String(g));
+  }
+  const env = (import.meta as any).env?.VITE_GIZZI_URL;
+  return env ? stripTrailingSlash(String(env)) : DEFAULT_GIZZI_URL;
+}
+
 // ============================================================================
 // HTTP Helper Types and Functions
 // ============================================================================

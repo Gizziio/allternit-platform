@@ -117,10 +117,11 @@ export class RetryExecutor {
       case 'exponential':
         delay = this.config.baseDelayMs * Math.pow(2, attempt - 1);
         break;
-      case 'jitter':
+      case 'jitter': {
         const base = this.config.baseDelayMs * Math.pow(2, attempt - 1);
         delay = base + (Math.random() * base * 0.1); // 10% jitter
         break;
+      }
       default:
         delay = this.config.baseDelayMs;
     }

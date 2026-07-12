@@ -16,6 +16,7 @@ import type {
 } from '../EventTypes';
 
 // Extend EventEmitter for event handling
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export interface VPSChannel extends EventEmitter {}
 
 // ============================================================================
@@ -65,6 +66,7 @@ export interface VPSServerStats {
 // VPS Channel Class
 // ============================================================================
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class VPSChannel extends EventEmitter {
   private readonly eventServer: EventServer;
   private readonly channelPrefix = 'vps:';

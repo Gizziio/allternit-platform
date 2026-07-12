@@ -1,0 +1,328 @@
+{
+  "common": {
+    "active": "启用",
+    "apiUnavailable": "API 不可用",
+    "catalogOnly": "仅目录",
+    "clear": "清除",
+    "close": "关闭",
+    "connected": "已连接",
+    "copied": "已复制 {{label}}",
+    "copy": "复制 {{label}}",
+    "credential": "凭证",
+    "currentSelection": "当前选择",
+    "docs": "文档",
+    "failed": "失败",
+    "loadingRuntimeData": "正在加载运行时数据...",
+    "local": "本地",
+    "noAuth": "无需鉴权",
+    "notConnected": "未连接",
+    "open": "打开",
+    "refresh": "刷新",
+    "required": "必填",
+    "runtimeReady": "运行时就绪",
+    "showMore": "显示更多",
+    "showing": "显示 {{shown}} / {{total}}",
+    "success": "成功"
+  },
+  "brand": {
+    "subtitle": "本地运行时控制台",
+    "adminAccess": "管理员访问"
+  },
+  "language": {
+    "label": "语言",
+    "en": "English",
+    "zh-CN": "简体中文",
+    "ja": "日本語",
+    "ru": "Русский",
+    "fr": "Français"
+  },
+  "nav": {
+    "overview": "概览",
+    "providers": "提供商",
+    "actions": "操作",
+    "runs": "运行记录",
+    "access": "API Key",
+    "docs": "文档"
+  },
+  "shell": {
+    "invalidUnlockToken": "请输入有效的管理员 token 来解锁控制台。",
+    "loadRuntimeFailed": "无法加载运行时数据。请刷新，或确认运行时已启动。",
+    "logoutFailed": "无法登出，请重试。",
+    "primaryNav": "主导航",
+    "refreshData": "刷新数据",
+    "logout": "登出",
+    "theme": "主题",
+    "themeMode": {
+      "auto": "自动",
+      "light": "浅色",
+      "dark": "深色"
+    },
+    "headings": {
+      "overview": {
+        "title": "概览",
+        "subtitle": "查看运行时状态和健康情况。"
+      },
+      "providers": {
+        "title": "提供商",
+        "subtitle": "连接提供商并查看能力配置。"
+      },
+      "actions": {
+        "title": "操作",
+        "subtitle": "搜索、检查并调试本地运行时操作。"
+      },
+      "runs": {
+        "title": "运行记录",
+        "subtitle": "最近的本地操作执行记录。"
+      },
+      "access": {
+        "title": "API Key",
+        "subtitle": "管理 agent 和客户端使用的运行时 API token。"
+      },
+      "resources": {
+        "title": "资源",
+        "subtitle": "生成的 API 参考和工具元数据。"
+      }
+    }
+  },
+  "unlock": {
+    "token": "管理员 token",
+    "unlockConsole": "解锁控制台"
+  },
+  "overview": {
+    "runtimeReady": "运行时就绪",
+    "connectedProviders": "{{count}} 个已连接提供商",
+    "capabilityStatus": "能力状态",
+    "metrics": {
+      "providers": "提供商",
+      "actions": "操作",
+      "executable": "可执行",
+      "runHealth": "运行健康"
+    },
+    "availableServices": "可连接服务",
+    "localActions": "本地可执行操作",
+    "recentFailuresMeta": "最近失败",
+    "ready": "就绪",
+    "unavailable": "暂不可用",
+    "needsAttention": "需处理",
+    "recentFailures": "最近失败",
+    "noFailedRunsTitle": "暂无失败运行",
+    "noFailedRunsDescription": "最近的操作运行都正常。",
+    "callTrend": "工具调用趋势",
+    "callTrendLegend": "服务",
+    "noCallTrendTitle": "暂无调用趋势",
+    "noCallTrendDescription": "运行一个操作后会显示每日服务调用量。",
+    "recentCalls": "最近调用",
+    "viewRuns": "查看",
+    "callCountOne": "{{count}} 次调用",
+    "callCountMany": "{{count}} 次调用",
+    "noRecentCallsTitle": "暂无最近调用",
+    "noRecentCallsDescription": "运行一个操作后会显示提供商调用次数。"
+  },
+  "providers": {
+    "catalogTitle": "提供商",
+    "searchPlaceholder": "搜索提供商",
+    "statusFilterLabel": "提供商状态",
+    "filters": {
+      "all": "全部",
+      "connected": "已连接",
+      "notConnected": "未连接",
+      "oauthNeedsConfig": "OAuth 待配置"
+    },
+    "providerMeta": "{{service}} · {{authTypes}} · {{count}} 个操作",
+    "noAuth": "无需鉴权",
+    "oauthConfigBadge": "OAuth 配置",
+    "noProvidersTitle": "没有找到提供商",
+    "noProvidersDescription": "试试其他搜索词或状态筛选。",
+    "resultCount": "显示 {{shown}} / {{total}}",
+    "showMore": "显示更多",
+    "resetFilters": "重置筛选",
+    "providerNotFoundTitle": "未找到提供商",
+    "providerNotFoundDescription": "{{service}} 不在当前目录中。",
+    "backToProviders": "返回提供商",
+    "providerHomepage": "主页",
+    "selectProviderTitle": "选择提供商",
+    "selectProviderDescription": "选择一个提供商来查看连接设置。",
+    "connectedBy": "通过 {{authType}} 连接",
+    "configuredBadge": "已配置",
+    "noSetupBadge": "无需设置",
+    "unconfiguredBadge": "未连接",
+    "oauthClientRequiredBadge": "需要 OAuth client",
+    "summary": {
+      "actions": "操作",
+      "auth": "鉴权",
+      "oauthConfig": "OAuth 配置",
+      "configured": "已配置",
+      "required": "必填",
+      "notUsed": "未使用"
+    },
+    "connection": "连接",
+    "connectionMethod": "连接方式",
+    "connectionDescriptions": {
+      "noSetup": "这个提供商无需本地凭证即可运行。",
+      "connected": "本地凭证已通过 {{authType}} 配置。",
+      "oauthClientRequired": "{{name}} 需要先配置本地 OAuth client 才能开始 OAuth。",
+      "notConnected": "运行需要凭证的 {{name}} 操作前，请先配置本地凭证。"
+    },
+    "noConnectionMethodTitle": "没有连接方式",
+    "noConnectionMethodDescription": "这个提供商不需要本地凭证。",
+    "oauthClient": "OAuth Client",
+    "scopes": "Scopes",
+    "scopesDescription": "这个提供商的本地操作需要的 scopes。",
+    "actions": "操作",
+    "actionsDescription": "目录中有 {{count}} 个本地运行时操作。",
+    "noScopes": "没有 scopes",
+    "noActions": "没有操作。",
+    "authLabels": {
+      "apiKey": "API key",
+      "oauth": "OAuth",
+      "custom": "自定义",
+      "noAuth": "无需鉴权"
+    },
+    "connectionMessages": {
+      "noAuth": "这个提供商无需本地凭证即可运行。",
+      "needsOAuthClient": "{{name}} 需要先配置本地 OAuth client 才能连接。",
+      "connectedOAuth": "{{name}} 已通过 OAuth 连接。",
+      "connectOAuth": "通过 OAuth 授权流程连接 {{name}}。",
+      "saving": "正在保存连接...",
+      "openingOAuth": "正在打开 OAuth...",
+      "configureOAuthFirst": "请先配置 OAuth client 再连接。",
+      "oauthWindowOpened": "OAuth 窗口已打开。",
+      "updated": "连接已更新。",
+      "failed": "连接失败。",
+      "disconnecting": "正在断开连接...",
+      "disconnected": "已断开连接。",
+      "disconnectFailed": "断开连接失败。"
+    },
+    "buttons": {
+      "configureOAuthClient": "配置 OAuth Client",
+      "editOAuthClient": "编辑 OAuth Client",
+      "saveConnection": "保存连接",
+      "connect": "连接",
+      "details": "详情",
+      "manageConnection": "管理",
+      "connectProvider": "连接 {{name}}",
+      "reconnectProvider": "重新连接 {{name}}",
+      "disconnect": "断开连接",
+      "saveOAuthClient": "保存 OAuth Client",
+      "updateOAuthClient": "更新 OAuth Client",
+      "resetOAuthClient": "重置 OAuth Client"
+    },
+    "oauthClientSettings": {
+      "configuredTitle": "OAuth client 已配置",
+      "requiredTitle": "需要 OAuth client",
+      "missingDescription": "{{name}} 需要先配置本地 OAuth client 才能连接。",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "storedSecretHint": "已保存的 secret 不会显示；保存变更时需要重新输入。",
+      "saving": "正在保存 OAuth client...",
+      "saved": "OAuth client 已保存。",
+      "failed": "保存 OAuth client 失败。",
+      "resetting": "正在重置 OAuth client...",
+      "reset": "OAuth client 已重置。",
+      "resetFailed": "重置 OAuth client 失败。"
+    },
+    "execution": {
+      "executable": "可执行",
+      "catalogOnly": "仅目录"
+    }
+  },
+  "actions": {
+    "searchPlaceholder": "按名称、ID 或提供商搜索操作",
+    "provider": "提供商",
+    "allProviders": "全部提供商",
+    "actionsCount": "{{count}} 个操作",
+    "noActionsTitle": "没有找到操作",
+    "noActionsDescription": "试试其他搜索词或提供商筛选。",
+    "actionNotFoundTitle": "未找到操作",
+    "noActionSelectedTitle": "未选择操作",
+    "actionNotFoundDescription": "当前目录中没有匹配这个操作路由。",
+    "selectActionDescription": "选择一个操作来检查并运行。",
+    "locallyExecutable": "本地可执行",
+    "needsCredential": "需要凭证",
+    "debugAction": "调试操作",
+    "requiredScopes": "必需 Scopes",
+    "parameters": "参数",
+    "fieldsCount": "{{count}} 个字段",
+    "noInputParameters": "没有输入参数。",
+    "required": "必填",
+    "optional": "可选",
+    "actionExamples": "操作示例",
+    "open": "打开",
+    "copyExample": "复制 {{label}}",
+    "copiedExample": "已复制 {{label}}",
+    "closeDebugAction": "关闭调试操作",
+    "input": "输入",
+    "run": "运行",
+    "running": "运行中",
+    "runningAction": "正在运行操作...",
+    "actionFailed": "操作失败。"
+  },
+  "runs": {
+    "noRunsTitle": "暂无运行记录",
+    "noRunsDescription": "运行一个操作后会显示最近执行历史。",
+    "service": "服务",
+    "allServices": "全部服务",
+    "loadMore": "加载更多",
+    "loadMoreFailed": "加载更多运行记录失败。",
+    "table": {
+      "action": "操作",
+      "caller": "调用方",
+      "status": "状态",
+      "started": "开始时间",
+      "duration": "耗时",
+      "input": "输入",
+      "error": "错误"
+    }
+  },
+  "access": {
+    "title": "运行时 Token",
+    "description": "为 /v1 和 MCP 客户端签发 bearer token。新 token 只会显示一次。",
+    "name": "名称",
+    "namePlaceholder": "本地 MCP 客户端",
+    "createToken": "创建 Token",
+    "createTokenDescription": "给要使用这个运行时 token 的客户端命名。",
+    "closeCreateToken": "关闭创建 token 弹窗",
+    "creating": "正在创建 token...",
+    "created": "Token 已创建。",
+    "createFailed": "创建 token 失败。",
+    "revoking": "正在吊销 token...",
+    "revoked": "Token 已吊销。",
+    "revokeFailed": "吊销 token 失败。",
+    "newToken": "新 token",
+    "tokenShownOnce": "这个 token 只会显示一次。关闭弹窗前请先复制。",
+    "copyToken": "复制 Token",
+    "copiedToken": "已复制",
+    "copyRuntimeToken": "复制运行时 token",
+    "copiedRuntimeToken": "已复制运行时 token",
+    "noTokensTitle": "暂无运行时 token",
+    "noTokensDescription": "连接 MCP 客户端或本地脚本前先创建一个 token。token 只会显示一次。",
+    "table": {
+      "name": "名称",
+      "status": "状态",
+      "created": "创建时间",
+      "lastUsed": "上次使用"
+    },
+    "revoke": "吊销"
+  },
+  "resources": {
+    "apiReference": {
+      "title": "API 参考",
+      "description": "在 Scalar 中浏览本地运行时路由。"
+    },
+    "mcp": {
+      "title": "MCP 连接",
+      "description": "将 Claude Desktop 或 Cursor 连接到本地运行时。",
+      "endpoint": "MCP 地址",
+      "copyEndpoint": "复制 MCP 地址",
+      "copiedEndpoint": "已复制 MCP 地址",
+      "configTitle": "JSON 配置",
+      "copyConfig": "复制 JSON 配置",
+      "copiedConfig": "已复制 JSON 配置",
+      "createToken": "生成 Runtime Token"
+    },
+    "openapi": {
+      "title": "OpenAPI JSON",
+      "description": "在脚本或工具导入器中使用生成的规格。"
+    }
+  }
+}

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Build the Next.js platform static export and copy it into resources/platform/.
+ * Build the platform static export and copy it into resources/ for the packaged desktop app.
  *
- * The desktop loads https://ai.allternit.com in production, but for offline mode
- * the Rust API serves the static export directly via tower-http ServeDir.
+ * The Rust API serves the platform static export directly via tower-http ServeDir
+ * when the desktop app runs offline.
  */
 
 const fs = require('fs');
@@ -13,7 +13,7 @@ const { execFileSync } = require('child_process');
 const desktopDir = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(desktopDir, '..', '..');
 const platformDir = path.join(repoRoot, 'surfaces', 'ai.allternit.com');
-const resourcesDir = path.join(desktopDir, 'resources', 'platform');
+const platformResourcesDir = path.join(desktopDir, 'resources', 'platform');
 
 function log(message) {
   process.stdout.write(`[prepare-platform-static] ${message}\n`);
@@ -34,46 +34,68 @@ function copyDir(src, dest) {
   }
 }
 
+function rmrf(p) {
+  if (fs.existsSync(p)) {
+    fs.rmSync(p, { recursive: true });
+  }
+}
+
+function runBuild(cwd, script, envExtra = {}) {
+  log(`Running pnpm ${script} in ${cwd}...`);
+  try {
+    execFileSync('pnpm', ['run', script], {
+      cwd,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        ...envExtra,
+      },
+    });
+  } catch (e) {
+    log(`Failed to run pnpm ${script}: ${e.message}`);
+    process.exit(1);
+  }
+}
+
+function copyExport(src, dest, label) {
+  if (!fs.existsSync(src)) {
+    log(`Output directory ${src} not found for ${label}.`);
+    process.exit(1);
+  }
+  rmrf(dest);
+  fs.mkdirSync(dest, { recursive: true });
+  log(`Copying ${src} -> ${dest}...`);
+  copyDir(src, dest);
+  log(`${label} static export ready at ${dest}`);
+}
+
+function checkRequiredBinaries() {
+  // Fail fast if the gizzi-code brain binary is missing. A packaged app without it
+  // throws at runtime ("gizzi-code binary not found" in GizziManager) — catch that
+  // here, at build time, with a clear remediation. The canonical pipeline
+  // (scripts/build-desktop.sh) stages this binary before the electron build.
+  const resourcesBin = path.join(desktopDir, 'resources', 'bin');
+  const gizziBin = path.join(resourcesBin, process.platform === 'win32' ? 'gizzi-code.exe' : 'gizzi-code');
+  if (!fs.existsSync(gizziBin)) {
+    log('ERROR: resources/bin/gizzi-code is missing — the packaged app would ship without a brain.');
+    log('Build it first via the canonical pipeline: ../../scripts/build-desktop.sh');
+    log('(which runs cmd/gizzi-code/build-production.js and copies dist/gizzi-code into resources/bin/).');
+    process.exit(1);
+  }
+  log(`gizzi-code brain present at ${gizziBin}`);
+}
+
 function main() {
+  checkRequiredBinaries();
+
   if (!fs.existsSync(platformDir)) {
     log(`Platform surface not found at ${platformDir}. Skipping static export.`);
     process.exit(0);
   }
 
-  log(`Building static export from ${platformDir}...`);
-
-  // Build Next.js static export
-  try {
-    execFileSync('npm', ['run', 'build'], {
-      cwd: platformDir,
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        CLOUDFLARE_PAGES: '1',
-      },
-    });
-  } catch (e) {
-    log(`Failed to build platform static export: ${e.message}`);
-    process.exit(1);
-  }
-
-  const outDir = path.join(platformDir, 'dist');
-  if (!fs.existsSync(outDir)) {
-    log(`Output directory ${outDir} not found after build.`);
-    process.exit(1);
-  }
-
-  // Clean and copy to resources
-  if (fs.existsSync(resourcesDir)) {
-    log(`Removing old resources/platform...`);
-    fs.rmSync(resourcesDir, { recursive: true });
-  }
-  fs.mkdirSync(resourcesDir, { recursive: true });
-
-  log(`Copying ${outDir} -> ${resourcesDir}...`);
-  copyDir(outDir, resourcesDir);
-
-  log(`Platform static export ready at ${resourcesDir}`);
+  // Build and copy platform static export
+  runBuild(platformDir, 'build', { CLOUDFLARE_PAGES: '1' });
+  copyExport(path.join(platformDir, 'dist'), platformResourcesDir, 'Platform');
 }
 
 main();

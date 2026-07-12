@@ -525,6 +525,7 @@ EOFCFG`);
       crypto.getRandomValues(randomValues);
     } else {
       // Fallback for Node.js
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { randomBytes } = require('crypto');
       const bytes = randomBytes(length);
       for (let i = 0; i < length; i++) {

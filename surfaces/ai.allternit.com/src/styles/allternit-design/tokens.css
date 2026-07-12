@@ -1,0 +1,195 @@
+/* ============================================================
+   Allternit Design tokens — scoped for Allternit ports
+   ============================================================
+   These tokens mirror the Open Design upstream tokens.css
+   but are scoped under .ad-tokens so they do not collide with
+   Allternit's global --accent and other CSS variables.
+
+   Apply this class to any container that hosts ported Allternit Design
+   components or surfaces.
+   ============================================================ */
+
+.ad-tokens {
+  /* Surface palette */
+  --ad-bg: #faf9f7;
+  --ad-bg-app: #faf9f7;
+  --ad-bg-panel: #fdfcfa;
+  --ad-bg-subtle: #f4f5f7;
+  --ad-bg-muted: #eef1f5;
+  --ad-bg-fill-tertiary: rgba(0, 0, 0, 0.03);
+  --ad-bg-fill-secondary: rgba(0, 0, 0, 0.06);
+  --ad-bg-fill: rgba(0, 0, 0, 0.12);
+  --ad-bg-elevated: #fffefc;
+  --ad-border: #e1e5eb;
+  --ad-border-strong: #c9d0da;
+  --ad-border-soft: #edf0f4;
+
+  --ad-text: #1a1916;
+  --ad-text-strong: #0d0c0a;
+  --ad-text-muted: #74716b;
+  --ad-text-soft: #989590;
+  --ad-text-faint: #b3b0a8;
+
+  /* Accent — Allternit sand-gold */
+  --ad-accent: #B08D6E;
+  --ad-accent-strong: #9A7658;
+  --ad-accent-soft: #F5EDE3;
+  --ad-accent-tint: #FDF8F3;
+  --ad-accent-hover: #9A7658;
+
+  /* Semantic accent tints */
+  --ad-green: #1f7a3a;
+  --ad-green-bg: #e8f7ee;
+  --ad-green-border: #c6ead2;
+  --ad-blue: #2348b8;
+  --ad-blue-bg: #e8efff;
+  --ad-blue-border: #c8d6ff;
+  --ad-purple: #6c3aa6;
+  --ad-purple-bg: #f3ecf9;
+  --ad-purple-border: #e4d4f1;
+  --ad-red: #9c2a25;
+  --ad-red-bg: #fdecea;
+  --ad-red-border: #f5c6c2;
+  --ad-amber: #b26200;
+  --ad-amber-bg: #fff3e0;
+
+  --ad-shadow-xs: 0 1px 0 rgba(28, 27, 26, 0.04);
+  --ad-shadow-sm: 0 1px 2px rgba(28, 27, 26, 0.05), 0 1px 3px rgba(28, 27, 26, 0.04);
+  --ad-shadow-md: 0 6px 24px rgba(28, 27, 26, 0.07), 0 2px 6px rgba(28, 27, 26, 0.04);
+  --ad-shadow-lg: 0 24px 60px rgba(28, 27, 26, 0.16), 0 8px 16px rgba(28, 27, 26, 0.07);
+
+  /* Radius scale */
+  --ad-radius-xs: 4px;
+  --ad-radius-sm: 6px;
+  --ad-radius: 8px;
+  --ad-radius-md: 10px;
+  --ad-radius-lg: 12px;
+  --ad-radius-pill: 999px;
+
+  /* Motion */
+  --ad-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ad-dur-quick: 120ms;
+  --ad-dur-enter: 200ms;
+  --ad-dur-exit: 140ms;
+
+  --ad-selected: #2563eb;
+  --ad-selected-soft: rgba(37, 99, 235, 0.16);
+
+  --ad-serif: 'Source Serif Pro', 'Source Serif 4', 'Iowan Old Style', 'Apple Garamond', Georgia, 'Times New Roman', serif;
+  --ad-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei UI', 'Noto Sans', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ad-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  --ad-prose-font-size: 15px;
+  --ad-prose-line-height: 1.75;
+  --ad-code-header-bg: #f4f5f7;
+  --ad-code-body-bg: #f9fafb;
+  --ad-code-font-size: 13px;
+  --ad-code-line-height: 1.65;
+
+  color: var(--ad-text);
+  background-color: var(--ad-bg);
+}
+
+.ad-tokens[data-theme='dark'] {
+  color-scheme: dark;
+  --ad-bg: #1a1917;
+  --ad-bg-app: #1a1917;
+  --ad-bg-panel: #222120;
+  --ad-bg-subtle: #252321;
+  --ad-bg-muted: #2e2c29;
+  --ad-bg-fill-tertiary: rgba(255, 255, 255, 0.06);
+  --ad-bg-fill-secondary: rgba(255, 255, 255, 0.10);
+  --ad-bg-fill: rgba(255, 255, 255, 0.16);
+  --ad-bg-elevated: #2a2825;
+  --ad-border: #333128;
+  --ad-border-strong: #46433c;
+  --ad-border-soft: #2a2825;
+
+  --ad-text: #e8e4dc;
+  --ad-text-strong: #f2ede4;
+  --ad-text-muted: #9a9690;
+  --ad-text-soft: #6e6b65;
+  --ad-text-faint: #4e4b46;
+
+  --ad-accent: #C4A78A;
+  --ad-accent-strong: #D4B08C;
+  --ad-accent-soft: #3D2E20;
+  --ad-accent-tint: #2A1F16;
+  --ad-accent-hover: #D4B08C;
+
+  --ad-green: #4caf72;
+  --ad-green-bg: #0f2a18;
+  --ad-green-border: #1a4028;
+  --ad-blue: #6b8fe8;
+  --ad-blue-bg: #0f1a38;
+  --ad-blue-border: #1a2c58;
+  --ad-purple: #a87dd4;
+  --ad-purple-bg: #1e1030;
+  --ad-purple-border: #321a50;
+  --ad-red: #e06b65;
+  --ad-red-bg: #2a0e0c;
+  --ad-red-border: #451714;
+  --ad-amber: #e09a40;
+  --ad-amber-bg: #2a1a04;
+
+  --ad-shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.2);
+  --ad-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --ad-shadow-md: 0 6px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --ad-shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.3);
+
+  --ad-code-header-bg: #1e1e20;
+  --ad-code-body-bg: #18181b;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ad-tokens:not([data-theme]) {
+    color-scheme: dark;
+    --ad-bg: #1a1917;
+    --ad-bg-app: #1a1917;
+    --ad-bg-panel: #222120;
+    --ad-bg-subtle: #252321;
+    --ad-bg-muted: #2e2c29;
+    --ad-bg-fill-tertiary: rgba(255, 255, 255, 0.06);
+    --ad-bg-fill-secondary: rgba(255, 255, 255, 0.10);
+    --ad-bg-fill: rgba(255, 255, 255, 0.16);
+    --ad-bg-elevated: #2a2825;
+    --ad-border: #333128;
+    --ad-border-strong: #46433c;
+    --ad-border-soft: #2a2825;
+
+    --ad-text: #e8e4dc;
+    --ad-text-strong: #f2ede4;
+    --ad-text-muted: #9a9690;
+    --ad-text-soft: #6e6b65;
+    --ad-text-faint: #4e4b46;
+
+    --ad-accent: #C4A78A;
+    --ad-accent-strong: #D4B08C;
+    --ad-accent-soft: #3D2E20;
+    --ad-accent-tint: #2A1F16;
+    --ad-accent-hover: #D4B08C;
+
+    --ad-green: #4caf72;
+    --ad-green-bg: #0f2a18;
+    --ad-green-border: #1a4028;
+    --ad-blue: #6b8fe8;
+    --ad-blue-bg: #0f1a38;
+    --ad-blue-border: #1a2c58;
+    --ad-purple: #a87dd4;
+    --ad-purple-bg: #1e1030;
+    --ad-purple-border: #321a50;
+    --ad-red: #e06b65;
+    --ad-red-bg: #2a0e0c;
+    --ad-red-border: #451714;
+    --ad-amber: #e09a40;
+    --ad-amber-bg: #2a1a04;
+
+    --ad-shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.2);
+    --ad-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+    --ad-shadow-md: 0 6px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
+    --ad-shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.3);
+
+    --ad-code-header-bg: #1e1e20;
+    --ad-code-body-bg: #18181b;
+  }
+}

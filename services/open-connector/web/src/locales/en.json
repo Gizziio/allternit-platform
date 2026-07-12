@@ -1,0 +1,328 @@
+{
+  "common": {
+    "active": "Active",
+    "apiUnavailable": "API unavailable",
+    "catalogOnly": "Catalog only",
+    "clear": "Clear",
+    "close": "Close",
+    "connected": "Connected",
+    "copied": "Copied {{label}}",
+    "copy": "Copy {{label}}",
+    "credential": "Credential",
+    "currentSelection": "Current selection",
+    "docs": "Docs",
+    "failed": "Failed",
+    "loadingRuntimeData": "Loading runtime data...",
+    "local": "Local",
+    "noAuth": "No auth",
+    "notConnected": "Not connected",
+    "open": "Open",
+    "refresh": "Refresh",
+    "required": "Required",
+    "runtimeReady": "Runtime ready",
+    "showMore": "Show more",
+    "showing": "Showing {{shown}} of {{total}}",
+    "success": "Success"
+  },
+  "brand": {
+    "subtitle": "Local runtime console",
+    "adminAccess": "Admin access"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "zh-CN": "简体中文",
+    "ja": "日本語",
+    "ru": "Русский",
+    "fr": "Français"
+  },
+  "nav": {
+    "overview": "Overview",
+    "providers": "Providers",
+    "actions": "Actions",
+    "runs": "Runs",
+    "access": "API Key",
+    "docs": "Docs"
+  },
+  "shell": {
+    "invalidUnlockToken": "Enter a valid admin token to unlock the console.",
+    "loadRuntimeFailed": "Could not load runtime data. Refresh or check that the runtime is running.",
+    "logoutFailed": "Could not log out. Try again.",
+    "primaryNav": "Primary",
+    "refreshData": "Refresh data",
+    "logout": "Log out",
+    "theme": "Theme",
+    "themeMode": {
+      "auto": "Auto",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "headings": {
+      "overview": {
+        "title": "Overview",
+        "subtitle": "Runtime status and health."
+      },
+      "providers": {
+        "title": "Providers",
+        "subtitle": "Connect providers and review provider capabilities."
+      },
+      "actions": {
+        "title": "Actions",
+        "subtitle": "Search, inspect, and debug local runtime actions."
+      },
+      "runs": {
+        "title": "Runs",
+        "subtitle": "Recent local action executions."
+      },
+      "access": {
+        "title": "API Key",
+        "subtitle": "Manage runtime API tokens for agents and clients."
+      },
+      "resources": {
+        "title": "Resources",
+        "subtitle": "Generated API references and tool metadata."
+      }
+    }
+  },
+  "unlock": {
+    "token": "Admin token",
+    "unlockConsole": "Unlock console"
+  },
+  "overview": {
+    "runtimeReady": "Runtime ready",
+    "connectedProviders": "{{count}} connected providers",
+    "capabilityStatus": "Capability Status",
+    "metrics": {
+      "providers": "Providers",
+      "actions": "Actions",
+      "executable": "Executable",
+      "runHealth": "Run Health"
+    },
+    "availableServices": "Available services",
+    "localActions": "Local actions",
+    "recentFailuresMeta": "Recent failures",
+    "ready": "Ready",
+    "unavailable": "Unavailable",
+    "needsAttention": "Needs attention",
+    "recentFailures": "Recent Failures",
+    "noFailedRunsTitle": "No failed runs",
+    "noFailedRunsDescription": "Recent action runs are clean.",
+    "callTrend": "Tool Call Trend",
+    "callTrendLegend": "Services",
+    "noCallTrendTitle": "No call trend yet",
+    "noCallTrendDescription": "Run an action to see daily service call volume.",
+    "recentCalls": "Recent Calls",
+    "viewRuns": "View",
+    "callCountOne": "{{count}} call",
+    "callCountMany": "{{count}} calls",
+    "noRecentCallsTitle": "No recent calls",
+    "noRecentCallsDescription": "Run an action to see provider call counts."
+  },
+  "providers": {
+    "catalogTitle": "Providers",
+    "searchPlaceholder": "Search providers",
+    "statusFilterLabel": "Provider status",
+    "filters": {
+      "all": "All",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "oauthNeedsConfig": "OAuth needs config"
+    },
+    "providerMeta": "{{service}} · {{authTypes}} · {{count}} actions",
+    "noAuth": "no auth",
+    "oauthConfigBadge": "OAuth config",
+    "noProvidersTitle": "No providers found",
+    "noProvidersDescription": "Try a different search or status filter.",
+    "resultCount": "Showing {{shown}} / {{total}}",
+    "showMore": "Show more",
+    "resetFilters": "Reset filters",
+    "providerNotFoundTitle": "Provider not found",
+    "providerNotFoundDescription": "{{service}} does not match the current catalog.",
+    "backToProviders": "Back to providers",
+    "providerHomepage": "Homepage",
+    "selectProviderTitle": "Select a provider",
+    "selectProviderDescription": "Choose a provider to inspect connection settings.",
+    "connectedBy": "Connected by {{authType}}",
+    "configuredBadge": "Configured",
+    "noSetupBadge": "No setup",
+    "unconfiguredBadge": "Not connected",
+    "oauthClientRequiredBadge": "OAuth client required",
+    "summary": {
+      "actions": "Actions",
+      "auth": "Auth",
+      "oauthConfig": "OAuth config",
+      "configured": "Configured",
+      "required": "Required",
+      "notUsed": "Not used"
+    },
+    "connection": "Connection",
+    "connectionMethod": "Connection method",
+    "connectionDescriptions": {
+      "noSetup": "This provider can run without local credentials.",
+      "connected": "Local credentials are configured with {{authType}}.",
+      "oauthClientRequired": "{{name}} needs a local OAuth client before OAuth can start.",
+      "notConnected": "Configure local credentials before running credentialed {{name}} actions."
+    },
+    "noConnectionMethodTitle": "No connection method",
+    "noConnectionMethodDescription": "This provider does not need local credentials.",
+    "oauthClient": "OAuth Client",
+    "scopes": "Scopes",
+    "scopesDescription": "Scopes requested by this provider's local actions.",
+    "actions": "Actions",
+    "actionsDescription": "{{count}} local runtime actions in the catalog.",
+    "noScopes": "No scopes",
+    "noActions": "No actions.",
+    "authLabels": {
+      "apiKey": "API key",
+      "oauth": "OAuth",
+      "custom": "Custom",
+      "noAuth": "No auth"
+    },
+    "connectionMessages": {
+      "noAuth": "This provider runs without local credentials.",
+      "needsOAuthClient": "{{name}} needs a local OAuth client before it can connect.",
+      "connectedOAuth": "{{name}} is connected through OAuth.",
+      "connectOAuth": "Connect {{name}} through its OAuth authorization flow.",
+      "saving": "Saving connection...",
+      "openingOAuth": "Opening OAuth...",
+      "configureOAuthFirst": "Configure the OAuth client before connecting.",
+      "oauthWindowOpened": "OAuth window opened.",
+      "updated": "Connection updated.",
+      "failed": "Connection failed.",
+      "disconnecting": "Disconnecting...",
+      "disconnected": "Disconnected.",
+      "disconnectFailed": "Disconnect failed."
+    },
+    "buttons": {
+      "configureOAuthClient": "Configure OAuth Client",
+      "editOAuthClient": "Edit OAuth Client",
+      "saveConnection": "Save Connection",
+      "connect": "Connect",
+      "details": "Details",
+      "manageConnection": "Manage",
+      "connectProvider": "Connect {{name}}",
+      "reconnectProvider": "Reconnect {{name}}",
+      "disconnect": "Disconnect",
+      "saveOAuthClient": "Save OAuth Client",
+      "updateOAuthClient": "Update OAuth Client",
+      "resetOAuthClient": "Reset OAuth Client"
+    },
+    "oauthClientSettings": {
+      "configuredTitle": "OAuth client configured",
+      "requiredTitle": "OAuth client required",
+      "missingDescription": "{{name}} needs a local OAuth client before connection.",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "storedSecretHint": "Stored secret is not shown. Enter it again when saving changes.",
+      "saving": "Saving OAuth client...",
+      "saved": "OAuth client saved.",
+      "failed": "Failed to save OAuth client.",
+      "resetting": "Resetting OAuth client...",
+      "reset": "OAuth client reset.",
+      "resetFailed": "Failed to reset OAuth client."
+    },
+    "execution": {
+      "executable": "Executable",
+      "catalogOnly": "Catalog only"
+    }
+  },
+  "actions": {
+    "searchPlaceholder": "Search actions by name, id, or provider",
+    "provider": "Provider",
+    "allProviders": "All providers",
+    "actionsCount": "{{count}} actions",
+    "noActionsTitle": "No actions found",
+    "noActionsDescription": "Try a different search or provider filter.",
+    "actionNotFoundTitle": "Action not found",
+    "noActionSelectedTitle": "No action selected",
+    "actionNotFoundDescription": "The action route does not match the current catalog.",
+    "selectActionDescription": "Select an action to inspect and run it.",
+    "locallyExecutable": "Locally executable",
+    "needsCredential": "Needs credential",
+    "debugAction": "Debug Action",
+    "requiredScopes": "Required Scopes",
+    "parameters": "Parameters",
+    "fieldsCount": "{{count}} fields",
+    "noInputParameters": "No input parameters.",
+    "required": "Required",
+    "optional": "Optional",
+    "actionExamples": "Action examples",
+    "open": "Open",
+    "copyExample": "Copy {{label}}",
+    "copiedExample": "Copied {{label}}",
+    "closeDebugAction": "Close debug action",
+    "input": "Input",
+    "run": "Run",
+    "running": "Running",
+    "runningAction": "Running action...",
+    "actionFailed": "Action failed."
+  },
+  "runs": {
+    "noRunsTitle": "No runs yet",
+    "noRunsDescription": "Run an action to see recent execution history.",
+    "service": "Service",
+    "allServices": "All services",
+    "loadMore": "Load more",
+    "loadMoreFailed": "Failed to load more runs.",
+    "table": {
+      "action": "Action",
+      "caller": "Caller",
+      "status": "Status",
+      "started": "Started",
+      "duration": "Duration",
+      "input": "Input",
+      "error": "Error"
+    }
+  },
+  "access": {
+    "title": "Runtime Tokens",
+    "description": "Issue bearer tokens for /v1 and MCP clients. New tokens are shown once.",
+    "name": "Name",
+    "namePlaceholder": "Local MCP client",
+    "createToken": "Create Token",
+    "createTokenDescription": "Name the client that will use this runtime token.",
+    "closeCreateToken": "Close create token dialog",
+    "creating": "Creating token...",
+    "created": "Token created.",
+    "createFailed": "Failed to create token.",
+    "revoking": "Revoking token...",
+    "revoked": "Token revoked.",
+    "revokeFailed": "Failed to revoke token.",
+    "newToken": "New token",
+    "tokenShownOnce": "This token is shown once. Copy it before closing this dialog.",
+    "copyToken": "Copy Token",
+    "copiedToken": "Copied",
+    "copyRuntimeToken": "Copy runtime token",
+    "copiedRuntimeToken": "Copied runtime token",
+    "noTokensTitle": "No runtime tokens yet",
+    "noTokensDescription": "Create one before connecting an MCP client or local script. The token is shown once.",
+    "table": {
+      "name": "Name",
+      "status": "Status",
+      "created": "Created",
+      "lastUsed": "Last used"
+    },
+    "revoke": "Revoke"
+  },
+  "resources": {
+    "apiReference": {
+      "title": "API Reference",
+      "description": "Browse the local runtime routes in Scalar."
+    },
+    "mcp": {
+      "title": "MCP connection",
+      "description": "Connect Claude Desktop or Cursor to this local runtime.",
+      "endpoint": "MCP URL",
+      "copyEndpoint": "Copy MCP URL",
+      "copiedEndpoint": "Copied MCP URL",
+      "configTitle": "JSON configuration",
+      "copyConfig": "Copy JSON configuration",
+      "copiedConfig": "Copied JSON configuration",
+      "createToken": "Generate Runtime Token"
+    },
+    "openapi": {
+      "title": "OpenAPI JSON",
+      "description": "Use the generated spec from scripts or tool importers."
+    }
+  }
+}

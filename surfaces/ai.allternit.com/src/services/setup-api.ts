@@ -16,6 +16,8 @@ export interface CompanyConfig {
   gatewayUrl: string;
   terminalServerUrl: string;
   tenantId: string;
+  /** When true, Clerk is optional and the local bundle is the auth authority. */
+  selfHosted?: boolean;
 }
 
 export interface WizardState {
@@ -101,11 +103,59 @@ export const setupApi = {
     return api.get('/api/onboarding/discover');
   },
 
+  /** Providers already authenticated on this machine (keychain / env / Gizzi config). */
+  listProviderAuthStatus(): Promise<
+    Array<{
+      provider_id: string;
+      status: 'ok' | 'missing' | 'expired' | 'unknown' | 'not_required';
+      authenticated: boolean;
+    }>
+  > {
+    return api.listProviderAuthStatus().then((r) => r.providers);
+  },
+
+  /** Discover models for a provider that already has a saved key (no key paste needed). */
+  discoverProviderModels(provider: string): Promise<{
+    supported: boolean;
+    models: Array<{ id: string; name: string }>;
+    default_model_id?: string;
+  }> {
+    return api.discoverProviderModels(provider).then((r) => ({
+      supported: r.supported,
+      models: (r.models ?? []).map((m) => ({ id: m.id, name: m.name })),
+      default_model_id: r.default_model_id,
+    }));
+  },
+
   validateKey(provider: string, key: string): Promise<ValidateKeyResponse> {
     return api.post('/api/onboarding/validate-key', { provider, key });
   },
 
   saveProvider(payload: SaveProviderPayload): Promise<SaveProviderResponse> {
     return api.post('/api/onboarding/provider', payload);
+  },
+
+  /** Trigger a subscription/OAuth sign-in flow for a CLI provider (claude/codex/qwen/kimi/antigravity/zai). */
+  connectProvider(id: string): Promise<{
+    status: 'already_connected' | 'started' | 'not_installed' | 'needs_api_key';
+    provider: string;
+    label?: string;
+    page?: string;
+    binary?: string;
+  }> {
+    return api.post(`/api/v1/providers/${id}/connect`, {});
+  },
+
+  connectProviderStatus(id: string): Promise<{
+    status: 'success' | 'pending';
+    provider: string;
+    label?: string;
+  }> {
+    return api.get(`/api/v1/providers/${id}/connect/status`);
+  },
+
+  /** User-attested completion of an interactive sign-in we could not auto-detect. */
+  confirmProviderConnect(id: string): Promise<{ status: string; provider: string; confirmed?: boolean }> {
+    return api.post(`/api/v1/providers/${id}/connect/confirm`, {});
   },
 };

@@ -7,7 +7,6 @@
       "ES2022"
     ],
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -27,6 +26,12 @@
       ],
       "@allternit/runtime/*": [
         "./src/*/index.ts"
+      ],
+      "@allternit/governor": [
+        "../../../../domains/governance/governor/src/index.ts"
+      ],
+      "@allternit/browser": [
+        "../../../../infrastructure/chrome-stream/agent-systems/allternit-browser/src/index.ts"
       ]
     }
   },

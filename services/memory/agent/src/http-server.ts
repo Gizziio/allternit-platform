@@ -12,7 +12,7 @@ import type { IngestRequest, QueryRequest } from './types/memory.types.js';
 import { VectorStore } from './store/vector-store.js';
 import { observability } from './utils/observability.js';
 
-const app = express();
+const app: express.Application = express();
 const PORT = process.env.MEMORY_HTTP_PORT || 3201;
 
 // Middleware

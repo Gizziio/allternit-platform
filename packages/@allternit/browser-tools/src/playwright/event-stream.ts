@@ -108,7 +108,7 @@ class EventStreamManager {
 
     // Run cleanup functions
     subscription.cleanup.forEach(fn => {
-      try { fn(); } catch {}
+      try { fn(); } catch { /* ignore cleanup errors */ }
     });
 
     // Clear screenshot interval
@@ -248,7 +248,7 @@ class EventStreamManager {
           };
           this.emit(subscription, event);
         }
-      } catch {}
+      } catch { /* ignore mutation observer errors */ }
     }, subscription.config.domMutationThrottle || 100);
 
     subscription.cleanup.push(() => clearInterval(pollInterval));
@@ -387,7 +387,7 @@ class EventStreamManager {
           },
         };
         this.emit(subscription, event);
-      } catch {}
+      } catch { /* ignore screenshot errors */ }
     }, subscription.config.screenshotInterval);
 
     this.screenshotIntervals.set(subscription.id, interval);

@@ -1,0 +1,18 @@
+{
+  "id": "blog-post",
+  "name": "Blog Post",
+  "version": "1.0.0",
+  "description": "Author a polished blog post layout as a self-contained live HTML artifact.",
+  "category": "examples",
+  "author": "Allternit Design",
+  "tags": ["blog", "content", "editorial", "web", "html"],
+  "preview": { "type": "html", "entry": "example.html" },
+  "inputs": [
+    { "name": "title", "type": "string", "required": true, "label": "Post title" },
+    { "name": "brief", "type": "text", "required": false, "label": "Angle / outline" }
+  ],
+  "pipelines": [
+    { "name": "live-html", "format": "html" }
+  ],
+  "capabilities": ["prompt:inject", "fs:write"]
+}

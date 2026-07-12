@@ -446,3 +446,4 @@ const getCompatibilityStatusMessage = (compatibility: BrowserCompatibility): str
     return 'Poor browser support - some features unavailable';
   }
 };
+

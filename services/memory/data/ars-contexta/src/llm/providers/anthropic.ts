@@ -47,6 +47,7 @@ interface AnthropicStreamEvent {
     type?: string;
     text?: string;
     partial_json?: string;
+    stop_reason?: string;
   };
   content_block?: {
     type: string;
@@ -124,7 +125,7 @@ export class AnthropicProvider implements LlmClient {
       throw new Error(`Anthropic API error: ${response.status} ${error}`);
     }
 
-    const data: AnthropicMessage = await response.json();
+    const data = await response.json() as AnthropicMessage;
     const textContent = data.content.find(c => c.type === 'text');
     const toolContent = data.content.filter(c => c.type === 'tool_use');
 
@@ -284,7 +285,7 @@ export class AnthropicProvider implements LlmClient {
             return {
               id: currentId,
               delta: '',
-              finishReason: this.mapStopReason(event.delta.stop_reason as string),
+              finishReason: this.mapStopReason(event.delta.stop_reason as string) as LlmStreamChunk['finishReason'],
             };
           }
           break;
@@ -348,7 +349,7 @@ export class AnthropicProvider implements LlmClient {
 
     if (!response.ok) return [];
 
-    const data = await response.json();
+    const data = await response.json() as any;
     return data.data
       .filter((m: any) => m.id.startsWith('claude-'))
       .map((m: any) => m.id);

@@ -104,6 +104,7 @@ const TablesView             = lazy(() => import('../views/cowork/TablesView').t
 const FilesView              = lazy(() => import('../views/cowork/FilesView').then(m => ({ default: m.FilesView })));
 const ExportsView            = lazy(() => import('../views/cowork/ExportsView').then(m => ({ default: m.ExportsView })));
 const ProductsDiscoveryView  = lazy(() => import('../views/products/ProductsDiscoveryView').then(m => ({ default: m.ProductsDiscoveryView })));
+const LibraryView            = lazy(() => import('../views/library/LibraryView').then(m => ({ default: m.LibraryView })));
 const LabsView               = lazy(() => import('../views/LabsView').then(m => ({ default: m.LabsView })));
 const CatalogView            = lazy(() => import('../views/CatalogView').then(m => ({ default: m.CatalogView })));
 const ExplorerView           = lazy(() => import('../views/code/ExplorerView').then(m => ({ default: m.ExplorerView })));
@@ -643,6 +644,11 @@ export function getShellViewRegistry(handlers: {
         <ProductsDiscoveryView />
       </ErrorBoundary>
     ),
+    library: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Library" />}>
+        <LibraryView openView={open} />
+      </ErrorBoundary>
+    ),
     labs: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="A://Labs" />}>
         <LabsView />
@@ -684,9 +690,9 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'chat-agent-session': ({ context }: { context?: ViewContext }) => (
-      <ChatModeAgentSession 
+      <ChatModeAgentSession
         mode="chat"
-        sessionId={context!.viewId}
+        sessionId={(context?.context as any)?.sessionId ?? context!.viewId}
         context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
         onClose={() => open('chat')}
       />

@@ -25,7 +25,7 @@ declare module 'better-sqlite3' {
 declare module 'chokidar' {
   import { EventEmitter } from 'events';
   
-  interface FSWatcher extends EventEmitter {
+  export interface FSWatcher extends EventEmitter {
     close(): Promise<void>;
     on(event: 'add', listener: (path: string) => void): this;
     on(event: 'change', listener: (path: string) => void): this;
@@ -33,8 +33,8 @@ declare module 'chokidar' {
     on(event: string, listener: (...args: any[]) => void): this;
   }
   
-  interface WatchOptions {
-    ignored?: RegExp | string | Array<string>;
+  export interface WatchOptions {
+    ignored?: RegExp | string | Array<RegExp | string>;
     persistent?: boolean;
     ignoreInitial?: boolean;
     awaitWriteFinish?: {
@@ -43,7 +43,7 @@ declare module 'chokidar' {
     };
   }
   
-  function watch(paths: string | Array<string>, options?: WatchOptions): FSWatcher;
+  export function watch(paths: string | Array<string>, options?: WatchOptions): FSWatcher;
   
   export default watch;
 }

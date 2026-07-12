@@ -1,9 +1,11 @@
 // @ts-nocheck
 'use client'
-import React, { useIsClient } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSettingsState } from '@/hooks/useSettingsState';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
+import { BrainsPanel } from '@/components/settings/BrainsPanel';
 import {
   GearSix,
   Cpu,
@@ -48,16 +50,32 @@ import {
   ArrowUpRight,
   DownloadSimple,
   Gift,
+  MagnifyingGlass,
+  Sparkle,
+  PlugsConnected,
+  PuzzlePiece,
 } from '@phosphor-icons/react';
 import { VPSConnectionsPanel } from './VPSConnectionsPanel';
 import { ToastProvider } from '@/components/ui/toast-provider';
-import { usePlatformUser, usePlatformSignOut, usePlatformSessions, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
+import { usePlatformUser, usePlatformSignOut, usePlatformHardSignOut, usePlatformSessions, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
 import { useThemeStore } from '@/design/ThemeStore';
 import { LocalModelManager } from '@/components/models/LocalModelManager';
 import { InfrastructureSettings } from './InfrastructureSettings';
 import { ServiceUrlSettings } from './ServiceUrlSettings';
 import { EnvironmentSettings } from './EnvironmentSettings';
-import { SETTINGS_NAV_ITEMS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
+import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
+import { SettingsRow } from '@/components/settings/SettingsRow';
+import { Toggle } from '@/components/settings/Toggle';
+import { SectionHeading } from '@/components/settings/SectionHeading';
+import { SettingsTable, SettingsTableCell, SettingsTableChip } from '@/components/settings/SettingsTable';
+import { PanelHeader } from '@/components/settings/PanelHeader';
+import { Badge } from '@/components/settings/Badge';
+import { SkeletonRow } from '@/components/settings/SkeletonRow';
+import { EmptyState } from '@/components/settings/EmptyState';
+import { MonoChip } from '@/components/settings/MonoChip';
+import { AgentOpsPanel } from './AgentOpsPanel';
+import { SecurityPanel } from './SecurityPanel';
+import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS, SETTINGS_SELECT_CLASS } from '@/components/settings/buttonStyles';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -141,13 +159,6 @@ const SHORTCUTS = [
   { action: 'Run Agent', shortcut: '⌘R' },
   { action: 'Toggle Theme', shortcut: '⌘Shift+T' },
   { action: 'Open Settings', shortcut: '⌘,' },
-];
-
-const API_PROVIDERS = [
-  { name: 'OpenAI', letter: 'O' },
-  { name: 'Anthropic', letter: 'A' },
-  { name: 'Mistral', letter: 'M' },
-  { name: 'Google', letter: 'G' },
 ];
 
 const GC_AGENT_INFO: Record<string, { description: string; icon: React.ReactNode }> = {
@@ -257,66 +268,24 @@ const SectionDivider = (): React.ReactNode => (
   <div className="h-px bg-[var(--border-subtle)] my-3" />
 );
 
-const ToggleItem: React.FC<{ label: string; value: boolean; onChange: (v: boolean) => void; description?: string }> = ({ label, value, onChange, description }) => (
-  <div className="flex items-center justify-between py-3 mb-3">
-    <div>
-      <div className="text-[13px] font-medium text-[var(--text-primary)] mb-0.5">{label}</div>
-      {description && <div className="text-[12px] text-[var(--text-secondary)]">{description}</div>}
-    </div>
-    <button type="button" 
-      onClick={() => onChange(!value)} 
-      className={cn(
-        "w-12 h-7 rounded-full border-none relative transition-all duration-300 cursor-pointer p-0",
-        value ? "bg-[var(--accent-primary)]" : "bg-[var(--border-subtle)]"
-      )}
-    >
-      <div className={cn(
-        "size-6 rounded-full bg-white absolute top-0.5 transition-all duration-300 shadow-sm",
-        value ? "left-[22px]" : "left-0.5"
-      )} />
-    </button>
-  </div>
-);
-
 const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: () => void }> = ({ item, activeSection, onClick }) => {
   const isActive = activeSection === item.id;
   return (
-    <button type="button" 
-      onClick={onClick} 
+    <button type="button"
+      onClick={onClick}
+      title={item.label}
       className={cn(
-        "w-full p-2 px-3 border-none flex items-center gap-2.5 transition-all duration-150 text-sm rounded-lg relative text-left cursor-pointer",
-        isActive 
-          ? "bg-[var(--bg-secondary)] text-[var(--text-primary)]" 
+        "w-full flex items-center gap-2.5 px-3 py-2 border-none rounded-lg text-left cursor-pointer transition-colors duration-150",
+        isActive
+          ? "bg-[var(--bg-secondary)] text-[var(--text-primary)]"
           : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
       )}
     >
-      {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[var(--accent-primary)] rounded-r-sm" />}
-      {item.label}
+      <span className="shrink-0 flex items-center">{item.icon}</span>
+      <span className="truncate text-[14px]">{item.label}</span>
     </button>
   );
 };
-
-const StatCard = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
-  <div className="p-5 bg-[var(--bg-secondary)] rounded-lg border border-solid border-[var(--border-subtle)] text-center">
-    <div className="text-3xl font-bold tabular-nums" style={{ color }}>{value}</div>
-    <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider mt-1">{label}</div>
-  </div>
-);
-
-const DiagnosticRow = ({ label, value, status }: { label: string, value: string, status?: 'success' | 'warning' | 'error' }) => (
-  <div className="flex justify-between p-3 px-4 border-b border-solid border-[var(--border-subtle)] last:border-b-0">
-    <span className="text-[13px] text-[var(--text-secondary)]">{label}</span>
-    <div className="flex items-center gap-2">
-      {status && (
-        <div className={cn(
-          "size-1.5 rounded-full",
-          status === 'success' ? "bg-[var(--status-success)]" : status === 'warning' ? "bg-[var(--status-warning)]" : "bg-[var(--status-error)]"
-        )} />
-      )}
-      <span className="text-[13px] font-medium text-[var(--text-primary)] font-mono">{value}</span>
-    </div>
-  </div>
-);
 
 const MetricBar = ({ label, value, suffix = '%', inverse = false }: { label: string, value: number, suffix?: string, inverse?: boolean }) => {
   const color = inverse 
@@ -349,59 +318,24 @@ const PermissionRow: React.FC<{
   const denied = status === 'denied';
 
   return (
-    <div className="flex items-center gap-3 p-3.5 px-4 bg-[var(--bg-secondary)] rounded-lg border border-solid border-[var(--border-subtle)]">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          {granted ? <CheckCircle size={16} className="text-[var(--status-success)]" /> : denied ? <Warning size={16} className="text-[var(--status-error)]" /> : <CircleNotch size={16} className="text-[var(--ui-text-muted)] animate-spin" />}
-          <span className={cn("text-sm font-medium", granted ? "text-[var(--status-success)]" : "text-[var(--text-primary)]")}>{label}</span>
-        </div>
-        <p className="text-[12px] text-[var(--text-secondary)] m-0 leading-relaxed truncate">{description}</p>
-      </div>
-      {denied && (
-        <button type="button"
-          onClick={onGrant}
-          className="p-1.5 px-3.5 rounded-lg border-none bg-[var(--status-warning)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer transition-transform active:scale-95"
-        >
-          Grant
-        </button>
-      )}
+    <SettingsRow label={label} description={description}>
       {granted && (
-        <span className="text-[12px] text-[var(--status-success)] font-semibold uppercase tracking-wider shrink-0">Granted</span>
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--status-success)]/15 text-[var(--status-success)]">
+          <CheckCircle size={12} weight="fill" /> Granted
+        </span>
       )}
-    </div>
+      {denied && (
+        <span className="flex items-center gap-2">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--bg-secondary)] text-[var(--text-secondary)]">Not granted</span>
+          <button type="button" onClick={onGrant} className={QUIET_BUTTON_CLASS}>Grant</button>
+        </span>
+      )}
+      {!granted && !denied && (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--bg-secondary)] text-[var(--text-secondary)]">Checking…</span>
+      )}
+    </SettingsRow>
   );
 };
-
-const ToastContainer = ({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) => (
-  <div className="fixed top-5 right-5 z-[160] flex flex-col gap-2 pointer-events-none">
-    <AnimatePresence>
-      {toasts.map(toast => (
-        <motion.div
-          key={toast.id}
-          initial={{ opacity: 0, x: 20, scale: 0.95 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 20, scale: 0.95 }}
-          className={cn(
-            "p-3 px-4 rounded-xl text-[13px] font-semibold shadow-xl flex items-center gap-2.5 pointer-events-auto min-w-[280px] max-w-[400px]",
-            toast.type === 'error' ? "bg-[var(--status-error)]" : toast.type === 'success' ? "bg-[var(--status-success)]" : "bg-[var(--status-info)]",
-            "text-[var(--ui-text-inverse)]"
-          )}
-        >
-          {toast.type === 'error' && <XCircle size={18} weight="fill" />}
-          {toast.type === 'success' && <CheckCircle size={18} weight="fill" />}
-          {toast.type === 'info' && <Info size={18} weight="fill" />}
-          <span className="flex-1">{toast.message}</span>
-          <button type="button" 
-            onClick={() => onRemove(toast.id)}
-            className="bg-transparent border-none text-[var(--ui-text-inverse)] cursor-pointer opacity-70 hover:opacity-100 transition-opacity p-0.5"
-          >
-            <X size={14} weight="bold" />
-          </button>
-        </motion.div>
-      ))}
-    </AnimatePresence>
-  </div>
-);
 
 // ─── Main View Component ──────────────────────────────────────────────────────
 
@@ -411,6 +345,7 @@ function ClerkAuthPanel() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const user = _user as any;
   const signOut = usePlatformSignOut();
+  const hardSignOut = usePlatformHardSignOut();
   const [backendSummary, setBackendSummary] = useState<{ mode: string; url: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [restarting, setRestarting] = useState(false);
@@ -478,30 +413,26 @@ function ClerkAuthPanel() {
     backendSummary?.mode === 'remote' ? 'Manage remote backend' : 'Manage backend';
 
   if (!isLoaded) {
-    return <div className="p-6 text-[var(--text-tertiary)] text-[13px]">Loading…</div>;
+    return <div className="py-6 text-[var(--text-tertiary)] text-[13px]">Loading…</div>;
   }
 
   if (isPlatformAuthDisabled()) {
     return (
-      <div className="p-6">
-        <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6">
-          <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
-            Authentication is unavailable in this build. No signed-in user is active.
-          </div>
-        </div>
+      <div className="py-2 text-[13px] text-[var(--text-secondary)] leading-relaxed">
+        Authentication is unavailable in this build. No signed-in user is active.
       </div>
     );
   }
 
   if (!isSignedIn) {
     return (
-      <div className="p-6">
-        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold mb-4">Sign in to your Allternit account</div>
+      <div>
+        <SectionHeading>Sign in to your Allternit account</SectionHeading>
         <PlatformSignIn />
-        <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 mt-4 text-[12px] text-[var(--text-secondary)] leading-relaxed">
+        <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed mt-4">
           Desktop OAuth and backend selection are separate.
           Use Infrastructure or VPS Connections to change the active backend without resetting auth.
-        </div>
+        </p>
       </div>
     );
   }
@@ -515,9 +446,9 @@ function ClerkAuthPanel() {
   const initials = name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
 
   return (
-    <div className="p-6">
-      <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold mb-2">Account</div>
-      <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 mb-4 flex items-center gap-4">
+    <div>
+      <SectionHeading>Account</SectionHeading>
+      <div className="flex items-center gap-4 py-4">
         {user?.imageUrl ? (
           <img src={user.imageUrl} alt={name} className="size-12 rounded-full object-cover shrink-0" />
         ) : (
@@ -525,88 +456,91 @@ function ClerkAuthPanel() {
             {initials}
           </div>
         )}
-        <div className="min-w-0">
-          <div className="text-[15px] font-bold text-[var(--text-primary)] mb-0.5">{name}</div>
-          {email && <div className="text-[12px] text-[var(--text-tertiary)] truncate">{email}</div>}
+        <div className="min-w-0 flex-1">
+          <div className="text-[15px] font-semibold text-[var(--text-primary)] mb-0.5">{name}</div>
+          {email && <div className="text-[13px] text-[var(--text-secondary)] truncate">{email}</div>}
         </div>
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void signOut()}>
+          Log out
+        </button>
       </div>
+      {user?.id && (
+        <SettingsRow label="User ID" description="Your Allternit account identifier">
+          <MonoChip className="max-w-[320px] break-all">{user.id}</MonoChip>
+        </SettingsRow>
+      )}
+      <SettingsRow label="Log out of all devices" description="Ends every active session on all devices, including this one">
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void hardSignOut()}>
+          Log out everywhere
+        </button>
+      </SettingsRow>
 
-      <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 mb-4">
-        <div className="mb-1 text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">
-          Session
-        </div>
-        <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed mb-4">
-          Sign out of the current Allternit account session. Backend routing stays managed separately in infrastructure settings.
-        </div>
-        <div className="flex gap-2.5 flex-wrap">
-          <button type="button" className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border border-solid border-rose-500/30 bg-[var(--status-error-bg)] text-[var(--status-error)] text-[13px] font-semibold cursor-pointer active:scale-95" onClick={() => void signOut()}>
-            <User size={14} weight="bold" /> Sign out
-          </button>
-          <button type="button" className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-hover)] disabled:opacity-50 active:scale-95" onClick={() => void refreshBackendSummary()} disabled={refreshing}>
+      <SectionHeading>Active sessions</SectionHeading>
+      {sessions.length > 0 ? (
+        <SettingsTable columns={['Session', 'Last active', '']}>
+          {sessions.map((sess: any) => {
+            const isCurrent = sess.id === (user as any)?.lastActiveSessionId;
+            return (
+              <tr key={sess.id}>
+                <SettingsTableCell>
+                  <span className="flex items-center gap-2">
+                    <span className={cn("size-1.5 rounded-full shrink-0", sess.status === 'active' ? "bg-[var(--status-success)]" : "bg-[var(--ui-text-muted)]")} />
+                    <span className="font-mono text-[12px] text-[var(--text-secondary)] truncate max-w-[200px]">{sess.id}</span>
+                    {isCurrent && <SettingsTableChip>Current</SettingsTableChip>}
+                  </span>
+                </SettingsTableCell>
+                <SettingsTableCell className="text-[var(--text-secondary)]">
+                  {sess.latestActivityAt ? new Date(sess.latestActivityAt).toLocaleDateString() : '—'}
+                </SettingsTableCell>
+                <SettingsTableCell className="text-right">
+                  {!isCurrent && (
+                    <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => sess.revoke()}>Revoke</button>
+                  )}
+                </SettingsTableCell>
+              </tr>
+            );
+          })}
+        </SettingsTable>
+      ) : (
+        <p className="text-[13px] text-[var(--text-secondary)] py-3">No active sessions.</p>
+      )}
+
+      <SectionHeading>Trusted devices</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] py-3">No trusted devices.</p>
+
+      <SectionHeading>Backend</SectionHeading>
+      <SettingsRow label="Connection" description={backendLabel ?? 'Backend state unavailable'}>
+        <div className="flex items-center gap-2">
+          <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void refreshBackendSummary()} disabled={refreshing}>
             <ArrowsClockwise size={14} className={refreshing ? 'animate-spin' : ''} /> {refreshing ? 'Refreshing…' : 'Refresh status'}
           </button>
           {isElectron && (
-            <button type="button" className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-hover)] disabled:opacity-50 active:scale-95" onClick={handleRestartBackend} disabled={restarting}>
-              <Cpu size={14} className={restarting ? 'animate-spin' : ''} /> {restarting ? 'Restarting…' : 'Restart Backend'}
+            <button type="button" className={QUIET_BUTTON_CLASS} onClick={handleRestartBackend} disabled={restarting}>
+              <Cpu size={14} className={restarting ? 'animate-spin' : ''} /> {restarting ? 'Restarting…' : 'Restart backend'}
             </button>
           )}
         </div>
-      </div>
-
-      <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 mb-4">
-        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold mb-3">Active Platform Sessions</div>
-        <div className="flex flex-col gap-3">
-          {sessions.map((sess: any) => (
-            <div key={sess.id} className="flex items-center justify-between p-2.5 px-3.5 bg-[var(--surface-hover)] rounded-lg border border-solid border-[var(--ui-border-muted)]">
-              <div className="flex items-center gap-2.5">
-                <div className={cn("size-1.5 rounded-full", sess.status === 'active' ? "bg-[var(--status-success)]" : "bg-[var(--ui-text-muted)]")} />
-                <div>
-                  <div className="text-[13px] font-bold text-[var(--text-primary)]">
-                    {sess.latestActivityAt ? new Date(sess.latestActivityAt).toLocaleDateString() : 'Active Session'}
-                    {sess.id === (user as any)?.lastActiveSessionId && <span className="ml-2 text-[11px] text-[var(--accent-primary)] uppercase tracking-widest font-black">(Current)</span>}
-                  </div>
-                  <div className="text-[12px] text-[var(--text-tertiary)] font-mono opacity-60">ID: {sess.id}</div>
-                </div>
-              </div>
-              {sess.id !== (user as any)?.lastActiveSessionId && (
-                <button type="button" className="p-1 px-3 rounded-md border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--text-primary)] text-[12px] font-bold cursor-pointer hover:bg-white/5 active:scale-95" onClick={() => sess.revoke()}>Revoke</button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-[var(--status-success-bg)] border border-solid border-emerald-500/20 rounded-xl p-5 px-6 mb-4">
-        <div className="flex items-center gap-2.5 mb-2">
-          <Shield size={18} className="text-[var(--status-success)]" weight="fill" />
-          <div className="text-[14px] font-black text-[var(--status-success)] uppercase tracking-wider">Offline-First Sovereignty</div>
-        </div>
-        <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed m-0">
-          Your Private Brain remains 100% functional without internet. All neural memories, local models (Ollama), and tool schemas are stored securely on this device.
-        </p>
-      </div>
-
-      <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 text-[12px] text-[var(--text-secondary)] leading-relaxed">
-        <div className="mb-1 text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">
-          Backend Routing
-        </div>
-        <div className="text-[var(--text-primary)] font-bold mb-0.5">
-          {backendLabel ?? 'Backend state unavailable'}
-        </div>
-        {backendSummary?.url && <div className="break-all mb-2 font-mono opacity-60">{backendSummary.url}</div>}
-        <div className="mb-4 text-[var(--text-tertiary)]">
-          {backendHelp}
-        </div>
-        <div className="flex gap-2.5 flex-wrap">
-          <button type="button" className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer hover:opacity-90 active:scale-95" onClick={() => openSettingsSection('infrastructure', manageBackendTab)}>
-            <Cloud size={14} weight="bold" /> {manageBackendLabel}
+      </SettingsRow>
+      {backendSummary?.url && (
+        <SettingsRow label="Backend URL">
+          <MonoChip className="max-w-[320px] break-all">{backendSummary.url}</MonoChip>
+        </SettingsRow>
+      )}
+      <SettingsRow label="Backend routing" description={backendHelp}>
+        <div className="flex items-center gap-2">
+          <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openSettingsSection('infrastructure', manageBackendTab)}>
+            <Cloud size={14} /> {manageBackendLabel}
           </button>
-          <button type="button" className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-hover)] active:scale-95" onClick={() => openSettingsSection('infrastructure', 'connections')}>
-            <HardDrives size={14} weight="bold" /> BYOC connections
+          <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openSettingsSection('infrastructure', 'connections')}>
+            <HardDrives size={14} /> BYOC connections
           </button>
         </div>
-      </div>
+      </SettingsRow>
 
+      <SectionHeading>Offline-first sovereignty</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed py-1">
+        Your Private Brain remains 100% functional without internet. All neural memories, local models (Ollama), and tool schemas are stored securely on this device.
+      </p>
     </div>
   );
 }
@@ -647,9 +581,9 @@ const PermissionsPanel = () => {
 
   if (!hasApi) {
     return (
-      <div style={{ maxWidth: 500 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>System Permissions</h3>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+      <div>
+        <SectionHeading>System permissions</SectionHeading>
+        <p className="text-[13px] text-[var(--text-secondary)]">
           Permission guide is only available in the Allternit Desktop app.
         </p>
       </div>
@@ -659,41 +593,36 @@ const PermissionsPanel = () => {
   const allGranted = permStatus?.accessibility === 'granted' && permStatus?.screenRecording === 'granted';
 
   return (
-    <div style={{ maxWidth: 500 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>System Permissions</h3>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24 }}>
+    <div>
+      <SectionHeading>System permissions</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] mb-2">
         Allternit needs Accessibility and Screen Recording permissions to control your desktop and capture screenshots.
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
-        <PermissionRow
-          label="Accessibility"
-          description="Allows Allternit to click and type on your behalf"
-          status={permStatus?.accessibility}
-          onGrant={() => presentGuide('accessibility')}
-        />
-        <PermissionRow
-          label="Screen Recording"
-          description="Allows Allternit to see your screen and take screenshots"
-          status={permStatus?.screenRecording}
-          onGrant={() => presentGuide('screen-recording')}
-        />
-      </div>
+      <PermissionRow
+        label="Accessibility"
+        description="Allows Allternit to click and type on your behalf"
+        status={permStatus?.accessibility}
+        onGrant={() => presentGuide('accessibility')}
+      />
+      <PermissionRow
+        label="Screen Recording"
+        description="Allows Allternit to see your screen and take screenshots"
+        status={permStatus?.screenRecording}
+        onGrant={() => presentGuide('screen-recording')}
+      />
 
-      <div style={{ display: 'flex', gap: 12 }}>
+      <div className="flex items-center gap-3 mt-4">
         <button type="button"
           onClick={checkPermissions}
           disabled={permChecking}
-          style={{
-            padding: '8px 16px', borderRadius: 6, border: 'none',
-            background: 'var(--accent)', color: 'var(--ui-text-inverse)', fontSize: 13,
-            cursor: permChecking ? 'not-allowed' : 'pointer', opacity: permChecking ? 0.6 : 1
-          }}
+          className={QUIET_BUTTON_CLASS}
         >
-          {permChecking ? 'Checking...' : 'Refresh Status'}
+          <ArrowsClockwise size={14} className={permChecking ? 'animate-spin' : ''} />
+          {permChecking ? 'Checking…' : 'Refresh status'}
         </button>
         {allGranted && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--status-success)' }}>
+          <span className="flex items-center gap-1.5 text-[13px] text-[var(--status-success)]">
             <CheckCircle size={16} /> All permissions granted
           </span>
         )}
@@ -703,28 +632,42 @@ const PermissionsPanel = () => {
 };
 
 const DiagnosticsPanel = () => {
+  const telemetryRows: Array<{ label: string; value: string; status?: 'success' | 'warning' | 'error' }> = [
+    { label: 'App Version', value: 'v0.9.1-beta' },
+    { label: 'Platform', value: typeof window !== 'undefined' && (window as any).allternit?.backend ? 'Desktop (Native)' : 'Web' },
+    { label: 'Kernel State', value: 'Operational (Port 3004)', status: 'success' },
+    { label: 'Memory Bridge', value: 'Connected (Port 3201)', status: 'success' },
+    { label: 'Gateway Sync', value: 'Healthy (Port 8013)', status: 'success' },
+  ];
 
   return (
-    <div style={{ maxWidth: '600px' }}>
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', marginBottom: '16px' }}>Telemetry & System</h3>
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden' }}>
-          <DiagnosticRow label="App Version" value="v0.9.1-beta" />
-          <DiagnosticRow label="Platform" value={typeof window !== 'undefined' && (window as any).allternit?.backend ? 'Desktop (Native)' : 'Web'} />
-          <DiagnosticRow label="Kernel State" value="Operational (Port 3004)" status="success" />
-          <DiagnosticRow label="Memory Bridge" value="Connected (Port 3201)" status="success" />
-          <DiagnosticRow label="Gateway Sync" value="Healthy (Port 8013)" status="success" />
-        </div>
-      </section>
+    <div>
+      <SectionHeading>Telemetry & system</SectionHeading>
+      <SettingsTable columns={['Item', 'Value']}>
+        {telemetryRows.map((row) => (
+          <tr key={row.label}>
+            <SettingsTableCell className="text-[var(--text-secondary)]">{row.label}</SettingsTableCell>
+            <SettingsTableCell>
+              <span className="flex items-center gap-2">
+                {row.status && (
+                  <span className={cn(
+                    "size-1.5 rounded-full shrink-0",
+                    row.status === 'success' ? "bg-[var(--status-success)]" : row.status === 'warning' ? "bg-[var(--status-warning)]" : "bg-[var(--status-error)]"
+                  )} />
+                )}
+                <span className="font-mono text-[12px]">{row.value}</span>
+              </span>
+            </SettingsTableCell>
+          </tr>
+        ))}
+      </SettingsTable>
 
-      <section>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', marginBottom: '16px' }}>Session Metrics</h3>
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '16px' }}>
-           <MetricBar label="Active Memory Ingestion" value={92} />
-           <MetricBar label="Tool Execution Success" value={98} />
-           <MetricBar label="Context Recall Latency" value={15} suffix="ms" inverse />
-        </div>
-      </section>
+      <SectionHeading>Session metrics</SectionHeading>
+      <div className="py-2">
+        <MetricBar label="Active Memory Ingestion" value={92} />
+        <MetricBar label="Tool Execution Success" value={98} />
+        <MetricBar label="Context Recall Latency" value={15} suffix="ms" inverse />
+      </div>
     </div>
   );
 };
@@ -735,8 +678,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   initialTab 
 }) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
+  const [navQuery, setNavQuery] = useState('');
   const [infrastructureTab, setInfrastructureTab] = useState<string | undefined>(initialTab);
-  const [agentOpsTab, setAgentOpsTab] = useState<AgentOpsTab>('evaluation');
 
   // Inline state adjustment for initialSection change
   const [prevInitialSection, setPrevInitialSection] = useState(initialSection);
@@ -769,18 +712,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
   }, []);
 
-  // State
-  const [language, setLanguage] = useState('English');
-  const [timezone, setTimezone] = useState('UTC');
-  const [showSystemMessages, setShowSystemMessages] = useState(true);
-  const [enableTelemetry, setEnableTelemetry] = useState(true);
-  const [autoSave, setAutoSave] = useState(true);
+  // State — migrated to persisted localStorage via useSettingsState
+  const [language, setLanguage] = useSettingsState('general.language', 'English');
+  const [timezone, setTimezone] = useSettingsState('general.timezone', 'UTC');
+  const [showSystemMessages, setShowSystemMessages] = useSettingsState('general.showSystemMessages', true);
+  const [enableTelemetry, setEnableTelemetry] = useSettingsState('general.enableTelemetry', true);
+  const [autoSave, setAutoSave] = useSettingsState('general.autoSave', true);
   const [, _setDefaultMode] = useState<DefaultMode>('chat');
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const [, _setFontSize] = useState<FontSize>('medium');
-  const [compactDensity, setCompactDensity] = useState(false);
-  const [showSidebarLabels, setTwoSidebarLabels] = useState(true);
+  const [compactDensity, setCompactDensity] = useSettingsState('appearance.compactDensity', false);
+  const [showSidebarLabels, setTwoSidebarLabels] = useSettingsState('appearance.showSidebarLabels', true);
   const [, _setAnimateTransitions] = useState(true);
   const [, _setAccentColor] = useState('var(--accent-primary)');
   const [, _setChatModel] = useState('GPT-4o');
@@ -795,12 +738,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     Mistral: { masked: '', isSet: false },
     Google: { masked: '', isSet: false },
   });
-  const [bypassPermissions, setBypassPermissions] = useState(false);
-  const [drawAttentionNotifications, setDrawAttentionNotifications] = useState(true);
+  const [bypassPermissions, setBypassPermissions] = useSettingsState('gizziio-code.bypassPermissions', false);
+  const [drawAttentionNotifications, setDrawAttentionNotifications] = useSettingsState('gizziio-code.drawAttentionNotifications', true);
   const [, _setWorktreeLocation] = useState('Inside project (.claude/)');
   const [gizziRevokeState, setGizziRevokeState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
-  const [autoUpdateExtensions, setAutoUpdateExtensions] = useState(true);
-  const [useBuiltinNode, setUseBuiltinNode] = useState(true);
+  const [autoUpdateExtensions, setAutoUpdateExtensions] = useSettingsState('extensions.autoUpdateExtensions', true);
+  const [useBuiltinNode, setUseBuiltinNode] = useSettingsState('extensions.useBuiltinNode', true);
+
+  // Privacy
+  const [locationMetadata, setLocationMetadata] = useSettingsState('privacy.locationMetadata', false);
+  const [improveModels, setImproveModels] = useSettingsState('privacy.improveModels', true);
+
+  // Gizziio Code
+  const [codeThemeLight, setCodeThemeLight] = useSettingsState('gizziio-code.codeThemeLight', 'GitHub Light');
+  const [codeThemeDark, setCodeThemeDark] = useSettingsState('gizziio-code.codeThemeDark', 'Allternit Dark');
+  const [browserTools, setBrowserTools] = useSettingsState('gizziio-code.browserTools', true);
+  const [persistSessions, setPersistSessions] = useSettingsState('gizziio-code.persistSessions', '7 days');
+  const [branchPrefix, setBranchPrefix] = useSettingsState('gizziio-code.branchPrefix', 'allternit');
+  const [autoCreatePRs, setAutoCreatePRs] = useSettingsState('gizziio-code.autoCreatePRs', false);
+  const [autofixPRs, setAutofixPRs] = useSettingsState('gizziio-code.autofixPRs', true);
+
+  // Cowork
+  const [dispatchEnabled, setDispatchEnabled] = useSettingsState('cowork.dispatchEnabled', false);
+
+  // Usage
+  const [usageUpdatedLabel, setUsageUpdatedLabel] = useState('just now');
+  const [usageRefreshing, setUsageRefreshing] = useState(false);
+
+  // Customize list panels
+  const [connectors, setConnectors] = useState<Array<{ id: string; name: string; category: string; status: string }>>([]);
+  const [connectorsLoading, setConnectorsLoading] = useState(false);
+  const [connectorsError, setConnectorsError] = useState<string | null>(null);
 
   // Agent Operations State
   const [evaluations, setEvaluations] = useState<any[]>([]);
@@ -1531,106 +1499,104 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   
 
   const renderGeneralPanel = () => (
-    <div className="max-w-lg">
-      <div className="mb-6">
-        <div className="block text-[13px] font-bold text-[var(--ui-text-primary)] mb-2 uppercase tracking-widest opacity-60">Language</div>
-        <select aria-label="Selection" value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full p-2.5 px-3.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[14px] font-medium outline-none cursor-pointer focus:border-[var(--accent-primary)]">
+    <div>
+      <SectionHeading>Language & region</SectionHeading>
+      <SettingsRow label="Language" description="Display language for the interface">
+        <select aria-label="Language" value={language} onChange={(e) => setLanguage(e.target.value)} className="p-2 px-3 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[13px] font-medium outline-none cursor-pointer focus:border-[var(--accent-primary)]">
           <option>English</option><option>Spanish</option><option>French</option><option>German</option><option>Japanese</option>
         </select>
-      </div>
-      <div className="mb-6">
-        <div className="block text-[13px] font-bold text-[var(--ui-text-primary)] mb-2 uppercase tracking-widest opacity-60">Timezone</div>
-        <select aria-label="Selection" value={timezone} onChange={(e) => setTimezone(e.target.value)} className="w-full p-2.5 px-3.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[14px] font-medium outline-none cursor-pointer focus:border-[var(--accent-primary)]">
+      </SettingsRow>
+      <SettingsRow label="Timezone" description="Used for timestamps and scheduling">
+        <select aria-label="Timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} className="p-2 px-3 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[13px] font-medium outline-none cursor-pointer focus:border-[var(--accent-primary)]">
           <option>UTC</option><option>EST</option><option>CST</option><option>PST</option><option>GMT</option>
         </select>
-      </div>
-      <ToggleItem label="Show system messages" value={showSystemMessages} onChange={setShowSystemMessages} description="Display internal system operations" />
-      <ToggleItem label="Enable telemetry" value={enableTelemetry} onChange={setEnableTelemetry} description="Help improve Allternit by sharing usage data" />
-      <ToggleItem label="Auto-save" value={autoSave} onChange={setAutoSave} description="Automatically save your work" />
+      </SettingsRow>
+      <SectionHeading>Behavior</SectionHeading>
+      <SettingsRow label="Show system messages" description="Display internal system operations">
+        <Toggle value={showSystemMessages} onChange={setShowSystemMessages} />
+      </SettingsRow>
+      <SettingsRow label="Enable telemetry" description="Help improve Allternit by sharing usage data">
+        <Toggle value={enableTelemetry} onChange={setEnableTelemetry} />
+      </SettingsRow>
+      <SettingsRow label="Auto-save" description="Automatically save your work">
+        <Toggle value={autoSave} onChange={setAutoSave} />
+      </SettingsRow>
     </div>
   );
 
   const renderAppearancePanel = () => (
-    <div className="max-w-lg">
-      <div className="mb-8">
-        <div className="block text-[13px] font-bold text-[var(--ui-text-primary)] mb-3 uppercase tracking-widest opacity-60">Theme</div>
+    <div>
+      <SectionHeading>Theme</SectionHeading>
+      <SettingsRow label="Color theme" description="Choose how the interface looks">
         <div className="flex gap-2">
           {(['light', 'dark', 'system'] as const).map((t) => (
-            <button type="button" 
-              key={t} 
-              onClick={() => setTheme(t)} 
+            <button type="button"
+              key={t}
+              onClick={() => setTheme(t)}
               className={cn(
-                "flex-1 flex items-center justify-center gap-2 p-2.5 px-4 rounded-xl border border-solid text-[13px] font-bold cursor-pointer transition-all active:scale-95",
-                theme === t 
-                  ? "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)] text-[var(--text-primary)]" 
+                "flex items-center justify-center gap-1.5 p-2 px-3 rounded-lg border border-solid text-[13px] font-medium cursor-pointer transition-all active:scale-95",
+                theme === t
+                  ? "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)] text-[var(--text-primary)]"
                   : "bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-white/5"
               )}
             >
-              {t === 'light' && <Sun size={18} weight={theme === t ? "fill" : "regular"} />}
-              {t === 'dark' && <Moon size={18} weight={theme === t ? "fill" : "regular"} />}
-              {t === 'system' && <DeviceMobile size={18} weight={theme === t ? "fill" : "regular"} />}
+              {t === 'light' && <Sun size={16} weight={theme === t ? "fill" : "regular"} />}
+              {t === 'dark' && <Moon size={16} weight={theme === t ? "fill" : "regular"} />}
+              {t === 'system' && <DeviceMobile size={16} weight={theme === t ? "fill" : "regular"} />}
               <span className="capitalize">{t}</span>
             </button>
           ))}
         </div>
-      </div>
-      <ToggleItem label="Compact density" value={compactDensity} onChange={setCompactDensity} description="Use less vertical spacing" />
-      <ToggleItem label="Show sidebar labels" value={showSidebarLabels} onChange={setTwoSidebarLabels} description="Display text labels in sidebar" />
+      </SettingsRow>
+      <SectionHeading>Layout</SectionHeading>
+      <SettingsRow label="Compact density" description="Use less vertical spacing">
+        <Toggle value={compactDensity} onChange={setCompactDensity} />
+      </SettingsRow>
+      <SettingsRow label="Show sidebar labels" description="Display text labels in sidebar">
+        <Toggle value={showSidebarLabels} onChange={setTwoSidebarLabels} />
+      </SettingsRow>
     </div>
   );
 
   const renderModelsPanel = () => (
-    <div className="max-w-2xl">
+    <div>
       <LocalModelManager />
-      
-      <div className="mt-10 pt-8 border-t border-solid border-[var(--border-subtle)]">
-        <h3 className="text-sm font-bold text-[var(--ui-text-primary)] mb-4 uppercase tracking-widest opacity-60">Session Controls</h3>
-        <ToggleItem label="Streaming" value={streaming} onChange={setStreaming} description="Stream responses in real-time" />
-      </div>
+
+      <SectionHeading>Session controls</SectionHeading>
+      <SettingsRow label="Streaming" description="Stream responses in real-time">
+        <Toggle value={streaming} onChange={setStreaming} />
+      </SettingsRow>
     </div>
   );
 
   const renderApiKeysPanel = () => (
-    <div className="max-w-2xl">
-      <div className="flex flex-col gap-3">
-        {API_PROVIDERS.map((provider) => (
-          <div key={provider.name} className="flex items-center gap-4 p-4 rounded-xl bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] hover:border-[var(--ui-border-default)] transition-colors">
-            <div className="size-11 rounded-xl bg-[var(--accent-primary)] flex items-center justify-center text-[var(--ui-text-inverse)] text-xl font-black shadow-lg shadow-[var(--accent-primary)]/10">{provider.letter}</div>
-            <div className="flex-1">
-              <div className="text-[14px] font-bold text-[var(--text-primary)]">{provider.name}</div>
-              <div className="text-[11px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mt-0.5">Connected • Tier 2</div>
-            </div>
-            <button type="button" className="p-2 px-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[12px] font-bold cursor-pointer hover:bg-white/5 active:scale-95 transition-all">Manage</button>
-          </div>
-        ))}
-      </div>
+    <div>
+      <SectionHeading>Brains</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] mb-4">
+        Detected providers and their auth state. Connect a subscription or CLI brain in one click; API-key providers use a key.
+      </p>
+      <BrainsPanel />
     </div>
   );
 
   const renderShortcutsPanel = () => (
-    <div className="max-w-2xl">
-      <div className="rounded-xl overflow-hidden border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-lg">
-        <div className="grid grid-cols-2 bg-white/5 border-b border-solid border-[var(--border-subtle)]">
-          <div className="p-3 px-5 text-[11px] font-black text-[var(--ui-text-muted)] uppercase tracking-widest border-r border-solid border-[var(--border-subtle)]">Action</div>
-          <div className="p-3 px-5 text-[11px] font-black text-[var(--ui-text-muted)] uppercase tracking-widest">Shortcut</div>
-        </div>
-        <div className="flex flex-col">
-          {SHORTCUTS.map((item, index) => (
-            <div key={`settings-index-${index}`} className={cn(
-              "grid grid-cols-2",
-              index !== SHORTCUTS.length - 1 ? "border-b border-solid border-[var(--border-subtle)]" : ""
-            )}>
-              <div className="p-3 px-5 text-[13px] font-medium text-[var(--ui-text-primary)] border-r border-solid border-[var(--border-subtle)]">{item.action}</div>
-              <div className="p-3 px-5 text-[12px] text-[var(--ui-text-primary)] font-mono bg-white/[0.02] flex items-center tracking-tighter uppercase">{item.shortcut}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div>
+      <SectionHeading>Keyboard shortcuts</SectionHeading>
+      <SettingsTable columns={['Action', 'Shortcut']}>
+        {SHORTCUTS.map((item, index) => (
+          <tr key={`settings-index-${index}`}>
+            <SettingsTableCell>{item.action}</SettingsTableCell>
+            <SettingsTableCell>
+              <MonoChip>{item.shortcut}</MonoChip>
+            </SettingsTableCell>
+          </tr>
+        ))}
+      </SettingsTable>
     </div>
   );
 
   const renderAboutPanel = () => (
-    <div className="max-w-2xl text-center py-10">
+    <div className="text-center py-10">
       <div className="mb-10">
         <div className="grid grid-cols-4 gap-2 size-40 mx-auto transform hover:rotate-3 transition-transform duration-500">
           {Array.from({ length: 16 }).map((_, i) => (
@@ -1638,12 +1604,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           ))}
         </div>
       </div>
-      <h1 className="text-4xl font-black m-0 mb-2 text-[var(--ui-text-primary)] tracking-tight">Allternit & <span className="text-[var(--accent-primary)]">Coffee</span></h1>
-      <p className="text-base text-[var(--ui-text-muted)] font-mono font-bold tracking-widest opacity-60">v0.9.1-beta</p>
-      <div className="mt-12 flex justify-center gap-6">
-        <button type="button" className="bg-transparent border-none text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-sm font-bold uppercase tracking-widest cursor-pointer">Terms</button>
-        <button type="button" className="bg-transparent border-none text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-sm font-bold uppercase tracking-widest cursor-pointer">Privacy</button>
-        <button type="button" className="bg-transparent border-none text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-sm font-bold uppercase tracking-widest cursor-pointer">GitHub</button>
+      <h1 className="text-3xl font-semibold m-0 mb-2 text-[var(--ui-text-primary)] tracking-tight">Allternit & <span className="text-[var(--accent-primary)]">Coffee</span></h1>
+      <p className="text-[13px] text-[var(--ui-text-muted)] font-mono">v0.9.1-beta</p>
+      <div className="mt-10 flex justify-center gap-6">
+        <button type="button" className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Terms</button>
+        <button type="button" className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Privacy</button>
+        <button type="button" className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">GitHub</button>
       </div>
     </div>
   );
@@ -1682,6 +1648,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   useEffect(() => {
     if (activeSection === 'security') fetchSecurityData();
   }, [activeSection, fetchSecurityData]);
+
+  const fetchConnectors = useCallback(async () => {
+    setConnectorsLoading(true);
+    setConnectorsError(null);
+    try {
+      const res = await fetch('/api/v1/cowork/connectors');
+      const data = await res.json();
+      setConnectors(data.connectors ?? []);
+    } catch {
+      setConnectorsError('Failed to load connectors');
+      setConnectors([]);
+    } finally {
+      setConnectorsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'connectors' && connectors.length === 0 && !connectorsError) {
+      void fetchConnectors();
+    }
+  }, [activeSection, connectors.length, connectorsError, fetchConnectors]);
 
   const renderSecurityPanel = () => (
     <div className="max-w-4xl">
@@ -1896,118 +1883,334 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const renderGizziioCodePanel = () => (
-    <div className="max-w-xl">
+    <div>
       <section className="mb-10">
         <ToastProvider>
           <ServiceUrlSettings />
         </ToastProvider>
       </section>
 
-      <section className="mb-10">
-        <ToggleItem label="Allow bypass permissions mode" value={bypassPermissions} onChange={setBypassPermissions} description="Bypass all permission checks (Developer only)" />
-        <ToggleItem label="Draw attention on notifications" value={drawAttentionNotifications} onChange={setDrawAttentionNotifications} description="Bounce dock icon on important agent notifications" />
-      </section>
+      <SectionHeading>General</SectionHeading>
+      <SettingsRow label="Allow bypass permissions mode" description="Bypass all permission checks (Developer only)">
+        <Toggle value={bypassPermissions} onChange={setBypassPermissions} />
+      </SettingsRow>
+      <SettingsRow label="Draw attention on notifications" description="Bounce dock icon on important agent notifications">
+        <Toggle value={drawAttentionNotifications} onChange={setDrawAttentionNotifications} />
+      </SettingsRow>
 
-      <section className="mb-10">
-        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-black mb-4 opacity-60">
-          Authorized API Access
-        </div>
-        <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl overflow-hidden shadow-lg">
-          <div className="p-5 px-6 flex items-center gap-4">
-            <div className="size-11 rounded-xl bg-[var(--surface-canvas)] border border-solid border-[var(--ui-border-muted)] flex items-center justify-center shadow-inner shrink-0">
-              <Code size={22} className="text-[var(--accent-primary)]" weight="bold" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[14px] font-black text-[var(--text-primary)] uppercase tracking-tight">Gizzi Code CLI</div>
-              <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5 leading-snug">
-                Full repository access — reads, writes, and deploys on your behalf.
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {gizziRevokeState === 'done' && (
-                <span className="text-[11px] font-bold text-[var(--status-success)] uppercase tracking-widest animate-pulse">Revoked</span>
-              )}
-              {gizziRevokeState === 'error' && (
-                <span className="text-[11px] font-bold text-[var(--status-error)] uppercase tracking-widest">Failed</span>
-              )}
-              <button type="button"
-                onClick={handleRevokeGizziAccess}
-                disabled={gizziRevokeState === 'loading' || gizziRevokeState === 'done'}
-                className={cn(
-                  "p-2 px-4 rounded-lg border border-solid text-[13px] font-bold font-sans transition-all active:scale-95",
-                  gizziRevokeState === 'done' 
-                    ? "border-zinc-800 text-zinc-600 cursor-not-allowed bg-transparent" 
-                    : "border-rose-500/30 bg-[var(--status-error-bg)] text-[var(--status-error)] cursor-pointer hover:bg-rose-500/10",
-                  gizziRevokeState === 'loading' && "opacity-50 cursor-wait"
-                )}
-              >
-                {gizziRevokeState === 'loading' ? 'Revoking…' : 'Revoke Access'}
-              </button>
-            </div>
+      <SectionHeading>Code appearance</SectionHeading>
+      <SettingsRow label="Light theme" description="Syntax theme used in light mode">
+        <select aria-label="Light code theme" value={codeThemeLight} onChange={(e) => setCodeThemeLight(e.target.value)} className={SETTINGS_SELECT_CLASS}>
+          <option>GitHub Light</option><option>Solarized Light</option><option>One Light</option>
+        </select>
+      </SettingsRow>
+      <SettingsRow label="Dark theme" description="Syntax theme used in dark mode">
+        <select aria-label="Dark code theme" value={codeThemeDark} onChange={(e) => setCodeThemeDark(e.target.value)} className={SETTINGS_SELECT_CLASS}>
+          <option>Allternit Dark</option><option>GitHub Dark</option><option>One Dark</option><option>Dracula</option>
+        </select>
+      </SettingsRow>
+      <div className="grid grid-cols-2 gap-3 py-4">
+        <div className="rounded-lg border border-solid border-[var(--border-subtle)] overflow-hidden">
+          <div className="px-3 py-1.5 text-[11px] font-medium text-zinc-500 bg-zinc-100 border-b border-solid border-zinc-200">Light</div>
+          <div className="p-3 bg-white text-[11px] leading-relaxed font-mono text-zinc-700 overflow-x-auto">
+            <div><span className="text-zinc-400 select-none">12&nbsp;&nbsp;</span><span className="text-purple-600">function</span> greet(name) {'{'}</div>
+            <div className="bg-red-50 text-red-600 -mx-3 px-3"><span className="text-red-300 select-none">13&nbsp;</span>-&nbsp;&nbsp;return "hi " + name;</div>
+            <div className="bg-green-50 text-green-700 -mx-3 px-3"><span className="text-green-400 select-none">13&nbsp;</span>+&nbsp;&nbsp;return 'hello ' + name;</div>
+            <div><span className="text-zinc-400 select-none">14&nbsp;&nbsp;</span>{'}'}</div>
           </div>
         </div>
-        <p className="text-[12px] text-[var(--text-tertiary)] m-0 mt-3 leading-relaxed opacity-60">
-          Revoking access signs Gizzi Code out on all machines. Re-authorize by running{' '}
-          <code className="font-mono bg-[var(--bg-secondary)] p-0.5 px-1.5 rounded border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]">gizzi login</code>.
-        </p>
-      </section>
+        <div className="rounded-lg border border-solid border-[var(--border-subtle)] overflow-hidden">
+          <div className="px-3 py-1.5 text-[11px] font-medium text-zinc-400 bg-zinc-800 border-b border-solid border-zinc-700">Dark</div>
+          <div className="p-3 bg-[#0d1117] text-[11px] leading-relaxed font-mono text-zinc-300 overflow-x-auto">
+            <div><span className="text-zinc-600 select-none">12&nbsp;&nbsp;</span><span className="text-purple-400">function</span> greet(name) {'{'}</div>
+            <div className="bg-red-500/10 text-red-300 -mx-3 px-3"><span className="text-red-400/50 select-none">13&nbsp;</span>-&nbsp;&nbsp;return "hi " + name;</div>
+            <div className="bg-green-500/10 text-green-300 -mx-3 px-3"><span className="text-green-400/50 select-none">13&nbsp;</span>+&nbsp;&nbsp;return 'hello ' + name;</div>
+            <div><span className="text-zinc-600 select-none">14&nbsp;&nbsp;</span>{'}'}</div>
+          </div>
+        </div>
+      </div>
+
+      <SectionHeading>Browser</SectionHeading>
+      <SettingsRow label="Browser tools" description="Allow Gizziio Code to drive the built-in browser">
+        <Toggle value={browserTools} onChange={setBrowserTools} />
+      </SettingsRow>
+      <SettingsRow label="Persist sessions" description="How long browser sessions stay alive">
+        <select aria-label="Persist sessions" value={persistSessions} onChange={(e) => setPersistSessions(e.target.value)} className={SETTINGS_SELECT_CLASS}>
+          <option>Don't keep</option><option>1 day</option><option>7 days</option><option>30 days</option>
+        </select>
+      </SettingsRow>
+
+      <SectionHeading>Pull requests</SectionHeading>
+      <SettingsRow label="Branch prefix" description="Prefix used for generated PR branches">
+        <input
+          type="text"
+          value={branchPrefix}
+          onChange={(e) => setBranchPrefix(e.target.value)}
+          aria-label="Branch prefix"
+          className="w-40 p-2 px-3 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]"
+        />
+      </SettingsRow>
+      <SettingsRow label="Create pull requests automatically" description="Open a PR when a task completes">
+        <Toggle value={autoCreatePRs} onChange={setAutoCreatePRs} />
+      </SettingsRow>
+      <SettingsRow label="Autofix review comments" description="Apply suggested fixes without asking">
+        <Toggle value={autofixPRs} onChange={setAutofixPRs} />
+      </SettingsRow>
+
+      <SectionHeading>Authorized API access</SectionHeading>
+      <SettingsRow label="Gizzi Code CLI" description="Full repository access — reads, writes, and deploys on your behalf.">
+        <div className="flex items-center gap-3">
+          {gizziRevokeState === 'done' && (
+            <span className="text-[11px] font-medium text-[var(--status-success)]">Revoked</span>
+          )}
+          {gizziRevokeState === 'error' && (
+            <span className="text-[11px] font-medium text-[var(--status-error)]">Failed</span>
+          )}
+          <button type="button"
+            onClick={handleRevokeGizziAccess}
+            disabled={gizziRevokeState === 'loading' || gizziRevokeState === 'done'}
+            className={DESTRUCTIVE_BUTTON_CLASS}
+          >
+            {gizziRevokeState === 'loading' ? 'Revoking…' : 'Revoke access'}
+          </button>
+        </div>
+      </SettingsRow>
+      <p className="text-[12px] text-[var(--text-tertiary)] m-0 leading-relaxed">
+        Revoking access signs Gizzi Code out on all machines. Re-authorize by running{' '}
+        <code className="font-mono bg-[var(--bg-secondary)] p-0.5 px-1.5 rounded border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]">gizzi login</code>.
+      </p>
     </div>
   );
 
   const renderCoworkPanel = () => (
-    <div className="max-w-xl">
-      <section className="mb-10">
-        <h3 className="text-base font-bold text-[var(--ui-text-primary)] m-0">Collaborative Workspace</h3>
-        <p className="text-[13px] text-[var(--ui-text-muted)] m-0 mt-1">Configure real-time agent coordination and shared task state settings.</p>
-        <div className="mt-8 p-12 text-center bg-black/5 rounded-2xl border border-dashed border-white/10 text-[13px] text-[var(--ui-text-muted)] italic">
-          Cowork settings are managed per-project.
-        </div>
-      </section>
+    <div>
+      <SectionHeading>Cowork</SectionHeading>
+      <SettingsRow
+        label="Dispatch"
+        description="Let agents hand off background tasks to Cowork sessions"
+      >
+        <span className="flex items-center gap-2">
+          <Badge>Beta</Badge>
+          <Toggle value={dispatchEnabled} onChange={setDispatchEnabled} />
+        </span>
+      </SettingsRow>
+      <SettingsRow label="Files location" description="Where Cowork stores shared workspace files">
+        <span className="flex items-center gap-2">
+          <span className="text-[13px] text-[var(--accent-primary)] underline underline-offset-2 font-mono cursor-pointer">~/Allternit/Cowork</span>
+          <button type="button"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-solid border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 text-[13px] font-medium text-[var(--status-warning)] cursor-pointer hover:bg-[var(--status-warning)]/15 transition-colors"
+            title="Not wired yet"
+            disabled
+          >
+            <Warning size={14} /> Use recommended
+          </button>
+          <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Change</button>
+        </span>
+      </SettingsRow>
+
+      <SectionHeading>Access</SectionHeading>
+      <SettingsRow label="Trusted folders" description="Folders Cowork agents may read and write">
+        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Manage</button>
+      </SettingsRow>
+      <SettingsRow label="Global instructions" description="Instructions applied to every Cowork session">
+        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Edit</button>
+      </SettingsRow>
     </div>
   );
 
   const renderExtensionsPanel = () => (
-    <div className="max-w-xl">
-      <section className="mb-10">
-        <ToggleItem label="Enable auto-updates for extensions" value={autoUpdateExtensions} onChange={setAutoUpdateExtensions} description="Background update all marketplace and sidecar extensions" />
-        <ToggleItem label="Use Built-in Node.js for MCP" value={useBuiltinNode} onChange={setUseBuiltinNode} description="Ensure stability by using Allternit's verified runtime" />
-      </section>
+    <div>
+      <SectionHeading>Extensions</SectionHeading>
+      <SettingsRow label="Enable auto-updates for extensions" description="Background update all marketplace and sidecar extensions">
+        <Toggle value={autoUpdateExtensions} onChange={setAutoUpdateExtensions} />
+      </SettingsRow>
+      <SettingsRow label="Use Built-in Node.js for MCP" description="Ensure stability by using Allternit's verified runtime">
+        <Toggle value={useBuiltinNode} onChange={setUseBuiltinNode} />
+      </SettingsRow>
     </div>
   );
 
   const renderBillingPanel = () => (
-    <div className="max-w-xl">
-      <section className="mb-10">
-        <h3 className="text-base font-bold text-[var(--ui-text-primary)] m-0 mb-6">Subscription & Usage</h3>
-        <div className="p-8 bg-gradient-to-br from-zinc-800 to-black rounded-2xl border border-solid border-white/10 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-             <ChartBar size={100} weight="thin" />
-          </div>
-          <div className="flex items-center justify-between relative z-10">
-            <div>
-              <div className="text-[11px] font-black text-[var(--accent-primary)] uppercase tracking-[0.2em] mb-1">Active Tier</div>
-              <div className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                Allternit Pro <ShieldCheck size={20} weight="fill" className="text-[var(--accent-primary)]" />
-              </div>
-              <div className="text-sm text-white/50 mt-4 font-medium">$20.00 / month • Renews June 12</div>
-            </div>
-            <span className="p-1.5 px-4 bg-emerald-500/20 text-emerald-400 rounded-full text-[12px] font-black uppercase tracking-widest border border-solid border-emerald-500/20 shadow-lg shadow-emerald-500/5">
-              Active
-            </span>
-          </div>
-          <button type="button" className="mt-8 w-full p-2.5 rounded-lg border-none bg-white text-black text-[13px] font-black cursor-pointer hover:bg-zinc-200 active:scale-[0.98] transition-all">Manage Billing Portal</button>
-        </div>
-      </section>
+    <div>
+      <SectionHeading>Subscription & usage</SectionHeading>
+      <SettingsRow label="Allternit Pro" description="$20.00 / month · Renews June 12">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--status-success)]/15 text-[var(--status-success)]">
+          <ShieldCheck size={12} weight="fill" /> Active
+        </span>
+      </SettingsRow>
+      <SettingsRow label="Billing portal" description="Update payment method, download invoices, or cancel">
+        <button type="button" className={QUIET_BUTTON_CLASS}>Manage billing portal</button>
+      </SettingsRow>
     </div>
   );
 
-  const renderUsagePanel = () => (
-    <div className="max-w-3xl">
-      <ResourceUsageDashboard />
-    </div>
-  );
+  const renderUsagePanel = () => {
+    const sessionRows = [
+      { label: 'Messages this session', used: 8 },
+      { label: 'Tokens this session', used: 14 },
+    ];
+    const weeklyRows = [
+      { label: 'Weekly message limit', used: 34 },
+      { label: 'Weekly token limit', used: 27 },
+    ];
+
+    const renderBarRow = (row: { label: string; used: number }) => (
+      <div key={row.label} className="py-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[14px] font-medium text-[var(--text-primary)]">{row.label}</span>
+          <span className="text-[12px] text-[var(--text-secondary)] tabular-nums">{row.used}% used</span>
+        </div>
+        <div className="h-1 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+          <div className="h-full rounded-full bg-[var(--text-tertiary)] transition-all duration-500" style={{ width: `${row.used}%` }} />
+        </div>
+      </div>
+    );
+
+    const handleUsageRefresh = () => {
+      setUsageRefreshing(true);
+      setTimeout(() => {
+        setUsageUpdatedLabel('just now');
+        setUsageRefreshing(false);
+      }, 600);
+    };
+
+    return (
+      <div>
+        <SectionHeading>Current session</SectionHeading>
+        {sessionRows.map(renderBarRow)}
+        <SectionHeading>Weekly limits</SectionHeading>
+        {weeklyRows.map(renderBarRow)}
+        <div className="flex items-center justify-between py-3">
+          <span className="text-[12px] text-[var(--text-tertiary)]">Last updated: {usageUpdatedLabel}</span>
+          <button type="button" className={QUIET_BUTTON_CLASS} onClick={handleUsageRefresh} disabled={usageRefreshing}>
+            <ArrowsClockwise size={14} className={usageRefreshing ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
+        <SectionHeading>Usage details</SectionHeading>
+        <ResourceUsageDashboard />
+      </div>
+    );
+  };
 
   
+
+  const openView = (viewType: string) => {
+    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType } }));
+  };
+
+  const renderPrivacyPanel = () => (
+    <div>
+      <SectionHeading>Privacy</SectionHeading>
+      {['How we protect your data', 'How we use your data'].map((label) => (
+        <button key={label} type="button"
+          className="w-full flex items-center justify-between py-4 bg-transparent border-none cursor-pointer text-left group"
+        >
+          <span className="text-[14px] font-medium text-[var(--text-primary)]">{label}</span>
+          <CaretRight size={14} className="text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)]" />
+        </button>
+      ))}
+
+      <SectionHeading>Preferences</SectionHeading>
+      <SettingsRow label="Location metadata" description="Attach coarse location to usage analytics">
+        <Toggle value={locationMetadata} onChange={setLocationMetadata} />
+      </SettingsRow>
+      <SettingsRow label="Help improve our models" description="Allow anonymized usage data to improve Allternit models">
+        <Toggle value={improveModels} onChange={setImproveModels} />
+      </SettingsRow>
+
+      <SectionHeading>Your data</SectionHeading>
+      <SettingsRow label="Export data" description="Download a copy of your account data">
+        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>
+          <DownloadSimple size={14} /> Export
+        </button>
+      </SettingsRow>
+      <SettingsRow label="Shared chats" description="Manage chats you have shared with others">
+        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Manage</button>
+      </SettingsRow>
+      <SettingsRow label="Memory preferences" description="Control what Allternit remembers between sessions">
+        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Manage</button>
+      </SettingsRow>
+    </div>
+  );
+
+  const renderSkillsPanel = () => (
+    <div>
+      <PanelHeader title="Skills">
+        <button type="button" className="size-8 flex items-center justify-center rounded-lg border-none bg-transparent text-[var(--text-tertiary)] cursor-not-allowed" title="Not wired yet" disabled aria-label="Search skills">
+          <MagnifyingGlass size={16} />
+        </button>
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openView('memory')}>Browse</button>
+        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Add <CaretDown size={12} /></button>
+      </PanelHeader>
+      <EmptyState
+        icon={<Sparkle size={40} weight="thin" />}
+        caption="No skills installed yet."
+        ctaLabel="Browse skills"
+        onCtaClick={() => openView('memory')}
+      />
+    </div>
+  );
+
+  const renderConnectorsPanel = () => (
+    <div>
+      <PanelHeader title="Connectors">
+        <button type="button" className="size-8 flex items-center justify-center rounded-lg border-none bg-transparent text-[var(--text-tertiary)] cursor-not-allowed" title="Not wired yet" disabled aria-label="Search connectors">
+          <MagnifyingGlass size={16} />
+        </button>
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void fetchConnectors()} disabled={connectorsLoading}>
+          <ArrowsClockwise size={14} className={connectorsLoading ? 'animate-spin' : ''} /> Refresh
+        </button>
+        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Add <CaretDown size={12} /></button>
+      </PanelHeader>
+      {connectorsLoading && connectors.length === 0 ? (
+        <SkeletonRow lines={4} />
+      ) : connectorsError ? (
+        <EmptyState
+          icon={<PlugsConnected size={40} weight="thin" />}
+          caption={connectorsError}
+          ctaLabel="Retry"
+          onCtaClick={() => void fetchConnectors()}
+        />
+      ) : connectors.length === 0 ? (
+        <EmptyState
+          icon={<PlugsConnected size={40} weight="thin" />}
+          caption="No connectors configured."
+        />
+      ) : (
+        <SettingsTable columns={['Connector', 'Category', 'Status']}>
+          {connectors.map((c) => (
+            <tr key={c.id}>
+              <SettingsTableCell>{c.name}</SettingsTableCell>
+              <SettingsTableCell className="text-[var(--text-secondary)] capitalize">{c.category}</SettingsTableCell>
+              <SettingsTableCell>
+                <SettingsTableChip tone={c.status === 'connected' ? 'blue' : 'gray'}>
+                  {c.status === 'connected' ? 'Connected' : 'Unconfigured'}
+                </SettingsTableChip>
+              </SettingsTableCell>
+            </tr>
+          ))}
+        </SettingsTable>
+      )}
+    </div>
+  );
+
+  const renderPluginsPanel = () => (
+    <div>
+      <PanelHeader title="Plugins">
+        <button type="button" className="size-8 flex items-center justify-center rounded-lg border-none bg-transparent text-[var(--text-tertiary)] cursor-not-allowed" title="Not wired yet" disabled aria-label="Search plugins">
+          <MagnifyingGlass size={16} />
+        </button>
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => openView('plugins')}>Browse</button>
+        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Add <CaretDown size={12} /></button>
+      </PanelHeader>
+      <EmptyState
+        icon={<PuzzlePiece size={40} weight="thin" />}
+        caption="No plugins installed yet."
+        ctaLabel="Browse plugins"
+        onCtaClick={() => openView('plugins')}
+      />
+    </div>
+  );
 
   const renderContent = () => {
     switch (activeSection) {
@@ -2021,6 +2224,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'cowork': return renderCoworkPanel();
       case 'extensions': return renderExtensionsPanel();
       case 'billing': return renderBillingPanel();
+      case 'privacy': return renderPrivacyPanel();
       case 'usage': return renderUsagePanel();
       case 'diagnostics': return <DiagnosticsPanel />;
       case 'infrastructure': return <ToastProvider><InfrastructureSettings initialTab={infrastructureTab as any} /></ToastProvider>;
@@ -2029,6 +2233,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'agents': return <ToastProvider>{renderAgentsPanel()}</ToastProvider>;
       case 'about': return renderAboutPanel();
       case 'signin': return <ClerkAuthPanel />;
+      case 'skills': return renderSkillsPanel();
+      case 'connectors': return renderConnectorsPanel();
+      case 'plugins': return renderPluginsPanel();
       case 'vps': return <ToastProvider><VPSConnectionsPanel /></ToastProvider>;
       default: return null;
     }
@@ -2036,66 +2243,78 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const navigationItems = SETTINGS_NAV_ITEMS;
 
+  const navSearch = navQuery.trim().toLowerCase();
+  const filteredNavItems = navSearch
+    ? navigationItems.filter((item: any) => item.label.toLowerCase().includes(navSearch))
+    : navigationItems;
+
+  const closeSettings = () => window.dispatchEvent(new CustomEvent('allternit:close-settings'));
+
   return (
-    <div className="h-screen bg-[var(--view-settings-bg,var(--surface-canvas))] overflow-hidden relative text-[var(--text-primary)] font-sans">
-      <div className="flex justify-center h-full overflow-hidden">
-        <div className="flex w-full max-w-[1200px] min-w-[600px] h-full mx-auto">
-          {/* Sidebar Nav */}
-          <div className="w-[220px] min-w-[180px] h-full bg-transparent p-4 pb-8 overflow-y-auto shrink-0 no-scrollbar border-r border-solid border-white/[0.03]">
-            <div className="px-1 mb-6 flex items-center gap-2.5">
-              <button type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('allternit:close-settings'))}
-                className="size-7 flex items-center justify-center rounded-lg bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer shrink-0 hover:bg-white/5 active:scale-95 transition-all"
-                aria-label="Back"
-              >
-                <CaretRight size={16} className="rotate-180" weight="bold" />
-              </button>
-              <span className="text-[15px] font-black text-[var(--text-primary)] uppercase tracking-tight">System Settings</span>
-            </div>
-            
-            <nav className="flex flex-col gap-0.5">
-              <div className="mb-2">
-                {navigationItems.filter((i: any) => i.group === 'account').map((item: any) => (
-                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-                ))}
-              </div>
-              <div className="h-px bg-white/5 my-3 mx-2" />
-              <div className="mb-2">
-                {navigationItems.filter((i: any) => i.group === 'platform').map((item: any) => (
-                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-                ))}
-              </div>
-              <div className="h-px bg-white/5 my-3 mx-2" />
-              <div className="mb-2">
-                <div className="p-2 px-3 text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-[0.2em] opacity-40 mb-1">Products</div>
-                {navigationItems.filter((i: any) => i.group === 'products').map((item: any) => (
-                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-                ))}
-              </div>
-              <div className="h-px bg-white/5 my-3 mx-2" />
-              <div className="mb-2">
-                <div className="p-2 px-3 text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-[0.2em] opacity-40 mb-1">Infrastructure</div>
-                {navigationItems.filter((i: any) => i.group === 'infrastructure').map((item: any) => (
-                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-                ))}
-              </div>
-              <div className="h-px bg-white/5 my-3 mx-2" />
-              <div>
-                {navigationItems.filter((i: any) => i.group === 'about').map((item: any) => (
-                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-                ))}
-              </div>
-            </nav>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-[2px] text-[var(--text-primary)] font-sans"
+      onClick={closeSettings}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        className="flex w-full max-w-[1000px] min-w-[600px] h-[80vh] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-solid border-white/10 bg-[var(--view-settings-bg,var(--surface-canvas))]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Sidebar Nav */}
+        <div className="w-[220px] min-w-[180px] h-full bg-transparent p-4 pb-8 overflow-y-auto shrink-0 no-scrollbar border-r border-solid border-white/[0.03]">
+          <div className="relative mb-5">
+            <MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
+            <input
+              type="text"
+              value={navQuery}
+              onChange={(e) => setNavQuery(e.target.value)}
+              placeholder="Search settings"
+              aria-label="Search settings"
+              className="w-full pl-8 pr-3 py-2 rounded-full bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--accent-primary)]"
+            />
           </div>
 
-          {/* Content Area */}
-          <div className="flex-1 min-w-0 h-full overflow-y-auto bg-[radial-gradient(circle_at_top_right,rgba(212,176,140,0.03),transparent_600px)]">
-            <div className="p-8 px-12 pb-32 w-full max-w-3xl">
-              <h1 className="text-xl font-black text-[var(--text-primary)] m-0 mb-8 uppercase tracking-widest opacity-80">
-                {navigationItems.find((item: any) => item.id === activeSection)?.label}
-              </h1>
-              {renderContent()}
-            </div>
+          <nav className="flex flex-col">
+            {SETTINGS_NAV_GROUPS.map((g) => {
+              const groupItems = filteredNavItems.filter((i: any) => i.group === g.group);
+              if (groupItems.length === 0) return null;
+              return (
+                <div key={g.group} className="mb-4 last:mb-0">
+                  {g.label && (
+                    <div className="px-3 mb-1 text-[12px] font-medium text-[var(--text-tertiary)]">{g.label}</div>
+                  )}
+                  <div className="flex flex-col gap-0.5">
+                    {groupItems.map((item: any) => (
+                      <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {filteredNavItems.length === 0 && (
+              <div className="px-3 py-6 text-center text-[12px] text-[var(--text-tertiary)]">No matching settings</div>
+            )}
+          </nav>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 min-w-0 h-full relative bg-[radial-gradient(circle_at_top_right,rgba(212,176,140,0.03),transparent_600px)]">
+          <button type="button"
+            onClick={closeSettings}
+            className="absolute top-4 right-4 z-10 size-7 flex items-center justify-center rounded-lg bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] active:scale-95 transition-all"
+            aria-label="Close settings"
+          >
+            <X size={16} weight="bold" />
+          </button>
+          <div className="h-full overflow-y-auto">
+          <div className="p-10 pb-32 w-full max-w-[740px]">
+            <h1 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-6">
+              {navigationItems.find((item: any) => item.id === activeSection)?.label}
+            </h1>
+            {renderContent()}
+          </div>
           </div>
         </div>
       </div>

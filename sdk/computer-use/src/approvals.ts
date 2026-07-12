@@ -21,12 +21,12 @@ export const ApprovalPredicates = {
   /**
    * Always approve (use with caution!).
    */
-  always: (): boolean => true,
+  always: (): ApprovalPredicate => () => true,
 
   /**
    * Never approve - always deny.
    */
-  never: (): boolean => false,
+  never: (): ApprovalPredicate => () => false,
 
   /**
    * Approve if the action summary matches a pattern.
@@ -327,7 +327,7 @@ export class ApprovalHandler {
    */
   static createAutoApprove(
     client: AllternitComputerUseClient,
-    predicate: ApprovalPredicate = ApprovalPredicates.always
+    predicate: ApprovalPredicate = ApprovalPredicates.always()
   ): ApprovalHandler {
     const handler = new ApprovalHandler(client);
     handler.setGlobalPredicate(predicate);

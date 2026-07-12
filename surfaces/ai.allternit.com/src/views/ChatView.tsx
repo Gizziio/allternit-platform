@@ -434,12 +434,20 @@ export function ChatView({
   const useMonolithLogo = mode === 'code';
 
   const embeddedAgentDescriptor = embeddedAgentSession.descriptor;
-  const embeddedAgentStrip = isAgentSessionEmbedded ? (
+  // Only sessions actually bound to an agent (agent metadata present) get the
+  // context strip. Plain chat sessions must not render the agent card —
+  // previously `isAgentSessionEmbedded` was true for ANY active session, so
+  // the context window showed on every view.
+  const hasAgentBinding = Boolean(
+    embeddedAgentDescriptor.agentId || embeddedAgentDescriptor.agentName,
+  );
+  const embeddedAgentStrip = isAgentSessionEmbedded && hasAgentBinding ? (
     <AgentContextStrip
       surface={agentSurface}
       sessionName={embeddedAgentSession.session?.name || "Agent Session"}
       sessionDescription={embeddedAgentSession.session?.description}
       agentName={embeddedAgentDescriptor.agentName || selectedAgent?.name || undefined}
+      harnessMode={selectedAgent?.harness?.mode}
       statusLabel={getAgentSessionStatusLabel(embeddedAgentSession.session)}
       messageCount={embeddedAgentSession.session?.messageCount ?? nativeMessages.length}
       workspaceScope={embeddedAgentDescriptor.workspaceScope}

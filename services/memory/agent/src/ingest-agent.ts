@@ -6,10 +6,10 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import chokidar from 'chokidar';
-import { LocalModelManager } from '../models/local-model.js';
-import { MemoryStore } from '../store/sqlite-store.js';
-import type { Memory, FileType, IngestRequest, IngestResult } from '../types/memory.types.js';
+import { watch, FSWatcher } from 'chokidar';
+import { LocalModelManager } from './models/local-model.js';
+import { MemoryStore } from './store/sqlite-store.js';
+import type { Memory, FileType, IngestRequest, IngestResult } from './types/memory.types.js';
 
 /**
  * File type utilities
@@ -141,7 +141,7 @@ export class IngestAgent {
   private modelManager: LocalModelManager;
   private store: MemoryStore;
   private config: IngestAgentConfig;
-  private watcher?: chokidar.FSWatcher;
+  private watcher?: FSWatcher;
   private processedFiles: Set<string> = new Set();
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
 
@@ -174,8 +174,8 @@ export class IngestAgent {
     }
 
     // Set up file watcher
-    this.watcher = chokidar.watch(watchDir, {
-      ignored: /(^|[\/\\])\../, // Ignore dotfiles
+    this.watcher = watch(watchDir, {
+      ignored: /(^|[/\\])\../, // Ignore dotfiles
       persistent: true,
       ignoreInitial: false,
       awaitWriteFinish: {

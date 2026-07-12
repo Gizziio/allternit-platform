@@ -162,6 +162,7 @@ export interface UpdateRoutineInput {
   timezone?: string;
   execution_domain?: ExecutionDomain;
   agent_id?: string;
+  goal_id?: string;
   config?: Record<string, unknown>;
   tags?: string[];
   metadata?: Record<string, unknown>;
@@ -194,6 +195,7 @@ export interface UpdateLoopInput {
   schedule_expression?: string;
   execution_domain?: ExecutionDomain;
   agent_id?: string;
+  goal_id?: string;
   config?: Record<string, unknown>;
   tags?: string[];
   metadata?: Record<string, unknown>;

@@ -15,6 +15,7 @@ import { NewProjectScreen } from './NewProjectScreen';
 import { SkillPicker } from './SkillPicker';
 import { SkillParameterPanel } from '../../components/design/SkillParameterPanel';
 import { SurgicalEditPanel } from '../../components/design/SurgicalEditPanel';
+import { DesignCritiquePanel } from '../../components/design/DesignCritiquePanel';
 import { AgentAdapterPanel } from '../../components/design/AgentAdapterPanel';
 import { PluginPicker } from './PluginPicker';
 import type { SkillRecord } from '../../lib/design/skill-registry';
@@ -37,6 +38,8 @@ import { splitOnArtifacts } from "../../lib/openui/artifact-parser";
 
 // Parity with Chat/Cowork composer stack
 import { ChatComposer, type ChatAttachment } from "../chat/ChatComposer";
+// Integrated Allternit Design component (consumed with Allternit tokens via .ad-tokens)
+import { Button as ODButton } from "@/allternit-design/components";
 import {
   ComposerPermissionInfoBar,
   ComposerQuestionBar,
@@ -86,7 +89,7 @@ type ProjectType =
   | 'content-engine'
   | 'template'
   | 'other';
-type CanvasTab = 'files' | 'system' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit' | 'hyperframes';
+type CanvasTab = 'files' | 'system' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit' | 'hyperframes' | 'critique';
 type Specialist = 'architect' | 'growth' | 'purist' | 'creative';
 type OfficeDocType = 'slides' | 'spreadsheet' | 'document';
 
@@ -140,6 +143,7 @@ function buildDirectProject(initialTab: CanvasTab): Project {
         : []),
       { id: 'team', label: 'Team', type: 'team' },
       { id: 'handoff', label: 'Handoff', type: 'handoff' },
+      { id: 'critique', label: 'Critique', type: 'critique' as CanvasTab },
       { id: 'live', label: 'Live', type: 'live' as CanvasTab },
       { id: 'orbit', label: 'Orbit', type: 'orbit' as CanvasTab },
       { id: 'hyperframes', label: 'HyperFrames', type: 'hyperframes' as CanvasTab },
@@ -338,6 +342,17 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   const [uiStream, setUiStream] = useState<string | null>(initialStream ?? null);
   const [tokens, setTokens] = useState({ radius: 12, spacing: 4, primary: 'var(--accent-primary)', font: 'Allternit Sans' });
   const [darkMode, setDarkMode] = useState(true);
+  const [designStudioLook, setDesignStudioLook] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('allternit-design-studio') === '1';
+  });
+  const toggleDesignStudioLook = () => {
+    setDesignStudioLook((prev) => {
+      const next = !prev;
+      window.localStorage.setItem('allternit-design-studio', next ? '1' : '0');
+      return next;
+    });
+  };
   const [showClipboard, setShowClipboard] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [installedDesignId, setInstalledDesignId] = useState<string | null>(null);
@@ -462,6 +477,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
         { id: 'brand',   label: 'Brand',       type: 'brand'   as CanvasTab },
         { id: 'team',    label: 'Team',         type: 'team'    as CanvasTab },
         { id: 'handoff', label: 'Handoff',      type: 'handoff' as CanvasTab },
+        { id: 'critique', label: 'Critique',    type: 'critique' as CanvasTab },
         { id: 'market',  label: 'Marketplace',  type: 'market'  as CanvasTab },
         { id: 'live',    label: 'Live',         type: 'live'    as CanvasTab },
         { id: 'orbit',   label: 'Orbit',        type: 'orbit'   as CanvasTab },
@@ -536,7 +552,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   } as React.CSSProperties;
 
   return (
-    <div style={{ ...tokenStyles, ...themeOverride, display: "flex", height: "100%", width: "100%", background: "var(--bg-primary)", fontFamily: "var(--font-sans)", color: "var(--text-primary)", transition: "background 0.3s, color 0.3s" }}>
+    <div className={designStudioLook ? 'od-design-studio' : ''} style={{ ...tokenStyles, ...themeOverride, display: "flex", height: "100%", width: "100%", background: "var(--bg-primary)", fontFamily: "var(--font-sans)", color: "var(--text-primary)", transition: "background 0.3s, color 0.3s" }}>
       <PanelGroup direction="horizontal">
         <Panel>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-secondary)" }}>
@@ -553,6 +569,11 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                  <button type="button" onClick={() => setShowImport(true)} title="Import design system" style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><UploadSimple size={14} /></button>
                  <button type="button" onClick={() => setShowPluginPicker(true)} title="Plugin marketplace" style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><PuzzlePiece size={14} /></button>
                  <button type="button" onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Light mode" : "Dark mode"} style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{darkMode ? <Sun size={14} /> : <Moon size={14} />}</button>
+                 <button type="button" onClick={toggleDesignStudioLook} title={designStudioLook ? "Allternit look" : "Design Studio look"} style={{ width: "30px", height: "30px", borderRadius: "8px", background: designStudioLook ? 'var(--accent-primary)' : 'transparent', color: designStudioLook ? '#fff' : 'var(--text-secondary)', border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><span style={{ fontSize: 12, fontWeight: 700 }}>AD</span></button>
+                 {/* Integrated design component, Allternit-branded via .ad-tokens */}
+                 <span className="ad-tokens" style={{ display: "inline-flex" }}>
+                   <ODButton variant="primary" onClick={() => setShowImport(true)} title="Allternit Design button (integrated, Allternit tokens)">Allternit Design</ODButton>
+                 </span>
                  <button type="button" onClick={() => { setShowClipboard(!showClipboard); setShowTweaks(false); }} title="Design Clipboard" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showClipboard ? "var(--accent-primary)" : "transparent", color: showClipboard ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Scissors size={14} /></button>
                  <button type="button" onClick={() => { setShowTweaks(!showTweaks); setShowClipboard(false); }} title="Live Tokens" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showTweaks ? "var(--accent-primary)" : "transparent", color: showTweaks ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Sliders size={14} /></button>
                </div>
@@ -668,9 +689,14 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                       </Suspense>
                     </div>
                   )}
+                  {activeTab === 'critique' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <DesignCritiquePanel artifactHtml={latestArtifactHtml} />
+                    </div>
+                  )}
                   </ErrorBoundary>
                   {/* Padded tabs */}
-                  {!['sketch', 'system', 'handoff', 'mobile', 'video', 'docs', 'market', 'brand', 'graph', 'pipeline', 'live', 'orbit', 'hyperframes'].includes(activeTab) && (
+                  {!['sketch', 'system', 'handoff', 'mobile', 'video', 'docs', 'market', 'brand', 'graph', 'pipeline', 'live', 'orbit', 'hyperframes', 'critique'].includes(activeTab) && (
                     <div style={{ flex: 1, overflowY: 'auto', padding: '40px' }}>
                       {activeTab === 'team' && <DesignTeamWorkspace projectName={activeProject?.name} />}
                       {activeTab === 'questions' && (

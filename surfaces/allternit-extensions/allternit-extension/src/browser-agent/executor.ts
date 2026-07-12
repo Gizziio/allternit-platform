@@ -22,13 +22,15 @@ export function setResultSender(
   _sendResult = fn;
 }
 
-function sendResult(action: string, tabId: number, result: unknown): void {
+function sendResult(action: string, tabId: number, result: unknown): unknown {
   _sendResult?.(action, tabId, result);
+  return result;
 }
 
-export async function executeBrowserAction(action: BrowserAction): Promise<void> {
+export async function executeBrowserAction(action: BrowserAction): Promise<unknown> {
   const typedAction = action as { type: string; tabId?: number; params?: Record<string, unknown> };
   const tabId = typedAction.tabId ?? 0;
+  let result: unknown;
 
   if (circuitBreaker.canExecute().allowed === false) {
     throw new Error('Circuit breaker open — too many failed actions');
@@ -37,28 +39,28 @@ export async function executeBrowserAction(action: BrowserAction): Promise<void>
   try {
     switch (typedAction.type) {
       case 'BROWSER.NAV':
-        await handleNavigate(tabId, typedAction.params as { url: string });
+        result = await handleNavigate(tabId, typedAction.params as { url: string });
         break;
       case 'BROWSER.GET_CONTEXT':
-        await handleGetContext(
+        result = await handleGetContext(
           tabId,
           typedAction.params as { includeDom?: boolean; includeAccessibility?: boolean }
         );
         break;
       case 'BROWSER.ACT':
-        await handleAct(
+        result = await handleAct(
           tabId,
           typedAction.params as { action: string; target: unknown; options?: unknown }
         );
         break;
       case 'BROWSER.EXTRACT':
-        await handleExtract(tabId, typedAction.params as { query: unknown });
+        result = await handleExtract(tabId, typedAction.params as { query: unknown });
         break;
       case 'BROWSER.SCREENSHOT':
-        await handleScreenshot(tabId, typedAction.params as { fullPage?: boolean });
+        result = await handleScreenshot(tabId, typedAction.params as { fullPage?: boolean });
         break;
       case 'BROWSER.WAIT':
-        await handleWait(
+        result = await handleWait(
           tabId,
           typedAction.params as { condition: string; timeout?: number }
         );
@@ -68,13 +70,14 @@ export async function executeBrowserAction(action: BrowserAction): Promise<void>
     }
 
     circuitBreaker.recordAction(typedAction.type, true);
+    return result;
   } catch (error) {
     circuitBreaker.recordAction(typedAction.type, false);
     throw error;
   }
 }
 
-async function handleNavigate(tabId: number, params: { url: string }): Promise<void> {
+async function handleNavigate(tabId: number, params: { url: string }): Promise<unknown> {
   const { url } = params;
 
   if (!allowlist.isAllowed(url)) {
@@ -95,13 +98,13 @@ async function handleNavigate(tabId: number, params: { url: string }): Promise<v
     chrome.webNavigation.onCompleted.addListener(listener);
   });
 
-  sendResult('BROWSER.NAV', tabId, { success: true });
+  return sendResult('BROWSER.NAV', tabId, { success: true });
 }
 
 async function handleGetContext(
   tabId: number,
   params: { includeDom?: boolean; includeAccessibility?: boolean }
-): Promise<void> {
+): Promise<unknown> {
   const { includeDom = true, includeAccessibility = false } = params;
 
   const results = await chrome.scripting.executeScript({
@@ -126,18 +129,19 @@ async function handleGetContext(
     args: [includeDom, includeAccessibility],
   });
 
-  sendResult('BROWSER.GET_CONTEXT', tabId, results[0]?.result);
+  return sendResult('BROWSER.GET_CONTEXT', tabId, results[0]?.result);
 }
 
 async function handleAct(
   tabId: number,
   params: { action: string; target: unknown; options?: unknown }
-): Promise<void> {
+): Promise<unknown> {
   const { action, target, options } = params;
   await chrome.tabs.sendMessage(tabId, { type: 'BROWSER.ACT', action, target, options });
+  return sendResult('BROWSER.ACT', tabId, { success: true, action });
 }
 
-async function handleExtract(tabId: number, params: { query: unknown }): Promise<void> {
+async function handleExtract(tabId: number, params: { query: unknown }): Promise<unknown> {
   const { query } = params;
 
   const results = await chrome.scripting.executeScript({
@@ -162,21 +166,22 @@ async function handleExtract(tabId: number, params: { query: unknown }): Promise
     args: [JSON.stringify(query)],
   });
 
-  sendResult('BROWSER.EXTRACT', tabId, results[0]?.result);
+  return sendResult('BROWSER.EXTRACT', tabId, results[0]?.result);
 }
 
 async function handleScreenshot(
   tabId: number,
   _params: { fullPage?: boolean }
-): Promise<void> {
+): Promise<unknown> {
   const screenshot = await chrome.tabs.captureVisibleTab(undefined, { format: 'png' });
-  sendResult('BROWSER.SCREENSHOT', tabId, { screenshot });
+  return sendResult('BROWSER.SCREENSHOT', tabId, { screenshot });
 }
 
 async function handleWait(
   tabId: number,
   params: { condition: string; timeout?: number }
-): Promise<void> {
+): Promise<unknown> {
   const { condition, timeout } = params;
   await chrome.tabs.sendMessage(tabId, { type: 'BROWSER.WAIT', condition, timeout });
+  return sendResult('BROWSER.WAIT', tabId, { success: true, condition });
 }

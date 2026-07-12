@@ -85,11 +85,13 @@ export interface LeaseManagerEvents {
   'lease:warning': (lease: ManagedLease, message: string) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export declare interface LeaseManager {
   on<E extends keyof LeaseManagerEvents>(event: E, listener: LeaseManagerEvents[E]): this;
   emit<E extends keyof LeaseManagerEvents>(event: E, ...args: Parameters<LeaseManagerEvents[E]>): boolean;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
 export class LeaseManager extends EventEmitter {
   private config: Required<LeaseManagerConfig>;
   private leases: Map<LeaseId, ManagedLease> = new Map();

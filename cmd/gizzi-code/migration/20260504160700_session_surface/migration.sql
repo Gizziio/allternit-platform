@@ -1,1 +1,1 @@
-ALTER TABLE session ADD COLUMN IF NOT EXISTS surface TEXT;
+ALTER TABLE session ADD COLUMN surface TEXT;

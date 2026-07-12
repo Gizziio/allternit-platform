@@ -128,6 +128,8 @@ export type ViewType =
   | "design-agent-session"
   // Product Discovery
   | "products"
+  // Library (generated artifacts)
+  | "library"
   // A://Labs - Course Management
   | "labs"
   | "catalog"

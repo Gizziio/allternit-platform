@@ -235,7 +235,7 @@ fn chat_event_stream(
 /// Configure a Gizzi provider from an agent harness config. Non-fatal — if the
 /// harness cannot be registered we still attempt the chat with the resolved
 /// model reference so the UI degrades gracefully.
-async fn configure_harness_on_gizzi(
+pub(crate) async fn configure_harness_on_gizzi(
     client: &Client,
     base: &str,
     harness: Option<&serde_json::Value>,
@@ -286,21 +286,22 @@ async fn configure_harness_on_gizzi(
             json!({ "type": "api", "key": "local", "baseURL": base_url })
         }
         "subprocess" => {
-            let (command, cwd) = harness
+            let (command, cwd, env) = harness
                 .get("subprocess")
                 .and_then(|v| v.as_object())
                 .map(|o| {
                     (
                         o.get("command").and_then(|v| v.as_str()).unwrap_or(""),
                         o.get("cwd").and_then(|v| v.as_str()).unwrap_or(""),
+                        o.get("env").cloned().unwrap_or_else(|| json!({})),
                     )
                 })
-                .unwrap_or(("", ""));
+                .unwrap_or(("", "", json!({})));
             if command.is_empty() {
                 warn!(mode = %mode, "Subprocess harness missing command");
                 return;
             }
-            json!({ "type": "api", "key": "subprocess", "subprocess_cmd": command, "cwd": cwd })
+            json!({ "type": "api", "key": "subprocess", "subprocess_cmd": command, "cwd": cwd, "env": env })
         }
         _ => {
             warn!(mode = %mode, "Unknown harness mode");
@@ -324,6 +325,16 @@ async fn configure_harness_on_gizzi(
     }
 }
 
+/// Quick health check so the frontend gets a clear error when Gizzi is down
+/// instead of a generic timeout.
+async fn gizzi_health_ok(client: &Client, base: &str) -> Option<String> {
+    match client.get(format!("{}/health", base)).send().await {
+        Ok(res) if res.status().is_success() => None,
+        Ok(res) => Some(format!("Gizzi health returned {}", res.status())),
+        Err(err) => Some(format!("Gizzi health unreachable: {}", err)),
+    }
+}
+
 /// Send a chat message to a Gizzi session and stream the response back.
 pub async fn stream_chat_through_gizzi(
     gizzi_base: &str,
@@ -341,6 +352,16 @@ pub async fn stream_chat_through_gizzi(
         .build()
         .unwrap_or_else(|_| Client::new());
 
+    if let Some(err) = gizzi_health_ok(&client, base).await {
+        warn!(error = %err, "Gizzi health preflight failed");
+        return stream_error(
+            format!("msg_{}", uuid::Uuid::new_v4().simple()),
+            runtime_model_id.unwrap_or("").to_string(),
+            err,
+        )
+        .into_response();
+    }
+
     let model = parse_model_ref(runtime_model_id, agent_provider, agent_model);
     let model_id = model
         .get("modelID")
@@ -354,9 +375,32 @@ pub async fn stream_chat_through_gizzi(
     // For non-cloud harness modes, push credentials/config to Gizzi first.
     configure_harness_on_gizzi(&client, base, harness, &model).await;
 
+    // Ensure the Gizzi session exists before we subscribe/send.
+    let init_url = format!("{}/session/{}/initialize", base, urlencoding::encode(session_id));
+    match client.post(&init_url).json(&json!({})).send().await {
+        Ok(res) if res.status().is_success() || res.status().as_u16() == 409 => {
+            info!(session_id = %session_id, "Gizzi session initialized");
+        }
+        Ok(res) => {
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            warn!(status = %status, body = %body, "Gizzi session initialize returned unexpected status");
+            // Continue anyway; the session may already exist.
+        }
+        Err(err) => {
+            warn!(error = %err, "Could not initialize Gizzi session");
+            return stream_error(
+                format!("msg_{}", uuid::Uuid::new_v4().simple()),
+                model_id,
+                format!("Gizzi session unreachable: {}", err),
+            )
+            .into_response();
+        }
+    }
+
     // Subscribe to events *before* sending the message so we don't miss deltas.
     let event_resp = match client
-        .get(format!("{}/v1/event", base))
+        .get(format!("{}/event", base))
         .header("Accept", "text/event-stream")
         .send()
         .await
@@ -378,7 +422,7 @@ pub async fn stream_chat_through_gizzi(
         "model": model,
     });
 
-    let message_url = format!("{}/v1/session/{}/message", base, urlencoding::encode(session_id));
+    let message_url = format!("{}/session/{}/message", base, urlencoding::encode(session_id));
     match client.post(&message_url).json(&message_payload).send().await {
         Ok(res) if res.status().is_success() => {
             info!(session_id = %session_id, "Forwarded chat message to Gizzi");

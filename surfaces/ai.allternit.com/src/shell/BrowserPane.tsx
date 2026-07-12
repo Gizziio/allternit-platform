@@ -258,7 +258,7 @@ export function BrowserPaneWrapper({ children }: { children: React.ReactNode }):
                   input.value = '';
                 }
               }} className="relative">
-                <input aria-label="Search the web or enter a URL…" type="text" placeholder="Search the web or enter a URL…" className="w-full h-14 pl-6 pr-14 bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] text-[18px] outline-none box-border transition-all duration-200" onFocus={(e) => { e.currentTarget.style.borderColor = browserTokens.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${browserTokens.soft}`; }} onBlur={(e) => { e.currentTarget.style.borderColor = BORDER.subtle; e.currentTarget.style.boxShadow = 'none'; }} />
+                <input aria-label="Search the web or enter a URL…" type="text" placeholder="Search the web or enter a URL…" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} className="w-full h-14 pl-6 pr-14 bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl text-[var(--text-primary)] text-[18px] outline-none box-border transition-all duration-200" onFocus={(e) => { e.currentTarget.style.borderColor = browserTokens.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${browserTokens.soft}`; }} onBlur={(e) => { e.currentTarget.style.borderColor = BORDER.subtle; e.currentTarget.style.boxShadow = 'none'; }} />
                 <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 p-2 border-none rounded-lg cursor-pointer" style={{ background: browserTokens.accent }}>
                   <MagnifyingGlass className="w-5 h-5 text-[var(--bg-primary)]" />
                 </button>

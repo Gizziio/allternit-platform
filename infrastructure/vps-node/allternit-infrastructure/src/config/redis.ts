@@ -1,9 +1,9 @@
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 import config from './index';
 import { logger } from '../utils/logger';
 
 // Redis connection options
-const redisOptions: Redis.RedisOptions = {
+const redisOptions: RedisOptions = {
   host: config.redis.host,
   port: config.redis.port,
   db: config.redis.db,

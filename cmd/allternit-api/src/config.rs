@@ -14,6 +14,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing::{info, warn};
+use crate::secrets;
 
 /// Company-level configuration. These values are part of the packaged app and
 /// should not be edited by end users. They standardize auth, endpoints, and
@@ -154,6 +155,11 @@ impl AppConfig {
     /// If the user config has no default model but the Gizzi runtime config
     /// does, mirror it so the UI and API agree on which brain to use.
     pub fn load() -> Self {
+        // One-time migration: if a brain was saved to the legacy (wrong) gizzi
+        // config path, copy it to the file the gizzi runtime actually reads so
+        // a previously configured provider starts taking effect immediately.
+        migrate_legacy_gizzi_config();
+
         let company = load_company_config();
         let mut user = load_user_config();
 
@@ -188,17 +194,20 @@ impl AppConfig {
     }
 
     /// Default LLM provider/model when a request does not specify one.
+    /// Returns empty strings when nothing is configured so callers can fall back
+    /// to the local Ollama brain instead of silently routing to an unconfigured
+    /// provider.
     pub fn default_model(&self) -> (String, String) {
         let raw = std::env::var("ALLTERNIT_DEFAULT_MODEL")
             .ok()
             .filter(|s| !s.is_empty())
             .or_else(|| self.user.default_model.clone())
-            .unwrap_or_else(|| "kimi-for-coding/kimi-k2".to_string());
+            .unwrap_or_default();
 
         if let Some((provider, model)) = raw.split_once('/') {
             (provider.trim().to_string(), model.trim().to_string())
         } else {
-            ("kimi-for-coding".to_string(), raw.trim().to_string())
+            (String::new(), raw.trim().to_string())
         }
     }
 
@@ -235,11 +244,17 @@ impl AppConfig {
     }
 
     /// Default encryption key for local data.
+    ///
+    /// Resolution order matches `token_crypto`: env (`ENCRYPTION_KEY`) ->
+    /// baked company config (empty by design) -> per-host OS keychain
+    /// (`platform:encryption-key`). Nothing secret is baked into the package;
+    /// the key is generated per machine on first onboarding.
     pub fn encryption_key(&self) -> Option<String> {
         std::env::var("ENCRYPTION_KEY")
             .ok()
             .filter(|s| !s.is_empty())
-            .or_else(|| self.company.encryption_key.clone())
+            .or_else(|| self.company.encryption_key.clone().filter(|s| !s.is_empty()))
+            .or_else(|| crate::secrets::get_secret(crate::token_crypto::PLATFORM_KEY_ACCOUNT))
     }
 
     /// Tenant identifier for this packaged deployment.
@@ -560,28 +575,32 @@ fn read_gizzi_default_model() -> Option<String> {
     })
 }
 
-/// Best-effort build of a Gizzi harness for the default model configured in
-/// the Gizzi runtime user config. This lets the Allternit API create sessions
-/// that route through the user's chosen brain (subprocess, local, or BYOK)
-/// without requiring an agent record in the platform DB.
-pub fn read_gizzi_default_harness() -> Option<serde_json::Value> {
+/// Convenience builder that looks up a provider by id from the Gizzi runtime
+/// config and builds its harness (injecting any stored API key for subprocess
+/// providers).
+pub fn build_gizzi_harness_for_provider(provider_id: &str) -> Option<serde_json::Value> {
     let path = gizzi_user_config_path();
     let text = std::fs::read_to_string(&path).ok()?;
     let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+    let provider = value.get("provider")?.as_object()?.get(provider_id)?;
+    build_gizzi_harness(provider_id, provider)
+}
 
-    let provider_id = value
-        .get("model")
-        .and_then(|v| v.as_str())
-        .and_then(|m| m.split_once('/').map(|(p, _)| p.to_string()))?;
-
-    let provider = value.get("provider")?.as_object()?.get(&provider_id)?.clone();
+/// Best-effort build of a Gizzi harness for a provider configured in the Gizzi
+/// runtime user config. Injects API keys from the OS keychain for subprocess
+/// providers so CLI brains (Claude CLI, etc.) authenticate without writing
+/// secrets to disk.
+pub fn build_gizzi_harness(provider_id: &str, provider: &serde_json::Value) -> Option<serde_json::Value> {
+    let provider = provider.as_object()?;
 
     // Subprocess provider (e.g. claude-cli, custom local scripts).
     if let Some(cmd) = provider.get("subprocess_cmd").and_then(|v| v.as_str()) {
-        return Some(serde_json::json!({
+        let mut harness = serde_json::json!({
             "mode": "subprocess",
-            "subprocess": { "command": cmd }
-        }));
+            "subprocess": { "command": cmd, "env": {} }
+        });
+        inject_subprocess_api_key(provider_id, &mut harness);
+        return Some(harness);
     }
 
     // Local/OpenAI-compatible provider (e.g. Ollama).
@@ -615,8 +634,150 @@ pub fn read_gizzi_default_harness() -> Option<serde_json::Value> {
     None
 }
 
-fn gizzi_user_config_path() -> PathBuf {
-    dirs::config_dir()
-        .map(|p| p.join("gizzi").join("gizzi.json"))
-        .unwrap_or_else(|| PathBuf::from(".config/gizzi/gizzi.json"))
+/// Inject the provider API key (stored in the OS keychain) into a subprocess
+/// harness's env. The env variable name is inferred from the provider id:
+///   - providers whose id contains "claude" -> ANTHROPIC_API_KEY
+/// Everything else falls back to a generic LLM_API_KEY so the subprocess can
+/// pick it up if it supports one.
+fn inject_subprocess_api_key(provider_id: &str, harness: &mut serde_json::Value) {
+    let env_name = if provider_id.to_lowercase().contains("claude") {
+        "ANTHROPIC_API_KEY"
+    } else {
+        "LLM_API_KEY"
+    };
+
+    match secrets::get_secret(&secrets::provider_account(provider_id)) {
+        Some(key) if !key.is_empty() => {
+            if let Some(subprocess) = harness.get_mut("subprocess").and_then(|v| v.as_object_mut()) {
+                let env = subprocess
+                    .entry("env")
+                    .or_insert_with(|| serde_json::json!({}))
+                    .as_object_mut()
+                    .unwrap();
+                env.insert(env_name.to_string(), serde_json::json!(key));
+                info!(provider = %provider_id, env = %env_name, "Injected API key into subprocess harness env");
+            }
+        }
+        Some(_) => {
+            // Key exists but is empty — nothing to inject.
+        }
+        None => {
+            warn!(provider = %provider_id, "No API key found in keychain for subprocess provider");
+        }
+    }
+}
+
+/// Best-effort build of a Gizzi harness for the default model configured in
+/// the Gizzi runtime user config. This lets the Allternit API create sessions
+/// that route through the user's chosen brain (subprocess, local, or BYOK)
+/// without requiring an agent record in the platform DB.
+pub fn read_gizzi_default_harness() -> Option<serde_json::Value> {
+    let path = gizzi_user_config_path();
+    let text = std::fs::read_to_string(&path).ok()?;
+    let value: serde_json::Value = serde_json::from_str(&text).ok()?;
+
+    let provider_id = value
+        .get("model")
+        .and_then(|v| v.as_str())
+        .and_then(|m| m.split_once('/').map(|(p, _)| p.to_string()))?;
+
+    let provider = value.get("provider")?.as_object()?.get(&provider_id)?.clone();
+    build_gizzi_harness(&provider_id, &provider)
+}
+
+/// Path to the gizzi-code global config file that the runtime actually reads.
+///
+/// This MUST mirror gizzi-code's own resolution:
+///   - config dir = `Global.Path.config` = xdg-basedir config + `"gizzi-code"`
+///     (`src/runtime/context/global/paths.ts`)
+///   - filename   = `config.json` (`src/cli/commands/provider.ts`)
+///
+/// Previously this resolved to `<dirs::config_dir>/gizzi/gizzi.json`, which on
+/// macOS is `~/Library/Application Support/gizzi/gizzi.json` — a file the gizzi
+/// runtime never opens. That is why "add a brain instead of kimi" silently did
+/// nothing in packaged builds: the wizard wrote the provider to the wrong file
+/// and `read_gizzi_default_harness` read it back from the same wrong place, so
+/// every session kept falling back to the built-in default.
+///
+/// Precedence: `GIZZI_CONFIG_HOME` (dir) > `XDG_CONFIG_HOME` > platform default
+/// (`~/.config` on macOS/Linux to match xdg-basedir, `%APPDATA%` on Windows).
+pub(crate) fn gizzi_user_config_path() -> PathBuf {
+    if let Ok(dir) = std::env::var("GIZZI_CONFIG_HOME") {
+        if !dir.is_empty() {
+            return PathBuf::from(dir).join("config.json");
+        }
+    }
+    let base = std::env::var("XDG_CONFIG_HOME")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            if cfg!(windows) {
+                std::env::var("APPDATA").ok().map(PathBuf::from)
+            } else {
+                dirs::home_dir().map(|h| h.join(".config"))
+            }
+        })
+        .unwrap_or_else(|| PathBuf::from(".config"));
+    base.join("gizzi-code").join("config.json")
+}
+
+/// One-time migration from the legacy gizzi config paths the API used to write
+/// (`<dirs::config_dir>/gizzi/gizzi.json`, and the xdg-style
+/// `~/.config/gizzi/{gizzi,config}.json` leftovers) into the file the gizzi-code
+/// runtime actually reads: `<xdg-config>/gizzi-code/config.json`.
+///
+/// Best-effort and idempotent: if the target already exists, or no legacy file
+/// is present, it does nothing. When several legacy files exist, the richest
+/// (most configured providers) wins so a thin auto-generated file never shadows
+/// the user's real brain set. Legacy files are copied (never deleted) so the
+/// operation is reversible.
+fn migrate_legacy_gizzi_config() {
+    let target = gizzi_user_config_path();
+    if target.exists() {
+        return;
+    }
+
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    // Where the old API wrote on each platform (macOS: ~/Library/Application Support).
+    if let Some(dir) = dirs::config_dir() {
+        candidates.push(dir.join("gizzi").join("gizzi.json"));
+    }
+    // xdg-style leftovers observed in the wild.
+    if let Some(home) = dirs::home_dir() {
+        candidates.push(home.join(".config").join("gizzi").join("gizzi.json"));
+        candidates.push(home.join(".config").join("gizzi").join("config.json"));
+    }
+
+    let provider_count = |path: &PathBuf| -> usize {
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+            .and_then(|v| v.get("provider").and_then(|p| p.as_object()).map(|o| o.len()))
+            .unwrap_or(0)
+    };
+
+    let Some(source) = candidates
+        .into_iter()
+        .filter(|p| p.is_file())
+        .max_by_key(|p| provider_count(p))
+    else {
+        return;
+    };
+
+    if provider_count(&source) == 0 {
+        return;
+    }
+
+    if let Some(parent) = target.parent() {
+        if let Err(err) = std::fs::create_dir_all(parent) {
+            warn!(error = %err, path = %parent.display(), "Failed to create gizzi config dir for migration");
+            return;
+        }
+    }
+
+    match std::fs::copy(&source, &target) {
+        Ok(bytes) => info!(from = %source.display(), to = %target.display(), bytes, "Migrated legacy gizzi brain config"),
+        Err(err) => warn!(error = %err, from = %source.display(), to = %target.display(), "Failed to migrate legacy gizzi brain config"),
+    }
 }

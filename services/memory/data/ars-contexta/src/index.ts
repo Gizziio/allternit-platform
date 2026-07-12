@@ -7,6 +7,8 @@
  * Based on: https://github.com/agenticnotetaking/arscontexta
  */
 
+import type { Note, NoteLink, PipelineInput, PipelineOutput, Insight } from './types.js';
+
 // ============================================================================
 // Three-Space Architecture Types
 // ============================================================================
@@ -42,25 +44,6 @@ export interface NotesSpace {
   notes: Map<string, Note>;
   links: NoteLink[];
   mocs: Map<string, MapOfContent>;
-}
-
-export interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  links: string[]; // Note IDs
-  createdAt: string;
-  updatedAt: string;
-  accessCount: number;
-  confidence: number;
-}
-
-export interface NoteLink {
-  source: string;
-  target: string;
-  type: 'reference' | 'related' | 'contradicts' | 'extends';
-  strength: number;
 }
 
 export interface MapOfContent {
@@ -111,34 +94,6 @@ export interface WorkflowStep {
   action: string;
   template?: string;
   conditions?: string[];
-}
-
-// ============================================================================
-// 6Rs Processing Pipeline
-// ============================================================================
-
-export type PipelinePhase = 'record' | 'reduce' | 'reflect' | 'reweave' | 'verify' | 'rethink';
-
-export interface PipelineInput {
-  rawContent: string;
-  source?: string;
-  timestamp: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface PipelineOutput {
-  notes: Note[];
-  links: NoteLink[];
-  summary: string;
-  insights: Insight[];
-}
-
-export interface Insight {
-  id: string;
-  type: 'pattern' | 'contradiction' | 'gap' | 'opportunity';
-  description: string;
-  confidence: number;
-  relatedNotes: string[];
 }
 
 // ============================================================================
@@ -245,6 +200,8 @@ export class ArsContextaEngine {
         description: 'Content contains substantial information',
         confidence: 0.7,
         relatedNotes: [],
+        source: 'pattern',
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -535,13 +492,79 @@ export class ArsContextaEngine {
 // LLM Integration (GAP-78)
 // ============================================================================
 
-export * from './llm/index.js';
+export type {
+  LlmClient,
+  LlmClientOptions,
+  ProviderCapabilities,
+} from './llm/types.js';
+
+export {
+  createLlmClient,
+  createLlmClientFromEnv,
+  getAvailableProviders,
+  isProviderAvailable,
+} from './llm/client.js';
+
+export {
+  OpenAiProvider,
+  AnthropicProvider,
+  LocalProvider,
+  StubProvider,
+} from './llm/providers/index.js';
+
+export {
+  INSIGHT_SYSTEM_PROMPT,
+  generateInsightPrompt,
+  generateEntityExtractionPrompt,
+  generateSummarizationPrompt,
+  generateVerificationPrompt,
+  generateLinkSuggestionPrompt,
+  PromptTemplates,
+  type PromptTemplateName,
+} from './llm/templates.js';
+
+export {
+  StreamAccumulator,
+  processStreamWithInsights,
+  parseSseStream,
+  createMockStream,
+  type StreamConfig,
+} from './llm/stream.js';
+
+export {
+  TerminalProviderAdapter,
+  createTerminalAdapter,
+  createLlmClientWithFallback,
+  initTerminalModules,
+  isTerminalContext,
+} from './llm/adapters/terminal-provider.js';
 
 // ============================================================================
 // NLP Entity Extraction (GAP-79)
 // ============================================================================
 
-export * from './nlp/index.js';
+export type {
+  EntityExtractor,
+  EntitySpan,
+  NerModelConfig,
+  RemoteNlpConfig,
+  RustBridgeConfig,
+  BatchExtractionRequest,
+  BatchExtractionResult,
+  ExtractOptions,
+} from './nlp/types.js';
+
+export {
+  createEntityExtractor,
+} from './nlp/extractor.js';
+
+export {
+  RustBridge,
+  createRustBridgeFromEnv,
+  getGlobalBridge,
+  spansToEntities,
+  type BridgeStatus,
+} from './nlp/rust_bridge.js';
 
 // ============================================================================
 // Shared Types (GAP-78, GAP-79)

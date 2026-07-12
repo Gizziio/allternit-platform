@@ -84,7 +84,7 @@ export class DigitalOceanProvider extends BaseProvider {
 
       if (body) {
         const bodyString = JSON.stringify(body);
-        options.headers!['Content-Length'] = Buffer.byteLength(bodyString);
+        (options.headers as any)['Content-Length'] = Buffer.byteLength(bodyString);
       }
 
       const req = https.request(options, (res) => {

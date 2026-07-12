@@ -1,0 +1,18 @@
+{
+  "id": "docs-page",
+  "name": "Docs Page",
+  "version": "1.0.0",
+  "description": "Generate a clean, readable documentation page as a self-contained live HTML artifact.",
+  "category": "examples",
+  "author": "Allternit Design",
+  "tags": ["docs", "documentation", "web", "html"],
+  "preview": { "type": "html", "entry": "example.html" },
+  "inputs": [
+    { "name": "title", "type": "string", "required": true, "label": "Page title" },
+    { "name": "brief", "type": "text", "required": false, "label": "What the doc covers" }
+  ],
+  "pipelines": [
+    { "name": "live-html", "format": "html" }
+  ],
+  "capabilities": ["prompt:inject", "fs:write"]
+}

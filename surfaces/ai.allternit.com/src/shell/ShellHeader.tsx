@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { GlassSurface } from '../design/GlassSurface';
 import { AllternitOperatorStatus } from '../components/AllternitOperatorStatus';
 import { EnvironmentSelector, EnvironmentType } from './EnvironmentSelector';
+import { listGoals, listRoutines, listLoops } from '@/lib/automation-api';
 import {
   CaretLeft,
   CaretRight,
@@ -9,10 +10,12 @@ import {
   Moon,
   SidebarSimple,
   FileCode,
+  Target,
 } from '@phosphor-icons/react';
 
 import { ModeSwitcher } from './ModeSwitcher';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
 
@@ -48,6 +51,35 @@ export function ShellHeader({
   currentEnvironment = 'local',
   onEnvironmentChange,
 }: ShellHeaderProps): React.ReactNode {
+  const navigate = useNavigate();
+  const [automationCount, setAutomationCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [goals, routines, loops] = await Promise.all([
+          listGoals(),
+          listRoutines(),
+          listLoops(),
+        ]);
+        if (cancelled) return;
+        const activeGoals = goals.filter((g) => g.status === 'active').length;
+        const activeRoutines = routines.filter((r) => r.status === 'active').length;
+        const activeLoops = loops.filter((l) => l.status === 'active').length;
+        setAutomationCount(activeGoals + activeRoutines + activeLoops);
+      } catch {
+        if (!cancelled) setAutomationCount(null);
+      }
+    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   const modeColors: Record<string, string> = {
     chat: 'var(--accent-chat)',
     cowork: 'var(--accent-cowork)',
@@ -92,6 +124,25 @@ export function ShellHeader({
       </div>
 
       <div className="flex items-center gap-3 [WebkitAppRegion:no-drag]">
+        {/* Automation Hub — visible from every mode */}
+        <button
+          type="button"
+          onClick={() => navigate('/automation/goals')}
+          className="flex items-center gap-1.5 border border-solid border-[var(--border-subtle)] rounded-lg px-2.5 py-1.5 bg-[var(--shell-control-bg)] text-[var(--shell-control-fg)] cursor-pointer [WebkitAppRegion:no-drag] transition-colors hover:bg-[var(--shell-control-active-bg)] hover:text-[var(--shell-control-active-fg)]"
+          title="Open Automation Hub (Goals, Routines, Loops)"
+        >
+          <Target size={16} />
+          <span className="text-[12px] font-semibold hidden sm:inline">Automation</span>
+          {automationCount !== null && automationCount > 0 && (
+            <span
+              className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold"
+              style={{ background: 'var(--accent-primary)', color: '#fff' }}
+            >
+              {automationCount}
+            </span>
+          )}
+        </button>
+
         {/* Environment Selector */}
         <EnvironmentSelector
           currentEnvironment={currentEnvironment}

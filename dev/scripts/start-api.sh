@@ -23,7 +23,7 @@ fi
 echo "[start-api] Starting allternit-api on :8013 (dev mode, auth bypass enabled)"
 echo "[start-api] Log: $LOG_FILE"
 
-ALLTERNIT_DEV_AUTH_BYPASS=1 \
+ALLTERNIT_LOCAL_DEV_BYPASS=1 \
     "$BINARY" > "$LOG_FILE" 2>&1 &
 
 PID=$!

@@ -201,6 +201,11 @@ export function useBrowserExtensionPaneAdapter(): {
       sessions: mapSessions(mergedSessions),
       pageLabel,
       hostLabel,
+      protocol: {
+        provider: "extension-tab",
+        surface: "platform-web",
+        contractVersion: "1.0",
+      },
       config,
       execute,
       stop,

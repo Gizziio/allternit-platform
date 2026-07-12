@@ -28,9 +28,13 @@ import {
   Robot,
   Info,
   SlidersHorizontal,
+  Lock,
+  Sparkle,
+  PlugsConnected,
+  Package,
 } from '@phosphor-icons/react';
 
-type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'about';
+export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'customize' | 'about';
 
 export interface SettingsNavItem {
   id: string;
@@ -43,6 +47,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'signin', label: 'Account', icon: React.createElement(User, { size: 18 }), group: 'account' },
   { id: 'usage', label: 'Usage', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
   { id: 'billing', label: 'Billing', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
+  { id: 'privacy', label: 'Privacy', icon: React.createElement(Lock, { size: 18 }), group: 'account' },
   { id: 'general', label: 'General', icon: React.createElement(GearSix, { size: 18 }), group: 'platform' },
   { id: 'appearance', label: 'Appearance', icon: React.createElement(Palette, { size: 18 }), group: 'platform' },
   { id: 'models', label: 'Models', icon: React.createElement(Cpu, { size: 18 }), group: 'platform' },
@@ -58,6 +63,9 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'environment', label: 'Environment', icon: React.createElement(SlidersHorizontal, { size: 18 }), group: 'infrastructure' },
   { id: 'security', label: 'Security', icon: React.createElement(Shield, { size: 18 }), group: 'infrastructure' },
   { id: 'agents', label: 'Agents', icon: React.createElement(Robot, { size: 18 }), group: 'infrastructure' },
+  { id: 'skills', label: 'Skills', icon: React.createElement(Sparkle, { size: 18 }), group: 'customize' },
+  { id: 'connectors', label: 'Connectors', icon: React.createElement(PlugsConnected, { size: 18 }), group: 'customize' },
+  { id: 'plugins', label: 'Plugins', icon: React.createElement(Package, { size: 18 }), group: 'customize' },
   { id: 'about', label: 'About', icon: React.createElement(Info, { size: 18 }), group: 'about' },
 ];
 
@@ -66,6 +74,25 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
  * This ensures the type stays in sync with the config.
  */
 export type SettingsSection = typeof SETTINGS_NAV_ITEMS[number]['id'];
+
+export interface SettingsNavGroup {
+  group: SettingsGroup;
+  /** Sentence-case sidebar label; null renders the group without a label. */
+  label: string | null;
+}
+
+/**
+ * Sidebar group order + labels. Keeps `SETTINGS_NAV_ITEMS` as the single
+ * source of truth for items while centralizing group presentation.
+ */
+export const SETTINGS_NAV_GROUPS: SettingsNavGroup[] = [
+  { group: 'account', label: 'Account' },
+  { group: 'platform', label: 'Platform' },
+  { group: 'products', label: 'Products' },
+  { group: 'infrastructure', label: 'Infrastructure' },
+  { group: 'customize', label: 'Customize' },
+  { group: 'about', label: null },
+];
 
 /**
  * Valid section IDs as a runtime Set for O(1) lookups.

@@ -1,5 +1,5 @@
 /**
- * Open Design skill registry — ported from nexu-io/open-design.
+ * Allternit Design skill registry — ported from nexu-io/open-design.
  *
  * A skill is a folder containing SKILL.md + optional assets/ + references/.
  * SKILL.md frontmatter follows the Claude Code convention with an optional
@@ -164,10 +164,40 @@ export function parseYamlFrontmatter(raw: string): { frontmatter: ParsedFrontmat
   const body = trimmed.slice(end + 3).trim();
   const frontmatter: ParsedFrontmatter = {};
   let currentKey: string | null = null;
-  let currentArray: string[] | null = null;
   let currentNested: Record<string, unknown> | null = null;
   let nestedKey: string | null = null;
-  let nestedArray: string[] | null = null;
+  // Block scalar (| literal / > folded) accumulation — top-level keys only.
+  let blockKey: string | null = null;
+  let blockFold = false;
+  let blockLines: string[] = [];
+  let blockIndent: number | null = null;
+
+  const finalizeBlock = () => {
+    if (!blockKey) return;
+    const joined = blockFold ? blockLines.join(' ') : blockLines.join('\n');
+    frontmatter[blockKey] = joined.replace(/\s+$/g, '');
+    blockKey = null;
+    blockLines = [];
+    blockIndent = null;
+  };
+
+  const parseInlineArray = (value: string): string[] | null => {
+    if (!value.startsWith('[') || !value.endsWith(']')) return null;
+    const inner = value.slice(1, -1).trim();
+    if (!inner) return [];
+    return inner.split(',').map((s) => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+  };
+
+  const unquote = (value: string): unknown => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    const arr = parseInlineArray(value);
+    if (arr) return arr;
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      return value.slice(1, -1);
+    }
+    return value;
+  };
 
   for (const line of yaml.split('\n')) {
     const indent = line.length - line.trimStart().length;
@@ -175,30 +205,40 @@ export function parseYamlFrontmatter(raw: string): { frontmatter: ParsedFrontmat
 
     if (!trimmedLine || trimmedLine.startsWith('#')) continue;
 
+    // While collecting a block scalar, indented lines are content; a dedent ends it.
+    if (blockKey) {
+      if (indent > 0) {
+        if (blockIndent === null) blockIndent = indent;
+        blockLines.push(line.slice(Math.min(blockIndent, indent)));
+        continue;
+      }
+      finalizeBlock();
+    }
+
     // Top-level key: value
     if (indent === 0 && trimmedLine.includes(':')) {
-      currentArray = null;
       currentNested = null;
       nestedKey = null;
-      nestedArray = null;
       const idx = trimmedLine.indexOf(':');
       const key = trimmedLine.slice(0, idx).trim();
-      let value: unknown = trimmedLine.slice(idx + 1).trim();
+      const value = trimmedLine.slice(idx + 1).trim();
       if (value === '') {
-        // Could be nested block starting next line
+        // Nested block starting on the next line.
         currentKey = key;
         frontmatter[key] = {};
         currentNested = frontmatter[key] as Record<string, unknown>;
         continue;
       }
-      if (value === 'true') value = true;
-      else if (value === 'false') value = false;
-      else if ((value as string).startsWith('"') && (value as string).endsWith('"')) {
-        value = (value as string).slice(1, -1);
-      } else if ((value as string).startsWith("'") && (value as string).endsWith("'")) {
-        value = (value as string).slice(1, -1);
+      if (/^[|>][-+]?\s*$/.test(value)) {
+        // Start of a literal (|) or folded (>) block scalar.
+        blockKey = key;
+        blockFold = value.startsWith('>');
+        blockLines = [];
+        blockIndent = null;
+        currentKey = key;
+        continue;
       }
-      frontmatter[key] = value;
+      frontmatter[key] = unquote(value);
       currentKey = key;
       continue;
     }
@@ -209,29 +249,21 @@ export function parseYamlFrontmatter(raw: string): { frontmatter: ParsedFrontmat
         frontmatter[currentKey] = [];
       }
       (frontmatter[currentKey] as string[]).push(trimmedLine.slice(2).replace(/^["']|["']$/g, ''));
-      currentArray = frontmatter[currentKey] as string[];
       continue;
     }
 
     // Nested key under current od block
     if (indent === 2 && trimmedLine.includes(':') && currentNested) {
-      nestedArray = null;
+      nestedKey = null;
       const idx = trimmedLine.indexOf(':');
       const key = trimmedLine.slice(0, idx).trim();
-      let value: unknown = trimmedLine.slice(idx + 1).trim();
+      const value = trimmedLine.slice(idx + 1).trim();
       if (value === '') {
         nestedKey = key;
         currentNested[key] = {};
         continue;
       }
-      if (value === 'true') value = true;
-      else if (value === 'false') value = false;
-      else if ((value as string).startsWith('"') && (value as string).endsWith('"')) {
-        value = (value as string).slice(1, -1);
-      } else if ((value as string).startsWith("'") && (value as string).endsWith("'")) {
-        value = (value as string).slice(1, -1);
-      }
-      currentNested[key] = value;
+      currentNested[key] = unquote(value);
       nestedKey = key;
       continue;
     }
@@ -242,32 +274,23 @@ export function parseYamlFrontmatter(raw: string): { frontmatter: ParsedFrontmat
         currentNested[nestedKey] = [];
       }
       (currentNested[nestedKey] as string[]).push(trimmedLine.slice(2).replace(/^["']|["']$/g, ''));
-      nestedArray = currentNested[nestedKey] as string[];
       continue;
     }
 
     // Deeper nested key (indent 4) — treat as key under current nested object
     if (indent === 4 && trimmedLine.includes(':') && currentNested) {
-      nestedArray = null;
       const idx = trimmedLine.indexOf(':');
       const key = trimmedLine.slice(0, idx).trim();
-      let value: unknown = trimmedLine.slice(idx + 1).trim();
-      if (value === 'true') value = true;
-      else if (value === 'false') value = false;
-      else if ((value as string).startsWith('"') && (value as string).endsWith('"')) {
-        value = (value as string).slice(1, -1);
-      } else if ((value as string).startsWith("'") && (value as string).endsWith("'")) {
-        value = (value as string).slice(1, -1);
-      }
-      // Find parent: if nestedKey points to an object, put there; else root of currentNested
+      const value = trimmedLine.slice(idx + 1).trim();
       if (nestedKey && typeof currentNested[nestedKey] === 'object' && currentNested[nestedKey] !== null) {
-        (currentNested[nestedKey] as Record<string, unknown>)[key] = value;
+        (currentNested[nestedKey] as Record<string, unknown>)[key] = unquote(value);
       } else {
-        currentNested[key] = value;
+        currentNested[key] = unquote(value);
       }
       continue;
     }
   }
+  finalizeBlock();
 
   return { frontmatter, body };
 }

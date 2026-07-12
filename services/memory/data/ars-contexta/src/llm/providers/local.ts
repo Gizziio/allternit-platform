@@ -106,7 +106,7 @@ export class LocalProvider implements LlmClient {
       throw new Error(`Ollama API error: ${response.status} ${error}`);
     }
 
-    const data: OllamaChatResponse = await response.json();
+    const data = await response.json() as OllamaChatResponse;
 
     return {
       id: `ollama_${Date.now()}`,
@@ -240,7 +240,7 @@ export class LocalProvider implements LlmClient {
       const response = await fetch(`${this.baseUrl}/api/tags`);
       if (!response.ok) return [];
       
-      const data = await response.json();
+      const data = await response.json() as any;
       return (data.models || []).map((m: OllamaModel) => m.name);
     } catch {
       return [];
@@ -293,7 +293,7 @@ export class LocalProvider implements LlmClient {
         throw new Error(`Embedding error: ${error}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
       embeddings.push(data.embedding);
     }
 

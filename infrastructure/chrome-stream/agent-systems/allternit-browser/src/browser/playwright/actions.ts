@@ -9,6 +9,7 @@ export interface ClickOptions {
   cdpUrl: string;
   targetId: string;
   ref: string;
+  selector?: string;
   doubleClick?: boolean;
   button?: 'left' | 'right' | 'middle';
   modifiers?: string[];
@@ -23,7 +24,7 @@ export async function clickViaPlaywright(options: ClickOptions): Promise<void> {
     if (!page) throw new Error('Page not found');
     
     // Find element by ref (aria-ref or role+name)
-    const selector = `[data-ref="${options.ref}"]`;
+    const selector = options.selector || `[data-allternit-ref="${options.ref}"]`;
     
     await page.click(selector, {
       clickCount: options.doubleClick ? 2 : 1,
@@ -40,6 +41,7 @@ export interface TypeOptions {
   cdpUrl: string;
   targetId: string;
   ref: string;
+  selector?: string;
   text: string;
   submit?: boolean;
   slowly?: boolean;
@@ -53,7 +55,7 @@ export async function typeViaPlaywright(options: TypeOptions): Promise<void> {
     const page = context.pages().find(p => p.url() === options.targetId) || context.pages()[0];
     if (!page) throw new Error('Page not found');
     
-    const selector = `[data-ref="${options.ref}"]`;
+    const selector = options.selector || `[data-allternit-ref="${options.ref}"]`;
     
     await page.fill(selector, options.text, { timeout: options.timeoutMs || 5000 });
     
@@ -123,6 +125,7 @@ export interface HoverOptions {
   cdpUrl: string;
   targetId: string;
   ref: string;
+  selector?: string;
   timeoutMs?: number;
 }
 
@@ -133,7 +136,7 @@ export async function hoverViaPlaywright(options: HoverOptions): Promise<void> {
     const page = context.pages()[0];
     if (!page) throw new Error('Page not found');
     
-    const selector = `[data-ref="${options.ref}"]`;
+    const selector = options.selector || `[data-allternit-ref="${options.ref}"]`;
     await page.hover(selector, { timeout: options.timeoutMs || 5000 });
   } finally {
     await browser.close();

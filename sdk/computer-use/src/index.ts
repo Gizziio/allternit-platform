@@ -49,6 +49,37 @@ export type {
 
 export { AllternitComputerUseClient } from './client';
 
+export type {
+  ActionIntent,
+  BrowserEvent,
+  BrowserObservation,
+  BrowserProvider,
+  BrowserRun,
+  BrowserSkillManifest,
+  BrowserTrajectory,
+  BrowserWorkflowSpec,
+  ExecutionLease,
+  ProviderCapabilities,
+  ProviderKind,
+  Receipt,
+  SessionSpec,
+  Surface,
+} from '@allternit/computer-use-protocol';
+export {
+  ActionIntentSchema,
+  BrowserEventSchema,
+  BrowserObservationSchema,
+  BrowserRunSchema,
+  BrowserSkillManifestSchema,
+  BrowserTrajectorySchema,
+  BrowserWorkflowSpecSchema,
+  COMPUTER_USE_PROTOCOL_VERSION,
+  ExecutionLeaseSchema,
+  ProviderCapabilitiesSchema,
+  ReceiptSchema,
+  SessionSpecSchema,
+} from '@allternit/computer-use-protocol';
+
 // =============================================================================
 // Types
 // =============================================================================

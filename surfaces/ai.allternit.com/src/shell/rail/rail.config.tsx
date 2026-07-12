@@ -13,6 +13,7 @@ import {
   Target,
   Clock,
   ArrowsClockwise,
+  Images,
 } from '@phosphor-icons/react';
 
 export interface RailSubmenuItem {
@@ -85,12 +86,18 @@ export const RAIL_CONFIG: RailConfigSection[] = [
         payload: 'code',
         shortcut: '⌘⇧K'
       },
-      { 
-        id: 'browser', 
-        label: 'Browser', 
-        icon: Globe, 
+      {
+        id: 'browser',
+        label: 'Browser',
+        icon: Globe,
         payload: 'browser',
         shortcut: '⌘⇧B'
+      },
+      {
+        id: 'library',
+        label: 'Library',
+        icon: Images,
+        payload: 'library',
       },
     ]
   },

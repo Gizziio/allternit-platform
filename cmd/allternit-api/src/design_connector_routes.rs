@@ -6,6 +6,7 @@
 
 use axum::{
     extract::{Query, State},
+    http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
@@ -102,62 +103,96 @@ pub fn design_connector_router() -> Router<Arc<AppState>> {
         .route("/design/plugins/install", post(install_plugin))
 }
 
+// ─── Open Design connector catalog (in-process) ───────────────────────────────
+// The connector registry is part of Allternit Design, not a separate service.
+// We vendor the Open Design connector catalog at build time and serve it
+// directly from this process — no daemon, no proxy, Allternit-branded.
+//
+// Live connect/execute is OWNED: it runs through the in-process connector
+// standard at /api/v1/connectors (connector_routes.rs) — local_cli (instant,
+// e.g. `gh`), owned oauth2 loopback + device_flow, api_key, and the synthesized
+// connector-MCP. No Composio, no third-party key. These legacy /design/* routes
+// are kept only as a thin pointer to that owned standard; they never claim a
+// connector is live and never ask for a third-party key.
+
+const CONNECTOR_CATALOG_JSON: &str = include_str!("../assets/open-design/connectors.json");
+
+fn connector_catalog() -> &'static serde_json::Value {
+    static CATALOG: std::sync::OnceLock<serde_json::Value> = std::sync::OnceLock::new();
+    CATALOG.get_or_init(|| {
+        serde_json::from_str(CONNECTOR_CATALOG_JSON).unwrap_or_else(|_| json!({"connectors": []}))
+    })
+}
+
+fn find_connector(id: &str) -> Option<serde_json::Value> {
+    connector_catalog()
+        .get("connectors")
+        .and_then(|c| c.as_array())
+        .and_then(|arr| arr.iter().find(|c| c.get("id").and_then(|i| i.as_str()) == Some(id)).cloned())
+}
+
 async fn list_composio_connections(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
-    Json(json!({
-        "connections": [],
-        "total": 0,
-        "stub": true,
-    }))
+    let connectors = connector_catalog().get("connectors").cloned().unwrap_or_else(|| json!([]));
+    let total = connectors.as_array().map(|a| a.len()).unwrap_or(0);
+    Json(json!({ "connectors": connectors, "total": total, "source": "allternit-in-process" }))
+}
+
+fn connect_response(id: &str) -> (StatusCode, Json<serde_json::Value>) {
+    match find_connector(id) {
+        Some(c) => (StatusCode::OK, Json(json!({
+            "status": "use_owned_connect",
+            "connector": id,
+            "owned": true,
+            "owned_endpoint": format!("/api/v1/connectors/{}/connect", id),
+            "owned_execute": format!("/api/v1/connectors/{}/execute", id),
+            "catalog": c,
+            "message": "Allternit owns this connector in-process. Use POST /api/v1/connectors/:id/connect (local_cli instant, owned OAuth one-click) and POST /api/v1/connectors/:id/execute. No Composio, no third-party key."
+        }))),
+        None => (StatusCode::NOT_FOUND, Json(json!({"error": "unknown_connector", "connector": id}))),
+    }
 }
 
 async fn connect_composio(
     State(_state): State<Arc<AppState>>,
-    Json(_body): Json<serde_json::Value>,
+    Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    Json(json!({
-        "status": "connected",
-        "stub": true,
-    }))
+    let id = body
+        .get("connector")
+        .or_else(|| body.get("connectorId"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    match id {
+        Some(id) => connect_response(&id),
+        None => (StatusCode::BAD_REQUEST, Json(json!({"error": "connector id is required (pass {\"connector\":\"slack\"})"}))),
+    }
 }
 
 async fn slack_connector(
     State(_state): State<Arc<AppState>>,
     Json(_body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    Json(json!({
-        "status": "ok",
-        "stub": true,
-    }))
+    connect_response("slack")
 }
 
 async fn notion_connector(
     State(_state): State<Arc<AppState>>,
     Json(_body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    Json(json!({
-        "status": "ok",
-        "stub": true,
-    }))
+    connect_response("notion")
 }
 
 async fn linear_connector(
     State(_state): State<Arc<AppState>>,
     Json(_body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    Json(json!({
-        "status": "ok",
-        "stub": true,
-    }))
+    connect_response("linear")
 }
 
 async fn github_connector(
     State(_state): State<Arc<AppState>>,
     Json(_body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
-    Json(json!({
-        "status": "ok",
-        "stub": true,
-    }))
+    connect_response("github")
 }
 
 // ─── Skill Discovery ─────────────────────────────────────────────────────────

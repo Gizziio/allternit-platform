@@ -112,10 +112,12 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
       dateCount.set(dateKey, (dateCount.get(dateKey) ?? 0) + Math.max(session.messageCount, 1));
 
       const runtimeModel =
-        typeof metadata.runtimeModel === "string"
+        typeof metadata.runtimeModel === "string" && metadata.runtimeModel.length > 0
           ? metadata.runtimeModel
-          : metadata.agentName ?? "Sonnet 4.6";
-      modelCount.set(runtimeModel, (modelCount.get(runtimeModel) ?? 0) + 1);
+          : metadata.agentName ?? null;
+      if (runtimeModel) {
+        modelCount.set(runtimeModel, (modelCount.get(runtimeModel) ?? 0) + 1);
+      }
 
       const hour = new Date(session.updatedAt || session.createdAt).getHours();
       hourCount.set(hour, (hourCount.get(hour) ?? 0) + Math.max(session.messageCount, 1));
@@ -135,8 +137,10 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
       count: dateCount.get(date) ?? 0,
     }));
     const streaks = getStreaks(activeDates);
-    const favoriteModel = [...modelCount.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? "Sonnet 4.6";
-    const peakHour = [...hourCount.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? 15;
+    const favoriteModel = [...modelCount.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+    const peakHour = filteredSessions.length > 0
+      ? [...hourCount.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null
+      : null;
 
     return {
       sessions: filteredSessions.length,
@@ -315,9 +319,9 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
             <MetricCard label="Longest streak" value={`${metrics.streaks.longest}d`} />
             <MetricCard
               label="Peak hour"
-              value={`${metrics.peakHour % 12 || 12} ${metrics.peakHour >= 12 ? "PM" : "AM"}`}
+              value={metrics.peakHour === null ? "—" : `${metrics.peakHour % 12 || 12} ${metrics.peakHour >= 12 ? "PM" : "AM"}`}
             />
-            <MetricCard label="Favorite model" value={metrics.favoriteModel} />
+            <MetricCard label="Favorite model" value={metrics.favoriteModel ?? "—"} />
           </div>
 
           {/* Heatmap */}
@@ -376,8 +380,16 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
               }}
             >
               <span style={{ fontSize: 12, color: "var(--ui-text-muted, #9A7658)" }}>
-                You&apos;ve used ~{Math.max(1, Math.round(metrics.tokens / 576_000))}× more tokens than{" "}
-                <em>The Lord of the Rings</em>.
+                {metrics.tokens >= 576_000 ? (
+                  <>
+                    You&apos;ve used ~{Math.round(metrics.tokens / 576_000)}× more tokens than{" "}
+                    <em>The Lord of the Rings</em>.
+                  </>
+                ) : metrics.tokens > 0 ? (
+                  <>{formatCompact(metrics.tokens)} tokens used across {metrics.sessions} session{metrics.sessions === 1 ? "" : "s"}.</>
+                ) : (
+                  <>Send a message to start tracking usage.</>
+                )}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ fontSize: 12, color: "var(--ui-text-muted, #9A7658)" }}>Less</span>

@@ -1,0 +1,26 @@
+{
+  "name": "@allternit/computer-use-protocol",
+  "version": "1.0.0",
+  "description": "Canonical wire protocol for Allternit browser and computer-use runs across web, desktop, Gizzi, extension, and providers",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.6.0"
+  }
+}

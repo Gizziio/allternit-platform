@@ -17,11 +17,17 @@ export default defineContentScript({
 
   main() {
     console.debug(`${DEBUG_PREFIX} Loaded on ${window.location.href}`)
+    document.documentElement.dataset.allternitExtensionReady = chrome.runtime.id
+    installBrowserModeSmokeBridge()
 
     // ── Page-agent DOM controller ─────────────────────────────────────────────
     // Sets up the PageController mask overlay and routes PAGE_CONTROL messages
     // from background → this content script.
-    initPageController()
+    try {
+      initPageController()
+    } catch (error) {
+      console.error(`${DEBUG_PREFIX} Page controller failed to initialize`, error)
+    }
 
     // ── Page-API bridge (opt-in) ──────────────────────────────────────────────
     // If auth tokens match, expose MultiPageAgent to the host page via
@@ -41,8 +47,71 @@ export default defineContentScript({
     chrome.runtime.sendMessage({ type: 'CONTENT_READY', url: location.href }).catch(() => {
       // Background may not be listening yet on fresh installs — safe to ignore
     })
+
   },
 })
+
+function installBrowserModeSmokeBridge() {
+  async function respond(id: unknown) {
+    try {
+      const payload = await chrome.runtime.sendMessage({ type: 'NATIVE_HOST_STATUS' })
+      window.postMessage(
+        {
+          channel: 'ALLTERNIT_BROWSER_MODE_SMOKE_RESPONSE',
+          id,
+          payload,
+        },
+        '*'
+      )
+      window.dispatchEvent(
+        new CustomEvent('ALLTERNIT_BROWSER_MODE_SMOKE_RESPONSE', {
+          detail: { id, payload },
+        })
+      )
+      document.dispatchEvent(
+        new CustomEvent('ALLTERNIT_BROWSER_MODE_SMOKE_RESPONSE', {
+          detail: { id, payload },
+        })
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      window.postMessage(
+        {
+          channel: 'ALLTERNIT_BROWSER_MODE_SMOKE_RESPONSE',
+          id,
+          error: message,
+        },
+        '*'
+      )
+      window.dispatchEvent(
+        new CustomEvent('ALLTERNIT_BROWSER_MODE_SMOKE_RESPONSE', {
+          detail: { id, error: message },
+        })
+      )
+      document.dispatchEvent(
+        new CustomEvent('ALLTERNIT_BROWSER_MODE_SMOKE_RESPONSE', {
+          detail: { id, error: message },
+        })
+      )
+    }
+  }
+
+  const handleSmokeRequest = (event: Event) => {
+    const id = event instanceof CustomEvent ? event.detail?.id : undefined
+    void respond(id)
+  }
+
+  window.addEventListener('ALLTERNIT_BROWSER_MODE_SMOKE_REQUEST', handleSmokeRequest)
+  document.addEventListener('ALLTERNIT_BROWSER_MODE_SMOKE_REQUEST', handleSmokeRequest)
+
+  window.addEventListener('message', async (event) => {
+    const data = event.data
+    if (typeof data !== 'object' || data === null) return
+    if (data.channel !== 'ALLTERNIT_BROWSER_MODE_SMOKE_REQUEST') return
+
+    await respond(data.id)
+  })
+}
 
 // ── Page-API bridge implementation ───────────────────────────────────────────
 

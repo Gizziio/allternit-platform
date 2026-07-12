@@ -9,12 +9,77 @@ use axum::{
     Json, Router,
 };
 use futures::StreamExt;
+use once_cell::sync::Lazy;
 use serde_json::json;
-use std::{convert::Infallible, sync::Arc};
+use std::{collections::HashMap, convert::Infallible, sync::Arc, sync::Mutex};
 use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::{AppState, default_model};
+use crate::config::build_gizzi_harness_for_provider;
+use crate::gizzi_chat_stream::configure_harness_on_gizzi;
+
+/// In-memory map from platform chatId → Gizzi session ID. Gizzi generates its
+/// own session IDs, so we cache the mapping for the lifetime of the API process.
+static GIZZI_CHAT_SESSIONS: Lazy<Mutex<HashMap<String, String>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+async fn get_or_create_gizzi_session(
+    client: &reqwest::Client,
+    gizzi: &str,
+    chat_id: &str,
+) -> Result<String, String> {
+    {
+        let lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
+        if let Some(id) = lock.get(chat_id) {
+            return Ok(id.clone());
+        }
+    }
+
+    // Sessions created via /api/v1/agent-sessions already exist in Gizzi (that
+    // router proxies creation there). If chat_id is such a session, use it
+    // directly — forking a second Gizzi session here made streamed messages land
+    // in a different session than the one GET /agent-sessions/:id/messages reads,
+    // so threads looked empty and history vanished on reload.
+    if chat_id.starts_with("ses") {
+        if let Ok(resp) = client
+            .get(format!("{}/session/{}", gizzi, chat_id))
+            .send()
+            .await
+        {
+            if resp.status().is_success() {
+                let mut lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
+                lock.insert(chat_id.to_string(), chat_id.to_string());
+                return Ok(chat_id.to_string());
+            }
+        }
+    }
+
+    let resp = client
+        .post(format!("{}/session", gizzi))
+        .json(&json!({ "title": format!("Allternit chat {}", chat_id) }))
+        .send()
+        .await
+        .map_err(|e| format!("failed to create gizzi session: {}", e))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("gizzi session creation failed: {}", resp.status()));
+    }
+
+    let body = resp
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|e| format!("failed to parse gizzi session response: {}", e))?;
+    let session_id = body
+        .get("id")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "gizzi session response missing id".to_string())?
+        .to_string();
+
+    let mut lock = GIZZI_CHAT_SESSIONS.lock().map_err(|e| e.to_string())?;
+    lock.insert(chat_id.to_string(), session_id.clone());
+    Ok(session_id)
+}
 
 fn gizzi_base() -> String {
     crate::APP_CONFIG
@@ -70,7 +135,9 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
         .or_else(|| body_json.get("modelId"))
         .and_then(|v| v.as_str())
         .unwrap_or(&default_label)
-        .to_string();
+        // Frontend model ids use the `provider::model` convention; the runtime
+        // expects `provider/model`. Normalize so both forms route.
+        .replace("::", "/");
 
     let (provider_id, model_id) = if let Some((p, m)) = raw_model.split_once('/') {
         (p.to_string(), m.to_string())
@@ -89,11 +156,36 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     let assistant_message_id = format!("msg_{}", Uuid::new_v4().simple());
     let model_label = format!("{}/{}", provider_id, model_id);
 
-    info!(session_id = %chat_id, model = %model_label, "agent-chat bridge → gizzi");
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(120))
+        .build()
+        .unwrap_or_default();
+
+    // For non-cloud harness modes (subprocess, local, BYOK), push credentials
+    // and config to Gizzi before creating the session so the chosen brain is
+    // authenticated. This is what makes Claude CLI / local brains work through
+    // the /api/agent-chat bridge.
+    let harness = build_gizzi_harness_for_provider(&provider_id);
+    let model_ref = json!({ "providerID": provider_id, "modelID": model_id });
+    configure_harness_on_gizzi(&client, &gizzi, harness.as_ref(), &model_ref).await;
+
+    let gizzi_session_id = match get_or_create_gizzi_session(&client, &gizzi, &chat_id).await {
+        Ok(id) => id,
+        Err(err) => {
+            warn!(error = %err, "Failed to get or create Gizzi session");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": err })),
+            )
+                .into_response();
+        }
+    };
+
+    info!(session_id = %chat_id, gizzi_session_id = %gizzi_session_id, model = %model_label, "agent-chat bridge → gizzi");
 
     let stream = async_stream::stream! {
         let msg_id = assistant_message_id.clone();
-        let session_id = chat_id.clone();
+        let session_id = gizzi_session_id.clone();
 
         yield Ok::<Event, Infallible>(Event::default().data(
             json!({
@@ -104,15 +196,10 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
             }).to_string()
         ));
 
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(120))
-            .build()
-            .unwrap_or_default();
-
         // Subscribe to the gizzi event stream BEFORE sending the message so we
         // don't miss any events that fire immediately after the POST.
         let event_resp = match client
-            .get(format!("{}/v1/event", gizzi))
+            .get(format!("{}/event", gizzi))
             .header("Accept", "text/event-stream")
             .send()
             .await
@@ -136,21 +223,39 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
             "model": { "providerID": provider_id, "modelID": model_id },
         });
 
-        if let Err(e) = client
-            .post(format!("{}/v1/session/{}/message", gizzi, session_id))
+        let _message_resp = match client
+            .post(format!("{}/session/{}/message", gizzi, session_id))
             .json(&gizzi_payload)
             .send()
             .await
         {
-            warn!("Failed to send message to gizzi session: {}", e);
-            yield Ok(Event::default().data(json!({
-                "type": "finish",
-                "messageId": msg_id,
-                "status": "error",
-                "metadata": { "status": "error", "error": format!("gizzi unavailable: {}", e) },
-            }).to_string()));
-            return;
-        }
+            Ok(r) if r.status().is_success() => r,
+            Ok(r) => {
+                let status = r.status();
+                let body = r.text().await.unwrap_or_default();
+                warn!(status = %status, body = %body, "Gizzi message endpoint failed");
+                yield Ok(Event::default().data(json!({
+                    "type": "finish",
+                    "messageId": msg_id,
+                    "status": "error",
+                    "metadata": { "status": "error", "error": format!("gizzi message failed ({}): {}", status, body) },
+                }).to_string()));
+                return;
+            }
+            Err(e) => {
+                warn!("Failed to send message to gizzi session: {}", e);
+                yield Ok(Event::default().data(json!({
+                    "type": "finish",
+                    "messageId": msg_id,
+                    "status": "error",
+                    "metadata": { "status": "error", "error": format!("gizzi unavailable: {}", e) },
+                }).to_string()));
+                return;
+            }
+        };
+
+        // If the message endpoint returned a body with an agent response, ignore
+        // it; we rely on the event stream for streaming replies.
 
         // Stream events from gizzi, forwarding text deltas for our session
         let mut buf = String::new();

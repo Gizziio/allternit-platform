@@ -131,32 +131,32 @@ export abstract class BaseProvider {
   /**
    * Get console URL for instance (if supported)
    */
-  abstract getConsoleUrl?(instanceId: string): Promise<string | null>;
+  getConsoleUrl?(instanceId: string): Promise<string | null>;
 
   /**
    * Reset root password (if supported)
    */
-  abstract resetPassword?(instanceId: string): Promise<{ success: boolean; newPassword?: string }>;
+  resetPassword?(instanceId: string): Promise<{ success: boolean; newPassword?: string }>;
 
   /**
    * Create a snapshot/backup of an instance (if supported)
    */
-  abstract createSnapshot?(instanceId: string, name: string): Promise<{ id: string; status: string }>;
+  createSnapshot?(instanceId: string, name: string): Promise<{ id: string; status: string }>;
 
   /**
    * List available SSH keys
    */
-  abstract listSSHKeys?(): Promise<Array<{ id: string; name: string; fingerprint: string; publicKey: string }>>;
+  listSSHKeys?(): Promise<Array<{ id: string; name: string; fingerprint: string; publicKey: string }>>;
 
   /**
    * Upload SSH key
    */
-  abstract uploadSSHKey?(name: string, publicKey: string): Promise<{ id: string; fingerprint: string }>;
+  uploadSSHKey?(name: string, publicKey: string): Promise<{ id: string; fingerprint: string }>;
 
   /**
    * Delete SSH key
    */
-  abstract deleteSSHKey?(keyId: string): Promise<void>;
+  deleteSSHKey?(keyId: string): Promise<void>;
 
   /**
    * Convert provider instance status to internal status

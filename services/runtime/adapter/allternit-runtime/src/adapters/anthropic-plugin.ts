@@ -48,7 +48,7 @@ export class AnthropicPlugin implements ProviderPlugin {
       throw new Error('Anthropic API error: ' + error);
     }
 
-    const data = await response.json();
+    const data = await response.json() as any;
     return {
       content: data.content[0].text,
       usage: {

@@ -69,6 +69,26 @@ export default defineBackground(() => {
     if (message.type === 'PAGE_CONTROL') {
       return handlePageControlMessage(message, sender, sendResponse)
     }
+    if (message.type === 'NATIVE_HOST_STATUS') {
+      browserAgentConnection
+        .checkNativeHostStatus()
+        .then((status) => {
+          sendResponse({
+            ok: true,
+            extensionId: chrome.runtime.id,
+            version: chrome.runtime.getManifest().version,
+            status,
+          })
+        })
+        .catch((error) => {
+          sendResponse({
+            ok: false,
+            extensionId: chrome.runtime.id,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+      return true
+    }
     // Browser-agent content script messages are handled by browserAgentConnection
     if (message.type === 'BROWSER_ACTION' || message.type === 'CONTENT_READY') {
       return browserAgentConnection.handleContentMessage(message, sender, sendResponse)

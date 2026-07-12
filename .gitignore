@@ -1,4 +1,5 @@
 node_modules/
+services/open-connector/data/
 dist/
 dist-bundle/
 target/

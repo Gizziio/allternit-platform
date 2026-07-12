@@ -1,0 +1,18 @@
+{
+  "id": "data-report",
+  "name": "Data Report",
+  "version": "1.0.0",
+  "description": "Build a data-driven report / dashboard view as a self-contained live HTML artifact.",
+  "category": "examples",
+  "author": "Allternit Design",
+  "tags": ["report", "data", "dashboard", "web", "html"],
+  "preview": { "type": "html", "entry": "example.html" },
+  "inputs": [
+    { "name": "title", "type": "string", "required": true, "label": "Report title" },
+    { "name": "brief", "type": "text", "required": false, "label": "Metrics / audience" }
+  ],
+  "pipelines": [
+    { "name": "live-html", "format": "html" }
+  ],
+  "capabilities": ["prompt:inject", "fs:write"]
+}

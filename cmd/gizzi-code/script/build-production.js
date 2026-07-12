@@ -111,6 +111,19 @@ export const jsxs = jsx;
 export const jsxDEV = jsx;
 export const Fragment = undefined;
 `;
+// Some source files were pre-processed with React Compiler and contain imports from
+// "react/compiler-runtime". The build pipeline does not run React Compiler, so we stub
+// the runtime to keep those files bundlable. This disables compiler memoization but
+// preserves behaviour.
+const REACT_COMPILER_RUNTIME_NS = "react-compiler-runtime-stub";
+const REACT_COMPILER_RUNTIME_STUB = `
+export function c(size) {
+  return (fn) => fn();
+}
+export function useMemoCache(size) {
+  return [];
+}
+`;
 // Embed WASM files as Uint8Array constants at bundle time so they work
 // in compiled bun binaries (where /$bunfs/ paths are not fs-readable).
 const wasmEmbedPlugin = {
@@ -173,6 +186,15 @@ const solidPlugin = {
         }));
         build.onLoad({ filter: /.*/, namespace: JSX_RUNTIME_NS }, () => ({
             contents: JSX_RUNTIME_STUB,
+            loader: "js",
+        }));
+        // Redirect react/compiler-runtime to a no-op stub.
+        build.onResolve({ filter: /^react\/compiler-runtime$/ }, () => ({
+            path: REACT_COMPILER_RUNTIME_NS,
+            namespace: REACT_COMPILER_RUNTIME_NS,
+        }));
+        build.onLoad({ filter: /.*/, namespace: REACT_COMPILER_RUNTIME_NS }, () => ({
+            contents: REACT_COMPILER_RUNTIME_STUB,
             loader: "js",
         }));
         // Transform .tsx files with babel-preset-solid before Bun bundles them

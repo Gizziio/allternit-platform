@@ -1,8 +1,14 @@
-import { NativeBridge } from '../bridges/allternit-native-bridge/index.js'; // Assumes compiled bindings
 import { OrchestrationContext } from '@allternit/orchestrator';
 
-export class AllternitRuntimeBridge {
-  private native: any;
+// Stub for the optional native policy bridge until bindings are compiled.
+class NativeBridge {
+  evaluate_policy(_input: string): string {
+    return JSON.stringify({ decision: 'allow', reason: 'stub' });
+  }
+}
+
+export class RuntimeBridge {
+  private native: NativeBridge | null = null;
 
   constructor() {
     try {

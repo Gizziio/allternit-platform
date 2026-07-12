@@ -3,7 +3,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { CodeCanvas } from './CodeCanvas';
-import { CodePreviewPane } from './CodePreviewPane';
+import { CodeSessionSidePane } from './CodeSessionSidePane';
 import { CodeUsageDashboard } from './CodeUsageDashboard';
 import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
@@ -16,10 +16,11 @@ import { ChatModelsProvider } from '@/providers/chat-models-provider';
 import { ModelSelectionProvider } from '@/providers/model-selection-provider';
 import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { useCodeModeStore } from './CodeModeStore';
+import { useCodeSessionStore } from './CodeSessionStore';
 import type { CodeWorkspaceRecord } from './CodeModeStore';
 
 const BASE_ROOT_INSET = 12;
-const PREVIEW_DEFAULT_WIDTH = 380;
+const PREVIEW_DEFAULT_WIDTH = 440;
 const PREVIEW_MIN_WIDTH = 260;
 const PREVIEW_MAX_WIDTH = 700;
 
@@ -29,14 +30,20 @@ interface CodeThreadViewProps {
 
 export function CodeThreadView({ workspace }: CodeThreadViewProps) {
   const defaultSelection = useDefaultModelSelection();
-  const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(true);
+  // Side pane (Files/Preview/Terminal/Git) is open by default during a
+  // session — code mode should look like a coding session, not a bare chat.
+  const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(PREVIEW_DEFAULT_WIDTH);
   const [showDashboard, setShowDashboard] = useState(true);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startX: number; startW: number } | null>(null);
   const codeAgentModeEnabled = useSurfaceAgentModeEnabled('code');
-  const activeSessionId = useCodeModeStore((s) => s.activeSessionId);
-  const hasSession = Boolean(activeSessionId);
+  // Chat sessions created from the composer live in CodeSessionStore (the mode
+  // session store), not CodeModeStore — derive "has an active session" from the
+  // store the send flow actually populates, otherwise the usage dashboard
+  // overlay never dismisses and the preview toggle never appears.
+  const activeCodeSessionId = useCodeSessionStore((s) => s.activeSessionId);
+  const hasSession = Boolean(activeCodeSessionId);
 
   const togglePreview = useCallback(() => {
     setIsPreviewCollapsed((prev) => !prev);
@@ -122,7 +129,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
             }}
           >
             {isPreviewCollapsed ? <CaretLeft size={12} /> : <CaretRight size={12} />}
-            {isPreviewCollapsed ? 'Show Preview' : 'Hide Preview'}
+            {isPreviewCollapsed ? 'Show Panel' : 'Hide Panel'}
           </button>
         </div>
       )}
@@ -161,7 +168,9 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
           </ChatIdProvider>
         </div>
 
-        {/* Heatmap dashboard — floating centered overlay on landing (no session) */}
+        {/* Heatmap dashboard — floating centered overlay on landing (no session).
+            The wrapper is click-through so it never blocks the composer behind
+            it; only the card itself captures pointer events. */}
         {!hasSession && showDashboard && (
           <div style={{
             position: 'absolute',
@@ -173,14 +182,16 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
             padding: '0 12px',
             boxSizing: 'border-box',
             zIndex: 10,
-            pointerEvents: 'auto',
+            pointerEvents: 'none',
             borderRadius: 14,
           }}>
-            <CodeUsageDashboard onClose={() => setShowDashboard(false)} />
+            <div style={{ pointerEvents: 'auto' }}>
+              <CodeUsageDashboard onClose={() => setShowDashboard(false)} />
+            </div>
           </div>
         )}
 
-        {/* Resize handle + Preview pane — session only */}
+        {/* Resize handle + session side pane (Files/Preview/Terminal/Git) — session only */}
         {hasSession && !isPreviewCollapsed && (
           <>
             <div
@@ -220,14 +231,18 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
               style={{
                 width: previewWidth,
                 flexShrink: 0,
-                height: '100%',
+                alignSelf: 'stretch',
                 boxSizing: 'border-box',
                 paddingLeft: 6,
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 0,
               }}
             >
               <div
                 style={{
-                  height: '100%',
+                  flex: 1,
+                  minHeight: 0,
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
@@ -237,7 +252,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                   boxShadow: '0 14px 34px rgba(0, 0, 0, 0.12)',
                 }}
               >
-                <CodePreviewPane />
+                <CodeSessionSidePane />
               </div>
             </div>
           </>

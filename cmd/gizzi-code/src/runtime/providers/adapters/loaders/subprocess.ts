@@ -283,6 +283,29 @@ function buildOneShotInvocation(baseCmd: string[], message: string): OneShotInvo
     }
   }
 
+  if (name === "agy") {
+    // Antigravity (agy) one-shot: `agy --print <msg>` returns plain text. Do not
+    // pass --model/--print-timeout here — agy mis-parses flags after --print and
+    // treats them as the prompt. It uses the session's active model by default.
+    const stripped = stripFlags(args, ["-p", "--print", "--prompt", "-m", "--model", "--print-timeout"])
+    return {
+      mode: "one-shot",
+      argv: [command, ...stripped, "--print", message],
+    }
+  }
+
+  if (name === "qwen") {
+    // Qwen Code (gemini-cli fork): positional prompt = one-shot, plain text output.
+    // The warm stream-json path speaks Claude Code's protocol, which qwen does not
+    // implement, so qwen must go one-shot here or it returns empty. Auth (e.g.
+    // --auth-type qwen-oauth) is taken from the provider's configured baseCmd.
+    const stripped = stripFlags(args, ["-m", "--model", "-o", "--output-format", "-p", "--prompt"])
+    return {
+      mode: "one-shot",
+      argv: [command, ...stripped, "--output-format", "text", message],
+    }
+  }
+
   return undefined
 }
 

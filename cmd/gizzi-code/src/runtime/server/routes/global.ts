@@ -10,6 +10,7 @@ import { Installation } from "@/shared/installation"
 import { Log } from "@/shared/util/log"
 import { lazy } from "@/shared/util/lazy"
 import { Config } from "@/runtime/context/config/config"
+import { SessionUsage } from "@/runtime/session/usage"
 import { errors } from "@/runtime/server/error"
 
 const log = Log.create({ service: "server" })
@@ -123,6 +124,40 @@ export const GlobalRoutes = lazy(() =>
       }),
       async (c) => {
         return c.json({ version: Installation.VERSION })
+      },
+    )
+    .get(
+      "/usage",
+      describeRoute({
+        summary: "Get usage + cost summary",
+        description:
+          "Aggregated token usage and cost across all providers/brains (Ollama, OpenAI, Anthropic, CLI subprocess). " +
+          "Sourced from SessionUsage, which is recorded at the provider-agnostic finish-step hook and persisted to cache/usage.json.",
+        operationId: "global.usage",
+        responses: {
+          200: {
+            description: "Usage summary",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+        },
+      }),
+      validator(
+        "query",
+        z.object({
+          sessionID: z.string().optional(),
+          days: z.coerce.number().int().min(1).max(365).default(30),
+          limit: z.coerce.number().int().min(1).max(50000).optional(),
+        }),
+      ),
+      async (c) => {
+        const { sessionID, days, limit } = c.req.valid("query")
+        const startDate = days ? new Date(Date.now() - days * 86_400_000) : undefined
+        const summary = await SessionUsage.getSummary({ sessionID, startDate, limit })
+        return c.json(summary)
       },
     ),
 )

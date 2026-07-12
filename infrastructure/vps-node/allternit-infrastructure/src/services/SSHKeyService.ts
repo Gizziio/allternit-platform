@@ -18,6 +18,7 @@ import { connectSSH, disconnectSSH, addAuthorizedKey, testSSHConnection } from '
 
 // Use tweetnacl for Ed25519 key generation
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   require('tweetnacl');
 } catch (e) {
   // tweetnacl is optional
@@ -349,7 +350,9 @@ export class SSHKeyService {
    */
   private async generateEd25519Key(passphrase?: string): Promise<GeneratedSSHKey> {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const nacl = require('tweetnacl');
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const naclUtil = require('tweetnacl-util');
       
       const keyPair = nacl.sign.keyPair();

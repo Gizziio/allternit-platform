@@ -17,11 +17,19 @@ import { WebSocketClient, WebSocketMessage } from './websocket-client';
 import {
   connectNativeHost,
   disconnectNativeHost,
+  isNativeHostConnected,
+  pingNativeHost,
   subscribeToEvents,
   NativeMessage,
 } from './native-messaging';
 import { executeBrowserAction, setResultSender } from './executor';
 import { HostAllowlist } from './safety/host-allowlist';
+import {
+  parseExtensionActionCommand,
+  toLegacyBrowserAction,
+  toProtocolActionFailure,
+  toProtocolActionResult,
+} from './protocol-transport';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -44,7 +52,7 @@ const DEFAULT_CONFIG: StoredConfig = {
 class BrowserAgentConnection {
   private wsClient: WebSocketClient | null = null;
   private nativeUnsub: (() => void) | null = null;
-  private mode: ConnectionMode = 'local';
+  private mode: ConnectionMode = 'cowork';
   private state: ConnectionState = 'disconnected';
   private config: StoredConfig = { ...DEFAULT_CONFIG };
   private readonly allowlist = new HostAllowlist();
@@ -116,6 +124,24 @@ class BrowserAgentConnection {
     return this.state === 'connected';
   }
 
+  async checkNativeHostStatus(): Promise<{
+    host: string;
+    connected: boolean;
+    ping: boolean;
+    mode: ConnectionMode;
+    state: ConnectionState;
+  }> {
+    const connected = isNativeHostConnected() || await connectNativeHost();
+    const ping = connected ? await pingNativeHost() : false;
+    return {
+      host: 'com.allternit.desktop',
+      connected,
+      ping,
+      mode: this.mode,
+      state: this.state,
+    };
+  }
+
   // ── Private ─────────────────────────────────────────────────────────────────
 
   private async _connect(mode: ConnectionMode): Promise<void> {
@@ -176,6 +202,12 @@ class BrowserAgentConnection {
     const m = msg as unknown as { type: string; payload?: unknown };
 
     switch (m.type) {
+      case 'computer_use.action': {
+        void this._handleProtocolAction(m.payload).catch((err) =>
+          console.error('[BrowserAgentConnection] protocol action error:', err)
+        );
+        break;
+      }
       case 'execute':
         if (m.payload) {
           this._handleCoworkExecute(m.payload).catch((err) =>
@@ -218,6 +250,28 @@ class BrowserAgentConnection {
     const actions = req.actions ?? [payload];
     for (const action of actions) {
       await executeBrowserAction(action as Parameters<typeof executeBrowserAction>[0]);
+    }
+  }
+
+  private async _handleProtocolAction(payload: unknown): Promise<void> {
+    const command = parseExtensionActionCommand(payload);
+    const legacyAction = toLegacyBrowserAction(command);
+    try {
+      const result = await executeBrowserAction(legacyAction as Parameters<typeof executeBrowserAction>[0]);
+      this._sendToBackend({
+        id: this._id(),
+        type: 'computer_use.events',
+        payload: toProtocolActionResult(command, result),
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      this._sendToBackend({
+        id: this._id(),
+        type: 'computer_use.events',
+        payload: toProtocolActionFailure(command, error),
+        timestamp: Date.now(),
+      });
+      throw error;
     }
   }
 

@@ -101,6 +101,7 @@ export class LangChainAdapter implements Adapter {
   canActivate(): boolean {
     // Works if LangChain is available
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       require('langchain/tools');
       return true;
     } catch {

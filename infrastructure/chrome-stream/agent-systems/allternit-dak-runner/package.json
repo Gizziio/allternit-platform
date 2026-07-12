@@ -38,7 +38,7 @@
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",
     "test": "jest",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src"
   },
   "engines": {
     "node": ">=18.0.0"

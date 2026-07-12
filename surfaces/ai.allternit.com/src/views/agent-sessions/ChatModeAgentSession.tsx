@@ -65,10 +65,12 @@ export function ChatModeAgentSession({
   const sendMessageStream = useChatSessionStore((s) => s.sendMessageStream);
   const createSession = useChatSessionStore((s) => s.createSession);
   const setActiveSession = useChatSessionStore((s) => s.setActiveSession);
+  const fetchMessages = useChatSessionStore((s) => s.fetchMessages);
 
   // ── Local UI state ────────────────────────────────────────────────────────
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const loadedSessionRef = useRef<string | null>(null);
 
   const canvases = useMemo<AgentSessionCanvas[]>(() => {
     const result: AgentSessionCanvas[] = [];
@@ -95,6 +97,17 @@ export function ChatModeAgentSession({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, isStreaming]);
+
+  // Deep-link: when opened with an existing backend session id, load its
+  // messages from the backend (messages are not persisted locally) instead of
+  // showing the empty/suggestions state. Create-new behavior is unchanged —
+  // non-backend ids (and no sessionId) skip this and still create on send.
+  useEffect(() => {
+    if (!sessionId || !sessionId.startsWith('ses')) return;
+    if (loadedSessionRef.current === sessionId) return;
+    loadedSessionRef.current = sessionId;
+    void fetchMessages(sessionId);
+  }, [sessionId, fetchMessages]);
 
   // ── Send handler ──────────────────────────────────────────────────────────
   const handleSend = useCallback(async () => {

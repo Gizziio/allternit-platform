@@ -176,7 +176,7 @@ export async function wrapToolExecution(
       };
     }
 
-    // @ts-ignore
+    // @ts-expect-error - modify action is conditionally typed
     case 'modify': { 
       // Apply parameter modifications
       if (routingResult.modifiedParams) {

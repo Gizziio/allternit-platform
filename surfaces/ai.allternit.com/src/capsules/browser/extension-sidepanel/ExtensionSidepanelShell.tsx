@@ -1344,7 +1344,12 @@ export function ExtensionSidepanelShell({
           <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
             <div className="flex items-center gap-2.5">
               {brandIcon ?? <Logo className="size-5" />}
-              <span className="text-sm font-semibold">{shellCopy.title}</span>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold">{shellCopy.title}</div>
+                <div className="truncate text-[10px] text-muted-foreground">
+                  {adapter.protocol.provider} · {adapter.protocol.surface} · v{adapter.protocol.contractVersion}
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-1.5">

@@ -42,8 +42,7 @@ export type {
   BeadsIssue,
   BeadsAdapterConfig,
   BeadsFilter,
-  BeadsAdapter,
-  
+
   // Receipt types
   ReceiptGeneratorConfig,
   AttestationGenerator,
@@ -60,10 +59,11 @@ export type {
 } from './types.js';
 
 // Policy Engine
-export {
+import {
   LawPolicyEngine,
   PolicyTemplates,
 } from './engine/policy-engine.js';
+export { LawPolicyEngine, PolicyTemplates };
 
 // Adapters
 export {
@@ -84,7 +84,6 @@ export {
 
 import type { AllternitKernel } from '@allternit/governor';
 import type { LawLayerConfig, PolicyDecision, PolicyEvaluationRequest } from './types.js';
-import { LawPolicyEngine } from './engine/policy-engine.js';
 import { BeadsAdapter } from './adapters/beads-adapter.js';
 import { LawReceiptGenerator } from './receipt-generator.js';
 

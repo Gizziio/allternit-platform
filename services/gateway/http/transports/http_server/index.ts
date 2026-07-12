@@ -721,6 +721,10 @@ export class HttpTransport {
       'session.updated': 'SESSION_UPDATED',
       'session.deleted': 'SESSION_DELETED',
       'session.status_changed': 'SESSION_STATUS_CHANGED',
+      'session.resumed': 'SESSION_RESUMED',
+      'session.paused': 'SESSION_PAUSED',
+      'session.completed': 'SESSION_COMPLETED',
+      'session.error': 'SESSION_ERROR',
       'message.created': 'MESSAGE_CREATED',
       'message.updated': 'MESSAGE_UPDATED',
       'message.removed': 'MESSAGE_REMOVED',
@@ -744,6 +748,13 @@ export class HttpTransport {
       'worktree.failed': 'WORKTREE_FAILED',
       'health.check': 'HEALTH_CHECK',
       'error': 'ERROR',
+      'chat.started': 'CHAT_STARTED',
+      'chat.delta': 'CHAT_DELTA',
+      'chat.completed': 'CHAT_COMPLETED',
+      'tool.call.started': 'TOOL_CALL_STARTED',
+      'tool.call.completed': 'TOOL_CALL_COMPLETED',
+      'tool.call.error': 'TOOL_CALL_ERROR',
+      'artifact.created': 'ARTIFACT_CREATED',
     };
     return mapping[eventType] || eventType;
   }

@@ -6,9 +6,7 @@
  */
 
 import type {
-  AllternitKernel,
   WihItem,
-  RoutingDecision,
   ToolContext,
   FileContext,
 } from '@allternit/governor';
@@ -16,7 +14,6 @@ import {
   type Policy,
   type PolicyRule,
   type PolicyCondition,
-  type PolicyAction,
   type PolicyDecision,
   type PolicyEvaluationRequest,
   type PolicyFilter,
@@ -292,14 +289,14 @@ export class LawPolicyEngine {
   private extractValue(
     field: string,
     context: ToolContext | FileContext,
-    wihItem?: WihItem
+    _wihItem?: WihItem
   ): unknown {
     // Handle special fields
     if (field === 'always') return true;
     
     // Check context fields
     if (field in context) {
-      return (context as Record<string, unknown>)[field];
+      return (context as unknown as Record<string, unknown>)[field];
     }
 
     // Check nested fields (e.g., 'toolParams.path')

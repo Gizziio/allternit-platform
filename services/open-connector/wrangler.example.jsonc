@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "open-connector",
+  "main": "src/server/cloudflare.ts",
+  "compatibility_date": "2026-07-02",
+  "compatibility_flags": ["nodejs_compat"],
+  "cache": {
+    "enabled": true,
+  },
+  "assets": {
+    "directory": "dist/web",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/v1/*", "/mcp*", "/oauth/*", "/docs", "/docs/*", "/openapi.json", "/health"],
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "persist": true,
+    },
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "open-connector",
+      "database_id": "<your-d1-database-id>",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "TRANSIT_FILES",
+      "bucket_name": "open-connector-transit-files",
+    },
+  ],
+}

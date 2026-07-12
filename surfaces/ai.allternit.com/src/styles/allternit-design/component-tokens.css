@@ -1,0 +1,28 @@
+/* ============================================================
+   Allternit Design component token bridge (Allternit-scoped)
+   ============================================================
+   The integrated design components
+   (src/allternit-design/components) read the upstream, UN-prefixed
+   token names (--text, --bg-panel, --accent, --border, …). Allternit's
+   theme (tokens.css) exposes the same values Allternit-branded under
+   the --ad-* prefix, scoped to .ad-tokens.
+
+   This file bridges the two inside .ad-tokens so any Open Design
+   component rendered within an .ad-tokens container picks up the
+   Allternit palette/radius/shadow — without editing the forked source
+   (keeps upstream sync clean) and without touching Allternit's global
+   tokens (no collision). Load after tokens.css in main.tsx.
+   ============================================================ */
+
+.ad-tokens {
+  --text: var(--ad-text);
+  --bg-panel: var(--ad-bg-panel);
+  --bg-subtle: var(--ad-bg-subtle);
+  --border: var(--ad-border);
+  --border-strong: var(--ad-border-strong);
+  --accent: var(--ad-accent);
+  --accent-hover: var(--ad-accent-hover);
+  --accent-tint: var(--ad-accent-tint);
+  --radius-sm: var(--ad-radius-sm);
+  --shadow-xs: var(--ad-shadow-xs);
+}

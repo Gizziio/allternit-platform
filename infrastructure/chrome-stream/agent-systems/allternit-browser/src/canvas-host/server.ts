@@ -218,8 +218,8 @@ export async function createCanvasHostHandler(opts: {
         ignoreInitial: true,
         awaitWriteFinish: { stabilityThreshold: 75, pollInterval: 10 },
         ignored: [
-          /(^|[\/])\../, // dotfiles
-          /(^|[\/])node_modules([\/]|$)/,
+          /(^|[/])\../, // dotfiles
+          /(^|[/])node_modules([/]|$)/,
         ],
       })
     : null;
@@ -262,8 +262,12 @@ export async function createCanvasHostHandler(opts: {
       
       let urlPath = url.pathname;
       if (basePath !== '/') {
-        if (urlPath !== basePath && !urlPath.startsWith(`${basePath}/`)) return false;
-        urlPath = urlPath === basePath ? '/' : urlPath.slice(basePath.length) || '/';
+        // The standalone canvas host serves `/` for humans and keeps the
+        // canonical mounted path for gateway embedding.
+        if (urlPath !== '/') {
+          if (urlPath !== basePath && !urlPath.startsWith(`${basePath}/`)) return false;
+          urlPath = urlPath === basePath ? '/' : urlPath.slice(basePath.length) || '/';
+        }
       }
       
       if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -304,11 +308,13 @@ export async function createCanvasHostHandler(opts: {
       
       if (mime === 'text/html') {
         const html = data.toString('utf8');
+        res.statusCode = 200;
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.end(liveReload ? injectCanvasLiveReload(html) : html);
         return true;
       }
       
+      res.statusCode = 200;
       res.setHeader('Content-Type', mime);
       res.end(data);
       return true;

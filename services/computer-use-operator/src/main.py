@@ -292,12 +292,215 @@ async def browser_retrieve(request: BrowserRetrieveRequest):
     """Retrieve URL content using browser (replaces Firecrawl)"""
     if not BROWSER_USE_AVAILABLE:
         raise HTTPException(status_code=503, detail="browser-use not available")
-    
+
     try:
         result = await allternit_browser_manager.retrieve_url(request.url)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# Gizzi browser-tool bridge
+# The gizzi runtime's `browser` tool (runtime/tools/builtins/browser.ts) POSTs a
+# single action envelope here and expects the ComputerUseResponse shape below.
+# We reuse allternit_browser_manager so there is one automation implementation.
+# ============================================================================
+
+class GizziBrowserExecuteRequest(BaseModel):
+    action: str
+    session_id: str
+    run_id: str
+    target: Optional[str] = None
+    goal: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
+    adapter_preference: Optional[str] = None
+    llm_config: Optional[Dict[str, Any]] = None
+
+
+def _adapter_mode(preference: Optional[str], action: str) -> str:
+    """Resolve the manager mode. LLM-free actions default to direct Playwright /
+    computer-use so they work without an inference key; 'execute' uses the agent."""
+    pref = (preference or "").lower()
+    if pref in ("playwright", "browser-use", "computer-use"):
+        return pref
+    if pref == "cdp":
+        return "playwright"
+    if pref == "desktop":
+        return "computer-use"
+    if action in ("goto", "inspect"):
+        return "playwright"
+    if action == "screenshot":
+        return "computer-use"
+    return "browser-use"
+
+
+def _envelope(
+    req: GizziBrowserExecuteRequest,
+    mode: str,
+    status: str,
+    summary: str = "",
+    extracted_content: Any = None,
+    artifacts: Optional[List[Dict[str, Any]]] = None,
+    receipts: Optional[List[Dict[str, Any]]] = None,
+    error: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
+    return {
+        "run_id": req.run_id,
+        "session_id": req.session_id,
+        "adapter_id": mode,
+        "family": "browser",
+        "mode": mode,
+        "status": status,
+        "summary": summary,
+        "extracted_content": extracted_content,
+        "artifacts": artifacts or [],
+        "receipts": receipts or [],
+        "error": error,
+        "trace_id": str(uuid.uuid4()),
+    }
+
+
+async def _raw_playwright(action: str, target: Optional[str], text: Optional[str] = None) -> Dict[str, Any]:
+    """Drive a real Chromium directly via Playwright for deterministic, LLM-free
+    actions (goto/inspect/screenshot). Independent of the optional browser-use
+    agent package, so these work even with no inference key set. Prefers the
+    system Chrome (no download) and falls back to a cached Playwright Chromium."""
+    from playwright.async_api import async_playwright
+
+    launch_kwargs: Dict[str, Any] = {
+        "headless": os.getenv("BROWSER_HEADLESS", "true").lower() == "true",
+        "args": ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    }
+    for candidate in (
+        os.getenv("ALLTERNIT_CHROME_PATH"),
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    ):
+        if candidate and os.path.exists(candidate):
+            launch_kwargs["executable_path"] = candidate
+            break
+
+    result: Dict[str, Any] = {}
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(**launch_kwargs)
+        try:
+            page = await browser.new_page()
+            if target:
+                await page.goto(target, wait_until="domcontentloaded", timeout=45000)
+            if action == "screenshot":
+                shot = await page.screenshot(full_page=False)
+                result = {"url": page.url, "title": await page.title(), "screenshot": shot}
+            else:  # goto / inspect
+                body_text = await page.evaluate("() => document.body ? document.body.innerText : ''")
+                result = {
+                    "url": page.url,
+                    "title": await page.title(),
+                    "text": body_text or "",
+                }
+        finally:
+            await browser.close()
+    return result
+
+
+@app.post("/v1/execute")
+async def gizzi_browser_execute(request: GizziBrowserExecuteRequest):
+    """Single entrypoint the gizzi browser tool calls. Routes the action to the
+    real browser manager and returns the ComputerUseResponse envelope the tool
+    normalizes. No simulated output — failures surface as status=failed."""
+    action = request.action
+    mode = _adapter_mode(request.adapter_preference, action)
+    receipt = {
+        "action": action,
+        "timestamp": datetime.now().isoformat(),
+        "success": False,
+        "details": {"target": request.target, "mode": mode},
+    }
+
+    try:
+        if action == "goto":
+            res = await _raw_playwright("goto", request.target)
+            receipt["success"] = True
+            return _envelope(request, "playwright", "completed",
+                             summary=f"Navigated to {res.get('url', request.target)} — {res.get('title', '')}",
+                             extracted_content=(res.get("text") or "")[:8000], receipts=[receipt])
+
+        if action == "execute":
+            if not BROWSER_USE_AVAILABLE:
+                return _envelope(request, mode, "failed", summary="execute requires the browser-use agent (inference key + browser-use package)",
+                                 receipts=[receipt], error={"code": "AGENT_UNAVAILABLE", "message": "browser-use agent not available"})
+            task = await allternit_browser_manager.create_task(
+                goal=request.goal or "", url=request.target, mode=mode,
+            )
+            task = await allternit_browser_manager.execute_task(task.id)
+            res = task.result or {}
+            receipt["success"] = task.status == "completed"
+            if task.status == "failed":
+                return _envelope(request, mode, "failed", summary="execute failed",
+                                 receipts=[receipt], error={"code": "EXECUTE_FAILED", "message": task.error or "unknown"})
+            return _envelope(request, mode, "completed", summary=f"Executed: {request.goal}",
+                             extracted_content=res.get("extracted_content"), receipts=[receipt])
+
+        if action == "screenshot":
+            res = await _raw_playwright("screenshot", request.target)
+            receipt["success"] = True
+            artifacts: List[Dict[str, Any]] = []
+            shot = res.get("screenshot")
+            if isinstance(shot, (bytes, bytearray)) and shot:
+                path = f"/tmp/allternit-browser-{request.run_id}.png"
+                with open(path, "wb") as f:
+                    f.write(shot)
+                b64 = base64.b64encode(shot).decode("ascii")
+                artifacts.append({"type": "screenshot", "path": path, "url": f"data:image/png;base64,{b64}", "mime": "image/png"})
+            return _envelope(request, "computer-use", "completed", summary=f"Screenshot of {res.get('url', request.target)}",
+                             extracted_content={"url": res.get("url"), "title": res.get("title")},
+                             artifacts=artifacts, receipts=[receipt])
+
+        if action == "inspect":
+            res = await _raw_playwright("inspect", request.target)
+            receipt["success"] = True
+            return _envelope(request, "playwright", "completed", summary=f"Inspected {res.get('url', request.target)}",
+                             extracted_content={"url": res.get("url"), "title": res.get("title"), "text": (res.get("text") or "")[:8000]},
+                             receipts=[receipt])
+
+        if action == "extract":
+            target = request.target or request.goal or ""
+            if target.startswith("http://") or target.startswith("https://"):
+                res = await _raw_playwright("goto", target)
+                receipt["success"] = True
+                return _envelope(request, "playwright", "completed", summary=f"Extracted: {target}",
+                                 extracted_content={"url": res.get("url"), "title": res.get("title"), "text": (res.get("text") or "")[:8000]},
+                                 receipts=[receipt])
+            if not BROWSER_USE_AVAILABLE:
+                return _envelope(request, mode, "failed", summary="search extract requires the browser-use agent",
+                                 receipts=[receipt], error={"code": "AGENT_UNAVAILABLE", "message": "browser-use agent not available"})
+            task = await allternit_browser_manager.search_and_retrieve(query=target)
+            res = task.result if hasattr(task, "result") else task
+            receipt["success"] = bool(res)
+            return _envelope(request, mode, "completed", summary=f"Extracted: {target}",
+                             extracted_content=res, receipts=[receipt])
+
+        if action in ("click", "fill"):
+            text = (request.parameters or {}).get("text") if request.parameters else None
+            goal = (f"Fill the element matching selector '{request.target}' with the text: {text}"
+                    if action == "fill" else f"Click the element matching selector '{request.target}'")
+            task = await allternit_browser_manager.create_task(goal=goal, url=None, mode="browser-use")
+            task = await allternit_browser_manager.execute_task(task.id)
+            receipt["success"] = task.status == "completed"
+            if task.status == "failed":
+                return _envelope(request, mode, "failed", summary=f"{action} failed",
+                                 receipts=[receipt], error={"code": f"{action.upper()}_FAILED", "message": task.error or "unknown"})
+            return _envelope(request, mode, "completed", summary=goal,
+                             extracted_content=(task.result or {}).get("extracted_content"), receipts=[receipt])
+
+        return _envelope(request, mode, "failed", summary=f"unsupported action: {action}",
+                         receipts=[receipt], error={"code": "UNSUPPORTED_ACTION", "message": action})
+
+    except Exception as e:
+        print(f"gizzi /v1/execute failed: {e}")
+        return _envelope(request, mode, "failed", summary=str(e), receipts=[receipt],
+                         error={"code": "EXECUTION_ERROR", "message": str(e)})
+
 
 # ============================================================================
 # Allternit PARALLEL EXECUTION SECTION (Rebranded from Superconductor)

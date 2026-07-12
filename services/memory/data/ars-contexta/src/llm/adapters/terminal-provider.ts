@@ -114,25 +114,26 @@ export class TerminalProviderAdapter implements LlmClient {
       // Use ai-sdk generateText
       const result = await AI.generateText({
         model: languageModel,
-        messages,
+        messages: messages as any,
         maxTokens: request.maxTokens,
         temperature: request.temperature,
         // @ts-ignore - tool support
         tools: request.tools ? this.convertTools(request.tools) : undefined,
-      });
+      } as any);
 
       // Map to ars-contexta format
+      const resultAny = result as any;
       return {
-        id: result.id || `term_${Date.now()}`,
-        content: result.text,
+        id: resultAny.id || `term_${Date.now()}`,
+        content: resultAny.text,
         usage: {
-          promptTokens: result.usage?.promptTokens || 0,
-          completionTokens: result.usage?.completionTokens || 0,
-          totalTokens: result.usage?.totalTokens || 0,
+          promptTokens: resultAny.usage?.promptTokens || 0,
+          completionTokens: resultAny.usage?.completionTokens || 0,
+          totalTokens: resultAny.usage?.totalTokens || 0,
         },
         model: this.config.model,
-        finishReason: result.finishReason as 'stop' | 'length' | 'tool_calls' | null,
-        toolCalls: result.toolCalls ? this.convertToolCalls(result.toolCalls) : undefined,
+        finishReason: resultAny.finishReason as LlmResponse['finishReason'],
+        toolCalls: resultAny.toolCalls ? this.convertToolCalls(resultAny.toolCalls) : undefined,
       };
     } catch (error) {
       console.error('[TerminalProviderAdapter] Completion failed:', error);
@@ -163,14 +164,14 @@ export class TerminalProviderAdapter implements LlmClient {
       // Use ai-sdk streamText
       const result = await AI.streamText({
         model: languageModel,
-        messages,
+        messages: messages as any,
         maxTokens: request.maxTokens,
         temperature: request.temperature,
-      });
+      } as any);
 
       // Stream chunks
       let id = `term_stream_${Date.now()}`;
-      for await (const chunk of result.textStream) {
+      for await (const chunk of result.textStream as AsyncIterable<string>) {
         yield {
           id,
           delta: chunk,
@@ -179,11 +180,12 @@ export class TerminalProviderAdapter implements LlmClient {
       }
 
       // Final chunk
+      const usage = result.usage ? await result.usage : undefined;
       yield {
         id,
         delta: '',
         finishReason: 'stop',
-        usage: result.usage ? await result.usage : undefined,
+        usage: usage as any,
       };
     } catch (error) {
       console.error('[TerminalProviderAdapter] Streaming failed:', error);
@@ -264,7 +266,7 @@ export class TerminalProviderAdapter implements LlmClient {
 
     const providers = await TerminalProvider.list();
     
-    return Object.entries(providers).map(([id, info]) => ({
+    return Object.entries(providers).map(([id, info]: [string, any]) => ({
       id,
       name: info.name,
       models: Object.keys(info.models),

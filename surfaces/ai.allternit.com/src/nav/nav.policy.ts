@@ -153,6 +153,9 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   // Product Discovery
   products: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
+  // Library (generated artifacts)
+  library: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
   // A://Labs - Course Management
   labs: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   catalog: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

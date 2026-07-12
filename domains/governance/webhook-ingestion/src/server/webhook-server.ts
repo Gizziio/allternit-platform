@@ -92,8 +92,6 @@ export class WebhookServer {
    */
   private setupErrorHandling(): void {
     this.fastify.setErrorHandler((error, request, reply) => {
-      this.config.railsEmitter as unknown as { logger: { error: (msg: string) => void } };
-      
       reply.status(error.statusCode || 500).send({
         error: error.name,
         message: error.message,
@@ -369,8 +367,6 @@ export class WebhookServer {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
-      this.config.railsEmitter as unknown as { logger: { error: (msg: string, err?: unknown) => void } };
-      
       reply.status(500).send({
         error: 'ProcessingError',
         message: errorMessage,
@@ -393,7 +389,7 @@ export class WebhookServer {
   private parseWebhookBody(
     source: string,
     body: unknown,
-    rawBody: string
+    _rawBody: string
   ): WebhookPayload {
     const timestamp = new Date().toISOString();
     

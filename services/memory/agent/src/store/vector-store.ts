@@ -32,7 +32,7 @@ export class VectorStore {
    */
   async embed(text: string): Promise<number[]> {
     try {
-      const response = await this.ollama.embed({
+      const response = await (this.ollama as any).embed({
         model: this.embeddingModel,
         input: text,
       });

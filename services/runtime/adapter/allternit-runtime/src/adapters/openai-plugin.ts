@@ -46,7 +46,7 @@ export class OpenAIPlugin implements ProviderPlugin {
       throw new Error('OpenAI API error: ' + error);
     }
 
-    const data = await response.json();
+    const data = await response.json() as any;
     return {
       content: data.choices[0].message.content,
       usage: {

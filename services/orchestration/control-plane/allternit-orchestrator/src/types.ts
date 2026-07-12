@@ -17,12 +17,14 @@ export interface ToolResult {
   callId: string;
   output: string;
   success: boolean;
+  error?: string;
 }
 
 export interface OrchestrationContext {
   sessionId: string;
   agentId: string;
   role: AgentRole;
+  mode?: string;
   history: AgentTurn[];
   maxTurns?: number;
 }

@@ -1,0 +1,45 @@
+{
+  "github": {
+    "auth_type": "local_cli",
+    "alt": ["device_flow"],
+    "base_url": "https://api.github.com",
+    "tier": 1,
+    "mcp_backed": true,
+    "connectable": true,
+    "scopes": ["repo", "read:org", "workflow", "gist"],
+    "local_cli": {
+      "cmd": "gh",
+      "token_args": ["auth", "token"],
+      "account_args": ["api", "user", "--jq", ".login"]
+    },
+    "tools": [
+      { "name": "github_list_repos", "method": "GET", "path": "/user/repos", "query": ["sort", "per_page", "type"] }
+    ]
+  },
+  "notion": {
+    "auth_type": "oauth2",
+    "base_url": "https://api.notion.com",
+    "tier": 1,
+    "mcp_backed": true,
+    "connectable": true,
+    "scopes": [],
+    "oauth2": {
+      "authorize_url": "https://api.notion.com/v1/oauth/authorize",
+      "token_url": "https://api.notion.com/v1/oauth/token",
+      "pkce": false
+    }
+  },
+  "slack": {
+    "auth_type": "oauth2",
+    "base_url": "https://slack.com/api",
+    "tier": 1,
+    "mcp_backed": true,
+    "connectable": true,
+    "scopes": ["chat:write", "channels:read", "users:read"],
+    "oauth2": {
+      "authorize_url": "https://slack.com/oauth/v2/authorize",
+      "token_url": "https://slack.com/api/oauth.v2.access",
+      "pkce": false
+    }
+  }
+}

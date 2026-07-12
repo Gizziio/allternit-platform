@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { ConnectorRegistry } from '@allternit/mcp-connectors';
+import { ConnectorRegistry, type Connector } from '@allternit/mcp-connectors';
 
 const registry = new ConnectorRegistry();
 
@@ -17,7 +17,7 @@ export const connectorsCommand = new Command('connectors')
     if (connectors.length === 0) {
       console.log(chalk.yellow('No connectors registered'));
     } else {
-      connectors.forEach(connector => {
+      connectors.forEach((connector: Connector) => {
         const caps = connector.getCapabilities();
         console.log(chalk.green('✓'), chalk.white(connector.name));
         console.log(chalk.gray(`  ${connector.description}`));

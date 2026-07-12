@@ -1,0 +1,328 @@
+{
+  "common": {
+    "active": "有効",
+    "apiUnavailable": "API は利用できません",
+    "catalogOnly": "カタログのみ",
+    "clear": "クリア",
+    "close": "閉じる",
+    "connected": "接続済み",
+    "copied": "{{label}} をコピーしました",
+    "copy": "{{label}} をコピー",
+    "credential": "認証情報",
+    "currentSelection": "現在の選択",
+    "docs": "ドキュメント",
+    "failed": "失敗",
+    "loadingRuntimeData": "ランタイムデータを読み込み中...",
+    "local": "ローカル",
+    "noAuth": "認証不要",
+    "notConnected": "未接続",
+    "open": "開く",
+    "refresh": "更新",
+    "required": "必須",
+    "runtimeReady": "ランタイム準備完了",
+    "showMore": "さらに表示",
+    "showing": "{{shown}} / {{total}} を表示中",
+    "success": "成功"
+  },
+  "brand": {
+    "subtitle": "ローカルランタイムコンソール",
+    "adminAccess": "管理者アクセス"
+  },
+  "language": {
+    "label": "言語",
+    "en": "English",
+    "zh-CN": "简体中文",
+    "ja": "日本語",
+    "ru": "Русский",
+    "fr": "Français"
+  },
+  "nav": {
+    "overview": "概要",
+    "providers": "プロバイダー",
+    "actions": "アクション",
+    "runs": "実行履歴",
+    "access": "API Key",
+    "docs": "ドキュメント"
+  },
+  "shell": {
+    "invalidUnlockToken": "有効な管理者 token を入力してコンソールをロック解除してください。",
+    "loadRuntimeFailed": "ランタイムデータを読み込めませんでした。更新するか、ランタイムが起動していることを確認してください。",
+    "logoutFailed": "ログアウトできませんでした。もう一度お試しください。",
+    "primaryNav": "メインナビゲーション",
+    "refreshData": "データを更新",
+    "logout": "ログアウト",
+    "theme": "テーマ",
+    "themeMode": {
+      "auto": "自動",
+      "light": "ライト",
+      "dark": "ダーク"
+    },
+    "headings": {
+      "overview": {
+        "title": "概要",
+        "subtitle": "ランタイムの状態とヘルスを確認します。"
+      },
+      "providers": {
+        "title": "プロバイダー",
+        "subtitle": "プロバイダーを接続し、機能を確認します。"
+      },
+      "actions": {
+        "title": "アクション",
+        "subtitle": "ローカルランタイムのアクションを検索、確認、デバッグします。"
+      },
+      "runs": {
+        "title": "実行履歴",
+        "subtitle": "最近のローカルアクション実行です。"
+      },
+      "access": {
+        "title": "API Key",
+        "subtitle": "Agent とクライアント向けの runtime API token を管理します。"
+      },
+      "resources": {
+        "title": "リソース",
+        "subtitle": "生成された API reference と tool metadata です。"
+      }
+    }
+  },
+  "unlock": {
+    "token": "管理者 token",
+    "unlockConsole": "コンソールを解除"
+  },
+  "overview": {
+    "runtimeReady": "ランタイム準備完了",
+    "connectedProviders": "{{count}} 件の接続済みプロバイダー",
+    "capabilityStatus": "能力ステータス",
+    "metrics": {
+      "providers": "プロバイダー",
+      "actions": "アクション",
+      "executable": "実行可能",
+      "runHealth": "実行ヘルス"
+    },
+    "availableServices": "利用可能なサービス",
+    "localActions": "ローカルアクション",
+    "recentFailuresMeta": "最近の失敗",
+    "ready": "準備完了",
+    "unavailable": "利用不可",
+    "needsAttention": "要対応",
+    "recentFailures": "最近の失敗",
+    "noFailedRunsTitle": "失敗した実行はありません",
+    "noFailedRunsDescription": "最近のアクション実行は正常です。",
+    "callTrend": "ツール呼び出しトレンド",
+    "callTrendLegend": "サービス",
+    "noCallTrendTitle": "呼び出しトレンドはまだありません",
+    "noCallTrendDescription": "アクションを実行すると、サービス別の日次呼び出し量が表示されます。",
+    "recentCalls": "最近の呼び出し",
+    "viewRuns": "表示",
+    "callCountOne": "{{count}} 回の呼び出し",
+    "callCountMany": "{{count}} 回の呼び出し",
+    "noRecentCallsTitle": "最近の呼び出しはありません",
+    "noRecentCallsDescription": "アクションを実行するとプロバイダー別の呼び出し数が表示されます。"
+  },
+  "providers": {
+    "catalogTitle": "プロバイダー",
+    "searchPlaceholder": "プロバイダーを検索",
+    "statusFilterLabel": "プロバイダーのステータス",
+    "filters": {
+      "all": "すべて",
+      "connected": "接続済み",
+      "notConnected": "未接続",
+      "oauthNeedsConfig": "OAuth 設定が必要"
+    },
+    "providerMeta": "{{service}} ・ {{authTypes}} ・ {{count}} 件のアクション",
+    "noAuth": "認証不要",
+    "oauthConfigBadge": "OAuth 設定",
+    "noProvidersTitle": "プロバイダーが見つかりません",
+    "noProvidersDescription": "別の検索語句またはステータスフィルターを試してください。",
+    "resultCount": "{{shown}} / {{total}} を表示",
+    "showMore": "さらに表示",
+    "resetFilters": "フィルターをリセット",
+    "providerNotFoundTitle": "プロバイダーが見つかりません",
+    "providerNotFoundDescription": "{{service}} は現在の catalog にありません。",
+    "backToProviders": "プロバイダーに戻る",
+    "providerHomepage": "ホームページ",
+    "selectProviderTitle": "プロバイダーを選択",
+    "selectProviderDescription": "接続設定を確認するプロバイダーを選択してください。",
+    "connectedBy": "{{authType}} で接続済み",
+    "configuredBadge": "設定済み",
+    "noSetupBadge": "設定不要",
+    "unconfiguredBadge": "未接続",
+    "oauthClientRequiredBadge": "OAuth client が必要",
+    "summary": {
+      "actions": "アクション",
+      "auth": "認証",
+      "oauthConfig": "OAuth 設定",
+      "configured": "設定済み",
+      "required": "必須",
+      "notUsed": "未使用"
+    },
+    "connection": "接続",
+    "connectionMethod": "接続方式",
+    "connectionDescriptions": {
+      "noSetup": "このプロバイダーはローカル認証情報なしで実行できます。",
+      "connected": "ローカル認証情報は {{authType}} で設定済みです。",
+      "oauthClientRequired": "{{name}} で OAuth を開始するには、ローカル OAuth client が必要です。",
+      "notConnected": "認証情報が必要な {{name}} アクションを実行する前に、ローカル認証情報を設定してください。"
+    },
+    "noConnectionMethodTitle": "接続方式はありません",
+    "noConnectionMethodDescription": "このプロバイダーはローカル認証情報を必要としません。",
+    "oauthClient": "OAuth Client",
+    "scopes": "Scopes",
+    "scopesDescription": "このプロバイダーのローカルアクションが要求する scopes です。",
+    "actions": "アクション",
+    "actionsDescription": "Catalog 内のローカルランタイムアクションは {{count}} 件です。",
+    "noScopes": "Scopes はありません",
+    "noActions": "アクションはありません。",
+    "authLabels": {
+      "apiKey": "API key",
+      "oauth": "OAuth",
+      "custom": "カスタム",
+      "noAuth": "認証不要"
+    },
+    "connectionMessages": {
+      "noAuth": "このプロバイダーはローカル認証情報なしで実行できます。",
+      "needsOAuthClient": "{{name}} を接続するには、先にローカル OAuth client を設定してください。",
+      "connectedOAuth": "{{name}} は OAuth で接続済みです。",
+      "connectOAuth": "OAuth 認可フローで {{name}} に接続します。",
+      "saving": "接続を保存中...",
+      "openingOAuth": "OAuth を開いています...",
+      "configureOAuthFirst": "接続する前に OAuth client を設定してください。",
+      "oauthWindowOpened": "OAuth window を開きました。",
+      "updated": "接続を更新しました。",
+      "failed": "接続に失敗しました。",
+      "disconnecting": "切断中...",
+      "disconnected": "切断しました。",
+      "disconnectFailed": "切断に失敗しました。"
+    },
+    "buttons": {
+      "configureOAuthClient": "OAuth Client を設定",
+      "editOAuthClient": "OAuth Client を編集",
+      "saveConnection": "接続を保存",
+      "connect": "接続",
+      "details": "詳細",
+      "manageConnection": "管理",
+      "connectProvider": "{{name}} に接続",
+      "reconnectProvider": "{{name}} に再接続",
+      "disconnect": "切断",
+      "saveOAuthClient": "OAuth Client を保存",
+      "updateOAuthClient": "OAuth Client を更新",
+      "resetOAuthClient": "OAuth Client をリセット"
+    },
+    "oauthClientSettings": {
+      "configuredTitle": "OAuth client 設定済み",
+      "requiredTitle": "OAuth client が必要です",
+      "missingDescription": "{{name}} を接続するには、先にローカル OAuth client が必要です。",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "storedSecretHint": "保存済みの secret は表示されません。変更を保存するときは再入力してください。",
+      "saving": "OAuth client を保存中...",
+      "saved": "OAuth client を保存しました。",
+      "failed": "OAuth client の保存に失敗しました。",
+      "resetting": "OAuth client をリセット中...",
+      "reset": "OAuth client をリセットしました。",
+      "resetFailed": "OAuth client のリセットに失敗しました。"
+    },
+    "execution": {
+      "executable": "実行可能",
+      "catalogOnly": "カタログのみ"
+    }
+  },
+  "actions": {
+    "searchPlaceholder": "名前、ID、プロバイダーでアクションを検索",
+    "provider": "プロバイダー",
+    "allProviders": "すべてのプロバイダー",
+    "actionsCount": "{{count}} 件のアクション",
+    "noActionsTitle": "アクションが見つかりません",
+    "noActionsDescription": "別の検索語句またはプロバイダーフィルターを試してください。",
+    "actionNotFoundTitle": "アクションが見つかりません",
+    "noActionSelectedTitle": "アクションが選択されていません",
+    "actionNotFoundDescription": "現在の catalog に、この action route と一致する項目はありません。",
+    "selectActionDescription": "確認して実行するアクションを選択してください。",
+    "locallyExecutable": "ローカルで実行可能",
+    "needsCredential": "認証情報が必要",
+    "debugAction": "アクションをデバッグ",
+    "requiredScopes": "必須 Scopes",
+    "parameters": "パラメーター",
+    "fieldsCount": "{{count}} 件のフィールド",
+    "noInputParameters": "入力パラメーターはありません。",
+    "required": "必須",
+    "optional": "任意",
+    "actionExamples": "アクション例",
+    "open": "開く",
+    "copyExample": "{{label}} をコピー",
+    "copiedExample": "{{label}} をコピーしました",
+    "closeDebugAction": "アクションデバッグを閉じる",
+    "input": "入力",
+    "run": "実行",
+    "running": "実行中",
+    "runningAction": "アクションを実行中...",
+    "actionFailed": "アクションに失敗しました。"
+  },
+  "runs": {
+    "noRunsTitle": "実行履歴はまだありません",
+    "noRunsDescription": "アクションを実行すると、最近の実行履歴が表示されます。",
+    "service": "サービス",
+    "allServices": "すべてのサービス",
+    "loadMore": "さらに読み込む",
+    "loadMoreFailed": "実行履歴の追加読み込みに失敗しました。",
+    "table": {
+      "action": "アクション",
+      "caller": "呼び出し元",
+      "status": "ステータス",
+      "started": "開始時刻",
+      "duration": "所要時間",
+      "input": "入力",
+      "error": "エラー"
+    }
+  },
+  "access": {
+    "title": "Runtime Tokens",
+    "description": "/v1 と MCP client 向けの bearer token を発行します。新しい token は一度だけ表示されます。",
+    "name": "名前",
+    "namePlaceholder": "ローカル MCP client",
+    "createToken": "Token を作成",
+    "createTokenDescription": "この runtime token を使用する client に名前を付けてください。",
+    "closeCreateToken": "token 作成 dialog を閉じる",
+    "creating": "token を作成中...",
+    "created": "token を作成しました。",
+    "createFailed": "token の作成に失敗しました。",
+    "revoking": "token を失効中...",
+    "revoked": "token を失効しました。",
+    "revokeFailed": "token の失効に失敗しました。",
+    "newToken": "新しい token",
+    "tokenShownOnce": "この token は一度だけ表示されます。この dialog を閉じる前にコピーしてください。",
+    "copyToken": "Token をコピー",
+    "copiedToken": "コピーしました",
+    "copyRuntimeToken": "runtime token をコピー",
+    "copiedRuntimeToken": "runtime token をコピーしました",
+    "noTokensTitle": "runtime token はまだありません",
+    "noTokensDescription": "MCP client またはローカル script を接続する前に作成してください。token は一度だけ表示されます。",
+    "table": {
+      "name": "名前",
+      "status": "ステータス",
+      "created": "作成日時",
+      "lastUsed": "最終使用"
+    },
+    "revoke": "失効"
+  },
+  "resources": {
+    "apiReference": {
+      "title": "API Reference",
+      "description": "Scalar でローカルランタイム route を確認します。"
+    },
+    "mcp": {
+      "title": "MCP 接続",
+      "description": "Claude Desktop または Cursor をローカルランタイムに接続します。",
+      "endpoint": "MCP URL",
+      "copyEndpoint": "MCP URL をコピー",
+      "copiedEndpoint": "MCP URL をコピーしました",
+      "configTitle": "JSON 設定",
+      "copyConfig": "JSON 設定をコピー",
+      "copiedConfig": "JSON 設定をコピーしました",
+      "createToken": "Runtime Token を生成"
+    },
+    "openapi": {
+      "title": "OpenAPI JSON",
+      "description": "生成された spec を script や tool importer で使用します。"
+    }
+  }
+}

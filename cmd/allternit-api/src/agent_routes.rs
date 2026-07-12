@@ -17,6 +17,7 @@ use serde_json::json;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::warn;
 
 use crate::AppState;
@@ -30,7 +31,12 @@ fn unauthorized() -> axum::response::Response {
 pub fn agent_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/agents", get(list_agents).post(create_agent))
+        .route("/agent-templates", get(list_templates))
+        .route("/agents/from-template", post(instantiate_template))
         .route("/agents/:id", get(get_agent).put(update_agent).delete(delete_agent))
+        .route("/agents/:id/runs", post(run_agent))
+        .route("/agents/:id/subagents", get(list_subagents).post(create_subagent))
+        .route("/agents/companion/ensure", post(ensure_companion))
         .route("/agents/:id/workspace/initialize", post(initialize_agent_workspace))
         .route("/agents/identity", get(get_agent_identity).post(set_agent_identity))
         .route("/agents/metrics", get(list_agent_metrics))
@@ -74,6 +80,9 @@ struct AgentRow {
     created_at: String,
     updated_at: String,
     last_run_at: Option<String>,
+    mode: String,
+    is_primary: bool,
+    delegates: Option<serde_json::Value>,
 }
 
 fn parse_json_column(value: Option<String>) -> Option<serde_json::Value> {
@@ -106,7 +115,8 @@ async fn list_agents(
                     capabilities, system_prompt, tools, max_iterations, temperature, config,
                     status, workspace_id, avatar, identity_key, trust_tier, harness_config,
                     enabled_modes, character_json, allowed_skills, allowed_tools, category, tags,
-                    data_classification, write_scope, created_at, updated_at, last_run_at
+                    data_classification, write_scope, created_at, updated_at, last_run_at,
+                    mode, is_primary, delegates
              FROM agents WHERE user_id = ?1"
         );
         let mut params_vec: Vec<String> = vec![user_id];
@@ -160,6 +170,9 @@ async fn list_agents(
                 created_at: row.get(28)?,
                 updated_at: row.get(29)?,
                 last_run_at: row.get(30)?,
+                mode: row.get(31)?,
+                is_primary: row.get::<_, i64>(32)? != 0,
+                delegates: parse_json_column(row.get(33)?),
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -190,6 +203,9 @@ struct CreateAgentBody {
     #[serde(rename = "type")]
     agent_type: Option<String>,
     parent_agent_id: Option<String>,
+    /// Agent mode: primary | subagent | orchestrator | council. Defaults to
+    /// "primary" when omitted (DB default). Subagents set "subagent".
+    mode: Option<String>,
     model: String,
     provider: String,
     capabilities: Option<serde_json::Value>,
@@ -264,6 +280,58 @@ fn validate_agent_against_checklist(body: &CreateAgentBody) -> Result<(), String
     Ok(())
 }
 
+/// Single persistence path for every agent type (primary, subagent, orchestrator,
+/// council, template-instantiated). Generates the id and writes the row using the
+/// canonical column set. All creation flows go through `validate_agent_against_checklist`
+/// first, then here.
+fn persist_agent(
+    conn: &rusqlite::Connection,
+    user_id: &str,
+    body: CreateAgentBody,
+) -> Result<String, rusqlite::Error> {
+    let id = uuid::Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO agents (id, user_id, name, description, type, parent_agent_id, model, provider,
+                            capabilities, system_prompt, tools, max_iterations, temperature, config,
+                            status, workspace_id, avatar, identity_key, trust_tier, harness_config,
+                            enabled_modes, character_json, allowed_skills, allowed_tools, category,
+                            tags, data_classification, write_scope, mode)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
+                 ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29)",
+        params![
+            id, user_id,
+            body.name,
+            body.description,
+            body.agent_type.unwrap_or_else(|| "worker".to_string()),
+            body.parent_agent_id,
+            body.model,
+            body.provider,
+            json_to_string(body.capabilities),
+            body.system_prompt,
+            json_to_string(body.tools),
+            body.max_iterations.unwrap_or(10),
+            body.temperature.unwrap_or(0.7),
+            json_to_string(body.config),
+            body.status.unwrap_or_else(|| "idle".to_string()),
+            body.workspace_id,
+            body.avatar,
+            body.identity_key,
+            body.trust_tier.unwrap_or_else(|| "standard".to_string()),
+            json_to_string(body.harness_config),
+            json_to_string(body.enabled_modes).unwrap_or_else(|| "[\"chat\"]".to_string()),
+            json_to_string(body.character_json),
+            json_to_string(body.allowed_skills),
+            json_to_string(body.allowed_tools),
+            body.category,
+            json_to_string(body.tags),
+            body.data_classification,
+            body.write_scope,
+            body.mode.unwrap_or_else(|| "primary".to_string()),
+        ],
+    )?;
+    Ok(id)
+}
+
 async fn create_agent(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
@@ -295,9 +363,9 @@ async fn create_agent(
                                 capabilities, system_prompt, tools, max_iterations, temperature, config,
                                 status, workspace_id, avatar, identity_key, trust_tier, harness_config,
                                 enabled_modes, character_json, allowed_skills, allowed_tools, category,
-                                tags, data_classification, write_scope)
+                                tags, data_classification, write_scope, mode)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
-                     ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28)",
+                     ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29)",
             params![
                 id2,
                 user_id_for_db,
@@ -327,6 +395,7 @@ async fn create_agent(
                 json_to_string(body.tags),
                 body.data_classification,
                 body.write_scope,
+                body.mode.unwrap_or_else(|| "primary".to_string()),
             ],
         )?;
         Ok::<_, rusqlite::Error>(())
@@ -380,6 +449,420 @@ async fn create_agent(
     }
 }
 
+// ─── Ensure primary Companion agent ───────────────────────────────────────────
+
+/// Ensure the user has a designated primary "Allternit Companion" agent — the
+/// always-on orchestrator that is the default entrypoint and routes work to
+/// subagents. Idempotent: returns the existing primary if one already exists.
+async fn ensure_companion(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    // Pick a runnable brain: the user's configured default, unless it is the
+    // unconfigured kimi fallback — then use the local Ollama brain so the
+    // Companion actually runs out of the box.
+    let (mut provider, mut model) = state.config.default_model();
+    if provider.is_empty() || provider == "kimi-for-coding" || provider == "echo" {
+        provider = "ollama".to_string();
+        model = "qwen2.5:0.5b".to_string();
+    }
+
+    let result = tokio::task::spawn_blocking(move || -> Result<serde_json::Value, rusqlite::Error> {
+        let conn = db.connect()?;
+        if let Ok((id, name, model, provider)) = conn.query_row(
+            "SELECT id, name, model, provider FROM agents WHERE user_id = ?1 AND is_primary = 1 LIMIT 1",
+            params![user_id],
+            |row| Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+            )),
+        ) {
+            return Ok(json!({
+                "agent": { "id": id, "name": name, "model": model, "provider": provider,
+                           "mode": "orchestrator", "is_primary": true },
+                "created": false,
+            }));
+        }
+
+        let id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO agents (id, user_id, name, description, type, model, provider,
+                                status, trust_tier, harness_config, enabled_modes, mode, is_primary)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            params![
+                id, user_id,
+                "Allternit Companion",
+                "Your always-on Allternit agent. Routes tasks, spawns subagents, and runs in any surface.",
+                "orchestrator",
+                model, provider,
+                "idle", "standard",
+                "{\"mode\":\"local\"}",
+                "[\"chat\",\"cowork\",\"code\",\"browser\",\"design\"]",
+                "orchestrator", 1,
+            ],
+        )?;
+        Ok(json!({
+            "agent": { "id": id, "name": "Allternit Companion", "model": model, "provider": provider,
+                       "mode": "orchestrator", "is_primary": true },
+            "created": true,
+        }))
+    })
+    .await;
+
+    match result {
+        Ok(Ok(v)) => (StatusCode::OK, Json(v)).into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error ensuring companion: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+// ─── Subagents (delegates of an orchestrator / Companion) ─────────────────────
+
+/// Compact subagent row returned by list_subagents. The frontend subagent panel
+/// uses its own SubagentConfig shape, so a compact row avoids duplicating the
+/// full AgentRow mapping.
+#[derive(Serialize)]
+struct SubagentRow {
+    id: String,
+    name: String,
+    #[serde(rename = "type")]
+    agent_type: String,
+    mode: String,
+    parent_agent_id: Option<String>,
+    model: String,
+    provider: String,
+    status: String,
+    created_at: String,
+}
+
+async fn list_subagents(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(parent_id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let rows = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, name, type, mode, parent_agent_id, model, provider, status, created_at
+             FROM agents WHERE parent_agent_id = ?1 AND user_id = ?2 ORDER BY created_at",
+        )?;
+        let rows = stmt
+            .query_map(params![parent_id, user_id], |row| {
+                Ok(SubagentRow {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    agent_type: row.get(2)?,
+                    mode: row.get(3)?,
+                    parent_agent_id: row.get(4)?,
+                    model: row.get(5)?,
+                    provider: row.get(6)?,
+                    status: row.get(7)?,
+                    created_at: row.get(8)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok::<_, rusqlite::Error>(rows)
+    })
+    .await;
+
+    match rows {
+        Ok(Ok(subagents)) => Json(json!({ "subagents": subagents })).into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error listing subagents: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+/// Create a subagent under a parent orchestrator. Flows through the SAME
+/// creation checklist as every other agent (one validated entry point), then
+/// forces parent_agent_id = :id and mode = "subagent".
+async fn create_subagent(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(parent_id): Path<String>,
+    Json(mut body): Json<CreateAgentBody>,
+) -> impl IntoResponse {
+    if let Err(err) = validate_agent_against_checklist(&body) {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": err}))).into_response();
+    }
+
+    let id = uuid::Uuid::new_v4().to_string();
+    let db = state.db.clone();
+    let id2 = id.clone();
+    let user_id = user.user_id;
+    let user_id_for_db = user_id.clone();
+    let parent_for_db = parent_id.clone();
+    let parent_for_response = parent_id.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        // Refuse to orphan a subagent under a non-existent / other user's parent.
+        let parent_exists: bool = conn
+            .query_row(
+                "SELECT 1 FROM agents WHERE id = ?1 AND user_id = ?2",
+                params![parent_for_db, user_id_for_db],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+        if !parent_exists {
+            return Ok::<_, rusqlite::Error>(false);
+        }
+        conn.execute(
+            "INSERT INTO agents (id, user_id, name, description, type, parent_agent_id, model, provider,
+                                capabilities, system_prompt, tools, max_iterations, temperature, config,
+                                status, workspace_id, avatar, identity_key, trust_tier, harness_config,
+                                enabled_modes, character_json, allowed_skills, allowed_tools, category,
+                                tags, data_classification, write_scope, mode)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18,
+                     ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, ?27, ?28, ?29)",
+            params![
+                id2,
+                user_id_for_db,
+                body.name,
+                body.description,
+                body.agent_type.unwrap_or_else(|| "subagent".to_string()),
+                Some(parent_id),
+                body.model,
+                body.provider,
+                json_to_string(body.capabilities),
+                body.system_prompt,
+                json_to_string(body.tools),
+                body.max_iterations.unwrap_or(10),
+                body.temperature.unwrap_or(0.7),
+                json_to_string(body.config),
+                body.status.unwrap_or_else(|| "idle".to_string()),
+                body.workspace_id,
+                body.avatar,
+                body.identity_key,
+                body.trust_tier.unwrap_or_else(|| "standard".to_string()),
+                json_to_string(body.harness_config),
+                json_to_string(body.enabled_modes).unwrap_or_else(|| "[\"chat\"]".to_string()),
+                json_to_string(body.character_json),
+                json_to_string(body.allowed_skills),
+                json_to_string(body.allowed_tools),
+                body.category,
+                json_to_string(body.tags),
+                body.data_classification,
+                body.write_scope,
+                "subagent".to_string(),
+            ],
+        )?;
+        Ok::<_, rusqlite::Error>(true)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(true)) => (StatusCode::CREATED, Json(json!({ "agent": { "id": id, "parent_agent_id": parent_for_response, "mode": "subagent" } }))).into_response(),
+        Ok(Ok(false)) => (StatusCode::NOT_FOUND, Json(json!({"error": "parent_not_found"}))).into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error creating subagent: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+// ─── Agent pattern templates ──────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct BrainInput {
+    provider: String,
+    model: String,
+}
+
+#[derive(Deserialize)]
+struct InstantiateBody {
+    template_id: String,
+    brain: Option<BrainInput>,
+    name_override: Option<String>,
+}
+
+async fn list_templates(
+    State(state): State<Arc<AppState>>,
+    Extension(_user): Extension<AuthUser>,
+    _headers: HeaderMap,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<serde_json::Value>, rusqlite::Error> {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, name, description, category, spec, is_builtin, created_at
+             FROM agent_templates ORDER BY is_builtin DESC, name",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(json!({
+                "id": row.get::<_, String>(0)?,
+                "name": row.get::<_, String>(1)?,
+                "description": row.get::<_, Option<String>>(2)?,
+                "category": row.get::<_, String>(3)?,
+                "spec": parse_json_column(row.get(4)?).unwrap_or_else(|| json!({})),
+                "is_builtin": row.get::<_, i64>(5)? != 0,
+                "created_at": row.get::<_, Option<String>>(6)?,
+            }))
+        })?;
+        let mut out = Vec::new();
+        for r in rows {
+            out.push(r?);
+        }
+        Ok(out)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(templates)) => (StatusCode::OK, Json(json!({ "templates": templates }))).into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error listing templates: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+/// Instantiate a persisted pattern template into a live, runnable agent crew.
+/// Resolves the brain (request override → user default → local Ollama fallback),
+/// injects it into every node, validates each node against the creation checklist,
+/// then persists the orchestrator and its subagents through the canonical path.
+async fn instantiate_template(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Json(body): Json<InstantiateBody>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    // Resolve the brain the same way the Companion does so template crews run
+    // out of the box without a configured provider.
+    let (mut provider, mut model) = match body.brain {
+        Some(b) => (b.provider, b.model),
+        None => state.config.default_model(),
+    };
+    if provider.is_empty() || provider == "kimi-for-coding" || provider == "echo" {
+        provider = "ollama".to_string();
+        model = "qwen2.5:0.5b".to_string();
+    }
+    let template_id = body.template_id.clone();
+    let name_override = body.name_override.clone();
+
+    let result = tokio::task::spawn_blocking(
+        move || -> Result<serde_json::Value, (StatusCode, serde_json::Value)> {
+            let conn = db.connect().map_err(|e| {
+                (StatusCode::INTERNAL_SERVER_ERROR, json!({"error": e.to_string()}))
+            })?;
+            let spec_text: Option<String> = conn
+                .query_row(
+                    "SELECT spec FROM agent_templates WHERE id = ?1",
+                    params![template_id],
+                    |row| row.get(0),
+                )
+                .map_err(|_| (StatusCode::NOT_FOUND, json!({"error": "template_not_found"})))?;
+            let spec: serde_json::Value = serde_json::from_str(&spec_text.unwrap_or_else(|| "{}".to_string()))
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, json!({"error": e.to_string()})))?;
+
+            let pattern = spec
+                .get("pattern")
+                .and_then(|v| v.as_str())
+                .unwrap_or("custom")
+                .to_string();
+
+            // Phase 1: build + validate every node before any insert.
+            let inject_brain = |node: &serde_json::Value| -> Result<CreateAgentBody, (StatusCode, serde_json::Value)> {
+                let mut n = node.clone();
+                if let Some(obj) = n.as_object_mut() {
+                    obj.insert("model".to_string(), json!(model));
+                    obj.insert("provider".to_string(), json!(provider));
+                }
+                serde_json::from_value::<CreateAgentBody>(n).map_err(|e| {
+                    (StatusCode::UNPROCESSABLE_ENTITY, json!({"error": format!("invalid template node: {}", e)}))
+                })
+            };
+
+            let agent_node = spec.get("agent").cloned().unwrap_or_else(|| json!({}));
+            let mut orch = inject_brain(&agent_node)?;
+            if orch.mode.is_none() {
+                orch.mode = Some("orchestrator".to_string());
+            }
+            orch.parent_agent_id = None;
+            if let Some(n) = name_override {
+                orch.name = n;
+            }
+            validate_agent_against_checklist(&orch).map_err(|e| {
+                (StatusCode::BAD_REQUEST, json!({"error": format!("orchestrator: {}", e)}))
+            })?;
+
+            let mut sub_bodies: Vec<CreateAgentBody> = Vec::new();
+            if let Some(arr) = spec.get("subagents").and_then(|v| v.as_array()) {
+                for node in arr {
+                    let mut s = inject_brain(node)?;
+                    s.mode = Some("subagent".to_string());
+                    validate_agent_against_checklist(&s).map_err(|e| {
+                        (StatusCode::BAD_REQUEST, json!({"error": format!("subagent '{}': {}", s.name, e)}))
+                    })?;
+                    sub_bodies.push(s);
+                }
+            }
+
+            // Phase 2: persist orchestrator, then subagents wired to it.
+            let orch_name = orch.name.clone();
+            let orch_id = persist_agent(&conn, &user_id, orch).map_err(|e| {
+                (StatusCode::INTERNAL_SERVER_ERROR, json!({"error": e.to_string()}))
+            })?;
+            let mut subs: Vec<serde_json::Value> = Vec::new();
+            for mut s in sub_bodies {
+                s.parent_agent_id = Some(orch_id.clone());
+                let name = s.name.clone();
+                let id = persist_agent(&conn, &user_id, s).map_err(|e| {
+                    (StatusCode::INTERNAL_SERVER_ERROR, json!({"error": e.to_string()}))
+                })?;
+                subs.push(json!({ "id": id, "name": name }));
+            }
+
+            Ok(json!({
+                "pattern": pattern,
+                "orchestrator": { "id": orch_id, "name": orch_name },
+                "subagents": subs,
+            }))
+        },
+    )
+    .await;
+
+    match result {
+        Ok(Ok(body)) => (StatusCode::CREATED, Json(body)).into_response(),
+        Ok(Err((code, err))) => (code, Json(err)).into_response(),
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
 // ─── Get agent ────────────────────────────────────────────────────────────────
 
 async fn get_agent(
@@ -398,7 +881,8 @@ async fn get_agent(
                     capabilities, system_prompt, tools, max_iterations, temperature, config,
                     status, workspace_id, avatar, identity_key, trust_tier, harness_config,
                     enabled_modes, character_json, allowed_skills, allowed_tools, category, tags,
-                    data_classification, write_scope, created_at, updated_at, last_run_at
+                    data_classification, write_scope, created_at, updated_at, last_run_at,
+                    mode, is_primary, delegates
              FROM agents WHERE id = ?1 AND user_id = ?2"
         )?;
         let row = stmt.query_row(params![id, user_id], |row| {
@@ -434,6 +918,9 @@ async fn get_agent(
                 created_at: row.get(28)?,
                 updated_at: row.get(29)?,
                 last_run_at: row.get(30)?,
+                mode: row.get(31)?,
+                is_primary: row.get::<_, i64>(32)? != 0,
+                delegates: parse_json_column(row.get(33)?),
             })
         })?;
         Ok::<_, rusqlite::Error>(row)
@@ -774,22 +1261,36 @@ async fn set_agent_identity(
     _headers: HeaderMap,
     Json(body): Json<SetIdentityBody>,
 ) -> impl IntoResponse {
+    // No fabricated secrets: the client supplies the public key to bind to the
+    // agent. We never invent or return a private key.
+    let pk = match body.public_key.as_deref().map(str::trim) {
+        Some(k) if !k.is_empty() => k.to_string(),
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "public_key is required"})),
+            )
+                .into_response();
+        }
+    };
 
     let db = state.db.clone();
     let user_id = user.user_id;
-    let pk = body.public_key.clone();
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        conn.execute(
+        let rows = conn.execute(
             "UPDATE agents SET identity_key = ?1 WHERE id = ?2 AND user_id = ?3",
             params![pk, body.agent_id, user_id],
         )?;
-        Ok::<_, rusqlite::Error>(())
+        Ok::<_, rusqlite::Error>(rows)
     }).await;
 
     match result {
-        Ok(Ok(())) => Json(json!({"success": true, "public_key": body.public_key, "private_key": "demo-only-do-not-use-in-production"})).into_response(),
+        Ok(Ok(rows)) if rows > 0 => {
+            Json(json!({"success": true, "public_key": body.public_key})).into_response()
+        }
+        Ok(Ok(_)) => (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response(),
         _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to set identity"}))).into_response(),
     }
 }
@@ -986,42 +1487,420 @@ async fn create_test_suite(
     }
 }
 
+// ─── Run Agent (real brain through Gizzi) ─────────────────────────────────────
+
+#[derive(Deserialize)]
+struct RunAgentBody {
+    input: String,
+    #[allow(dead_code)]
+    plan: Option<serde_json::Value>,
+    #[allow(dead_code)]
+    metadata: Option<serde_json::Value>,
+}
+
+struct AgentRunRow {
+    id: String,
+    name: String,
+    model: String,
+    provider: String,
+    system_prompt: Option<String>,
+}
+
+/// Run an existing agent by sending `input` through the Gizzi runtime using the
+/// agent's configured brain (provider + model) and system prompt. This is the
+/// "agent use" half of the creation checklist: every agent that passes
+/// `validate_agent_against_checklist` must be runnable end-to-end through gizzi.
+async fn run_agent(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<RunAgentBody>,
+) -> impl IntoResponse {
+    let input = body.input.trim().to_string();
+    if input.is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": "input is required"}))).into_response();
+    }
+
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let id_for_db = id.clone();
+    let row = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.query_row(
+            "SELECT id, name, model, provider, system_prompt
+             FROM agents WHERE id = ?1 AND user_id = ?2",
+            params![id_for_db, user_id],
+            |row| {
+                Ok(AgentRunRow {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    model: row.get(2)?,
+                    provider: row.get(3)?,
+                    system_prompt: row.get(4)?,
+                })
+            },
+        )
+    })
+    .await;
+
+    let agent = match row {
+        Ok(Ok(a)) => a,
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
+            return (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response();
+        }
+        Ok(Err(e)) => {
+            warn!("DB error loading agent for run: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response();
+        }
+    };
+
+    let gizzi = state
+        .config
+        .terminal_server_url()
+        .trim_end_matches('/')
+        .to_string();
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(180))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+        }
+    };
+
+    // Create a gizzi session bound to this agent.
+    let session_payload = json!({
+        "title": format!("Agent run: {}", agent.name),
+        "surface": "chat",
+    });
+    let session = match client
+        .post(format!("{}/v1/session", gizzi))
+        .json(&session_payload)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
+            Ok(v) => v,
+            Err(e) => {
+                return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi session decode: {}", e)}))).into_response();
+            }
+        },
+        Ok(r) => {
+            let s = r.status();
+            let t = r.text().await.unwrap_or_default();
+            return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi session create failed: {} {}", s, t)}))).into_response();
+        }
+        Err(e) => {
+            return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi unreachable: {}", e)}))).into_response();
+        }
+    };
+    let session_id = session
+        .get("id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    if session_id.is_empty() {
+        return (StatusCode::BAD_GATEWAY, Json(json!({"error": "gizzi returned no session id"}))).into_response();
+    }
+
+    // Gizzi message parts only accept a fixed set of part types (no "system"),
+    // so prepend the agent's system prompt to the user input when present.
+    let full_prompt = match &agent.system_prompt {
+        Some(sp) if !sp.trim().is_empty() => format!("{}\n\n{}", sp.trim(), input),
+        _ => input.clone(),
+    };
+    let message_payload = json!({
+        "model": { "providerID": agent.provider, "modelID": agent.model },
+        "agent": "build",
+        "parts": [{ "type": "text", "text": full_prompt }],
+    });
+    let message = match client
+        .post(format!("{}/v1/session/{}/message", gizzi, session_id))
+        .json(&message_payload)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
+            Ok(v) => v,
+            Err(e) => {
+                return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi message decode: {}", e)}))).into_response();
+            }
+        },
+        Ok(r) => {
+            let s = r.status();
+            let t = r.text().await.unwrap_or_default();
+            return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi message failed: {} {}", s, t)}))).into_response();
+        }
+        Err(e) => {
+            return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi unreachable: {}", e)}))).into_response();
+        }
+    };
+
+    // Surface brain/provider errors (auth, model not found) instead of fabricating output.
+    if let Some(err) = message
+        .get("info")
+        .and_then(|i| i.get("error"))
+        .filter(|e| !e.is_null())
+    {
+        let msg = err
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("gizzi brain error");
+        return (
+            StatusCode::OK,
+            Json(json!({
+                "run_id": uuid::Uuid::new_v4().to_string(),
+                "agent_id": agent.id,
+                "session_id": session_id,
+                "status": "error",
+                "error": msg,
+                "model": agent.model,
+                "provider": agent.provider,
+            })),
+        )
+            .into_response();
+    }
+
+    let mut output = String::new();
+    if let Some(parts) = message.get("parts").and_then(|p| p.as_array()) {
+        for p in parts {
+            if p.get("type").and_then(|t| t.as_str()) == Some("text") {
+                if let Some(t) = p.get("text").and_then(|t| t.as_str()) {
+                    output.push_str(t);
+                }
+            }
+        }
+    }
+
+    // Stamp last_run_at (best-effort; do not fail the run if this errors).
+    let db2 = state.db.clone();
+    let aid = agent.id.clone();
+    let _ = tokio::task::spawn_blocking(move || {
+        let conn = db2.connect()?;
+        conn.execute(
+            "UPDATE agents SET last_run_at = datetime('now'), updated_at = datetime('now') WHERE id = ?1",
+            params![aid],
+        )?;
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await;
+
+    (
+        StatusCode::OK,
+        Json(json!({
+            "run_id": uuid::Uuid::new_v4().to_string(),
+            "agent_id": agent.id,
+            "session_id": session_id,
+            "status": "completed",
+            "output": output,
+            "model": agent.model,
+            "provider": agent.provider,
+        })),
+    )
+        .into_response()
+}
+
 // ─── Run Agent Test ───────────────────────────────────────────────────────────
+
+struct GizziRunResult {
+    output: String,
+    tool_calls: Vec<serde_json::Value>,
+    tokens: Option<u64>,
+    error: Option<String>,
+    session_id: String,
+}
+
+/// Single real gizzi round-trip for an agent. Shared by `run_agent_test` so the
+/// test endpoint reports real behaviour instead of fabricated metrics.
+async fn gizzi_run_once(
+    state: &AppState,
+    agent: &AgentRunRow,
+    input: &str,
+) -> Result<GizziRunResult, (StatusCode, Json<serde_json::Value>)> {
+    let gizzi = state
+        .config
+        .terminal_server_url()
+        .trim_end_matches('/')
+        .to_string();
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(180))
+        .build()
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+
+    let session_payload = json!({ "title": format!("Agent test: {}", agent.name), "surface": "chat" });
+    let session = match client
+        .post(format!("{}/v1/session", gizzi))
+        .json(&session_payload)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|e| (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi session decode: {}", e)}))))?,
+        Ok(r) => {
+            let s = r.status();
+            let t = r.text().await.unwrap_or_default();
+            return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi session create failed: {} {}", s, t)}))));
+        }
+        Err(e) => return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi unreachable: {}", e)})))),
+    };
+    let session_id = session.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    if session_id.is_empty() {
+        return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": "gizzi returned no session id"}))));
+    }
+
+    let full_prompt = match &agent.system_prompt {
+        Some(sp) if !sp.trim().is_empty() => format!("{}\n\n{}", sp.trim(), input),
+        _ => input.to_string(),
+    };
+    let message_payload = json!({
+        "model": { "providerID": agent.provider, "modelID": agent.model },
+        "agent": "build",
+        "parts": [{ "type": "text", "text": full_prompt }],
+    });
+    let message = match client
+        .post(format!("{}/v1/session/{}/message", gizzi, session_id))
+        .json(&message_payload)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|e| (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi message decode: {}", e)}))))?,
+        Ok(r) => {
+            let s = r.status();
+            let t = r.text().await.unwrap_or_default();
+            return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi message failed: {} {}", s, t)}))));
+        }
+        Err(e) => return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi unreachable: {}", e)})))),
+    };
+
+    let brain_error = message
+        .get("info")
+        .and_then(|i| i.get("error"))
+        .filter(|e| !e.is_null())
+        .and_then(|e| e.get("message"))
+        .and_then(|m| m.as_str())
+        .map(|s| s.to_string());
+
+    let tokens = message
+        .get("info")
+        .and_then(|i| i.get("tokens"))
+        .and_then(|t| t.as_u64());
+
+    let mut output = String::new();
+    let mut tool_calls: Vec<serde_json::Value> = Vec::new();
+    if let Some(parts) = message.get("parts").and_then(|p| p.as_array()) {
+        for p in parts {
+            match p.get("type").and_then(|t| t.as_str()) {
+                Some("text") => {
+                    if let Some(t) = p.get("text").and_then(|t| t.as_str()) {
+                        output.push_str(t);
+                    }
+                }
+                Some("tool-call") | Some("tool") => tool_calls.push(p.clone()),
+                _ => {}
+            }
+        }
+    }
+
+    Ok(GizziRunResult { output, tool_calls, tokens, error: brain_error, session_id })
+}
 
 #[derive(Deserialize)]
 struct RunTestBody {
     #[serde(alias = "agentId")]
-    _agent_id: String,
-    _messages: Option<Vec<serde_json::Value>>,
-    _variables: Option<serde_json::Value>,
+    agent_id: String,
+    messages: Option<Vec<serde_json::Value>>,
+    #[allow(dead_code)]
+    variables: Option<serde_json::Value>,
 }
 
 async fn run_agent_test(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Extension(_user): Extension<AuthUser>,
     headers: HeaderMap,
-    Json(_body): Json<RunTestBody>,
+    Json(body): Json<RunTestBody>,
 ) -> impl IntoResponse {
-    let _user = match get_user(&headers) {
+    let user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
     };
 
-    // Simulate a test run with mock metrics
-    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
-    let latency_ms = now % 1200 + 800;
-    let tokens = now % 500 + 100;
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let aid = body.agent_id.clone();
+    let row = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.query_row(
+            "SELECT id, name, model, provider, system_prompt FROM agents WHERE id = ?1 AND user_id = ?2",
+            params![aid, user_id],
+            |row| Ok(AgentRunRow {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                model: row.get(2)?,
+                provider: row.get(3)?,
+                system_prompt: row.get(4)?,
+            }),
+        )
+    }).await;
+
+    let agent = match row {
+        Ok(Ok(a)) => a,
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
+            return (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response();
+        }
+        Ok(Err(e)) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response();
+        }
+    };
+
+    // Use the last user message if the playground supplied one, otherwise a
+    // deterministic connectivity probe.
+    let input = body
+        .messages
+        .as_ref()
+        .and_then(|m| m.iter().rev().find(|x| x.get("role").and_then(|r| r.as_str()) == Some("user")))
+        .and_then(|x| x.get("content").and_then(|c| c.as_str()))
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or("Connectivity test: reply with a short acknowledgement.")
+        .to_string();
+
+    let start = std::time::Instant::now();
+    let result = match gizzi_run_once(&state, &agent, &input).await {
+        Ok(r) => r,
+        Err(resp) => return resp.into_response(),
+    };
+    let latency_ms = start.elapsed().as_millis() as u64;
+
+    if let Some(err) = result.error {
+        return Json(json!({
+            "success": false,
+            "response": { "role": "assistant", "content": "" },
+            "metrics": { "latency_ms": latency_ms, "tokens": result.tokens },
+            "tool_calls": result.tool_calls,
+            "error": err,
+            "session_id": result.session_id,
+        })).into_response();
+    }
 
     Json(json!({
         "success": true,
-        "response": {
-            "role": "assistant",
-            "content": "Mock test response from agent",
-        },
-        "metrics": {
-            "latency_ms": latency_ms,
-            "tokens": tokens,
-        },
-        "tool_calls": [],
+        "response": { "role": "assistant", "content": result.output },
+        "metrics": { "latency_ms": latency_ms, "tokens": result.tokens },
+        "tool_calls": result.tool_calls,
+        "session_id": result.session_id,
     })).into_response()
 }

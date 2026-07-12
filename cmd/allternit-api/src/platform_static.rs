@@ -2,34 +2,54 @@ use std::path::PathBuf;
 use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
 
+/// Resolve the project/package root from the current executable path.
+///
+/// - Packaged desktop app: `.../Contents/MacOS/allternit-api` → `.../Contents`
+/// - Repo dev build: `.../allternit/target/debug/allternit-api` → `.../allternit`
+fn resolve_project_root() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let mut cur = exe.parent()?;
+
+    // Packaged macOS desktop layout: Contents/MacOS/<binary>
+    if cur.file_name()?.to_str()? == "MacOS" {
+        return cur.parent().map(|p| p.to_path_buf());
+    }
+
+    // Repo build: walk up until we find the workspace Cargo.toml.
+    loop {
+        if cur.join("Cargo.toml").exists() {
+            return Some(cur.to_path_buf());
+        }
+        match cur.parent() {
+            Some(p) => cur = p,
+            None => break,
+        }
+    }
+
+    None
+}
+
 pub fn resolve_static_path() -> PathBuf {
     if let Ok(p) = std::env::var("ALLTERNIT_PLATFORM_STATIC") {
         return PathBuf::from(p);
     }
-    if let Ok(exe) = std::env::current_exe() {
-        let packaged = exe
-            .parent()
-            .and_then(|p| p.parent())
-            .map(|p| p.join("platform"));
-        if let Some(p) = packaged {
-            if p.exists() {
-                return p;
-            }
+    if let Some(root) = resolve_project_root() {
+        // Packaged layout: <root>/platform (macOS: Contents/platform)
+        let packaged = root.join("platform");
+        if packaged.exists() {
+            return packaged;
         }
-        let repo_root = exe.parent().and_then(|p| p.parent());
-        if let Some(root) = repo_root {
-            let ai_dist = root.join("surfaces/ai.allternit.com/dist");
-            if ai_dist.exists() {
-                return ai_dist;
-            }
-            let ai_out = root.join("surfaces/ai.allternit.com/out");
-            if ai_out.exists() {
-                return ai_out;
-            }
-            let legacy = root.join("surfaces/platform/out");
-            if legacy.exists() {
-                return legacy;
-            }
+        let ai_dist = root.join("surfaces/ai.allternit.com/dist");
+        if ai_dist.exists() {
+            return ai_dist;
+        }
+        let ai_out = root.join("surfaces/ai.allternit.com/out");
+        if ai_out.exists() {
+            return ai_out;
+        }
+        let legacy = root.join("surfaces/platform/out");
+        if legacy.exists() {
+            return legacy;
         }
     }
     PathBuf::from("./resources/platform")

@@ -123,7 +123,7 @@ export class OpenAiProvider implements LlmClient {
       throw new Error(`OpenAI API error: ${response.status} ${error}`);
     }
 
-    const data: OpenAIChatCompletion = await response.json();
+    const data = await response.json() as OpenAIChatCompletion;
     const choice = data.choices[0];
 
     return {
@@ -241,7 +241,7 @@ export class OpenAiProvider implements LlmClient {
       return {
         id: parsed.id,
         delta: choice.delta.content || '',
-        finishReason: choice.finish_reason,
+        finishReason: choice.finish_reason as LlmStreamChunk['finishReason'],
       };
     } catch {
       return null;
@@ -282,7 +282,7 @@ export class OpenAiProvider implements LlmClient {
 
     if (!response.ok) return [];
 
-    const data = await response.json();
+    const data = await response.json() as any;
     return data.data
       .filter((m: any) => m.id.startsWith('gpt-'))
       .map((m: any) => m.id);

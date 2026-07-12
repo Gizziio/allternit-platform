@@ -6,6 +6,7 @@ import {
   ClockCounterClockwise,
   Cpu,
   FolderSimple,
+  Lightning,
   Sparkle,
   Wrench,
   X,
@@ -32,6 +33,7 @@ export function AgentContextStrip({
   sessionName,
   sessionDescription,
   agentName,
+  harnessMode,
   statusLabel,
   messageCount,
   workspaceScope,
@@ -128,6 +130,13 @@ export function AgentContextStrip({
               <InfoChip
                 icon={ArrowsOutCardinal}
                 label={agentName}
+                palette={palette}
+              />
+            ) : null}
+            {harnessMode ? (
+              <InfoChip
+                icon={Lightning}
+                label={`Harness: ${harnessMode}`}
                 palette={palette}
               />
             ) : null}

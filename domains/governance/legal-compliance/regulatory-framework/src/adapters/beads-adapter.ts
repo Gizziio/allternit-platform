@@ -15,6 +15,8 @@ import {
   BeadsAdapterError,
 } from '../types.js';
 
+export type { BeadsIssue, BeadsAdapterConfig, BeadsFilter } from '../types.js';
+
 const execAsync = promisify(exec);
 
 /**
@@ -238,7 +240,10 @@ export class BeadsAdapter {
         status: wih.status,
         priority: wih.priority,
         blockedBy: wih.blockedBy,
+        blocks: [],
         tags: wih.tags,
+        receiptRefs: [],
+        artifacts: [],
       });
     }
   }

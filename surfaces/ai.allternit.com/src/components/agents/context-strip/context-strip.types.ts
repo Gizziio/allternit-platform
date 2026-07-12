@@ -7,6 +7,7 @@ export interface AgentContextStripProps {
   sessionName: string;
   sessionDescription?: string;
   agentName?: string;
+  harnessMode?: string;
   statusLabel: string;
   messageCount: number;
   workspaceScope?: string;

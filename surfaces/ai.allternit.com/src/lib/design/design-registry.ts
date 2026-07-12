@@ -56,7 +56,7 @@ export const DESIGN_MARKETPLACE: DesignSystem[] = DESIGN_SYSTEMS_LIBRARY.map(ent
     name: entry.title,
     description: entry.summary,
     vibe: entry.category,
-    author: 'nexu-io/open-design',
+    author: 'Allternit Design',
     installs,
     likes: Math.round(installs * 0.72),
     views: installs * 4,

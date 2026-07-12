@@ -8,7 +8,7 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
-import type { WihItem, Receipt, AllternitKernel, Attestation } from '@allternit/governor';
+import type { WihItem, Receipt, AllternitKernel, Attestation, AttestationType } from '@allternit/governor';
 import {
   type ReceiptGeneratorConfig,
   type ReceiptGenerationContext,
@@ -71,7 +71,7 @@ export class LawReceiptGenerator {
       try {
         const customAttestation = await generator(wih, context);
         attestations.push({
-          type: customAttestation.type,
+          type: customAttestation.type as AttestationType,
           value: customAttestation.value,
           agent: context.agentId,
           timestamp: new Date().toISOString(),

@@ -130,8 +130,8 @@ export class LocalModelManager {
       const response: ChatResponse = await this.ollama.chat({
         model: modelConfig.name,
         messages: [
-          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-          { role: 'user', content: prompt },
+          ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+          { role: 'user' as const, content: prompt },
         ],
         options: {
           temperature: modelConfig.temperature,
@@ -163,8 +163,8 @@ export class LocalModelManager {
       const stream = await this.ollama.chat({
         model: modelConfig.name,
         messages: [
-          ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-          { role: 'user', content: prompt },
+          ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+          { role: 'user' as const, content: prompt },
         ],
         options: {
           temperature: modelConfig.temperature,
@@ -174,7 +174,7 @@ export class LocalModelManager {
         stream: true,
       });
 
-      for await (const part of stream) {
+      for await (const part of stream as unknown as AsyncIterable<{ message?: { content?: string } }>) {
         if (part.message?.content) {
           yield part.message.content;
         }

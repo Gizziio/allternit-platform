@@ -499,7 +499,7 @@ export default function GeneratedUI() {
   validateA11y(spec: UISpec): any {
     if (!this.engine) {
       // Mock implementation - basic checks
-      const violations = [];
+      const violations: any[] = [];
       if (!spec.components || spec.components.length === 0) {
         violations.push({
           rule: 'empty-spec',

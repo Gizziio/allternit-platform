@@ -18,6 +18,8 @@
 // API Configuration — Runtime-resolved to support cloudflared tunnel from CF Pages
 // ============================================================================
 
+import type { ArtifactUIPart } from "@/lib/ai/ui-parts.types";
+
 /**
  * When a cloudflared tunnel is active (set by /connect page), returns the
  * tunnel's HTTPS origin so all API calls route through it. Falls back to ""
@@ -290,10 +292,16 @@ export interface BackendToolResult {
 export interface BackendCanvas {
   id: string;
   session_id: string;
+  title?: string;
   components: unknown[];
-  layout: unknown;
+  layout?: unknown;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+export interface CanvasListResponse {
+  canvases: BackendCanvas[];
 }
 
 // ============================================================================
@@ -352,6 +360,60 @@ function normalizeSessionPayload(
     tags: payload.tags ?? [],
     metadata: payload.metadata,
   };
+}
+
+type ArtifactKind = ArtifactUIPart["kind"];
+
+function normalizeArtifactKind(kind?: string): ArtifactKind {
+  switch (kind) {
+    case "image":
+    case "svg":
+    case "mermaid":
+    case "jsx":
+    case "html":
+    case "document":
+    case "slides":
+    case "sheet":
+    case "audio":
+    case "video":
+    case "podcast":
+      return kind;
+    default:
+      return "html";
+  }
+}
+
+function formatArtifactTitle(kind: ArtifactKind, title?: string): string {
+  if (title && title.trim()) {
+    return title.trim();
+  }
+
+  switch (kind) {
+    case "image":
+      return "Generated image";
+    case "svg":
+      return "Generated SVG";
+    case "mermaid":
+      return "Generated diagram";
+    case "jsx":
+      return "Generated component";
+    case "html":
+      return "Generated HTML";
+    case "document":
+      return "Generated document";
+    case "slides":
+      return "Presentation deck";
+    case "sheet":
+      return "Data sheet";
+    case "audio":
+      return "Generated audio";
+    case "video":
+      return "Generated video";
+    case "podcast":
+      return "AI Podcast";
+    default:
+      return "Generated artifact";
+  }
 }
 
 // ============================================================================
@@ -560,6 +622,7 @@ export interface ChatStreamCallbacks {
     toolName?: string;
     error: string;
   }) => void;
+  onArtifact?: (artifact: ArtifactUIPart) => void;
   onError?: (error: Error) => void;
   onDone?: () => void;
 }
@@ -718,6 +781,25 @@ export const chatApi = {
               callbacks.onDone?.();
             } else if (parsed.type === "error") {
               callbacks.onError?.(new Error((parsed.error as string) ?? "Stream error"));
+            } else if (parsed.type === "artifact" || parsed.type === "artifact.created" || parsed.type === "artifact-created") {
+              const kind = normalizeArtifactKind(parsed.kind as string | undefined);
+              const content = typeof parsed.content === "string" ? parsed.content : undefined;
+              const hasDataUrl = typeof content === "string" && content.startsWith("data:");
+              const artifact: ArtifactUIPart = {
+                type: "artifact",
+                artifactId: typeof parsed.artifactId === "string"
+                  ? parsed.artifactId
+                  : (typeof parsed.id === "string" ? parsed.id : `artifact-${Date.now()}`),
+                kind,
+                title: typeof parsed.title === "string" && parsed.title.trim()
+                  ? parsed.title.trim()
+                  : formatArtifactTitle(kind),
+                url: kind === "image"
+                  ? (typeof parsed.url === "string" ? parsed.url : (hasDataUrl ? content : undefined))
+                  : (typeof parsed.url === "string" ? parsed.url : undefined),
+                content: kind === "image" && !hasDataUrl ? undefined : content,
+              };
+              callbacks.onArtifact?.(artifact);
             }
           } catch (parseError) {
             console.error("Failed to parse SSE chunk:", data);
@@ -868,50 +950,106 @@ export interface CanvasOperation {
 
 export const canvasApi = {
   /**
-   * Canvas is currently managed client-side. No backend canvas API is exposed
-   * for this GUI surface yet.
+   * List canvases for a session.
+   * GET /api/v1/agent-sessions/:id/canvases
+   */
+  async listCanvases(sessionId: string): Promise<BackendCanvas[]> {
+    const response = await fetch(
+      `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/canvases`,
+    );
+    const data = await handleResponse<CanvasListResponse>(response);
+    return data.canvases;
+  },
+
+  /**
+   * Create a canvas for a session.
+   * POST /api/v1/agent-sessions/:id/canvases
    */
   async createCanvas(
-    _sessionId: string,
-    _layout?: Record<string, unknown>,
+    sessionId: string,
+    options: {
+      title?: string;
+      components?: unknown[];
+      layout?: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
+    } = {},
   ): Promise<BackendCanvas> {
-    throw new NativeAgentApiError(
-      "Canvas operations are local-only in the current GUI; no backend canvas endpoint is exposed.",
-      501,
+    const response = await fetch(
+      `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/canvases`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options),
+      },
     );
+    const created = await handleResponse<{ id: string; session_id: string }>(response);
+    return canvasApi.getCanvas(created.id);
   },
 
   /**
-   * Canvas is currently managed client-side.
+   * Get a canvas by id.
+   * GET /api/v1/canvases/:id
    */
-  async getCanvas(_canvasId: string): Promise<BackendCanvas> {
-    throw new NativeAgentApiError(
-      "Canvas operations are local-only in the current GUI; no backend canvas endpoint is exposed.",
-      501,
+  async getCanvas(canvasId: string): Promise<BackendCanvas> {
+    const response = await fetch(
+      `${getApiV1Base()}/canvases/${encodeURIComponent(canvasId)}`,
     );
+    return handleResponse<BackendCanvas>(response);
   },
 
   /**
-   * Canvas is currently managed client-side.
+   * Update a canvas.
+   * PATCH /api/v1/canvases/:id
+   */
+  async updateCanvas(
+    canvasId: string,
+    options: {
+      title?: string;
+      components?: unknown[];
+      layout?: Record<string, unknown>;
+      metadata?: Record<string, unknown>;
+    },
+  ): Promise<BackendCanvas> {
+    const response = await fetch(
+      `${getApiV1Base()}/canvases/${encodeURIComponent(canvasId)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options),
+      },
+    );
+    await handleResponse(response);
+    return canvasApi.getCanvas(canvasId);
+  },
+
+  /**
+   * Apply an operation to a canvas (client-side merge; persisted via updateCanvas).
+   * PATCH /api/v1/canvases/:id
    */
   async canvasOperation(
-    _canvasId: string,
-    _operation: CanvasOperation,
+    canvasId: string,
+    operation: CanvasOperation,
   ): Promise<{ success: boolean; canvas_id: string; operation: string }> {
-    throw new NativeAgentApiError(
-      "Canvas operations are local-only in the current GUI; no backend canvas endpoint is exposed.",
-      501,
-    );
+    await canvasApi.updateCanvas(canvasId, {
+      metadata: { lastOperation: operation },
+    });
+    return { success: true, canvas_id: canvasId, operation: operation.operation };
   },
 
   /**
-   * Canvas is currently managed client-side.
+   * Delete a canvas.
+   * DELETE /api/v1/canvases/:id
    */
-  async deleteCanvas(_canvasId: string): Promise<void> {
-    throw new NativeAgentApiError(
-      "Canvas operations are local-only in the current GUI; no backend canvas endpoint is exposed.",
-      501,
+  async deleteCanvas(canvasId: string): Promise<void> {
+    const response = await fetch(
+      `${getApiV1Base()}/canvases/${encodeURIComponent(canvasId)}`,
+      {
+        method: "DELETE",
+      },
     );
+    if (!response.ok) {
+      await handleResponse(response);
+    }
   },
 };
 

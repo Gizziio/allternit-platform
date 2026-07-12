@@ -33,6 +33,7 @@ export interface GatewayConfig {
   timeouts: {
     request: number;
     health: number;
+    prompt: number;
   };
   auth: {
     enabled: boolean;
@@ -187,7 +188,28 @@ export interface UIv0Events {
     new_status: string;
     timestamp: string;
   };
-  
+  'session.resumed': {
+    directory: string;
+    session_id: string;
+    resumed_at: string;
+  };
+  'session.paused': {
+    directory: string;
+    session_id: string;
+    paused_at: string;
+  };
+  'session.completed': {
+    directory: string;
+    session_id: string;
+    completed_at: string;
+  };
+  'session.error': {
+    directory: string;
+    session_id: string;
+    error: string;
+    timestamp: string;
+  };
+
   // Message lifecycle
   'message.created': {
     directory: string;
@@ -209,7 +231,25 @@ export interface UIv0Events {
     reason: string;
     removed_at: string;
   };
-  
+
+  // Chat lifecycle
+  'chat.started': {
+    directory: string;
+    session_id: string;
+    started_at: string;
+  };
+  'chat.delta': {
+    directory: string;
+    session_id: string;
+    delta: string;
+    timestamp: string;
+  };
+  'chat.completed': {
+    directory: string;
+    session_id: string;
+    completed_at: string;
+  };
+
   // Part lifecycle (critical for streaming)
   'part.created': {
     directory: string;
@@ -253,7 +293,37 @@ export interface UIv0Events {
     error?: string;
     timestamp: string;
   };
-  
+  'tool.call.started': {
+    directory: string;
+    tool_call_id: string;
+    tool_name: string;
+    input?: unknown;
+    started_at: string;
+  };
+  'tool.call.completed': {
+    directory: string;
+    tool_call_id: string;
+    tool_name: string;
+    output?: unknown;
+    completed_at: string;
+  };
+  'tool.call.error': {
+    directory: string;
+    tool_call_id: string;
+    tool_name: string;
+    error: string;
+    timestamp: string;
+  };
+
+  // Artifact lifecycle
+  'artifact.created': {
+    directory: string;
+    artifact_id: string;
+    type: string;
+    content?: unknown;
+    created_at: string;
+  };
+
   // Permission system
   'permission.requested': {
     directory: string;
@@ -1005,6 +1075,7 @@ export const DEFAULT_CONFIG: GatewayConfig = {
   timeouts: {
     request: 60000,
     health: 5000,
+    prompt: 300000,
   },
   auth: {
     enabled: false,

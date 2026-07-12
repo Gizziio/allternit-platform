@@ -4,8 +4,11 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "rootDir": "src",
     "declaration": true,
+    "paths": {
+      "@allternit/browser": ["../../../../infrastructure/chrome-stream/agent-systems/allternit-browser/src/index.ts"],
+      "@allternit/governor": ["../../../../domains/governance/governor/src/index.ts"]
+    },
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true

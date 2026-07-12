@@ -4,8 +4,8 @@
  * Tests for Chrome DevTools Protocol client.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { CDPClient } from '../cdp/client.js';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { CDPClient, createTarget } from '../cdp/client.js';
 
 describe('CDP Client', () => {
   // Note: These tests require a running Chrome instance with CDP enabled
@@ -54,6 +54,22 @@ describe('CDP Client', () => {
 });
 
 describe('CDP Utils', () => {
+  it('creates targets with the modern Chrome PUT endpoint and normalizes id to targetId', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: 'target-1', type: 'page', url: 'about:blank' })),
+    );
+
+    await expect(createTarget('http://127.0.0.1:9222', 'about:blank')).resolves.toMatchObject({
+      id: 'target-1',
+      targetId: 'target-1',
+    });
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:9222/json/new?about%3Ablank', {
+      method: 'PUT',
+    });
+
+    fetchMock.mockRestore();
+  });
+
   it('should export tab management functions', async () => {
     const tabs = await import('../cdp/tabs.js');
     expect(tabs.getTabs).toBeDefined();

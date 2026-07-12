@@ -830,7 +830,7 @@ const AGENT_CAPABILITIES = [
   { id: 'reasoning', name: 'Reasoning', description: 'Complex reasoning and analysis' },
   { id: 'surgical-edit', name: 'Surgical Edit', description: 'Apply targeted comment-mode edits to artifacts' },
   { id: 'hyperframes', name: 'HyperFrames', description: 'Keyframe motion graphics and timeline rendering' },
-  { id: 'plugin-install', name: 'Plugin Install', description: 'Install Open Design plugins into agent workspaces' },
+  { id: 'plugin-install', name: 'Plugin Install', description: 'Install Allternit Design plugins into agent workspaces' },
 ] as const;
 
 // Available models

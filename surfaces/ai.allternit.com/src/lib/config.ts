@@ -4,11 +4,11 @@
 import { env } from "@/lib/env";
 
 export const config = {
-  appUrl: env.NEXT_PUBLIC_APP_URL,
-  kernelUrl: env.KERNEL_URL,
-  nodeEnv: env.NODE_ENV,
+  appUrl: env("NEXT_PUBLIC_APP_URL"),
+  kernelUrl: env("KERNEL_URL"),
+  nodeEnv: env("NODE_ENV") ?? "production",
   appPrefix: "allternit",
-  
+
   // Model configuration
   models: {
     disabledModels: [] as string[],
@@ -26,7 +26,7 @@ export const config = {
       followupSuggestions: "google/gemini-2.5-flash-lite" as string,
     },
   },
-  
+
   // Integrations configuration
   integrations: {
     urlRetrieval: true,
@@ -36,11 +36,11 @@ export const config = {
     mcp: true,
     agentBrowser: true,
   },
-  
+
   // API Keys (server-side only)
-  firecrawlApiKey: process.env.FIRECRAWL_API_KEY,
-  tavilyApiKey: process.env.TAVILY_API_KEY,
-  
+  firecrawlApiKey: env("FIRECRAWL_API_KEY"),
+  tavilyApiKey: env("TAVILY_API_KEY"),
+
   // Feature flags
   enableWebSearch: true, // Now using Allternit Operator instead of external APIs
   enableCodeExecution: true, // Enabled via Docker/WebAssembly sandbox

@@ -18,6 +18,7 @@ import {
   Plugs,
   Globe,
   PushPinSlash,
+  Palette,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -218,23 +219,28 @@ export function ShellRail({
     }
 
     if (mode === 'code') {
+      // Real code-mode chat sessions live in the mode session store (CodeSessionStore).
+      // codeStore.sessions is the legacy workspace-runtime list and is normally empty,
+      // which left the Threads rail blank even after sessions were created.
       const projects: UnifiedProject[] = codeStore.workspaces.map(ws => ({
         id: ws.workspace_id,
         title: ws.display_name,
-        itemIds: ws.sessions
+        itemIds: codeSessions
+          .filter(s => (s.metadata as Record<string, unknown> | undefined)?.workspaceId === ws.workspace_id)
+          .map(s => s.id)
       }));
-      const items: UnifiedItem[] = codeStore.sessions.map(s => ({
-        id: s.session_id,
-        title: s.title,
-        icon: Cpu,
-        projectId: s.workspace_id,
-        isActive: codeStore.activeSessionId === s.session_id,
-        metaLabel: s.state
+      const items: UnifiedItem[] = codeSessions.map(s => ({
+        id: s.id,
+        title: s.name || 'Untitled Session',
+        icon: (s.metadata as Record<string, unknown> | undefined)?.sessionMode === 'agent' ? Robot : Cpu,
+        projectId: (s.metadata as Record<string, unknown> | undefined)?.workspaceId as string | undefined,
+        isActive: activeCodeSessionId === s.id,
+        metaLabel: formatAgentSessionMetaLabel(s.metadata)
       }));
       return { projects, items };
     }
     return { projects: [], items: [] };
-  }, [isBrowser, mode, chatProjects, chatSessions, nativeSessions, activeNativeSessionId, activeChatSessionId, coworkStore, codeStore]);
+  }, [isBrowser, mode, chatProjects, chatSessions, nativeSessions, activeNativeSessionId, activeChatSessionId, codeSessions, activeCodeSessionId, coworkStore, codeStore]);
 
   // Build active config, then inject any enabled-plugin rail items
   let activeConfig: RailConfigSection[];
@@ -511,6 +517,12 @@ export function ShellRail({
                           description: "Create a task to get started.",
                           actionLabel: "New Task",
                           onAction: () => onOpen?.('cowork-new-task')
+                        } : mode === 'design' ? {
+                          icon: Palette as any,
+                          title: "No design projects",
+                          description: "Create a design project to start designing.",
+                          actionLabel: "New Design",
+                          onAction: () => onOpen?.('design')
                         } : {
                           icon: Cpu as any,
                           title: "No workspace",

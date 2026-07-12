@@ -82,6 +82,11 @@ export interface ExtensionSidepanelAdapter {
   sessions: ExtensionSidepanelSessionRecord[];
   pageLabel: string;
   hostLabel: string;
+  protocol: {
+    provider: "extension-tab" | "local-playwright" | "browser-use" | "stagehand";
+    surface: "platform-web" | "desktop" | "gizzi" | "extension" | "api";
+    contractVersion: string;
+  };
   config: ExtensionSidepanelConfig;
   execute: (task: string) => void;
   stop: () => void;

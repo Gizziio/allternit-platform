@@ -1,5 +1,5 @@
 /**
- * Open Design plugin manifest parser — ported from nexu-io/open-design.
+ * Allternit Design plugin manifest parser — ported from nexu-io/open-design.
  *
  * A plugin is a portable agent-skill folder containing SKILL.md plus an
  * optional `open-design.json` manifest that gives marketplace metadata,

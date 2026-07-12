@@ -4,9 +4,9 @@
  * Runs periodically to find connections between memories and generate insights
  */
 
-import { LocalModelManager } from '../models/local-model.js';
-import { MemoryStore } from '../store/sqlite-store.js';
-import type { Memory, MemoryConnection, Insight } from '../types/memory.types.js';
+import { LocalModelManager } from './models/local-model.js';
+import { MemoryStore } from './store/sqlite-store.js';
+import type { Memory, MemoryConnection, Insight } from './types/memory.types.js';
 
 /**
  * Consolidate Agent configuration
