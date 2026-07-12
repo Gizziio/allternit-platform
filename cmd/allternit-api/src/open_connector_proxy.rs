@@ -427,6 +427,38 @@ pub async fn execute(action_id: &str, user_id: &str, input: Value) -> Result<Val
     serde_json::from_str(&text).map_err(ProxyError::decode)
 }
 
+/// Sidecar `POST /mcp` — stateless JSON-RPC (no SSE/long-lived session; the
+/// sidecar rejects `GET`/`DELETE` on this route by design, matching its own
+/// docs). `body` is the caller's raw JSON-RPC request, passed through as-is.
+/// `x-oo-connector-alias: user_id` on every call is what keeps `execute_action`
+/// (one of the sidecar's built-in MCP tools, alongside `list_apps`,
+/// `search_actions`, `get_action_guide`) resolving to the calling Allternit
+/// user's own connections instead of some other user's — same per-user
+/// isolation discipline as `execute()`, just over MCP instead of `/v1/actions`.
+/// Runtime-scope route, so this uses the runtime bearer token.
+pub async fn proxy_mcp(user_id: &str, body: Value) -> Result<Value, ProxyError> {
+    let url = format!("{}/mcp", sidecar_url());
+    // The sidecar's MCP transport (@modelcontextprotocol/sdk Streamable HTTP)
+    // requires the client to accept both media types, even for the
+    // stateless-JSON-response case actually used here — otherwise it answers
+    // 406 regardless of what the original inbound request's Accept header was.
+    let mut req = client()
+        .post(&url)
+        .header("x-oo-connector-alias", user_id)
+        .header("accept", "application/json, text/event-stream")
+        .json(&body);
+    if let Some(tok) = runtime_token() {
+        req = req.bearer_auth(tok);
+    }
+    let resp = req.send().await.map_err(ProxyError::down)?;
+    let status = resp.status().as_u16();
+    let text = resp.text().await.map_err(ProxyError::down)?;
+    if !(200..300).contains(&status) {
+        return Err(ProxyError::bad_status(status, &text));
+    }
+    serde_json::from_str(&text).map_err(ProxyError::decode)
+}
+
 /// Sidecar `GET /oauth/callback?<query>` — the OAuth provider's redirect
 /// target. Pipes the sidecar's HTML completion page back verbatim (status +
 /// body); this route is public on the sidecar, no token needed.

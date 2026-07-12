@@ -88,12 +88,36 @@ pub fn connector_router() -> Router<Arc<AppState>> {
     // unauthenticated in main.rs) alongside the sidecar's `/oauth/callback`.
     Router::new()
         .route("/connectors", get(list_connectors))
+        .route("/connectors/mcp", post(mcp_proxy))
         .route("/connectors/:id", get(get_connector))
         .route("/connectors/:id/connect", post(connect_connector))
         .route("/connectors/:id/refresh", post(refresh_connector))
         .route("/connectors/:id/poll", post(poll_device))
         .route("/connectors/:id/execute", post(execute_connector))
         .route("/connectors/:id/disconnect", delete(disconnect_connector))
+}
+
+/// Unified MCP surface: one endpoint (`/api/v1/connectors/mcp`, Clerk-
+/// authenticated, same as every other route in this router) exposing every
+/// sidecar-backed connector to any MCP-capable agent host, instead of each
+/// consumer having to know Allternit's bespoke REST shapes. Proxies straight
+/// to the sidecar's own `/mcp` (stateless JSON-RPC — see
+/// `open_connector_proxy::proxy_mcp`); the curated 3 (github/notion/slack)
+/// are NOT reachable through this surface, only through the REST routes
+/// above — they never went through the sidecar to begin with.
+async fn mcp_proxy(headers: axum::http::HeaderMap, Json(body): Json<Value>) -> impl IntoResponse {
+    let user_id = caller(&headers);
+    match crate::open_connector_proxy::proxy_mcp(&user_id, body).await {
+        Ok(resp) => (StatusCode::OK, Json(resp)),
+        Err(e) if e.unreachable => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "sidecar_unavailable", "message": "Connector sidecar unavailable — the open-connector process is down or still starting." })),
+        ),
+        Err(e) => (
+            StatusCode::from_u16(e.status).unwrap_or(StatusCode::BAD_GATEWAY),
+            Json(json!({ "error": "mcp_proxy_failed", "message": e.message })),
+        ),
+    }
 }
 
 /// Public connector routes — mounted OUTSIDE the Clerk-protected router in

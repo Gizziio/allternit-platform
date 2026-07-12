@@ -8,6 +8,7 @@ import type { MarketplacePlugin } from './capability.types';
 import { authorToDisplayName } from './pluginStandards';
 
 import { createModuleLogger } from '@/lib/logger';
+import { listOwnedConnectors } from '@/lib/design/owned-connector';
 
 const logger = createModuleLogger('MarketplaceApi');
 
@@ -109,12 +110,6 @@ const CURATED_MARKETPLACE_TIMEOUT_MS = 4500;
 const CURATED_CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 const EXTERNAL_DIRECTORY_TIMEOUT_MS = 3500;
 const EXTERNAL_DIRECTORY_CACHE_TTL_MS = 5 * 60 * 1000;
-const CONNECTOR_MARKETPLACE_TIMEOUT_MS = 3500;
-const CONNECTOR_MARKETPLACE_ENDPOINTS = [
-  '/api/v1/marketplace/connectors',
-  '/api/v1/connectors/marketplace',
-  '/api/v1/marketplace/skills',
-];
 const CLAUDE_MARKETPLACES_MARKETPLACES_API = 'https://claudemarketplaces.com/api/marketplaces';
 const CLAUDE_MARKETPLACES_SKILLS_API = 'https://claudemarketplaces.com/api/skills';
 const CLAUDE_PLUGIN_HUB_MARKETPLACES_API = 'https://www.claudepluginhub.com/api/marketplaces';
@@ -722,57 +717,32 @@ function getGitHubDownloadUrl(owner: string, repo: string, ref: string = 'main')
 }
 
 /**
- * Fetch connector catalog from runtime marketplace endpoints.
- *
- * This intentionally avoids hardcoded connector catalogs in UI code.
+ * Fetch the connector catalog from Allternit's own connector standard
+ * (`/api/v1/connectors` — see `cmd/allternit-api/src/connector_routes.rs` and
+ * ADR-0043). This is the real catalog: the legacy Allternit list plus every
+ * provider the vendored open-connector sidecar supports (1,000+), not a
+ * generic marketplace feed — there is no separate "connector marketplace"
+ * backend, and there never really was one wired up.
  */
 export async function fetchConnectorMarketplaceCatalog(): Promise<ConnectorMarketplaceSearchResult> {
-  let lastError: Error | null = null;
-
-  for (const endpoint of CONNECTOR_MARKETPLACE_ENDPOINTS) {
-    try {
-      const response = await fetchWithTimeout(
-        endpoint,
-        {
-          headers: {
-            Accept: 'application/json',
-          },
-        },
-        CONNECTOR_MARKETPLACE_TIMEOUT_MS,
-      );
-
-      if (!response.ok) {
-        if (response.status === 404 || response.status === 405) {
-          continue;
-        }
-        throw new Error(`Connector marketplace request failed (${response.status})`);
-      }
-
-      const payload = await response.json();
-      const records = collectConnectorRecords(payload);
-      const dedicatedConnectorEndpoint = endpoint.includes('/connectors');
-      const connectors = dedupeConnectorCatalog(
-        records
-          .map((record) =>
-            normalizeConnectorMarketplaceItem(record, { acceptAny: dedicatedConnectorEndpoint }),
-          )
-          .filter((item): item is ConnectorMarketplaceCatalogItem => Boolean(item)),
-      );
-
-      if (connectors.length > 0) {
-        return { connectors, source: 'api' };
-      }
-
-      if (endpoint.endsWith('/marketplace/connectors') || endpoint.endsWith('/marketplace/skills')) {
-        return { connectors: [], source: 'api' };
-      }
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error('Failed to load connector marketplace.');
-    }
+  try {
+    const owned = await listOwnedConnectors();
+    const connectors = dedupeConnectorCatalog(
+      owned.map((c) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description || `${c.name} via Allternit connectors.`,
+        category: normalizeCategory(c.category ?? null),
+        connectorType: normalizeConnectorType(c.auth_type ?? null, c.category ?? '', []),
+        featured: false,
+        icon: initials(c.name).slice(0, 4).toUpperCase(),
+      })),
+    );
+    return { connectors, source: connectors.length > 0 ? 'api' : 'none' };
+  } catch (error) {
+    logger.warn({ err: error }, 'Failed to load connector catalog from /api/v1/connectors');
+    return { connectors: [], source: 'none' };
   }
-
-  if (lastError) throw lastError;
-  return { connectors: [], source: 'none' };
 }
 
 /**
@@ -1237,87 +1207,6 @@ function sortMarketplacePlugins(
   return sorted;
 }
 
-function collectConnectorRecords(payload: unknown): unknown[] {
-  if (Array.isArray(payload)) return payload;
-  if (payload && typeof payload === 'object') {
-    const asRecord = payload as Record<string, unknown>;
-    if (Array.isArray(asRecord.connectors)) return asRecord.connectors;
-    if (Array.isArray(asRecord.items)) return asRecord.items;
-    if (Array.isArray(asRecord.skills)) return asRecord.skills;
-    if (Array.isArray(asRecord.plugins)) return asRecord.plugins;
-    if (asRecord.data && typeof asRecord.data === 'object') {
-      const nested = asRecord.data as Record<string, unknown>;
-      if (Array.isArray(nested.connectors)) return nested.connectors;
-      if (Array.isArray(nested.items)) return nested.items;
-      if (Array.isArray(nested.skills)) return nested.skills;
-      if (Array.isArray(nested.plugins)) return nested.plugins;
-    }
-  }
-  return [];
-}
-
-function normalizeConnectorMarketplaceItem(
-  raw: unknown,
-  options: { acceptAny: boolean },
-): ConnectorMarketplaceCatalogItem | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const record = raw as Record<string, unknown>;
-
-  const name = firstNonEmptyString([
-    record.name,
-    record.title,
-    record.display_name,
-    record.appName,
-    record.app_name,
-  ]);
-  if (!name) return null;
-
-  const tags = readTags(record.tags);
-  const category = (
-    firstNonEmptyString([record.category, record.group, record.domain]) ||
-    tags.find((tag) => tag !== 'connector' && tag !== 'integration') ||
-    'general'
-  ).toLowerCase();
-
-  const isConnectorLike =
-    options.acceptAny ||
-    includesToken(record.type, 'connector') ||
-    includesToken(record.kind, 'connector') ||
-    includesToken(record.entry_type, 'connector') ||
-    tags.includes('connector') ||
-    tags.includes('integration') ||
-    typeof record.authType === 'string' ||
-    typeof record.appUrl === 'string' ||
-    typeof record.oauth === 'object';
-
-  if (!isConnectorLike) return null;
-
-  const id =
-    firstNonEmptyString([record.id, record.slug, record.key]) ||
-    slugify(name);
-  const description =
-    firstNonEmptyString([record.description, record.summary, record.short_description]) || '';
-  const connectorType = normalizeConnectorType(
-    firstNonEmptyString([record.connectorType, record.type, record.vertical]),
-    category,
-    tags,
-  );
-  const icon =
-    firstNonEmptyString([record.icon, record.badge]) ||
-    initials(name);
-  const featured = toBoolean(record.featured) || tags.includes('featured');
-
-  return {
-    id,
-    name,
-    description,
-    category,
-    connectorType,
-    featured,
-    icon: icon.slice(0, 4).toUpperCase(),
-  };
-}
-
 function dedupeConnectorCatalog(items: ConnectorMarketplaceCatalogItem[]): ConnectorMarketplaceCatalogItem[] {
   const seen = new Set<string>();
   const deduped: ConnectorMarketplaceCatalogItem[] = [];
@@ -1376,19 +1265,6 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
-function readTags(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((tag): tag is string => typeof tag === 'string')
-    .map((tag) => tag.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-function includesToken(value: unknown, token: string): boolean {
-  if (typeof value !== 'string') return false;
-  return value.toLowerCase().includes(token.toLowerCase());
-}
-
 function normalizeConnectorType(
   value: string | null,
   category: string,
@@ -1435,15 +1311,6 @@ function initials(value: string): string {
   if (words.length === 0) return 'CN';
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return `${words[0][0]}${words[1][0]}`.toUpperCase();
-}
-
-function toBoolean(value: unknown): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') {
-    const lower = value.trim().toLowerCase();
-    return lower === 'true' || lower === '1' || lower === 'yes';
-  }
-  return false;
 }
 
 // ============================================================================
