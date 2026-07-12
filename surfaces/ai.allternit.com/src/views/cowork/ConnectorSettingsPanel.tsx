@@ -1,55 +1,96 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { CheckCircle, Warning, ArrowClockwise } from '@phosphor-icons/react';
-import type { ConnectorDefinition } from '@/lib/cowork/connectors-manifest';
-import type { ConnectorCategory } from '@/lib/cowork/connectors-manifest';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle, Warning, ArrowClockwise, MagnifyingGlass, Trash } from '@phosphor-icons/react';
+import {
+  listOwnedConnectors,
+  connectOwned,
+  disconnectOwned,
+  type OwnedConnector,
+  type OwnedConnectStatus,
+} from '@/lib/design/owned-connector';
 
-type ConnectorWithStatus = ConnectorDefinition & {
-  status: 'connected' | 'unconfigured';
-  missingVars: string[];
-};
-
-type Summary = { total: number; connected: number; unconfigured: number };
-
-const CATEGORY_LABELS: Record<ConnectorCategory, string> = {
-  comms: 'Communications',
-  devtools: 'Developer Tools',
-  productivity: 'Productivity',
-  crm: 'CRM',
-  infra: 'Infrastructure',
-};
-
-const CATEGORY_ORDER: ConnectorCategory[] = ['comms', 'devtools', 'productivity', 'crm', 'infra'];
+// Backed by Allternit's real connector standard (ADR-0043:
+// cmd/allternit-api/src/connector_routes.rs + the open-connector sidecar) —
+// 1,000+ real connectors, not the old 15-entry env-var-only manifest this
+// panel used to read. The catalog is large, so render is capped + searchable
+// the same way views/design/ConnectorModal.tsx handles it.
+const INITIAL_VISIBLE_COUNT = 60;
+const VISIBLE_COUNT_STEP = 100;
 
 export function ConnectorSettingsPanel() {
-  const [connectors, setConnectors] = useState<ConnectorWithStatus[]>([]);
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [connectors, setConnectors] = useState<OwnedConnector[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [note, setNote] = useState<Record<string, string>>({});
 
   const load = () => {
     setLoading(true);
     setError(null);
-    fetch('/api/v1/cowork/connectors')
-      .then((r) => r.json())
-      .then((data: { connectors: ConnectorWithStatus[]; summary: Summary }) => {
-        setConnectors(data.connectors ?? []);
-        setSummary(data.summary ?? null);
-      })
+    listOwnedConnectors()
+      .then((list) => setConnectors(list))
       .catch(() => setError('Failed to load connectors'))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
 
-  const grouped = CATEGORY_ORDER.reduce<Record<ConnectorCategory, ConnectorWithStatus[]>>(
-    (acc, cat) => {
-      acc[cat] = connectors.filter((c) => c.category === cat);
-      return acc;
-    },
-    {} as Record<ConnectorCategory, ConnectorWithStatus[]>,
-  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return connectors;
+    return connectors.filter((c) =>
+      [c.id, c.name, c.category, c.description].some((v) => (v || '').toLowerCase().includes(q)),
+    );
+  }, [connectors, query]);
+
+  useEffect(() => { setVisibleCount(INITIAL_VISIBLE_COUNT); }, [query, connectors]);
+
+  const isSearching = query.trim().length > 0;
+  const visible = isSearching ? filtered : filtered.slice(0, visibleCount);
+  const remaining = filtered.length - visible.length;
+  const connectedCount = connectors.filter((c) => c.connection?.status === 'connected').length;
+
+  function setInline(id: string, msg: string) {
+    setNote((prev) => ({ ...prev, [id]: msg }));
+  }
+
+  async function handleConnect(c: OwnedConnector) {
+    setBusy(c.id);
+    setInline(c.id, '');
+    try {
+      const r: OwnedConnectStatus = await connectOwned(c.id);
+      switch (r.status) {
+        case 'connected':
+          load();
+          break;
+        case 'authorization_required': {
+          const url = (r as { authorize_url?: string }).authorize_url;
+          if (url) window.open(url, '_blank', 'width=600,height=700');
+          setInline(c.id, 'Authorize Allternit in the opened window, then click Refresh.');
+          break;
+        }
+        default:
+          setInline(c.id, (r as { message?: string }).message || `Status: ${r.status}`);
+      }
+    } catch (e) {
+      setInline(c.id, e instanceof Error ? e.message : 'connect failed');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDisconnect(c: OwnedConnector) {
+    setBusy(c.id);
+    try {
+      await disconnectOwned(c.id);
+      load();
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <div style={{
@@ -59,7 +100,7 @@ export function ConnectorSettingsPanel() {
       color: 'var(--ui-text-primary)',
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
           <h2 style={{
             fontFamily: "'Allternit Serif', Georgia, ui-serif, serif",
@@ -70,11 +111,9 @@ export function ConnectorSettingsPanel() {
           }}>
             Connector Registry
           </h2>
-          {summary && (
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-muted)' }}>
-              {summary.connected} of {summary.total} connectors configured
-            </p>
-          )}
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-muted)' }}>
+            {loading ? 'Loading…' : `${connectedCount} of ${connectors.length} connectors connected`}
+          </p>
         </div>
         <button type="button"
           onClick={load}
@@ -97,6 +136,18 @@ export function ConnectorSettingsPanel() {
         </button>
       </div>
 
+      {/* Search */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, border: '1px solid var(--ui-border-muted)', background: 'var(--surface-raised, rgba(255,255,255,0.03))', marginBottom: 16 }}>
+        <MagnifyingGlass size={14} color="var(--ui-text-muted)" />
+        <input
+          aria-label="Search connectors"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Search ${connectors.length || ''} connectors…`}
+          style={{ flex: 1, border: 'none', background: 'transparent', fontSize: 13, outline: 'none', color: 'var(--ui-text-primary)' }}
+        />
+      </div>
+
       {error && (
         <div style={{
           padding: '10px 14px',
@@ -114,29 +165,32 @@ export function ConnectorSettingsPanel() {
       {loading && !connectors.length ? (
         <div style={{ color: 'var(--ui-text-muted)', fontSize: 13 }}>Loading connectors…</div>
       ) : (
-        CATEGORY_ORDER.map((cat) => {
-          const items = grouped[cat];
-          if (!items.length) return null;
-          return (
-            <section key={cat} style={{ marginBottom: 28 }}>
-              <h3 style={{
-                fontSize: 12,
-                fontWeight: 600,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'var(--ui-text-muted)',
-                margin: '0 0 10px',
-              }}>
-                {CATEGORY_LABELS[cat]}
-              </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {items.map((connector) => (
-                  <ConnectorRow key={connector.id} connector={connector} />
-                ))}
-              </div>
-            </section>
-          );
-        })
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {visible.map((c) => (
+              <ConnectorRow
+                key={c.id}
+                connector={c}
+                busy={busy === c.id}
+                note={note[c.id]}
+                onConnect={() => handleConnect(c)}
+                onDisconnect={() => handleDisconnect(c)}
+              />
+            ))}
+          </div>
+          {filtered.length === 0 && (
+            <div style={{ fontSize: 13, color: 'var(--ui-text-muted)', padding: 12 }}>No connectors match "{query}".</div>
+          )}
+          {!isSearching && remaining > 0 && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount((n) => n + VISIBLE_COUNT_STEP)}
+              style={{ width: '100%', marginTop: 10, padding: 8, borderRadius: 10, border: '1px dashed var(--ui-border-muted)', background: 'transparent', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--ui-text-muted)' }}
+            >
+              Show {Math.min(remaining, VISIBLE_COUNT_STEP)} more ({remaining} left) — or search above
+            </button>
+          )}
+        </>
       )}
 
       <style>{`
@@ -146,8 +200,20 @@ export function ConnectorSettingsPanel() {
   );
 }
 
-function ConnectorRow({ connector }: { connector: ConnectorWithStatus }) {
-  const isConnected = connector.status === 'connected';
+function ConnectorRow({
+  connector,
+  busy,
+  note,
+  onConnect,
+  onDisconnect,
+}: {
+  connector: OwnedConnector;
+  busy: boolean;
+  note?: string;
+  onConnect: () => void;
+  onDisconnect: () => void;
+}) {
+  const isConnected = connector.connection?.status === 'connected';
 
   return (
     <div style={{
@@ -159,7 +225,6 @@ function ConnectorRow({ connector }: { connector: ConnectorWithStatus }) {
       border: `1px solid ${isConnected ? 'rgba(34,197,94,0.15)' : 'var(--ui-border-muted)'}`,
       borderRadius: 10,
     }}>
-      {/* Status icon */}
       <div style={{ paddingTop: 2, flexShrink: 0 }}>
         {isConnected ? (
           <CheckCircle size={16} color="var(--status-success)" weight="fill" />
@@ -168,9 +233,8 @@ function ConnectorRow({ connector }: { connector: ConnectorWithStatus }) {
         )}
       </div>
 
-      {/* Info */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2, flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 600, fontSize: 14 }}>{connector.name}</span>
           <span style={{
             fontSize: 12,
@@ -182,28 +246,31 @@ function ConnectorRow({ connector }: { connector: ConnectorWithStatus }) {
             background: isConnected ? 'color-mix(in srgb, var(--status-success) 12%, transparent)' : 'color-mix(in srgb, var(--status-warning) 12%, transparent)',
             color: isConnected ? 'var(--status-success)' : 'var(--status-warning)',
           }}>
-            {isConnected ? 'Connected' : 'Unconfigured'}
+            {isConnected ? 'Connected' : 'Not connected'}
           </span>
+          {connector.category && (
+            <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{connector.category}</span>
+          )}
         </div>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--ui-text-muted)' }}>{connector.description}</p>
-
-        {/* Missing vars hint */}
-        {!isConnected && connector.missingVars.length > 0 && (
-          <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {connector.missingVars.map((key) => (
-              <code key={key} style={{
-                fontSize: 12,
-                padding: '1px 6px',
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 4,
-                color: 'var(--ui-text-secondary)',
-                fontFamily: 'monospace',
-              }}>
-                {key}
-              </code>
-            ))}
+        {connector.description && (
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--ui-text-muted)' }}>{connector.description}</p>
+        )}
+        {note && (
+          <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.5, color: 'var(--ui-text-secondary)', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--ui-border-muted)', borderRadius: 6, padding: '6px 8px' }}>
+            {note}
           </div>
+        )}
+      </div>
+
+      <div style={{ flexShrink: 0 }}>
+        {isConnected ? (
+          <button type="button" onClick={onDisconnect} disabled={busy} title="Disconnect" style={{ padding: 6, borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+            <Trash size={13} />
+          </button>
+        ) : (
+          <button type="button" onClick={onConnect} disabled={busy} style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: 'var(--accent-primary, #e27c59)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', opacity: busy ? 0.6 : 1 }}>
+            {busy ? '…' : 'Connect'}
+          </button>
         )}
       </div>
     </div>

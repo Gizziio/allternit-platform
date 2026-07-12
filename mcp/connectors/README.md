@@ -1,7 +1,0 @@
-# Deprecated — do not extend
-
-This package (`@allternit/mcp-connectors`) is **not** the connector standard. Per [ADR-0043](../../docs/architecture/ADR-0043-CONNECTOR-STANDARD.md), Allternit's canonical connector system is `cmd/allternit-api/src/connector_routes.rs` (catalog, auth, connection state) plus the vendored open-connector sidecar (`services/open-connector`) — see `docs/gap-analysis/OPEN_CONNECTOR_GAP_ANALYSIS.md` for the full comparison and `docs/OPEN_CONNECTOR_SIDECAR_PHASE2_NOTES.md` for the implementation.
-
-This package's `Connector`/`ConnectorRegistry` interface was a reasonable shape but never scaled past 3 hand-written connectors (Slack, GitHub, PostgreSQL). New connector integrations should be catalog entries in the standard above, not new implementations here.
-
-**Consumer audit (2026-07-12):** exactly one consumer exists, `cmd/cli/src/commands/connectors.ts` (the `allternit connectors` CLI command, registered in `cmd/cli/src/index.ts`). That consumer is itself already non-functional: it constructs `new ConnectorRegistry()` and nothing anywhere ever calls `.register()` on it, so `allternit connectors list` always prints "No connectors registered" and `connect`/`disconnect`/`exec` always report "Connector not found." This package is safe to delete with essentially zero live-code risk — still not deleted here, since that's a separate, explicitly-confirmed change, but there is no known blocker.
