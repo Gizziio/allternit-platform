@@ -12,14 +12,14 @@ The catalog is the union of Allternit's legacy 181-entry list and every provider
 
 Per-user isolation is enforced entirely in the Rust layer: the sidecar is architecturally a local single-user server, so every proxied call passes the Allternit `user_id` as `connectionName`/`x-oo-connector-alias`. The sidecar is the token vault for everything it handles; `connector_connections` (SQLite, `backend` column) is an index only for sidecar-backed rows — real secrets never land in Rust's database for those.
 
-## Why not the alternatives already in the codebase
+## Why not the alternatives that existed in the codebase
 
-Two other connector implementations exist and are **not** the standard:
+Two other connector implementations existed and were never the standard — both deleted 2026-07-12, same day as this ADR, after a consumer audit found zero live dependents:
 
-- `mcp/connectors/` — a clean `Connector` interface/registry, abandoned at 3 hand-written connectors (Slack, GitHub, PostgreSQL). The right shape, wrong scale; superseded by the catalog+sidecar model, which gets 1,000+ providers without hand-writing each one.
-- `domains/cowork/connectors/*` — 15 hand-rolled stdio-MCP servers with manual env-var token auth, no OAuth flow, no encryption at rest. Functional for its narrow set but has no path to the sidecar's scale or the Rust layer's per-user isolation and encrypted storage.
+- `mcp/connectors/` — a clean `Connector` interface/registry, abandoned at 3 hand-written connectors (Slack, GitHub, PostgreSQL). The right shape, wrong scale; superseded by the catalog+sidecar model, which gets 1,000+ providers without hand-writing each one. Its only consumer, the `allternit connectors` CLI command, was itself already non-functional (`ConnectorRegistry` never populated — `list` always showed empty).
+- `domains/cowork/connectors/*` — 15 hand-rolled stdio-MCP servers with manual env-var token auth, no OAuth flow, no encryption at rest. Never spawned by anything in the codebase; the manifest pointing at each package's `dist/index.js` was unread dead metadata.
 
-Neither is deleted by this ADR (deletion is a separate, more destructive action — see Consequences), but neither should be extended. New connector work goes through `connector_routes.rs`.
+New connector work goes through `connector_routes.rs`.
 
 ## Existing component disposition
 
@@ -29,13 +29,13 @@ Neither is deleted by this ADR (deletion is a separate, more destructive action 
 | `cmd/allternit-api/src/open_connector_proxy.rs` | Canonical. Sole point of contact with the sidecar; owns id aliasing and per-user isolation. |
 | `services/open-connector/` | Canonical sidecar backend for every non-curated connector. Self-hosted, vendored, no live upstream dependency. |
 | `cmd/allternit-api/src/token_crypto.rs` | Canonical for the curated-3 (rust-native) credential path only. |
-| `mcp/connectors/` | Deprecated. Consumer audit (2026-07-12): exactly one consumer, `cmd/cli/src/commands/connectors.ts` (the `allternit connectors` CLI command) — and that consumer is itself already non-functional: `new ConnectorRegistry()` is never populated (nothing calls `.register()` anywhere), so `list` always shows empty and `connect`/`exec` always report "not found." Safe to delete with essentially zero live-code risk. |
-| `domains/cowork/connectors/*` | Deprecated. Consumer audit (2026-07-12): the 15 packages' actual server code (`src/index.ts`, stdio MCP servers) is never spawned by anything in the codebase — `connectors-manifest.ts`'s `entrypoint` field pointing at each package's `dist/index.js` is dead metadata, nothing reads it to spawn a process. The only *live* consumers are `cowork_routes.rs` (reads/writes the `cowork_connectors` DB status table — unrelated to the packages' code) and `ConnectorSettingsPanel.tsx` (a status UI reading only the static manifest's names/categories/env-var lists, never invoking the packages). The 15 packages themselves are safe to delete with essentially zero live-code risk; `cowork_routes.rs`/`ConnectorSettingsPanel.tsx`/`connectors-manifest.ts` would need to be migrated or retired separately (their response-shape mismatch, noted in the original gap analysis, is a separate pre-existing bug, untouched by this ADR). |
+| `mcp/connectors/` | **Deleted** (2026-07-12). Consumer audit found exactly one consumer, the `allternit connectors` CLI command, and it was already non-functional (`ConnectorRegistry` never populated). Removed the package and its CLI registration (`cmd/cli/src/index.ts`). |
+| `domains/cowork/connectors/*` | **Deleted** (2026-07-12). Consumer audit found the 15 packages' server code was never spawned by anything. Deleted along with `connectors-manifest.ts` (nothing else referenced it). `ConnectorSettingsPanel.tsx` was repointed at the real catalog (`listOwnedConnectors()`) instead of left broken. `cowork_routes.rs`'s `/api/v1/cowork/connectors` endpoint and the `cowork_connectors` DB table were deliberately left in place — they don't reference the deleted packages' code, and their remaining consumer (`views/settings/SettingsView.tsx`) was mid-edit by a concurrent session at the time, so migrating it was deferred rather than risk a collision. Its pre-existing response-shape mismatch (noted in the original gap analysis) remains open. |
 | Plugin Manager marketplace UI (`BrowseConnectorsOverlay.tsx`) | Repointed at the real `/api/v1/connectors` catalog (was hitting nonexistent endpoints). |
 
 ## Consequences
 
 - New connector integrations are catalog entries and (when needed) id aliases, not new bespoke Rust or TypeScript connector implementations.
-- `mcp/connectors/` and `domains/cowork/connectors/*` are frozen, not actively deleted by this ADR — deletion requires a consumer audit (what still reads from `cowork_connectors`/`connectors-manifest.ts`) and is a separate, explicitly-confirmed change.
 - The sidecar's own single-user architecture means any future feature that needs sidecar-side data (run logs, action policy) must be threaded through the same per-user `connectionName` discipline established here — never exposed to the frontend/MCP surface unfiltered.
 - Full provider support (1,064/1,137) still excludes ~72 services genuinely absent from open-connector's catalog under any spelling (Salesforce, ServiceNow, Snowflake, the Zoho suite, etc.) — closing that gap means either open-connector adds them upstream or Allternit writes first-party provider definitions; it is not fixable by more id-mapping.
+- `views/settings/SettingsView.tsx`'s own `/api/v1/cowork/connectors` consumer and `cowork_routes.rs`'s matching endpoint are the one remaining loose end from the Systems A/B removal — still functional (untouched), but pointed at a legacy table rather than the real catalog. Migrating it is a follow-up once it's not actively being edited by other work.
