@@ -214,10 +214,44 @@ fn detect_local_cli(m: &Value) -> Value {
 /// Curated 3 (github/notion/slack): the rust-native meta path below, untouched.
 /// Everything else: sidecar-sourced truth via `merge_sidecar` — never the old
 /// synthesized always-`connectable:true` stub.
-fn merge(c: &Value, user_id: &str, db: &crate::db::DbHandle, sv: &SidecarView) -> Value {
+/// All of one user's `connector_connections` rows in a single query, keyed by
+/// `connector_id`. `db.connect()` opens a fresh SQLite connection every call
+/// (no pooling — see `db.rs`), so doing this once per request instead of once
+/// per connector is the difference between ~1,100 connection opens and one,
+/// once the catalog covers the full sidecar provider set (`sidecar_only_entries`)
+/// rather than just the legacy 181.
+fn fetch_connection_rows(
+    db: &crate::db::DbHandle,
+    user_id: &str,
+) -> std::collections::HashMap<String, (String, String)> {
+    db.connect()
+        .ok()
+        .and_then(|conn| {
+            let mut stmt = conn
+                .prepare("SELECT connector_id, status, COALESCE(account,'') FROM connector_connections WHERE user_id=?1")
+                .ok()?;
+            let rows = stmt
+                .query_map(params![user_id], |row| {
+                    Ok((row.get::<_, String>(0)?, (row.get::<_, String>(1)?, row.get::<_, String>(2)?)))
+                })
+                .ok()?
+                .filter_map(|r| r.ok())
+                .collect();
+            Some(rows)
+        })
+        .unwrap_or_default()
+}
+
+fn merge(
+    c: &Value,
+    user_id: &str,
+    db: &crate::db::DbHandle,
+    sv: &SidecarView,
+    rows: &std::collections::HashMap<String, (String, String)>,
+) -> Value {
     let id = c.get("id").and_then(|i| i.as_str()).unwrap_or("");
     if !is_curated(id) {
-        return merge_sidecar(c, user_id, db, sv);
+        return merge_sidecar(c, user_id, db, sv, rows);
     }
     let m = meta_for(id);
     let auth_type = m.get("auth_type").and_then(|v| v.as_str()).unwrap_or("unknown");
@@ -234,17 +268,9 @@ fn merge(c: &Value, user_id: &str, db: &crate::db::DbHandle, sv: &SidecarView) -
         .unwrap_or(false);
     let executable = base_url.is_some() && tools_mapped;
 
-    let (conn_status, account) = db
-        .connect()
-        .ok()
-        .and_then(|conn| {
-            conn.query_row(
-                "SELECT status, COALESCE(account,'') FROM connector_connections WHERE connector_id=?1 AND user_id=?2",
-                params![id, user_id],
-                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
-            )
-            .ok()
-        })
+    let (conn_status, account) = rows
+        .get(id)
+        .cloned()
         .unwrap_or_else(|| ("disconnected".to_string(), String::new()));
 
     let mut out = c.clone();
@@ -285,20 +311,18 @@ fn merge(c: &Value, user_id: &str, db: &crate::db::DbHandle, sv: &SidecarView) -
 /// connection list (falling back to the index row). Degrades to an honest
 /// `connectable:false` with a clear message when the sidecar is down or lacks
 /// the provider — no fake stub, and curated connectors are unaffected.
-fn merge_sidecar(c: &Value, user_id: &str, db: &crate::db::DbHandle, sv: &SidecarView) -> Value {
+fn merge_sidecar(
+    c: &Value,
+    user_id: &str,
+    db: &crate::db::DbHandle,
+    sv: &SidecarView,
+    rows: &std::collections::HashMap<String, (String, String)>,
+) -> Value {
     let id = c.get("id").and_then(|i| i.as_str()).unwrap_or("");
 
-    let (db_status, db_account) = db
-        .connect()
-        .ok()
-        .and_then(|conn| {
-            conn.query_row(
-                "SELECT status, COALESCE(account,'') FROM connector_connections WHERE connector_id=?1 AND user_id=?2",
-                params![id, user_id],
-                |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
-            )
-            .ok()
-        })
+    let (db_status, db_account) = rows
+        .get(id)
+        .cloned()
         .unwrap_or_else(|| ("disconnected".to_string(), String::new()));
 
     let mut out = c.clone();
@@ -369,6 +393,41 @@ fn mark_sidecar_connected(db: &crate::db::DbHandle, id: &str, user_id: &str, aut
     }
 }
 
+/// Build a minimal catalog-shaped entry for a sidecar provider that has no
+/// entry at all in Allternit's legacy 181-connector catalog. Fed through
+/// `merge_sidecar` exactly like a real catalog entry — that function only
+/// ever reads `id` from its input and otherwise sources everything from the
+/// sidecar, so a synthesized base is indistinguishable downstream.
+fn synthesize_sidecar_catalog_entry(id: &str, p: &crate::open_connector_proxy::ProviderSummary) -> Value {
+    json!({
+        "id": id,
+        "name": p.display_name,
+        "category": "Open Connector",
+        "description": format!("{} — via the vendored open-connector catalog (not in Allternit's original 181-entry list).", p.display_name),
+        "status": "available",
+    })
+}
+
+/// Every sidecar provider not already present in the legacy 181-entry catalog
+/// (by id, after aliasing — `provider_summaries()` keys are already resolved
+/// to the Allternit spelling when an alias exists). This is what closes the
+/// gap between "Allternit's own catalog has 181 entries" and "open-connector
+/// actually has 1,000+ providers": without this, only providers Allternit's
+/// legacy catalog already happened to list could ever show up, no matter how
+/// many the sidecar supports.
+fn sidecar_only_entries(sv: &SidecarView, legacy_ids: &std::collections::HashSet<&str>) -> Vec<Value> {
+    sv.providers
+        .as_ref()
+        .map(|providers| {
+            providers
+                .iter()
+                .filter(|(id, _)| !legacy_ids.contains(id.as_str()))
+                .map(|(id, p)| synthesize_sidecar_catalog_entry(id, p))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 async fn list_connectors(
     State(state): State<Arc<AppState>>,
     headers: axum::http::HeaderMap,
@@ -377,7 +436,14 @@ async fn list_connectors(
     let db = state.db.clone();
     let sv = sidecar_view(&user_id).await;
     let sidecar_ok = sv.providers.is_some();
-    let list: Vec<Value> = catalog_connectors().iter().map(|c| merge(c, &user_id, &db, &sv)).collect();
+    let rows = fetch_connection_rows(&db, &user_id);
+    let legacy = catalog_connectors();
+    let legacy_ids: std::collections::HashSet<&str> =
+        legacy.iter().filter_map(|c| c.get("id").and_then(|i| i.as_str())).collect();
+    let mut list: Vec<Value> = legacy.iter().map(|c| merge(c, &user_id, &db, &sv, &rows)).collect();
+    for extra in sidecar_only_entries(&sv, &legacy_ids) {
+        list.push(merge_sidecar(&extra, &user_id, &db, &sv, &rows));
+    }
     let total = list.len();
     Json(json!({
         "connectors": list,
@@ -393,13 +459,25 @@ async fn get_connector(
     headers: axum::http::HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
+    let user_id = caller(&headers);
+    let rows = fetch_connection_rows(&state.db, &user_id);
     match find_catalog(&id) {
         Some(c) => {
-            let user_id = caller(&headers);
             let sv = sidecar_view(&user_id).await;
-            (StatusCode::OK, Json(merge(&c, &user_id, &state.db, &sv)))
+            (StatusCode::OK, Json(merge(&c, &user_id, &state.db, &sv, &rows)))
         }
-        None => (StatusCode::NOT_FOUND, Json(json!({ "error": "connector_not_found", "id": id }))),
+        None => {
+            // Not in the legacy 181-entry catalog — check whether it's one of
+            // the ~950 sidecar-only providers before giving up.
+            let sv = sidecar_view(&user_id).await;
+            match sv.providers.as_ref().and_then(|m| m.get(&id)) {
+                Some(p) => {
+                    let base = synthesize_sidecar_catalog_entry(&id, p);
+                    (StatusCode::OK, Json(merge_sidecar(&base, &user_id, &state.db, &sv, &rows)))
+                }
+                None => (StatusCode::NOT_FOUND, Json(json!({ "error": "connector_not_found", "id": id }))),
+            }
+        }
     }
 }
 
@@ -415,10 +493,11 @@ async fn connect_connector(
     Path(id): Path<String>,
     body: Option<Json<ConnectBody>>,
 ) -> impl IntoResponse {
-    let c = match find_catalog(&id) {
-        Some(c) => c,
-        None => return (StatusCode::NOT_FOUND, Json(json!({ "error": "connector_not_found", "id": id }))),
-    };
+    // Legacy 181-entry catalog first; falls through to a bare `{id}` stub for
+    // the ~950 sidecar-only providers (never in that catalog by design — see
+    // `sidecar_only_entries`). `connect_sidecar` verifies real existence via
+    // `sidecar::get_provider` and 404s honestly if the id is wrong.
+    let c = find_catalog(&id).unwrap_or_else(|| json!({ "id": id }));
     let m = meta_for(&id);
     let user_id = caller(&headers);
     let body = body.map(|Json(b)| b).unwrap_or(ConnectBody { via: None, api_key: None });
@@ -627,10 +706,9 @@ async fn refresh_connector(
     headers: axum::http::HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let c = match find_catalog(&id) {
-        Some(c) => c,
-        None => return (StatusCode::NOT_FOUND, Json(json!({ "error": "connector_not_found", "id": id }))),
-    };
+    // See `connect_connector` for why this falls back to a bare stub instead
+    // of 404ing for sidecar-only ids.
+    let c = find_catalog(&id).unwrap_or_else(|| json!({ "id": id }));
     let m = meta_for(&id);
     let user_id = caller(&headers);
 
@@ -918,10 +996,9 @@ async fn execute_connector(
     Path(id): Path<String>,
     Json(body): Json<ExecuteBody>,
 ) -> impl IntoResponse {
-    let c = match find_catalog(&id) {
-        Some(c) => c,
-        None => return (StatusCode::NOT_FOUND, Json(json!({ "error": "connector_not_found", "id": id }))),
-    };
+    // See `connect_connector` for why this falls back to a bare stub instead
+    // of 404ing for sidecar-only ids.
+    let c = find_catalog(&id).unwrap_or_else(|| json!({ "id": id }));
     let m = meta_for(&id);
     let base_url = m.get("base_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let user_id = caller(&headers);
@@ -1041,7 +1118,8 @@ async fn execute_sidecar(user_id: &str, id: &str, c: &Value, body: ExecuteBody) 
             );
         }
     };
-    let action_id = match resolve_action_id(id, &tool, &provider) {
+    let sidecar_service = sidecar::sidecar_id(id);
+    let action_id = match resolve_action_id(id, &sidecar_service, &tool, &provider) {
         Ok(a) => a,
         Err(resp) => return resp,
     };
@@ -1067,9 +1145,16 @@ async fn execute_sidecar(user_id: &str, id: &str, c: &Value, body: ExecuteBody) 
 }
 
 /// Map a caller-supplied tool name to a sidecar action id: exact action-id
-/// match first, then action display name, then trust any already-qualified
-/// `{service}.{name}` string.
-fn resolve_action_id(id: &str, tool: &str, provider: &Value) -> Result<String, (StatusCode, Json<Value>)> {
+/// match first, then action display name, then accept a qualified
+/// `{service}.{name}` string using either the Allternit catalog id or the
+/// sidecar provider id as prefix (rewriting to the sidecar id before calling
+/// /v1/actions).
+fn resolve_action_id(
+    allternit_id: &str,
+    sidecar_id: &str,
+    tool: &str,
+    provider: &Value,
+) -> Result<String, (StatusCode, Json<Value>)> {
     let actions = provider.get("actions").and_then(|v| v.as_array());
     if let Some(actions) = actions {
         if actions.iter().any(|a| a.get("id").and_then(|v| v.as_str()) == Some(tool)) {
@@ -1081,15 +1166,18 @@ fn resolve_action_id(id: &str, tool: &str, provider: &Value) -> Result<String, (
             }
         }
     }
-    if tool.starts_with(&format!("{}.", id)) {
-        return Ok(tool.to_string());
+    // Accept prefixes in either spelling and normalize to the sidecar id.
+    for prefix in [allternit_id, sidecar_id] {
+        if let Some(rest) = tool.strip_prefix(&format!("{}.", prefix)) {
+            return Ok(format!("{}.{}", sidecar_id, rest));
+        }
     }
     let available: Vec<&str> = actions
         .map(|a| a.iter().filter_map(|x| x.get("id").and_then(|v| v.as_str())).take(10).collect())
         .unwrap_or_default();
     Err((
         StatusCode::BAD_REQUEST,
-        Json(json!({ "error": "unknown_action", "id": id, "tool": tool, "message": "Unknown tool for this provider. Pass one of available_actions (or its short name).", "available_actions": available })),
+        Json(json!({ "error": "unknown_action", "id": allternit_id, "tool": tool, "message": "Unknown tool for this provider. Pass one of available_actions (or its short name).", "available_actions": available })),
     ))
 }
 

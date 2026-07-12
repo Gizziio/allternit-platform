@@ -249,8 +249,9 @@ pub async fn list_providers() -> Result<Value, ProxyError> {
 }
 
 /// Sidecar `GET /api/providers/:service`, cached per service for 10 minutes.
-/// Includes the provider's full action list (used to resolve tool names to
-/// sidecar action ids at execute time).
+/// `service` is the **Allternit catalog id**; it is resolved to the sidecar
+/// provider id for the HTTP call, while the cache is keyed by the Allternit
+/// id so callers never need to know the sidecar spelling.
 pub async fn get_provider(service: &str) -> Result<Value, ProxyError> {
     static CACHE: OnceLock<tokio::sync::Mutex<HashMap<String, (Instant, Value)>>> = OnceLock::new();
     let lock = CACHE.get_or_init(Default::default);
@@ -262,7 +263,8 @@ pub async fn get_provider(service: &str) -> Result<Value, ProxyError> {
             }
         }
     }
-    let fresh = admin_get(&format!("/api/providers/{}", urlencoding(service))).await?;
+    let sidecar_service = sidecar_id(service);
+    let fresh = admin_get(&format!("/api/providers/{}", urlencoding(&sidecar_service))).await?;
     let mut guard = lock.lock().await;
     guard.insert(service.to_string(), (Instant::now(), fresh.clone()));
     Ok(fresh)
@@ -327,13 +329,16 @@ pub async fn list_user_connections(user_id: &str) -> Result<Vec<(String, String)
 }
 
 /// Sidecar `POST /api/oauth/authorizations {service, connectionName: user_id}`.
-/// Returns the sidecar's authorization object (contains `authorizationUrl`).
-/// No state is persisted in Rust by this call — the sidecar tracks the pending
-/// authorization and completes it via `proxy_oauth_callback`.
+/// `service` is the Allternit catalog id and is resolved to the sidecar
+/// provider id internally. Returns the sidecar's authorization object (contains
+/// `authorizationUrl`). No state is persisted in Rust by this call — the
+/// sidecar tracks the pending authorization and completes it via
+/// `proxy_oauth_callback`.
 pub async fn start_oauth(service: &str, user_id: &str) -> Result<Value, ProxyError> {
+    let sidecar_service = sidecar_id(service);
     let url = format!("{}/api/oauth/authorizations", sidecar_url());
     let mut req = client().post(&url).json(&json!({
-        "service": service,
+        "service": sidecar_service,
         "connectionName": user_id,
     }));
     if let Some(tok) = admin_token() {
@@ -349,16 +354,18 @@ pub async fn start_oauth(service: &str, user_id: &str) -> Result<Value, ProxyErr
 }
 
 /// Sidecar `PUT /api/connections/:service` with `connectionName: user_id`.
-/// `body` is the caller-supplied credential payload (e.g.
-/// `{authType: "api_key", values: {apiKey: ...}}` or `{authType: "no_auth"}`) —
-/// the secret lands only in the sidecar's own encrypted SQLite, never in
-/// Rust's DB.
+/// `service` is the Allternit catalog id and is resolved to the sidecar
+/// provider id internally. `body` is the caller-supplied credential payload
+/// (e.g. `{authType: "api_key", values: {apiKey: ...}}` or
+/// `{authType: "no_auth"}`) — the secret lands only in the sidecar's own
+/// encrypted SQLite, never in Rust's DB.
 pub async fn upsert_credential(service: &str, user_id: &str, body: Value) -> Result<Value, ProxyError> {
+    let sidecar_service = sidecar_id(service);
     let mut payload = body;
     if let Some(obj) = payload.as_object_mut() {
         obj.insert("connectionName".to_string(), json!(user_id));
     }
-    let url = format!("{}/api/connections/{}", sidecar_url(), urlencoding(service));
+    let url = format!("{}/api/connections/{}", sidecar_url(), urlencoding(&sidecar_service));
     let mut req = client().put(&url).json(&payload);
     if let Some(tok) = admin_token() {
         req = req.bearer_auth(tok);
@@ -374,12 +381,15 @@ pub async fn upsert_credential(service: &str, user_id: &str, body: Value) -> Res
 
 /// Sidecar `DELETE /api/connections/:service?connectionName=<user_id>`
 /// (connectionName as query param, per the sidecar's `readConnectionName`
-/// resolution order in connect-server.ts). Keeps this a bodyless DELETE.
+/// resolution order in connect-server.ts). `service` is the Allternit catalog
+/// id and is resolved to the sidecar provider id internally. Keeps this a
+/// bodyless DELETE.
 pub async fn disconnect(service: &str, user_id: &str) -> Result<Value, ProxyError> {
+    let sidecar_service = sidecar_id(service);
     let url = format!(
         "{}/api/connections/{}?connectionName={}",
         sidecar_url(),
-        urlencoding(service),
+        urlencoding(&sidecar_service),
         urlencoding(user_id)
     );
     let mut req = client().delete(&url);

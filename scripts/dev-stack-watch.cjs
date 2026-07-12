@@ -313,7 +313,30 @@ async function onGizziChange() {
 const debouncedApiChange = debounce(onApiChange, 1500);
 const debouncedGizziChange = debounce(onGizziChange, 1500);
 
+let companyConfigSnapshot = null;
+
+function readCompanyConfigSnapshot() {
+  try {
+    const s = fs.statSync(COMPANY_CONFIG);
+    return { mtimeMs: s.mtimeMs, size: s.size };
+  } catch {
+    return null;
+  }
+}
+
+function hasCompanyConfigChanged() {
+  const current = readCompanyConfigSnapshot();
+  if (!current) return false;
+  if (!companyConfigSnapshot) return true;
+  return current.mtimeMs !== companyConfigSnapshot.mtimeMs || current.size !== companyConfigSnapshot.size;
+}
+
 async function onCompanyConfigChange() {
+  if (!hasCompanyConfigChanged()) {
+    log('watcher', 'Company config fs.watch event fired, but mtime/size unchanged — ignoring.');
+    return;
+  }
+  companyConfigSnapshot = readCompanyConfigSnapshot();
   log('watcher', 'Company config changed, restarting API...');
   await api.restart();
 }
@@ -370,6 +393,7 @@ async function main() {
     api.start();
     watchRecursive(API_SRC, debouncedApiChange, '.rs');
     if (fs.existsSync(COMPANY_CONFIG)) {
+      companyConfigSnapshot = readCompanyConfigSnapshot();
       fs.watch(COMPANY_CONFIG, debouncedCompanyConfigChange);
       log('watcher', `Watching company config: ${COMPANY_CONFIG}`);
     }
@@ -388,6 +412,7 @@ async function main() {
     watchRecursive(API_SRC, debouncedApiChange, '.rs');
     watchRecursive(GIZZI_SRC, debouncedGizziChange, '.ts');
     if (fs.existsSync(COMPANY_CONFIG)) {
+      companyConfigSnapshot = readCompanyConfigSnapshot();
       fs.watch(COMPANY_CONFIG, debouncedCompanyConfigChange);
       log('watcher', `Watching company config: ${COMPANY_CONFIG}`);
     }

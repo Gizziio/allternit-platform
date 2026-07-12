@@ -16,12 +16,21 @@ interface Props {
   onConnect?: () => void;
 }
 
+// The catalog now spans 1,000+ entries (legacy Allternit list + every
+// open-connector sidecar provider). Rendering all of them as real DOM nodes
+// at once is a real jank risk with no search query active, so the unfiltered
+// view is capped and expandable; an active search narrows the set naturally
+// and always shows every match.
+const INITIAL_VISIBLE_COUNT = 80;
+const VISIBLE_COUNT_STEP = 120;
+
 export function ConnectorModal({ onClose, onConnect }: Props) {
   const [connectors, setConnectors] = useState<OwnedConnector[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
 
   async function refresh() {
     setLoading(true);
@@ -44,6 +53,16 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
       [c.id, c.name, c.category, c.description].some((v) => (v || "").toLowerCase().includes(q)),
     );
   }, [connectors, query]);
+
+  // Reset the visible window whenever the underlying match set changes so a
+  // new search always starts from a sane, fast-to-render slice.
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_COUNT);
+  }, [query, connectors]);
+
+  const isSearching = query.trim().length > 0;
+  const visible = isSearching ? filtered : filtered.slice(0, visibleCount);
+  const remaining = filtered.length - visible.length;
 
   function setInline(id: string, msg: string) {
     setNote((prev) => ({ ...prev, [id]: msg }));
@@ -158,7 +177,7 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
               </motion.div>
             ) : (
               <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {filtered.map((c) => {
+                {visible.map((c) => {
                   const connected = isConnected(c);
                   const localCli = c.auth_type === "local_cli";
                   const ready = localCli && c.availability?.installed && c.availability?.authed;
@@ -209,6 +228,15 @@ export function ConnectorModal({ onClose, onConnect }: Props) {
                 })}
                 {filtered.length === 0 && (
                   <div style={{ fontSize: 12, color: "var(--text-secondary, #666)", padding: 12 }}>No connectors match “{query}”.</div>
+                )}
+                {!isSearching && remaining > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((n) => n + VISIBLE_COUNT_STEP)}
+                    style={{ width: "100%", padding: 8, borderRadius: 10, border: "1px dashed var(--border-default, rgba(0,0,0,0.12))", background: "transparent", fontSize: 11, fontWeight: 600, cursor: "pointer", color: "var(--text-secondary, #666)" }}
+                  >
+                    Show {Math.min(remaining, VISIBLE_COUNT_STEP)} more ({remaining} left) — or search above
+                  </button>
                 )}
               </motion.div>
             )}
