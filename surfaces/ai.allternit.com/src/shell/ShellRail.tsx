@@ -419,6 +419,18 @@ export function ShellRail({
               onClick={() => onOpen?.('library')}
             />
             <RailItem
+              icon={GraduationCap}
+              label="A://Labs"
+              isActive={activeViewType === 'labs'}
+              onClick={() => onOpen?.('labs')}
+            />
+            <RailItem
+              icon={Robot}
+              label="Agent Hub"
+              isActive={activeViewType === 'agent-hub'}
+              onClick={() => onOpen?.('agent-hub')}
+            />
+            <RailItem
               icon={Clock}
               label="Automation Tasks"
               isActive={activeViewType === 'goals-list' || activeViewType === 'cron' || activeViewType === 'cowork-cron'}
@@ -678,24 +690,31 @@ export function ShellRail({
 
         <div className="h-px bg-[var(--shell-divider)] w-full" />
 
-        <SettingsDrilldown>
+        <div className="flex items-center p-[10px_16px] gap-2">
+          <SettingsDrilldown>
+            <button
+              type="button"
+              className="flex-1 flex items-center gap-3 border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors rounded-lg p-[6px_8px] -ml-2"
+            >
+              <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
+                J
+              </div>
+              <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[var(--shell-item-fg)] text-[13px] font-semibold">
+                <span>Joe</span>
+                <span className="text-[var(--shell-item-muted)] font-normal">· Pro</span>
+                <CaretDown size={12} className="text-[var(--shell-item-muted)]" />
+              </div>
+            </button>
+          </SettingsDrilldown>
           <button
             type="button"
-            className="w-full flex items-center gap-3 p-[10px_16px] border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors"
+            onClick={() => onOpen?.('promotion')}
+            title="Apps & Extensions"
+            className="size-8 flex items-center justify-center rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] cursor-pointer transition-colors shrink-0"
           >
-            <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
-              J
-            </div>
-            <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[var(--shell-item-fg)] text-[13px] font-semibold">
-              <span>Joe</span>
-              <span className="text-[var(--shell-item-muted)] font-normal">· Pro</span>
-              <CaretDown size={12} className="text-[var(--shell-item-muted)]" />
-            </div>
-            <div className="size-8 flex items-center justify-center text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] transition-colors">
-              <DownloadSimple size={18} />
-            </div>
+            <DownloadSimple size={18} />
           </button>
-        </SettingsDrilldown>
+        </div>
       </div>
     </div>
   );
