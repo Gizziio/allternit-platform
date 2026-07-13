@@ -25,7 +25,9 @@
     "preview": "vite preview --port 3000",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:hosted": "node ./scripts/verify-hosted-runtime.mjs",
+    "test:binding": "node ./scripts/verify-live-binding.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

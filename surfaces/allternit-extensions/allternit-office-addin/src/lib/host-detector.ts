@@ -13,6 +13,12 @@ export function getOfficeProductTarget(): OfficeHostType {
   return product === 'word' || product === 'excel' || product === 'powerpoint' ? product : 'unknown'
 }
 
+export function getOfficeManifestUrl(): string {
+  const product = getOfficeProductTarget()
+  if (typeof window === 'undefined' || product === 'unknown') return 'manifest.xml'
+  return new URL(`../../manifests/${product}.xml`, window.location.href).toString()
+}
+
 export function getOfficeHost(): OfficeHostType {
   if (
     typeof Office === 'undefined' ||

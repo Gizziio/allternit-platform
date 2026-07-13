@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getBridge } from '@/lib/bridge-factory'
-import { getOfficeHost, getOfficeHostDisplayName, getOfficeProductTarget } from '@/lib/host-detector'
+import { getOfficeHost, getOfficeHostDisplayName, getOfficeManifestUrl, getOfficeProductTarget } from '@/lib/host-detector'
 import {
   bootstrapOfficeRuntime,
   getOfficeBootstrapState,
   getPlatformOrigin,
   resolveOfficeDocumentSnapshot,
+  setAuthToken,
   syncOfficeRuntimeState,
   type OfficeBindingSnapshot,
 } from '@/lib/platform-gateway'
@@ -62,8 +63,44 @@ export default function App() {
   const [binding, setBinding] = useState<OfficeBindingSnapshot | null>(null)
   const [documentLabel, setDocumentLabel] = useState(`${hostLabel} document`)
   const [error, setError] = useState<string | null>(null)
+  const [connectionAttempt, setConnectionAttempt] = useState(0)
   const platformOrigin = useMemo(() => getPlatformOrigin(), [])
   const product = HOST_PRODUCTS[host]
+
+  const connectAllternit = () => {
+    const authUrl = `${platformOrigin}/office-auth-bridge`
+    const officeUi = typeof Office !== 'undefined' ? Office.context?.ui : undefined
+
+    if (officeUi?.displayDialogAsync) {
+      officeUi.displayDialogAsync(authUrl, { height: 65, width: 35, displayInIframe: false }, (result) => {
+        if (result.status !== Office.AsyncResultStatus.Succeeded || !result.value) {
+          setError(result.error?.message ?? 'Could not open Allternit sign in.')
+          return
+        }
+
+        const dialog = result.value
+        dialog.addEventHandler(Office.EventType.DialogMessageReceived, (event) => {
+          try {
+            if (!('message' in event)) throw new Error('The sign-in dialog did not return a message.')
+            const payload = JSON.parse(event.message ?? '{}') as { token?: string }
+            if (!payload.token) throw new Error('No authentication token was returned.')
+            setAuthToken(payload.token)
+            dialog.close()
+            setStatus('connecting')
+            setError(null)
+            setConnectionAttempt((attempt) => attempt + 1)
+          } catch (reason) {
+            setError(reason instanceof Error ? reason.message : 'Could not finish Allternit sign in.')
+          }
+        })
+        dialog.addEventHandler(Office.EventType.DialogEventReceived, () => dialog.close())
+      })
+      return
+    }
+
+    const popup = window.open(authUrl, 'allternit-office-auth', 'popup=yes,width=520,height=720')
+    if (!popup) setError('Allow popups for this add-in, then try connecting again.')
+  }
 
   const steerAgent = (instruction: string) => {
     if (window.parent === window) {
@@ -90,7 +127,7 @@ export default function App() {
           platform: {
             taskpane_origin: window.location.origin,
             taskpane_url: window.location.href,
-            manifest_url: `${window.location.origin}/manifest.xml`,
+            manifest_url: getOfficeManifestUrl(),
             platform_origin: platformOrigin,
           },
           runtimeState: {
@@ -125,7 +162,17 @@ export default function App() {
       cancelled = true
       if (heartbeat) window.clearInterval(heartbeat)
     }
-  }, [host, liveHost, platformOrigin])
+  }, [connectionAttempt, host, liveHost, platformOrigin])
+
+  useEffect(() => {
+    const reconnect = () => {
+      setStatus('connecting')
+      setError(null)
+      setConnectionAttempt((attempt) => attempt + 1)
+    }
+    window.addEventListener('allternit-office-auth-token-received', reconnect)
+    return () => window.removeEventListener('allternit-office-auth-token-received', reconnect)
+  }, [])
 
   return (
     <main className="flex h-full min-h-0 flex-col bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -158,7 +205,10 @@ export default function App() {
           </div>}
 
           {status === 'companion' && <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">Open this add-in from Word, Excel, or PowerPoint. Loading its webpage by itself cannot provide Office document access.</div>}
-          {error && <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-[11px] leading-relaxed text-red-600">{error}</div>}
+          {error && <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-[11px] leading-relaxed text-red-600">
+            <div>{error}</div>
+            {liveHost !== 'unknown' && <button type="button" onClick={connectAllternit} className="mt-3 rounded-lg px-3 py-2 text-[11px] font-bold text-white" style={{ background: accent }}>Connect Allternit</button>}
+          </div>}
         </div>
 
         <footer className="mt-5 border-t border-[var(--border-subtle)] pt-3 text-[10px] leading-relaxed text-[var(--text-tertiary)]">Platform brain · Browser/computer-use harness · {binding ? `Binding ${binding.id.slice(0, 8)}` : 'Waiting for binding'}</footer>

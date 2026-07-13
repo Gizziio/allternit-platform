@@ -49,6 +49,11 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       https: getHttpsConfig(),
     },
+    preview: {
+      // Ephemeral Office-host smoke tests use generated Cloudflare/ngrok hostnames.
+      // This affects Vite Preview only; production hosting still owns its allowlist.
+      allowedHosts: true,
+    },
     build: {
       outDir: 'dist',
       rollupOptions: {

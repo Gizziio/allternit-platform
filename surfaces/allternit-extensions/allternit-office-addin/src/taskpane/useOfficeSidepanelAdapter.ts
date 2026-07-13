@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { useOfficeAgent } from '@/agent/useOfficeAgent'
 import { getBridge } from '@/lib/bridge-factory'
-import { getOfficeHostDisplayName, getOfficeHostPlaceholder, getOfficeHost } from '@/lib/host-detector'
+import { getOfficeHostDisplayName, getOfficeHostPlaceholder, getOfficeHost, getOfficeManifestUrl } from '@/lib/host-detector'
 import { useConnectivity } from './hooks/useConnectivity'
 import {
   bootstrapOfficeRuntime,
@@ -124,7 +124,7 @@ export function useOfficeSidepanelAdapter() {
           platform: {
             taskpane_origin: window.location.origin,
             taskpane_url: window.location.href,
-            manifest_url: `${window.location.origin}/manifest.xml`,
+            manifest_url: getOfficeManifestUrl(),
             platform_origin: getPlatformOrigin(),
           },
           runtimeState: {
@@ -182,7 +182,7 @@ export function useOfficeSidepanelAdapter() {
             platform: {
               taskpane_origin: window.location.origin,
               taskpane_url: window.location.href,
-              manifest_url: `${window.location.origin}/manifest.xml`,
+              manifest_url: getOfficeManifestUrl(),
               platform_origin: getPlatformOrigin(),
             },
             runtimeState: {
@@ -255,7 +255,7 @@ export function useOfficeSidepanelAdapter() {
             platform: {
               taskpane_origin: window.location.origin,
               taskpane_url: window.location.href,
-              manifest_url: `${window.location.origin}/manifest.xml`,
+              manifest_url: getOfficeManifestUrl(),
               platform_origin: getPlatformOrigin(),
             },
             runtimeState: {

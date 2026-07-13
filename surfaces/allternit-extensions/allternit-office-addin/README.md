@@ -1,6 +1,6 @@
 # Allternit Office Add-in
 
-An AI-powered Microsoft Office task pane add-in that brings the Allternit assistant into Excel, PowerPoint, and Word — running in debug/sideload mode (no AppSource required).
+Three host-specific Microsoft Office developer products that connect Word, Excel, and PowerPoint to the Allternit platform brain. Distribution is debug/sideload mode; Marketplace certification is not part of this launch path.
 
 ## What It Does
 
@@ -107,7 +107,7 @@ Key files:
 ## Development Notes
 
 - **HTTPS is required** — Office refuses to load HTTP task panes. Use `npm run certs` to install trusted dev certs
-- **Single manifest** — `manifest.xml` supports all three hosts (`Workbook`, `Presentation`, `Document`)
+- **Separate stable manifests** — `manifests/word.xml`, `manifests/excel.xml`, and `manifests/powerpoint.xml` install and update independently
 - **Hot reload** — Vite HMR works during dev; the task pane reloads automatically
 - **Code execution** — The AI can generate and execute Office.js code directly in the task pane sandbox (see `code-executor.ts`)
 

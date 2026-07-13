@@ -199,7 +199,7 @@ function requestShellBootstrap(): void {
   }
 }
 
-function applyAuthBridgeMessage(payload: unknown): void {
+function applyAuthBridgeMessage(payload: unknown, sourceOrigin?: string): void {
   if (!payload || typeof payload !== 'object') return
   const data = payload as {
     source?: string
@@ -208,6 +208,7 @@ function applyAuthBridgeMessage(payload: unknown): void {
   }
   if (data.source !== AUTH_BRIDGE_MESSAGE_SOURCE || data.type !== 'auth-token') return
   if (!data.token) return
+  if (sourceOrigin && sourceOrigin !== getPlatformOrigin()) return
 
   bootstrapState = {
     ...bootstrapState,
@@ -227,7 +228,7 @@ if (typeof window !== 'undefined') {
   // Listen for shell bootstrap messages
   window.addEventListener('message', (event) => {
     applyShellBootstrapMessage(event.data)
-    applyAuthBridgeMessage(event.data)
+    applyAuthBridgeMessage(event.data, event.origin)
   })
 
   // Listen for auth-bridge tokens via BroadcastChannel (same-origin fallback)
