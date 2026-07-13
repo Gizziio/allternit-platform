@@ -84,6 +84,7 @@ const TASKPANE_ORIGINS = [
   'http://localhost:3001',
   'https://localhost:3000',
   'https://localhost:3001',
+  'https://ai.allternit.com/office-addins',
 ] as const;
 const TASKPANE_PROBE_PATH = '/src/taskpane/index.html';
 const ADDIN_DIR = 'surfaces/allternit-extensions/allternit-office-addin';
@@ -182,7 +183,7 @@ function buildTaskpaneUrl(origin: string, context: {
   projectName: string | null;
   platformOrigin: string;
 }) {
-  const url = new URL('/src/taskpane/index.html', origin)
+  const url = new URL('src/taskpane/index.html', `${origin.replace(/\/+$/, '')}/`)
   url.searchParams.set('product', context.product)
   if (context.workspaceId) url.searchParams.set('workspaceId', context.workspaceId)
   if (context.projectId) url.searchParams.set('projectId', context.projectId)
@@ -199,7 +200,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
   const { user } = usePlatformUser();
 
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>('idle');
-  const [resolvedOrigin, setResolvedOrigin] = useState<string>('http://localhost:3000');
+  const [resolvedOrigin, setResolvedOrigin] = useState<string>(import.meta.env.DEV ? 'http://localhost:3000' : 'https://ai.allternit.com/office-addins');
   const [desktopHostStatus, setDesktopHostStatus] = useState<DesktopHostStatus>({ installed: false, running: false, bundlePath: null });
   const [copied, setCopied] = useState(false);
   const [copiedCommand, setCopiedCommand] = useState(false);

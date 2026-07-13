@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    base: process.env.VITE_ALLTERNIT_OFFICE_BASE_PATH || '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

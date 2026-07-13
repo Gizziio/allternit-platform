@@ -1,104 +1,67 @@
-# Allternit Office Add-in — Deployment Guide
+# Allternit Office developer-product deployment
 
-## Prerequisites
+Allternit for Word, Allternit for Excel, and Allternit for PowerPoint are three separate developer-mode products. They share the Allternit platform harness, but they do not share an identity, manifest, installation state, or task-pane experience.
 
-- Node.js 20+
-- Microsoft 365 subscription (for sideloading) or access to Microsoft AppSource
-- HTTPS-enabled static host (CDN, S3, Azure Blob, etc.)
-- The Allternit API gateway running and reachable
+## Runtime topology
 
-## Environment Variables
+The task-pane application is a static web application hosted at an HTTPS path such as:
 
-Copy `.env.example` to `.env` and fill in:
-
-```bash
-# Required: backend origins
-VITE_ALLTERNIT_GATEWAY_URL=https://api.yourdomain.com
-VITE_ALLTERNIT_PLATFORM_URL=https://app.yourdomain.com
-
-# Optional: override defaults
-ALLTERNIT_OFFICE_APP_BASE_URL=https://addin.yourdomain.com
-ALLTERNIT_OFFICE_APP_GUID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```text
+https://ai.allternit.com/office-addins/
 ```
 
-Generate a stable GUID once:
-```bash
-node -e "console.log(require('crypto').randomUUID())"
+Developer manifests point to host-specific URLs:
+
+```text
+/office-addins/src/taskpane/index.html?product=word
+/office-addins/src/taskpane/index.html?product=excel
+/office-addins/src/taskpane/index.html?product=powerpoint
 ```
 
-## Build
+The product query identifies the companion preview. A live Office.js host remains mandatory before the task pane reports document access.
+
+## Prepare deployment assets
 
 ```bash
-npm install
-npm run build
+export ALLTERNIT_OFFICE_APP_BASE_URL=https://ai.allternit.com/office-addins
+export ALLTERNIT_PLATFORM_URL=https://ai.allternit.com
+export VITE_ALLTERNIT_GATEWAY_URL=https://api.allternit.com
+export VITE_ALLTERNIT_PLATFORM_URL=https://ai.allternit.com
+export VITE_ALLTERNIT_OFFICE_BASE_PATH=/office-addins/
+./deploy.sh
 ```
 
-Outputs:
-- `dist/` — static assets to upload to your CDN
-- `manifest.xml` — Office add-in manifest (generated from `manifest.template.xml`)
+Publish `deployment/office-addins/` at `ALLTERNIT_OFFICE_APP_BASE_URL`. Do not publish a development build whose manifests point at localhost.
 
-## Upload
+## Stable product manifests
 
-Upload the contents of `dist/` to your HTTPS-enabled static host.
+The manifest generator writes:
 
-Ensure the host serves:
-- `src/taskpane/index.html` at `https://addin.yourdomain.com/src/taskpane/index.html`
-- `assets/` at `https://addin.yourdomain.com/assets/`
+- `manifests/word.xml`
+- `manifests/excel.xml`
+- `manifests/powerpoint.xml`
 
-## Sideload for Testing
+Their IDs are stable defaults. A deployment may override each ID with `ALLTERNIT_OFFICE_WORD_GUID`, `ALLTERNIT_OFFICE_EXCEL_GUID`, and `ALLTERNIT_OFFICE_POWERPOINT_GUID`, but IDs must never rotate during an update.
 
-### macOS (Word / Excel / PowerPoint)
+## Installation
 
-1. Copy the manifest to the Office WEf folder:
-```bash
-mkdir -p ~/Library/Containers/com.microsoft.Word/Data/Documents/wef
-mkdir -p ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef
-mkdir -p ~/Library/Containers/com.microsoft.PowerPoint/Data/Documents/wef
-cp manifest.xml ~/Library/Containers/com.microsoft.Word/Data/Documents/wef/
-cp manifest.xml ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef/
-cp manifest.xml ~/Library/Containers/com.microsoft.PowerPoint/Data/Documents/wef/
-```
+Normal users install through the Allternit Office Setup Center. It manages only Allternit-owned developer registrations.
 
-2. Restart Word/Excel/PowerPoint
-3. Go to **Insert → My Add-ins** → your add-in appears
+- macOS: host-specific Office `wef` directories
+- Windows: per-user `HKCU\\SOFTWARE\\Microsoft\\Office\\16.0\\Wef\\Developer` values
+- Office web: guided manifest upload with the required Microsoft developer-mode confirmation
 
-### Windows
+Manual manifest upload is a recovery path, not the primary UX.
 
-Use `office-addin-debugging`:
-```bash
-npx office-addin-debugging start manifest.xml --app excel
-```
+## Platform connection
 
-### Office Online
+The task pane contains no API-key, model-provider, or independent system-prompt settings. It authenticates to the Allternit platform gateway and creates a live document binding. CORS must allow the Office runtime and platform origins.
 
-1. Go to [office.com](https://www.office.com) and open Word/Excel/PowerPoint
-2. **Insert → Office Add-ins → Upload My Add-in**
-3. Upload `manifest.xml`
+## Release checks
 
-## Production Backend CORS
-
-Your cloud API must allow the add-in origin. Set:
-
-```bash
-CORS_ALLOWED_ORIGINS=https://addin.yourdomain.com,https://app.yourdomain.com
-```
-
-## AppSource Submission (public distribution)
-
-1. Create a seller account at [Microsoft Partner Center](https://partner.microsoft.com/dashboard)
-2. Validate your manifest:
-```bash
-npx office-addin-manifest validate manifest.xml
-```
-3. Submit the manifest + icons + description
-4. Microsoft reviews (typically 3-5 business days)
-
-## Troubleshooting
-
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| Blank taskpane | Office.js failed to load | Ensure HTTPS in production |
-| "Failed to fetch" | CORS blocked | Add add-in origin to `CORS_ALLOWED_ORIGINS` |
-| Add-in not showing in Word/PPT | Manifest requires ExcelApi | Already fixed — use latest manifest |
-| Auth dialog closes immediately | Popup blocked | Use Office Desktop or allow popups in browser |
-| Dark mode not working | System theme not detected | Add `<meta name="color-scheme" content="light dark">` (already present) |
+- Build the task-pane runtime with the production base path.
+- Validate all three XML manifests.
+- Confirm each manifest declares only its matching host.
+- Install, repair, update, and remove each product independently.
+- Verify the hosted task pane from Windows Office, macOS Office, and Office web.
+- Verify that clearing Office-web browser storage changes health to repair-needed instead of leaving a false installed state.

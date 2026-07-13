@@ -136,7 +136,7 @@ export function CoworkTopDeck(): React.ReactNode {
         onToggle={() => setOpenDropdown((prev) => (prev === 'permission' ? null : 'permission'))}
         onClose={() => setOpenDropdown(null)}
       />
-      <style jsx>{`
+      <style>{`
         @keyframes slide-up {
           from {
             opacity: 0;

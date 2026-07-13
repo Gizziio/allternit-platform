@@ -10,6 +10,7 @@ import { LessonPlayerErrorBoundary } from './labs/components/LessonPlayerErrorBo
 
 // Modularized Labs components
 import { useLabsManager } from './labs/main/useLabsManager';
+import type { Tab } from './labs/main/LabsView.constants';
 import { LabsViewHeader } from './labs/main/LabsViewHeader';
 import { LabsTracksTab } from './labs/main/LabsTracksTab';
 import { LabsClassroomTab } from './labs/main/LabsClassroomTab';
