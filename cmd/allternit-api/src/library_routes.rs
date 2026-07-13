@@ -286,6 +286,7 @@ async fn library_stats(
                 let raw_kind = component
                     .get("kind")
                     .and_then(|v| v.as_str())
+                    .or_else(|| component.get("type").and_then(|v| v.as_str()))
                     .unwrap_or("artifact");
                 let title = component
                     .get("title")

@@ -3,7 +3,7 @@
 
 export type AgentVendor = 'claude' | 'kimi' | 'codex' | 'agy' | (string & {});
 
-export type ExecutorBackendKind = 'local-terminal' | 'kernel' | 'cloud' | 'acu';
+export type ExecutorBackendKind = 'local-terminal' | 'local-pty' | 'kernel' | 'cloud' | 'acu';
 
 export type ExecutorMode = 'interactive' | 'headless';
 
@@ -39,6 +39,7 @@ export interface ExecutorSession {
   transcriptPath?: string;
   createdAt: string;
   endedAt?: string;
+  review?: { status: 'pending' | 'accepted' | 'rejected'; reason?: string; decidedAt?: string };
 }
 
 export interface SendResult {
@@ -69,6 +70,14 @@ export interface Footprint {
   isolated: boolean;
   changedFiles: string[];
   diffStat?: string;
+  /** Optional terminal evidence captured for caller-owned review. */
+  artifacts?: ReviewArtifact[];
+}
+
+export interface ReviewArtifact {
+  kind: 'terminal-text' | 'terminal-image' | 'terminal-recording';
+  path: string;
+  sensitive: boolean;
 }
 
 export interface HandoffResult {
@@ -97,7 +106,9 @@ export type OrchestrationEventType =
   | 'session.dead'
   | 'session.timeout'
   | 'session.killed'
-  | 'review.pending';
+  | 'review.pending'
+  | 'review.accepted'
+  | 'review.rejected';
 
 export interface OrchestrationEvent {
   sessionId: string;

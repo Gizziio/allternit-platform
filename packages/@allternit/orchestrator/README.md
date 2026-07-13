@@ -35,9 +35,12 @@ Key invariants (see ADR-0044):
   explicit act, never automated away.
 - Task specs are written by the orchestrator before spawn; executors make no product decisions.
 
-Backends: `local-terminal` (tmux, this package) today; `kernel` / `cloud` / `acu` are
-phase-2 (rollout gated per ADR-0044). The dev-machine `ao-*` scripts are the reference
-implementation of the same semantics.
+Backends: `local-terminal` (tmux, default) and optional `local-pty`
+(`TerminalControlBackend`). The terminal-control backend fails closed when `termctrl`
+is absent, verifies prompts against the rendered screen before submitting Enter, and
+attaches sensitive PNG/text/recording paths to the review footprint. `kernel` /
+`cloud` / `acu` remain later phase-2 targets. The dev-machine `ao-*` scripts are the
+reference implementation of the same semantics.
 ## Runtime discovery
 
 The known launch matrix is verified against installed CLIs before fallback selection:
@@ -60,7 +63,18 @@ the same registry contract without duplicating executor state.
 
 Gizzi's stdio MCP entrypoints expose `orchestrator_doctor`, `orchestrator_spawn`,
 `orchestrator_assign`, `orchestrator_handoff`, `orchestrator_status`,
-`orchestrator_send`, `orchestrator_watch`, and `orchestrator_kill`. They call the
+`orchestrator_send`, `orchestrator_watch`, `orchestrator_review`, and
+`orchestrator_kill`. They call the
 canonical HTTP runtime at `GIZZI_ORCHESTRATOR_URL` (falling back to
 `GIZZI_SERVER_URL`, then `http://127.0.0.1:4096`) and forward Gizzi basic-auth
 environment credentials when configured.
+
+Lifecycle events are also available over `/events` as SSE. Session/spec metadata is
+stored with owner-only permissions at `~/.allternit/orchestrator-sessions.json`
+(`GIZZI_ORCHESTRATOR_STATE_PATH` overrides it); launch commands are redacted before
+persistence. Completed sessions require an explicit accepted/rejected review decision.
+
+`KernelExecutorBackend`, `CloudExecutorBackend`, and `AcuExecutorBackend` are guarded
+driver adapters. Their owning runtime injects an `ExecutorBackendDriver`; without one
+they report unavailable and fail closed. Drivers must provide real footprints—missing
+review evidence is never represented as an empty successful footprint.

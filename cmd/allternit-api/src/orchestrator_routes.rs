@@ -93,6 +93,23 @@ async fn proxy_orchestrator(
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
         .cloned();
+    let is_event_stream = content_type
+        .as_ref()
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with("text/event-stream"));
+    if is_event_stream {
+        let mut response = Response::new(axum::body::Body::from_stream(upstream.bytes_stream()));
+        *response.status_mut() = status;
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            axum::http::HeaderValue::from_static("text/event-stream"),
+        );
+        response.headers_mut().insert(
+            header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("no-cache"),
+        );
+        return response;
+    }
     let bytes = match upstream.bytes().await {
         Ok(bytes) => bytes,
         Err(error) => {

@@ -202,3 +202,13 @@ export class LocalTerminalBackend implements ExecutorBackend {
     return wt;
   }
 }
+
+export async function probeLocalTerminal(): Promise<{ installed: boolean; version?: string; error?: string }> {
+  try {
+    const { stdout, stderr } = await run('tmux', ['-V'], { timeout: 5_000 });
+    return { installed: true, version: `${stdout}\n${stderr}`.split(/\r?\n/).map((line) => line.trim()).find(Boolean) };
+  } catch (error) {
+    const cause = error as NodeJS.ErrnoException;
+    return { installed: false, error: cause.code === 'ENOENT' ? 'tmux is not installed or not on PATH.' : cause.message };
+  }
+}

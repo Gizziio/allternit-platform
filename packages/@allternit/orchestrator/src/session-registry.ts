@@ -22,6 +22,12 @@ interface Entry {
   spec: SessionSpec;
 }
 
+export interface SessionRecord {
+  session: ExecutorSession;
+  /** Launch commands are deliberately redacted from persisted records. */
+  spec: Omit<SessionSpec, 'launchCommand'>;
+}
+
 export type OrchestrationListener = (event: OrchestrationEvent) => void;
 
 export class SessionRegistry {
@@ -87,6 +93,7 @@ export class SessionRegistry {
       footprint = await this.backend.footprint(session).catch(() => undefined);
     }
     if (outcome.kind === 'done') {
+      session.review = { status: 'pending' };
       this.emit(session, 'review.pending', { report: outcome.report, footprint });
     }
     return { session, outcome, footprint };
@@ -116,6 +123,31 @@ export class SessionRegistry {
 
   get(slug: string): ExecutorSession | undefined {
     return this.entries.get(slug)?.session;
+  }
+
+  records(): SessionRecord[] {
+    return [...this.entries.values()].map(({ session, spec }) => {
+      const { launchCommand: _redacted, ...persistedSpec } = spec;
+      return { session: { ...session }, spec: persistedSpec };
+    });
+  }
+
+  restore(record: SessionRecord): void {
+    if (this.entries.has(record.session.slug)) return;
+    this.entries.set(record.session.slug, {
+      session: { ...record.session },
+      spec: { ...record.spec, launchCommand: '' },
+    });
+  }
+
+  review(slug: string, decision: 'accepted' | 'rejected', reason?: string): ExecutorSession {
+    const entry = this.mustGet(slug);
+    if (entry.session.state !== 'done' || entry.session.review?.status !== 'pending') {
+      throw new Error(`session '${slug}' has no pending review`);
+    }
+    entry.session.review = { status: decision, reason, decidedAt: new Date().toISOString() };
+    this.emit(entry.session, decision === 'accepted' ? 'review.accepted' : 'review.rejected', { reason });
+    return entry.session;
   }
 
   async kill(slug: string, opts?: { removeWorktree?: boolean }): Promise<void> {

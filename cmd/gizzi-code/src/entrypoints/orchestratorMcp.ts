@@ -5,6 +5,7 @@ const sessionProperties = {
   workdir: { type: 'string', minLength: 1 },
   vendor: { type: 'string', enum: ['claude', 'kimi', 'codex', 'agy'] },
   mode: { type: 'string', enum: ['interactive', 'headless'] },
+  backend: { type: 'string', enum: ['tmux', 'terminal-control'] },
   isolation: { type: 'string', enum: ['worktree', 'none'] },
   taskFile: { type: 'string', minLength: 1 },
   notesFile: { type: 'string', minLength: 1 },
@@ -28,6 +29,7 @@ export const ORCHESTRATOR_MCP_TOOLS: Tool[] = [
   { name: 'orchestrator_status', description: 'List all sessions, or read one session status when slug is provided.', inputSchema: { type: 'object', properties: { slug: sessionProperties.slug }, additionalProperties: false } },
   { name: 'orchestrator_send', description: 'Steer or re-task a running executor using verified terminal submission.', inputSchema: { type: 'object', properties: { slug: sessionProperties.slug, prompt: sessionProperties.prompt }, required: ['slug', 'prompt'], additionalProperties: false } },
   { name: 'orchestrator_watch', description: 'Wait for completion and return executor notes plus the actual changed-file footprint for review.', inputSchema: { type: 'object', properties: { slug: sessionProperties.slug }, required: ['slug'], additionalProperties: false } },
+  { name: 'orchestrator_review', description: 'Explicitly accept or reject executor work after inspecting its report and footprint.', inputSchema: { type: 'object', properties: { slug: sessionProperties.slug, decision: { type: 'string', enum: ['accepted', 'rejected'] }, reason: { type: 'string', minLength: 1 } }, required: ['slug', 'decision'], additionalProperties: false } },
   { name: 'orchestrator_kill', description: 'Terminate an executor session without interrupt keystrokes.', inputSchema: { type: 'object', properties: { slug: sessionProperties.slug, removeWorktree: { type: 'boolean' } }, required: ['slug'], additionalProperties: false } },
 ]
 
@@ -85,6 +87,7 @@ export async function callOrchestratorMcpTool(name: string, rawArgs: unknown): P
   const slug = encodeURIComponent(requiredString(args, 'slug'))
   if (name === 'orchestrator_send') return call(`/sessions/${slug}/send`, { method: 'POST', body: JSON.stringify({ prompt: requiredString(args, 'prompt') }) })
   if (name === 'orchestrator_watch') return call(`/sessions/${slug}/watch`, { method: 'POST' })
+  if (name === 'orchestrator_review') return call(`/sessions/${slug}/review`, { method: 'POST', body: JSON.stringify({ decision: requiredString(args, 'decision'), reason: args.reason }) })
   if (name === 'orchestrator_kill') return call(`/sessions/${slug}?removeWorktree=${args.removeWorktree === true}`, { method: 'DELETE' })
   throw new Error(`Unknown orchestrator MCP tool: ${name}`)
 }

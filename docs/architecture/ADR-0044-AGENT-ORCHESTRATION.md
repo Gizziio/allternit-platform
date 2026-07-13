@@ -110,6 +110,26 @@ contract, footprint, and review gate unchanged. The existing tmux backend stays 
 default until terminal-control proves installation maturity and live-observation
 tradeoffs are acceptable.
 
+The optional `TerminalControlBackend` is now implemented as backend kind `local-pty`
+and selectable explicitly as `terminal-control` through HTTP, MCP, and Code Mode.
+It was initially unavailable and correctly failed closed. Terminal-control 0.3.1 was
+subsequently installed with a side-by-side Rust 1.97 toolchain. A real Codex
+delegation exposed and fixed two transport issues (input-box startup readiness and
+wrapped verification markers), then completed with matching notes plus PNG, text, and
+`.termctrl` evidence. tmux remains the conservative default; `local-pty` is validated
+and explicitly selectable.
+
+### Durable lifecycle and remaining backends
+
+Gizzi persists redacted session/spec metadata with owner-only permissions, restores it
+on restart, and publishes lifecycle/review events over SSE. Review is explicit:
+completed work remains `pending` until accepted or rejected, and the decision is an
+event plus persisted session state. Code Mode consumes SSE rather than polling.
+
+Kernel, cloud, and ACU are injection-owned backends through
+`ExecutorBackendDriver`. They fail closed until the owning runtime supplies a driver,
+and a driver without footprint support cannot silently satisfy the review contract.
+
 ### Process-supervisor patterns
 
 Runtime discovery, doctor diagnostics, and ordered vendor fallback are adopted as
