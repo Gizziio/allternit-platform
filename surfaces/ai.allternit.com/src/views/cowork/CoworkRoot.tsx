@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment, react-hooks/exhaustive-deps */
 // @ts-nocheck
 /**
  * CoworkRoot.tsx
@@ -12,7 +13,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { getAgentSessionDescriptor, getAgentSessionStatusLabel } from '@/lib/agents';
+import { getAgentSessionDescriptor } from '@/lib/agents';
 import { X, CaretDown } from '@phosphor-icons/react';
 
 // Chat components
@@ -54,7 +55,7 @@ import {
   mapNativeMessagesToStreamMessages,
 } from '@/lib/agents';
 import { useCoworkSessionStore, createCoworkSession } from './CoworkSessionStore';
-import { useCoworkMode } from './CoworkModeTabs';
+import { CoworkModeTabs, useCoworkMode } from './CoworkModeTabs';
 import { WorkflowPipeline, type CoworkAgent } from './components/WorkflowPipeline';
 import { BrowserAgentWorkspace } from './components/BrowserAgentWorkspace';
 import { ReactFlowProvider } from '@xyflow/react';
@@ -74,10 +75,8 @@ import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('CoworkRoot');
 
-// Theme (matching ChatView)
+// Theme tokens
 const THEME = {
-  bg: '#2B2520',
-  bgGradient: 'linear-gradient(to top, #2B2520 60%, transparent)',
   textPrimary: 'var(--ui-text-primary)',
   textSecondary: 'var(--ui-text-secondary)',
   textMuted: 'var(--ui-text-muted)',
@@ -219,9 +218,8 @@ function CoworkRootContent() {
         body: JSON.stringify({ checkpoint, status: 'paused' }),
       }).catch(() => {});
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  
+
   // Auto-open the right rail when a cowork session becomes active so the
   // session panel is visible without needing a manual click.
   useEffect(() => {
@@ -282,7 +280,6 @@ function CoworkRootContent() {
         }
       })
       .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthLoaded, isSignedIn]);
 
   const handleAgentTakeover = useCallback((agentId: string) => {
@@ -427,7 +424,7 @@ function CoworkRootContent() {
                                   onClick={() => setDroppedFiles([])}
                                   style={{
                                     fontSize: 12,
-                                    color: 'rgba(245,240,232,0.5)',
+                                    color: 'var(--text-tertiary)',
                                     background: 'transparent',
                                     border: 'none',
                                     cursor: 'pointer',
@@ -597,10 +594,10 @@ const coworkStyles = `
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: rgba(16, 14, 11, 0.55);
+  background: color-mix(in srgb, var(--shell-panel-bg) 72%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-left: 1px solid rgba(210, 185, 148, 0.10);
+  border-left: 1px solid var(--ui-border-muted);
   animation: coworkRailIn 0.18s ease-out;
 }
 
@@ -617,9 +614,9 @@ const coworkStyles = `
   transform: translateY(-50%);
   width: 14px;
   height: 48px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--ui-text-primary) 4%, transparent);
   border: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid var(--ui-border-muted);
   border-radius: 6px 0 0 6px;
   cursor: pointer;
   padding: 0;
@@ -634,13 +631,13 @@ const coworkStyles = `
 }
 
 .coworkRailHandle:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--ui-text-primary) 8%, transparent);
 }
 
 .coworkRailHandleLine {
   width: 2px;
   height: 20px;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--ui-border-muted);
   border-radius: 2px;
   transition: background 0.15s;
 }
@@ -684,7 +681,7 @@ interface CoworkComposeEventDetail {
 }
 
 function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpdate }: CoworkChatProps) {
-  const defaultSelection = useDefaultModelSelection();
+  const _defaultSelection = useDefaultModelSelection();
   const { selection: modelSelection, selectModel, startSelection } = useModelSelection();
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('cowork');
@@ -722,7 +719,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
       ? state.sessions.find(s => s.id === embeddedAgentSession.sessionId)?.messages || []
       : [],
   );
-  const embeddedCanvasIds = useCoworkSessionStore((state) =>
+  const _embeddedCanvasIds = useCoworkSessionStore((state) =>
     embeddedAgentSession?.sessionId
       ? state.sessionCanvases[embeddedAgentSession.sessionId] ?? []
       : [],
@@ -1133,6 +1130,17 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
         </div>
       )}
 
+      {/* Cowork mode pills */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '8px 16px',
+        flexShrink: 0,
+      }}>
+        <CoworkModeTabs variant="top-pills" />
+      </div>
+
       {/* Message List */}
       <div
         ref={scrollContainerRef}
@@ -1161,7 +1169,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
         </div>
       </div>
       
-      {/* Bottom Input - Full width like Chat mode */}
+      {/* Bottom Input - Same centered width/padding as Chat mode so switching feels seamless */}
       <div style={{
         position: 'absolute',
         bottom: 0,
@@ -1178,6 +1186,9 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
       }}>
         <div style={{
           width: '100%',
+          maxWidth: '760px',
+          padding: '0 20px',
+          boxSizing: 'border-box',
           pointerEvents: 'auto',
         }}>
           <ACIComputerUseBar suppressInBrowserMode />
@@ -1263,7 +1274,7 @@ function EmbeddedCoworkAgentRail({ onClose }: { onClose: () => void }) {
       color: 'var(--ui-text-muted)',
       marginBottom: 8,
     } as React.CSSProperties,
-    msgRow: (role: string) => ({
+    msgRow: (_role: string) => ({
       display: 'flex',
       gap: 8,
       alignItems: 'flex-start',

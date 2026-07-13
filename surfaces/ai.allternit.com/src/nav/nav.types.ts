@@ -3,6 +3,7 @@ export type ViewType =
   | "home"
   | "chat"
   | "chat-legacy"
+  | "project"
   | "elements"
   | "playground"
   | "workspace"
@@ -23,6 +24,7 @@ export type ViewType =
   // Service views
   | "marketplace"
   | "hermes"
+  | "oh-my-pi"
   | "openclaw"
   | "openclaw-chat"
   | "openclaw-sessions"

@@ -1,223 +1,74 @@
-import React, { useState, useEffect } from 'react';
-import {
-  FileText,
-  MagnifyingGlass,
-  DotsThreeVertical,
-} from '@phosphor-icons/react';
-import GlassSurface from '@/design/GlassSurface';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { FileText, GridFour, PresentationChart, UploadSimple, CircleNotch, FloppyDisk } from '@phosphor-icons/react';
+import { EDITOR_PACKS, type EditorPackId } from '../documents/editor-packs';
+import { importDocumentFile } from '../documents/file-io';
+import { listDocumentWorkflowDrafts, listPromotedDocumentWorkflows, promoteDocumentWorkflow, recordDocumentWorkflowIntent } from '../documents/document-workflows';
 
-interface Document {
-  id: string;
-  title: string;
-  type: 'doc' | 'table' | 'code';
-  size: string;
-  pages: number;
-  path: string;
-  modified: string;
-}
-
-type DocType = 'All' | 'Doc' | 'Table' | 'Code';
-type SortOption = 'Recent' | 'Name' | 'Size';
-
-const getDocIcon = (type: Document['type']) => {
-  switch (type) {
-    case 'doc':
-      return <FileText size={18} color="var(--status-info)" />;
-    case 'table':
-      return <FileText size={18} color="var(--accent-cowork)" />;
-    case 'code':
-      return <FileText size={18} color="var(--status-success)" />;
-    default:
-      return <FileText size={18} />;
-  }
-};
+const PACK_ICONS = { documents: FileText, sheets: GridFour, presentations: PresentationChart } as const;
 
 export const DocumentsView: React.FC = () => {
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<DocType>('All');
-  const [sortBy, setSortBy] = useState<SortOption>('Recent');
-  const [hoveredDocId, setHoveredDocId] = useState<string | null>(null);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [active, setActive] = useState<{ pack: EditorPackId; id: string } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [workflowRevision, setWorkflowRevision] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const Editor = useMemo(() => active ? React.lazy(EDITOR_PACKS[active.pack].load) : null, [active]);
+  const suggestedWorkflows = useMemo(() => listDocumentWorkflowDrafts().filter((workflow) => workflow.runCount >= 2), [workflowRevision]);
+  const promotedWorkflows = useMemo(() => listPromotedDocumentWorkflows(), [workflowRevision]);
 
   useEffect(() => {
-    fetch('/api/v1/workspace/documents').then(r => r.json()).then(setDocuments).catch(() => setDocuments([]));
+    const refresh = () => setWorkflowRevision((revision) => revision + 1);
+    window.addEventListener('allternit:document-workflows-changed', refresh);
+    return () => window.removeEventListener('allternit:document-workflows-changed', refresh);
   }, []);
 
-  const filteredDocs = documents
-    .filter((doc) => {
-      const matchesSearch = doc.title.toLowerCase().includes(search.toLowerCase());
-      const matchesType = typeFilter === 'All' || doc.type === typeFilter.toLowerCase();
-      return matchesSearch && matchesType;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'Name') return a.title.localeCompare(b.title);
-      if (sortBy === 'Size') {
-        const sizeA = parseFloat(a.size);
-        const sizeB = parseFloat(b.size);
-        return sizeB - sizeA;
-      }
-      return 0; // 'Recent' is default order
-    });
+  const createDocument = (pack: EditorPackId) => {
+    recordDocumentWorkflowIntent(pack, `Create a new ${pack === 'documents' ? 'document' : pack === 'sheets' ? 'spreadsheet' : 'presentation'}`);
+    setActive({ pack, id: crypto.randomUUID() });
+  };
 
-  return (
-    <div style={{ padding: 'var(--spacing-lg)' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 'var(--spacing-xl)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <FileText size={24} color="var(--accent-primary)" />
-          <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Documents</h1>
-        </div>
-        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>All workspace documents</p>
-      </div>
+  const openFile = async (file: File | undefined) => {
+    if (!file) return;
+    setImportError(null);
+    try {
+      const imported = await importDocumentFile(file);
+      setActive({ pack: imported.pack, id: imported.documentId });
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : 'This file could not be opened.');
+    }
+  };
 
-      {/* Controls Bar */}
-      <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)', alignItems: 'center', flexWrap: 'wrap' }}>
-        {/* Search Input */}
-        <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
-          <MagnifyingGlass size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-          <input aria-label="Search documents…" type="text"
-            placeholder="Search documents…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px 10px 40px',
-              borderRadius: '8px',
-              border: '1px solid var(--border-subtle)',
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              fontSize: '14px',
-              outline: 'none',
-            }}
-          />
-        </div>
+  if (active && Editor) {
+    return <Suspense fallback={<div className="flex h-full items-center justify-center gap-2 text-sm text-[var(--text-secondary)]"><CircleNotch className="animate-spin"/>Loading editor pack…</div>}><Editor documentId={active.id} onClose={() => setActive(null)} /></Suspense>;
+  }
 
-        {/* Type Filter Chips */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {(['All', 'Doc', 'Table', 'Code'] as DocType[]).map((type) => (
-            <button type="button"
-              key={type}
-              onClick={() => setTypeFilter(type)}
-              style={{
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                backgroundColor: typeFilter === type ? 'var(--accent-cowork)' : 'var(--bg-secondary)',
-                color: typeFilter === type ? '#fff' : 'var(--text-secondary)',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-
-        {/* Sort Dropdown */}
-        <select aria-label="Selection" value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as SortOption)}
-          style={{
-            padding: '8px 12px',
-            borderRadius: '6px',
-            border: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-secondary)',
-            color: 'var(--text-secondary)',
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: 'pointer',
-            outline: 'none',
-          }}
-        >
-          <option value="Recent">Recent</option>
-          <option value="Name">Name</option>
-          <option value="Size">Size</option>
-        </select>
-      </div>
-
-      {/* Documents List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
-        {filteredDocs.map((doc) => (
-          <GlassSurface
-            key={doc.id}
-            style={{
-              padding: 'var(--spacing-md)',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={() => setHoveredDocId(doc.id)}
-            onMouseLeave={() => setHoveredDocId(null)}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
-              {/* Icon */}
-              <div style={{ flexShrink: 0 }}>{getDocIcon(doc.type)}</div>
-
-              {/* Title and Path */}
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)', fontSize: '14px', fontWeight: 500 }}>
-                  {doc.title}
-                </h3>
-                <p style={{ margin: 0, color: 'var(--text-tertiary)', fontSize: '12px' }}>
-                  {doc.path}
-                </p>
-              </div>
-
-              {/* Size and Pages */}
-              <div style={{ display: 'flex', gap: 'var(--spacing-lg)', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '13px', minWidth: '200px' }}>
-                <span>{doc.size}</span>
-                <span>{doc.pages} page{doc.pages !== 1 ? 's' : ''}</span>
-              </div>
-
-              {/* Modified Time */}
-              <div style={{ color: 'var(--text-secondary)', fontSize: '13px', minWidth: '120px', textAlign: 'right' }}>
-                {doc.modified}
-              </div>
-
-              {/* Actions — always present to avoid layout shift, faded when not hovered */}
-              <div style={{ display: 'flex', gap: '8px', flexShrink: 0, opacity: hoveredDocId === doc.id ? 1 : 0, transition: 'opacity 0.15s', pointerEvents: hoveredDocId === doc.id ? 'auto' : 'none' }}>
-                <button type="button"
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '4px',
-                    border: 'none',
-                    backgroundColor: 'var(--accent-cowork)',
-                    color: '#fff',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Open
-                </button>
-                <button type="button"
-                  style={{
-                    padding: '6px 8px',
-                    borderRadius: '4px',
-                    border: 'none',
-                    backgroundColor: 'var(--bg-secondary)',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <DotsThreeVertical size={16} />
-                </button>
-              </div>
-            </div>
-          </GlassSurface>
-        ))}
-
-        {filteredDocs.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-xl)', color: 'var(--text-secondary)' }}>
-            <p style={{ fontSize: '14px' }}>No documents found</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return <div className="h-full overflow-auto bg-[var(--shell-view-bg)] p-8">
+    <header className="mx-auto max-w-6xl">
+      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Allternit workspace</p>
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-3xl font-bold text-[var(--text-primary)]">Documents</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">Create locally without Microsoft, or open the same work in Word, Excel, and PowerPoint through their dedicated Allternit integrations.</p></div><input ref={fileInputRef} type="file" className="hidden" accept=".altdoc,.altsheet,.altdeck,.txt,.md,.csv" onChange={(event) => { void openFile(event.target.files?.[0]); event.target.value = ''; }} /><button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-2 text-sm font-semibold text-[var(--text-secondary)]"><UploadSimple/>Open a file</button></div>
+      {importError && <p className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-500">{importError}</p>}
+    </header>
+    <main className="mx-auto mt-8 max-w-6xl">
+      <div className="grid gap-4 md:grid-cols-3">{Object.values(EDITOR_PACKS).map((pack) => {
+        const Icon = PACK_ICONS[pack.id];
+        return <article key={pack.id} className="flex min-h-64 flex-col rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5 shadow-sm">
+          <div className="flex size-12 items-center justify-center rounded-2xl" style={{ color: pack.accent, background: `color-mix(in srgb, ${pack.accent} 12%, transparent)` }}><Icon size={24} weight="duotone" /></div>
+          <h2 className="mt-5 text-lg font-bold text-[var(--text-primary)]">{pack.name}</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">{pack.description}</p>
+          <p className="mt-3 text-[10px] text-[var(--text-tertiary)]">On-demand pack · {pack.formats.join(' · ')}</p>
+          <button type="button" onClick={() => createDocument(pack.id)} className="mt-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: pack.accent }}>Create new</button>
+        </article>;
+      })}</div>
+      {(suggestedWorkflows.length > 0 || promotedWorkflows.length > 0) && <section className="mt-8 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6">
+        <h2 className="text-base font-bold text-[var(--text-primary)]">Reusable document workflows</h2>
+        <p className="mt-1 text-xs text-[var(--text-secondary)]">Repeated intents can be saved without combining the Word, Excel, and PowerPoint products.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">{suggestedWorkflows.map((workflow) => {
+          const saved = promotedWorkflows.some((item) => item.id === workflow.id);
+          return <div key={workflow.id} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-[var(--text-primary)]">{workflow.name}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">{workflow.host} · used {workflow.runCount} times</p></div><button type="button" disabled={saved} onClick={() => { promoteDocumentWorkflow(workflow.id); setWorkflowRevision((revision) => revision + 1); }} className="flex items-center gap-1 rounded-lg border border-[var(--border-subtle)] px-2.5 py-1.5 text-[11px] font-semibold disabled:opacity-50"><FloppyDisk />{saved ? 'Saved' : 'Save workflow'}</button></div></div>;
+        })}</div>
+      </section>}
+      <section className="mt-8 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6"><h2 className="text-base font-bold text-[var(--text-primary)]">Offline and Microsoft compatibility</h2><p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">Desktop packages include these lazy chunks and can open them offline. Web loads each editor only when requested. Local formats, Markdown, and CSV import/export are available now; high-fidelity DOCX, XLSX, and PPTX remain delegated to the dedicated Microsoft integrations or a future compatibility engine.</p></section>
+    </main>
+  </div>;
 };
 
 export default DocumentsView;

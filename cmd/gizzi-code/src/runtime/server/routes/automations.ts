@@ -61,6 +61,18 @@ const GoalUpdateSchema = z.object({
   progress: z.number().optional(),
 })
 
+const GoalMilestoneSchema = z.object({
+  name: z.string().min(1),
+  status: z.enum(["pending", "in_progress", "completed", "failed"]),
+  completedAt: z.string().optional(),
+})
+
+const GoalValidationSchema = z.object({
+  testName: z.string().min(1),
+  status: z.enum(["passed", "failed"]),
+  output: z.string().optional(),
+})
+
 const IdParamSchema = z.object({
   id: z.string(),
 })
@@ -424,8 +436,88 @@ export const AutomationsRoutes = lazy(() =>
             .where(eq(GoalTable.id, id))
             .run()
         )
-        GoalEngine.startGoal(id).catch(console.error)
-        return c.json({ success: true, state: "planning" })
+        await GoalEngine.startGoal(id)
+        return c.json({ success: true, state: "in_progress" })
+      },
+    )
+    .post(
+      "/goals/:id/pause",
+      describeRoute({
+        summary: "Pause goal",
+        description: "Pause a running automation goal without discarding progress",
+        operationId: "automation.goals.pause",
+        responses: { 200: { description: "Goal paused", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404) },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        await GoalEngine.pauseGoal(id)
+        return c.json({ success: true, state: "paused" })
+      },
+    )
+    .post(
+      "/goals/:id/milestones",
+      describeRoute({
+        summary: "Publish goal milestone",
+        description: "Create or update a milestone using real orchestrator progress",
+        operationId: "automation.goals.milestones.publish",
+        responses: { 200: { description: "Milestone recorded", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404, 409) },
+      }),
+      validator("param", IdParamSchema),
+      validator("json", GoalMilestoneSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const result = await GoalEngine.recordMilestone(id, c.req.valid("json"))
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, ...result })
+      },
+    )
+    .post(
+      "/goals/:id/validations",
+      describeRoute({
+        summary: "Publish goal validation",
+        description: "Create or update validation evidence from an actual check",
+        operationId: "automation.goals.validations.publish",
+        responses: { 200: { description: "Validation recorded", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404, 409) },
+      }),
+      validator("param", IdParamSchema),
+      validator("json", GoalValidationSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const result = await GoalEngine.recordValidation(id, c.req.valid("json"))
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, ...result })
+      },
+    )
+    .post(
+      "/goals/:id/block",
+      describeRoute({
+        summary: "Block goal",
+        description: "Mark a goal blocked pending external input or state change",
+        operationId: "automation.goals.block",
+        responses: { 200: { description: "Goal blocked", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404) },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        await GoalEngine.blockGoal(id)
+        return c.json({ success: true, state: "blocked" })
+      },
+    )
+    .post(
+      "/goals/:id/complete",
+      describeRoute({
+        summary: "Complete goal",
+        description: "Complete a goal after its evidence has been audited",
+        operationId: "automation.goals.complete",
+        responses: { 200: { description: "Goal completed", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404) },
+      }),
+      validator("param", IdParamSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const result = await GoalEngine.completeGoal(id)
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, state: "completed", progress: 100 })
       },
     )
 )

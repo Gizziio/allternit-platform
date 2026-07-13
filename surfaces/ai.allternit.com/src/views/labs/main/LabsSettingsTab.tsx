@@ -1,72 +1,110 @@
 import React from "react";
-import { Eye } from 'lucide-react';
 import { Fade } from '@/design/animation/Fade';
-import { GlassSurfaceThin } from '@/design/glass/GlassSurface';
-import { Text } from '@/components/typography/Text';
-import { L } from "./LabsView.constants";
+import { SettingsCard, SettingsCardRow } from '@/components/settings/SettingsCard';
+import { Toggle } from '@/components/settings/Toggle';
 
 interface LabsSettingsTabProps {
   canvasToken: string;
   canvasDomain: string;
-  saveConfig: (config: { canvasToken?: string; canvasDomain?: string }) => void;
+  autoGenerateLessons: boolean;
+  researchNotebookSync: boolean;
+  saveConfig: (config: { canvasToken?: string; canvasDomain?: string; autoGenerateLessons?: boolean; researchNotebookSync?: boolean }) => void;
 }
 
 export const LabsSettingsTab: React.FC<LabsSettingsTabProps> = ({
   canvasToken,
   canvasDomain,
+  autoGenerateLessons,
+  researchNotebookSync,
   saveConfig,
 }) => {
+  const [showToken, setShowToken] = React.useState(false);
+
   return (
     <Fade in direction="up" distance={20}>
-      <div className="max-w-[520px]">
-        <div className="mb-9">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-4 h-px bg-[var(--ui-text-secondary)] opacity-40" />
-            <Text variant="label" className="text-[12.5px] font-bold tracking-widest uppercase text-[var(--ui-text-secondary)]">Configuration</Text>
-          </div>
-          <Text variant="researchHeading" as="h2" className="text-3xl font-black italic m-0 tracking-tight text-[var(--ui-text-primary)] leading-none">Settings</Text>
-        </div>
-
+      <div className="max-w-[640px]">
         <div className="mb-8">
-          <div className="flex items-center gap-2.5 mb-5">
-            <Text variant="label" className="text-[12px] font-extrabold tracking-widest uppercase text-[var(--accent-primary)]">Canvas LMS</Text>
-            <div className="flex-1 h-px bg-[var(--ui-border-muted)]" />
-          </div>
-          <div className="flex flex-col gap-4.5">
-            <div>
-              <Text variant="label" as="label" className="block text-[12px] font-bold tracking-wider uppercase text-[var(--ui-text-secondary)] mb-2">API Token</Text>
-              <input aria-label="Input" type="password" value={canvasToken}
-                onChange={e => saveConfig({ canvasToken: e.target.value })}
-                placeholder="Paste your Canvas API token here"
-                className="w-full p-2.5 px-3.5 rounded-lg border border-solid border-white/10 bg-white/[0.04] text-[#f0f0f0] text-sm outline-none transition-colors focus:border-[rgba(167,139,250,0.4)] box-border"
-              />
-              <Text variant="caption" className="text-[12px] text-[var(--ui-text-muted)] mt-1.5 leading-relaxed block">Canvas → Account → Settings → Approved Integrations → New Access Token</Text>
-            </div>
-            <div>
-              <Text variant="label" as="label" className="block text-[12px] font-bold tracking-wider uppercase text-[var(--ui-text-secondary)] mb-2">Domain</Text>
-              <input aria-label="Input" type="text" value={canvasDomain}
-                onChange={e => saveConfig({ canvasDomain: e.target.value })}
-                placeholder="https://canvas.instructure.com"
-                className="w-full p-2.5 px-3.5 rounded-lg border border-solid border-white/10 bg-white/[0.04] text-[#f0f0f0] text-sm outline-none transition-colors focus:border-[rgba(167,139,250,0.4)] box-border"
-              />
-            </div>
-          </div>
+          <h2 className="text-[22px] font-semibold text-[var(--text-primary)] m-0">
+            Labs Settings
+          </h2>
+          <p className="text-[14px] text-[var(--text-secondary)] m-0 mt-1 leading-relaxed">
+            Connect your learning management system and configure the A://Labs portal.
+          </p>
         </div>
 
-        <GlassSurfaceThin 
-          className="p-4.5 px-5 rounded-[13px] border border-solid"
-          style={{ background: L.accentDim, borderColor: L.accentBorder }}
-        >
-          <Text variant="label" className="m-0 mb-3 font-bold text-[12px] tracking-wider uppercase text-[var(--accent-primary)] flex items-center gap-1.5">
-            <Eye size={12}/> Getting Your Canvas Token
-          </Text>
-          <ol className="m-0 pl-4.5 text-[var(--ui-text-secondary)] text-[12px] leading-[2]">
-            <li>Log in to Canvas</li>
-            <li>Go to Account → Settings</li>
-            <li>Scroll to Approved Integrations</li>
-            <li>Click <em className="italic">New Access Token</em> and copy the generated value</li>
-          </ol>
-        </GlassSurfaceThin>
+        <div className="flex flex-col gap-6">
+          <SettingsCard
+            title="Canvas LMS"
+            description="Sync courses, assignments, and enrollments from Canvas."
+          >
+            <SettingsCardRow
+              label="API Token"
+              description="Canvas → Account → Settings → Approved Integrations → New Access Token"
+            >
+              <div className="relative">
+                <input
+                  aria-label="Canvas API token"
+                  type={showToken ? 'text' : 'password'}
+                  value={canvasToken}
+                  onChange={(e) => saveConfig({ canvasToken: e.target.value })}
+                  placeholder="Paste your Canvas API token"
+                  className="w-[260px] p-2.5 px-3.5 rounded-lg border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-sm outline-none transition-colors focus:border-[var(--accent-primary)] box-border"
+                />
+              </div>
+            </SettingsCardRow>
+
+            <SettingsCardRow
+              label="Domain"
+              description="e.g. https://canvas.instructure.com"
+            >
+              <input
+                aria-label="Canvas domain"
+                type="text"
+                value={canvasDomain}
+                onChange={(e) => saveConfig({ canvasDomain: e.target.value })}
+                placeholder="https://canvas.instructure.com"
+                className="w-[260px] p-2.5 px-3.5 rounded-lg border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-sm outline-none transition-colors focus:border-[var(--accent-primary)] box-border"
+              />
+            </SettingsCardRow>
+
+            <SettingsCardRow
+              label="Show token while typing"
+              description="Temporarily reveal the API token so you can verify it."
+            >
+              <Toggle value={showToken} onChange={setShowToken} />
+            </SettingsCardRow>
+          </SettingsCard>
+
+          <SettingsCard
+            title="Getting started"
+            description="New to Canvas integration? Follow these steps."
+          >
+            <ol className="m-0 pl-5 text-[var(--text-secondary)] text-[13px] leading-[2] list-decimal">
+              <li>Log in to Canvas</li>
+              <li>Go to Account → Settings</li>
+              <li>Scroll to Approved Integrations</li>
+              <li>Click <em className="italic">New Access Token</em> and copy the generated value</li>
+            </ol>
+          </SettingsCard>
+
+          <SettingsCard
+            title="Labs features"
+            description="Toggle experimental learning features."
+          >
+            <SettingsCardRow
+              label="Auto-generate lessons"
+              description="Allow A://Labs to suggest new lessons from synced courses."
+            >
+              <Toggle value={autoGenerateLessons} onChange={(v) => saveConfig({ autoGenerateLessons: v })} />
+            </SettingsCardRow>
+            <SettingsCardRow
+              label="Research notebook sync"
+              description="Keep research notes in sync with your Canvas account."
+            >
+              <Toggle value={researchNotebookSync} onChange={(v) => saveConfig({ researchNotebookSync: v })} />
+            </SettingsCardRow>
+          </SettingsCard>
+        </div>
       </div>
     </Fade>
   );

@@ -23,6 +23,7 @@ const SkillsRegistryView   = lazy(() => import('../views/code/SkillsRegistryView
 const DesignRegistryView   = lazy(() => import('../views/design/DesignRegistryView').then(m => ({ default: m.DesignRegistryView })));
 const OpenClawView         = lazy(() => import('../views/openclaw/OpenClawView').then(m => ({ default: m.OpenClawView })));
 const HermesView           = lazy(() => import('../views/hermes/HermesView').then(m => ({ default: m.HermesView })));
+const OhMyPiView           = lazy(() => import('../views/omp/OhMyPiView').then(m => ({ default: m.OhMyPiView })));
 const ChatModeAgentSession = lazy(() => import('../views/agent-sessions/ChatModeAgentSession').then(m => ({ default: m.ChatModeAgentSession })));
 const CoworkModeAgentTasks = lazy(() => import('../views/agent-sessions/CoworkModeAgentTasks').then(m => ({ default: m.CoworkModeAgentTasks })));
 const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeModeAgentSession').then(m => ({ default: m.CodeModeAgentSession })));
@@ -130,6 +131,11 @@ export function getShellViewRegistry(handlers: {
     home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
     chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
     "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
+    project: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Projects" />}>
+        <ProjectView />
+      </ErrorBoundary>
+    ),
     workspace: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork" />}>
         <CoworkRoot />
@@ -311,6 +317,11 @@ export function getShellViewRegistry(handlers: {
     hermes: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Hermes" />}>
         <HermesView />
+      </ErrorBoundary>
+    ),
+    'oh-my-pi': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Oh My Pi" />}>
+        <OhMyPiView />
       </ErrorBoundary>
     ),
     dag: ({ context }: { context?: ViewContext }) => (

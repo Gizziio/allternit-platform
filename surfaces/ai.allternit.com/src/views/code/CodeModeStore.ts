@@ -327,7 +327,7 @@ export const useCodeModeStore = create<CodeModeState>()(
     }),
 
   createWorkspace: (displayName: string) => {
-    const workspace_id = `ws_${Date.now()}.toString(36)}`;
+    const workspace_id = `ws_${Date.now().toString(36)}`;
     const newWorkspace: CodeWorkspaceRecord = {
       workspace_id,
       display_name: displayName,
@@ -358,7 +358,7 @@ export const useCodeModeStore = create<CodeModeState>()(
   },
 
   createSession: (title: string, workspaceId: string, mode: CodeSessionMode = 'DEFAULT') => {
-    const session_id = `sess_${Date.now()}.toString(36)}`;
+    const session_id = `sess_${Date.now().toString(36)}`;
     const now = new Date().toISOString();
     const newSession: CodeSessionRecord = {
       session_id,

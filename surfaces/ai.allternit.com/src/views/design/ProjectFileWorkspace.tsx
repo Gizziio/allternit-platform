@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash, FileCode, FileText, DownloadSimple, FolderOpen } from '@phosphor-icons/react';
+import { Plus, Trash, FileCode, FileText, DownloadSimple } from '@phosphor-icons/react';
 import {
   loadProjectFiles,
   writeProjectFile,
@@ -61,7 +61,7 @@ export function ProjectFileWorkspace({ projectId, onOpenFile }: ProjectFileWorks
   const selectedFile = selectedPath ? tree.files[selectedPath] : null;
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: 'var(--bg-primary)' }}>
+    <div style={{ display: 'flex', height: '100%', background: 'var(--shell-view-bg)' }}>
       {/* Sidebar */}
       <div style={{ width: 260, borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

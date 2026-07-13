@@ -40,6 +40,9 @@ export default defineBackground(() => {
 
   // Remote task execution via com.allternit.desktop native messaging
   remoteTaskHandler.start()
+  remoteTaskHandler.onPlatformTaskState((state) => {
+    chrome.runtime.sendMessage({ type: 'PLATFORM_TASK_STATE', state }).catch(() => {})
+  })
 
   // ── Browser-agent setup ───────────────────────────────────────────────────
 
@@ -88,6 +91,25 @@ export default defineBackground(() => {
           })
         })
       return true
+    }
+    if (message.type === 'PLATFORM_TASK_RUN') {
+      const task = typeof message.task === 'string' ? message.task.trim() : ''
+      if (!task) {
+        sendResponse({ ok: false, error: 'Task is required' })
+        return undefined
+      }
+      const requestId = remoteTaskHandler.requestPlatformTask(task, message.config)
+      sendResponse({ ok: true, requestId })
+      return undefined
+    }
+    if (message.type === 'PLATFORM_TASK_STOP') {
+      remoteTaskHandler.stopPlatformTask(message.requestId)
+      sendResponse({ ok: true })
+      return undefined
+    }
+    if (message.type === 'PLATFORM_TASK_SUBSCRIBE') {
+      sendResponse({ ok: true })
+      return undefined
     }
     // Browser-agent content script messages are handled by browserAgentConnection
     if (message.type === 'BROWSER_ACTION' || message.type === 'CONTENT_READY') {

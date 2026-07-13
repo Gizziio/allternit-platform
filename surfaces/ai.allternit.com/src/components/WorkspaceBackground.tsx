@@ -116,75 +116,34 @@ export function WorkspaceBackground(): React.ReactNode {
           : 'var(--shell-frame-bg)',
       }}
     >
-      {mode !== 'code' && mode !== 'chat' && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: `
-              radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--surface-floating) 52%, transparent) 0%, transparent 58%),
-              linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 38%, transparent) 0%, transparent 32%, color-mix(in srgb, var(--surface-overlay) 24%, transparent) 100%)
-            `,
-          }}
-        />
-      )}
-
+      {/* Subtle grid texture for non-chat modes; kept neutral so the rail and view share the same tone */}
       {mode !== 'chat' && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            opacity: mode === 'code' ? 0.18 : 0.32,
+            opacity: mode === 'code' ? 0.12 : 0.2,
             backgroundImage: `
-              linear-gradient(to right, color-mix(in srgb, var(--ui-border-muted) 38%, transparent) 1px, transparent 1px),
-              linear-gradient(to bottom, color-mix(in srgb, var(--ui-border-muted) 32%, transparent) 1px, transparent 1px)
+              linear-gradient(to right, color-mix(in srgb, var(--ui-border-muted) 30%, transparent) 1px, transparent 1px),
+              linear-gradient(to bottom, color-mix(in srgb, var(--ui-border-muted) 24%, transparent) 1px, transparent 1px)
             `,
             backgroundSize: mode === 'code' ? '32px 32px' : '24px 24px',
-            maskImage: mode === 'code'
-              ? 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)'
-              : 'linear-gradient(180deg, rgba(0,0,0,0.9), var(--surface-panel) 55%, transparent 100%)',
+            maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)',
           }}
         />
       )}
 
-      {mode !== 'code' && mode !== 'chat' && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            opacity: 0.08,
-            backgroundImage: 'radial-gradient(color-mix(in srgb, var(--ui-text-primary) 90%, transparent) 0.7px, transparent 0.7px)',
-            backgroundSize: '8px 8px',
-            mixBlendMode: 'multiply',
-          }}
-        />
-      )}
-
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--surface-floating) 70%, transparent)',
-        }}
-      />
-
+      {/* Very faint vignette to keep the canvas from feeling flat, using neutral shell tones */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
           background: `
-            radial-gradient(circle at center, transparent 0%, color-mix(in srgb, var(--shell-overlay-backdrop) 52%, transparent) 100%),
-            linear-gradient(180deg, color-mix(in srgb, var(--surface-overlay) 10%, transparent) 0%, transparent 18%, color-mix(in srgb, var(--shell-overlay-backdrop) 14%, transparent) 100%)
+            radial-gradient(circle at center, transparent 0%, color-mix(in srgb, var(--shell-overlay-backdrop) 28%, transparent) 100%)
           `,
+          opacity: 0.6,
         }}
       />
-
-      <style>{`
-        @keyframes topoPulse {
-          0% { transform: scale(1) translate(0, 0); opacity: 0.5; }
-          100% { transform: scale(1.2) translate(2%, 2%); opacity: 0.8; }
-        }
-      `}</style>
     </div>
   );
 }

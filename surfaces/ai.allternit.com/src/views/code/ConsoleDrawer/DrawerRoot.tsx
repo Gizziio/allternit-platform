@@ -4,9 +4,10 @@ import { DrawerTabs } from './DrawerTabs';
 import { KanbanBoard } from '../KanbanBoard';
 import { UnifiedTerminal } from '../../../components/workspace/UnifiedTerminal';
 import { LogsView } from '../LogsView';
-import { RunsView } from '../RunsView';
+import { RunInspector } from '../RunInspector';
+import { ArtifactCenter } from '../ArtifactCenter';
 import { ProblemsView } from '../ProblemsView';
-import { OrchestrationView } from '../OrchestrationView';
+import { OrchestratorCenter } from '../OrchestratorCenter';
 import { SchedulerView } from '../SchedulerView';
 import { ContextView } from './ContextView';
 import { ChangeSetReview } from '../../../components/changeset-review/ChangeSetReview';
@@ -20,7 +21,7 @@ import { AutomationHub } from './AutomationHub';
 import { WorkspaceBoardView } from './WorkspaceBoardView';
 import { GanttChartView } from './GanttChartView';
 import { WorkloadPanel } from './WorkloadPanel';
-import { InboxView } from './InboxView';
+import { PeerCollaborationCenter } from '../PeerCollaborationCenter';
 import { AgentRuntimeDashboard } from '../../runtime/AgentRuntimeDashboard';
 import { ToastProvider } from '@/components/ui/toast-provider';
 
@@ -107,9 +108,10 @@ export function DrawerRoot() {
       case 'queue': return <KanbanBoard />;
       case 'changes': return <ChangeSetReview changeSetId="cs-legacy-patchgate" />;
       case 'logs': return <LogsView />;
-      case 'executions': return <RunsView />;
+      case 'executions': return <RunInspector />;
+      case 'artifacts': return <ArtifactCenter />;
       case 'problems': return <ProblemsView />;
-      case 'agents': return <OrchestrationView />;
+      case 'agents': return <OrchestratorCenter />;
       case 'automation': return <AutomationHub />;
       case 'scheduler': return <SchedulerView />;
       case 'context': return <ContextView />;
@@ -122,7 +124,7 @@ export function DrawerRoot() {
       case 'board': return <WorkspaceBoardView />;
       case 'gantt': return <GanttChartView />;
       case 'workload': return <WorkloadPanel />;
-      case 'inbox': return <InboxView />;
+      case 'inbox': return <PeerCollaborationCenter />;
       case 'runtime': return <ToastProvider><AgentRuntimeDashboard /></ToastProvider>;
       default: return null;
     }

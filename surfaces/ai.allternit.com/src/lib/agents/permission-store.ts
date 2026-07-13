@@ -9,7 +9,7 @@
 
 import { create } from 'zustand';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
-import { questionsApi } from './native-agent-api';
+import { nativeAgentApi, questionsApi } from './native-agent-api';
 
 export interface PendingPermissionRequest {
   requestId: string;
@@ -107,6 +107,11 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actionId: requestId, decision }),
       }).catch(() => {});
+    } else {
+      void nativeAgentApi.permissions.replyPermission(requestId, reply).catch(() => {
+        // The request remains recorded in history; the runtime will also clear
+        // it when the originating session is stopped or disconnected.
+      });
     }
   },
 

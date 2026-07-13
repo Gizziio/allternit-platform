@@ -86,12 +86,11 @@ export function BrowserNewTabPage({ onNavigate }: { onNavigate: (url: string) =>
 
   const suggested = useMemo(() => {
     return [
-      { label: "Google", url: "https://www.google.com", icon: "🔍" },
+      { label: "Allternit", url: "https://ai.allternit.com", icon: "A" },
       { label: "GitHub", url: "https://github.com", icon: "🐙" },
-      { label: "YouTube", url: "https://www.youtube.com", icon: "▶️" },
-      { label: "ChatGPT", url: "https://chat.openai.com", icon: "💬" },
-      { label: "Vercel", url: "https://vercel.com", icon: "▲" },
-      { label: "Figma", url: "https://www.figma.com", icon: "🎨" },
+      { label: "OpenClaw", url: "https://openclaw.ai", icon: "🦞" },
+      { label: "Hermes", url: "https://hermes-agent.nousresearch.com", icon: "☤" },
+      { label: "Oh My Pi", url: "https://omp.sh", icon: "⌥" },
     ];
   }, []);
 
@@ -118,6 +117,16 @@ export function BrowserNewTabPage({ onNavigate }: { onNavigate: (url: string) =>
         overflow: "auto",
       }}
     >
+      <motion.div
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 flex flex-col items-center"
+      >
+        <div className="flex size-12 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-xl font-semibold text-[var(--accent-primary)] shadow-sm">A</div>
+        <div className="mt-3 text-lg font-semibold tracking-tight text-[var(--text-primary)]">Allternit Browser</div>
+        <div className="mt-1 text-xs text-[var(--text-muted)]">Browse, automate, and turn repeatable work into skills.</div>
+      </motion.div>
+
       {/* Clock */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -161,7 +170,7 @@ export function BrowserNewTabPage({ onNavigate }: { onNavigate: (url: string) =>
           }}
         >
           <MagnifyingGlass style={{ width: 18, height: 18, color: TEXT.tertiary, flexShrink: 0 }} />
-          <input aria-label="Input" type="text"
+          <input aria-label="Search the web or enter an address" type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search or type a URL"

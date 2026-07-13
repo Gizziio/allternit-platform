@@ -2,7 +2,7 @@ import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 import { Target, ArrowsClockwise, ArrowCounterClockwise } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
-import GoalsView from '@/views/cowork/GoalsView';
+import { GoalControlCenter } from '../GoalControlCenter';
 import RoutinesPanel from '@/views/cowork/RoutinesPanel';
 import LoopMonitor from '@/views/cowork/LoopMonitor';
 
@@ -16,7 +16,7 @@ const TABS: { id: AutomationTab; label: string; icon: React.ReactNode }[] = [
 
 export const AutomationHub: React.FC = () => {
   const isClient = useIsClient();
-  const [activeTab, setActiveTab] = useState<AutomationTab>('routines');
+  const [activeTab, setActiveTab] = useState<AutomationTab>('goals');
 
   if (!isClient) {
     return (
@@ -55,7 +55,7 @@ export const AutomationHub: React.FC = () => {
 
       {/* Tab Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {activeTab === 'goals' && <GoalsView />}
+        {activeTab === 'goals' && <GoalControlCenter />}
         {activeTab === 'routines' && <RoutinesPanel />}
         {activeTab === 'loops' && <LoopMonitor />}
       </div>

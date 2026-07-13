@@ -17,7 +17,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { AllternitOpenUIRenderer } from '@/lib/openui/AllternitOpenUIRenderer';
 import { generatePrompt } from '@openuidev/react-lang';
 import { schemas } from '@/lib/openui/registry';
-import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
 import {
   Palette,
   Eye,
@@ -62,7 +61,6 @@ export function UIForge() {
   });
 
   const systemInstructions = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (generatePrompt as any)(schemas, {
       framework: 'OpenUI Lang',
       instructions: 'You are the UI Forge Architect. Create high-fidelity Allternit dashboards based on user descriptions.',
@@ -133,11 +131,9 @@ export function UIForge() {
         </div>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
           <TabsList className="grid w-full grid-cols-2 bg-black/40 border border-white/5">
-            <ContextWindowCard>
-              <TabsTrigger value="generative" className="flex items-center gap-2">
-                <Sparkle size={14} /> AI Architect
-              </TabsTrigger>
-            </ContextWindowCard>
+            <TabsTrigger value="generative" className="flex items-center gap-2">
+              <Sparkle size={14} /> AI Architect
+            </TabsTrigger>
             <TabsTrigger value="manual" className="flex items-center gap-2">
               <Palette size={14} /> Manual Spec
             </TabsTrigger>

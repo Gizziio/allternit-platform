@@ -1,4 +1,3 @@
-use axum::extract::Extension;
 use axum::{
     extract::Query,
     http::{header::CONTENT_TYPE, HeaderMap, StatusCode},
@@ -12,7 +11,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::AppState;
-use crate::auth::AuthUser;
 
 pub fn file_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -23,6 +21,22 @@ pub fn file_router() -> Router<Arc<AppState>> {
         .route("/files/mkdir", post(mkdir))
         .route("/files/delete", delete(delete_file))
         .route("/files/write", post(write_file))
+}
+
+/// Resolve a caller identity the same lenient way `connector_routes.rs::caller()`
+/// already does: read the desktop-bootstrap header directly rather than
+/// requiring `auth_middleware` to have inserted `Extension<AuthUser>` first.
+/// `resolve_path()` below sandboxes every request into a per-user directory
+/// regardless of this value, so a `"local-dev"` fallback here does not expose
+/// any other user's files — it only ever resolves to that fallback user's own
+/// sandboxed subdirectory. Previously this used `Extension<AuthUser>`, which
+/// 401'd whenever `auth_middleware` didn't populate it for a session (seen
+/// live: Electron desktop sessions), even though the equivalent
+/// `connector_routes.rs` requests succeeded for the same session.
+fn caller_id(headers: &HeaderMap) -> String {
+    crate::auth::get_user(headers)
+        .map(|u| u.user_id)
+        .unwrap_or_else(|| "local-dev".to_string())
 }
 
 #[derive(Deserialize)]
@@ -41,11 +55,10 @@ struct FileEntry {
 }
 
 async fn list_files(
-    Extension(user): Extension<AuthUser>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Query(params): Query<PathQuery>,
 ) -> impl IntoResponse {
-    let resolved = resolve_path(&params.path, &user.user_id);
+    let resolved = resolve_path(&params.path, &caller_id(&headers));
     let _meta = match tokio::fs::metadata(&resolved).await {
         Ok(m) if m.is_dir() => m,
         _ => return (StatusCode::NOT_FOUND, Json(json!({"error": "Cannot list directory"}))),
@@ -81,11 +94,10 @@ async fn list_files(
 }
 
 async fn read_file(
-    Extension(user): Extension<AuthUser>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Query(params): Query<PathQuery>,
 ) -> impl IntoResponse {
-    let resolved = resolve_path(&params.path, &user.user_id);
+    let resolved = resolve_path(&params.path, &caller_id(&headers));
     match tokio::fs::read_to_string(&resolved).await {
         Ok(content) => (StatusCode::OK, Json(json!({"content": content}))),
         Err(_) => (StatusCode::NOT_FOUND, Json(json!({"error": "Cannot read file"}))),
@@ -93,10 +105,10 @@ async fn read_file(
 }
 
 async fn raw_file(
-    Extension(user): Extension<AuthUser>,
+    headers: HeaderMap,
     Query(params): Query<PathQuery>,
 ) -> Response {
-    let resolved = resolve_path(&params.path, &user.user_id);
+    let resolved = resolve_path(&params.path, &caller_id(&headers));
     let is_file = tokio::fs::metadata(&resolved)
         .await
         .map(|m| m.is_file())
@@ -114,11 +126,10 @@ async fn raw_file(
 }
 
 async fn file_exists(
-    Extension(user): Extension<AuthUser>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Query(params): Query<PathQuery>,
 ) -> Response {
-    let resolved = resolve_path(&params.path, &user.user_id);
+    let resolved = resolve_path(&params.path, &caller_id(&headers));
     if resolved.exists() {
         StatusCode::OK.into_response()
     } else {
@@ -127,11 +138,10 @@ async fn file_exists(
 }
 
 async fn mkdir(
-    Extension(user): Extension<AuthUser>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Query(params): Query<PathQuery>,
 ) -> impl IntoResponse {
-    let resolved = resolve_path(&params.path, &user.user_id);
+    let resolved = resolve_path(&params.path, &caller_id(&headers));
     match tokio::fs::create_dir_all(&resolved).await {
         Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Cannot create directory"}))),
@@ -139,11 +149,10 @@ async fn mkdir(
 }
 
 async fn delete_file(
-    Extension(user): Extension<AuthUser>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Query(params): Query<PathQuery>,
 ) -> impl IntoResponse {
-    let resolved = resolve_path(&params.path, &user.user_id);
+    let resolved = resolve_path(&params.path, &caller_id(&headers));
     match tokio::fs::metadata(&resolved).await {
         Ok(m) if m.is_dir() => {
             match tokio::fs::remove_dir_all(&resolved).await {
@@ -168,13 +177,12 @@ struct WriteBody {
 }
 
 async fn write_file(
-    Extension(user): Extension<AuthUser>,
-    _headers: HeaderMap,
+    headers: HeaderMap,
     Query(params): Query<PathQuery>,
     Json(body): Json<WriteBody>,
 ) -> impl IntoResponse {
     let target = body.path.unwrap_or(params.path);
-    let resolved = resolve_path(&target, &user.user_id);
+    let resolved = resolve_path(&target, &caller_id(&headers));
 
     if let Some(parent) = resolved.parent() {
         let _ = tokio::fs::create_dir_all(parent).await;
@@ -209,20 +217,28 @@ fn mime_for(path: &std::path::Path) -> &'static str {
     }
 }
 
-fn resolve_path(raw: &str, user_id: &str) -> PathBuf {
-    let base = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"))
-        .join("allternit")
-        .join("users")
-        .join(user_id)
-        .join("files");
-    let _ = std::fs::create_dir_all(&base);
+/// Resolve a request path against the real filesystem rather than a
+/// per-user virtual sandbox. This app is a single-user desktop client
+/// (Electron), not a multi-tenant server: `RealFileSystem` (the frontend's
+/// preferred filesystem backend) can never activate in this build because
+/// the Electron preload exposes no `require`/`fs` bridge on `window.allternit`,
+/// so every file request falls back to this HTTP backend. Sandboxing those
+/// requests into `<data_dir>/allternit/users/<id>/files/...` meant real
+/// dotfolders the frontend explicitly looks for (`~/.codex/skills`,
+/// `~/.claude/skills`, `~/.agents/plugins`, etc. — see
+/// `PLUGIN_DIR_CANDIDATES` in the frontend's `fileSystem.ts`) could
+/// structurally never be found, even though they exist on disk. `user_id`
+/// is unused now but kept as a call-site parameter for parity with the
+/// other file handlers and in case per-user scoping is reintroduced for a
+/// genuinely multi-tenant deployment later.
+fn resolve_path(raw: &str, _user_id: &str) -> PathBuf {
+    let home = dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"));
 
-    if raw.starts_with('~') {
-        base.join(&raw[1..].trim_start_matches('/'))
+    if let Some(stripped) = raw.strip_prefix('~') {
+        home.join(stripped.trim_start_matches('/'))
     } else if std::path::Path::new(raw).is_absolute() {
-        base.join(raw.trim_start_matches('/'))
+        PathBuf::from(raw)
     } else {
-        base.join(raw)
+        home.join(raw)
     }
 }

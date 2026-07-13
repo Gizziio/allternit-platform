@@ -126,7 +126,7 @@ export function QuizScene({ title, questions, onComplete }: QuizSceneProps) {
                 title={`Question ${idx + 1}`}
                 style={{
                   width: 32, height: 32, borderRadius: 8,
-                  background: correct ? `${STATUS_SUCCESS}20` : a !== null ? `${STATUS_ERROR}20` : 'rgba(255,255,255,0.04)',
+                  background: correct ? `${STATUS_SUCCESS}20` : a !== null ? `${STATUS_ERROR}20` : 'color-mix(in srgb, var(--ui-text-muted) 8%, transparent)',
                   border: `1.5px solid ${correct ? STATUS_SUCCESS : a !== null ? STATUS_ERROR : BORDER_SUBTLE}`,
                   color: correct ? STATUS_SUCCESS : a !== null ? STATUS_ERROR : TEXT_MUTED,
                   fontSize: 12, fontWeight: 700,
@@ -145,13 +145,13 @@ export function QuizScene({ title, questions, onComplete }: QuizSceneProps) {
             onClick={handleReview}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '10px 20px', background: 'rgba(255,255,255,.06)',
+              padding: '10px 20px', background: 'var(--surface-hover)',
               border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 10,
               color: TEXT_PRIMARY, fontWeight: 600, fontSize: 14,
               cursor: 'pointer', transition: 'all .18s',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.1)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,.06)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-active)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
           >
             <Eye size={14} /> Review Answers
           </button>
@@ -294,7 +294,7 @@ export function QuizScene({ title, questions, onComplete }: QuizSceneProps) {
         <div style={{
           height: '100%',
           width: `${((currentQ + (isRevealed ? 1 : 0)) / questions.length) * 100}%`,
-          background: `linear-gradient(90deg, ${ACCENT}, rgba(212,176,140,0.6))`,
+          background: `linear-gradient(90deg, ${ACCENT}, color-mix(in srgb, var(--accent-primary) 60%, transparent))`,
           borderRadius: 2,
           transition: 'width 0.3s ease',
         }} />

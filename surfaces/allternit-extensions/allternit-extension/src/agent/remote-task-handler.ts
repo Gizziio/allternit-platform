@@ -37,6 +37,15 @@ interface RemoteMessage {
   timestamp: number
 }
 
+export interface PlatformTaskState {
+  requestId: string
+  status: AgentStatus
+  task?: string
+  activity?: AgentActivity | null
+  history?: HistoricalEvent[]
+  error?: string
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const NATIVE_HOST_NAME = 'com.allternit.desktop'
@@ -51,6 +60,7 @@ class RemoteTaskHandler {
   private reconnectDelay = RECONNECT_DELAY_MS
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private active = false
+  private platformStateListeners = new Set<(state: PlatformTaskState) => void>()
 
   /** Call once from background to begin managing the remote connection. */
   start(): void {
@@ -72,6 +82,24 @@ class RemoteTaskHandler {
 
   get isConnected(): boolean {
     return this.port !== null
+  }
+
+  requestPlatformTask(task: string, config?: Record<string, unknown>): string {
+    const requestId = crypto.randomUUID()
+    this._send({
+      type: 'platform_task_request',
+      payload: { requestId, task, config: config ?? {} },
+    })
+    return requestId
+  }
+
+  stopPlatformTask(requestId?: string): void {
+    this._send({ type: 'platform_task_stop', payload: { requestId } })
+  }
+
+  onPlatformTaskState(listener: (state: PlatformTaskState) => void): () => void {
+    this.platformStateListeners.add(listener)
+    return () => this.platformStateListeners.delete(listener)
   }
 
   // ── Private ────────────────────────────────────────────────────────────────
@@ -154,6 +182,13 @@ class RemoteTaskHandler {
       case 'ping':
         this._send({ type: 'pong', payload: {} })
         break
+      case 'platform_task_state': {
+        const state = msg.payload as unknown as PlatformTaskState
+        if (state?.requestId) {
+          this.platformStateListeners.forEach((listener) => listener(state))
+        }
+        break
+      }
       default:
         console.warn('[RemoteTaskHandler] Unknown message type:', msg.type)
     }

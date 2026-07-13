@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useCallback } from 'react';
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import {
   HardDrives,
   Cloud,
@@ -101,6 +102,7 @@ interface InfrastructureSettingsProps {
 
 export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ initialTab = 'overview' }) => {
   const { addToast } = useToast();
+  const isClient = useIsClient();
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'connections' | 'environments' | 'nodes'>(initialTab);

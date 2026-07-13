@@ -15,6 +15,10 @@ import { errors } from "@/runtime/server/error"
 import { lazy } from "@/runtime/util/lazy"
 import { Log } from "@/runtime/util/log"
 import { spawn } from "child_process"
+import { Readable, Writable } from "node:stream"
+import { ClientSideConnection, PROTOCOL_VERSION, ndJsonStream } from "@agentclientprotocol/sdk"
+import { PermissionNext } from "@/runtime/tools/guard/permission/next"
+import { Identifier } from "@/shared/id/id"
 
 const log = Log.create({ service: "acp-server-routes" })
 
@@ -35,6 +39,10 @@ interface ActiveConnection {
   createdAt: Date
   lastActivity: Date
   error?: string
+  acp?: ClientSideConnection
+  updates?: unknown[]
+  permissions?: Map<string, { request: any; resolve: (response: any) => void }>
+  permissionSessionId?: string
 }
 
 const connections = new Map<string, ActiveConnection>()
@@ -138,7 +146,7 @@ export const AcpRoutes = lazy(() =>
           connections.set(connectionId, connection)
 
           // Spawn the process
-          const spawnResult = await spawnAcpAgent({
+          const spawnResult = await spawnAcpAgentSdk({
             connectionId,
             connection,
             command,
@@ -345,20 +353,17 @@ export const AcpRoutes = lazy(() =>
           const { prompt } = body
           connection.lastActivity = new Date()
 
-          // Send prompt via stdin
-          if (connection.process?.stdin) {
-            const message = {
-              jsonrpc: "2.0",
-              id: Date.now(),
-              method: "prompt",
-              params: { prompt },
-            }
-            connection.process.stdin.write(JSON.stringify(message) + "\n")
-          }
+          if (!connection.acp || !connection.sessionId) return c.json({ error: "ACP session unavailable" }, 400)
+          connection.updates = []
+          const result = await connection.acp.prompt({
+            sessionId: connection.sessionId,
+            prompt: [{ type: "text", text: prompt }],
+          })
 
           return c.json({
             success: true,
-            message: "Prompt sent",
+            stopReason: result.stopReason,
+            updates: connection.updates,
             sessionId: connection.sessionId,
           })
         } catch (error) {
@@ -366,8 +371,121 @@ export const AcpRoutes = lazy(() =>
           return c.json({ error: "Failed to send prompt" }, 500)
         }
       },
-    ),
+    )
+    .post("/connections/:id/v1/chat/completions", async (c) => {
+      const connection = connections.get(c.req.param("id"))
+      if (!connection?.acp || !connection.sessionId) return c.json({ error: { message: "ACP connection unavailable" } }, 404)
+      const body = await c.req.json().catch(() => ({})) as { messages?: Array<{ role?: string; content?: string }> }
+      const prompt = [...(body.messages ?? [])].reverse().find((message) => message.role === "user")?.content
+      if (!prompt) return c.json({ error: { message: "A user message is required" } }, 400)
+      connection.updates = []
+      const result = await connection.acp.prompt({ sessionId: connection.sessionId, prompt: [{ type: "text", text: prompt }] })
+      const text = (connection.updates ?? []).flatMap((notification: any) => {
+        const update = notification?.update
+        return update?.sessionUpdate === "agent_message_chunk" && update.content?.type === "text" ? [update.content.text] : []
+      }).join("")
+      return c.json({
+        id: `acp-${Date.now()}`,
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model: connection.agentId,
+        choices: [{ index: 0, message: { role: "assistant", content: text }, finish_reason: result.stopReason ?? "stop" }],
+        usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+      })
+    })
+    .get("/connections/:id/permissions", (c) => {
+      const connection = connections.get(c.req.param("id"))
+      if (!connection) return c.json({ error: "Connection not found" }, 404)
+      return c.json({ permissions: [...(connection.permissions ?? new Map()).entries()].map(([id, value]) => ({ id, ...value.request })) })
+    })
+    .post("/connections/:id/permissions/:permissionId", async (c) => {
+      const pending = connections.get(c.req.param("id"))?.permissions?.get(c.req.param("permissionId"))
+      if (!pending) return c.json({ error: "Permission request not found" }, 404)
+      const body = await c.req.json().catch(() => ({})) as { optionId?: string; cancelled?: boolean }
+      pending.resolve({ outcome: body.cancelled || !body.optionId ? { outcome: "cancelled" } : { outcome: "selected", optionId: body.optionId } })
+      connections.get(c.req.param("id"))?.permissions?.delete(c.req.param("permissionId"))
+      return c.json({ success: true })
+    }),
 )
+
+async function spawnAcpAgentSdk({ connectionId, connection, command, args, env, cwd }: {
+  connectionId: string
+  connection: ActiveConnection
+  command: string
+  args: string[]
+  env: Record<string, string>
+  cwd?: string
+}): Promise<{ success: boolean; pid?: number; sessionId?: string; capabilities?: { tools: string[]; prompts: string[]; resources: string[] }; error?: string }> {
+  try {
+    const proc = spawn(command, args, { env: { ...process.env, ...env }, cwd: cwd || process.cwd(), stdio: ["pipe", "pipe", "pipe"] })
+    connection.process = proc
+    connection.updates = []
+    connection.permissions = new Map()
+    connection.permissionSessionId = Identifier.ascending("session")
+    proc.stderr?.on("data", (data: Buffer) => log.warn("acp_agent_stderr", { connectionId, data: data.toString().slice(0, 500) }))
+
+    const stream = ndJsonStream(
+      Writable.toWeb(proc.stdin!) as WritableStream<Uint8Array>,
+      Readable.toWeb(proc.stdout!) as ReadableStream<Uint8Array>,
+    )
+    const client = {
+      async sessionUpdate(params: unknown) { connection.lastActivity = new Date(); connection.updates?.push(params) },
+      async requestPermission(request: any) {
+        const title = String(request.toolCall?.title ?? request.toolCall?.kind ?? "ACP tool")
+        const kind = String(request.toolCall?.kind ?? "tool")
+        const readonly = new Set(["read", "search", "fetch", "list", "inspect"])
+        const ruleset = PermissionNext.fromConfig({ "*": "ask", ...(readonly.has(kind) ? { acp: "allow" } : {}) } as any)
+        try {
+          const requestID = Identifier.ascending("permission")
+          const approval = PermissionNext.ask({
+            id: requestID,
+            sessionID: connection.permissionSessionId!,
+            permission: "acp",
+            patterns: [kind],
+            metadata: { source: "mini-app-acp", connectionId, agentId: connection.agentId, title, toolCall: request.toolCall },
+            always: [kind],
+            ruleset,
+          })
+          const timeout = setTimeout(() => {
+            void PermissionNext.reply({ requestID, reply: "reject", message: "Approval timed out" })
+          }, 120_000)
+          await approval.finally(() => clearTimeout(timeout))
+          const option = request.options?.find((item: any) => item.kind === "allow_once")
+            ?? request.options?.find((item: any) => item.kind === "allow_always")
+            ?? request.options?.find((item: any) => !String(item.kind).includes("reject"))
+          return option ? { outcome: { outcome: "selected" as const, optionId: option.optionId } } : { outcome: { outcome: "cancelled" as const } }
+        } catch {
+          return { outcome: { outcome: "cancelled" as const } }
+        }
+      },
+      async readTextFile() { throw new Error("ACP file reads require an Allternit workspace grant") },
+      async writeTextFile() { throw new Error("ACP file writes require an Allternit workspace grant") },
+    }
+    const acp = new ClientSideConnection(() => client as any, stream)
+    connection.acp = acp
+    const initialized = await acp.initialize({
+      protocolVersion: PROTOCOL_VERSION,
+      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false } },
+      clientInfo: { name: "Allternit", version: "1.0.0" },
+    })
+    const session = await acp.newSession({ cwd: cwd || process.cwd(), mcpServers: [] })
+    connection.sessionId = session.sessionId
+    proc.once("exit", () => { connection.status = "disconnected" })
+    return {
+      success: true,
+      pid: proc.pid || 0,
+      sessionId: session.sessionId,
+      capabilities: {
+        tools: initialized.agentCapabilities?.mcpCapabilities ? ["mcp"] : [],
+        prompts: ["session/prompt"],
+        resources: [],
+      },
+    }
+  } catch (error) {
+    try { connection.process?.kill("SIGTERM") } catch {}
+    return { success: false, error: error instanceof Error ? error.message : String(error) }
+  }
+}
 
 // Spawn helper
 async function spawnAcpAgent({

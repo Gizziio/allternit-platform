@@ -19,6 +19,7 @@ export function LabsView() {
   const {
     activeTab, setActiveTab,
     canvasToken, canvasDomain,
+    autoGenerateLessons, researchNotebookSync,
     notification, showNotification,
     courses, coursesLoading,
     lessons, lessonsLoading, setLessons,
@@ -50,8 +51,17 @@ export function LabsView() {
     return () => window.removeEventListener('allternit:open-labs-research' as any, handler);
   }, [setActiveTab]);
 
+  // Listen for internal tab-switch requests (e.g., empty-state CTAs)
+  useEffect(() => {
+    const handler = (e: CustomEvent<{ tab?: Tab }>) => {
+      if (e.detail?.tab) setActiveTab(e.detail.tab);
+    };
+    window.addEventListener('allternit:labs-set-tab' as any, handler);
+    return () => window.removeEventListener('allternit:labs-set-tab' as any, handler);
+  }, [setActiveTab]);
+
   return (
-    <div className="flex flex-col h-full w-full bg-[var(--surface-canvas)] relative overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-[var(--shell-view-bg)] relative overflow-hidden">
       {/* ── Header ── */}
       <LabsViewHeader 
         activeTab={activeTab} 
@@ -105,6 +115,8 @@ export function LabsView() {
             <LabsSettingsTab
               canvasToken={canvasToken}
               canvasDomain={canvasDomain}
+              autoGenerateLessons={autoGenerateLessons}
+              researchNotebookSync={researchNotebookSync}
               saveConfig={saveConfig}
             />
           )}

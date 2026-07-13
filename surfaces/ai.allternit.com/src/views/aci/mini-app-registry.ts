@@ -54,10 +54,13 @@ export function manifestToMiniApp(
     repo: manifest.repo,
     githubUrl: manifest.githubUrl,
     downloadable: manifest.downloadable,
+    surface: manifest.surface,
+    harness: manifest.harness,
+    lifecycle: manifest.lifecycle,
   };
 }
 
-const SEED_KEY = 'allternit-mini-apps-seeded';
+const SEED_KEY = 'allternit-mini-apps-seeded-v2';
 
 export function seedDefaultMiniApps(): void {
   if (typeof window === 'undefined') return;
@@ -65,33 +68,53 @@ export function seedDefaultMiniApps(): void {
     if (localStorage.getItem(SEED_KEY) === '1') return;
     localStorage.setItem(SEED_KEY, '1');
     const existing = getPinnedMiniApps();
-    if (existing.length > 0) return;
     const defaults: Array<Omit<InstalledMiniApp, 'status' | 'pinnedAt'>> = [
       {
         id: 'openclaw',
         name: 'OpenClaw',
-        description: 'Agent coding runtime and control UI.',
+        description: 'Official OpenClaw personal-agent gateway and control UI.',
         category: 'runtime',
         source: 'builtin',
         url: 'http://localhost:18789',
         sourceUrl: 'http://localhost:18789',
-        repo: 'openclaw-sh/openclaw',
-        githubUrl: 'https://github.com/openclaw-sh/openclaw',
+        repo: 'openclaw/openclaw',
+        githubUrl: 'https://github.com/openclaw/openclaw',
         downloadable: true,
+        surface: { kind: 'embedded-web', url: 'http://127.0.0.1:18789', viewType: 'openclaw' },
+        harness: { transport: 'acp', command: 'openclaw acp', model: 'openclaw' },
       },
       {
         id: 'hermes',
         name: 'Hermes',
-        description: 'Connector and messaging runtime.',
+        description: 'Nous Research self-improving agent and messaging gateway.',
         category: 'connector',
         source: 'builtin',
         url: 'http://localhost:18790',
         sourceUrl: 'http://localhost:18790',
-        repo: 'allternit/hermes',
-        githubUrl: 'https://github.com/allternit/hermes',
+        repo: 'NousResearch/hermes-agent',
+        githubUrl: 'https://github.com/NousResearch/hermes-agent',
         downloadable: true,
+        surface: { kind: 'embedded-web', url: 'http://127.0.0.1:9119', viewType: 'hermes', desktopAction: 'hermes' },
+        harness: { transport: 'http', baseURL: 'http://127.0.0.1:9119/v1', model: 'hermes-agent' },
+      },
+      {
+        id: 'oh-my-pi',
+        name: 'Oh My Pi',
+        description: 'Terminal coding agent with RPC, ACP, browser tools, and subagents.',
+        category: 'runtime',
+        source: 'builtin',
+        url: 'https://omp.sh',
+        sourceUrl: 'https://omp.sh',
+        repo: 'can1357/oh-my-pi',
+        githubUrl: 'https://github.com/can1357/oh-my-pi',
+        downloadable: true,
+        surface: { kind: 'allternit-native', viewType: 'oh-my-pi' },
+        harness: { transport: 'acp', command: 'omp acp', model: 'omp' },
       },
     ];
+    const correctedIds = new Set(defaults.map((app) => app.id));
+    const corrected = existing.filter((app) => !correctedIds.has(app.id));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(corrected));
     for (const app of defaults) pinMiniApp(app);
   } catch {
     // private mode / localStorage unavailable

@@ -108,9 +108,8 @@ export function BrowserExtensionComposer({
   return (
     <div
       style={{
-        padding: "12px 16px",
-        borderTop: "1px solid var(--ui-border-muted)",
-        background: "var(--surface-panel)",
+        padding: 0,
+        background: "transparent",
         position: "relative",
       }}
     >
@@ -146,10 +145,10 @@ export function BrowserExtensionComposer({
           display: "flex",
           alignItems: "flex-end",
           gap: 10,
-          background: "var(--surface-canvas)",
-          border: "1px solid var(--ui-border-default)",
-          borderRadius: RADIUS.lg,
-          padding: "10px 14px",
+          background: `color-mix(in srgb, ${browser.accent} 6%, var(--shell-view-bg))`,
+          border: "1px solid var(--shell-divider)",
+          borderRadius: RADIUS.xl,
+          padding: "9px 10px 9px 12px",
           transition: ANIMATION.fast,
         }}
         onFocus={(e) => {
@@ -159,11 +158,12 @@ export function BrowserExtensionComposer({
         }}
         onBlur={(e) => {
           const target = e.currentTarget;
-          target.style.borderColor = "var(--ui-border-default)";
+          target.style.borderColor = "var(--shell-divider)";
           target.style.boxShadow = "none";
         }}
         tabIndex={-1}
       >
+        <span aria-hidden="true" style={{ alignSelf: "center", color: browser.accent, fontSize: 10, fontWeight: 900, letterSpacing: "-0.04em" }}>A//</span>
         <textarea
           className="focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
           aria-label={placeholder}
@@ -180,7 +180,7 @@ export function BrowserExtensionComposer({
             border: "none",
             fontSize: TYPOGRAPHY.size.sm,
             lineHeight: TYPOGRAPHY.lineHeight.normal,
-            color: "var(--ui-text-primary)",
+            color: "var(--shell-item-fg)",
             fontFamily: TYPOGRAPHY.fontFamily.sans,
             minHeight: 22,
             maxHeight: 120,
@@ -196,7 +196,7 @@ export function BrowserExtensionComposer({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            borderRadius: RADIUS.md,
+            borderRadius: 999,
             border: "none",
             cursor: canSubmit || isRunning ? "pointer" : "default",
             background: isRunning

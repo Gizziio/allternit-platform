@@ -82,6 +82,7 @@ export class DesktopAuthManager {
   private pendingAuth: PendingAuthState | null = null;
   private deferredCallbackUrl: string | null = null;
   private refreshTimer: NodeJS.Timeout | null = null;
+  private refreshInFlight: Promise<void> | null = null;
   private readonly sessionPath = path.join(app.getPath('userData'), 'auth', 'desktop-session.json');
   private readonly accountsPath = path.join(app.getPath('userData'), 'auth', 'desktop-accounts.json');
   private signInResolver: ((session: DesktopAuthSession) => void) | null = null;
@@ -353,6 +354,16 @@ export class DesktopAuthManager {
   }
 
   private async refreshSessionIfNeeded(): Promise<void> {
+    if (this.refreshInFlight) return this.refreshInFlight;
+    this.refreshInFlight = this.performRefreshIfNeeded();
+    try {
+      await this.refreshInFlight;
+    } finally {
+      this.refreshInFlight = null;
+    }
+  }
+
+  private async performRefreshIfNeeded(): Promise<void> {
     if (!this.session) {
       return;
     }
@@ -367,7 +378,7 @@ export class DesktopAuthManager {
       refreshed = await this.refreshSession(this.session.refreshToken);
     } catch (err) {
       const message = (err as Error).message ?? '';
-      if (message.includes('invalid_grant') || message.includes('400')) {
+      if (message.includes('invalid_grant') || message.includes('400') || message.includes('(501)')) {
         log.warn('[Auth] Refresh token expired or revoked — clearing session for re-authentication');
         await this.clearSession();
         await this.clearCurrentAccountFlag();

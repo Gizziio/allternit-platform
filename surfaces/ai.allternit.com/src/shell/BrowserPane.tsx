@@ -92,7 +92,7 @@ export function BrowserPaneWrapper({ children }: { children: React.ReactNode }):
   const { shortcuts, addShortcut, removeShortcut, reorderShortcuts } = useBrowserShortcutsStore();
   const { mode: agentMode, setMode: setAgentMode } = useBrowserAgentStore();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [topOffset, setTopOffset] = useState(108);
+  const [topOffset, setTopOffset] = useState(0);
   const isDragging = useRef(false);
   const dragStartY = useRef(0);
   const dragStartOffset = useRef(0);
@@ -162,11 +162,11 @@ export function BrowserPaneWrapper({ children }: { children: React.ReactNode }):
     const card = wrapperRef.current?.closest('[data-shell-card]') as HTMLElement | null;
     if (!card) return;
     if (hasTabs) {
-      card.style.marginTop = `${topOffset}px`;
-      card.style.height = `calc(100% - ${topOffset}px)`;
-      card.style.background = 'var(--shell-panel-bg)';
-      card.style.border = '1px solid var(--shell-divider)';
-      card.style.boxShadow = 'var(--shadow-xl)';
+      card.style.marginTop = '0';
+      card.style.height = '100%';
+      card.style.background = 'var(--shell-view-bg)';
+      card.style.border = 'none';
+      card.style.boxShadow = 'none';
     } else {
       card.style.marginTop = '0';
       card.style.height = '100%';
@@ -326,7 +326,7 @@ export function BrowserPaneWrapper({ children }: { children: React.ReactNode }):
         </div>
       )}
       <div ref={wrapperRef} className={cn("w-full h-full flex-col bg-[var(--view-browser-bg,#f6f8fc)]", hasTabs ? "flex animate-[browserCardSlideUp_0.3s_ease-out]" : "hidden")}>
-        <div onMouseDown={handleDragStart} className="h-2 shrink-0 cursor-ns-resize flex items-center justify-center">
+        <div onMouseDown={handleDragStart} className="hidden">
           <div className="w-10 h-1 rounded-full bg-[var(--border-subtle)] transition-colors duration-150" onMouseEnter={(e) => { e.currentTarget.style.background = browserTokens.accent; }} onMouseLeave={(e) => { e.currentTarget.style.background = BORDER.subtle; }} />
         </div>
         <div className="flex-1 min-h-0 flex overflow-hidden">{children}</div>

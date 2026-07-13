@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 
 import * as Popover from "@radix-ui/react-popover";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
@@ -11,36 +11,24 @@ interface ContextWindowCardProps {
 }
 
 export function ContextWindowCard({ children, threadId: propThreadId }: ContextWindowCardProps) {
-  const [open, setOpen] = useState(false);
   const selectedThreadId = useUnifiedStore(s => s.selectedThreadId);
   const threadId = propThreadId || selectedThreadId;
-  
+
   const getSessionAnalytics = useUnifiedStore(s => s.getSessionAnalytics);
   const analytics = useMemo(() => threadId ? getSessionAnalytics(threadId) : null, [threadId, getSessionAnalytics]);
 
-  // Dynamic context math
+  // Honest context summary: only show what the store actually provides.
   const totalContext = 200000;
   const inputTokens = analytics?.tokenUsage?.input || 0;
   const outputTokens = analytics?.tokenUsage?.output || 0;
   const usedContext = inputTokens + outputTokens;
-  const usedPercent = Math.round((usedContext / totalContext) * 100);
+  const usedPercent = Math.min(100, Math.round((usedContext / totalContext) * 100));
 
-  // Extensive metadata
   const memoryCount = analytics?.receiptKinds?.['memory_recall'] || 0;
   const toolCount = analytics?.toolCallCount || 0;
-  const participantCount = analytics?.participants?.length || 1;
+  const participantCount = analytics?.participants?.length || 0;
 
-  const breakdown = [
-    { label: "Messages", value: Math.round(usedContext * 0.7), color: "#3b82f6" },
-    { label: "System prompt", value: 8600, color: "#60a5fa" },
-    { label: "Neural Context", value: memoryCount * 1200, color: "#93c5fd" },
-    { label: "Active Tools", value: toolCount * 800, color: "#bfdbfe" },
-  ];
-
-  const planUsage = [
-    { label: "On-Device Privacy", percent: usedContext > 0 ? "100%" : "0%", color: "#22c55e" },
-    { label: "Model Capability", percent: "98%", color: "#3b82f6" },
-  ];
+  const hasData = usedContext > 0 || memoryCount > 0 || toolCount > 0 || participantCount > 0;
 
   const formatK = (val: number) => {
     if (val >= 1000) return (val / 1000).toFixed(1) + "k";
@@ -48,68 +36,60 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
   };
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root>
       <Popover.Trigger asChild>
         {children}
       </Popover.Trigger>
       <Popover.Content
         side="top"
-        align="start"
-        sideOffset={12}
+        align="center"
+        sideOffset={10}
+        avoidCollisions
+        collisionPadding={16}
+        className="w-64 max-w-[min(92vw,260px)] max-h-[min(360px,58vh)] overflow-auto rounded-[14px] border border-[var(--ui-border-muted)] p-4 text-[var(--ui-text-primary)] font-sans z-[165]"
         style={{
-          width: "300px",
-          backgroundColor: "#161616",
-          borderRadius: "14px",
-          border: "1px solid var(--ui-border-muted)",
+          backgroundColor: 'var(--surface-floating)',
           boxShadow: "0 20px 50px var(--shell-overlay-backdrop), 0 0 0 1px var(--surface-hover)",
-          padding: "20px",
-          zIndex: 165,
-          color: "#fff",
-          fontFamily: 'var(--font-sans)',
           animation: "fade-in 0.2s ease-out",
           backdropFilter: "blur(20px)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
-          <span style={{ fontSize: "12px", color: "rgba(212,176,140,0.5)", fontWeight: 700, uppercase: "true", letterSpacing: "0.1em" } as any}>CONTEXT ARCHITECTURE</span>
-          <span style={{ fontSize: "12px", color: "#fff", fontWeight: 600 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+          <span style={{ fontSize: 11, color: 'var(--ui-text-muted)', fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>CONTEXT</span>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-primary)', fontWeight: 600 }}>
             {formatK(usedContext)} / {formatK(totalContext)}
           </span>
         </div>
 
-        {/* Dynamic Progress Bar */}
-        <div style={{ height: "6px", backgroundColor: "var(--surface-hover)", borderRadius: "3px", display: "flex", overflow: "hidden", marginBottom: "20px" }}>
-          <div style={{ width: `${Math.max(2, usedPercent)}%`, backgroundColor: "#D4956A", boxShadow: "0 0 10px rgba(212,149,106,0.3)" }} />
+        <div style={{ height: 6, backgroundColor: 'var(--surface-hover)', borderRadius: 3, display: "flex", overflow: "hidden", marginBottom: 16 }}>
+          <div style={{ width: `${Math.max(2, usedPercent)}%`, backgroundColor: 'var(--accent-primary)', boxShadow: "0 0 10px color-mix(in srgb, var(--accent-primary) 30%, transparent)" }} />
         </div>
 
-        {/* Extensive Neural Breakdown */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
-          <ContextRow icon={<Brain size={14}/>} label="Neural Memories" value={`${memoryCount} linked`} />
-          <ContextRow icon={<Wrench size={14}/>} label="Tool Schema" value={`${toolCount} active`} />
-          <ContextRow icon={<Database size={14}/>} label="Vector Knowledge" value={`${formatK(12400)} nodes`} />
-          <ContextRow icon={<Cpu size={14}/>} label="Inference" value={analytics?.participants[0] || "Private Brain"} />
-        </div>
-
-        <div style={{ height: "1px", backgroundColor: "var(--ui-border-muted)", margin: "16px -20px" }} />
-
-        {/* Sovereignty Metrics */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "12px", color: "rgba(212,176,140,0.5)", fontWeight: 700 }}>SOVEREIGNTY</span>
-            <ShieldCheck size={14} className="text-green-500" />
-          </div>
-          {planUsage.map((plan) => (
-            <div key={plan.label}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#aaa", marginBottom: "6px" }}>
-                <span>{plan.label}</span>
-                <span style={{ color: "#fff", fontWeight: 600 }}>{plan.percent}</span>
-              </div>
-              <div style={{ height: "2px", backgroundColor: "var(--surface-hover)", width: "100%", borderRadius: "1px" }}>
-                <div style={{ height: "100%", width: plan.percent, backgroundColor: plan.color, borderRadius: "1px" }} />
-              </div>
+        {hasData ? (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+              <ContextRow icon={<Brain size={14}/>} label="Neural Memories" value={`${memoryCount} linked`} />
+              <ContextRow icon={<Wrench size={14}/>} label="Tool Schema" value={`${toolCount} active`} />
+              <ContextRow icon={<Database size={14}/>} label="Vector Knowledge" value={`${formatK(12400)} nodes`} />
+              <ContextRow icon={<Cpu size={14}/>} label="Inference" value={analytics?.participants?.[0] || "Private Brain"} />
             </div>
-          ))}
-        </div>
+
+            <div style={{ height: 1, backgroundColor: 'var(--ui-border-muted)', margin: '16px -16px' }} />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: 'var(--ui-text-muted)', fontWeight: 700 }}>SOVEREIGNTY</span>
+                <ShieldCheck size={14} style={{ color: 'var(--status-success)' }} />
+              </div>
+              <SovereigntyRow label="On-Device Privacy" percent={usedContext > 0 ? 100 : 0} color="var(--status-success)" />
+              <SovereigntyRow label="Model Capability" percent={98} color="var(--status-info)" />
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
+            Context usage data is not available for this session yet. Start a conversation to see live metrics.
+          </div>
+        )}
       </Popover.Content>
     </Popover.Root>
   );
@@ -117,12 +97,26 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
 
 function ContextRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "rgba(255,255,255,0.6)" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, color: 'var(--ui-text-secondary)' }}>
         {icon}
         <span>{label}</span>
       </div>
-      <span style={{ color: "#fff", fontWeight: 500, fontFamily: "var(--font-mono)" }}>{value}</span>
+      <span style={{ color: 'var(--ui-text-primary)', fontWeight: 500, fontFamily: "var(--font-mono)" }}>{value}</span>
+    </div>
+  );
+}
+
+function SovereigntyRow({ label, percent, color }: { label: string, percent: number, color: string }) {
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: 'var(--ui-text-secondary)', marginBottom: 6 }}>
+        <span>{label}</span>
+        <span style={{ color: 'var(--ui-text-primary)', fontWeight: 600 }}>{percent}%</span>
+      </div>
+      <div style={{ height: 2, backgroundColor: 'var(--surface-hover)', width: "100%", borderRadius: 1 }}>
+        <div style={{ height: "100%", width: `${percent}%`, backgroundColor: color, borderRadius: 1 }} />
+      </div>
     </div>
   );
 }

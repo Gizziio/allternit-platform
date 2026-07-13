@@ -61,7 +61,7 @@ export function NewProjectScreen({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', background: 'var(--bg-primary)', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', background: 'var(--shell-view-bg)', overflowY: 'auto' }}>
 
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 32px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>

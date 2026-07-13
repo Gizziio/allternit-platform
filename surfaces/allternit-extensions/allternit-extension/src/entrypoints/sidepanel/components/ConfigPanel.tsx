@@ -4,16 +4,12 @@ import {
 	CornerUpLeft,
 	Eye,
 	EyeOff,
-	HatGlasses,
-	Home,
 	Loader2,
-	Scale,
 	Palette,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { siGithub } from 'simple-icons'
 
-import { DEMO_API_KEY, DEMO_BASE_URL, DEMO_MODEL, isTestingEndpoint } from '@/agent/constants'
+import { DEMO_CONFIG } from '@/agent/constants'
 import type { ExtConfig, LanguagePreference } from '@/agent/useAgent'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,12 +23,8 @@ interface ConfigPanelProps {
 }
 
 export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: ConfigPanelProps) {
-	const [apiKey, setApiKey] = useState(config?.apiKey || DEMO_API_KEY)
-	const [baseURL, setBaseURL] = useState(config?.baseURL || DEMO_BASE_URL)
-	const [model, setModel] = useState(config?.model || DEMO_MODEL)
 	const [language, setLanguage] = useState<LanguagePreference>(config?.language)
 	const [maxSteps, setMaxSteps] = useState<number | undefined>(config?.maxSteps)
-	const [systemInstruction, setSystemInstruction] = useState(config?.systemInstruction ?? '')
 	const [experimentalLlmsTxt, setExperimentalLlmsTxt] = useState(
 		config?.experimentalLlmsTxt ?? false
 	)
@@ -41,15 +33,10 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 	const [userAuthToken, setUserAuthToken] = useState<string>('')
 	const [copied, setCopied] = useState(false)
 	const [showToken, setShowToken] = useState(false)
-	const [showApiKey, setShowApiKey] = useState(false)
 
 	useEffect(() => {
-		setApiKey(config?.apiKey || DEMO_API_KEY)
-		setBaseURL(config?.baseURL || DEMO_BASE_URL)
-		setModel(config?.model || DEMO_MODEL)
 		setLanguage(config?.language)
 		setMaxSteps(config?.maxSteps)
-		setSystemInstruction(config?.systemInstruction ?? '')
 		setExperimentalLlmsTxt(config?.experimentalLlmsTxt ?? false)
 	}, [config])
 
@@ -88,13 +75,14 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 	const handleSave = async () => {
 		setSaving(true)
 		try {
+			const llmConfig = config ?? DEMO_CONFIG
 			await onSave({
-				apiKey,
-				baseURL,
-				model,
+				apiKey: llmConfig.apiKey,
+				baseURL: llmConfig.baseURL,
+				model: llmConfig.model,
 				language,
 				maxSteps: maxSteps || undefined,
-				systemInstruction: systemInstruction || undefined,
+				systemInstruction: undefined,
 				experimentalLlmsTxt,
 			})
 		} finally {
@@ -114,6 +102,23 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 				>
 					<CornerUpLeft className="size-3.5" />
 				</Button>
+			</div>
+
+			<div className="flex flex-col gap-2 p-3 bg-muted/50 rounded-md border">
+				<div className="flex items-center justify-between gap-2">
+					<div>
+						<label className="text-xs font-medium text-foreground">Allternit Brain</label>
+						<p className="text-[10px] text-muted-foreground">
+							Connected through the native host and Allternit/Gizzi harness.
+						</p>
+					</div>
+					<span className="text-[10px] rounded-full px-2 py-0.5 bg-background text-muted-foreground border">
+						Managed
+					</span>
+				</div>
+				<p className="text-[10px] text-muted-foreground leading-relaxed">
+					Model credentials and system instructions are owned by the Allternit platform brain. This extension attaches the current tab to that runtime instead of maintaining a separate LLM setup.
+				</p>
 			</div>
 
 			{/* HTML to Figma Section */}
@@ -177,64 +182,6 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 			</div>
 
 			<div className="flex flex-col gap-1.5">
-				<label className="text-xs text-muted-foreground">Base URL</label>
-				<Input
-					placeholder="https://api.openai.com/v1"
-					value={baseURL}
-					onChange={(e) => setBaseURL(e.target.value)}
-					className="text-xs h-8"
-				/>
-			</div>
-
-			{/* Testing API notice */}
-			{isTestingEndpoint(baseURL) && (
-				<div className="p-2.5 rounded-md border border-amber-500/30 bg-amber-500/5 text-[11px] text-muted-foreground leading-relaxed">
-					<Scale className="size-3 inline-block mr-1 -mt-0.5 text-amber-600" />
-					You are using the free testing API. By using this service you agree to the{' '}
-					<a
-						href="https://github.com/alibaba/page-agent/blob/main/docs/terms-and-privacy.md"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="underline hover:text-foreground"
-					>
-						Terms of Use & Privacy Policy
-					</a>
-					. No sensitive data. No guaranteed availability.
-				</div>
-			)}
-
-			<div className="flex flex-col gap-1.5">
-				<label className="text-xs text-muted-foreground">Model</label>
-				<Input
-					placeholder="gpt-5.2"
-					value={model}
-					onChange={(e) => setModel(e.target.value)}
-					className="text-xs h-8"
-				/>
-			</div>
-
-			<div className="flex flex-col gap-1.5">
-				<label className="text-xs text-muted-foreground">API Key</label>
-				<div className="flex gap-2 items-center">
-					<Input
-						type={showApiKey ? 'text' : 'password'}
-						placeholder="sk-..."
-						value={apiKey}
-						onChange={(e) => setApiKey(e.target.value)}
-						className="text-xs h-8"
-					/>
-					<Button
-						variant="outline"
-						size="icon"
-						className="h-8 w-8 shrink-0 cursor-pointer"
-						onClick={() => setShowApiKey(!showApiKey)}
-					>
-						{showApiKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-					</Button>
-				</div>
-			</div>
-
-			<div className="flex flex-col gap-1.5">
 				<label className="text-xs text-muted-foreground">Language</label>
 				<select
 					value={language ?? ''}
@@ -275,17 +222,6 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 						/>
 					</div>
 
-					<div className="flex flex-col gap-1.5">
-						<label className="text-xs text-muted-foreground">System Instruction</label>
-						<textarea
-							placeholder="Additional instructions for the agent..."
-							value={systemInstruction}
-							onChange={(e) => setSystemInstruction(e.target.value)}
-							rows={3}
-							className="text-xs rounded-md border border-input bg-background px-3 py-2 resize-y min-h-[60px]"
-						/>
-					</div>
-
 					<label className="flex items-center justify-between cursor-pointer">
 						<span className="text-xs text-muted-foreground">Experimental llms.txt support</span>
 						<Switch checked={experimentalLlmsTxt} onCheckedChange={setExperimentalLlmsTxt} />
@@ -312,56 +248,13 @@ export function ConfigPanel({ config, onSave, onClose, onOpenHTMLToFigma }: Conf
 					<span>
 						Version <span className="font-mono">v{__VERSION__}</span>
 					</span>
-
-					<a
-						href="https://github.com/alibaba/page-agent"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="flex items-center gap-1 hover:text-foreground"
-					>
-						<svg role="img" viewBox="0 0 24 24" className="size-3 fill-current">
-							<path d={siGithub.path} />
-						</svg>
-						<span>Source Code</span>
-					</a>
+					<span>Allternit extension agent</span>
 				</div>
 
 				<div className="flex flex-col items-end">
-					<a
-						href="https://alibaba.github.io/page-agent/"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="flex items-center gap-1 hover:text-foreground"
-					>
-						<Home className="size-3" />
-						<span>Home Page</span>
-					</a>
-
-					<a
-						href="https://github.com/alibaba/page-agent/blob/main/docs/terms-and-privacy.md"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="flex items-center gap-1 hover:text-foreground"
-					>
-						<HatGlasses className="size-3" />
-						<span>Privacy</span>
-					</a>
+					<span>Native host: com.allternit.desktop</span>
+					<span>Brain: Allternit/Gizzi managed</span>
 				</div>
-			</div>
-
-			{/* attribute */}
-			<div className="text-[10px] text-muted-foreground bg-background fixed bottom-0 w-full flex justify-around">
-				<span className="leading-loose">
-					Built with ♥️ by{' '}
-					<a
-						href="https://github.com/gaomeng1900"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="underline hover:text-foreground"
-					>
-						@Simon
-					</a>
-				</span>
 			</div>
 		</div>
 	)

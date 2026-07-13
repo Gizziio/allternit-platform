@@ -16,8 +16,8 @@ export default function DebugModePage() {
       },
       version: 0,
     }));
-    router.push('/');
-  }, [router]);
+    navigate('/');
+  }, [navigate]);
 
   return (
     <div style={{ background: '#0a0908', color: '#fff', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)' }}>

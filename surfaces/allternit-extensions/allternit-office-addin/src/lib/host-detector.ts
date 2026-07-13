@@ -5,6 +5,14 @@
 
 export type OfficeHostType = 'excel' | 'word' | 'powerpoint' | 'unknown'
 
+export function getOfficeProductTarget(): OfficeHostType {
+  const liveHost = getOfficeHost()
+  if (liveHost !== 'unknown') return liveHost
+  if (typeof window === 'undefined') return 'unknown'
+  const product = new URLSearchParams(window.location.search).get('product')
+  return product === 'word' || product === 'excel' || product === 'powerpoint' ? product : 'unknown'
+}
+
 export function getOfficeHost(): OfficeHostType {
   if (
     typeof Office === 'undefined' ||
@@ -28,7 +36,7 @@ export function isPowerPointHost():  boolean { return getOfficeHost() === 'power
 export function isOfficeHost():      boolean { return getOfficeHost() !== 'unknown' }
 
 export function getOfficeHostDisplayName(): string {
-  switch (getOfficeHost()) {
+  switch (getOfficeProductTarget()) {
     case 'excel':       return 'Excel Workbook'
     case 'word':        return 'Word Document'
     case 'powerpoint':  return 'PowerPoint Presentation'

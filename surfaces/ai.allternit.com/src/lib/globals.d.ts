@@ -75,6 +75,22 @@ declare global {
           bundlePath: string | null;
         }>>;
       };
+      officeAddins?: {
+        getStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
+          product: 'word' | 'excel' | 'powerpoint';
+          hostInstalled: boolean;
+          hostRunning: boolean;
+          health: 'not-installed' | 'installed' | 'update-available' | 'needs-repair' | 'unsupported';
+          installedVersion: string | null;
+          availableVersion: string | null;
+          manifestPath: string | null;
+          installMethod: 'macos-wef' | 'windows-developer' | 'web-guided' | 'unsupported';
+          detail: string;
+        }>>;
+        install: (product: 'word' | 'excel' | 'powerpoint') => Promise<{ ok: boolean; detail: string; requiresHostRestart?: boolean; requiresUserConfirmation?: boolean; manifestPath?: string }>;
+        repair: (product: 'word' | 'excel' | 'powerpoint') => Promise<{ ok: boolean; detail: string; requiresHostRestart?: boolean; requiresUserConfirmation?: boolean; manifestPath?: string }>;
+        remove: (product: 'word' | 'excel' | 'powerpoint') => Promise<{ ok: boolean; detail: string; requiresHostRestart?: boolean; requiresUserConfirmation?: boolean; manifestPath?: string }>;
+      };
       app?: {
         isFirstLaunch?: () => Promise<boolean>;
       };
@@ -83,6 +99,7 @@ declare global {
         start: (id: string) => Promise<{ success: boolean; error?: string }>;
         stop: (id: string) => Promise<{ success: boolean }>;
         getStatus: (id: string) => Promise<{ managed: boolean; running: boolean; port: number | null }>;
+        launchDesktop: (id: string) => Promise<{ success: boolean; error?: string }>;
         onProgress: (handler: (p: { id: string; line: string; type: 'stdout' | 'stderr' | 'info' }) => void) => () => void;
       };
       findInPage?: {

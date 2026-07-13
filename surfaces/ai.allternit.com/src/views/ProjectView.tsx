@@ -30,6 +30,10 @@ import {
 import { useProjectManager } from './project/main/useProjectManager';
 import { ProjectViewHeader } from './project/main/ProjectViewHeader';
 import { ProjectViewOverview } from './project/main/ProjectViewOverview';
+import { useChatStore } from '@/views/chat/ChatStore';
+import { useCoworkStore } from '@/views/cowork/CoworkStore';
+import { useCodeModeStore } from '@/views/code/CodeModeStore';
+import { useMode } from '@/providers/mode-provider';
 
 export function ProjectView(): React.ReactNode {
   const {
@@ -72,11 +76,109 @@ export function ProjectView(): React.ReactNode {
     dispatch,
   } = useProjectManager();
 
-  if (!project) return (
-    <div className="flex h-full items-center justify-center text-[var(--ui-text-muted)] italic text-sm">
-      Select a project to view
-    </div>
-  );
+  const chatStore = useChatStore();
+  const coworkStore = useCoworkStore();
+  const codeStore = useCodeModeStore();
+  const { setMode } = useMode();
+
+  if (!project) {
+    return (
+      <div className="h-full flex flex-col bg-[var(--bg-primary)] overflow-y-auto p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-black tracking-tight text-[var(--shell-item-fg)] font-serif mb-2">Projects</h1>
+          <p className="text-[var(--shell-item-muted)] text-sm">Centralized view of all your projects across Chat, Cowork, and Code.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Chat Projects */}
+          {chatStore.projects.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => {
+                chatStore.setActiveProject(p.id);
+                setMode('chat');
+                dispatch({ type: 'OPEN_VIEW', viewType: 'project' });
+              }}
+              className="group p-5 rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] hover:border-[var(--accent-chat)] cursor-pointer transition-all duration-200 flex flex-col gap-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--accent-chat)_15%,transparent)] text-[var(--accent-chat)] border border-solid border-[var(--accent-chat)]/25">
+                  Chat
+                </span>
+                <span className="text-[11px] text-[var(--shell-item-muted)]">
+                  {p.threadIds?.length || 0} threads
+                </span>
+              </div>
+              <h3 className="font-bold text-base text-[var(--shell-item-fg)] group-hover:text-[var(--accent-chat)] transition-colors">
+                {p.title}
+              </h3>
+            </div>
+          ))}
+
+          {/* Cowork Projects */}
+          {coworkStore.projects.map((p) => (
+            <div
+              key={p.id}
+              onClick={() => {
+                coworkStore.setActiveProject(p.id);
+                setMode('cowork');
+                dispatch({ type: 'OPEN_VIEW', viewType: 'workspace' });
+              }}
+              className="group p-5 rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] hover:border-[var(--accent-cowork)] cursor-pointer transition-all duration-200 flex flex-col gap-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--accent-cowork)_15%,transparent)] text-[var(--accent-cowork)] border border-solid border-[var(--accent-cowork)]/25">
+                  Cowork
+                </span>
+                <span className="text-[11px] text-[var(--shell-item-muted)]">
+                  Active
+                </span>
+              </div>
+              <h3 className="font-bold text-base text-[var(--shell-item-fg)] group-hover:text-[var(--accent-cowork)] transition-colors">
+                {p.title}
+              </h3>
+            </div>
+          ))}
+
+          {/* Code Workspaces */}
+          {codeStore.workspaces.map((ws) => (
+            <div
+              key={ws.workspace_id}
+              onClick={() => {
+                codeStore.setActiveWorkspace(ws.workspace_id);
+                setMode('code');
+                dispatch({ type: 'OPEN_VIEW', viewType: 'code-project' });
+              }}
+              className="group p-5 rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] hover:border-[var(--accent-code)] cursor-pointer transition-all duration-200 flex flex-col gap-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--accent-code)_15%,transparent)] text-[var(--accent-code)] border border-solid border-[var(--accent-code)]/25">
+                  Code
+                </span>
+                <span className="text-[11px] text-[var(--shell-item-muted)]">
+                  Workspace
+                </span>
+              </div>
+              <h3 className="font-bold text-base text-[var(--shell-item-fg)] group-hover:text-[var(--accent-code)] transition-colors">
+                {ws.display_name}
+              </h3>
+            </div>
+          ))}
+
+          {/* Create New Card */}
+          <div
+            onClick={() => {
+              chatStore.createProject('New Project');
+            }}
+            className="p-5 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-transparent hover:border-[var(--accent-primary)] hover:bg-[var(--surface-hover)] cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 min-h-[140px] text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)]"
+          >
+            <Plus size={24} weight="bold" />
+            <span className="font-bold text-sm">New Project</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleBack = () => setActiveProject(null);
   const handleNewChat = () => dispatch({ type: 'OPEN_VIEW', viewType: 'chat' });

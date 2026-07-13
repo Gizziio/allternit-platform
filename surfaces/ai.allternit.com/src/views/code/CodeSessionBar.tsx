@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ArrowBendUpRight, ClockCounterClockwise, GitBranch, WarningCircle } from '@phosphor-icons/react';
 import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
+import { Pill } from '@/components/ui/Pill';
 import {
   getActiveSession,
   getActiveWorkspace,
@@ -15,8 +16,8 @@ const fieldShellStyle: React.CSSProperties = {
   minWidth: 170,
   padding: '10px 12px',
   borderRadius: 16,
-  background: 'rgba(17, 20, 24, 0.26)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
+  background: 'color-mix(in srgb, var(--surface-panel) 72%, transparent)',
+  border: '1px solid var(--ui-border-muted)',
   backdropFilter: 'blur(14px)',
   WebkitBackdropFilter: 'blur(14px)',
 };
@@ -24,8 +25,8 @@ const fieldShellStyle: React.CSSProperties = {
 const selectStyle: React.CSSProperties = {
   maxWidth: '100%',
   padding: '8px 10px',
-  background: 'rgba(9, 12, 14, 0.32)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
+  background: 'color-mix(in srgb, var(--surface-panel-muted) 76%, transparent)',
+  border: '1px solid var(--ui-border-muted)',
   borderRadius: 12,
   color: 'var(--text-primary)',
   fontSize: 12,
@@ -42,23 +43,6 @@ const helperTextStyle: React.CSSProperties = {
   whiteSpace: 'nowrap',
 };
 
-function pillStyle(color: string): React.CSSProperties {
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 5,
-    padding: '6px 10px',
-    borderRadius: 999,
-    background: `${color}18`,
-    border: `1px solid ${color}40`,
-    color,
-    fontSize: 12,
-    fontWeight: 700,
-    letterSpacing: 0.2,
-    whiteSpace: 'nowrap',
-  };
-}
-
 function statChipStyle(): React.CSSProperties {
   return {
     display: 'inline-flex',
@@ -66,8 +50,8 @@ function statChipStyle(): React.CSSProperties {
     gap: 4,
     padding: '4px 8px',
     borderRadius: 999,
-    background: 'rgba(255, 255, 255, 0.05)',
-    border: '1px solid rgba(255, 255, 255, 0.06)',
+    background: 'color-mix(in srgb, var(--surface-hover) 60%, transparent)',
+    border: '1px solid var(--ui-border-muted)',
     color: 'var(--text-tertiary)',
     fontSize: 12,
     fontWeight: 600,
@@ -170,29 +154,39 @@ export function CodeSessionBar() {
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {activeWorkspace && (
-            <span
+            <Pill
               data-testid="code-sessionbar-workspace-pill"
-              style={pillStyle(activeWorkspace.repo_status.dirty ? '#ffb24c' : '#58d68d')}
+              icon={<GitBranch size={12} weight="bold" />}
+              active={activeWorkspace.repo_status.dirty}
+              variant={activeWorkspace.repo_status.dirty ? 'active' : 'outline'}
+              className={activeWorkspace.repo_status.dirty ? 'text-[var(--status-warning)] border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10' : 'text-[var(--status-success)] border-[var(--status-success)]/30 bg-[var(--status-success)]/10'}
             >
-              <GitBranch size={12} weight="bold" />
-              {`${activeWorkspace.repo_status.branch}${activeWorkspace.repo_status.dirty ? 'DIRTY' : 'CLEAN'}`}
-            </span>
+              {`${activeWorkspace.repo_status.branch} ${activeWorkspace.repo_status.dirty ? 'DIRTY' : 'CLEAN'}`}
+            </Pill>
           )}
 
           {activeSession && (
             <ContextWindowCard>
-              <button type="button" style={{ ...pillStyle('#7db8ff'), cursor: 'pointer', outline: 'none' }}>
-                <ClockCounterClockwise size={12} weight="bold" />
+              <Pill
+                data-testid="code-sessionbar-state-pill"
+                icon={<ClockCounterClockwise size={12} weight="bold" />}
+                variant="outline"
+                className="text-[var(--accent-browser)] border-[var(--accent-browser)]/30 bg-[var(--accent-browser)]/10 cursor-pointer"
+              >
                 {`${activeSession.mode}${activeSession.state}`}
-              </button>
+              </Pill>
             </ContextWindowCard>
           )}
 
           {activeSession && activeSession.pending_approvals_count > 0 && (
-            <span data-testid="code-sessionbar-pending-pill" style={pillStyle('var(--status-warning)')}>
-              <WarningCircle size={12} weight="fill" />
+            <Pill
+              data-testid="code-sessionbar-pending-pill"
+              icon={<WarningCircle size={12} weight="fill" />}
+              active
+              className="text-[var(--status-warning)] border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10"
+            >
               {`${activeSession.pending_approvals_count} pending`}
-            </span>
+            </Pill>
           )}
         </div>
 

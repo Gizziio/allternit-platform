@@ -10,6 +10,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useBrowserAgentStore } from './browserAgent.store';
 import { isElectronShell } from '@/lib/platform';
+import type { PageAgentBridgeConfig } from '@/lib/page-agent/config';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -73,6 +74,44 @@ export function useExtensionBridge() {
 
         try {
           switch (message.type) {
+            case 'platform_task_request': {
+              const payload = message.payload as { requestId?: string; task?: string; config?: PageAgentBridgeConfig };
+              if (!payload.requestId || !payload.task) break;
+              const requestId = payload.requestId;
+              const sendState = () => {
+                const state = useBrowserAgentStore.getState();
+                void extension.sendMessage({
+                  type: 'platform_task_state',
+                  payload: {
+                    requestId,
+                    task: payload.task,
+                    status: state.pageAgentStatus,
+                    activity: state.pageAgentActivity,
+                    history: state.pageAgentHistory,
+                  },
+                });
+              };
+              const unsubscribe = useBrowserAgentStore.subscribe(
+                (state) => [state.pageAgentStatus, state.pageAgentActivity, state.pageAgentHistory] as const,
+                sendState,
+              );
+              const monitor = useBrowserAgentStore.subscribe(
+                (state) => state.pageAgentStatus,
+                (status) => {
+                  if (status === 'completed' || status === 'error') {
+                    sendState();
+                    unsubscribe();
+                    monitor();
+                  }
+                },
+              );
+              useBrowserAgentStore.getState().runPageAgentGoal(payload.task, payload.config);
+              sendState();
+              break;
+            }
+            case 'platform_task_stop':
+              useBrowserAgentStore.getState().stopPageAgent();
+              break;
             case 'status':
               // Extension sends status updates
               if (message.payload && typeof message.payload === 'object' && 'status' in message.payload) {

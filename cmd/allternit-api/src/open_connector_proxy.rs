@@ -173,6 +173,12 @@ pub struct ProviderSummary {
     /// `execution.locallyExecutableActionCount` — actions this build can run.
     pub executable_actions: i64,
     pub display_name: String,
+    /// `homepageUrl` from the provider definition — present on all 1,063
+    /// vendored providers (`iconUrl` is defined on the type but never
+    /// actually populated by any provider, so it's not worth carrying here).
+    /// The frontend derives a real logo from this domain via a favicon
+    /// service rather than Allternit hosting/curating per-connector art.
+    pub homepage_url: Option<String>,
 }
 
 /// Sidecar `GET /api/providers`, reduced to a slim per-service map and cached
@@ -214,11 +220,15 @@ pub async fn provider_summaries() -> Result<Arc<HashMap<String, ProviderSummary>
                 .and_then(|v| v.as_str())
                 .unwrap_or(service)
                 .to_string();
+            let homepage_url = p
+                .get("homepageUrl")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             // Expose under the Allternit catalog spelling when one exists.
             let key = allternit_id(service).unwrap_or_else(|| service.to_string());
             map.insert(
                 key,
-                ProviderSummary { auth_types, executable_actions, display_name },
+                ProviderSummary { auth_types, executable_actions, display_name, homepage_url },
             );
         }
     }

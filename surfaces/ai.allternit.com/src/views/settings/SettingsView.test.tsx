@@ -2,25 +2,35 @@ import React from 'react';
 import { describe, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ClerkProvider } from '@clerk/clerk-react';
 import { SettingsView } from './SettingsView';
 
-// Mock Clerk context provider
-vi.mock('@clerk/clerk-react', () => ({
-  ClerkProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  useClerk: () => ({}),
-  useUser: () => ({ user: { firstName: 'Test', lastName: 'User', emailAddresses: [{ emailAddress: 'test@example.com' }] } }),
-  useAuth: () => ({ isSignedIn: true, isLoaded: true }),
+// Mock platform auth so the provider context is satisfied without Clerk
+vi.mock('@/lib/platform-auth-client', () => ({
+  PlatformAuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  usePlatformUser: () => ({
+    isLoaded: true,
+    isSignedIn: true,
+    user: {
+      id: 'user-test',
+      firstName: 'Test',
+      lastName: 'User',
+      emailAddresses: [{ emailAddress: 'test@example.com' }],
+      primaryEmailAddress: { emailAddress: 'test@example.com' },
+    },
+  }),
+  usePlatformSignOut: () => async () => {},
+  usePlatformHardSignOut: () => async () => {},
+  usePlatformSessions: () => ({ sessions: [] }),
+  isPlatformAuthDisabled: () => false,
+  PlatformSignIn: () => <div>Sign In</div>,
 }));
 
 describe('SettingsView', () => {
   it('renders without crashing', () => {
     render(
-      <ClerkProvider publishableKey="pk_test_mock_key">
-        <MemoryRouter>
-          <SettingsView />
-        </MemoryRouter>
-      </ClerkProvider>
+      <MemoryRouter>
+        <SettingsView />
+      </MemoryRouter>
     );
   });
 });

@@ -5,7 +5,8 @@
 // ============================================================================
 
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
+import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 import type {
   BrowserTab,
   BrowserContentType,
@@ -16,7 +17,16 @@ import type {
   A2UIPayload,
   MiniappManifest,
   ProtocolParseResult,
+  BrowserWorkspace,
+  BrowserSplitView,
+  BrowserSplitLayout,
+  BrowserGlanceView,
 } from './browser.types';
+
+export const DEFAULT_BROWSER_WORKSPACE_ID = 'browser-workspace-default';
+const DEFAULT_BROWSER_WORKSPACE: BrowserWorkspace = {
+  id: DEFAULT_BROWSER_WORKSPACE_ID, name: 'Focus', icon: '◎', color: '#7c6df2', createdAt: 0,
+};
 
 // ============================================================================
 // URL Protocol Detection
@@ -168,6 +178,13 @@ interface BrowserStore {
   chatPaneOpen: boolean;
   chatPaneWidth: number;
   recentVisits: RecentVisit[];
+  workspaces: BrowserWorkspace[];
+  activeWorkspaceId: string;
+  compactMode: boolean;
+  verticalTabs: boolean;
+  tabSidebarCollapsed: boolean;
+  splitViews: Record<string, BrowserSplitView>;
+  glanceViews: Record<string, BrowserGlanceView>;
   // Per-tab navigation history: tabId -> array of URLs
   tabHistory: Record<string, string[]>;
   tabHistoryIndex: Record<string, number>;
@@ -183,6 +200,25 @@ interface BrowserStore {
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTab: (id: string, updates: Partial<BrowserTab>) => void;
+  addWorkspace: (name?: string) => string;
+  updateWorkspace: (id: string, updates: Partial<Pick<BrowserWorkspace, 'name' | 'icon' | 'color' | 'agentId' | 'skillIds' | 'miniappIds' | 'extensionIds' | 'defaultUrl'>>) => void;
+  duplicateWorkspace: (id: string) => string | null;
+  reorderWorkspace: (id: string, direction: -1 | 1) => void;
+  removeWorkspace: (id: string) => void;
+  setActiveWorkspace: (id: string) => void;
+  moveTabToWorkspace: (tabId: string, workspaceId: string) => void;
+  toggleEssential: (tabId: string) => void;
+  toggleCompactMode: () => void;
+  toggleVerticalTabs: () => void;
+  toggleTabSidebar: () => void;
+  addTabToSplit: (tabId: string) => void;
+  removeTabFromSplit: (tabId: string) => void;
+  setSplitLayout: (layout: BrowserSplitLayout) => void;
+  closeSplitView: () => void;
+  openGlance: (url: string, title?: string, sourceTabId?: string) => void;
+  closeGlance: () => void;
+  expandGlance: () => string | null;
+  splitGlance: () => string | null;
 
   // Navigation
   goBack: (tabId: string) => void;
@@ -230,7 +266,7 @@ interface BrowserStore {
 // ============================================================================
 
 export const useBrowserStore = create<BrowserStore>()(
-  devtools(
+  devtools(persist(
     (set, get) => ({
       // Initial State
       tabs: [],
@@ -240,13 +276,20 @@ export const useBrowserStore = create<BrowserStore>()(
       chatPaneOpen: true,
       chatPaneWidth: BROWSER_CHAT_PANE_DEFAULT_WIDTH,
       recentVisits: [],
+      workspaces: [DEFAULT_BROWSER_WORKSPACE],
+      activeWorkspaceId: DEFAULT_BROWSER_WORKSPACE_ID,
+      compactMode: false,
+      verticalTabs: true,
+      tabSidebarCollapsed: false,
+      splitViews: {},
+      glanceViews: {},
       tabHistory: {},
       tabHistoryIndex: {},
       tabLoading: {},
 
       // Tab Management
       addTab: (input: string, title?: string) => {
-        const newTab = createWebTab(input, title);
+        const newTab = { ...createWebTab(input, title), workspaceId: get().activeWorkspaceId };
         // Track visit
         get().addRecentVisit(newTab.url, title || newTab.url);
         set((state) => ({
@@ -260,6 +303,7 @@ export const useBrowserStore = create<BrowserStore>()(
       },
 
       addCustomTab: (tab: BrowserTab) => {
+        tab = { ...tab, workspaceId: tab.workspaceId || get().activeWorkspaceId };
         set((state) => ({
           tabs: [...state.tabs.map((t) => ({ ...t, isActive: false })), { ...tab, isActive: true }],
           activeTabId: tab.id,
@@ -268,7 +312,7 @@ export const useBrowserStore = create<BrowserStore>()(
       },
 
       addA2UITab: (payload: A2UIPayload, title?: string, source?: string) => {
-        const newTab = createA2UITab(payload, title, source);
+        const newTab = { ...createA2UITab(payload, title, source), workspaceId: get().activeWorkspaceId };
         set((state) => ({
           tabs: [...state.tabs.map((t) => ({ ...t, isActive: false })), newTab],
           activeTabId: newTab.id,
@@ -277,7 +321,7 @@ export const useBrowserStore = create<BrowserStore>()(
       },
 
       addMiniappTab: (manifest: MiniappManifest, capsuleId: string, entryPoint?: string) => {
-        const newTab = createMiniappTab(manifest, capsuleId, entryPoint);
+        const newTab = { ...createMiniappTab(manifest, capsuleId, entryPoint), workspaceId: get().activeWorkspaceId };
         set((state) => ({
           tabs: [...state.tabs.map((t) => ({ ...t, isActive: false })), newTab],
           activeTabId: newTab.id,
@@ -286,7 +330,7 @@ export const useBrowserStore = create<BrowserStore>()(
       },
 
       addComponentTab: (componentId: string, title?: string, props?: Record<string, unknown>) => {
-        const newTab = createComponentTab(componentId, title, props);
+        const newTab = { ...createComponentTab(componentId, title, props), workspaceId: get().activeWorkspaceId };
         set((state) => ({
           tabs: [...state.tabs.map((t) => ({ ...t, isActive: false })), newTab],
           activeTabId: newTab.id,
@@ -311,7 +355,8 @@ export const useBrowserStore = create<BrowserStore>()(
             }
           }
 
-          return { tabs: newTabs, activeTabId: newActiveId };
+          const splitViews = Object.fromEntries(Object.entries(state.splitViews).map(([workspaceId, split]) => [workspaceId, { ...split, tabIds: split.tabIds.filter((tabId) => tabId !== id) }]).filter(([, split]) => (split as BrowserSplitView).tabIds.length > 1));
+          return { tabs: newTabs, activeTabId: newActiveId, splitViews };
         });
       },
 
@@ -326,6 +371,103 @@ export const useBrowserStore = create<BrowserStore>()(
         set((state) => ({
           tabs: state.tabs.map((t) => (t.id === id ? { ...t, ...updates } as BrowserTab : t)),
         }));
+      },
+
+      addWorkspace: (name = 'Workspace') => {
+        const id = `browser-workspace-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const workspace: BrowserWorkspace = { id, name, icon: '◇', color: '#4f9cf9', createdAt: Date.now() };
+        set((state) => ({ workspaces: [...state.workspaces, workspace], activeWorkspaceId: id, tabs: state.tabs.map((tab) => ({ ...tab, isActive: false })), activeTabId: null }));
+        return id;
+      },
+      updateWorkspace: (id, updates) => set((state) => ({ workspaces: state.workspaces.map((workspace) => workspace.id === id ? { ...workspace, ...updates } : workspace) })),
+      duplicateWorkspace: (id) => {
+        const source = get().workspaces.find((workspace) => workspace.id === id);
+        if (!source) return null;
+        const duplicateId = `browser-workspace-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const duplicate: BrowserWorkspace = { ...source, id: duplicateId, name: `${source.name} Copy`, createdAt: Date.now() };
+        set((state) => ({ workspaces: [...state.workspaces, duplicate], activeWorkspaceId: duplicateId, activeTabId: null, tabs: state.tabs.map((tab) => ({ ...tab, isActive: false })) }));
+        return duplicateId;
+      },
+      reorderWorkspace: (id, direction) => set((state) => {
+        const index = state.workspaces.findIndex((workspace) => workspace.id === id);
+        const target = index + direction;
+        if (index < 0 || target < 0 || target >= state.workspaces.length) return state;
+        const workspaces = [...state.workspaces];
+        [workspaces[index], workspaces[target]] = [workspaces[target], workspaces[index]];
+        return { workspaces };
+      }),
+      removeWorkspace: (id) => set((state) => {
+        if (state.workspaces.length === 1) return state;
+        const workspaces = state.workspaces.filter((workspace) => workspace.id !== id);
+        const activeWorkspaceId = state.activeWorkspaceId === id ? workspaces[0].id : state.activeWorkspaceId;
+        const tabs = state.tabs.map((tab) => tab.workspaceId === id ? { ...tab, workspaceId: activeWorkspaceId, isActive: false } : tab);
+        return { workspaces, activeWorkspaceId, tabs, activeTabId: null };
+      }),
+      setActiveWorkspace: (id) => set((state) => {
+        const workspace = state.workspaces.find((item) => item.id === id);
+        if (!workspace) return state;
+        let candidate = state.tabs.find((tab) => tab.workspaceId === id || tab.essential);
+        let tabs = state.tabs;
+        if (!candidate && workspace.defaultUrl) {
+          candidate = { ...createWebTab(workspace.defaultUrl), workspaceId: id, isActive: true };
+          tabs = [...tabs, candidate];
+        }
+        return { activeWorkspaceId: id, activeTabId: candidate?.id ?? null, tabs: tabs.map((tab) => ({ ...tab, isActive: tab.id === candidate?.id })) };
+      }),
+      moveTabToWorkspace: (tabId, workspaceId) => set((state) => ({ tabs: state.tabs.map((tab) => tab.id === tabId ? { ...tab, workspaceId, essential: false } : tab) })),
+      toggleEssential: (tabId) => set((state) => ({ tabs: state.tabs.map((tab) => tab.id === tabId ? { ...tab, essential: !tab.essential } : tab) })),
+      toggleCompactMode: () => set((state) => ({ compactMode: !state.compactMode })),
+      toggleVerticalTabs: () => set((state) => ({ verticalTabs: !state.verticalTabs })),
+      toggleTabSidebar: () => set((state) => ({ tabSidebarCollapsed: !state.tabSidebarCollapsed })),
+      addTabToSplit: (tabId) => set((state) => {
+        const tab = state.tabs.find((item) => item.id === tabId);
+        if (!tab || (!tab.essential && tab.workspaceId !== state.activeWorkspaceId)) return state;
+        const existing = state.splitViews[state.activeWorkspaceId];
+        const seed = existing?.tabIds.length ? existing.tabIds : (state.activeTabId ? [state.activeTabId] : []);
+        const tabIds = Array.from(new Set([...seed, tabId])).slice(0, 4);
+        if (tabIds.length < 2) return state;
+        return { splitViews: { ...state.splitViews, [state.activeWorkspaceId]: { workspaceId: state.activeWorkspaceId, tabIds, layout: existing?.layout || 'horizontal' } } };
+      }),
+      removeTabFromSplit: (tabId) => set((state) => {
+        const existing = state.splitViews[state.activeWorkspaceId];
+        if (!existing) return state;
+        const tabIds = existing.tabIds.filter((id) => id !== tabId);
+        const splitViews = { ...state.splitViews };
+        if (tabIds.length < 2) delete splitViews[state.activeWorkspaceId];
+        else splitViews[state.activeWorkspaceId] = { ...existing, tabIds };
+        return { splitViews };
+      }),
+      setSplitLayout: (layout) => set((state) => {
+        const existing = state.splitViews[state.activeWorkspaceId];
+        return existing ? { splitViews: { ...state.splitViews, [state.activeWorkspaceId]: { ...existing, layout } } } : state;
+      }),
+      closeSplitView: () => set((state) => {
+        const splitViews = { ...state.splitViews };
+        delete splitViews[state.activeWorkspaceId];
+        return { splitViews };
+      }),
+      openGlance: (url, title = url, sourceTabId) => set((state) => ({ glanceViews: { ...state.glanceViews, [state.activeWorkspaceId]: { workspaceId: state.activeWorkspaceId, url: parseBrowserInput(url).resource, title, sourceTabId } } })),
+      closeGlance: () => set((state) => {
+        const glanceViews = { ...state.glanceViews };
+        delete glanceViews[state.activeWorkspaceId];
+        return { glanceViews };
+      }),
+      expandGlance: () => {
+        const glance = get().glanceViews[get().activeWorkspaceId];
+        if (!glance) return null;
+        const tabId = get().addTab(glance.url, glance.title);
+        get().closeGlance();
+        return tabId;
+      },
+      splitGlance: () => {
+        const glance = get().glanceViews[get().activeWorkspaceId];
+        if (!glance) return null;
+        const sourceTabId = glance.sourceTabId || get().activeTabId;
+        const tabId = get().addTab(glance.url, glance.title);
+        if (sourceTabId) get().setActiveTab(sourceTabId);
+        get().addTabToSplit(tabId);
+        get().closeGlance();
+        return tabId;
       },
 
       // Navigation
@@ -407,7 +549,7 @@ export const useBrowserStore = create<BrowserStore>()(
 
       // Bulk Operations
       closeAllTabs: () => {
-        set({ tabs: [], activeTabId: null });
+        set({ tabs: [], activeTabId: null, splitViews: {} });
       },
 
       closeOtherTabs: (keepId: string) => {
@@ -493,6 +635,7 @@ export const useBrowserStore = create<BrowserStore>()(
           default:
             return;
         }
+        newTab = { ...newTab, workspaceId: tab.workspaceId || get().activeWorkspaceId, essential: tab.essential };
 
         set((state) => {
           const index = state.tabs.findIndex((t) => t.id === id);
@@ -531,6 +674,18 @@ export const useBrowserStore = create<BrowserStore>()(
 
       getTabsByType: (type: BrowserContentType) => {
         return get().tabs.filter((t) => t.contentType === type);
+      },
+    }), {
+      name: 'allternit-browser-session', version: 1,
+      storage: createBrowserJSONStorage(),
+      partialize: (state) => ({ tabs: state.tabs, activeTabId: state.activeTabId, workspaces: state.workspaces, activeWorkspaceId: state.activeWorkspaceId, compactMode: state.compactMode, verticalTabs: state.verticalTabs, tabSidebarCollapsed: state.tabSidebarCollapsed, splitViews: state.splitViews, tabHistory: state.tabHistory, tabHistoryIndex: state.tabHistoryIndex, recentVisits: state.recentVisits, chatPaneOpen: state.chatPaneOpen, chatPaneWidth: state.chatPaneWidth }),
+      merge: (persisted, current) => {
+        const saved = (persisted || {}) as Partial<BrowserStore>;
+        const workspaces = saved.workspaces?.length ? saved.workspaces : [DEFAULT_BROWSER_WORKSPACE];
+        const activeWorkspaceId = workspaces.some((workspace) => workspace.id === saved.activeWorkspaceId) ? saved.activeWorkspaceId! : workspaces[0].id;
+        const tabs = (saved.tabs || current.tabs).map((tab) => ({ ...tab, workspaceId: tab.workspaceId || activeWorkspaceId }));
+        const splitViews = Object.fromEntries(Object.entries(saved.splitViews || {}).map(([id, split]) => [id, { ...split, tabIds: split.tabIds.filter((tabId) => tabs.some((tab) => tab.id === tabId)).slice(0, 4) }]).filter(([, split]) => (split as BrowserSplitView).tabIds.length > 1));
+        return { ...current, ...saved, workspaces, activeWorkspaceId, tabs, splitViews };
       },
     }),
     { name: 'browser-store' }

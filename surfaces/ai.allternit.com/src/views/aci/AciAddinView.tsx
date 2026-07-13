@@ -21,8 +21,9 @@ import type { ViewContext } from '@/nav/nav.types';
 import { usePlatformAuth, usePlatformUser } from '@/lib/platform-auth-client';
 import { useWorkspaceStore } from '@/stores/workspace.store';
 import { useChatStore } from '@/views/chat/ChatStore';
-import { openOfficeDesktopApp, openOfficeWebInBrowser } from './open-office-web';
+import { openOfficeDesktopApp, openOfficeWebInBrowser, startOfficeWebDeveloperSetup } from './open-office-web';
 import { openInBrowser } from '@/lib/openInBrowser';
+import { recordDocumentWorkflowIntent } from '@/views/documents/document-workflows';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -90,6 +91,15 @@ const ADDIN_DIR = 'surfaces/allternit-extensions/allternit-office-addin';
 type ProbeStatus = 'idle' | 'checking' | 'running' | 'offline';
 type GatewayBindingStatus = 'idle' | 'checking' | 'connected' | 'empty' | 'error';
 type BootstrapAckState = 'idle' | 'pending' | 'acknowledged' | 'timed-out';
+type OfficeAddinHealth = 'not-installed' | 'installed' | 'update-available' | 'needs-repair' | 'unsupported';
+
+interface OfficeAddinStatus {
+  health: OfficeAddinHealth;
+  installedVersion: string | null;
+  availableVersion: string | null;
+  manifestPath: string | null;
+  detail: string;
+}
 
 interface AddinRuntimeState {
   host: string;
@@ -166,12 +176,14 @@ async function probeGatewayBinding(host: OfficeHost, token: string | null): Prom
 }
 
 function buildTaskpaneUrl(origin: string, context: {
+  product: OfficeHost;
   workspaceId: string | null;
   projectId: string | null;
   projectName: string | null;
   platformOrigin: string;
 }) {
   const url = new URL('/src/taskpane/index.html', origin)
+  url.searchParams.set('product', context.product)
   if (context.workspaceId) url.searchParams.set('workspaceId', context.workspaceId)
   if (context.projectId) url.searchParams.set('projectId', context.projectId)
   if (context.projectName) url.searchParams.set('projectName', context.projectName)
@@ -199,6 +211,9 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
   const [iframeAcknowledged, setIframeAcknowledged] = useState(false);
   const [bootstrapAckState, setBootstrapAckState] = useState<BootstrapAckState>('idle');
   const [runtimeState, setRuntimeState] = useState<AddinRuntimeState | null>(null);
+  const [addinStatus, setAddinStatus] = useState<OfficeAddinStatus | null>(null);
+  const [setupBusy, setSetupBusy] = useState(false);
+  const [setupMessage, setSetupMessage] = useState<string | null>(null);
 
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const activeProjectId = useChatStore((s) => s.activeProjectId);
@@ -208,6 +223,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
 
   const taskpaneUrl = useMemo(
     () => buildTaskpaneUrl(resolvedOrigin, {
+      product: host,
       workspaceId: contextWorkspaceId,
       projectId: contextProjectId,
       projectName: contextProjectName,
@@ -215,7 +231,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
     }),
     [resolvedOrigin, contextWorkspaceId, contextProjectId, contextProjectName],
   );
-  const manifestUrl = useMemo(() => `${resolvedOrigin}/manifest.xml`, [resolvedOrigin]);
+  const manifestUrl = useMemo(() => `${resolvedOrigin}/manifests/${host}.xml`, [host, resolvedOrigin]);
   const startCommand = useMemo(() => `cd ${ADDIN_DIR}\n${devScript}`, [devScript]);
   const bootstrapPayload = useMemo<OfficeBootstrapPayload>(() => ({
     source: 'allternit-shell',
@@ -355,6 +371,38 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
     };
   }, [host]);
 
+  const refreshAddinStatus = useCallback(async () => {
+    if (!window.allternit?.officeAddins?.getStatus) {
+      setAddinStatus(null);
+      return;
+    }
+    const statuses = await window.allternit.officeAddins.getStatus().catch(() => null);
+    setAddinStatus(statuses?.[host] ?? null);
+  }, [host]);
+
+  useEffect(() => {
+    void refreshAddinStatus();
+  }, [refreshAddinStatus]);
+
+  const runSetupAction = useCallback(async (action: 'install' | 'repair' | 'remove') => {
+    const api = window.allternit?.officeAddins;
+    if (!api) {
+      setSetupMessage('Open Allternit Desktop to manage the developer add-in.');
+      return;
+    }
+    setSetupBusy(true);
+    setSetupMessage(null);
+    try {
+      const result = await api[action](host);
+      setSetupMessage(result.detail);
+      await refreshAddinStatus();
+    } catch (error) {
+      setSetupMessage(error instanceof Error ? error.message : 'Office setup failed.');
+    } finally {
+      setSetupBusy(false);
+    }
+  }, [host, refreshAddinStatus]);
+
   // Auto-refresh gateway binding every 10 seconds when connected
   useEffect(() => {
     if (gatewayStatus !== 'connected' && gatewayStatus !== 'empty') return;
@@ -379,6 +427,20 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
         postBootstrapToIframe();
         return;
       }
+      if (event.data?.type === 'steer-agent' && typeof event.data?.payload?.instruction === 'string') {
+        recordDocumentWorkflowIntent(host, event.data.payload.instruction);
+        window.dispatchEvent(new CustomEvent('allternit:open-view', {
+          detail: {
+            viewType: 'chat',
+            context: {
+              initialPrompt: event.data.payload.instruction,
+              officeHost: host,
+              officeBindingId: event.data.payload.bindingId ?? gatewayBinding?.id ?? null,
+            },
+          },
+        }));
+        return;
+      }
       if (event.data?.payload && typeof event.data.payload === 'object') {
         setIframeAcknowledged(true);
         setBootstrapAckState('acknowledged');
@@ -397,7 +459,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
     }
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [postBootstrapToIframe]);
+  }, [gatewayBinding?.id, host, postBootstrapToIframe]);
 
   const handleDesktop = () => {
     openOfficeDesktopApp(host);
@@ -468,6 +530,39 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
         {/* Left panel — setup / launch */}
         <div className="flex w-72 shrink-0 flex-col gap-5 overflow-y-auto border-r border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5">
 
+          <section>
+            <div className="mb-2.5 flex items-center justify-between">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Developer integration</p>
+              <span className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                addinStatus?.health === 'installed' ? 'bg-green-500/10 text-green-500' :
+                  addinStatus?.health === 'update-available' ? 'bg-blue-500/10 text-blue-500' :
+                    'bg-amber-500/10 text-amber-500',
+              )}>
+                {addinStatus?.health === 'installed' ? 'Installed' : addinStatus?.health === 'update-available' ? 'Update available' : addinStatus?.health === 'needs-repair' ? 'Repair needed' : addinStatus?.health === 'unsupported' ? 'Web setup' : 'Not installed'}
+              </span>
+            </div>
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3">
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                {addinStatus?.detail ?? 'Allternit Desktop installs and verifies this product independently.'}
+              </p>
+              {addinStatus?.availableVersion && <p className="mt-1 text-[10px] text-[var(--text-tertiary)]">Available {addinStatus.availableVersion}{addinStatus.installedVersion ? ` · Installed ${addinStatus.installedVersion}` : ''}</p>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {addinStatus?.health === 'installed' ? (
+                  <>
+                    <button type="button" disabled={setupBusy} onClick={() => void runSetupAction('repair')} className="rounded-lg border border-[var(--border-subtle)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:border-[var(--border-strong)] disabled:opacity-50">Verify & repair</button>
+                    <button type="button" disabled={setupBusy} onClick={() => void runSetupAction('remove')} className="rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50">Remove</button>
+                  </>
+                ) : (
+                  <button type="button" disabled={setupBusy || addinStatus?.health === 'unsupported'} onClick={() => void runSetupAction(addinStatus?.health === 'needs-repair' ? 'repair' : 'install')} className="rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50" style={{ background: color }}>
+                    {setupBusy ? 'Working…' : addinStatus?.health === 'update-available' ? 'Update' : addinStatus?.health === 'needs-repair' ? 'Repair' : `Install for ${label}`}
+                  </button>
+                )}
+              </div>
+              {setupMessage && <p className="mt-2 text-[11px] leading-relaxed text-[var(--text-tertiary)]">{setupMessage}</p>}
+            </div>
+          </section>
+
           {/* Launch */}
           <section>
             <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
@@ -496,6 +591,15 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
                 <Globe size={13} />
                 Open {label} In Browser Mode
                 <ArrowSquareOut size={10} className="ml-auto" />
+              </button>
+              <button type="button"
+                onClick={() => {
+                  const opened = startOfficeWebDeveloperSetup(host);
+                  setSetupMessage(opened ? `Opened ${label} on the web and prepared a verified setup task in Computer Agent.` : 'Open this from Allternit Desktop to use guided web setup.');
+                }}
+                className="flex items-center gap-2 rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--bg-primary)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+              >
+                <PlugsConnected size={13} /> Set up web developer add-in
               </button>
             </div>
           </section>
@@ -621,14 +725,16 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
             </div>
           </section>
 
-          {/* Manifest */}
-          <section>
+          {/* Advanced developer diagnostics */}
+          <details className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3">
+            <summary className="cursor-pointer text-[12px] font-semibold text-[var(--text-secondary)]">Advanced diagnostics</summary>
+          <section className="mt-3">
             <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
               Sideload manifest
             </p>
             <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 text-xs text-[var(--text-secondary)]">
               <p className="mb-2 leading-relaxed">
-                To install the add-in, sideload this manifest in {label}:
+                Host-specific manifest for troubleshooting:
               </p>
               <div className="mb-2 flex items-center gap-1 rounded border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-2 py-1">
                 <code className="flex-1 truncate font-mono text-[12px] text-[var(--text-tertiary)]">
@@ -642,7 +748,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
                 </button>
               </div>
               <p className="text-[12px] text-[var(--text-tertiary)]">
-                Requires the add-in server to be running locally.
+                Normal installation is handled above. Manual sideloading is only a recovery path.
               </p>
               <div className="mt-2 flex gap-2">
                 <button type="button"
@@ -694,6 +800,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
               </div>
             </section>
           )}
+          </details>
         </div>
 
         {/* Right panel — live task pane */}

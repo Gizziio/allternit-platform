@@ -200,6 +200,13 @@ const shellAPI = {
   showOpen: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-open', options),
 };
 
+const officeAddinsAPI = {
+  getStatus: () => ipcRenderer.invoke('office-addins:get-status'),
+  install: (product: 'word' | 'excel' | 'powerpoint') => ipcRenderer.invoke('office-addins:install', product),
+  repair: (product: 'word' | 'excel' | 'powerpoint') => ipcRenderer.invoke('office-addins:repair', product),
+  remove: (product: 'word' | 'excel' | 'powerpoint') => ipcRenderer.invoke('office-addins:remove', product),
+};
+
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
 const themeAPI = {
@@ -406,6 +413,8 @@ const miniAppsAPI = {
     ipcRenderer.invoke('miniApps:stop', id),
   getStatus: (id: string): Promise<MiniAppStatus> =>
     ipcRenderer.invoke('miniApps:getStatus', id),
+  launchDesktop: (id: string): Promise<MiniAppInstallResult> =>
+    ipcRenderer.invoke('miniApps:launchDesktop', id),
   onProgress: (handler: (p: MiniAppInstallProgress) => void): (() => void) => {
     const listener = (_: IpcRendererEvent, p: MiniAppInstallProgress) => handler(p);
     ipcRenderer.on('miniApps:install-progress', listener);
@@ -451,6 +460,7 @@ const allternitDesktopAPI = {
   app: appAPI,
   auth: authAPI,
   shell: shellAPI,
+  officeAddins: officeAddinsAPI,
   theme: themeAPI,
   extension: extensionAPI,
   tunnel: tunnelAPI,

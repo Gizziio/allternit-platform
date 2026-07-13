@@ -2,9 +2,17 @@
  * UI Forge Component Tests
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { UIForge } from './UIForge';
+
+vi.mock('@openuidev/react-lang', () => ({
+  generatePrompt: () => 'mocked system instructions',
+}));
+vi.mock('@/lib/openui/registry', () => ({
+  schemas: {},
+}));
 
 global.fetch = vi.fn();
 

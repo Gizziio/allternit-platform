@@ -78,6 +78,16 @@ export function installFetchInterceptor(): void {
       // browser-local auth context is already present.
     }
 
+    const isElectronShell =
+      window.allternitSidecar !== undefined ||
+      (window as any).process?.versions?.electron !== undefined
+    if (isElectronShell && !headers.has('Authorization') && !headers.has('X-Allternit-Desktop-Access-Token')) {
+      headers.set('X-Allternit-Desktop-Access-Token', 'desktop-dev-bootstrap')
+      headers.set('X-Allternit-User-Id', 'desktop-dev-user')
+      headers.set('X-Allternit-User-Email', 'desktop@allternit.local')
+      headers.set('X-Allternit-User-Name', 'Desktop Dev User')
+    }
+
     return originalFetch(input, {
       ...init,
       headers,

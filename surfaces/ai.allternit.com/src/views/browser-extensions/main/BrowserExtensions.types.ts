@@ -1,4 +1,4 @@
-export type ExtensionCategory = 'all' | 'productivity' | 'automation' | 'ai' | 'utilities';
+export type ExtensionCategory = 'all' | 'productivity' | 'automation' | 'ai' | 'utilities' | 'office';
 
 export interface Extension {
   id: string;
@@ -11,4 +11,6 @@ export interface Extension {
   isInstalled: boolean;
   isEnabled: boolean;
   permissions: string[];
+  owned?: boolean;
+  surfaceViewType?: string;
 }

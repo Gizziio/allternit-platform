@@ -13,22 +13,22 @@ describe('getAgentModeSurfaceTheme', () => {
   it('returns chat theme by default when no surface is provided', () => {
     const theme = getAgentModeSurfaceTheme();
     
-    expect(theme.accent).toBe('#D4956A');
+    expect(theme.accent).toBe('var(--accent-primary)');
     expect(theme.glow).toBe('rgba(212,149,106,0.28)');
     expect(theme.soft).toBe('rgba(212,149,106,0.14)');
   });
 
   it('returns chat theme when null surface is provided', () => {
     const theme = getAgentModeSurfaceTheme(null);
-    
-    expect(theme.accent).toBe('#D4956A');
+
+    expect(theme.accent).toBe('var(--accent-primary)');
     expect(theme.glow).toBe('rgba(212,149,106,0.28)');
   });
 
   it('returns correct theme for chat surface', () => {
     const theme = getAgentModeSurfaceTheme('chat');
-    
-    expect(theme.accent).toBe('#D4956A');
+
+    expect(theme.accent).toBe('var(--accent-primary)');
     expect(theme.glow).toBe('rgba(212,149,106,0.28)');
     expect(theme.soft).toBe('rgba(212,149,106,0.14)');
     expect(theme.wash).toBe('rgba(212,149,106,0.18)');

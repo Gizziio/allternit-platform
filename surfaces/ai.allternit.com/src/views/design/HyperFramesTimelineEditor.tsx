@@ -94,7 +94,7 @@ export function HyperFramesTimelineEditor({ projectId, initialTimeline, artifact
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-primary)', padding: 16, gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--shell-view-bg)', padding: 16, gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <VideoCamera size={18} color="var(--accent-primary)" weight="bold" />

@@ -11,27 +11,44 @@ import log from 'electron-log';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-interface MiniAppConfig {
+export interface MiniAppConfig {
   packageName: string;
+  installCommand: string;
+  installArgs: string[];
   /** Binary name after global install */
   binary: string;
   /** Args to pass when starting the service */
   startArgs: string[];
   port: number;
+  statusArgs?: string[];
+  harnessManaged?: boolean;
 }
 
-const MINI_APP_CONFIGS: Record<string, MiniAppConfig> = {
+export const MINI_APP_CONFIGS: Record<string, MiniAppConfig> = {
   openclaw: {
-    packageName: 'openclaw',
+    packageName: 'openclaw@latest',
+    installCommand: 'npm',
+    installArgs: ['install', '-g', 'openclaw@latest'],
     binary: 'openclaw',
-    startArgs: ['--port', '18789'],
+    startArgs: ['gateway', '--port', '18789'],
     port: 18789,
   },
   hermes: {
-    packageName: '@allternit/hermes',
+    packageName: 'NousResearch/hermes-agent',
+    installCommand: '/bin/bash',
+    installArgs: ['-lc', 'curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash'],
     binary: 'hermes',
-    startArgs: ['--port', '18790'],
-    port: 18790,
+    startArgs: ['dashboard', '--no-open', '--port', '9119'],
+    port: 9119,
+  },
+  'oh-my-pi': {
+    packageName: 'can1357/oh-my-pi',
+    installCommand: '/bin/bash',
+    installArgs: ['-lc', 'curl -fsSL https://omp.sh/install | sh'],
+    binary: 'omp',
+    startArgs: ['acp'],
+    port: 0,
+    harnessManaged: true,
   },
 };
 
@@ -65,6 +82,14 @@ function isPortOpen(port: number, timeoutMs = 3000): Promise<boolean> {
   });
 }
 
+function commandSucceeds(binary: string, args: string[]): Promise<boolean> {
+  return new Promise((resolve) => {
+    const proc = spawn(binary, args, { env: { ...process.env }, shell: true, stdio: 'ignore' });
+    proc.once('error', () => resolve(false));
+    proc.once('close', (code) => resolve(code === 0));
+  });
+}
+
 // ─── Install ──────────────────────────────────────────────────────────────────
 
 export type InstallProgress = {
@@ -94,7 +119,7 @@ export async function installMiniApp(
   onProgress({ id, line: `Installing ${config.packageName}…`, type: 'info' });
 
   return new Promise((resolve) => {
-    const proc = spawn('npm', ['install', '-g', config.packageName], {
+    const proc = spawn(config.installCommand, config.installArgs, {
       env: { ...process.env },
       shell: true,
     });
@@ -138,9 +163,12 @@ export async function startMiniApp(
 ): Promise<{ success: boolean; error?: string }> {
   const config = MINI_APP_CONFIGS[id];
   if (!config) return { success: false, error: `Unknown mini-app: ${id}` };
+  if (config.harnessManaged) {
+    return { success: false, error: `${config.binary} is started by the Allternit/Gizzi harness when a session begins` };
+  }
 
   if (runningApps.has(id)) {
-    const alreadyUp = await isPortOpen(config.port, 1000);
+    const alreadyUp = config.port === 0 || await isPortOpen(config.port, 1000);
     if (alreadyUp) return { success: true };
     runningApps.delete(id);
   }
@@ -172,6 +200,18 @@ export async function startMiniApp(
 
   runningApps.set(id, { id, process: proc, port: config.port });
 
+  if (config.port === 0) {
+    // Hermes starts a managed gateway daemon and exits; OMP remains attached as
+    // an RPC child. Both are verified through their upstream lifecycle shape.
+    if (config.statusArgs) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const up = await commandSucceeds(config.binary, config.statusArgs);
+      if (!up) return { success: false, error: `${config.binary} gateway did not report a running status` };
+    }
+    onProgress?.({ id, line: `✓ ${config.binary} runtime started`, type: 'info' });
+    return { success: true };
+  }
+
   // Poll until port is open (max 10 seconds)
   for (let i = 0; i < 20; i++) {
     await new Promise((r) => setTimeout(r, 500));
@@ -195,6 +235,17 @@ export function stopMiniApp(id: string): void {
   log.info(`[mini-apps] ${id} stopped`);
 }
 
+export function launchMiniAppDesktop(id: string): { success: boolean; error?: string } {
+  if (id !== 'hermes') return { success: false, error: `No desktop launcher for mini-app: ${id}` };
+  try {
+    const proc = spawn('hermes', ['desktop'], { env: { ...process.env }, shell: true, detached: true, stdio: 'ignore' });
+    proc.unref();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 // ─── Status ──────────────────────────────────────────────────────────────────
 
 export async function getMiniAppStatus(id: string): Promise<{
@@ -206,8 +257,10 @@ export async function getMiniAppStatus(id: string): Promise<{
   if (!config) return { managed: false, running: false, port: null };
 
   const tracked = runningApps.has(id);
-  const portOpen = await isPortOpen(config.port, 800);
-  return { managed: tracked, running: portOpen, port: config.port };
+  const portOpen = config.statusArgs
+    ? await commandSucceeds(config.binary, config.statusArgs)
+    : config.port === 0 ? tracked : await isPortOpen(config.port, 800);
+  return { managed: tracked, running: portOpen, port: config.port || null };
 }
 
 export function listKnownIds(): string[] {

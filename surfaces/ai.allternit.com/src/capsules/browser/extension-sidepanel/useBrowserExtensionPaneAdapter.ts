@@ -57,12 +57,11 @@ function mapSessions(
 const DEFAULT_CONFIG: ExtensionSidepanelConfig = {
   permissionMode: "act",
   language: "en-US",
-  runtimeLabel: "Platform Browser",
-  apiKey: undefined,
-  baseURL: undefined,
-  model: undefined,
+  runtimeLabel: "Allternit Browser Mode",
+  brainLabel: "Allternit/Gizzi platform brain",
+  harnessLabel: "Page-agent + computer-use harness",
+  connectionLabel: "Managed by platform",
   maxSteps: null,
-  systemInstruction: null,
   experimentalLlmsTxt: false,
 };
 
@@ -153,16 +152,15 @@ export function useBrowserExtensionPaneAdapter(): {
         setPageAgentTargetTabId(activeTabId);
       }
       runPageAgentGoal(task, {
-        apiKey: config.apiKey,
-        baseURL: config.baseURL,
-        model: config.model,
         language: config.language as "en-US" | "zh-CN" | null,
         maxSteps: config.maxSteps,
-        systemInstruction: config.systemInstruction,
         experimentalLlmsTxt: config.experimentalLlmsTxt,
+        systemInstruction: activeTab?.extensionIds?.some((id) => id.startsWith('allternit-office-'))
+          ? `This tab is an attached Microsoft Office surface${activeTab.officeDocumentTitle ? ` for ${activeTab.officeDocumentTitle}` : ''}. Operate the visible Office document through the Allternit browser/computer-use harness. Preserve user content, request approval before destructive document changes, and use the enabled ${activeTab.extensionIds.join(', ')} capability context.${activeTab.officeBindingId ? ` The live Office document bridge binding is ${activeTab.officeBindingId}.` : ''}`
+          : null,
       });
     },
-    [runPageAgentGoal, config, activeTabId, setPageAgentTargetTabId]
+    [runPageAgentGoal, config, activeTab, activeTabId, setPageAgentTargetTabId]
   );
 
   const stop = useCallback(() => {

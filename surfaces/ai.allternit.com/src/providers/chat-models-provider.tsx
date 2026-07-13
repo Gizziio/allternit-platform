@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { createContext, useContext, useCallback, ReactNode, useMemo } from "react";
 import type { ModelData } from "@/lib/ai/types";
 import { ALL_MODELS, DEFAULT_MODEL, getModelById } from "@/lib/ai/models";

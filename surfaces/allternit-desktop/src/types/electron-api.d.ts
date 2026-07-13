@@ -166,6 +166,32 @@ export interface ShellAPI {
   showOpen(options: unknown): Promise<unknown>;
 }
 
+export type OfficeProductId = 'word' | 'excel' | 'powerpoint';
+export interface OfficeAddinProductStatus {
+  product: OfficeProductId;
+  hostInstalled: boolean;
+  hostRunning: boolean;
+  health: 'not-installed' | 'installed' | 'update-available' | 'needs-repair' | 'unsupported';
+  installedVersion: string | null;
+  availableVersion: string | null;
+  manifestPath: string | null;
+  installMethod: 'macos-wef' | 'windows-developer' | 'web-guided' | 'unsupported';
+  detail: string;
+}
+export interface OfficeAddinActionResult {
+  ok: boolean;
+  requiresHostRestart?: boolean;
+  requiresUserConfirmation?: boolean;
+  manifestPath?: string;
+  detail: string;
+}
+export interface OfficeAddinsAPI {
+  getStatus(): Promise<Record<OfficeProductId, OfficeAddinProductStatus>>;
+  install(product: OfficeProductId): Promise<OfficeAddinActionResult>;
+  repair(product: OfficeProductId): Promise<OfficeAddinActionResult>;
+  remove(product: OfficeProductId): Promise<OfficeAddinActionResult>;
+}
+
 export interface ThemeAPI {
   get(): Promise<'light' | 'dark'>;
   set(theme: 'light' | 'dark' | 'system'): Promise<void>;
@@ -303,6 +329,7 @@ export interface MiniAppsAPI {
   start(id: string): Promise<{ success: boolean; error?: string }>;
   stop(id: string): Promise<{ success: boolean }>;
   getStatus(id: string): Promise<MiniAppStatus>;
+  launchDesktop(id: string): Promise<{ success: boolean; error?: string }>;
   onProgress(handler: (p: MiniAppInstallProgress) => void): () => void;
 }
 
@@ -317,6 +344,7 @@ export interface AllternitDesktopAPI {
   app: AppAPI;
   auth: AuthAPI;
   shell: ShellAPI;
+  officeAddins: OfficeAddinsAPI;
   theme: ThemeAPI;
   extension: ExtensionAPI;
   tunnel: TunnelAPI;

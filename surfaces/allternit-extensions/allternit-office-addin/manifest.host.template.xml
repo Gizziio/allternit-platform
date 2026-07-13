@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+  <Id>{{APP_GUID}}</Id>
+  <Version>{{VERSION}}</Version>
+  <ProviderName>Allternit</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Allternit for {{HOST_LABEL}}" />
+  <Description DefaultValue="{{DESCRIPTION}}" />
+  <IconUrl DefaultValue="{{APP_BASE_URL}}/icon-32.png" />
+  <HighResolutionIconUrl DefaultValue="{{APP_BASE_URL}}/icon-80.png" />
+  <SupportUrl DefaultValue="{{SUPPORT_URL}}" />
+  <AppDomains>
+    <AppDomain>{{APP_BASE_URL}}</AppDomain>
+    <AppDomain>{{PLATFORM_URL}}</AppDomain>
+  </AppDomains>
+  <Hosts><Host Name="{{HOST_NAME}}" /></Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="{{TASKPANE_URL}}" />
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="{{HOST_NAME}}">
+        <DesktopFormFactor>
+          <FunctionFile resid="Commands.Url" />
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="Allternit.{{HOST_KEY}}.Commands">
+                <Label resid="CommandsGroup.Label" />
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16x16" />
+                  <bt:Image size="32" resid="Icon.32x32" />
+                  <bt:Image size="80" resid="Icon.80x80" />
+                </Icon>
+                <Control xsi:type="Button" id="Allternit.{{HOST_KEY}}.Open">
+                  <Label resid="TaskpaneButton.Label" />
+                  <Supertip>
+                    <Title resid="TaskpaneButton.Label" />
+                    <Description resid="TaskpaneButton.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16" />
+                    <bt:Image size="32" resid="Icon.32x32" />
+                    <bt:Image size="80" resid="Icon.80x80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>Allternit.{{HOST_KEY}}.Taskpane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16x16" DefaultValue="{{APP_BASE_URL}}/icon-16.png" />
+        <bt:Image id="Icon.32x32" DefaultValue="{{APP_BASE_URL}}/icon-32.png" />
+        <bt:Image id="Icon.80x80" DefaultValue="{{APP_BASE_URL}}/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="Commands.Url" DefaultValue="{{TASKPANE_URL}}" />
+        <bt:Url id="Taskpane.Url" DefaultValue="{{TASKPANE_URL}}" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="CommandsGroup.Label" DefaultValue="Allternit for {{HOST_LABEL}}" />
+        <bt:String id="TaskpaneButton.Label" DefaultValue="Open Allternit" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open Allternit for {{HOST_LABEL}}" />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

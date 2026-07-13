@@ -5,11 +5,8 @@ import {
   Scroll,
   ClockCounterClockwise,
   Kanban,
-  Robot,
   Clock,
   Target,
-  TreeStructure,
-  ListDashes,
   LockKey,
   GitDiff,
   Users,
@@ -18,8 +15,9 @@ import {
   Gear,
   ChartBar,
   ChartLine,
-  Bell,
   Cpu,
+  Package,
+  Robot,
 } from '@phosphor-icons/react';
 
 export type DrawerTabId = 
@@ -43,7 +41,8 @@ export type DrawerTabId =
   | 'gantt'      // NEW - Gantt chart
   | 'workload'   // NEW - Workload analysis
   | 'inbox'      // NEW - Assignment inbox
-  | 'runtime';   // NEW - Agent Runtime dashboard
+  | 'runtime'   // NEW - Agent Runtime dashboard
+  | 'artifacts';
 
 interface DrawerTabsProps {
   activeTab: DrawerTabId;
@@ -63,8 +62,8 @@ export function DrawerTabs({ activeTab, onTabChange }: DrawerTabsProps) {
       <Tab id="changes" label="Changes" icon={GitDiff} active={activeTab === 'changes'} onClick={onTabChange} />
       
       {/* Agents & Orchestration */}
-      <Tab id="agents" label="Agents" icon={Robot} active={activeTab === 'agents'} onClick={onTabChange} />
       <Tab id="automation" label="Automation" icon={Gear} active={activeTab === 'automation'} onClick={onTabChange} />
+      <Tab id="agents" label="Orchestrate" icon={Robot} active={activeTab === 'agents'} onClick={onTabChange} />
       <Tab id="swarm" label="Swarm" icon={Users} active={activeTab === 'swarm'} onClick={onTabChange} />
       
       {/* Governance & Security */}
@@ -73,21 +72,19 @@ export function DrawerTabs({ activeTab, onTabChange }: DrawerTabsProps) {
       
       {/* Executions & Evidence */}
       <Tab id="executions" label="Executions" icon={ClockCounterClockwise} active={activeTab === 'executions'} onClick={onTabChange} />
+      <Tab id="artifacts" label="Artifacts" icon={Package} active={activeTab === 'artifacts'} onClick={onTabChange} />
       <Tab id="receipts" label="Receipts" icon={LockKey} active={activeTab === 'receipts'} onClick={onTabChange} />
       
-      {/* Scheduling & DAG */}
+      {/* Scheduling */}
       <Tab id="scheduler" label="Scheduler" icon={Clock} active={activeTab === 'scheduler'} onClick={onTabChange} />
-      <Tab id="dag-graph" label="DAG" icon={TreeStructure} active={activeTab === 'dag-graph'} onClick={onTabChange} />
       
       {/* Board & Planning */}
       <Tab id="board" label="Board" icon={Kanban} active={activeTab === 'board'} onClick={onTabChange} />
       <Tab id="gantt" label="Gantt" icon={ChartBar} active={activeTab === 'gantt'} onClick={onTabChange} />
       <Tab id="workload" label="Workload" icon={ChartLine} active={activeTab === 'workload'} onClick={onTabChange} />
-      <Tab id="inbox" label="Inbox" icon={Bell} active={activeTab === 'inbox'} onClick={onTabChange} />
+      <Tab id="inbox" label="Peers" icon={Users} active={activeTab === 'inbox'} onClick={onTabChange} />
       <Tab id="runtime" label="Runtimes" icon={Cpu} active={activeTab === 'runtime'} onClick={onTabChange} />
       
-      {/* Execution Trace */}
-      <Tab id="trace" label="Trace" icon={ListDashes} active={activeTab === 'trace'} onClick={onTabChange} />
     </div>
   );
 }

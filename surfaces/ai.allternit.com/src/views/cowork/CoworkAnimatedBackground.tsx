@@ -42,8 +42,6 @@ export function CoworkAnimatedBackground(): React.ReactNode {
       const t = (now - startTime) * SPEED;
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = dark ? '#100e0b' : '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const cols = Math.ceil(canvas.width  / SPACING) + 1;
       const rows = Math.ceil(canvas.height / SPACING) + 1;
@@ -61,9 +59,10 @@ export function CoworkAnimatedBackground(): React.ReactNode {
 
           ctx.beginPath();
           ctx.arc(x, y, DOT_R, 0, Math.PI * 2);
+          // Neutral dots so the background stays clean white/gray instead of warm cream/brown
           ctx.fillStyle = dark
-            ? `rgba(210,185,148,${alpha.toFixed(3)})`
-            : `rgba(160,145,120,${alpha.toFixed(3)})`;
+            ? `rgba(180,185,195,${alpha.toFixed(3)})`
+            : `rgba(120,125,135,${alpha.toFixed(3)})`;
           ctx.fill();
         }
       }

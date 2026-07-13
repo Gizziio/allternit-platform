@@ -12,17 +12,18 @@
   "scripts": {
     "dev": "NODE_ENV=development electron .",
     "prepare:platform-static": "node scripts/prepare-platform-static.cjs",
+    "prepare:office-addins": "pnpm --dir ../allternit-extensions/allternit-office-addin manifest:generate",
     "build": "npm run build:main && npm run build:preload",
     "build:main": "tsc -p src/main/tsconfig.json",
     "build:preload": "tsc -p src/preload/tsconfig.json",
     "download:lima": "node scripts/download-lima.cjs",
     "config:company": "cd ../.. && pnpm run config:company:write",
-    "build:electron": "npm run config:company && npm run prepare:platform-static && npm run download:lima && npm run build && electron-builder --mac",
-    "build:electron:dmg": "npm run config:company && npm run prepare:platform-static && npm run download:lima && npm run build && electron-builder --mac dmg",
+    "build:electron": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run download:lima && npm run build && electron-builder --mac",
+    "build:electron:dmg": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run download:lima && npm run build && electron-builder --mac dmg",
     "start": "electron .",
     "typecheck": "tsc --noEmit -p src/main/tsconfig.json && tsc --noEmit -p src/preload/tsconfig.json",
-    "pack": "npm run prepare:platform-static && electron-builder --dir",
-    "dist": "npm run prepare:platform-static && npm run build && electron-builder"
+    "pack": "npm run prepare:platform-static && npm run prepare:office-addins && electron-builder --dir",
+    "dist": "npm run prepare:platform-static && npm run prepare:office-addins && npm run build && electron-builder"
   },
   "dependencies": {
     "electron-log": "^5.2.0",
@@ -103,6 +104,13 @@
       {
         "from": "../../cmd/gizzi-code/src/runtime/vm/allternit.yaml",
         "to": "allternit.yaml"
+      },
+      {
+        "from": "../allternit-extensions/allternit-office-addin/manifests/",
+        "to": "office-addins/manifests/",
+        "filter": [
+          "*.xml"
+        ]
       }
     ],
     "asarUnpack": [

@@ -298,13 +298,8 @@ export function AgentOpsPanel() {
     try {
       const data = await api.getEvaluations();
       setEvaluations(data.evaluations || []);
-    } catch (e) {
-      setEvaluations([
-        { id: 'eval-1', name: 'Agent Response Quality', type: 'benchmark', status: 'passed', score: 92, lastRun: '2026-03-05T10:30:00Z' },
-        { id: 'eval-2', name: 'Tool Call Accuracy', type: 'unit', status: 'passed', score: 88, lastRun: '2026-03-04T14:20:00Z' },
-        { id: 'eval-3', name: 'Context Window Management', type: 'integration', status: 'failed', score: 67, lastRun: '2026-03-03T09:15:00Z' },
-        { id: 'eval-4', name: 'Safety Filter Compliance', type: 'conformance', status: 'passed', score: 95, lastRun: '2026-03-02T16:45:00Z' },
-      ]);
+    } catch {
+      setEvaluations([]);
     }
   }, []);
 
@@ -313,13 +308,8 @@ export function AgentOpsPanel() {
       const data = await api.getBenchmarkHistory();
       setBenchmarkHistory(data.history || []);
     } catch (e) {
-      setBenchmarkHistory([
-        { date: '2026-03-05', score: 92, tests: 45 },
-        { date: '2026-03-04', score: 89, tests: 45 },
-        { date: '2026-03-03', score: 87, tests: 44 },
-        { date: '2026-03-02', score: 91, tests: 45 },
-        { date: '2026-03-01', score: 85, tests: 43 },
-      ]);
+      logger.error({ err: e }, 'Failed to fetch benchmark history');
+      setBenchmarkHistory([]);
     }
   }, []);
 
@@ -327,13 +317,9 @@ export function AgentOpsPanel() {
     try {
       const data = await api.getFactoryTasks();
       setFactoryTasks(data.tasks || []);
-    } catch (e) {
-      setFactoryTasks([
-        { id: 'task-1', specRef: 'spec/auth-refactor', status: 'completed', progress: 100, createdAt: '2026-03-05T08:00:00Z' },
-        { id: 'task-2', specRef: 'spec/api-optimization', status: 'generating', progress: 65, createdAt: '2026-03-05T09:30:00Z' },
-        { id: 'task-3', specRef: 'spec/error-handling', status: 'validating', progress: 80, createdAt: '2026-03-04T14:00:00Z' },
-        { id: 'task-4', specRef: 'spec/logging-improvements', status: 'pending_approval', progress: 95, createdAt: '2026-03-04T10:00:00Z' },
-      ]);
+    } catch (err) {
+      logger.error({ err }, 'Failed to fetch factory tasks');
+      setFactoryTasks([]);
     }
   }, []);
 
@@ -348,9 +334,8 @@ export function AgentOpsPanel() {
       if (historyData.entropyScore !== undefined) {
         setEntropyScore(historyData.entropyScore);
       }
-    } catch (e) {
-      // Silent fail - don't show fake data on fetch, just keep current state
-      logger.error({ err: e }, 'Failed to fetch GC data');
+    } catch (err) {
+      logger.error({ err }, 'Failed to fetch GC data');
     }
   }, []);
 
@@ -368,17 +353,8 @@ export function AgentOpsPanel() {
       const results = await api.getEvaluationResults(evalId);
       setEvalResults(results);
       fetchEvaluations();
-    } catch (e) {
-      setEvalResults({
-        evaluationId: evalId, status: 'completed',
-        summary: { total: 45, passed: 42, failed: 2, skipped: 1 },
-        duration: 12450,
-        details: [
-          { test: 'response_quality', status: 'passed', duration: 120 },
-          { test: 'tool_accuracy', status: 'passed', duration: 95 },
-          { test: 'context_management', status: 'failed', duration: 200, error: 'Memory limit exceeded' },
-        ]
-      });
+    } catch {
+      setEvalResults(null);
     }
     setIsRunningEval(false);
   };
@@ -388,8 +364,7 @@ export function AgentOpsPanel() {
     try {
       await api.createEvaluation({ name: newEvalName, type: newEvalType, config: {} });
       setShowCreateEval(false); setNewEvalName(''); fetchEvaluations();
-    } catch (e) {
-      setEvaluations(prev => [...prev, { id: `eval-${Date.now()}`, name: newEvalName, type: newEvalType, status: 'pending', score: 0, lastRun: null }]);
+    } catch {
       setShowCreateEval(false); setNewEvalName('');
     }
   };
@@ -399,20 +374,19 @@ export function AgentOpsPanel() {
     try {
       await api.createFactoryTask({ specRef: newTaskSpec, requirements: newTaskRequirements.split('\n').filter(r => r.trim()) });
       setShowCreateTask(false); setNewTaskSpec(''); setNewTaskRequirements(''); fetchFactoryTasks();
-    } catch (e) {
-      setFactoryTasks(prev => [...prev, { id: `task-${Date.now()}`, specRef: newTaskSpec, status: 'generating', progress: 0, createdAt: new Date().toISOString() }]);
+    } catch {
       setShowCreateTask(false); setNewTaskSpec(''); setNewTaskRequirements('');
     }
   };
 
   const handleApproveChange = async (taskId: string, changeId: string) => {
     try { await api.approveFactoryChange(taskId, changeId); fetchFactoryTasks(); }
-    catch (e) { setFactoryTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t)); }
+    catch { fetchFactoryTasks(); }
   };
 
   const handleRejectChange = async (taskId: string, changeId: string) => {
     try { await api.rejectFactoryChange(taskId, changeId); fetchFactoryTasks(); }
-    catch (e) { setFactoryTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'rejected' } : t)); }
+    catch { fetchFactoryTasks(); }
   };
 
   const handleTriggerCleanup = async () => {

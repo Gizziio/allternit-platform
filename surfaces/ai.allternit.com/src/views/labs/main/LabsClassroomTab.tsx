@@ -2,14 +2,14 @@ import React from "react";
 import { RefreshCw, School } from 'lucide-react';
 import { Fade } from '@/design/animation/Fade';
 import { Stagger } from '@/design/animation/Stagger';
-import { GlassSurfaceBase } from '@/design/glass/GlassSurface';
 import { Text } from '@/components/typography/Text';
+import { EmptyState } from '@/components/settings/EmptyState';
 import type { ALABSCourse, ALABSLesson } from "./LabsView.constants";
 import { L } from "./LabsView.constants";
-import { 
-  getTierIcon, 
-  getTierColor, 
-  LessonCard 
+import {
+  getTierIcon,
+  getTierColor,
+  LessonCard
 } from "./LabsSharedComponents";
 
 interface LabsClassroomTabProps {
@@ -61,55 +61,74 @@ export const LabsClassroomTab: React.FC<LabsClassroomTabProps> = ({
             <Text variant="body">Loading lessons…</Text>
           </div>
         ) : lessons.length === 0 ? (
-          <GlassSurfaceBase className="max-w-[520px] mx-auto text-center p-12 px-9">
-            <div 
-              className="size-16 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-solid"
-              style={{ background: `${L.accent}14`, borderColor: `${L.accent}28` }}
-            >
-              <School size={28} color={L.accent} />
-            </div>
-            <Text variant="researchHeading" as="h3" className="text-xl font-black italic m-0 mb-2.5 text-[var(--ui-text-primary)]">
-              No Lessons Published
-            </Text>
-            <Text variant="body" className="text-[13px] text-[var(--ui-text-secondary)] m-0 mb-5 leading-relaxed">
-              The lesson catalog is empty. Generate a lesson from any course to get started.
-            </Text>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {courses.slice(0, 5).map(course => (
-                <button type="button"
-                  key={course.id}
-                  onClick={async () => {
-                    setGeneratingLesson(true);
-                    try {
-                      const res = await fetch('/api/v1/lessons/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ courseId: course.id, targetDuration: 20 }),
-                      });
-                      const data = await res.json();
-                      if (data.lesson) {
-                        setLessons(prev => [...prev, data.lesson]);
-                        showNotification(`Generated lesson for ${course.title}`);
+          <div className="max-w-[520px]">
+            <EmptyState
+              icon={<School size={48} strokeWidth={1} />}
+              title="No lessons published"
+              caption="The lesson catalog is empty. Generate a lesson from any course to get started."
+              ctaLabel={generatingLesson ? 'Generating…' : 'Generate from first course'}
+              primaryCta
+              onCtaClick={async () => {
+                const firstCourse = courses[0];
+                if (!firstCourse) return;
+                setGeneratingLesson(true);
+                try {
+                  const res = await fetch('/api/v1/lessons/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courseId: firstCourse.id, targetDuration: 20 }),
+                  });
+                  const data = await res.json();
+                  if (data.lesson) {
+                    setLessons(prev => [...prev, data.lesson]);
+                    showNotification(`Generated lesson for ${firstCourse.title}`);
+                  }
+                } catch {
+                  showNotification('Failed to generate lesson');
+                } finally {
+                  setGeneratingLesson(false);
+                }
+              }}
+              className="bg-[var(--bg-secondary)] rounded-2xl border border-solid border-[var(--border-subtle)]"
+            />
+            {courses.length > 1 && (
+              <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                {courses.slice(1, 6).map(course => (
+                  <button type="button"
+                    key={course.id}
+                    onClick={async () => {
+                      setGeneratingLesson(true);
+                      try {
+                        const res = await fetch('/api/v1/lessons/generate', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ courseId: course.id, targetDuration: 20 }),
+                        });
+                        const data = await res.json();
+                        if (data.lesson) {
+                          setLessons(prev => [...prev, data.lesson]);
+                          showNotification(`Generated lesson for ${course.title}`);
+                        }
+                      } catch {
+                        showNotification('Failed to generate lesson');
+                      } finally {
+                        setGeneratingLesson(false);
                       }
-                    } catch (e) {
-                      showNotification('Failed to generate lesson');
-                    } finally {
-                      setGeneratingLesson(false);
-                    }
-                  }}
-                  disabled={generatingLesson}
-                  className="p-2 px-3.5 rounded-lg border border-solid text-[12px] font-semibold cursor-pointer transition-all disabled:opacity-60 disabled:cursor-wait"
-                  style={{
-                    background: `${getTierColor(course.tier)}12`,
-                    borderColor: `${getTierColor(course.tier)}30`,
-                    color: getTierColor(course.tier),
-                  }}
-                >
-                  {generatingLesson ? 'Generating...' : course.title}
-                </button>
-              ))}
-            </div>
-          </GlassSurfaceBase>
+                    }}
+                    disabled={generatingLesson}
+                    className="p-2 px-3.5 rounded-lg border border-solid text-[12px] font-semibold cursor-pointer transition-all disabled:opacity-60 disabled:cursor-wait"
+                    style={{
+                      background: `${getTierColor(course.tier)}12`,
+                      borderColor: `${getTierColor(course.tier)}30`,
+                      color: getTierColor(course.tier),
+                    }}
+                  >
+                    {generatingLesson ? 'Generating...' : course.title}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <div className="flex flex-col gap-8">
             {Object.entries(lessonsByCourse).map(([courseId, courseLessons]) => {

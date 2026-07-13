@@ -1,11 +1,11 @@
 // @ts-nocheck
 "use client";
 
-import React, { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
-import { Paperclip, Sliders, MagicWand, Sun, Moon, Scissors,
-  UsersThree, TreeStructure, Target, Megaphone, ShieldCheck, UploadSimple, Plus, PuzzlePiece
+import { Sliders, MagicWand, Sun, Moon, Scissors,
+  TreeStructure, Megaphone, ShieldCheck, UploadSimple, Plus, PuzzlePiece
 } from "@phosphor-icons/react";
 import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
@@ -19,7 +19,6 @@ import { DesignCritiquePanel } from '../../components/design/DesignCritiquePanel
 import { AgentAdapterPanel } from '../../components/design/AgentAdapterPanel';
 import { PluginPicker } from './PluginPicker';
 import type { SkillRecord } from '../../lib/design/skill-registry';
-import type { PluginManifest } from '../../lib/design/plugin-manifest';
 import type { SurgicalComment } from '../../lib/design/surgical-edit';
 import { buildSurgicalEditPrompt } from '../../lib/design/surgical-edit';
 
@@ -31,27 +30,18 @@ import { DesignSystemView } from "./DesignSystemView";
 import { DesignHandoffView } from "./DesignHandoffView";
 import type { DesignSystem } from "../../lib/design/design-registry";
 import { DesignImportModal } from "./DesignImportModal";
-import { StudioMessageRenderer } from "../../components/design/StudioMessageRenderer";
 import { composeStudioSystemPrompt } from "../../lib/design/studio-system-prompt";
 import { ErrorBoundary } from "../../components/design/ErrorBoundary";
 import { splitOnArtifacts } from "../../lib/openui/artifact-parser";
 
 // Parity with Chat/Cowork composer stack
-import { ChatComposer, type ChatAttachment } from "../chat/ChatComposer";
+import { ChatComposer } from "../chat/ChatComposer";
 // Integrated Allternit Design component (consumed with Allternit tokens via .ad-tokens)
 import { Button as ODButton } from "@/allternit-design/components";
-import {
-  ComposerPermissionInfoBar,
-  ComposerQuestionBar,
-  ComposerStatusInfoBar,
-} from "../chat/ChatComposerEnhancements";
-import { useDropTarget, type FileWithData } from "@/components/GlobalDropzone";
-import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from "@/components/chat/AttachmentPreview";
-import { usePendingPermissions, usePendingQuestions } from "@/lib/agents";
-import { useRuntimeExecutionMode } from "@/hooks/useRuntimeExecutionMode";
+
+
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
-import { useModelSelection } from "@/providers/model-selection-provider";
-import { useAgentStore, type Agent, isAgentAllowedOnSurface } from "@/lib/agents";
+import { type Agent } from "@/lib/agents";
 import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
 import { useAgentSurfaceModeStore } from "@/stores/agent-surface-mode.store";
 import { HarnessConfigPanel } from "@/views/cowork/HarnessConfigPanel";
@@ -63,7 +53,6 @@ import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
 import { ChatModelsProvider } from "@/providers/chat-models-provider";
 import { ModelSelectionProvider } from "@/providers/model-selection-provider";
 import { useDefaultModelSelection } from "@/hooks/use-default-model-selection";
-import { ModelPicker } from "@/components/model-picker";
 
 const VideoEditorView = lazy(() => import("./video/VideoEditorView").then((m) => ({ default: m.VideoEditorView })));
 const OfficeWorkspace = lazy(() => import("./office/OfficeWorkspace").then((m) => ({ default: m.OfficeWorkspace })));
@@ -155,7 +144,7 @@ function buildDirectProject(initialTab: CanvasTab): Project {
 
 function GenerativeLoader({ title }: { title: string }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", background: "var(--bg-primary)", gap: "32px" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", background: "var(--shell-view-bg)", gap: "32px" }}>
        <div style={{ position: "relative", width: "120px", height: "120px" }}>
           <motion.div 
             animate={{ rotate: 360, scale: [1, 1.1, 1] }} 
@@ -183,37 +172,6 @@ function GenerativeLoader({ title }: { title: string }) {
 }
 
 // ─── Swarm Inspect UI ────────────────────────────────────────────────────────
-
-interface SwarmLog {
-  agent: string;
-  action: string;
-  status: string;
-}
-
-function SwarmInspect({ logs }: { logs: SwarmLog[] }) {
-  return (
-    <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: "16px", overflow: "hidden", marginBottom: "20px" }}>
-       <div style={{ padding: "12px 16px", background: "rgba(0,0,0,0.03)", borderBottom: "1px solid rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: "8px" }}>
-          <UsersThree size={14} weight="bold" />
-          <span style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Swarm Collaboration</span>
-       </div>
-       <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          {logs.map((log, i) => (
-             <div key={`designmodeview-${i}`} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-                <div style={{ padding: "4px", borderRadius: "6px", background: log.agent === 'Architect' ? "#3b82f615" : "var(--accent-primary)15", color: log.agent === 'Architect' ? "#3b82f6" : "var(--accent-primary)" }}>
-                   {log.agent === 'Architect' ? <TreeStructure size={12} weight="fill" /> : <Target size={12} weight="fill" />}
-                </div>
-                <div style={{ flex: 1 }}>
-                   <div style={{ fontSize: "10px", fontWeight: 800 }}>{log.agent}</div>
-                   <div style={{ fontSize: "11px", opacity: 0.6, marginTop: "2px" }}>{log.action}</div>
-                </div>
-                <div style={{ fontSize: "9px", fontWeight: 700, color: "#22c55e" }}>{log.status}</div>
-             </div>
-          ))}
-       </div>
-    </div>
-  );
-}
 
 // ─── Studio Onboarding (The "Cutscene") ──────────────────────────────────────
 
@@ -258,7 +216,7 @@ function StudioOnboarding({ onComplete }: { onComplete: () => void }) {
   }, [step, sequence]);
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1100, background: "var(--bg-primary)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 1100, background: "var(--shell-view-bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
        <button type="button"
           onClick={onComplete}
           style={{ position: "absolute", bottom: "48px", right: "32px", padding: "8px 16px", borderRadius: "20px", background: "var(--surface-hover)", border: "none", fontSize: "12px", fontWeight: 700, color: "var(--text-tertiary)", cursor: "pointer", zIndex: 1101 }}
@@ -308,7 +266,7 @@ function StudioOnboarding({ onComplete }: { onComplete: () => void }) {
 
 function TabLoadingState({ label = "Loading workspace…" }: { label?: string }) {
   return (
-    <div style={{ height: "100%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600 }}>
+    <div style={{ height: "100%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--shell-view-bg)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600 }}>
       {label}
     </div>
   );
@@ -442,7 +400,6 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     if (!pendingProject) return;
     clearPendingProject();
     startProject({ name: pendingProject.name, type: pendingProject.type ?? 'prototype' });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingProject]);
 
   function handleInstallDesign(design: DesignSystem) {
@@ -552,7 +509,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   } as React.CSSProperties;
 
   return (
-    <div className={designStudioLook ? 'od-design-studio' : ''} style={{ ...tokenStyles, ...themeOverride, display: "flex", height: "100%", width: "100%", background: "var(--bg-primary)", fontFamily: "var(--font-sans)", color: "var(--text-primary)", transition: "background 0.3s, color 0.3s" }}>
+    <div className={designStudioLook ? 'od-design-studio' : ''} style={{ ...tokenStyles, ...themeOverride, display: "flex", height: "100%", width: "100%", background: "var(--shell-view-bg)", fontFamily: "var(--font-sans)", color: "var(--text-primary)", transition: "background 0.3s, color 0.3s" }}>
       <PanelGroup direction="horizontal">
         <Panel>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-secondary)" }}>
@@ -581,7 +538,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
             <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
                <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
                   {isStreaming && (
-                    <div style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'var(--bg-primary)' }}>
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'var(--shell-view-bg)' }}>
                       <GenerativeLoader title="Manifesting high-fidelity UI..." />
                     </div>
                   )}
@@ -868,7 +825,7 @@ function DesignChatPanel({
   composerSeed: string;
   onComposerSeedChange: (seed: string) => void;
 }) {
-  const { agentModeEnabled, selectedAgentId, selectedAgent, allowedAgents } =
+  const { selectedAgentId, selectedAgent, allowedAgents } =
     useSurfaceAgentSelection('design');
   const setSelectedAgent = useAgentSurfaceModeStore((s) => s.setSelectedAgent);
   const [showHarness, setShowHarness] = useState(false);

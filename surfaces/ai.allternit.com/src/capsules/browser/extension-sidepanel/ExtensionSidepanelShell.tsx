@@ -1331,18 +1331,18 @@ export function ExtensionSidepanelShell({
     <section
       data-testid={testId}
       className={cn(
-        "relative flex min-h-0 flex-col bg-transparent p-2 text-foreground",
+        "relative flex min-h-0 flex-col bg-transparent text-foreground",
         prefersDark && "dark",
-        containerClassName ?? "h-dvh",
+        containerClassName ?? "h-dvh p-2",
       )}
       style={themeStyle}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-border/80 bg-card shadow-2xl">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-[var(--shell-floating-bg,var(--shell-view-bg))] shadow-none">
         <MotionOverlay active={isRunning} />
 
         {!isSubView && (
-          <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
-            <div className="flex items-center gap-2.5">
+          <header className="relative z-10 flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] px-3 py-2">
+            <div className="flex min-w-0 items-center gap-2.5">
               {brandIcon ?? <Logo className="size-5" />}
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{shellCopy.title}</div>
@@ -1352,8 +1352,8 @@ export function ExtensionSidepanelShell({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <StatusDot status={adapter.status} />
+            <div className="flex shrink-0 items-center gap-1">
+              <div className="hidden min-[360px]:block"><StatusDot status={adapter.status} /></div>
               <button
                 type="button"
                 aria-label="Open history"
@@ -1483,7 +1483,7 @@ export function ExtensionSidepanelShell({
         </main>
 
         {!isSubView && (
-          <footer className="border-t border-border/80 p-3.5">
+          <footer className="shrink-0 border-t border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] p-3">
             {renderComposer ? (
               renderComposer({
                 isRunning,

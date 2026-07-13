@@ -297,11 +297,31 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function GatewayOffline({ onRetry }: { onRetry: () => Promise<void> }) {
   const [retrying, setRetrying] = useState(false);
+  const [working, setWorking] = useState<'install' | 'start' | null>(null);
+  const [error, setError] = useState('');
+  const miniApps = typeof window !== 'undefined' ? window.allternit?.miniApps : undefined;
 
   const retry = async () => {
     setRetrying(true);
     await onRetry();
     setRetrying(false);
+  };
+
+  const install = async () => {
+    if (!miniApps) return;
+    setWorking('install'); setError('');
+    const result = await miniApps.install('openclaw');
+    setWorking(null);
+    if (!result.success) setError(result.error ?? 'Installation failed');
+  };
+
+  const start = async () => {
+    if (!miniApps) return;
+    setWorking('start'); setError('');
+    const result = await miniApps.start('openclaw');
+    setWorking(null);
+    if (!result.success) setError(result.error ?? 'Gateway failed to start');
+    else await onRetry();
   };
 
   return (
@@ -326,16 +346,19 @@ function GatewayOffline({ onRetry }: { onRetry: () => Promise<void> }) {
             className="font-mono text-xs p-2 rounded"
             style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-primary)' }}
           >
-            openclaw gateway --port 18789 --cors
+            openclaw gateway --port 18789
           </div>
           <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-            or run ./scripts/start-openclaw.sh
+            First-time setup: openclaw onboard --install-daemon
           </div>
           <div className="text-xs pt-1" style={{ color: 'var(--text-tertiary)' }}>
             Override URL: set <code>window.__ALLTERNIT_OPENCLAW_URL__</code>
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-2">
+        {miniApps && <button type="button" onClick={install} disabled={Boolean(working)} className="flex items-center gap-2 px-4 py-2 rounded-lg border-none cursor-pointer text-sm font-medium disabled:opacity-50" style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--bg-primary)' }}>{working === 'install' ? 'Installing…' : 'Install or update'}</button>}
+        {miniApps && <button type="button" onClick={start} disabled={Boolean(working)} className="flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer text-sm font-medium disabled:opacity-50" style={{ backgroundColor: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}>{working === 'start' ? 'Starting…' : 'Start gateway'}</button>}
         <button type="button"
           onClick={retry}
           disabled={retrying}
@@ -345,6 +368,9 @@ function GatewayOffline({ onRetry }: { onRetry: () => Promise<void> }) {
           <ArrowsClockwise size={14} className={retrying ? 'animate-spin' : ''} />
           {retrying ? 'Checking…' : 'Retry Connection'}
         </button>
+        <button type="button" onClick={() => openInBrowser('https://github.com/openclaw/openclaw')} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm" style={{ background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}><ArrowSquareOut size={14}/>GitHub</button>
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
       </div>
     </div>
   );

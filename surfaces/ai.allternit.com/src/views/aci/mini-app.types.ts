@@ -2,6 +2,29 @@ export type MiniAppCategory = 'runtime' | 'connector' | 'tool' | 'data' | 'commu
 export type MiniAppSource = 'discovered' | 'connector' | 'url' | 'builtin';
 type MiniAppStatus = 'available' | 'pinned' | 'running' | 'offline';
 
+export interface MiniAppSurfaceContract {
+  kind: 'embedded-web' | 'allternit-native' | 'external-desktop';
+  url?: string;
+  viewType?: string;
+  desktopAction?: string;
+}
+
+export interface MiniAppHarnessContract {
+  transport: 'subprocess' | 'http' | 'rpc' | 'acp' | 'mcp';
+  command?: string;
+  baseURL?: string;
+  cwd?: string;
+  env?: Record<string, string>;
+  model?: string;
+}
+
+export interface MiniAppLifecycleContract {
+  install?: { command: string; args?: string[] };
+  start?: { command: string; args?: string[] };
+  stop?: { method: 'managed-process' | 'command'; command?: string; args?: string[] };
+  health?: { kind: 'http' | 'command' | 'process'; url?: string; command?: string; args?: string[] };
+}
+
 /** Served at /.well-known/allternit-app.json by any allternit-native service */
 export interface MiniAppManifest {
   id: string;
@@ -17,6 +40,9 @@ export interface MiniAppManifest {
   githubUrl?: string;
   /** Whether the mini-app can be downloaded and run locally */
   downloadable?: boolean;
+  surface?: MiniAppSurfaceContract;
+  harness?: MiniAppHarnessContract;
+  lifecycle?: MiniAppLifecycleContract;
 }
 
 export interface InstalledMiniApp {
@@ -40,4 +66,7 @@ export interface InstalledMiniApp {
   githubUrl?: string;
   /** Whether the mini-app can be downloaded and run locally */
   downloadable?: boolean;
+  surface?: MiniAppSurfaceContract;
+  harness?: MiniAppHarnessContract;
+  lifecycle?: MiniAppLifecycleContract;
 }

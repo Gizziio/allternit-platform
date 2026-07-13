@@ -1,21 +1,15 @@
 /**
  * CoworkModeTabs.tsx
- * 
+ *
  * Mode-specific tabs for Cowork surface.
- * Provides contextual tabs based on the collaborative workflow.
- * 
- * Top Pills: Plan, Execute, Review, Automate, Web, Agents
- * Bottom Dock: Plan, Execute, Review, Report, Automate, Web, Agents, Sync
+ * Only surfaces with implemented views are exposed: execute, agents, web,
+ * routines, loops, sync.
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
-  ClipboardText,
   Play,
-  CheckCircle,
-  FileText,
-  Lightning,
   Globe,
   Robot,
   ArrowsClockwise,
@@ -23,6 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { Pill } from '@/components/ui/Pill';
 import { useAgentSurfaceModeStore, type AgentModeId } from '@/stores/agent-surface-mode.store';
 
 interface ModeTab {
@@ -32,154 +27,63 @@ interface ModeTab {
   description?: string;
 }
 
-// Top pills configuration (8 tabs)
-const TOP_PILLS: ModeTab[] = [
-  { id: 'plan', label: 'Plan', icon: ClipboardText, description: 'Define tasks and milestones' },
+const TABS: ModeTab[] = [
   { id: 'execute', label: 'Execute', icon: Play, description: 'Run tasks and workflows' },
-  { id: 'review', label: 'Review', icon: CheckCircle, description: 'Review and approve work' },
-  { id: 'automate', label: 'Automate', icon: Lightning, description: 'Automation and scheduling' },
   { id: 'routines', label: 'Routines', icon: ArrowsClockwise, description: 'Routines configuration' },
   { id: 'loops', label: 'Loops', icon: ArrowCounterClockwise, description: 'Loop monitoring' },
   { id: 'web', label: 'Web', icon: Globe, description: 'Web search and browsing' },
   { id: 'agents', label: 'Agents', icon: Robot, description: 'Agent selection and config' },
-];
-
-// Bottom dock configuration (10 tabs)
-const BOTTOM_TABS: ModeTab[] = [
-  { id: 'plan', label: 'Plan', icon: ClipboardText },
-  { id: 'execute', label: 'Execute', icon: Play },
-  { id: 'review', label: 'Review', icon: CheckCircle },
-  { id: 'report', label: 'Report', icon: FileText },
-  { id: 'automate', label: 'Automate', icon: Lightning },
-  { id: 'routines', label: 'Routines', icon: ArrowsClockwise },
-  { id: 'loops', label: 'Loops', icon: ArrowCounterClockwise },
-  { id: 'web', label: 'Web', icon: Globe },
-  { id: 'agents', label: 'Agents', icon: Robot },
-  { id: 'sync', label: 'Sync', icon: ArrowsClockwise },
+  { id: 'sync', label: 'Sync', icon: ArrowsClockwise, description: 'Sync status and settings' },
 ];
 
 interface CoworkModeTabsProps {
-  variant: 'top-pills' | 'bottom-dock';
-  surfaceTheme?: {
-    accent: string;
-    soft: string;
-    glow: string;
-  };
+  variant?: 'top-pills' | 'bottom-dock';
   className?: string;
 }
 
-/**
- * Cowork Mode Tabs
- * 
- * Provides surface-specific mode selection for the Cowork view.
- * - Top pills: Main workflow modes (6)
- * - Bottom dock: Extended workflow modes (8)
- */
-function CoworkModeTabs({ 
-  variant, 
-  surfaceTheme,
-  className 
-}: CoworkModeTabsProps) {
+export function CoworkModeTabs({
+  variant = 'top-pills',
+  className,
+}: CoworkModeTabsProps): React.ReactNode {
   const { selectedModeBySurface, setSelectedMode } = useAgentSurfaceModeStore();
   const currentMode = selectedModeBySurface['cowork'];
-  
-  const tabs = variant === 'top-pills' ? TOP_PILLS : BOTTOM_TABS;
-  
+
   const handleSelect = (modeId: AgentModeId) => {
     setSelectedMode('cowork', modeId);
   };
-  
-  if (variant === 'top-pills') {
-    return (
-      <div className={cn(
-        "flex items-center gap-2 flex-wrap justify-center",
-        className
-      )}>
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = currentMode === tab.id;
-          
-          return (
-            <motion.button
-              key={tab.id}
-              onClick={() => handleSelect(tab.id)}
-              className={cn(
-                "relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border",
-                isActive 
-                  ? "text-white border-transparent" 
-                  : "text-[var(--ui-text-muted)] border-[var(--ui-border-muted)] hover:text-[var(--ui-text-primary)] hover:bg-white/5"
-              )}
-              style={{
-                background: isActive 
-                  ? `linear-gradient(135deg, ${surfaceTheme?.soft || 'rgba(167,139,250,0.2)'} 0%, ${surfaceTheme?.glow || 'rgba(167,139,250,0.1)'} 100%)`
-                  : 'transparent',
-                borderColor: isActive 
-                  ? (surfaceTheme?.accent || '#A78BFA') 
-                  : undefined,
-                boxShadow: isActive 
-                  ? `0 0 20px ${surfaceTheme?.glow || 'rgba(167,139,250,0.2)'}` 
-                  : 'none',
-              }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Icon size={16} />
-              <span>{tab.label}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="cowork-mode-indicator"
-                  className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent"
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
-            </motion.button>
-          );
-        })}
-      </div>
-    );
-  }
-  
-  // Bottom dock variant
+
   return (
-    <div className={cn(
-      "flex items-center gap-1 p-1.5 rounded-xl bg-[var(--surface-panel,#1e1e1e)] border border-[var(--ui-border-muted,#333)]",
-      className
-    )}>
-      {tabs.map((tab) => {
+    <div
+      className={cn(
+        'flex items-center gap-2 flex-wrap',
+        variant === 'bottom-dock' &&
+          'p-1.5 rounded-xl bg-[var(--surface-panel)] border border-[var(--ui-border-muted)]',
+        className
+      )}
+    >
+      {TABS.map((tab) => {
         const Icon = tab.icon;
         const isActive = currentMode === tab.id;
-        
+
         return (
-          <motion.button
+          <motion.div
             key={tab.id}
-            onClick={() => handleSelect(tab.id)}
-            className={cn(
-              "relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200",
-              isActive 
-                ? "text-white" 
-                : "text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)] hover:bg-white/5"
-            )}
-            style={{
-              background: isActive 
-                ? surfaceTheme?.soft || 'rgba(167,139,250,0.15)' 
-                : 'transparent',
-            }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={variant === 'top-pills' ? { scale: 1.02 } : undefined}
+            whileTap={{ scale: 0.98 }}
           >
-            <Icon className={cn(
-              "size-3.5",
-              isActive && "text-[var(--accent-primary)]"
-            )} />
-            <span>{tab.label}</span>
-            {isActive && (
-              <motion.div
-                layoutId="cowork-dock-indicator"
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 size-1 rounded-full"
-                style={{ background: surfaceTheme?.accent || '#A78BFA' }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              />
-            )}
-          </motion.button>
+            <Pill
+              active={isActive}
+              size={variant === 'bottom-dock' ? 'sm' : 'md'}
+              icon={<Icon size={variant === 'bottom-dock' ? 14 : 16} weight={isActive ? 'fill' : 'regular'} />}
+              onClick={() => handleSelect(tab.id)}
+              className={cn(
+                variant === 'top-pills' && 'rounded-full',
+                variant === 'bottom-dock' && 'rounded-lg'
+              )}
+            >
+              {tab.label}
+            </Pill>
+          </motion.div>
         );
       })}
     </div>
@@ -192,18 +96,14 @@ function CoworkModeTabs({
 export function useCoworkMode() {
   const { selectedModeBySurface, setSelectedMode } = useAgentSurfaceModeStore();
   const currentMode = selectedModeBySurface['cowork'] || 'execute';
-  
-  const modeConfig = BOTTOM_TABS.find(t => t.id === currentMode) || BOTTOM_TABS[1];
-  
+
+  const modeConfig = TABS.find((t) => t.id === currentMode) || TABS[0];
+
   return {
     currentMode,
     modeConfig,
     setMode: (modeId: AgentModeId) => setSelectedMode('cowork', modeId),
-    isPlan: currentMode === 'plan',
     isExecute: currentMode === 'execute',
-    isReview: currentMode === 'review',
-    isReport: currentMode === 'report',
-    isAutomate: currentMode === 'automate',
     isRoutines: currentMode === 'routines',
     isLoops: currentMode === 'loops',
     isWeb: currentMode === 'web',

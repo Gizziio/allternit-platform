@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 'use client'
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSettingsState } from '@/hooks/useSettingsState';
 
 import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
@@ -22,6 +21,7 @@ import {
   MagnifyingGlass,
   PlugsConnected,
   PuzzlePiece,
+  Trash,
 } from '@phosphor-icons/react';
 import { VPSConnectionsPanel } from './VPSConnectionsPanel';
 import { ToastProvider } from '@/components/ui/toast-provider';
@@ -31,7 +31,8 @@ import { LocalModelManager } from '@/components/models/LocalModelManager';
 import { InfrastructureSettings } from './InfrastructureSettings';
 import { ServiceUrlSettings } from './ServiceUrlSettings';
 import { EnvironmentSettings } from './EnvironmentSettings';
-import { listOwnedConnectors } from '@/lib/design/owned-connector';
+import { listOwnedConnectors, connectOwned, disconnectOwned, type OwnedConnector, type OwnedConnectStatus } from '@/lib/design/owned-connector';
+import { getConnectorLogoUrl } from '@/lib/design/connector-logo';
 import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
 import { SettingsRow } from '@/components/settings/SettingsRow';
 import { Toggle } from '@/components/settings/Toggle';
@@ -46,6 +47,9 @@ import { MonoChip } from '@/components/settings/MonoChip';
 import { AgentOpsPanel } from './AgentOpsPanel';
 import { SecurityPanel } from './SecurityPanel';
 import { SkillsSettingsPanel } from './SkillsSettingsPanel';
+import { PluginsSettingsPanel } from './PluginsSettingsPanel';
+import { PluginManager } from '../plugins';
+import type { TabId as FullManagerTabId } from '../plugins/PluginManager/types';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS, SETTINGS_SELECT_CLASS } from '@/components/settings/buttonStyles';
 import { useFeaturePlugins } from '@/plugins/useFeaturePlugins';
 import { cn } from '@/lib/utils';
@@ -92,27 +96,6 @@ const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: 
       <span className="shrink-0 flex items-center">{item.icon}</span>
       <span className="truncate text-[14px]">{item.label}</span>
     </button>
-  );
-};
-
-const MetricBar = ({ label, value, suffix = '%', inverse = false }: { label: string, value: number, suffix?: string, inverse?: boolean }) => {
-  const color = inverse 
-    ? (value < 50 ? 'var(--status-success)' : value < 100 ? 'var(--status-warning)' : 'var(--status-error)')
-    : (value > 80 ? 'var(--status-success)' : value > 50 ? 'var(--status-warning)' : 'var(--status-error)');
-  
-  return (
-    <div className="mb-4">
-      <div className="flex justify-between mb-1.5">
-        <span className="text-[12px] text-[var(--text-secondary)]">{label}</span>
-        <span className="text-[12px] font-semibold text-[var(--text-primary)] tabular-nums">{value}{suffix}</span>
-      </div>
-      <div className="h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
-        <div 
-          className="h-full transition-all duration-500 ease-out" 
-          style={{ width: `${Math.min(100, value)}%`, backgroundColor: color }} 
-        />
-      </div>
-    </div>
   );
 };
 
@@ -439,13 +422,39 @@ const PermissionsPanel = () => {
 };
 
 const DiagnosticsPanel = () => {
+  const [appVersion, setAppVersion] = useState<string>('unknown');
+  const [backendSummary, setBackendSummary] = useState<{ mode: string; url: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const desktop = (window as any).allternit?.app;
+    if (desktop?.getVersion) {
+      desktop.getVersion().then((v: string | null) => {
+        if (v) setAppVersion(v);
+      }).catch(() => {});
+    }
+    const loadBackend = async () => {
+      try {
+        const backend = await (window as any).allternit?.connection?.getBackend?.();
+        if (backend) setBackendSummary({ mode: backend.mode, url: backend.url });
+      } catch {
+        setBackendSummary(null);
+      }
+    };
+    void loadBackend();
+  }, []);
+
+  const isDesktop = typeof window !== 'undefined' && !!(window as any).allternit?.backend;
+
   const telemetryRows: Array<{ label: string; value: string; status?: 'success' | 'warning' | 'error' }> = [
-    { label: 'App Version', value: 'v0.9.1-beta' },
-    { label: 'Platform', value: typeof window !== 'undefined' && (window as any).allternit?.backend ? 'Desktop (Native)' : 'Web' },
-    { label: 'Kernel State', value: 'Operational (Port 3004)', status: 'success' },
-    { label: 'Memory Bridge', value: 'Connected (Port 3201)', status: 'success' },
-    { label: 'Gateway Sync', value: 'Healthy (Port 8013)', status: 'success' },
+    { label: 'App Version', value: appVersion },
+    { label: 'Platform', value: isDesktop ? 'Desktop (Native)' : 'Web' },
+    { label: 'Backend Mode', value: backendSummary?.mode ? `${backendSummary.mode}` : isDesktop ? 'Bundled local backend' : 'Web gateway', status: backendSummary ? 'success' : 'warning' },
   ];
+
+  if (backendSummary?.url) {
+    telemetryRows.push({ label: 'Backend URL', value: backendSummary.url, status: 'success' });
+  }
 
   return (
     <div>
@@ -470,10 +479,8 @@ const DiagnosticsPanel = () => {
       </SettingsTable>
 
       <SectionHeading>Session metrics</SectionHeading>
-      <div className="py-2">
-        <MetricBar label="Active Memory Ingestion" value={92} />
-        <MetricBar label="Tool Execution Success" value={98} />
-        <MetricBar label="Context Recall Latency" value={15} suffix="ms" inverse />
+      <div className="p-4 rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 text-[13px] text-[var(--text-secondary)]">
+        Real-time session metrics are collected when telemetry is enabled. Enable telemetry in General settings to see memory ingestion, tool success, and recall latency here.
       </div>
     </div>
   );
@@ -483,7 +490,6 @@ const DiagnosticsPanel = () => {
 export const SettingsView: React.FC<SettingsViewProps> = ({
   initialSection,
   initialTab,
-  onOpenFullManager
 }) => {
   // Guard against unknown section ids arriving via event detail
   const safeInitialSection: SettingsSection = SETTINGS_SECTION_MAP[initialSection ?? ''] ?? 'signin';
@@ -491,6 +497,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [navQuery, setNavQuery] = useState('');
   const [infrastructureTab, setInfrastructureTab] = useState<string | undefined>(initialTab);
   const featurePlugins = useFeaturePlugins();
+  // "Browse"/"Open full manager" renders PluginManager as a nested overlay
+  // ON TOP of this Settings modal (PluginManager's own root is `fixed
+  // inset-0 z-[100]`, above Settings' `z-50`), instead of closing Settings
+  // and routing through ShellApp's separate top-level IntegrationsPanel —
+  // matches the Claude Desktop reference where the Directory modal stays
+  // anchored over the panel that opened it rather than navigating away.
+  const [fullManagerTab, setFullManagerTab] = useState<FullManagerTabId | null>(null);
+  const onOpenFullManager = (tab: string) => setFullManagerTab(tab as FullManagerTabId);
 
   // Inline state adjustment for initialSection change
   const [prevInitialSection, setPrevInitialSection] = useState(safeInitialSection);
@@ -533,7 +547,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const setTheme = useThemeStore((state) => state.setTheme);
   const [compactDensity, setCompactDensity] = useSettingsState('appearance.compactDensity', false);
   const [showSidebarLabels, setTwoSidebarLabels] = useSettingsState('appearance.showSidebarLabels', true);
-  const [streaming, setStreaming] = useState(true);
+  const [streaming, setStreaming] = useSettingsState('models.streaming', true);
   const [bypassPermissions, setBypassPermissions] = useSettingsState('gizziio-code.bypassPermissions', false);
   const [drawAttentionNotifications, setDrawAttentionNotifications] = useSettingsState('gizziio-code.drawAttentionNotifications', true);
   const [gizziRevokeState, setGizziRevokeState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
@@ -561,9 +575,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [usageRefreshing, setUsageRefreshing] = useState(false);
 
   // Customize list panels
-  const [connectors, setConnectors] = useState<Array<{ id: string; name: string; category: string; status: string }>>([]);
+  const [connectors, setConnectors] = useState<OwnedConnector[]>([]);
   const [connectorsLoading, setConnectorsLoading] = useState(false);
   const [connectorsError, setConnectorsError] = useState<string | null>(null);
+  const [connectorQuery, setConnectorQuery] = useState('');
+  const [connectorFilter, setConnectorFilter] = useState<'all' | 'connected' | 'not_connected'>('all');
+  const [connectorVisibleCount, setConnectorVisibleCount] = useState(80);
+  const [connectorBusy, setConnectorBusy] = useState<string | null>(null);
+  const [connectorNote, setConnectorNote] = useState<Record<string, string>>({});
+  const CONNECTOR_VISIBLE_STEP = 120;
 
   const renderGeneralPanel = () => (
     <div>
@@ -689,14 +709,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       // + the open-connector sidecar. Was /api/v1/cowork/connectors, the now-removed
       // 15-package env-var-only system's status endpoint.
       const owned = await listOwnedConnectors();
-      setConnectors(
-        owned.map((c) => ({
-          id: c.id,
-          name: c.name,
-          category: c.category || 'general',
-          status: c.connection?.status === 'connected' ? 'connected' : 'unconfigured',
-        })),
-      );
+      setConnectors(owned);
     } catch {
       setConnectorsError('Failed to load connectors');
       setConnectors([]);
@@ -710,6 +723,63 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       void fetchConnectors();
     }
   }, [activeSection, connectors.length, connectorsError, fetchConnectors]);
+
+  useEffect(() => { setConnectorVisibleCount(80); }, [connectorQuery, connectorFilter]);
+
+  const setConnectorInlineNote = (id: string, msg: string) => {
+    setConnectorNote((prev) => ({ ...prev, [id]: msg }));
+  };
+
+  const handleConnectorConnect = useCallback(async (c: OwnedConnector) => {
+    setConnectorBusy(c.id);
+    setConnectorInlineNote(c.id, '');
+    try {
+      const r: OwnedConnectStatus = await connectOwned(c.id);
+      switch (r.status) {
+        case 'connected':
+          void fetchConnectors();
+          break;
+        case 'authorization_required': {
+          const url = (r as { authorize_url?: string }).authorize_url;
+          if (url) window.open(url, '_blank', 'width=600,height=700');
+          setConnectorInlineNote(c.id, 'Authorize Allternit in the opened window, then click Refresh.');
+          break;
+        }
+        default:
+          setConnectorInlineNote(c.id, (r as { message?: string }).message || `Status: ${r.status}`);
+      }
+    } catch (e) {
+      setConnectorInlineNote(c.id, e instanceof Error ? e.message : 'Connect failed');
+    } finally {
+      setConnectorBusy(null);
+    }
+  }, [fetchConnectors]);
+
+  const handleConnectorDisconnect = useCallback(async (c: OwnedConnector) => {
+    setConnectorBusy(c.id);
+    try {
+      await disconnectOwned(c.id);
+      void fetchConnectors();
+    } finally {
+      setConnectorBusy(null);
+    }
+  }, [fetchConnectors]);
+
+  const filteredConnectors = useMemo(() => {
+    const q = connectorQuery.trim().toLowerCase();
+    return connectors.filter((c) => {
+      const isConnected = c.connection?.status === 'connected';
+      if (connectorFilter === 'connected' && !isConnected) return false;
+      if (connectorFilter === 'not_connected' && isConnected) return false;
+      if (!q) return true;
+      return [c.id, c.name, c.category, c.description].some((v) => (v || '').toLowerCase().includes(q));
+    });
+  }, [connectors, connectorQuery, connectorFilter]);
+
+  const isConnectorSearching = connectorQuery.trim().length > 0;
+  const visibleConnectors = isConnectorSearching ? filteredConnectors : filteredConnectors.slice(0, connectorVisibleCount);
+  const connectorsRemaining = filteredConnectors.length - visibleConnectors.length;
+  const connectedConnectorCount = connectors.filter((c) => c.connection?.status === 'connected').length;
 
 
   const handleRevokeGizziAccess = async () => {
@@ -867,9 +937,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </button>
       </div>
 
+      {/* Native, built-in extensions (previously mislabeled "Allternit Plugins" —
+          this is app-feature-toggle data: Core/Advanced/Office add-ins/Chrome
+          companion — genuinely Extensions-shaped, not the installed-plugins
+          list, which now lives in its own real Customize > Allternit Plugins
+          panel). Distinct from the marketplace-installed section below, which
+          stays an honest empty state until something is actually installed. */}
+      <div>
+        <SectionHeading className="mb-1">Native</SectionHeading>
+        {featurePlugins.allPlugins.map((plugin) => renderCapabilityRow({
+          id: plugin.id,
+          name: plugin.name,
+          description: plugin.description,
+          meta: [
+            plugin.builtin ? 'Built in' : undefined,
+            plugin.category,
+            plugin.version,
+          ].filter(Boolean).join(' · '),
+          enabled: featurePlugins.enabledIds.has(plugin.id),
+          onToggle: () => featurePlugins.toggle(plugin.id),
+        }))}
+      </div>
+
       <EmptyState
         icon={<PuzzlePiece size={56} weight="thin" />}
-        title="No extensions installed"
+        title="No marketplace extensions installed"
         caption="Extensions let Allternit connect to external tools and services."
         ctaLabel="Browse extensions"
         primaryCta
@@ -1002,6 +1094,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <ArrowsClockwise size={14} className={connectorsLoading ? 'animate-spin' : ''} /> Refresh
         </button>
       </PanelHeader>
+
+      <div className="flex items-center gap-2 p-[8px_12px] rounded-[10px] border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] mb-3">
+        <MagnifyingGlass size={14} className="text-[var(--text-tertiary)]" />
+        <input
+          aria-label="Search connectors"
+          value={connectorQuery}
+          onChange={(e) => setConnectorQuery(e.target.value)}
+          placeholder={`Search ${connectors.length || ''} connectors…`}
+          className="flex-1 bg-transparent border-none outline-none text-[13px] text-[var(--text-primary)]"
+        />
+      </div>
+
+      <div className="flex items-center gap-1 mb-3">
+        {([
+          ['all', `All (${connectors.length})`],
+          ['connected', `Connected (${connectedConnectorCount})`],
+          ['not_connected', `Not Connected (${connectors.length - connectedConnectorCount})`],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setConnectorFilter(key)}
+            className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold border border-solid transition-colors ${
+              connectorFilter === key
+                ? 'bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] border-[var(--accent-primary)]'
+                : 'bg-transparent text-[var(--text-secondary)] border-[var(--border-subtle)] hover:bg-[var(--bg-secondary)]'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {connectorsLoading && connectors.length === 0 ? (
         <SkeletonRow lines={4} />
       ) : connectorsError ? (
@@ -1011,25 +1136,81 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           ctaLabel="Retry"
           onCtaClick={() => void fetchConnectors()}
         />
-      ) : connectors.length === 0 ? (
+      ) : filteredConnectors.length === 0 ? (
         <EmptyState
           icon={<PlugsConnected size={40} weight="thin" />}
-          caption="No connectors configured."
+          caption={connectorQuery ? `No connectors match "${connectorQuery}".` : 'No connectors configured.'}
         />
       ) : (
-        <SettingsTable columns={['Connector', 'Category', 'Status']}>
-          {connectors.map((c) => (
-            <tr key={c.id}>
-              <SettingsTableCell>{c.name}</SettingsTableCell>
-              <SettingsTableCell className="text-[var(--text-secondary)] capitalize">{c.category}</SettingsTableCell>
-              <SettingsTableCell>
-                <SettingsTableChip tone={c.status === 'connected' ? 'blue' : 'gray'}>
-                  {c.status === 'connected' ? 'Connected' : 'Unconfigured'}
-                </SettingsTableChip>
-              </SettingsTableCell>
-            </tr>
-          ))}
-        </SettingsTable>
+        <>
+          <div className="flex flex-col gap-2">
+            {visibleConnectors.map((c) => {
+              const isConnected = c.connection?.status === 'connected';
+              const logoUrl = getConnectorLogoUrl(c.base_url);
+              return (
+                <div
+                  key={c.id}
+                  className={`flex items-center gap-3 p-[10px_12px] rounded-[10px] border border-solid ${
+                    isConnected ? 'border-[rgba(34,197,94,0.2)] bg-[rgba(34,197,94,0.04)]' : 'border-[var(--border-subtle)]'
+                  }`}
+                >
+                  <div className="shrink-0 size-8 rounded-lg overflow-hidden flex items-center justify-center bg-[var(--bg-secondary)]">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="" className="size-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    ) : (
+                      <PlugsConnected size={16} className="text-[var(--text-tertiary)]" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[13px] font-semibold text-[var(--text-primary)]">{c.name}</span>
+                      {c.category && <span className="text-[11px] text-[var(--text-tertiary)] capitalize">{c.category}</span>}
+                    </div>
+                    {connectorNote[c.id] && (
+                      <div className="mt-1 text-[11px] text-[var(--text-secondary)] leading-relaxed">{connectorNote[c.id]}</div>
+                    )}
+                  </div>
+                  <div className="shrink-0">
+                    {isConnected ? (
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-[var(--status-success)]">
+                          <CheckCircle size={14} weight="fill" /> Connected
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleConnectorDisconnect(c)}
+                          disabled={connectorBusy === c.id}
+                          title="Disconnect"
+                          className="p-1.5 rounded-lg border border-solid border-[#fecaca] bg-[#fef2f2] text-[#dc2626] cursor-pointer"
+                        >
+                          <Trash size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void handleConnectorConnect(c)}
+                        disabled={connectorBusy === c.id}
+                        className="px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[11px] font-bold cursor-pointer disabled:opacity-60"
+                      >
+                        {connectorBusy === c.id ? '…' : 'Connect'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {!isConnectorSearching && connectorsRemaining > 0 && (
+            <button
+              type="button"
+              onClick={() => setConnectorVisibleCount((n) => n + CONNECTOR_VISIBLE_STEP)}
+              className="w-full mt-2 p-2 rounded-[10px] border border-dashed border-[var(--border-subtle)] bg-transparent text-[12px] font-semibold text-[var(--text-tertiary)] cursor-pointer"
+            >
+              Show {Math.min(connectorsRemaining, CONNECTOR_VISIBLE_STEP)} more ({connectorsRemaining} left) — or search above
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -1057,50 +1238,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </SettingsRow>
   );
 
-  // Note: this panel shows built-in FEATURE toggles (featurePlugins —
-  // enable/disable whole app features like Design/Cowork surfaces), which is
-  // a real, distinct concept from the installed marketplace plugin packages
-  // shown in the full manager's own "Plugins" tab — the two aren't actually
-  // duplicates despite the name overlap. This used to also render a
-  // "Skills" sub-list from the static BUNDLED_SKILLS import, which WAS a
-  // real duplicate of the (now real, filesystem-backed) Customize > Skills
-  // panel above; that block is removed rather than kept in sync with two
-  // data sources.
-  const renderPluginsPanel = () => {
-    const pluginRows = featurePlugins.allPlugins;
-
-    return (
-      <div>
-        <PanelHeader title="Allternit Plugins">
-          <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => onOpenFullManager?.('plugins')}>
-            Open full manager
-          </button>
-        </PanelHeader>
-        <SectionHeading>Features</SectionHeading>
-        {pluginRows.length === 0 ? (
-          <EmptyState
-            icon={<PuzzlePiece size={40} weight="thin" />}
-            caption="No plugins installed."
-          />
-        ) : (
-          <div>
-            {pluginRows.map((plugin) => renderCapabilityRow({
-              id: plugin.id,
-              name: plugin.name,
-              description: plugin.description,
-              meta: [
-                plugin.builtin ? 'Built in' : undefined,
-                plugin.category,
-                plugin.version,
-              ].filter(Boolean).join(' · '),
-              enabled: featurePlugins.enabledIds.has(plugin.id),
-              onToggle: () => featurePlugins.toggle(plugin.id),
-            }))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  // Real installed plugin packages, disk-scanned via useFileSystem() — same
+  // pattern as SkillsSettingsPanel. This used to render featurePlugins (the
+  // built-in app FEATURE toggle registry), which is Extensions-shaped data,
+  // not plugins; that list now lives in renderExtensionsPanel instead.
+  const renderPluginsPanel = () => (
+    <PluginsSettingsPanel onBrowse={() => onOpenFullManager?.('plugins')} />
+  );
 
   const renderContent = () => {
     switch (activeSection) {
@@ -1141,6 +1285,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const closeSettings = () => window.dispatchEvent(new CustomEvent('allternit:close-settings'));
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-[2px] text-[var(--text-primary)] font-sans"
       onClick={closeSettings}
@@ -1212,6 +1357,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
     </div>
+    <PluginManager
+      isOpen={fullManagerTab !== null}
+      initialTab={fullManagerTab ?? undefined}
+      onClose={() => setFullManagerTab(null)}
+      onOpenSettings={() => setFullManagerTab(null)}
+    />
+    </>
   );
 };
 

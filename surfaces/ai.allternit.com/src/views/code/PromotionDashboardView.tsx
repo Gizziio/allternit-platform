@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { GlassCard } from '../../design/glass/GlassCard';
+import { EmptyState } from '@/components/settings/EmptyState';
 import {
   ShieldCheck,
   CheckCircle,
@@ -9,6 +10,7 @@ import {
   CaretUp,
   FolderOpen,
   GearSix,
+  ArrowsClockwise,
 } from '@phosphor-icons/react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,16 +92,33 @@ export function PromotionDashboardView() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [proposalStates, setProposalStates] = useState<Record<string, ProposalStatus>>({});
+  const [fetchState, setFetchState] = useState<'loading' | 'error' | 'success'>('loading');
+  const [decisionLoading, setDecisionLoading] = useState<Record<string, boolean>>({});
+  const [decisionError, setDecisionError] = useState<Record<string, string | null>>({});
+  const [globalError, setGlobalError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadProposals = useCallback(() => {
+    setFetchState('loading');
+    setGlobalError(null);
     fetch('/api/v1/promotion/proposals')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data: Proposal[]) => {
         setProposals(data);
         setProposalStates(data.reduce((acc, p) => ({ ...acc, [p.id]: p.status }), {}));
+        setFetchState('success');
       })
-      .catch(() => {});
+      .catch((err: Error) => {
+        setFetchState('error');
+        setGlobalError(err.message);
+      });
   }, []);
+
+  useEffect(() => {
+    loadProposals();
+  }, [loadProposals]);
 
   const filteredProposals = proposals.filter(p => 
     filterStatus === 'All' ? true : proposalStates[p.id] === filterStatus
@@ -126,13 +145,32 @@ export function PromotionDashboardView() {
     rejected: Object.values(proposalStates).filter(s => s === 'rejected').length
   };
 
-  const handleApply = (id: string) => {
-    setProposalStates(prev => ({ ...prev, [id]: 'approved' }));
-  };
+  const submitDecision = useCallback(async (id: string, decision: 'approved' | 'rejected') => {
+    const previousStatus = proposalStates[id];
+    setDecisionLoading(prev => ({ ...prev, [id]: true }));
+    setDecisionError(prev => ({ ...prev, [id]: null }));
+    setProposalStates(prev => ({ ...prev, [id]: decision }));
 
-  const handleReject = (id: string) => {
-    setProposalStates(prev => ({ ...prev, [id]: 'rejected' }));
-  };
+    try {
+      const res = await fetch(`/api/v1/promotion/proposals/${id}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `HTTP ${res.status}`);
+      }
+    } catch (err: any) {
+      setProposalStates(prev => ({ ...prev, [id]: previousStatus }));
+      setDecisionError(prev => ({ ...prev, [id]: err.message || 'Decision failed' }));
+    } finally {
+      setDecisionLoading(prev => ({ ...prev, [id]: false }));
+    }
+  }, [proposalStates]);
+
+  const handleApply = (id: string) => submitDecision(id, 'approved');
+  const handleReject = (id: string) => submitDecision(id, 'rejected');
 
   return (
     <div className="p-6 h-full flex flex-col gap-5 overflow-hidden">
@@ -150,11 +188,22 @@ export function PromotionDashboardView() {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mt-3">
-          <StatCard label="Pending" value={stats.pending} color="#ffa500" />
-          <StatCard label="Approved" value={stats.approved} color="#34c759" />
-          <StatCard label="Rejected" value={stats.rejected} color="#ff3b30" />
+          <StatCard label="Pending" value={stats.pending} color="var(--status-warning)" />
+          <StatCard label="Approved" value={stats.approved} color="var(--status-success)" />
+          <StatCard label="Rejected" value={stats.rejected} color="var(--status-error)" />
         </div>
       </div>
+
+      {/* Global Error Banner */}
+      {globalError && fetchState === 'success' && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-[var(--status-error-bg)] text-[var(--status-error)] text-[12px] font-semibold">
+          <Warning size={14} />
+          {globalError}
+          <button type="button" onClick={() => setGlobalError(null)} className="ml-auto text-[11px] underline cursor-pointer bg-transparent border-none">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Filter Tabs and Sort */}
       <div className="flex justify-between items-center gap-3">
@@ -164,8 +213,8 @@ export function PromotionDashboardView() {
               key={status}
               onClick={() => setFilterStatus(status === 'All' ? 'All' : status)}
               className={`px-3.5 py-1.5 rounded-md border-none text-[12px] font-semibold cursor-pointer transition-all duration-200 capitalize ${
-                filterStatus === status 
-                  ? 'bg-[var(--accent-chat)] text-white' 
+                filterStatus === status
+                  ? 'bg-[var(--accent-chat)] text-[var(--ui-text-inverse)]'
                   : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
               }`}
             >
@@ -187,8 +236,38 @@ export function PromotionDashboardView() {
 
       {/* Proposals List */}
       <div className="flex-1 overflow-auto">
-        <div className="grid gap-3">
-          {sortedProposals.map(proposal => {
+        {fetchState === 'loading' && (
+          <div className="flex flex-col items-center justify-center p-12 gap-3 text-[var(--text-tertiary)]">
+            <ArrowsClockwise size={24} className="animate-spin" />
+            <span className="text-[13px] font-medium">Loading proposals…</span>
+          </div>
+        )}
+
+        {fetchState === 'error' && (
+          <EmptyState
+            icon={<XCircle size={48} weight="thin" className="text-[var(--status-error)]" />}
+            title="Could not load proposals"
+            caption="The promotion service is unavailable. Check your connection and try again."
+            ctaLabel="Retry"
+            onCtaClick={loadProposals}
+          />
+        )}
+
+        {fetchState === 'success' && sortedProposals.length === 0 && (
+          <EmptyState
+            icon={<FolderOpen size={48} weight="thin" />}
+            title="No proposals found"
+            caption={filterStatus === 'All'
+              ? 'There are no promotion proposals to review right now.'
+              : `No ${filterStatus} proposals match the current filter.`}
+            ctaLabel={filterStatus === 'All' ? undefined : 'Clear filter'}
+            onCtaClick={filterStatus === 'All' ? undefined : () => setFilterStatus('All')}
+          />
+        )}
+
+        {fetchState !== 'error' && (
+          <div className="grid gap-3">
+            {sortedProposals.map(proposal => {
             const currentStatus = proposalStates[proposal.id];
             const isExpanded = expandedId === proposal.id;
             const CheckIconComponent = getCheckIcon(proposal.ciChecks);
@@ -302,7 +381,7 @@ export function PromotionDashboardView() {
                     </h4>
                     <div className="flex flex-col gap-1.5 mb-3">
                       {proposal.affectedFiles.map((file, idx) => (
-                        <div key={`promotiondashboardview-${idx}`} className="p-2 bg-white/5 rounded text-[12px] flex justify-between items-center">
+                        <div key={`promotiondashboardview-${idx}`} className="p-2 bg-[var(--surface-hover)] rounded text-[12px] flex justify-between items-center">
                           <span className="text-[var(--text-secondary)] font-mono">
                             {file.path}
                           </span>
@@ -315,18 +394,29 @@ export function PromotionDashboardView() {
                   </div>
                 )}
 
+                {/* Decision Error */}
+                {decisionError[proposal.id] && (
+                  <div className="flex items-center gap-2 pt-3 text-[11px] font-semibold text-[var(--status-error)]">
+                    <XCircle size={13} />
+                    {decisionError[proposal.id]}
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 {currentStatus === 'pending' && (
                   <div className="flex gap-2 pt-3 border-t border-solid border-[var(--border-subtle)]">
                     <button type="button"
                       onClick={() => handleApply(proposal.id)}
-                      className="flex-1 py-2 px-3 rounded-md border-none bg-[var(--status-success)] text-white text-[12px] font-bold cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-95"
+                      disabled={decisionLoading[proposal.id]}
+                      className="flex-1 py-2 px-3 rounded-md border-none bg-[var(--status-success)] text-[var(--ui-text-inverse)] text-[12px] font-bold cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-wait flex items-center justify-center gap-1.5"
                     >
+                      {decisionLoading[proposal.id] ? <ArrowsClockwise size={13} className="animate-spin" /> : <CheckCircle size={13} />}
                       Apply Proposal
                     </button>
                     <button type="button"
                       onClick={() => handleReject(proposal.id)}
-                      className="flex-1 py-2 px-3 rounded-md border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--status-error)] text-[12px] font-bold cursor-pointer transition-all duration-200 hover:bg-[var(--status-error-bg)]"
+                      disabled={decisionLoading[proposal.id]}
+                      className="flex-1 py-2 px-3 rounded-md border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--status-error)] text-[12px] font-bold cursor-pointer transition-all duration-200 hover:bg-[var(--status-error-bg)] disabled:opacity-60 disabled:cursor-wait"
                     >
                       Reject
                     </button>
@@ -335,7 +425,8 @@ export function PromotionDashboardView() {
               </GlassCard>
             );
           })}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

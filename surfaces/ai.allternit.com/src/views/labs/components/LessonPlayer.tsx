@@ -271,7 +271,7 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 200,
-        background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(16px)',
+        background: 'color-mix(in srgb, var(--surface-canvas) 92%, transparent)', backdropFilter: 'blur(16px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <Text variant="body" style={{ color: TEXT_MUTED }}>Loading lesson…</Text>
@@ -282,7 +282,7 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(20px)',
+      background: 'color-mix(in srgb, var(--surface-canvas) 95%, transparent)', backdropFilter: 'blur(20px)',
       display: 'flex', flexDirection: 'column',
     }}>
       <style>{`
@@ -335,7 +335,7 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
               <div style={{
                 height: '100%',
                 width: `${progress}%`,
-                background: `linear-gradient(90deg, ${ACCENT}, rgba(212,176,140,0.6))`,
+                background: `linear-gradient(90deg, ${ACCENT}, color-mix(in srgb, var(--accent-primary) 60%, transparent))`,
                 borderRadius: 2,
                 transition: 'width 0.4s ease',
               }} />
@@ -423,13 +423,13 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
                   onClick={() => { setIsFinished(false); setCurrentSceneIndex(0); setCompletedScenes(new Set()); setQuizScore(null); }}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '10px 18px', background: 'rgba(255,255,255,.06)',
+                    padding: '10px 18px', background: 'var(--surface-hover)',
                     border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 10,
                     color: TEXT_PRIMARY, fontWeight: 600, fontSize: 13,
                     cursor: 'pointer', transition: 'all .18s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.1)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,.06)'; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-active)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
                 >
                   <Play size={14} /> Replay
                 </button>
@@ -497,7 +497,7 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
           disabled={currentSceneIndex === 0}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', background: 'rgba(255,255,255,.04)',
+            padding: '8px 14px', background: 'var(--surface-active)',
             border: `1px solid ${BORDER_SUBTLE}`, borderRadius: 8,
             color: currentSceneIndex === 0 ? TEXT_MUTED : TEXT_PRIMARY,
             fontWeight: 500, fontSize: 13, cursor: currentSceneIndex === 0 ? 'not-allowed' : 'pointer',
@@ -521,7 +521,7 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
                   width: isCurrent ? 24 : 8,
                   height: 8,
                   borderRadius: 4,
-                  background: isCompleted ? STATUS_SUCCESS : isCurrent ? ACCENT : 'rgba(255,255,255,0.2)',
+                  background: isCompleted ? STATUS_SUCCESS : isCurrent ? ACCENT : 'color-mix(in srgb, var(--ui-text-muted) 40%, transparent)',
                   border: 'none',
                   cursor: 'pointer',
                   transition: 'all 0.25s ease',

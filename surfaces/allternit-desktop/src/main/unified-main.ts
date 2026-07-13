@@ -23,7 +23,8 @@ import { backendManager } from './backend-manager.js';
 import { gizziManager } from './gizzi-manager.js';
 import { gizziDaemonManager } from './gizzi-daemon-manager.js';
 import { PORTS, URLS, devUiUrl, apiUrl, notebookUrl, staticUiUrl } from './config.js';
-import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus } from './mini-apps-manager.js';
+import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus, launchMiniAppDesktop } from './mini-apps-manager.js';
+import { OfficeAddinManager, type OfficeProductId } from './office-addin-manager.js';
 
 import { tunnelManager } from './tunnel-manager.js';
 import { authManager } from './auth-manager.js';
@@ -104,7 +105,18 @@ const MINI_WINDOW_HEIGHT = 600;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
 let activeBackendUrl: string = URLS.API;
 /** Active TCP connection from the native messaging host (Chrome extension bridge) */
-let extensionSocket: net.Socket | null = null;
+const extensionSockets = new Set<net.Socket>();
+
+function getConnectedExtensionSockets(): net.Socket[] {
+  return [...extensionSockets].filter((socket) => !socket.destroyed);
+}
+
+function sendToExtension(message: unknown): boolean {
+  const sockets = getConnectedExtensionSockets();
+  const line = JSON.stringify(message) + '\n';
+  for (const socket of sockets) socket.write(line);
+  return sockets.length > 0;
+}
 function updateSidecarConfig(gizziUrl: string) {
   const config = {
     apiUrl: gizziUrl,
@@ -124,10 +136,11 @@ type OfficeHostRuntimeStatus = {
   bundlePath: string | null;
 };
 
-const OFFICE_HOSTS: Record<OfficeHostId, { appName: string; bundleId: string; commonPaths: string[] }> = {
+const OFFICE_HOSTS: Record<OfficeHostId, { appName: string; bundleId: string; windowsExe: string; commonPaths: string[] }> = {
   word: {
     appName: 'Microsoft Word',
     bundleId: 'com.microsoft.Word',
+    windowsExe: 'WINWORD.EXE',
     commonPaths: [
       '/Applications/Microsoft Word.app',
       join(os.homedir(), 'Applications/Microsoft Word.app'),
@@ -136,6 +149,7 @@ const OFFICE_HOSTS: Record<OfficeHostId, { appName: string; bundleId: string; co
   excel: {
     appName: 'Microsoft Excel',
     bundleId: 'com.microsoft.Excel',
+    windowsExe: 'EXCEL.EXE',
     commonPaths: [
       '/Applications/Microsoft Excel.app',
       join(os.homedir(), 'Applications/Microsoft Excel.app'),
@@ -144,6 +158,7 @@ const OFFICE_HOSTS: Record<OfficeHostId, { appName: string; bundleId: string; co
   powerpoint: {
     appName: 'Microsoft PowerPoint',
     bundleId: 'com.microsoft.Powerpoint',
+    windowsExe: 'POWERPNT.EXE',
     commonPaths: [
       '/Applications/Microsoft PowerPoint.app',
       join(os.homedir(), 'Applications/Microsoft PowerPoint.app'),
@@ -167,6 +182,21 @@ async function detectOfficeHostStatus(): Promise<Record<OfficeHostId, OfficeHost
   const result = {} as Record<OfficeHostId, OfficeHostRuntimeStatus>;
 
   await Promise.all((Object.entries(OFFICE_HOSTS) as Array<[OfficeHostId, typeof OFFICE_HOSTS[OfficeHostId]]>).map(async ([host, meta]) => {
+    if (process.platform === 'win32') {
+      const programRoots = [process.env.ProgramFiles, process.env['ProgramFiles(x86)']].filter((value): value is string => Boolean(value));
+      const candidates = programRoots.flatMap((root) => [
+        join(root, 'Microsoft Office', 'root', 'Office16', meta.windowsExe),
+        join(root, 'Microsoft Office', 'Office16', meta.windowsExe),
+      ]);
+      const bundlePath = candidates.find((candidate) => fs.existsSync(candidate)) ?? null;
+      const tasks = await execFileText('tasklist.exe', ['/FI', `IMAGENAME eq ${meta.windowsExe}`, '/FO', 'CSV', '/NH']);
+      result[host] = { installed: Boolean(bundlePath), running: tasks.toUpperCase().includes(meta.windowsExe), bundlePath };
+      return;
+    }
+    if (process.platform !== 'darwin') {
+      result[host] = { installed: false, running: false, bundlePath: null };
+      return;
+    }
     let bundlePath = meta.commonPaths.find((candidate) => fs.existsSync(candidate)) ?? null;
 
     if (!bundlePath) {
@@ -184,6 +214,20 @@ async function detectOfficeHostStatus(): Promise<Record<OfficeHostId, OfficeHost
   }));
 
   return result;
+}
+
+function resolveOfficeManifestDir(): string {
+  const candidates = [
+    process.env.ALLTERNIT_OFFICE_MANIFEST_DIR,
+    join(app.getAppPath(), 'surfaces', 'allternit-extensions', 'allternit-office-addin', 'manifests'),
+    join(process.resourcesPath, 'office-addins', 'manifests'),
+    join(process.cwd(), 'surfaces', 'allternit-extensions', 'allternit-office-addin', 'manifests'),
+  ].filter((value): value is string => Boolean(value));
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
+}
+
+async function getOfficeAddinManager(): Promise<OfficeAddinManager> {
+  return new OfficeAddinManager({ manifestDir: resolveOfficeManifestDir(), hostStatus: await detectOfficeHostStatus() });
 }
 
 interface StoreSchema {
@@ -679,6 +723,9 @@ function createMainWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Browser Mode uses Electron webviews for real page isolation. Guest
+      // preferences are locked down again in will-attach-webview below.
+      webviewTag: true,
       // Secure by default: API calls are routed through the allternit-api
       // custom protocol handler (registered in app.whenReady) which proxies
       // to the local API without mixed-content issues.
@@ -755,6 +802,41 @@ function createMainWindow(): BrowserWindow {
   window.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  window.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+    let protocol: string;
+    try {
+      protocol = new URL(params.src).protocol;
+    } catch {
+      event.preventDefault();
+      return;
+    }
+    if (!['http:', 'https:', 'about:'].includes(protocol)) {
+      log.warn(`[Main] Blocked Browser Mode webview protocol: ${protocol}`);
+      event.preventDefault();
+      return;
+    }
+    delete webPreferences.preload;
+    webPreferences.nodeIntegration = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+    webPreferences.webSecurity = true;
+    webPreferences.allowRunningInsecureContent = false;
+  });
+
+  window.webContents.on('did-attach-webview', (_event, guestContents) => {
+    guestContents.setWindowOpenHandler(({ url }) => {
+      try {
+        const protocol = new URL(url).protocol;
+        if (protocol === 'http:' || protocol === 'https:') {
+          void shell.openExternal(url);
+        }
+      } catch {
+        log.warn(`[Main] Ignored malformed Browser Mode popup URL: ${url}`);
+      }
+      return { action: 'deny' };
+    });
   });
 
   // Auto-open DevTools only when flag is set
@@ -1151,7 +1233,7 @@ const pendingRelayResponses = new Map<string, (data: unknown) => void>();
 function startExtensionBridge(): void {
   const server = net.createServer((socket) => {
     log.info('[ExtensionBridge] Native host connected');
-    extensionSocket = socket;
+    extensionSockets.add(socket);
 
     // Notify renderer that extension is now connected
     mainWindow?.webContents.send('extension:status', { connected: true });
@@ -1181,8 +1263,10 @@ function startExtensionBridge(): void {
 
     socket.on('close', () => {
       log.info('[ExtensionBridge] Native host disconnected');
-      extensionSocket = null;
-      mainWindow?.webContents.send('extension:status', { connected: false });
+      extensionSockets.delete(socket);
+      mainWindow?.webContents.send('extension:status', {
+        connected: getConnectedExtensionSockets().length > 0,
+      });
     });
 
     socket.on('error', (err) => {
@@ -1222,14 +1306,14 @@ function startAcuExtensionRelay(): void {
       req.on('end', () => {
         try {
           const message = JSON.parse(body) as Record<string, unknown>;
-          if (!extensionSocket || extensionSocket.destroyed) {
+          if (getConnectedExtensionSockets().length === 0) {
             res.writeHead(503, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: false, error: 'extension_not_connected' }));
             return;
           }
 
           const msgId = message['id'] as string | undefined;
-          extensionSocket.write(JSON.stringify(message) + '\n');
+          sendToExtension(message);
 
           if (!msgId) {
             // Fire-and-forget: no id means caller doesn't expect a correlated response
@@ -1258,7 +1342,7 @@ function startAcuExtensionRelay(): void {
         }
       });
     } else if (req.method === 'GET' && req.url === '/extension/status') {
-      const connected = extensionSocket !== null && !extensionSocket.destroyed;
+      const connected = getConnectedExtensionSockets().length > 0;
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ connected }));
     } else {
@@ -1759,6 +1843,13 @@ ipcMain.handle('shell:open-external', (_event, url: string) => {
   shell.openExternal(url);
 });
 ipcMain.handle('shell:get-office-host-status', async () => detectOfficeHostStatus());
+ipcMain.handle('office-addins:get-status', async () => {
+  const manager = await getOfficeAddinManager();
+  return Object.fromEntries((['word', 'excel', 'powerpoint'] as OfficeProductId[]).map((product) => [product, manager.getStatus(product)]));
+});
+ipcMain.handle('office-addins:install', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).install(product));
+ipcMain.handle('office-addins:repair', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).repair(product));
+ipcMain.handle('office-addins:remove', async (_event, product: OfficeProductId) => (await getOfficeAddinManager()).remove(product));
 
 // Desktop auth
 ipcMain.handle('auth:get-session', async () => {
@@ -2118,15 +2209,11 @@ ipcMain.handle('vm-setup:get-vm-status', async (): Promise<'running' | 'stopped'
 // ============================================================================
 
 ipcMain.handle('extension:get-status', () => ({
-  connected: extensionSocket !== null && !extensionSocket.destroyed,
+  connected: getConnectedExtensionSockets().length > 0,
 }));
 
 ipcMain.handle('extension:send', (_event, message: unknown) => {
-  if (extensionSocket && !extensionSocket.destroyed) {
-    extensionSocket.write(JSON.stringify(message) + '\n');
-    return true;
-  }
-  return false;
+  return sendToExtension(message);
 });
 
 // ============================================================================
@@ -2512,3 +2599,4 @@ ipcMain.handle('miniApps:stop', (_event, id: string) => {
 });
 
 ipcMain.handle('miniApps:getStatus', (_event, id: string) => getMiniAppStatus(id));
+ipcMain.handle('miniApps:launchDesktop', (_event, id: string) => launchMiniAppDesktop(id));

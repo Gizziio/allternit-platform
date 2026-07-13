@@ -27,6 +27,7 @@ import { setCwd } from '../utils/Shell.js'
 import { jsonStringify } from '../utils/slowOperations.js'
 import { getErrorParts } from '../utils/toolErrors.js'
 import { zodToJsonSchema } from '../utils/zodToJsonSchema.js'
+import { ORCHESTRATOR_MCP_TOOLS, callOrchestratorMcpTool, isOrchestratorMcpTool } from '../../../../entrypoints/orchestratorMcp.js'
 
 type ToolInput = Tool['inputSchema']
 type ToolOutput = Tool['outputSchema']
@@ -60,11 +61,11 @@ export async function startMCPServer(
   server.setRequestHandler(
     ListToolsRequestSchema,
     async (): Promise<ListToolsResult> => {
-      // TODO: Also re-expose any MCP tools
+      // Native Gizzi tools plus the HTTP-backed orchestrator bridge.
       const toolPermissionContext = getEmptyToolPermissionContext()
       const tools = getTools(toolPermissionContext)
       return {
-        tools: await Promise.all(
+        tools: [...await Promise.all(
           tools.map(async tool => {
             let outputSchema: ToolOutput | undefined
             if (tool.outputSchema) {
@@ -92,7 +93,7 @@ export async function startMCPServer(
               outputSchema,
             }
           }),
-        ),
+        ), ...ORCHESTRATOR_MCP_TOOLS],
       }
     },
   )
@@ -101,8 +102,18 @@ export async function startMCPServer(
     CallToolRequestSchema,
     async ({ params: { name, arguments: args } }): Promise<CallToolResult> => {
       const toolPermissionContext = getEmptyToolPermissionContext()
-      // TODO: Also re-expose any MCP tools
+      // Orchestrator tools dispatch before native tool lookup because they are
+      // owned by the canonical Gizzi HTTP runtime, not this stdio process.
       const tools = getTools(toolPermissionContext)
+      if (isOrchestratorMcpTool(name)) {
+        try {
+          const result = await callOrchestratorMcpTool(name, args)
+          return { content: [{ type: 'text' as const, text: jsonStringify(result) }] }
+        } catch (error) {
+          const parts = error instanceof Error ? getErrorParts(error) : [String(error)]
+          return { isError: true, content: [{ type: 'text' as const, text: parts.filter(Boolean).join('\n').trim() || 'Error' }] }
+        }
+      }
       const tool = findToolByName(tools, name)
       if (!tool) {
         throw new Error(`Tool ${name} not found`)

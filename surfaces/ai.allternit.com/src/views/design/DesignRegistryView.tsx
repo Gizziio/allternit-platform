@@ -1,12 +1,10 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import {
   MagnifyingGlass,
   DownloadSimple,
   Check,
-  ArrowSquareOut,
   Sparkle,
   Star,
   Eye,
@@ -20,11 +18,11 @@ import {
   Plus,
   Copy,
   Heart,
-  PlayCircle,
   Upload,
 } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Pill } from "@/components/ui/Pill";
 import { DESIGN_MARKETPLACE, DesignSystem } from "../../lib/design/design-registry";
 import { useNav } from "../../nav/useNav";
 
@@ -139,10 +137,10 @@ function PreviewGradient({ colors }: { colors: string[] }) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function DesignRegistryView({ onInstall, installedId }: DesignRegistryViewProps) {
+export function DesignRegistryView({ onInstall, installedId: _installedId }: DesignRegistryViewProps) {
   const { dispatch } = useNav();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [_selectedId, setSelectedId] = useState<string | null>(null);
   const [activeFeed, setActiveFeed] = useState<FeedFilter>("featured");
   const [activeTag, setActiveTag] = useState("all");
   const [promptInput, setPromptInput] = useState("");
@@ -356,31 +354,39 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         <div className="flex-1 overflow-y-auto p-[24px_28px]">
         {/* Filter pills */}
         <div className="flex flex-wrap gap-2 mb-5">
-          <FilterPill
+          <Pill
             active={activeFeed === "featured"}
             onClick={() => setActiveFeed("featured")}
             icon={<Star size={12} weight="fill" />}
-            label="Featured"
-          />
-          <FilterPill
+            size="sm"
+          >
+            Featured
+          </Pill>
+          <Pill
             active={activeFeed === "trending"}
             onClick={() => setActiveFeed("trending")}
             icon={<TrendUp size={12} />}
-            label="Trending"
-          />
-          <FilterPill
+            size="sm"
+          >
+            Trending
+          </Pill>
+          <Pill
             active={activeFeed === "pro"}
             onClick={() => setActiveFeed("pro")}
             icon={<Lightning size={12} />}
-            label="Pro"
-          />
+            size="sm"
+          >
+            Pro
+          </Pill>
           {activeTag !== "all" && (
-            <FilterPill
+            <Pill
               active
               onClick={() => setActiveTag("all")}
               icon={<Sparkle size={12} />}
-              label={TAG_CATEGORIES.find((t) => t.id === activeTag)?.label || activeTag}
-            />
+              size="sm"
+            >
+              {TAG_CATEGORIES.find((t) => t.id === activeTag)?.label || activeTag}
+            </Pill>
           )}
         </div>
 
@@ -597,31 +603,6 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         {icon}
         {value}
         </div>
-        );
-        }
-
-        function FilterPill({
-        active,
-        onClick,
-        icon,
-        label,
-        }: {
-        active: boolean;
-        onClick: () => void;
-        icon: React.ReactNode;
-        label: string;
-        }) {
-        return (
-        <button type="button"
-        onClick={onClick}
-        className={cn(
-        "flex items-center gap-1.5 p-[6px_12px] rounded-lg border border-solid text-[12px] font-bold cursor-pointer transition-all duration-150",
-        active ? "border-[var(--accent-primary)]/30 bg-[#e27c591a] text-[var(--accent-primary)]" : "border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)]"
-        )}
-        >
-        {icon}
-        {label}
-        </button>
         );
         }
 

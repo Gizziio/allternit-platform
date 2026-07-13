@@ -70,6 +70,9 @@ import { VmSessionRoutes } from "@/runtime/server/routes/vm-session"
 import { WorkspaceRoutes } from "@/runtime/server/routes/workspace"
 import { PluginRoutes } from "@/runtime/server/routes/plugin"
 import { CoworkRoutes } from "@/runtime/server/routes/cowork"
+import { AcpRoutes } from "@/runtime/server/routes/acp"
+import { PeerRoutes } from "@/runtime/server/routes/peers"
+import { OrchestratorRoutes } from "@/runtime/server/routes/orchestrator"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -301,6 +304,7 @@ export namespace Server {
         .route("/experimental", ExperimentalRoutes())
         .route("/session", SessionRoutes())
         .route("/automations", AutomationsRoutes())
+        .route("/peers", PeerRoutes())
         .route("/permission", PermissionRoutes())
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
@@ -323,6 +327,7 @@ export namespace Server {
         .route("/vm-session", VmSessionRoutes())
         .route("/plugin", PluginRoutes())
         .route("/cowork", CoworkRoutes())
+        .route("/acp", AcpRoutes())
         .post(
           "/log",
           describeRoute({
@@ -382,6 +387,8 @@ export namespace Server {
           new Hono()
             .route("/session", SessionRoutes())
             .route("/automations", AutomationsRoutes())
+            .route("/peers", PeerRoutes())
+            .route("/orchestrator", OrchestratorRoutes())
             .route("/agent", AgentRoutes())
             .route("/command", CommandRoutes())
             .route("/provider", ProviderRoutes())
@@ -413,6 +420,7 @@ export namespace Server {
             .route("/project", ProjectRoutes())
             .route("/experimental", ExperimentalRoutes())
             .route("/tui", TuiRoutes())
+            .route("/acp", AcpRoutes())
             .route("/workspace", WorkspaceRoutes()) as unknown as Hono,
         )
         .all("/*", async (c) => {

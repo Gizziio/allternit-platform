@@ -273,6 +273,9 @@ importers:
       '@allternit/gizzi-util':
         specifier: workspace:*
         version: link:packages/gizzi-util
+      '@allternit/orchestrator':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/orchestrator
       '@allternit/plugin':
         specifier: workspace:*
         version: link:packages/plugin

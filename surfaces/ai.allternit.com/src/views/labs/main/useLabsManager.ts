@@ -13,6 +13,8 @@ export function useLabsManager() {
   const [activeTab, setActiveTab] = useState<Tab>('discovery');
   const [canvasToken, setCanvasToken] = useState('');
   const [canvasDomain, setCanvasDomain] = useState('https://canvas.instructure.com');
+  const [autoGenerateLessons, setAutoGenerateLessons] = useState(false);
+  const [researchNotebookSync, setResearchNotebookSync] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
   const [courses, setCourses] = useState<ALABSCourse[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
@@ -70,17 +72,21 @@ export function useLabsManager() {
         const config = JSON.parse(saved);
         setCanvasToken(config.canvasToken || '');
         setCanvasDomain(config.canvasDomain || 'https://canvas.instructure.com');
+        setAutoGenerateLessons(Boolean(config.autoGenerateLessons));
+        setResearchNotebookSync(config.researchNotebookSync !== false);
       } catch (err) {
         logger.error({ err: err }, 'Malformed config');
       }
     }
   }, []);
 
-  const saveConfig = useCallback((config: { canvasToken?: string; canvasDomain?: string }) => {
+  const saveConfig = useCallback((config: { canvasToken?: string; canvasDomain?: string; autoGenerateLessons?: boolean; researchNotebookSync?: boolean }) => {
     const current = JSON.parse(localStorage.getItem(LABS_STORAGE_KEY) || '{}');
     localStorage.setItem(LABS_STORAGE_KEY, JSON.stringify({ ...current, ...config }));
     if (config.canvasToken !== undefined) setCanvasToken(config.canvasToken);
     if (config.canvasDomain !== undefined) setCanvasDomain(config.canvasDomain);
+    if (config.autoGenerateLessons !== undefined) setAutoGenerateLessons(config.autoGenerateLessons);
+    if (config.researchNotebookSync !== undefined) setResearchNotebookSync(config.researchNotebookSync);
   }, []);
 
   // Notebook integration
@@ -155,6 +161,7 @@ export function useLabsManager() {
   return {
     activeTab, setActiveTab,
     canvasToken, canvasDomain,
+    autoGenerateLessons, researchNotebookSync,
     notification, showNotification,
     courses, coursesLoading,
     lessons, lessonsLoading, setLessons,

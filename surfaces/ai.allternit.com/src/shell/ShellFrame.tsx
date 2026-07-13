@@ -81,7 +81,6 @@ export function ShellFrame({
   const setResizing = useSidecarStore((s) => s.setResizing);
 
   const isImmersive = mode === 'cowork' || mode === 'code' || mode === 'chat';
-  const useBlendedRail = ['chat', 'cowork', 'code', 'browser'].includes(mode) || mode === 'design';
 
   // ----------------------------------------------------------------
   // Sidecar resize (existing logic, unchanged)
@@ -177,9 +176,11 @@ export function ShellFrame({
           padding: '0px',
           zIndex: 1,
           background: isAgentActive
-            ? (useBlendedRail ? 'color-mix(in srgb, var(--shell-panel-bg) 88%, transparent)' : 'color-mix(in srgb, var(--shell-panel-bg) 88%, transparent)')
-            : (useBlendedRail ? 'var(--shell-panel-bg)' : 'var(--shell-panel-bg)'),
-          borderRight: useBlendedRail ? '1px solid var(--border-subtle)' : '1px solid var(--border-subtle)',
+            ? 'color-mix(in srgb, var(--shell-rail-bg) 88%, transparent)'
+            : 'var(--shell-rail-bg)',
+          borderRight: '1px solid var(--border-subtle)',
+          borderTopRightRadius: '16px',
+          borderBottomRightRadius: '16px',
           position: 'relative',
         }}>
           {rail}

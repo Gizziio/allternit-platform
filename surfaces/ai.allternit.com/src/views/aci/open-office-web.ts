@@ -3,6 +3,7 @@
 import { useBrowserStore } from '@/capsules/browser';
 import { isElectronShell } from '@/lib/platform';
 import type { OfficeHost } from './AciAddinView';
+import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 
 const OFFICE_WEB_URLS: Record<OfficeHost, string> = {
   word: 'https://word.office.com',
@@ -55,6 +56,19 @@ export function openOfficeWebInBrowser(host: OfficeHost) {
   }
 
   browser.addTab(targetUrl, targetTitle);
+  return true;
+}
+
+export function startOfficeWebDeveloperSetup(host: OfficeHost) {
+  if (!openOfficeWebInBrowser(host)) return false;
+  const browser = useBrowserStore.getState();
+  const activeTab = browser.tabs.find((tab) => tab.id === browser.activeTabId);
+  if (activeTab) {
+    browser.updateTab(activeTab.id, { extensionIds: Array.from(new Set([...(activeTab.extensionIds ?? []), `allternit-office-${host}`])) });
+  }
+  useBrowserAgentStore.getState().setGoal(
+    `Set up Allternit for ${OFFICE_WEB_TITLES[host]} in developer mode. Open a document, go to Home > Add-ins > More Settings > Upload My Add-in, and pause for me to confirm Microsoft's developer-mode prompt and select the ${host}.xml manifest. Verify the Allternit ribbon command appears; do not claim success before verification.`,
+  );
   return true;
 }
 

@@ -1,13 +1,14 @@
 import React from "react";
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, GraduationCap } from 'lucide-react';
 import { Fade } from '@/design/animation/Fade';
 import { Stagger } from '@/design/animation/Stagger';
 import { Text } from '@/components/typography/Text';
+import { EmptyState } from '@/components/settings/EmptyState';
 import type { ALABSCourse } from "./LabsView.constants";
-import { 
-  getTierIcon, 
-  getTierColor, 
-  CourseCard 
+import {
+  getTierIcon,
+  getTierColor,
+  CourseCard
 } from "./LabsSharedComponents";
 
 interface LabsTracksTabProps {
@@ -34,6 +35,21 @@ export const LabsTracksTab: React.FC<LabsTracksTabProps> = ({
             <Text variant="body">Loading courses…</Text>
           </div>
         )}
+
+        {!coursesLoading && courses.length === 0 && (
+          <EmptyState
+            icon={<GraduationCap size={48} strokeWidth={1} />}
+            title="No tracks available"
+            caption="Connect Canvas in Labs Settings to import your course tracks."
+            ctaLabel="Open Labs Settings"
+            primaryCta
+            onCtaClick={() => {
+              window.dispatchEvent(new CustomEvent('allternit:labs-set-tab', { detail: { tab: 'settings' } }));
+            }}
+            className="bg-[var(--bg-secondary)] rounded-2xl border border-solid border-[var(--border-subtle)]"
+          />
+        )}
+
         <Stagger staggerDelay={0.08} direction="up" distance={20}>
           {(['CORE', 'OPS', 'AGENTS', 'ADV'] as const).map(tier => {
             const TierIcon = getTierIcon(tier);

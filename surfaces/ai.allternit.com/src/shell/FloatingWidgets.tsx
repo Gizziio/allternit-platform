@@ -1,16 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import type { Icon } from '@phosphor-icons/react';
 import {
   SidebarSimple,
   NotePencil,
-  PuzzlePiece,
   MagnifyingGlass,
-  GraduationCap,
-  ChatTeardropText,
-  UsersThree,
+  House,
   TerminalWindow,
   Globe,
-  Palette,
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
 import { cn } from '@/lib/utils';
@@ -22,24 +17,21 @@ interface RailControlsProps {
   onNewChat: () => void | Promise<void>;
   onNewAgentSession: () => void | Promise<void>;
   isRailCollapsed: boolean;
-  activeViewType?: string;
-  onOpenView?: (view: string) => void;
-  onOpenIntegrations?: () => void;
+  railWidth?: number;
   onSearchOpen?: () => void;
-  onOpenLabs?: () => void;
 }
 
-const MODES: Array<{
-  key: string;
+interface ModeButton {
+  id: AppMode;
   label: string;
-  color: string;
-  icon: Icon;
-}> = [
-  { key: 'chat',    label: 'Chat',    color: '#D97757', icon: ChatTeardropText },
-  { key: 'cowork',  label: 'Cowork',  color: '#A78BFA', icon: UsersThree },
-  { key: 'code',    label: 'Code',    color: '#79C47C', icon: TerminalWindow },
-  { key: 'browser', label: 'Browser', color: '#69A8C8', icon: Globe },
-  { key: 'design',  label: 'Design',  color: 'var(--accent-primary)', icon: Palette },
+  icon: React.ElementType;
+  accent: string;
+}
+
+const MODE_BUTTONS: ModeButton[] = [
+  { id: 'chat', label: 'Home', icon: House, accent: 'var(--accent-chat)' },
+  { id: 'code', label: 'Code', icon: TerminalWindow, accent: 'var(--accent-code)' },
+  { id: 'browser', label: 'Browser', icon: Globe, accent: 'var(--accent-browser)' },
 ];
 
 export function RailControls({
@@ -49,11 +41,8 @@ export function RailControls({
   onNewChat,
   onNewAgentSession,
   isRailCollapsed,
-  activeViewType,
-  onOpenView,
-  onOpenIntegrations,
+  railWidth = 248,
   onSearchOpen,
-  onOpenLabs,
 }: RailControlsProps): React.ReactNode {
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
@@ -69,18 +58,41 @@ export function RailControls({
     return () => window.removeEventListener('mousedown', handlePointerDown);
   }, [showCreateMenu]);
 
+  if (isRailCollapsed) {
+    return (
+      <div
+        data-testid="shell-rail-controls"
+        className="fixed top-0 left-0 z-[150] pointer-events-none"
+        style={{ width: 120 }}
+      >
+        <div
+          className="h-11 flex items-center pointer-events-auto [WebkitAppRegion:no-drag]"
+          style={{ paddingLeft: 80 }}
+        >
+          <TitleBarButton
+            onClick={onToggleRail}
+            title="Expand Sidebar"
+          >
+            <SidebarSimple size={15} weight="bold" />
+          </TitleBarButton>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       data-testid="shell-rail-controls"
-      className="fixed top-0 left-0 w-[284px] z-[150] pointer-events-none"
+      className="fixed top-0 left-0 z-[150] pointer-events-none"
+      style={{ width: railWidth }}
     >
-      {/* 1. TITLE BAR ROW */}
+      {/* Title bar widget row */}
       <div
-        className="h-11 flex items-center pl-20 pr-2 pointer-events-auto [WebkitAppRegion:drag]"
+        className="h-11 flex items-center pr-2 pointer-events-auto [WebkitAppRegion:drag]"
+        style={{ paddingLeft: 56 }}
       >
-        {/* All widgets grouped together after traffic lights */}
         <div
-          className="flex items-center gap-px [WebkitAppRegion:no-drag]"
+          className="flex items-center gap-1 [WebkitAppRegion:no-drag]"
         >
           <TitleBarButton
             onClick={onToggleRail}
@@ -88,6 +100,34 @@ export function RailControls({
           >
             <SidebarSimple size={15} weight="bold" />
           </TitleBarButton>
+
+          <div className="w-px h-4 bg-[var(--shell-divider)] mx-1" />
+
+          {/* Primary mode switcher: Home | Code | Browser */}
+          {MODE_BUTTONS.map((btn) => {
+            const isActive = mode === btn.id;
+            const IconComponent = btn.icon;
+            return (
+              <button
+                key={btn.id}
+                type="button"
+                onClick={() => onModeChange(btn.id)}
+                title={btn.label}
+                data-testid={`rail-mode-${btn.id}`}
+                className={cn(
+                  'flex items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag]',
+                  isActive
+                    ? 'text-[var(--ui-text-inverse)]'
+                    : 'bg-transparent text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)]'
+                )}
+                style={isActive ? { background: btn.accent } : undefined}
+              >
+                <IconComponent size={15} weight={isActive ? 'fill' : 'bold'} />
+              </button>
+            );
+          })}
+
+          <div className="w-px h-4 bg-[var(--shell-divider)] mx-1" />
 
           <div ref={createMenuRef} className="relative">
             <TitleBarButton onClick={() => setShowCreateMenu((v) => !v)} title="New Session">
@@ -111,60 +151,13 @@ export function RailControls({
             )}
           </div>
 
-          {onOpenIntegrations && (
-            <TitleBarButton onClick={onOpenIntegrations} title="Integrations">
-              <PuzzlePiece size={15} weight="bold" />
-            </TitleBarButton>
-          )}
-
-          <TitleBarButton onClick={onOpenLabs} title="A://Labs">
-            <GraduationCap size={15} weight="bold" />
-          </TitleBarButton>
-
           <TitleBarButton onClick={onSearchOpen} title="Search">
             <MagnifyingGlass size={15} weight="bold" />
           </TitleBarButton>
         </div>
       </div>
 
-      {/* 2. MODE TABS — full-width, active expands with label */}
-      <div
-        className="p-[2px_8px_10px] pointer-events-auto"
-      >
-        <div
-          className="inline-flex items-center gap-0.5"
-        >
-          {MODES.map((m) => {
-            const active = mode === m.key;
-            const Icon = m.icon;
-            return (
-              <button type="button"
-                key={m.key}
-                onClick={() => {
-                  if (m.key === 'browser') {
-                    onOpenView?.('browser');
-                  } else {
-                    onModeChange(m.key as AppMode);
-                  }
-                }}
-                className={cn(
-                  "flex-[0_0_auto] flex items-center justify-center h-[30px] border-none rounded-[7px] cursor-pointer text-[13px] tracking-tight whitespace-nowrap overflow-hidden transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
-                  active 
-                    ? "gap-1.5 px-2.5 bg-[var(--shell-item-hover,rgba(255,255,255,0.08))] text-[var(--shell-item-fg,var(--text-primary))] font-semibold" 
-                    : "gap-0 px-2 bg-transparent text-[var(--shell-item-muted,var(--text-tertiary))] font-medium hover:bg-[var(--shell-item-hover,rgba(255,255,255,0.05))] hover:text-[var(--shell-item-fg,var(--text-primary))]"
-                )}
-              >
-                <Icon size={14} weight={active ? 'fill' : 'regular'} className="shrink-0" />
-                {active && (
-                  <span className="overflow-hidden text-ellipsis">
-                    {m.label}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+
     </div>
   );
 }

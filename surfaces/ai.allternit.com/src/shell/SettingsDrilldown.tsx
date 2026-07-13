@@ -17,6 +17,7 @@ import {
   Info,
   CaretRight,
   ArrowCounterClockwise,
+  Check,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
@@ -31,18 +32,20 @@ interface MenuItem {
 }
 
 // Submenu component that renders in a portal
-function SubmenuFlyout({ 
+function SubmenuFlyout({
   items,
   title,
   isOpen,
   anchorRect,
-  onClose
-}: { 
+  onClose,
+  selectedId,
+}: {
   items: MenuItem[];
   title: string;
   isOpen: boolean;
   anchorRect: DOMRect | null;
   onClose: () => void;
+  selectedId?: string | null;
 }): React.ReactNode | null {
   const [position, setPosition] = useState({ left: 0, top: 0 });
   const submenuRef = useRef<HTMLDivElement>(null);
@@ -106,7 +109,10 @@ function SubmenuFlyout({
           }}
           className="flex w-full items-center justify-between px-4 py-2 text-[14px] text-[var(--shell-item-fg)] bg-transparent border-none cursor-pointer text-left transition-colors duration-150 ease-in-out hover:bg-[var(--shell-item-hover)]"
         >
-          <span>{child.label}</span>
+          <span className="flex items-center gap-2">
+            {child.id === selectedId && <Check size={14} weight="bold" className="text-[var(--accent-primary)]" />}
+            {child.label}
+          </span>
           {child.shortcut && (
             <span className="text-[12px] text-[var(--shell-item-muted)] font-mono">
               {child.shortcut}
@@ -154,29 +160,51 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
     signOut();
   };
 
+  // Persisted language preference (honest stub until full i18n is wired)
+  const [selectedLanguage, setSelectedLanguage] = useState(() => {
+    try {
+      return localStorage.getItem('allternit:language') || 'en';
+    } catch {
+      return 'en';
+    }
+  });
+  const saveLanguage = (id: string) => {
+    setSelectedLanguage(id);
+    try {
+      localStorage.setItem('allternit:language', id);
+    } catch {
+      // ignore
+    }
+    setActiveSubmenuId(null);
+  };
+
+  const openExternal = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   // Submenu data
   const languageItems: MenuItem[] = [
-    { id: 'en', label: 'English', onClick: () => setActiveSubmenuId(null) },
-    { id: 'es', label: 'Español', onClick: () => setActiveSubmenuId(null) },
-    { id: 'fr', label: 'Français', onClick: () => setActiveSubmenuId(null) },
-    { id: 'de', label: 'Deutsch', onClick: () => setActiveSubmenuId(null) },
-    { id: 'zh', label: '中文', onClick: () => setActiveSubmenuId(null) },
-    { id: 'ja', label: '日本語', onClick: () => setActiveSubmenuId(null) },
+    { id: 'en', label: 'English', onClick: () => saveLanguage('en') },
+    { id: 'es', label: 'Español', onClick: () => saveLanguage('es') },
+    { id: 'fr', label: 'Français', onClick: () => saveLanguage('fr') },
+    { id: 'de', label: 'Deutsch', onClick: () => saveLanguage('de') },
+    { id: 'zh', label: '中文', onClick: () => saveLanguage('zh') },
+    { id: 'ja', label: '日本語', onClick: () => saveLanguage('ja') },
   ];
 
   const helpItems: MenuItem[] = [
-    { id: 'docs', label: 'Documentation', onClick: () => setActiveSubmenuId(null) },
-    { id: 'support', label: 'Contact Support', onClick: () => setActiveSubmenuId(null) },
-    { id: 'feedback', label: 'Send Feedback', onClick: () => setActiveSubmenuId(null) },
+    { id: 'docs', label: 'Documentation', onClick: () => openExternal('https://docs.allternit.com') },
+    { id: 'support', label: 'Contact Support', onClick: () => openExternal('https://allternit.com/support') },
+    { id: 'feedback', label: 'Send Feedback', onClick: () => openExternal('https://allternit.com/feedback') },
   ];
 
   const learnItems: MenuItem[] = [
-    { id: 'api', label: 'API Console', onClick: () => setActiveSubmenuId(null) },
+    { id: 'api', label: 'API Console', onClick: () => openExternal('https://api.allternit.com') },
     { id: 'about', label: 'About Allternit', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('about'); } },
-    { id: 'tutorials', label: 'Tutorials', onClick: () => setActiveSubmenuId(null) },
-    { id: 'courses', label: 'Courses', onClick: () => setActiveSubmenuId(null) },
-    { id: 'usage', label: 'Usage Policy', onClick: () => setActiveSubmenuId(null) },
-    { id: 'privacy', label: 'Privacy Policy', onClick: () => setActiveSubmenuId(null) },
+    { id: 'tutorials', label: 'Tutorials', onClick: () => openExternal('https://docs.allternit.com/tutorials') },
+    { id: 'courses', label: 'Courses', onClick: () => openExternal('https://allternit.com/labs') },
+    { id: 'usage', label: 'Usage Policy', onClick: () => openExternal('https://allternit.com/usage') },
+    { id: 'privacy', label: 'Privacy Policy', onClick: () => openExternal('https://allternit.com/privacy') },
     { id: 'shortcuts', label: 'Keyboard shortcuts', shortcut: '⌘?', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('shortcuts'); } },
   ];
 
@@ -346,6 +374,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
           title={activeSubmenuItem.label}
           isOpen={!!activeSubmenuId}
           anchorRect={submenuAnchor}
+          selectedId={activeSubmenuItem.id === 'language' ? selectedLanguage : undefined}
           onClose={() => {
             setActiveSubmenuId(null);
             setSubmenuAnchor(null);

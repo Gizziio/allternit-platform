@@ -197,13 +197,11 @@ export function ComposerQuestionBar({ request }: ComposerQuestionBarProps) {
 
 type ComposerStatusInfoBarProps = {
   modelLabel?: string | null;
-  modeLabel: string;
   attachmentCount?: number;
 };
 
 export function ComposerStatusInfoBar({
   modelLabel,
-  modeLabel,
   attachmentCount,
 }: ComposerStatusInfoBarProps) {
   return (
@@ -218,13 +216,13 @@ export function ComposerStatusInfoBar({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flexWrap: "wrap" }}>
-        <ContextWindowCard>
-          <button type="button" style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
-            {modelLabel ? (
+        {modelLabel ? (
+          <ContextWindowCard>
+            <button type="button" style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
               <InfoPill icon={<Sparkle size={12} />} label={modelLabel} />
-            ) : null}
-          </button>
-        </ContextWindowCard>
+            </button>
+          </ContextWindowCard>
+        ) : null}
       </div>
       {typeof attachmentCount === "number" ? (
         <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--ui-text-secondary)", fontSize: 12 }}>

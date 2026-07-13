@@ -7,7 +7,6 @@ import {
   Lock,
   Target,
   Warning,
-  ArrowsClockwise,
   CheckCircle,
   XCircle,
 } from '@phosphor-icons/react';
@@ -16,6 +15,7 @@ import { SectionHeading } from '@/components/settings/SectionHeading';
 import { SkeletonRow } from '@/components/settings/SkeletonRow';
 import { EmptyState } from '@/components/settings/EmptyState';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from '@/components/settings/buttonStyles';
+import { submitApproval } from '@/lib/governance/policy.service';
 
 const StatCard = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
   <div className="p-5 bg-[var(--bg-secondary)] rounded-lg border border-solid border-[var(--border-subtle)] text-center">
@@ -49,7 +49,7 @@ export function SecurityPanel() {
       setApprovals(approvalsRes.requests);
       setSecurityEvents(eventsRes.events);
       setComplianceStatus(complianceRes);
-    } catch (e) {
+    } catch {
       setPolicies([]); setViolations([]); setApprovals([]); setSecurityEvents([]); setComplianceStatus(null);
     }
     setSecurityLoading(false);
@@ -60,6 +60,19 @@ export function SecurityPanel() {
   }, [fetchSecurityData]);
 
   const pendingApprovals = approvals.filter((a: any) => a.status === 'pending');
+  const [approvalBusy, setApprovalBusy] = useState<Record<string, boolean>>({});
+
+  const handleApprovalDecision = useCallback(async (approvalId: string, approved: boolean) => {
+    setApprovalBusy((prev) => ({ ...prev, [approvalId]: true }));
+    try {
+      await submitApproval({ requestId: approvalId, approved, note: approved ? 'Approved from settings' : 'Rejected from settings' });
+      await fetchSecurityData();
+    } catch {
+      // Silent fail; the next poll will refresh state.
+    } finally {
+      setApprovalBusy((prev) => ({ ...prev, [approvalId]: false }));
+    }
+  }, [fetchSecurityData]);
 
   return (
     <div className="max-w-4xl">
@@ -199,10 +212,20 @@ export function SecurityPanel() {
                     <div className="text-[12px] text-[var(--ui-text-muted)] mt-1">Requested by <span className="text-[var(--accent-primary)] font-bold">{approval.requester?.agentName}</span> • {new Date(approval.createdAt).toLocaleDateString()}</div>
                   </div>
                   <div className="flex gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                    <button type="button" className={DESTRUCTIVE_BUTTON_CLASS}>
+                    <button
+                      type="button"
+                      disabled={approvalBusy[approval.id]}
+                      onClick={() => handleApprovalDecision(approval.id, false)}
+                      className={DESTRUCTIVE_BUTTON_CLASS}
+                    >
                       <XCircle size={14} /> Reject
                     </button>
-                    <button type="button" className={QUIET_BUTTON_CLASS}>
+                    <button
+                      type="button"
+                      disabled={approvalBusy[approval.id]}
+                      onClick={() => handleApprovalDecision(approval.id, true)}
+                      className={QUIET_BUTTON_CLASS}
+                    >
                       <CheckCircle size={14} /> Approve
                     </button>
                   </div>

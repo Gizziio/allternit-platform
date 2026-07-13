@@ -10,7 +10,7 @@
  */
 
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { getPlatformComputerUseBaseUrl } from '@/integration/computer-use-engine';
 import { useDrawerStore } from '@/drawers/drawer.store';
 import {
@@ -367,7 +367,7 @@ export interface BrowserAgentState {
 // ============================================================================
 
 export const useBrowserAgentStore = create<BrowserAgentState>()(
-  subscribeWithSelector((set, get) => ({
+  persist(subscribeWithSelector((set, get) => ({
     // Initial state
     status: 'Idle',
     mode: 'Human',
@@ -1043,7 +1043,13 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
 
     // No-op — kept for interface compatibility; real execution runs via runGoal → SSE
     _simulateExecution: () => {},
-  }))
+  })), {
+    name: 'allternit.browser.agent-sessions',
+    partialize: (state) => ({
+      pageAgentSessions: state.pageAgentSessions,
+      aciModel: state.aciModel,
+    }),
+  })
 );
 
 // ============================================================================

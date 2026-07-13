@@ -5,7 +5,7 @@ import type { InstalledMiniApp, MiniAppManifest } from './mini-app.types';
 import { getPinnedMiniApps, manifestToMiniApp, updateMiniAppStatus } from './mini-app-registry';
 
 /** Ports the platform silently probes for /.well-known/allternit-app.json */
-const KNOWN_PORTS = [18789, 18790];
+const KNOWN_PORTS = [18789];
 const MANIFEST_PATH = '/.well-known/allternit-app.json';
 const PROBE_TIMEOUT_MS = 1500;
 const BUILTIN_MINI_APPS: Array<{
@@ -17,26 +17,12 @@ const BUILTIN_MINI_APPS: Array<{
     manifest: {
       id: 'openclaw',
       name: 'OpenClaw',
-      description: 'Agent coding runtime and control UI.',
+      description: 'Official OpenClaw personal-agent gateway and control UI.',
       version: 'local',
       category: 'runtime',
       pinnable: true,
-      repo: 'openclaw-sh/openclaw',
-      githubUrl: 'https://github.com/openclaw-sh/openclaw',
-      downloadable: true,
-    },
-  },
-  {
-    port: 18790,
-    manifest: {
-      id: 'hermes',
-      name: 'Hermes',
-      description: 'Connector and messaging runtime.',
-      version: 'local',
-      category: 'connector',
-      pinnable: true,
-      repo: 'allternit/hermes',
-      githubUrl: 'https://github.com/allternit/hermes',
+      repo: 'openclaw/openclaw',
+      githubUrl: 'https://github.com/openclaw/openclaw',
       downloadable: true,
     },
   },
@@ -103,8 +89,10 @@ export function useMiniAppDiscovery() {
     // Update status of pinned apps that we can now see are online/offline
     const pinnedNow = getPinnedMiniApps();
     for (const app of pinnedNow) {
-      if (!app.sourceUrl) continue;
-      const isOnline = withBuiltins.some((f) => f.sourceUrl === app.sourceUrl && f.status !== 'offline');
+      const desktopStatus = window.allternit?.miniApps
+        ? await window.allternit.miniApps.getStatus(app.id).catch(() => null)
+        : null;
+      const isOnline = desktopStatus?.running ?? withBuiltins.some((f) => f.id === app.id && f.status !== 'offline');
       const newStatus = isOnline ? 'running' : 'offline';
       if (newStatus !== app.status) updateMiniAppStatus(app.id, newStatus);
     }

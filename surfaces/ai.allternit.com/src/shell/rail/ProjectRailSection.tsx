@@ -52,6 +52,7 @@ interface ProjectRailSectionProps {
   sectionCaption?: string;
   newButtonLabel?: string;
   recentItemsLabel?: string;
+  emptyItemsLabel?: string;
 }
 
 export const ProjectRailSection = memo(function ProjectRailSection({
@@ -71,6 +72,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
   sectionCaption = 'Shared organizer',
   newButtonLabel = 'New Project',
   recentItemsLabel = 'Recent Sessions',
+  emptyItemsLabel = 'No recent activity',
 }: ProjectRailSectionProps): React.ReactNode {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
@@ -156,11 +158,11 @@ export const ProjectRailSection = memo(function ProjectRailSection({
 
       {/* Root Items List */}
       <div className="px-2 mt-2">
+        <div className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-[0.06em] p-[8px_4px_4px]">
+          {recentItemsLabel}
+        </div>
         {rootItems.length > 0 ? (
           <>
-            <div className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-[0.06em] p-[8px_4px_4px]">
-              {recentItemsLabel}
-            </div>
             {rootItems.filter((i): i is typeof i & { id: string } => typeof i.id === 'string' && i.id.length > 0).map((item) => (
               <ItemRailRow
                 key={item.id}
@@ -173,7 +175,9 @@ export const ProjectRailSection = memo(function ProjectRailSection({
               />
             ))}
           </>
-        ) : projects.length === 0 && (
+        ) : projects.length > 0 ? (
+          <div className="px-1 py-2 text-[11px] text-[var(--shell-item-muted)]">{emptyItemsLabel}</div>
+        ) : (
           <GhostRailNotice
             icon={emptyNotice.icon}
             title={emptyNotice.title}

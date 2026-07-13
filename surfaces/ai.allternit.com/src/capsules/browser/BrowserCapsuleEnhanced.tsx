@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
   ArrowsClockwise,
-  Camera,
   CaretDown,
   CaretLeft,
   CaretRight,
@@ -45,7 +44,7 @@ import {
   BROWSER_CHAT_PANE_MIN_WIDTH,
   useBrowserStore,
 } from './browser.store';
-import { BrowserTab, WebTab, A2UITab, A2UIPayload } from './browser.types';
+import { BrowserTab, BrowserWorkspace, WebTab, A2UITab, A2UIPayload } from './browser.types';
 import { useBrowserAgentStore } from './browserAgent.store';
 import { BrowserAgentMode } from './browserAgent.types';
 import { A2UIRenderer } from '../a2ui/A2UIRenderer';
@@ -113,32 +112,27 @@ function isTrustedOfficeHost(url: string): boolean {
   }
 }
 
+function getOfficeHostFromUrl(url: string): 'word' | 'excel' | 'powerpoint' | null {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    const path = new URL(url).pathname.toLowerCase();
+    if (hostname.includes('word.') || path.includes('/word')) return 'word';
+    if (hostname.includes('excel.') || path.includes('/excel')) return 'excel';
+    if (hostname.includes('powerpoint.') || path.includes('/powerpoint')) return 'powerpoint';
+  } catch {}
+  return null;
+}
+
 // ============================================================================
 // Extension Store (Zustand with persist)
 // ============================================================================
 
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { useBrowserExtensionsStore, type BrowserExtension } from './browserExtensions.store';
 
 import { createModuleLogger } from '@/lib/logger';
 const logger = createModuleLogger('BrowserCapsuleEnhanced');
 
 type PermissionValue = 'allow' | 'block' | 'ask';
-
-interface BrowserExtension {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  enabled: boolean;
-  version: string;
-  // Real install fields
-  chromeStoreId?: string;
-  storeUrl?: string;
-  installStatus?: 'not-installed' | 'pending' | 'installed' | 'error';
-  // Per-extension permission settings
-  permissions?: Record<string, PermissionValue>;
-}
 
 const CLAUDE_CHROME_STORE_ID = 'claude-chrome-store-id';
 
@@ -213,62 +207,6 @@ const EXTENSION_CATALOG: CatalogExtension[] = [
   },
 ];
 
-interface ExtensionsStore {
-  extensions: BrowserExtension[];
-  addExtension: (ext: Omit<BrowserExtension, 'id'>) => void;
-  removeExtension: (id: string) => void;
-  toggleExtension: (id: string) => void;
-  setEnabled: (id: string, enabled: boolean) => void;
-  updateExtension: (id: string, patch: Partial<BrowserExtension>) => void;
-  setExtensionPermission: (id: string, permKey: string, value: PermissionValue) => void;
-}
-
-const DEFAULT_EXTENSIONS: BrowserExtension[] = [
-  { id: 'allternit-agent', name: 'Allternit Computer Agent', description: 'AI-powered computer automation', icon: '🤖', enabled: true, version: '1.0.0', installStatus: 'installed' },
-];
-
-const useExtensionsStore = create<ExtensionsStore>()(
-  persist(
-    (set) => ({
-      extensions: DEFAULT_EXTENSIONS,
-      addExtension: (ext) =>
-        set((state) => ({
-          extensions: [...state.extensions, { ...ext, id: `ext-${Date.now()}` }],
-        })),
-      removeExtension: (id) =>
-        set((state) => ({
-          extensions: state.extensions.filter((e) => e.id !== id),
-        })),
-      toggleExtension: (id) =>
-        set((state) => ({
-          extensions: state.extensions.map((e) =>
-            e.id === id ? { ...e, enabled: !e.enabled } : e
-          ),
-        })),
-      setEnabled: (id, enabled) =>
-        set((state) => ({
-          extensions: state.extensions.map((e) =>
-            e.id === id ? { ...e, enabled } : e
-          ),
-        })),
-      updateExtension: (id, patch) =>
-        set((state) => ({
-          extensions: state.extensions.map((e) =>
-            e.id === id ? { ...e, ...patch } : e
-          ),
-        })),
-      setExtensionPermission: (id, permKey, value) =>
-        set((state) => ({
-          extensions: state.extensions.map((e) =>
-            e.id === id
-              ? { ...e, permissions: { ...(e.permissions ?? {}), [permKey]: value } }
-              : e
-          ),
-        })),
-    }),
-    { name: 'allternit.browser.extensions' }
-  )
-);
 
 // ============================================================================
 // Canvas / Studio placeholders
@@ -391,7 +329,7 @@ const GROUP_COLORS = ['#69A8C8', '#A78BFA', '#79C47C', 'var(--accent-primary)', 
 function TabContextMenu({ x, y, tabId, onClose }: {
   x: number; y: number; tabId: string; onClose: () => void;
 }) {
-  const { closeTab, closeOtherTabs, closeTabsToRight, duplicateTab, pinTab, unpinTab, setTabGroup, removeTabFromGroup } = useBrowserStore();
+  const { closeTab, closeOtherTabs, closeTabsToRight, duplicateTab, pinTab, unpinTab, setTabGroup, removeTabFromGroup, toggleEssential, moveTabToWorkspace, workspaces } = useBrowserStore();
   const tab = useBrowserStore((s) => s.tabs.find((t) => t.id === tabId));
   const allGroups = useBrowserStore((s) => {
     const groups = new Map<string, string>();
@@ -412,6 +350,7 @@ function TabContextMenu({ x, y, tabId, onClose }: {
   const inGroup = !!tab?.group;
   const items = [
     { label: isPinned ? 'Unpin Tab' : 'Pin Tab', icon: <Pin className="size-3" />, action: () => isPinned ? unpinTab(tabId) : pinTab(tabId) },
+    { label: tab?.essential ? 'Remove from Essentials' : 'Add to Essentials', icon: <Star className="size-3" />, action: () => toggleEssential(tabId) },
     { label: 'Duplicate Tab', icon: <Copy className="size-3" />, action: () => duplicateTab(tabId) },
   ];
 
@@ -429,8 +368,8 @@ function TabContextMenu({ x, y, tabId, onClose }: {
   }));
 
   return (
-    <div ref={ref} className="fixed w-[180px] bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-lg shadow-md z-[100] py-1 text-[12px]"
-      style={{ left: x, top: y }}
+    <div ref={ref} className="fixed w-[180px] max-h-[min(420px,calc(100vh-16px))] overflow-y-auto bg-[var(--shell-floating-bg)] border border-solid border-[var(--shell-divider)] rounded-lg shadow-md z-[100] py-1 text-[12px]"
+      style={{ left: Math.max(8, Math.min(x, window.innerWidth - 188)), top: Math.max(8, Math.min(y, window.innerHeight - 428)) }}
     >
       {items.map((item, i) => (
         <button type="button" key={`browser-idx-${i}`} onClick={() => { item.action(); onClose(); }}
@@ -469,6 +408,10 @@ function TabContextMenu({ x, y, tabId, onClose }: {
         </>
       )}
       <div className="h-px bg-[var(--text-tertiary)]/20 my-1 mx-2" />
+      {workspaces.filter((workspace) => workspace.id !== tab?.workspaceId).map((workspace) => (
+        <button type="button" key={workspace.id} onClick={() => { moveTabToWorkspace(tabId, workspace.id); onClose(); }} className="flex items-center gap-2 w-full px-3 py-1.5 border-none bg-transparent cursor-pointer text-[var(--text-secondary)] text-[12px] text-left hover:bg-[var(--bg-hover)] transition-colors"><span style={{ color: workspace.color }}>{workspace.icon}</span>Move to {workspace.name}</button>
+      ))}
+      {workspaces.length > 1 && <div className="h-px bg-[var(--text-tertiary)]/20 my-1 mx-2" />}
       <button type="button" onClick={() => { closeTab(tabId); onClose(); }}
         className="flex items-center gap-2 w-full px-3 py-1.5 border-none bg-transparent cursor-pointer text-[var(--text-secondary)] text-[12px] text-left hover:bg-[var(--bg-hover)] transition-colors">
         <X className="size-3" />
@@ -552,11 +495,11 @@ const MenuItem = ({ label, icon, active, color, disabled, onClick, onClose }: Me
   </button>
 );
 
-function ThreeDotMenu({ open, onClose, contentMode, setContentMode, agentModeControl, setAgentMode, agentStatus, onNewTab, onToggleChatPane, chatPaneOpen, onCloseAllTabs, onScreenshot, zoomLevel, onZoomIn, onZoomOut, onZoomReset }: {
-  open: boolean; onClose: () => void; contentMode: ContentMode; setContentMode: (m: ContentMode) => void;
-  agentModeControl: BrowserAgentMode; setAgentMode: (m: BrowserAgentMode) => void; agentStatus: string;
+function ThreeDotMenu({ open, onClose, onNewTab, onToggleChatPane, chatPaneOpen, onCloseAllTabs, onEnterFocusMode, zoomLevel, onZoomIn, onZoomOut, onZoomReset }: {
+  open: boolean; onClose: () => void;
   onNewTab: () => void; onToggleChatPane: () => void; chatPaneOpen: boolean; onCloseAllTabs: () => void;
-  onScreenshot: () => void; zoomLevel: number; onZoomIn: () => void; onZoomOut: () => void; onZoomReset: () => void;
+  onEnterFocusMode: () => void;
+  zoomLevel: number; onZoomIn: () => void; onZoomOut: () => void; onZoomReset: () => void;
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -569,15 +512,9 @@ function ThreeDotMenu({ open, onClose, contentMode, setContentMode, agentModeCon
 
   return (
     <div ref={menuRef} className="absolute right-0 top-full mt-1 w-52 bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-lg shadow-md z-[50] py-1 text-[14px]">
-      <div className="px-3 py-1.5 text-[12px] uppercase tracking-widest text-[var(--text-tertiary)] font-semibold">View Mode</div>
-      {(['web', 'canvas', 'studio'] as ContentMode[]).map((m) => <MenuItem key={m} label={m.charAt(0).toUpperCase() + m.slice(1)} active={contentMode === m} onClick={() => setContentMode(m)} onClose={onClose} />)}
-      <div className="h-px bg-[var(--text-tertiary)]/20 my-1 mx-2" />
-      <div className="px-3 py-1.5 text-[12px] uppercase tracking-widest text-[var(--text-tertiary)] font-semibold">Agent Mode</div>
-      {(['Human', 'Assist', 'Agent'] as BrowserAgentMode[]).map((m) => <MenuItem key={m} label={m} active={agentModeControl === m} disabled={agentStatus === 'Running'} onClick={() => setAgentMode(m)} onClose={onClose} />)}
-      <div className="h-px bg-[var(--text-tertiary)]/20 my-1 mx-2" />
-      <MenuItem label={chatPaneOpen ? 'Hide Chat Pane' : 'Open Chat Pane'} icon={<Sparkle className="size-3.5" />} onClick={onToggleChatPane} onClose={onClose} />
-      <MenuItem label="Screenshot" icon={<Camera className="size-3.5" />} onClick={onScreenshot} onClose={onClose} />
       <MenuItem label="New Tab" icon={<Plus className="size-3.5" />} onClick={onNewTab} onClose={onClose} />
+      <MenuItem label={chatPaneOpen ? 'Hide Allternit Chat' : 'Open Allternit Chat'} icon={<Sparkle className="size-3.5" />} onClick={onToggleChatPane} onClose={onClose} />
+      <MenuItem label="Enter Focus Mode" icon={<SquaresFour className="size-3.5" />} onClick={onEnterFocusMode} onClose={onClose} />
       <div className="h-px bg-[var(--text-tertiary)]/20 my-1 mx-2" />
       <div className="px-3 py-1.5 text-[12px] uppercase tracking-widest text-[var(--text-tertiary)] font-semibold">Zoom</div>
       <MenuItem label={`Zoom In (${Math.round((zoomLevel + 0.1) * 100)}%)`} icon={<Plus className="size-3.5" />} onClick={onZoomIn} onClose={onClose} />
@@ -596,7 +533,6 @@ function ThreeDotMenu({ open, onClose, contentMode, setContentMode, agentModeCon
 function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const { status, mode, setMode, connectedEndpoints } = useBrowserAgentStore();
-  const [operatorOk, setOperatorOk] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -604,19 +540,6 @@ function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open, onClose]);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    const check = () => {
-      fetch('http://localhost:3000/health', { mode: 'no-cors' })
-        .then(() => { if (!cancelled) setOperatorOk(true); })
-        .catch(() => { if (!cancelled) setOperatorOk(false); });
-    };
-    check();
-    const interval = setInterval(check, 5000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, [open]);
 
   if (!open) return null;
 
@@ -655,13 +578,6 @@ function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
       </div>
 
       <div className="p-2 px-3 flex flex-col gap-1 text-[var(--text-tertiary)]">
-        <div>
-          Operator: {operatorOk === null ? '…' : operatorOk ? (
-            <span className="text-[var(--status-success)]">Connected ✓</span>
-          ) : (
-            <span className="text-[var(--status-error)]">Offline ✗</span>
-          )}
-        </div>
         <div>
           Extension: {extensionPaired ? (
             <span className="text-[var(--status-success)]">Paired ✓</span>
@@ -750,7 +666,7 @@ function ExtensionStoreIcon({ storeUrl, fallbackIcon, size }: { storeUrl?: strin
 
 function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; onClose: () => void; onNavigate: (url: string) => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { extensions, addExtension, removeExtension, toggleExtension, updateExtension, setExtensionPermission } = useExtensionsStore();
+  const { extensions, addExtension, removeExtension, toggleExtension, updateExtension, setExtensionPermission } = useBrowserExtensionsStore();
   const { setMode: setAgentMode } = useBrowserAgentStore();
   const [activeTab, setActiveTab] = useState<'installed' | 'discover'>('installed');
   const [customInstalling, setCustomInstalling] = useState(false);
@@ -1035,6 +951,39 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
   );
 }
 
+const OFFICE_HOST_META = {
+  word: { label: 'Word', color: '#2B579A', description: 'Draft, edit, format, and review documents.' },
+  excel: { label: 'Excel', color: '#217346', description: 'Analyze ranges, build formulas, charts, and models.' },
+  powerpoint: { label: 'PowerPoint', color: '#D24726', description: 'Create, rewrite, and design presentations.' },
+} as const;
+
+function OfficeExtensionPopup({ extension, currentUrl, attached, onClose, onOpen, onAttach, onDetach }: {
+  extension: BrowserExtension;
+  currentUrl?: string;
+  attached: boolean;
+  onClose: () => void;
+  onOpen: (url: string) => void;
+  onAttach: () => void;
+  onDetach: () => void;
+}) {
+  const host = extension.officeHost;
+  if (!host) return null;
+  const meta = OFFICE_HOST_META[host];
+  const currentIsOffice = Boolean(currentUrl && isTrustedOfficeHost(currentUrl));
+  return <div className="absolute right-0 top-full mt-1 z-[70] w-[280px] overflow-hidden rounded-2xl border border-solid border-[var(--shell-divider)] bg-[var(--shell-floating-bg)] shadow-2xl">
+    <div className="flex items-start gap-3 border-b border-solid border-[var(--shell-divider)] p-3.5">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl text-[15px] font-black" style={{ color: meta.color, background: `color-mix(in srgb, ${meta.color} 14%, transparent)` }}>{extension.icon}</div>
+      <div className="min-w-0 flex-1"><div className="text-[12px] font-bold text-[var(--shell-item-fg)]">Allternit for {meta.label}</div><div className="mt-0.5 text-[10px] leading-relaxed text-[var(--shell-item-muted)]">{meta.description}</div></div>
+      <button type="button" aria-label={`Close ${meta.label} extension menu`} onClick={onClose} className="size-6 rounded-full border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer hover:bg-[var(--shell-item-hover)]"><X size={12} /></button>
+    </div>
+    <div className="p-2 flex flex-col gap-1">
+      <button type="button" onClick={() => { onOpen(extension.launchUrl!); onClose(); }} className="flex w-full items-center gap-2 rounded-xl border-none bg-transparent p-2.5 text-left cursor-pointer hover:bg-[var(--shell-item-hover)]"><Globe size={15} style={{ color: meta.color }} /><span className="flex-1"><span className="block text-[12px] font-semibold text-[var(--shell-item-fg)]">Open {meta.label} in Browser</span><span className="block text-[10px] text-[var(--shell-item-muted)]">Stay in Allternit with Computer Agent beside it</span></span></button>
+      <button type="button" disabled={!currentIsOffice} onClick={() => { attached ? onDetach() : onAttach(); onClose(); }} className="flex w-full items-center gap-2 rounded-xl border-none bg-transparent p-2.5 text-left cursor-pointer hover:bg-[var(--shell-item-hover)] disabled:cursor-not-allowed disabled:opacity-40"><Sparkle size={15} className="text-[var(--accent-browser)]" /><span className="flex-1"><span className="block text-[12px] font-semibold text-[var(--shell-item-fg)]">{attached ? 'Detach Current Office Tab' : 'Attach Current Office Tab'}</span><span className="block text-[10px] text-[var(--shell-item-muted)]">{currentIsOffice ? attached ? 'Stop using this document as agent context' : 'Use this document as agent context' : 'Open an Office document first'}</span></span></button>
+    </div>
+    <div className="border-t border-solid border-[var(--shell-divider)] px-3 py-2 text-[9px] leading-relaxed text-[var(--shell-item-muted)]">The Office add-in supplies document tools. All model selection, chat, approvals, and history stay in Allternit.</div>
+  </div>;
+}
+
 // ============================================================================
 // Main Browser Component
 // ============================================================================
@@ -1055,6 +1004,36 @@ const NavBtn = ({ children, title, onClick, active, disabled }: { children: Reac
   </m.button>
 );
 
+function WorkspaceSettingsPanel({ workspace, workspaces, deleteArmed, onClose, onUpdate, onDuplicate, onReorder, onDelete, onArmDelete }: {
+  workspace: BrowserWorkspace;
+  workspaces: BrowserWorkspace[];
+  deleteArmed: boolean;
+  onClose: () => void;
+  onUpdate: (updates: Partial<BrowserWorkspace>) => void;
+  onDuplicate: () => void;
+  onReorder: (direction: -1 | 1) => void;
+  onDelete: () => void;
+  onArmDelete: () => void;
+}) {
+  const inputClass = "h-8 rounded-lg border border-solid border-[var(--shell-divider)] bg-[var(--shell-view-bg)] px-2 text-[12px] normal-case tracking-normal text-[var(--shell-item-fg)] outline-none focus:border-[var(--accent-browser)]";
+  const labelClass = "flex flex-col gap-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--shell-item-muted)]";
+  const index = workspaces.findIndex((item) => item.id === workspace.id);
+  return <div data-testid="workspace-settings-panel" className="absolute top-10 right-3 z-[90] w-[min(320px,calc(100%-24px))] max-h-[calc(100%-190px)] overflow-y-auto rounded-xl border border-solid border-[var(--shell-divider)] bg-[var(--shell-floating-bg)] shadow-xl p-3 flex flex-col gap-3" onMouseDown={(event) => event.stopPropagation()}>
+    <div className="flex items-center justify-between"><div><div className="text-[12px] font-bold text-[var(--shell-item-fg)]">Workspace settings</div><div className="text-[10px] text-[var(--shell-item-muted)]">Appearance, defaults, and agent context</div></div><button type="button" aria-label="Close workspace settings" onClick={onClose} className="size-7 border-none rounded-full bg-transparent text-[var(--shell-item-muted)] cursor-pointer hover:bg-[var(--shell-item-hover)]"><X size={13} /></button></div>
+    <label className={labelClass}>Name<input value={workspace.name} onChange={(event) => onUpdate({ name: event.target.value.slice(0, 40) })} className={inputClass} /></label>
+    <div className="grid grid-cols-[1fr_52px] gap-2"><label className={labelClass}>Icon<input value={workspace.icon} onChange={(event) => onUpdate({ icon: Array.from(event.target.value).slice(0, 2).join('') })} className={inputClass} /></label><label className={labelClass}>Color<input type="color" value={workspace.color} onChange={(event) => onUpdate({ color: event.target.value })} className="h-8 w-full rounded-lg border border-solid border-[var(--shell-divider)] bg-[var(--shell-view-bg)] p-1 cursor-pointer" /></label></div>
+    <label className={labelClass}>Default URL<input value={workspace.defaultUrl || ''} placeholder="about:blank" onChange={(event) => onUpdate({ defaultUrl: event.target.value || undefined })} className={inputClass} /></label>
+    <div className="h-px bg-[var(--shell-divider)]" />
+    <label className={labelClass}>Agent ID<input value={workspace.agentId || ''} placeholder="Use platform brain" onChange={(event) => onUpdate({ agentId: event.target.value || undefined })} className={inputClass} /></label>
+    <label className={labelClass}>Skills<input value={(workspace.skillIds || []).join(', ')} placeholder="research, capture" onChange={(event) => onUpdate({ skillIds: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) })} className={inputClass} /></label>
+    <label className={labelClass}>Mini-apps<input value={(workspace.miniappIds || []).join(', ')} placeholder="hermes, openclaw" onChange={(event) => onUpdate({ miniappIds: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) })} className={inputClass} /></label>
+    <label className={labelClass}>Extensions<input value={(workspace.extensionIds || []).join(', ')} placeholder="allternit-office-word" onChange={(event) => onUpdate({ extensionIds: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) })} className={inputClass} /></label>
+    <div className="text-[10px] leading-relaxed text-[var(--shell-item-muted)]">These defaults are passed to the same Allternit browser and computer-use harness when work starts in this workspace.</div>
+    <div className="grid grid-cols-4 gap-1.5"><button type="button" title="Move workspace left" disabled={index <= 0} onClick={() => onReorder(-1)} className="h-8 rounded-lg border border-solid border-[var(--shell-divider)] bg-transparent cursor-pointer disabled:opacity-30">←</button><button type="button" title="Move workspace right" disabled={index >= workspaces.length - 1} onClick={() => onReorder(1)} className="h-8 rounded-lg border border-solid border-[var(--shell-divider)] bg-transparent cursor-pointer disabled:opacity-30">→</button><button type="button" onClick={onDuplicate} className="h-8 col-span-2 rounded-lg border border-solid border-[var(--shell-divider)] bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-[var(--shell-item-hover)]">Duplicate</button></div>
+    {workspaces.length > 1 && <button type="button" onClick={deleteArmed ? onDelete : onArmDelete} className="h-8 rounded-lg border border-solid border-red-500/20 bg-red-500/5 text-red-500 cursor-pointer text-[11px] font-semibold hover:bg-red-500/10">{deleteArmed ? 'Confirm delete — tabs move safely' : 'Delete workspace…'}</button>}
+  </div>;
+}
+
 export function BrowserCapsuleEnhanced({
   initialUrl,
   agentMode = 'autonomous',
@@ -1067,6 +1046,13 @@ export function BrowserCapsuleEnhanced({
     goBack, goForward, canGoBack, canGoForward, pushHistory,
     tabLoading, setTabLoading,
     chatPaneOpen, chatPaneWidth, toggleChatPane, setChatPaneWidth,
+    workspaces, activeWorkspaceId, addWorkspace, setActiveWorkspace,
+    updateWorkspace, removeWorkspace, duplicateWorkspace, reorderWorkspace,
+    compactMode, toggleCompactMode,
+    verticalTabs, toggleVerticalTabs,
+    tabSidebarCollapsed, toggleTabSidebar,
+    splitViews, addTabToSplit, removeTabFromSplit, setSplitLayout, closeSplitView,
+    glanceViews, openGlance, closeGlance, expandGlance, splitGlance,
   } = useBrowserStore();
   
   const handleCloseAllTabs = useCallback(() => {
@@ -1083,6 +1069,7 @@ export function BrowserCapsuleEnhanced({
     goal: pageAgentGoal,
     pageAgentStatus,
     pageAgentTargetTabId,
+    setPageAgentTargetTabId,
   } = useBrowserAgentStore();
   const showAciViewport = agentStatus === 'Running' || agentStatus === 'WaitingApproval' || agentStatus === 'Blocked';
   const showPageAgentTakeover = pageAgentStatus === 'running';
@@ -1091,12 +1078,87 @@ export function BrowserCapsuleEnhanced({
     setIsBrowserCapsuleMounted(true);
     return () => { setIsBrowserCapsuleMounted(false); };
   }, [setIsBrowserCapsuleMounted]);
-  const { shortcuts, addShortcut } = useBrowserShortcutsStore();
-  const allExtensions = useExtensionsStore((s) => s.extensions);
+  const { shortcuts, addShortcut, removeShortcut } = useBrowserShortcutsStore();
+  const allExtensions = useBrowserExtensionsStore((s) => s.extensions);
   const enabledExtensions = useMemo(() => allExtensions.filter((e) => e.enabled && e.installStatus !== 'pending'), [allExtensions]);
   useExtensionBridge();
 
   const activeTab = tabs.find(t => t.id === activeTabId);
+  const visibleTabs = useMemo(
+    () => tabs.filter((tab) => tab.essential || (tab.workspaceId || activeWorkspaceId) === activeWorkspaceId),
+    [tabs, activeWorkspaceId],
+  );
+  const activeSplit = splitViews[activeWorkspaceId];
+  const activeGlance = glanceViews[activeWorkspaceId];
+  const splitTabs = useMemo(() => (activeSplit?.tabIds || []).map((id) => tabs.find((tab) => tab.id === id)).filter(Boolean) as BrowserTab[], [activeSplit, tabs]);
+  const previousSplitPaneCountRef = useRef(0);
+  const previousChatPaneOpenRef = useRef(chatPaneOpen);
+  const addNextTabToSplit = useCallback(() => {
+    const candidate = visibleTabs.find((tab) => tab.id !== activeTabId && !activeSplit?.tabIds.includes(tab.id));
+    if (candidate) addTabToSplit(candidate.id);
+  }, [visibleTabs, activeTabId, activeSplit, addTabToSplit]);
+
+  useEffect(() => {
+    const handleSplitShortcuts = (event: KeyboardEvent) => {
+      if (!event.altKey || !event.ctrlKey) return;
+      const key = event.key.toLowerCase();
+      if (!['h', 'v', 'g', 'u'].includes(key)) return;
+      event.preventDefault();
+      if (key === 'u') return closeSplitView();
+      if (!activeSplit) addNextTabToSplit();
+      setSplitLayout(key === 'h' ? 'horizontal' : key === 'v' ? 'vertical' : 'grid');
+    };
+    window.addEventListener('keydown', handleSplitShortcuts);
+    return () => window.removeEventListener('keydown', handleSplitShortcuts);
+  }, [activeSplit, addNextTabToSplit, closeSplitView, setSplitLayout]);
+
+  useEffect(() => {
+    const handleBrowserShortcuts = (event: KeyboardEvent) => {
+      if (compactMode && event.key === 'Escape') {
+        event.preventDefault();
+        toggleCompactMode();
+        return;
+      }
+      if (event.ctrlKey && event.key === 'Tab') {
+        event.preventDefault();
+        const current = visibleTabs.findIndex((tab) => tab.id === activeTabId);
+        const direction = event.shiftKey ? -1 : 1;
+        const next = (current + direction + visibleTabs.length) % visibleTabs.length;
+        if (visibleTabs[next]) setActiveTab(visibleTabs[next].id);
+        return;
+      }
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        toggleCompactMode();
+        return;
+      }
+      if (event.ctrlKey && event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+        event.preventDefault();
+        const current = workspaces.findIndex((workspace) => workspace.id === activeWorkspaceId);
+        const direction = event.key === 'ArrowLeft' ? -1 : 1;
+        const next = (current + direction + workspaces.length) % workspaces.length;
+        if (workspaces[next]) setActiveWorkspace(workspaces[next].id);
+      }
+    };
+    window.addEventListener('keydown', handleBrowserShortcuts);
+    return () => window.removeEventListener('keydown', handleBrowserShortcuts);
+  }, [visibleTabs, activeTabId, workspaces, activeWorkspaceId, compactMode, setActiveTab, setActiveWorkspace, toggleCompactMode]);
+
+  useEffect(() => {
+    const previousCount = previousSplitPaneCountRef.current;
+    if (splitTabs.length > 1 && previousCount < 2) {
+      if (chatPaneOpen) toggleChatPane();
+      if (verticalTabs && !tabSidebarCollapsed) toggleTabSidebar();
+    }
+    previousSplitPaneCountRef.current = splitTabs.length;
+  }, [splitTabs.length, chatPaneOpen, toggleChatPane, verticalTabs, tabSidebarCollapsed, toggleTabSidebar]);
+
+  useEffect(() => {
+    const justOpened = chatPaneOpen && !previousChatPaneOpenRef.current;
+    if (justOpened && verticalTabs && !tabSidebarCollapsed) toggleTabSidebar();
+    if (chatPaneOpen && (viewportRef.current?.parentElement?.clientWidth || 0) < 1000 && chatPaneWidth > 340) setChatPaneWidth(340);
+    previousChatPaneOpenRef.current = chatPaneOpen;
+  }, [chatPaneOpen, verticalTabs, tabSidebarCollapsed, toggleTabSidebar, chatPaneWidth, setChatPaneWidth]);
   const [contentMode, setContentMode] = useState<ContentMode>('web');
   const [urlInput, setUrlInput] = useState('');
   const [isHoveringTab, setIsHoveringTab] = useState<string | null>(null);
@@ -1107,10 +1169,14 @@ export function BrowserCapsuleEnhanced({
   const [tabDropdownOpen, setTabDropdownOpen] = useState(false);
   const [agentPopupOpen, setAgentPopupOpen] = useState(false);
   const [extensionPopupOpen, setExtensionPopupOpen] = useState(false);
+  const [officePopupId, setOfficePopupId] = useState<string | null>(null);
   const agentActive = agentModeControl !== 'Human';
   const [urlFocused, setUrlFocused] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const trustedOfficeHost = activeTab?.contentType === 'web' ? isTrustedOfficeHost((activeTab as WebTab).url) : false;
+  const activeOfficeHost = activeTab?.contentType === 'web' ? getOfficeHostFromUrl((activeTab as WebTab).url) : null;
+  const activeOfficeExtension = activeOfficeHost ? allExtensions.find((extension) => extension.officeHost === activeOfficeHost && extension.enabled) : undefined;
+  const officeTabAttached = Boolean(trustedOfficeHost && activeTab?.extensionIds?.some((id) => id.startsWith('allternit-office-')));
   const officeHostRequiresDesktopEmbed = trustedOfficeHost && !isElectronShell();
   const [copiedDesktopCommand, setCopiedDesktopCommand] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -1118,6 +1184,10 @@ export function BrowserCapsuleEnhanced({
   const [isResizingChatPane, setIsResizingChatPane] = useState(false);
   const [findBarOpen, setFindBarOpen] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const [workspaceSettingsOpen, setWorkspaceSettingsOpen] = useState(false);
+  const [workspaceDeleteArmed, setWorkspaceDeleteArmed] = useState(false);
+  const [narrowBrowser, setNarrowBrowser] = useState(false);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
   const chatPaneResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -1134,6 +1204,25 @@ export function BrowserCapsuleEnhanced({
   }, [activeTab, shortcuts]);
 
   useEffect(() => { setFindBarOpen(false); }, [activeTabId]);
+
+  useEffect(() => {
+    if (!activeOfficeHost || !activeTabId || !officeTabAttached) return;
+    let cancelled = false;
+    const refreshBinding = async () => {
+      try {
+        const response = await fetch('/api/v1/office/bindings');
+        if (!response.ok) return;
+        const payload = await response.json() as { bindings?: Array<{ id: string; host?: string; title?: string; label?: string; connected?: boolean }> };
+        const binding = payload.bindings?.find((item) => item.host === activeOfficeHost);
+        if (!cancelled && binding) updateTab(activeTabId, { officeBindingId: binding.id, officeDocumentTitle: binding.title || binding.label, officeBindingConnected: binding.connected !== false });
+      } catch {
+        if (!cancelled) updateTab(activeTabId, { officeBindingConnected: false });
+      }
+    };
+    void refreshBinding();
+    const interval = window.setInterval(refreshBinding, 10_000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [activeOfficeHost, activeTabId, officeTabAttached, updateTab]);
 
   useEffect(() => {
     if (activeTab) {
@@ -1208,37 +1297,43 @@ export function BrowserCapsuleEnhanced({
     return () => window.removeEventListener('message', handler);
   }, [activeTabId, updateTab, pushHistory, setTabLoading]);
 
-  const handleScreenshot = useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    try {
-      const canvas = document.createElement('canvas');
-      const rect = viewport.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      ctx.fillStyle = 'var(--bg-primary)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'var(--accent-primary)';
-      ctx.font = '16px system-ui';
-      ctx.textAlign = 'center';
-      const url = activeTab && activeTab.contentType === 'web' ? (activeTab as WebTab).url : 'No active tab';
-      ctx.fillText(`Screenshot: ${url}`, canvas.width / 2, canvas.height / 2 - 10);
-      ctx.fillStyle = 'var(--text-muted)';
-      ctx.font = '12px system-ui';
-      ctx.fillText(new Date().toLocaleString(), canvas.width / 2, canvas.height / 2 + 20);
-      canvas.toBlob((blob) => { if (!blob) return; const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `browser-screenshot-${Date.now()}.png`; a.click(); URL.revokeObjectURL(a.href); });
-    } catch (err) { logger.error({ err: err }, 'Screenshot failed:'); }
-  }, [activeTab]);
-
   const handleBookmark = useCallback(() => {
     if (!activeTab || activeTab.contentType !== 'web') return;
     const url = (activeTab as WebTab).url;
     const title = activeTab.title || url;
-    if (isBookmarked) return;
+    if (isBookmarked) {
+      const bookmark = shortcuts.find((shortcut) => shortcut.url === url);
+      if (bookmark) removeShortcut(bookmark.id);
+      return;
+    }
     addShortcut({ label: title, url, icon: '⭐' });
-  }, [activeTab, isBookmarked, addShortcut]);
+  }, [activeTab, isBookmarked, shortcuts, addShortcut, removeShortcut]);
+
+  const attachOfficeExtension = useCallback((extension: BrowserExtension, tabId: string) => {
+    const tab = useBrowserStore.getState().tabs.find((item) => item.id === tabId);
+    const tabExtensionIds = Array.from(new Set([...(tab?.extensionIds || []), extension.id]));
+    updateTab(tabId, { extensionIds: tabExtensionIds });
+    const workspace = useBrowserStore.getState().workspaces.find((item) => item.id === activeWorkspaceId);
+    updateWorkspace(activeWorkspaceId, { extensionIds: Array.from(new Set([...(workspace?.extensionIds || []), extension.id])) });
+    setPageAgentTargetTabId(tabId);
+    if (!chatPaneOpen) toggleChatPane();
+  }, [activeWorkspaceId, chatPaneOpen, setPageAgentTargetTabId, toggleChatPane, updateTab, updateWorkspace]);
+
+  const detachOfficeExtension = useCallback((extension: BrowserExtension, tabId: string) => {
+    const tab = useBrowserStore.getState().tabs.find((item) => item.id === tabId);
+    updateTab(tabId, { extensionIds: (tab?.extensionIds || []).filter((id) => id !== extension.id) });
+    if (pageAgentTargetTabId === tabId) setPageAgentTargetTabId(null);
+  }, [pageAgentTargetTabId, setPageAgentTargetTabId, updateTab]);
+
+  const handleRefresh = useCallback(() => {
+    if (!activeTabId) return;
+    setIframeLoaded(false);
+    setIframeError(false);
+    setTabLoading(activeTabId, true);
+    const webview = viewportRef.current?.querySelector('webview') as (HTMLElement & { reload?: () => void }) | null;
+    if (isElectronShell() && webview?.reload) webview.reload();
+    else setReloadNonce((value) => value + 1);
+  }, [activeTabId, setTabLoading]);
 
   const canBack = activeTabId ? canGoBack(activeTabId) : false;
   const canForward = activeTabId ? canGoForward(activeTabId) : false;
@@ -1282,23 +1377,46 @@ export function BrowserCapsuleEnhanced({
     };
   }, [isResizingChatPane, stopChatPaneResize, updateChatPaneResize]);
 
+  useEffect(() => {
+    const container = viewportRef.current?.parentElement;
+    if (!container) return;
+    const update = () => setNarrowBrowser(container.clientWidth < 800);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <LazyMotion features={domAnimation}>
-      <div data-testid="browser-capsule-enhanced-root" className="flex flex-col size-full flex-1 min-h-0 min-w-0 relative overflow-hidden bg-[var(--view-browser-bg,#f6f8fc)] text-[var(--text-primary)] font-sans select-none">
+      <div data-testid="browser-capsule-enhanced-root" className="flex flex-col size-full flex-1 min-h-0 min-w-0 relative overflow-hidden bg-[var(--shell-view-bg,var(--view-browser-bg))] text-[var(--shell-item-fg,var(--text-primary))] font-sans select-none">
         
+        {/* Workspaces are browser sessions with their own tabs and Allternit context. */}
+        {!compactMode && <div className="h-9 shrink-0 flex items-center gap-1 px-2 bg-[var(--shell-rail-bg)] border-b border-solid border-[var(--shell-divider)]">
+          <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] flex-1">
+            <span className="px-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--shell-item-muted)]">Workspaces</span>
+            {workspaces.map((workspace) => <button key={workspace.id} type="button" onClick={() => { setActiveWorkspace(workspace.id); setWorkspaceDeleteArmed(false); }} title={`Switch to ${workspace.name}`} className={cn("h-7 px-2.5 rounded-lg border border-solid flex items-center gap-1.5 cursor-pointer text-[12px] font-semibold whitespace-nowrap transition-colors relative", workspace.id === activeWorkspaceId ? "bg-[var(--shell-item-active-bg)] border-[var(--accent-browser)]/30 text-[var(--shell-item-active-fg)] after:absolute after:left-2 after:right-2 after:-bottom-[5px] after:h-0.5 after:rounded-full after:bg-[var(--accent-browser)]" : "bg-transparent border-transparent text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)]")}><span style={{ color: workspace.color }}>{workspace.icon}</span>{workspace.name}<span className="text-[9px] opacity-50">{tabs.filter((tab) => tab.workspaceId === workspace.id && !tab.essential).length}</span></button>)}
+            <button type="button" onClick={() => addWorkspace(`Workspace ${workspaces.length + 1}`)} title="New workspace" className="size-7 rounded-lg border-none bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] cursor-pointer flex items-center justify-center"><Plus size={14} /></button>
+          </div>
+          <button type="button" onClick={() => setWorkspaceSettingsOpen((open) => !open)} title="Workspace settings" className="size-7 rounded-lg border-none bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] cursor-pointer flex items-center justify-center"><GearSix size={14} /></button>
+          <button type="button" onClick={toggleVerticalTabs} title={verticalTabs ? "Use horizontal tabs" : "Use vertical tabs"} className="h-7 px-2 rounded-lg border-none bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] cursor-pointer flex items-center gap-1.5 text-[11px]">{verticalTabs ? '↔' : '↕'} Tabs</button>
+          <button type="button" onClick={toggleCompactMode} title="Enter focus mode" className="h-7 px-2 rounded-lg border-none bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] cursor-pointer flex items-center gap-1.5 text-[11px]"><SquaresFour size={14} /> Focus</button>
+        </div>}
+        {workspaceSettingsOpen && !compactMode && (() => { const workspace = workspaces.find((item) => item.id === activeWorkspaceId); return workspace ? <WorkspaceSettingsPanel workspace={workspace} workspaces={workspaces} deleteArmed={workspaceDeleteArmed} onClose={() => { setWorkspaceSettingsOpen(false); setWorkspaceDeleteArmed(false); }} onUpdate={(updates) => updateWorkspace(workspace.id, updates)} onDuplicate={() => { duplicateWorkspace(workspace.id); setWorkspaceDeleteArmed(false); }} onReorder={(direction) => reorderWorkspace(workspace.id, direction)} onArmDelete={() => setWorkspaceDeleteArmed(true)} onDelete={() => { removeWorkspace(workspace.id); setWorkspaceSettingsOpen(false); setWorkspaceDeleteArmed(false); }} /> : null; })()}
+
         {/* ━━━ ROW 1: TAB BAR ━━━ */}
-        <div 
-          className="h-9 min-h-9 max-h-9 flex flex-row items-end px-1 bg-[var(--bg-primary)] shrink-0 relative"
+        {!compactMode && !verticalTabs && <div
+          className="h-9 min-h-9 max-h-9 flex flex-row items-end px-1 bg-[var(--shell-rail-bg)] shrink-0 relative"
           onDoubleClick={(e) => { if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-tab-bar-space]')) addTab('about:blank'); }}
         >
           <div data-tab-bar-space ref={tabBarRef} onWheel={(e) => { e.preventDefault(); tabBarRef.current?.scrollBy({ left: e.deltaY, behavior: 'smooth' }); }} className="flex-1 flex flex-row items-end overflow-x-auto overflow-y-hidden [scrollbar-width:none] min-w-0 gap-0.5 pb-1 pl-0.5">
-            {tabs.map((tab, index) => {
+            {visibleTabs.map((tab, index) => {
               const isActive = tab.id === activeTabId;
               const isLoading = tabLoading[tab.id];
               const isMounted = pageAgentTargetTabId === tab.id;
               const isAgentRunning = isMounted && pageAgentStatus === 'running';
               const isPinned = tab.pinned ?? false;
-              const showTitle = isActive || isHoveringTab === tab.id || tabs.length <= 3;
+              const showTitle = isActive || isHoveringTab === tab.id || visibleTabs.length <= 3;
               const isDragOver = dragOverIndex === index;
               return (
                 <div 
@@ -1332,7 +1450,7 @@ export function BrowserCapsuleEnhanced({
                   {isPinned && !isMounted && <div className="absolute bottom-0.5 right-0.5 size-1 rounded-full bg-[var(--text-tertiary)] z-10" />}
                   {isAgentRunning || isLoading ? <CircleNotch size={13} className="shrink-0 opacity-80 animate-spin" /> : <TabFavicon url={tab.contentType === 'web' ? (tab as WebTab).url : undefined} size={isPinned ? 12 : 13} />}
                   {showTitle && !isPinned && <span className="text-[12px] font-medium truncate flex-1 min-w-0">{tab.title || 'New Tab'}</span>}
-                  {(isActive || isHoveringTab === tab.id) && !isPinned && <button type="button" onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }} className="ml-0.5 p-0.5 rounded-full border-none bg-transparent cursor-pointer text-inherit opacity-50 flex shrink-0 hover:bg-[var(--ui-border-default)] hover:opacity-100"><X size={10} /></button>}
+                  {(isActive || isHoveringTab === tab.id) && !isPinned && <button type="button" aria-label={`Close ${tab.title || 'tab'}`} onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }} className="ml-0.5 p-0.5 rounded-full border-none bg-transparent cursor-pointer text-inherit opacity-50 flex shrink-0 hover:bg-[var(--ui-border-default)] hover:opacity-100"><X size={10} /></button>}
                 </div>
               );
             })}
@@ -1341,9 +1459,9 @@ export function BrowserCapsuleEnhanced({
           <div className="relative flex items-center h-full pr-1 gap-0.5">
             <NavBtn title="Show all tabs" onClick={() => setTabDropdownOpen(!tabDropdownOpen)}><CaretDown className="size-4" /></NavBtn>
             <TabOverflowDropdown open={tabDropdownOpen} onClose={() => setTabDropdownOpen(false)} tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTab} onCloseTab={closeTab} />
-            {tabs.length > 0 && <NavBtn title="Close all tabs" onClick={handleCloseAllTabs}><X className="size-4" /></NavBtn>}
+            {visibleTabs.length > 0 && <NavBtn title="Close all tabs" onClick={handleCloseAllTabs}><X className="size-4" /></NavBtn>}
           </div>
-        </div>
+        </div>}
 
         {/* Tab context menu */}
         <AnimatePresence>
@@ -1361,24 +1479,31 @@ export function BrowserCapsuleEnhanced({
         )}
 
         {/* ━━━ ACCENT LINE ━━━ */}
-        <div className="h-0.5 shrink-0 bg-[linear-gradient(90deg,transparent,var(--accent-primary),transparent)] opacity-40 origin-left animate-[browserAccentSlide_1.2s_ease-out]" />
+        {!compactMode && <div className="h-0.5 shrink-0 bg-[linear-gradient(90deg,transparent,var(--accent-primary),transparent)] opacity-40 origin-left animate-[browserAccentSlide_1.2s_ease-out]" />}
 
         {/* ━━━ ROW 2: NAV BAR ━━━ */}
-        <div className="h-10 min-h-10 max-h-10 flex flex-row items-center gap-2 px-2 bg-[var(--bg-secondary)] border-b border-solid border-[var(--border-subtle)] shrink-0 z-20">
+        {!compactMode && <div className="h-10 min-h-10 max-h-10 flex flex-row items-center gap-2 px-2 bg-[var(--shell-rail-bg)] border-b border-solid border-[var(--shell-divider)] shrink-0 z-20">
           <div className="flex flex-row items-center gap-0.5">
             <NavBtn title="Back" onClick={() => activeTabId && goBack(activeTabId)} disabled={!canBack}><CaretLeft className="size-4" /></NavBtn>
             <NavBtn title="Forward" onClick={() => activeTabId && goForward(activeTabId)} disabled={!canForward}><CaretRight className="size-4" /></NavBtn>
-            <NavBtn title="Refresh" onClick={() => { if (activeTabId) { setIframeLoaded(false); setIframeError(false); setTabLoading(activeTabId, true); const currentUrl = activeTab && activeTab.contentType === 'web' ? (activeTab as WebTab).url : ''; if (currentUrl) { updateTab(activeTabId, { url: '' } as Partial<WebTab>); setTimeout(() => updateTab(activeTabId, { url: currentUrl } as Partial<WebTab>), 50); } } }}><ArrowsClockwise className="size-4" /></NavBtn>
+            <NavBtn title="Reload page" onClick={handleRefresh} disabled={!activeTabId}><ArrowsClockwise className="size-4" /></NavBtn>
           </div>
           <form onSubmit={handleNavigate} className="flex-1 min-w-0 relative flex items-center gap-2">
             <div className="flex items-center h-8 bg-[var(--bg-primary)] rounded-full px-4 flex-1">
-              {activeTab && <Lock className="size-3.5 text-[var(--text-tertiary)] mr-2 shrink-0" />}
-              <input aria-label="Input" type="text" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleNavigate(); } }} onFocus={() => setUrlFocused(true)} onBlur={() => setTimeout(() => setUrlFocused(false), 200)} className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text-primary)] font-inherit min-w-0" placeholder={activeTab ? "Enter URL or search…" : "Search or type a URL"} />
+              {activeTab && activeTab.contentType === 'web' && (activeTab as WebTab).url.startsWith('https://') && <Lock className="size-3.5 text-[var(--text-tertiary)] mr-2 shrink-0" />}
+              <input aria-label="Address and search bar" type="text" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (e.altKey) { openGlance(urlInput, urlInput, activeTabId || undefined); setUrlFocused(false); } else handleNavigate(); } }} onFocus={() => setUrlFocused(true)} onBlur={() => setTimeout(() => setUrlFocused(false), 200)} className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text-primary)] font-inherit min-w-0" placeholder={activeTab ? "Enter URL or search…" : "Search or type a URL"} />
             </div>
             <UrlAutocomplete query={urlInput} visible={urlFocused} onSelect={(url) => { setUrlInput(url); setUrlFocused(false); if (activeTabId) { updateTab(activeTabId, { url, title: url } as Partial<WebTab>); pushHistory(activeTabId, url); setTabLoading(activeTabId, true); setIframeLoaded(false); setIframeError(false); } else addTab(url); }} />
           </form>
           <NavBtn title={isBookmarked ? "Bookmarked" : "Bookmark this page"} onClick={handleBookmark} active={isBookmarked}><Star className="size-4" style={{ fill: isBookmarked ? 'var(--accent-primary)' : 'none' }} /></NavBtn>
           <NavBtn title="Find in page" onClick={() => setFindBarOpen((v) => !v)} active={findBarOpen}><MagnifyingGlass className="size-4" /></NavBtn>
+          <NavBtn title={activeSplit ? "Add another tab to Split View" : "Split with another tab"} onClick={addNextTabToSplit} disabled={visibleTabs.length < 2 || splitTabs.length >= 4} active={splitTabs.length > 1}><SquaresFour className="size-4" /></NavBtn>
+          {activeSplit && <div className="flex items-center rounded-lg bg-[var(--bg-primary)] p-0.5">
+            <button type="button" title="Side-by-side Split View" onClick={() => setSplitLayout('horizontal')} className={cn("px-1.5 py-1 border-none rounded cursor-pointer text-[10px]", activeSplit.layout === 'horizontal' ? "bg-[var(--bg-active)] text-[var(--accent-primary)]" : "bg-transparent text-[var(--text-tertiary)]")}>Ⅱ</button>
+            <button type="button" title="Stacked Split View" onClick={() => setSplitLayout('vertical')} className={cn("px-1.5 py-1 border-none rounded cursor-pointer text-[10px]", activeSplit.layout === 'vertical' ? "bg-[var(--bg-active)] text-[var(--accent-primary)]" : "bg-transparent text-[var(--text-tertiary)]")}>＝</button>
+            <button type="button" title="Grid Split View" onClick={() => setSplitLayout('grid')} className={cn("px-1.5 py-1 border-none rounded cursor-pointer text-[10px]", activeSplit.layout === 'grid' ? "bg-[var(--bg-active)] text-[var(--accent-primary)]" : "bg-transparent text-[var(--text-tertiary)]")}>▦</button>
+            <button type="button" title="Close Split View" onClick={closeSplitView} className="px-1.5 py-1 border-none rounded cursor-pointer bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]"><X size={11} /></button>
+          </div>}
 
           {enabledExtensions.map((ext) => ext.id === 'allternit-agent' ? (
             <div key={ext.id} className="relative" onContextMenu={(e) => { e.preventDefault(); setAgentPopupOpen(!agentPopupOpen); }}>
@@ -1391,7 +1516,15 @@ export function BrowserCapsuleEnhanced({
               <AgentPopup open={agentPopupOpen} onClose={() => setAgentPopupOpen(false)} />
             </div>
           ) : (
-            <NavBtn key={ext.id} title={ext.name}><ExtensionStoreIcon storeUrl={ext.storeUrl} fallbackIcon={ext.icon} size={16} /></NavBtn>
+            ext.officeHost ? <div key={ext.id} className="relative">
+              <NavBtn title={`${ext.name} — browser extension controls`} onClick={() => setOfficePopupId((current) => current === ext.id ? null : ext.id)} active={officePopupId === ext.id || (trustedOfficeHost && Boolean(activeTabId && pageAgentTargetTabId === activeTabId))}><ExtensionStoreIcon storeUrl={ext.storeUrl} fallbackIcon={ext.icon} size={16} /></NavBtn>
+              {officePopupId === ext.id && <OfficeExtensionPopup extension={ext} currentUrl={activeTab?.contentType === 'web' ? (activeTab as WebTab).url : undefined} attached={Boolean(activeTab?.extensionIds?.includes(ext.id))} onClose={() => setOfficePopupId(null)} onOpen={(url) => { const tabId = addTab(url); attachOfficeExtension(ext, tabId); }} onAttach={() => { if (activeTabId) attachOfficeExtension(ext, activeTabId); }} onDetach={() => { if (activeTabId) detachOfficeExtension(ext, activeTabId); }} />}
+            </div> : <NavBtn
+              key={ext.id}
+              title={`Open ${ext.name}`}
+              onClick={ext.storeUrl ? () => addTab(ext.storeUrl!) : undefined}
+              disabled={!ext.storeUrl}
+            ><ExtensionStoreIcon storeUrl={ext.storeUrl} fallbackIcon={ext.icon} size={16} /></NavBtn>
           ))}
 
           <div className="relative">
@@ -1401,13 +1534,28 @@ export function BrowserCapsuleEnhanced({
 
           <div className="relative">
             <NavBtn title="More" onClick={() => setMenuOpen(!menuOpen)}><DotsThreeVertical className="size-4" /></NavBtn>
-            <ThreeDotMenu open={menuOpen} onClose={() => setMenuOpen(false)} contentMode={contentMode} setContentMode={setContentMode} agentModeControl={agentModeControl} setAgentMode={setAgentMode} agentStatus={agentStatus} onNewTab={() => addTab('about:blank')} onToggleChatPane={toggleChatPane} chatPaneOpen={chatPaneOpen} onCloseAllTabs={handleCloseAllTabs} onScreenshot={handleScreenshot} zoomLevel={zoomLevel} onZoomIn={() => setZoomLevel((z) => Math.min(z + 0.1, 3))} onZoomOut={() => setZoomLevel((z) => Math.max(z - 0.1, 0.3))} onZoomReset={() => setZoomLevel(1)} />
+            <ThreeDotMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNewTab={() => addTab('about:blank')} onToggleChatPane={toggleChatPane} chatPaneOpen={chatPaneOpen} onCloseAllTabs={handleCloseAllTabs} onEnterFocusMode={toggleCompactMode} zoomLevel={zoomLevel} onZoomIn={() => setZoomLevel((z) => Math.min(z + 0.1, 3))} onZoomOut={() => setZoomLevel((z) => Math.max(z - 0.1, 0.3))} onZoomReset={() => setZoomLevel(1)} />
           </div>
-        </div>
+        </div>}
 
         {/* ━━━ VIEWPORT + CHAT PANE ━━━ */}
-        <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-row min-h-0 overflow-hidden relative">
+          {!compactMode && verticalTabs && <aside aria-label="Browser tabs" className={cn("shrink-0 flex flex-col min-h-0 border-r border-solid border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] gap-1 transition-[width] duration-200", tabSidebarCollapsed ? "w-12 p-1.5" : "w-[216px] p-2")}>
+            <button type="button" onClick={toggleTabSidebar} title={tabSidebarCollapsed ? "Expand tab sidebar" : "Collapse tab sidebar"} className={cn("h-7 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center", tabSidebarCollapsed ? "justify-center" : "justify-end px-1.5")}><CaretLeft size={13} className={cn("transition-transform", tabSidebarCollapsed && "rotate-180")} /></button>
+            <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-1">
+              {[...visibleTabs].sort((a, b) => Number(Boolean(b.essential)) - Number(Boolean(a.essential))).map((tab) => <button type="button" title={tabSidebarCollapsed ? tab.title || 'New Tab' : undefined} key={tab.id} onClick={() => setActiveTab(tab.id)} onContextMenu={(event) => { event.preventDefault(); setContextMenu({ x: event.clientX, y: event.clientY, tabId: tab.id }); }} className={cn("group h-9 w-full rounded-lg border border-solid flex items-center cursor-pointer text-left transition-colors", tabSidebarCollapsed ? "justify-center px-0" : "px-2 gap-2", tab.id === activeTabId ? "bg-[var(--shell-item-active-bg)] border-[var(--accent-browser)]/25 text-[var(--shell-item-active-fg)]" : "bg-transparent border-transparent text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]")}><span className="relative shrink-0"><TabFavicon url={tab.contentType === 'web' ? (tab as WebTab).url : undefined} size={14} />{tab.essential && <Star size={8} weight="fill" className="absolute -right-1 -bottom-1 text-[var(--accent-browser)]" />}</span>{!tabSidebarCollapsed && <><span className="flex-1 min-w-0 truncate text-[12px] font-medium">{tab.title || 'New Tab'}</span><span onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }} className="opacity-0 group-hover:opacity-70 hover:opacity-100"><X size={11} /></span></>}</button>)}
+            </div>
+            <button type="button" title="New tab" onClick={() => addTab('about:blank')} className={cn("h-9 w-full rounded-lg border-none bg-transparent text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center text-[12px]", tabSidebarCollapsed ? "justify-center" : "px-2 gap-2")}><Plus size={14} />{!tabSidebarCollapsed && ' New tab'}</button>
+          </aside>}
           <div ref={viewportRef} className="flex-1 relative overflow-hidden min-h-0 min-w-0">
+            {compactMode && <button type="button" onClick={toggleCompactMode} title="Exit focus mode (Esc)" aria-label="Exit focus mode" className="absolute top-3 left-1/2 -translate-x-1/2 z-[60] h-8 px-3 rounded-full border border-solid border-[var(--border-subtle)] bg-[var(--shell-rail-bg)] text-[var(--shell-item-fg)] shadow-md cursor-pointer flex items-center gap-1.5 text-[11px] font-semibold hover:bg-[var(--shell-item-hover)]"><X size={13} /> Exit Focus <span className="opacity-60">Esc</span></button>}
+            {trustedOfficeHost && activeOfficeHost && <div data-testid="office-browser-context-bar" className="absolute left-1/2 top-2 z-[35] flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-2 rounded-full border border-solid border-[var(--shell-divider)] bg-[var(--shell-floating-bg)]/95 px-2 py-1 shadow-lg backdrop-blur-md">
+              <span className="flex size-6 items-center justify-center rounded-full text-[10px] font-black" style={{ color: OFFICE_HOST_META[activeOfficeHost].color, background: `color-mix(in srgb, ${OFFICE_HOST_META[activeOfficeHost].color} 14%, transparent)` }}>{activeOfficeHost === 'powerpoint' ? 'P' : activeOfficeHost === 'excel' ? 'X' : 'W'}</span>
+              <span className="min-w-0 truncate text-[10px] font-semibold text-[var(--shell-item-fg)]">{activeTab.officeDocumentTitle || `${OFFICE_HOST_META[activeOfficeHost].label} in Allternit Browser`}</span>
+              <span className={cn("flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold", officeTabAttached ? "bg-green-500/10 text-green-600" : "bg-[var(--shell-item-hover)] text-[var(--shell-item-muted)]")}><span className={cn("size-1.5 rounded-full", officeTabAttached ? "bg-green-500" : "bg-amber-500")} />{officeTabAttached ? 'Agent attached' : 'Not attached'}</span>
+              {activeTab.officeBindingId && <span title={`Office binding ${activeTab.officeBindingId}`} className={cn("hidden sm:flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold", activeTab.officeBindingConnected ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600")}><span className={cn("size-1.5 rounded-full", activeTab.officeBindingConnected ? "bg-green-500" : "bg-amber-500")} />{activeTab.officeBindingConnected ? 'Bridge live' : 'Bridge reconnecting'}</span>}
+              <button type="button" onClick={() => { if (activeTabId && activeOfficeExtension) attachOfficeExtension(activeOfficeExtension, activeTabId); else if (!chatPaneOpen) toggleChatPane(); }} className="h-6 rounded-full border-none bg-[var(--accent-browser)] px-2.5 text-[9px] font-bold text-white cursor-pointer hover:brightness-110">{officeTabAttached ? 'Open Agent' : activeOfficeExtension ? 'Attach Agent' : 'Enable Extension'}</button>
+            </div>}
             {findBarOpen && contentMode === 'web' && activeTab?.contentType === 'web' && <BrowserFindBar iframeRef={iframeRef} onClose={() => setFindBarOpen(false)} />}
             {showAciViewport && <ACIComputerUseView agentBarHeight={0} />}
             <BrowserAgentOverlay status={agentStatus} currentAction={agentCurrentAction as any} />
@@ -1426,11 +1574,18 @@ export function BrowserCapsuleEnhanced({
               </div>
             )}
 
-            {contentMode === 'web' ? (
+            {splitTabs.length > 1 ? (
+              <div data-testid="browser-split-view" className={cn("size-full grid gap-px bg-[var(--border-subtle)]", activeSplit?.layout === 'vertical' ? "grid-cols-1" : activeSplit?.layout === 'grid' ? "grid-cols-2" : `grid-cols-${Math.min(splitTabs.length, 4)}`)} style={activeSplit?.layout === 'horizontal' ? { gridTemplateColumns: `repeat(${splitTabs.length}, minmax(0, 1fr))` } : activeSplit?.layout === 'vertical' ? { gridTemplateRows: `repeat(${splitTabs.length}, minmax(0, 1fr))` } : undefined}>
+                {splitTabs.map((splitTab, splitIndex) => <div key={splitTab.id} onMouseDown={() => setActiveTab(splitTab.id)} className={cn("relative min-w-0 min-h-0 bg-white overflow-hidden", activeSplit?.layout === 'grid' && splitTabs.length === 3 && splitIndex === 2 && "col-span-2", splitTab.id === activeTabId && "ring-2 ring-inset ring-[var(--accent-primary)]")}>
+                  <div className="absolute top-2 left-2 right-2 z-20 flex justify-between pointer-events-none"><div className="max-w-[70%] truncate rounded-md bg-[var(--bg-secondary)]/90 border border-solid border-[var(--border-subtle)] px-2 py-1 text-[10px] text-[var(--text-secondary)] shadow-sm">{splitTab.title}</div><button type="button" onClick={(event) => { event.stopPropagation(); removeTabFromSplit(splitTab.id); }} className="pointer-events-auto size-6 rounded-full border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/90 text-[var(--text-secondary)] cursor-pointer flex items-center justify-center"><Minus size={11} /></button></div>
+                  {splitTab.contentType === 'web' && (splitTab as WebTab).url !== 'about:blank' ? (isElectronShell() ? <webview data-testid={`split-webview-${splitTab.id}`} src={(splitTab as WebTab).url} className="size-full border-none bg-white" allowpopups={true} /> : <iframe title={splitTab.title} data-testid={`split-iframe-${splitTab.id}`} src={getWebProxyUrl((splitTab as WebTab).url)} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals allow-pointer-lock allow-downloads allow-storage-access-by-user-activation" className="size-full border-none bg-white" />) : <div className="size-full flex items-center justify-center bg-[var(--bg-primary)] text-[12px] text-[var(--text-tertiary)]">This surface opens outside Split View</div>}
+                </div>)}
+              </div>
+            ) : contentMode === 'web' ? (
               activeTab && activeTab.contentType === 'web' && (activeTab as WebTab).url !== 'about:blank' ? (
                 <div className="size-full relative overflow-auto">
                   <div className="origin-top-left" style={{ width: `${100 / zoomLevel}%`, height: `${100 / zoomLevel}%`, transform: `scale(${zoomLevel})` }}>
-                    {isElectronShell() ? <webview data-testid="allternit-webview-content" src={(activeTab as WebTab).url} partition={trustedOfficeHost ? "persist:allternit-office-web" : undefined} className="size-full border-none bg-white" allowpopups={true} onloadstart={() => { setIframeLoaded(false); setIframeError(false); if (activeTabId) setTabLoading(activeTabId, true); }} onloadstop={() => { setIframeLoaded(true); if (activeTabId) setTabLoading(activeTabId, false); }} onerror={() => { setIframeError(true); if (activeTabId) setTabLoading(activeTabId, false); }} {...({ 'ondid-fail-load': () => { setIframeError(true); if (activeTabId) setTabLoading(activeTabId, false); } } as any)} /> : trustedOfficeHost ? (
+                    {isElectronShell() ? <webview key={`${activeTab.id}-${reloadNonce}`} data-testid="allternit-webview-content" src={(activeTab as WebTab).url} partition={trustedOfficeHost ? "persist:allternit-office-web" : undefined} className="size-full border-none bg-white" allowpopups={true} onloadstart={() => { setIframeLoaded(false); setIframeError(false); if (activeTabId) setTabLoading(activeTabId, true); }} onloadstop={() => { setIframeLoaded(true); if (activeTabId) setTabLoading(activeTabId, false); }} onerror={() => { setIframeError(true); if (activeTabId) setTabLoading(activeTabId, false); }} {...({ 'ondid-fail-load': () => { setIframeError(true); if (activeTabId) setTabLoading(activeTabId, false); } } as any)} /> : trustedOfficeHost ? (
                       <div className="flex size-full items-center justify-center bg-[linear-gradient(180deg,#f7f8fc_0%,#eef3fb_100%)] px-6">
                         <div className="max-w-xl rounded-3xl border border-[rgba(15,23,42,0.08)] bg-white/95 p-7 shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
                           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
@@ -1440,7 +1595,7 @@ export function BrowserCapsuleEnhanced({
                           <div className="mt-2 text-[13px] leading-relaxed text-[var(--text-secondary)]">Office on the web is only treated as a real Allternit surface when it is mounted in the Electron desktop shell webview. This browser build will not render the Office product inline.</div>
                         </div>
                       </div>
-                    ) : <iframe ref={iframeRef} data-testid="allternit-iframe-content" src={getWebProxyUrl((activeTab as WebTab).url)} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals allow-pointer-lock allow-downloads allow-storage-access-by-user-activation" allow="accelerometer; autoplay; clipboard-read; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="no-referrer" className="size-full border-none bg-white" onLoad={handleIframeLoad} onError={() => { setIframeError(true); if (activeTabId) setTabLoading(activeTabId, false); }} />}
+                    ) : <iframe key={`${activeTab.id}-${reloadNonce}`} ref={iframeRef} data-testid="allternit-iframe-content" src={getWebProxyUrl((activeTab as WebTab).url)} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals allow-pointer-lock allow-downloads allow-storage-access-by-user-activation" allow="accelerometer; autoplay; clipboard-read; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="no-referrer" className="size-full border-none bg-white" onLoad={handleIframeLoad} onError={() => { setIframeError(true); if (activeTabId) setTabLoading(activeTabId, false); }} />}
                   </div>
                   {iframeError && <div className="absolute inset-0 bg-[var(--bg-primary)] flex flex-col items-center justify-center z-10"><Warning className="size-12 text-red-500/60 mb-4" /><div className="text-[12px] font-black text-red-400/80 uppercase tracking-[0.3em] mb-2">CONNECTION_FAILED</div><div className="text-[12px] font-mono text-zinc-500/40 max-w-[320px] text-center">Could not load {(activeTab as WebTab).url}</div></div>}
                   {!iframeLoaded && !iframeError && <div className="absolute inset-0 z-10"><BrowserIframeSkeleton /></div>}
@@ -1453,14 +1608,20 @@ export function BrowserCapsuleEnhanced({
               )
             ) : contentMode === 'canvas' ? <CanvasMode tab={activeTab?.contentType === 'a2ui' ? (activeTab as A2UITab) : undefined} /> : <StudioMode />}
             <PageAgentTakeoverOverlay active={showPageAgentTakeover} task={pageAgentGoal} />
+            {activeGlance && <div data-testid="browser-glance" className="absolute inset-0 z-40 flex items-center justify-center bg-black/30 p-[clamp(20px,5vw,72px)]" onMouseDown={(event) => { if (event.target === event.currentTarget) closeGlance(); }}>
+              <div className="size-full max-w-[1180px] max-h-[820px] overflow-hidden rounded-2xl border border-solid border-[var(--border-strong)] bg-[var(--bg-secondary)] shadow-2xl flex flex-col">
+                <div className="h-10 shrink-0 flex items-center gap-2 px-3 border-b border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]"><Globe size={14} className="text-[var(--accent-primary)]" /><div className="flex-1 min-w-0 truncate text-[12px] font-semibold text-[var(--text-primary)]">{activeGlance.title}</div><button type="button" onClick={splitGlance} className="h-7 px-2.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] cursor-pointer text-[11px] hover:bg-[var(--bg-hover)]">Add to Split</button><button type="button" onClick={expandGlance} className="h-7 px-2.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] cursor-pointer text-[11px] hover:bg-[var(--bg-hover)]">Open Tab</button><button type="button" aria-label="Close Glance" onClick={closeGlance} className="size-7 rounded-full border-none bg-transparent text-[var(--text-secondary)] cursor-pointer flex items-center justify-center hover:bg-[var(--bg-hover)]"><X size={14} /></button></div>
+                <div className="flex-1 min-h-0 bg-white">{isElectronShell() ? <webview src={activeGlance.url} className="size-full border-none" allowpopups={true} /> : <iframe title={`Glance: ${activeGlance.title}`} src={getWebProxyUrl(activeGlance.url)} sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals allow-downloads" className="size-full border-none" />}</div>
+              </div>
+            </div>}
           </div>
 
           {chatPaneOpen && (
             <>
-              <div role="separator" aria-label="Resize browser chat pane" onPointerDown={handleChatPaneResizePointerStart} onMouseDown={handleChatPaneResizeMouseStart} className={cn("w-2 shrink-0 cursor-col-resize relative transition-colors", isResizingChatPane ? "bg-[var(--surface-hover)]" : "bg-transparent")}>
+              {!narrowBrowser && <div role="separator" aria-label="Resize browser chat pane" onPointerDown={handleChatPaneResizePointerStart} onMouseDown={handleChatPaneResizeMouseStart} className={cn("w-2 shrink-0 cursor-col-resize relative transition-colors", isResizingChatPane ? "bg-[var(--surface-hover)]" : "bg-transparent")}>
                 <div className={cn("absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-px transition-colors", isResizingChatPane ? "bg-[var(--accent-primary)]" : "bg-[var(--border-subtle)]")} />
-              </div>
-              <div className="shrink-0 border-l border-solid border-[var(--border-subtle)] overflow-hidden relative" style={{ width: chatPaneWidth, minWidth: BROWSER_CHAT_PANE_MIN_WIDTH }}>
+              </div>}
+              <div className={cn("border-l border-solid border-[var(--shell-divider)] overflow-hidden", narrowBrowser ? "absolute z-30 right-0 top-0 bottom-0 shadow-2xl bg-[var(--shell-floating-bg)]" : "shrink-0 relative")} style={{ width: narrowBrowser ? `min(${chatPaneWidth}px, calc(100% - 56px))` : chatPaneWidth, minWidth: narrowBrowser ? 0 : BROWSER_CHAT_PANE_MIN_WIDTH }}>
                 <div className="absolute inset-0 flex flex-col"><BrowserChatPane /></div>
               </div>
             </>

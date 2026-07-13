@@ -7,9 +7,9 @@ import {
   Award,
   Settings,
 } from 'lucide-react';
-import { GlassSurface, GlassSurfaceThin } from '@/design/glass/GlassSurface';
+import { GlassSurface } from '@/design/glass/GlassSurface';
 import { Text } from '@/components/typography/Text';
-import { cn } from '@/lib/utils';
+import { Pill } from '@/components/ui/Pill';
 import type { Tab } from "./LabsView.constants";
 
 interface LabsViewHeaderProps {
@@ -18,10 +18,10 @@ interface LabsViewHeaderProps {
   notification: string | null;
 }
 
-export const LabsViewHeader: React.FC<LabsViewHeaderProps> = ({ 
-  activeTab, 
+export const LabsViewHeader: React.FC<LabsViewHeaderProps> = ({
+  activeTab,
   setActiveTab,
-  notification 
+  notification
 }) => {
   const TABS = [
     { id: 'discovery', label: 'Discovery', icon: Compass },
@@ -33,7 +33,7 @@ export const LabsViewHeader: React.FC<LabsViewHeaderProps> = ({
   ] as const;
 
   return (
-    <GlassSurface 
+    <GlassSurface
       className="flex items-center justify-between px-9 py-4 shrink-0 relative z-[2] border-b border-solid border-[var(--ui-border-muted)]"
     >
       <div className="flex items-center gap-6">
@@ -50,33 +50,34 @@ export const LabsViewHeader: React.FC<LabsViewHeaderProps> = ({
         {/* Global Notification */}
         {notification && (
           <div className="animate-in fade-in slide-in-from-left-2 duration-300">
-            <Text variant="label" className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[11px] font-bold border border-solid border-emerald-500/20">
+            <Text variant="label" className="bg-[var(--status-success-bg)] text-[var(--status-success)] px-3 py-1 rounded-full text-[11px] font-bold border border-solid border-[var(--status-success)]/20">
               {notification}
             </Text>
           </div>
         )}
       </div>
 
-      <div className="flex items-center">
-        <GlassSurfaceThin className="flex p-1 gap-1 rounded-xl bg-white/[0.03]">
-          {TABS.map(tab => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button type="button"
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex items-center gap-1.5 p-2 px-4 rounded-lg border-none text-[13px] font-semibold cursor-pointer transition-all whitespace-nowrap",
-                  isActive 
-                    ? "bg-[var(--accent-primary)]/15 text-[#f0f0f0]" 
-                    : "bg-transparent text-[var(--ui-text-secondary)] hover:bg-white/5"
-                )}
+      <div className="flex items-center gap-2">
+        {TABS.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              type="button"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              data-testid={`labs-tab-${tab.id}`}
+              className="border-none bg-transparent p-0 cursor-pointer"
+            >
+              <Pill
+                active={isActive}
+                icon={<tab.icon size={13} />}
+                size="md"
               >
-                <tab.icon size={13} /> {tab.label}
-              </button>
-            );
-          })}
-        </GlassSurfaceThin>
+                {tab.label}
+              </Pill>
+            </button>
+          );
+        })}
       </div>
     </GlassSurface>
   );

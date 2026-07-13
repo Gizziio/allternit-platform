@@ -10,24 +10,18 @@ export function BrowserExtensionConfigPanel({
   onSave,
   onBack,
 }: ExtensionSidepanelConfigViewProps) {
-  const [apiKey, setApiKey] = useState(config.apiKey || "");
-  const [baseURL, setBaseURL] = useState(config.baseURL || "");
-  const [model, setModel] = useState(config.model || "");
   const [language, setLanguage] = useState(config.language || "en-US");
   const [maxSteps, setMaxSteps] = useState<number | undefined>(config.maxSteps ?? undefined);
-  const [systemInstruction, setSystemInstruction] = useState(config.systemInstruction || "");
+  const [experimentalLlmsTxt, setExperimentalLlmsTxt] = useState(Boolean(config.experimentalLlmsTxt));
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       await onSave({
-        apiKey: apiKey || undefined,
-        baseURL: baseURL || undefined,
-        model: model || undefined,
         language,
         maxSteps: maxSteps || null,
-        systemInstruction: systemInstruction || null,
+        experimentalLlmsTxt,
       });
     } finally {
       setSaving(false);
@@ -57,37 +51,26 @@ export function BrowserExtensionConfigPanel({
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         <p className="text-xs opacity-60">{copy.settingsDescription}</p>
 
-        <div className="space-y-1">
-          <div className="text-xs font-medium">API Key</div>
-          <input aria-label="Input" type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="sk-…"
-            className="w-full rounded-md px-2.5 py-1.5 text-sm outline-none border"
-            style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <div className="text-xs font-medium">Base URL</div>
-          <input aria-label="Input" type="text"
-            value={baseURL}
-            onChange={(e) => setBaseURL(e.target.value)}
-            placeholder="https://api.openai.com/v1"
-            className="w-full rounded-md px-2.5 py-1.5 text-sm outline-none border"
-            style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <div className="text-xs font-medium">Model</div>
-          <input aria-label="Input" type="text"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="gpt-4o"
-            className="w-full rounded-md px-2.5 py-1.5 text-sm outline-none border"
-            style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}
-          />
+        <div
+          className="rounded-lg border p-3 space-y-2"
+          style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-medium">Brain</div>
+              <div className="text-sm">{config.brainLabel || "Allternit/Gizzi platform brain"}</div>
+            </div>
+            <span className="rounded-full px-2 py-0.5 text-[11px]" style={{ background: "var(--background)", color: "var(--muted-foreground)" }}>
+              {config.connectionLabel || "Managed"}
+            </span>
+          </div>
+          <div className="text-xs opacity-70">
+            Model selection, provider credentials, and system prompt are owned by the platform brain/runtime.
+            Browser mode attaches the current tab to that harness instead of creating a separate extension LLM.
+          </div>
+          <div className="text-[11px] opacity-60">
+            Harness: {config.harnessLabel || "page-agent + computer-use"}
+          </div>
         </div>
 
         <div className="space-y-1">
@@ -113,15 +96,19 @@ export function BrowserExtensionConfigPanel({
           />
         </div>
 
-        <div className="space-y-1">
-          <div className="text-xs font-medium">System Instruction</div>
-          <textarea aria-label="Text Area" value={systemInstruction}
-            onChange={(e) => setSystemInstruction(e.target.value)}
-            placeholder="Optional system prompt…"
-            rows={3}
-            className="w-full rounded-md px-2.5 py-1.5 text-sm outline-none border resize-none"
-            style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}
+        <label className="flex items-center justify-between gap-3 rounded-md border px-2.5 py-2" style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}>
+          <span className="text-xs font-medium">Experimental llms.txt support</span>
+          <input
+            aria-label="Experimental llms.txt support"
+            type="checkbox"
+            checked={experimentalLlmsTxt}
+            onChange={(event) => setExperimentalLlmsTxt(event.target.checked)}
           />
+        </label>
+
+        <div className="rounded-md border p-2.5 text-[11px] opacity-70" style={{ borderColor: "var(--border)" }}>
+          To change model, credentials, or system instructions, update the Allternit platform brain/Gizzi runtime settings.
+          This pane only controls how the attached browser tab participates in that run.
         </div>
       </div>
 

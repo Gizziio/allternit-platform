@@ -19,9 +19,9 @@ const PLATFORM_SIDEPANEL_COPY = {
   readyLabel: "Ready",
   contextLabel: "Current Browser Tab",
   settingsEyebrow: "Unified Browser Agent",
-  settingsTitle: "Configure how the shared browser agent executes tasks.",
+  settingsTitle: "Allternit brain connection",
   settingsDescription:
-    "The platform pane and Chrome extension share the same provider/run contract; this surface only changes where the current tab is attached.",
+    "Browser mode uses the Allternit/Gizzi brain and computer-use harness. Model credentials and system instructions are managed by the platform runtime, not this attached extension pane.",
   settingsContextLabel: "Provider",
 } as const;
 
@@ -32,7 +32,7 @@ function BrowserUnifiedAgentPanel(): React.ReactNode {
     <ExtensionSidepanelShell
       adapter={adapter}
       copy={PLATFORM_SIDEPANEL_COPY}
-      containerClassName="h-full"
+      containerClassName="size-full min-h-0 p-0"
       testId="browser-extension-sidepanel-shell"
       renderConfigView={({ onBack }) => (
         <BrowserExtensionConfigPanel

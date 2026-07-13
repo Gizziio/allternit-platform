@@ -1,5 +1,17 @@
 
 import React, { useState } from 'react';
+import {
+  Image,
+  VideoCamera,
+  PresentationChart,
+  Globe,
+  BookOpen,
+  Database,
+  Code,
+  UsersThree,
+  FlowArrow,
+  Desktop,
+} from '@phosphor-icons/react';
 import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
 import { ALL_TEMPLATES } from '@/components/chat/TemplatePreviewCards';
@@ -43,16 +55,16 @@ const getModeTemplates = (modeId: string): ModeTemplate[] => {
 };
 
 const MODE_TABS = [
-    { id: 'image', label: 'Image', color: '#8b5cf6' },
-    { id: 'video', label: 'Video', color: '#ec4899' },
-    { id: 'slides', label: 'Slides', color: 'var(--status-warning)' },
-    { id: 'website', label: 'Web', color: '#6366f1' },
-    { id: 'research', label: 'Research', color: 'var(--status-info)' },
-    { id: 'data', label: 'Data', color: 'var(--status-success)' },
-    { id: 'code', label: 'Code', color: 'var(--status-warning)' },
-    { id: 'swarms', label: 'Swarms', color: '#14b8a6' },
-    { id: 'flow', label: 'Flow', color: 'var(--status-info)' },
-    { id: 'computer-use', label: 'Computer', color: '#a855f7' },
+    { id: 'image', label: 'Image', color: '#8b5cf6', icon: Image },
+    { id: 'video', label: 'Video', color: '#ec4899', icon: VideoCamera },
+    { id: 'slides', label: 'Slides', color: 'var(--status-warning)', icon: PresentationChart },
+    { id: 'website', label: 'Web', color: '#6366f1', icon: Globe },
+    { id: 'research', label: 'Research', color: 'var(--status-info)', icon: BookOpen },
+    { id: 'data', label: 'Data', color: 'var(--status-success)', icon: Database },
+    { id: 'code', label: 'Code', color: 'var(--status-warning)', icon: Code },
+    { id: 'swarms', label: 'Swarms', color: '#14b8a6', icon: UsersThree },
+    { id: 'flow', label: 'Flow', color: 'var(--status-info)', icon: FlowArrow },
+    { id: 'computer-use', label: 'Computer', color: '#a855f7', icon: Desktop },
 ] as const;
 
 const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
@@ -145,26 +157,28 @@ export function ModeDock({
         {visibleTabs.map((mode) => {
           const isSelected = selectedMode === mode.id;
           const isActiveTab = isSelected && isLoading;
+          const ModeIcon = mode.icon;
           return (
             <button type="button"
               key={mode.id}
               onClick={() => onSelectMode(mode.id)}
               className={cn(
-                "flex items-center justify-center py-2 px-4 rounded-full text-xs cursor-pointer transition-all duration-150 whitespace-nowrap border border-solid",
+                "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12px] cursor-pointer transition-all duration-150 whitespace-nowrap border border-solid",
                 isActiveTab ? "animate-pulse" : "",
-                isSelected 
-                  ? "font-semibold shadow-sm" 
-                  : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--chat-composer-muted)] font-medium hover:bg-[var(--surface-active)] hover:border-[var(--ui-border-default)]"
+                isSelected
+                  ? "font-bold shadow-sm"
+                  : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--chat-composer-muted)] font-semibold hover:bg-[var(--surface-active)] hover:border-[var(--ui-border-default)] hover:text-[var(--ui-text-secondary)]"
               )}
               style={isSelected ? {
-                background: `${mode.color}20`,
-                borderColor: mode.color,
+                background: `${mode.color}18`,
+                borderColor: `${mode.color}60`,
                 color: mode.color,
                 boxShadow: isActiveTab
-                  ? `0 0 12px ${mode.color}60, 0 0 0 1px ${mode.color}40`
-                  : `0 0 0 1px ${mode.color}40`,
+                  ? `0 0 12px ${mode.color}50, 0 0 0 1px ${mode.color}30`
+                  : `0 0 0 1px ${mode.color}30`,
               } : undefined}
             >
+              <ModeIcon size={14} weight={isSelected ? 'fill' : 'bold'} />
               <span>{mode.label}</span>
             </button>
           );

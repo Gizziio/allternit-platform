@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { createContext, useContext, useState, useCallback, ReactNode, useMemo, useRef, useEffect } from "react";
 import type { ModelSelection } from "@/components/model-picker";
 

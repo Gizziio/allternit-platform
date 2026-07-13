@@ -363,6 +363,12 @@ fn merge_sidecar(
                 obj.insert("auth_type".to_string(), json!(provider_auth_type));
                 obj.insert("connectable".to_string(), json!(true));
                 obj.insert("executable".to_string(), json!(p.executable_actions > 0));
+                // Same field name the curated 3 already populate from
+                // connectors.meta.json — the frontend derives a real logo
+                // from this domain via a favicon service either way.
+                if let Some(homepage) = &p.homepage_url {
+                    obj.insert("base_url".to_string(), json!(homepage));
+                }
             }
             None if sv.providers.is_none() => {
                 obj.insert("auth".to_string(), json!({ "type": "unknown", "owned": true, "synthesized": false }));

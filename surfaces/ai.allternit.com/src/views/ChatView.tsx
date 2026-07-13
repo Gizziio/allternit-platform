@@ -10,7 +10,6 @@ import { AgentContextStrip } from "@/components/agents/AgentContextStrip";
 import { ArtifactSidePanel, type SelectedArtifact } from "@/components/ai-elements/artifact-panel";
 import { getSession } from "@/lib/auth-browser";
 import {
-  useAgentStore,
   usePendingPermissions,
   usePendingQuestions,
 } from "@/lib/agents";
@@ -25,7 +24,6 @@ import {
 } from "@/lib/agents/session-metadata";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
-import { useRuntimeExecutionMode } from "@/hooks/useRuntimeExecutionMode";
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
 import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
 import {
@@ -62,9 +60,9 @@ export function ChatView({
   onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code') => void;
 }) {
   const { id: chatId } = useChatId();
-  const { renameThread, activeThreadId } = useChatStore();
+  const { renameThread } = useChatStore();
   const agentSurface: AgentModeSurface = mode === 'cowork' ? 'cowork' : mode === 'code' ? 'code' : 'chat';
-  const { agentModeEnabled, selectedAgentId, selectedAgent } =
+  const { agentModeEnabled, selectedAgent } =
     useSurfaceAgentSelection(agentSurface);
   
   const activeNativeSessionId = useChatSessionStore((state) => state.activeSessionId);
@@ -124,8 +122,6 @@ export function ChatView({
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
 
   const selectedModel = modelSelection?.modelId ?? modelSelection?.profileId ?? MODELS[0].id;
-  const { executionMode } = useRuntimeExecutionMode();
-  const brainMode = executionMode?.mode === 'plan' ? 'plan' : 'build';
   const { ollamaRunning, modelReady } = useLocalBrainStatus();
   const isLocalBrainSelected = selectedModel === 'local-brain' || modelSelection?.profileId === 'ollama';
   
@@ -145,7 +141,6 @@ export function ChatView({
   const composerBottomInfoBar = (
     <ComposerStatusInfoBar
       modelLabel={modelSelection?.modelName || modelSelection?.modelId || null}
-      modeLabel={brainMode === 'plan' ? 'Plan' : 'Build'}
     />
   );
 

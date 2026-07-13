@@ -4,8 +4,7 @@ import type {
 	ExtensionSidepanelHistoricalEvent,
 } from '../../../../extension-shared/extension-sidepanel/ExtensionSidepanelShell.types'
 import { useEffect, useState } from 'react'
-
-import { useAgent } from '../../agent/useAgent'
+import type { PlatformTaskState } from '../../agent/remote-task-handler'
 
 function formatHost(url?: string): string {
 	if (!url) return 'Current tab'
@@ -18,7 +17,14 @@ function formatHost(url?: string): string {
 }
 
 export function useExtensionSidepanelAdapter() {
-	const agent = useAgent()
+	const [platformState, setPlatformState] = useState<PlatformTaskState>({
+		requestId: '',
+		status: 'idle',
+		history: [],
+	})
+	const [currentTask, setCurrentTask] = useState('')
+	const [requestId, setRequestId] = useState<string | null>(null)
+	const [language, setLanguage] = useState<'en-US' | 'zh-CN'>('en-US')
 	const [pageLabel, setPageLabel] = useState('Sidepanel attached to the current browser tab')
 	const [hostLabel, setHostLabel] = useState('Chrome Sidepanel')
 
@@ -34,53 +40,63 @@ export function useExtensionSidepanelAdapter() {
 		})
 	}, [])
 
-	const language =
-		agent.config?.language === 'zh-CN'
+	useEffect(() => {
+		void chrome.runtime.sendMessage({ type: 'PLATFORM_TASK_SUBSCRIBE' })
+		const listener = (message: { type?: string; state?: PlatformTaskState }) => {
+			if (message.type !== 'PLATFORM_TASK_STATE' || !message.state) return
+			setPlatformState(message.state)
+		}
+		chrome.runtime.onMessage.addListener(listener)
+		return () => chrome.runtime.onMessage.removeListener(listener)
+	}, [])
+
+	const uiLanguage =
+		language === 'zh-CN'
 			? 'zh'
-			: agent.config?.language === 'en-US'
-				? 'en'
-				: 'en'
+			: 'en'
 
 	const adapter: ExtensionSidepanelAdapter = {
-		status: agent.status,
-		history: agent.history as ExtensionSidepanelHistoricalEvent[],
-		activity: agent.activity as ExtensionSidepanelActivity | null,
-		currentTask: agent.currentTask,
+		status: platformState.status,
+		history: (platformState.history ?? []) as ExtensionSidepanelHistoricalEvent[],
+		activity: (platformState.activity ?? null) as ExtensionSidepanelActivity | null,
+		currentTask,
 		sessions: [],
 		pageLabel,
 		hostLabel,
 		config: {
 			permissionMode: 'act',
-			language,
-			runtimeLabel: 'Chrome extension sidepanel runtime',
+			language: uiLanguage,
+			runtimeLabel: 'Allternit/Gizzi platform brain',
 		},
 		execute: (task) => {
-			void agent.execute(task).catch((error) => {
-				console.error('[SidePanel] Failed to execute task:', error)
+			setCurrentTask(task)
+			setPlatformState({ requestId: '', task, status: 'running', history: [], activity: { type: 'thinking' } })
+			void chrome.runtime.sendMessage({
+				type: 'PLATFORM_TASK_RUN',
+				task,
+				config: { language },
+			}).then((response) => {
+				if (response?.requestId) setRequestId(response.requestId)
+				else if (!response?.ok) setPlatformState((state) => ({ ...state, status: 'error', error: response?.error }))
 			})
 		},
 		stop: () => {
-			agent.stop()
+			void chrome.runtime.sendMessage({ type: 'PLATFORM_TASK_STOP', requestId })
 		},
 		configure: (nextConfig) => {
-			if (!agent.config) return
-
 			const nextLanguage =
 				nextConfig.language === 'zh'
 					? 'zh-CN'
-					: nextConfig.language === 'en'
-						? 'en-US'
-						: agent.config.language
-
-			void agent.configure({
-				...agent.config,
-				language: nextLanguage,
-			})
+					: 'en-US'
+			setLanguage(nextLanguage)
 		},
 	}
 
 	return {
-		...agent,
+		status: platformState.status,
+		history: platformState.history ?? [],
+		activity: platformState.activity ?? null,
+		currentTask,
 		adapter,
 	}
 }

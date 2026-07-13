@@ -58,3 +58,42 @@ export async function fetchAutomations(baseUrl: string): Promise<AutomationsSnap
   ])
   return { goals, routines, loops }
 }
+
+async function postGoalAction(baseUrl: string, id: string, action: "run" | "pause" | "block" | "complete"): Promise<void> {
+  const url = new URL(`/v1/automations/goals/${encodeURIComponent(id)}/${action}`, baseUrl)
+  const res = await fetch(url, { method: "POST", headers: { Accept: "application/json" } })
+  if (!res.ok) throw new Error(`Goal action failed ${res.status}: ${res.statusText}`)
+}
+
+export const runGoal = (baseUrl: string, id: string) => postGoalAction(baseUrl, id, "run")
+export const pauseGoal = (baseUrl: string, id: string) => postGoalAction(baseUrl, id, "pause")
+export const blockGoal = (baseUrl: string, id: string) => postGoalAction(baseUrl, id, "block")
+export const completeGoal = (baseUrl: string, id: string) => postGoalAction(baseUrl, id, "complete")
+
+export async function publishGoalMilestone(
+  baseUrl: string,
+  id: string,
+  milestone: { name: string; status: "pending" | "in_progress" | "completed" | "failed"; completedAt?: string },
+): Promise<void> {
+  const url = new URL(`/v1/automations/goals/${encodeURIComponent(id)}/milestones`, baseUrl)
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(milestone),
+  })
+  if (!res.ok) throw new Error(`Milestone publish failed ${res.status}: ${res.statusText}`)
+}
+
+export async function publishGoalValidation(
+  baseUrl: string,
+  id: string,
+  validation: { testName: string; status: "passed" | "failed"; output?: string },
+): Promise<void> {
+  const url = new URL(`/v1/automations/goals/${encodeURIComponent(id)}/validations`, baseUrl)
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(validation),
+  })
+  if (!res.ok) throw new Error(`Validation publish failed ${res.status}: ${res.statusText}`)
+}

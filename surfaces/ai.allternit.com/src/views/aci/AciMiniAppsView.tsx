@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppWindow,
   ArrowsClockwise,
@@ -18,11 +18,13 @@ import {
   CheckCircle,
   XCircle,
   Terminal,
+  MagnifyingGlass,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useMiniAppDiscovery } from './use-mini-app-discovery';
 import { pinMiniApp, unpinMiniApp } from './mini-app-registry';
 import type { InstalledMiniApp } from './mini-app.types';
+import { ensureMiniAppAgent } from './mini-app-harness';
 
 function openView(viewType: string, context?: Record<string, unknown>): void {
   window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType, context } }));
@@ -374,15 +376,21 @@ function EmptyState({ probing, onScan }: { probing: boolean; onScan: () => void 
 
 export function AciMiniAppsView() {
   const { all, probing, reprobe } = useMiniAppDiscovery();
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<'all' | InstalledMiniApp['category']>('all');
+  const categories = useMemo(() => ['all', ...Array.from(new Set(all.map((app) => app.category)))] as Array<'all' | InstalledMiniApp['category']>, [all]);
+  const visibleApps = useMemo(() => all.filter((app) => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const matchesQuery = !normalizedQuery || `${app.name} ${app.description} ${app.repo || ''}`.toLowerCase().includes(normalizedQuery);
+    return matchesQuery && (category === 'all' || app.category === category);
+  }), [all, category, query]);
 
-  const handleOpen = useCallback((app: InstalledMiniApp) => {
-    if (app.id === 'hermes') {
-      openView('hermes');
-    } else if (app.id === 'openclaw') {
-      openView('openclaw');
-    } else {
-      openView('mini-app', { url: app.url, name: app.name, category: app.category, version: app.version });
-    }
+  const handleOpen = useCallback(async (app: InstalledMiniApp) => {
+    const integration = await ensureMiniAppAgent(app);
+    const viewType = app.surface?.viewType;
+    const context = { miniApp: app, ...('agentId' in integration ? { agentId: integration.agentId } : { harnessError: integration.reason }) };
+    if (viewType) { openView(viewType, context); return; }
+    openView('mini-app', { url: app.surface?.url ?? app.url, name: app.name, category: app.category, version: app.version, ...context });
   }, []);
 
   const handlePin = useCallback((app: InstalledMiniApp) => {
@@ -405,11 +413,11 @@ export function AciMiniAppsView() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col overflow-hidden bg-[var(--shell-view-bg)]">
       {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-2.5">
-        <AppWindow size={14} className="text-[var(--text-secondary)]" />
-        <span className="text-sm font-medium text-[var(--text-primary)]">Mini-apps</span>
+      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] px-5 py-3">
+        <div className="flex size-8 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--accent-browser)_14%,transparent)] text-[var(--accent-browser)]"><AppWindow size={16} weight="duotone" /></div>
+        <div><div className="text-sm font-bold text-[var(--shell-item-fg)]">Mini-app Library</div><div className="text-[11px] text-[var(--shell-item-muted)]">Local projects connected through the Allternit harness</div></div>
         {all.length > 0 && (
           <span className="rounded bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[12px] text-[var(--text-tertiary)]">
             {all.length}
@@ -441,13 +449,18 @@ export function AciMiniAppsView() {
         </div>
       </div>
 
+      <div className="shrink-0 border-b border-[var(--shell-divider)] px-5 py-3 flex flex-wrap items-center gap-2 bg-[var(--shell-view-bg)]">
+        <label className="relative min-w-[220px] flex-1 max-w-[420px]"><MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--shell-item-muted)]" /><input aria-label="Search mini-apps" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find runtimes, tools, and GitHub projects" className="h-9 w-full rounded-xl border border-solid border-[var(--shell-divider)] bg-[var(--shell-floating-bg)] pl-9 pr-3 text-[12px] text-[var(--shell-item-fg)] outline-none focus:border-[var(--accent-browser)]" /></label>
+        <div className="flex items-center gap-1 overflow-x-auto">{categories.map((item) => <button type="button" key={item} onClick={() => setCategory(item)} className={cn("h-8 rounded-lg border border-solid px-3 text-[11px] font-bold capitalize cursor-pointer", category === item ? "border-[var(--accent-browser)]/30 bg-[color-mix(in_srgb,var(--accent-browser)_14%,transparent)] text-[var(--accent-browser)]" : "border-transparent bg-transparent text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)]")}>{item}</button>)}</div>
+      </div>
+
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-5">
         {all.length === 0 ? (
           <EmptyState probing={probing} onScan={reprobe} />
         ) : (
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-            {all.map((app) => (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {visibleApps.map((app) => (
               <MiniAppCard
                 key={app.id}
                 app={app}
@@ -457,6 +470,7 @@ export function AciMiniAppsView() {
                 onReprobe={reprobe}
               />
             ))}
+            {visibleApps.length === 0 && <div className="col-span-full rounded-2xl border border-dashed border-[var(--shell-divider)] p-10 text-center text-[12px] text-[var(--shell-item-muted)]">No mini-app projects match this search.</div>}
           </div>
         )}
       </div>

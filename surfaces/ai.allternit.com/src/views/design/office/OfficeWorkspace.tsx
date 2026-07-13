@@ -33,7 +33,7 @@ export function OfficeWorkspace({
   const addinViewType = activeDoc === 'slides' ? 'addin-ppt' : activeDoc === 'spreadsheet' ? 'addin-excel' : 'addin-word';
 
   return (
-    <div style={{ display: "flex", width: "100%", height: "100%", background: "var(--bg-primary)" }}>
+    <div style={{ display: "flex", width: "100%", height: "100%", background: "var(--shell-view-bg)" }}>
       {/* Left: Document Type Rail */}
       <div style={{ width: "64px", borderRight: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: "20px", gap: "12px", background: "var(--surface-panel)" }}>
          <DocTypeBtn icon={<FilePpt size={22} />} active={activeDoc === 'slides'} onClick={() => setActiveDoc('slides')} label="Slides" color="#ff5c5c" />

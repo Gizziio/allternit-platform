@@ -30,6 +30,44 @@ interface BrowserTabBase {
   pinned?: boolean;
   group?: string;
   groupColor?: string;
+  /** Browser workspace that owns this tab. Missing values migrate to default. */
+  workspaceId?: string;
+  /** Essentials stay available across every workspace. */
+  essential?: boolean;
+  /** Enabled integration capabilities attached to this tab. */
+  extensionIds?: string[];
+  officeBindingId?: string;
+  officeDocumentTitle?: string;
+  officeBindingConnected?: boolean;
+}
+
+export interface BrowserWorkspace {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  createdAt: number;
+  /** Platform context carried when agents act inside this workspace. */
+  agentId?: string;
+  skillIds?: string[];
+  miniappIds?: string[];
+  extensionIds?: string[];
+  defaultUrl?: string;
+}
+
+export type BrowserSplitLayout = 'horizontal' | 'vertical' | 'grid';
+
+export interface BrowserSplitView {
+  workspaceId: string;
+  tabIds: string[];
+  layout: BrowserSplitLayout;
+}
+
+export interface BrowserGlanceView {
+  workspaceId: string;
+  url: string;
+  title: string;
+  sourceTabId?: string;
 }
 
 /** Web content tab - traditional browsing */

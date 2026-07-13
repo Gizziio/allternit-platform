@@ -1,114 +1,83 @@
 "use client";
 
-import { useState, useCallback, useMemo } from 'react';
-import type { Extension, ExtensionCategory } from './BrowserExtensions.types';
-
-const INITIAL_EXTENSIONS: Extension[] = [
-  {
-    id: 'ai-page-analyzer',
-    name: 'AI Page Analyzer',
-    description: 'Deep structural analysis of webpage content for agentic extraction.',
-    version: '1.2.4',
-    icon: '🔍',
-    author: 'Allternit Labs',
-    category: 'ai',
-    isInstalled: true,
-    isEnabled: true,
-    permissions: ['activeTab', 'storage'],
-  },
-  {
-    id: 'form-automator',
-    name: 'Smart Form Automator',
-    description: 'Auto-detects and fills complex multi-step forms using agent context.',
-    version: '0.9.1',
-    icon: '📝',
-    author: 'Allternit Labs',
-    category: 'automation',
-    isInstalled: true,
-    isEnabled: false,
-    permissions: ['activeTab', 'webNavigation'],
-  },
-  {
-    id: 'mcp-bridge',
-    name: 'MCP Browser Bridge',
-    description: 'Exposes browser tabs as MCP resources to the local agent runtime.',
-    version: '2.1.0',
-    icon: '🌉',
-    author: 'Anthropic',
-    category: 'utilities',
-    isInstalled: false,
-    isEnabled: false,
-    permissions: ['tabs', 'nativeMessaging'],
-  },
-  {
-    id: 'tab-grouper',
-    name: 'Focus Tab Grouper',
-    description: 'Automatically organize tabs based on current research goals.',
-    version: '1.0.5',
-    icon: '📁',
-    author: 'Community',
-    category: 'productivity',
-    isInstalled: false,
-    isEnabled: false,
-    permissions: ['tabs'],
-  },
-];
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useBrowserExtensionsStore } from '@/capsules/browser/browserExtensions.store';
+import type { ExtensionCategory } from './BrowserExtensions.types';
 
 export function useExtensionsManager() {
-  const [extensions, setExtensions] = useState<Extension[]>(INITIAL_EXTENSIONS);
+  const extensions = useBrowserExtensionsStore((state) => state.extensions);
+  const toggleExtension = useBrowserExtensionsStore((state) => state.toggleExtension);
+  const updateExtension = useBrowserExtensionsStore((state) => state.updateExtension);
+  const removeExtension = useBrowserExtensionsStore((state) => state.removeExtension);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<ExtensionCategory>('all');
   const [showNotification, setShowNotification] = useState<string | null>(null);
 
-  const notify = useCallback((msg: string) => {
-    setShowNotification(msg);
-    setTimeout(() => setShowNotification(null), 3000);
+  const notify = useCallback((message: string) => {
+    setShowNotification(message);
+    window.setTimeout(() => setShowNotification(null), 3000);
   }, []);
 
+  useEffect(() => {
+    const api = window.allternit?.officeAddins;
+    if (!api) return;
+    void api.getStatus().then((statuses) => {
+      (['word', 'excel', 'powerpoint'] as const).forEach((host) => {
+        const status = statuses[host];
+        updateExtension(`allternit-office-${host}`, {
+          installStatus: status.health === 'installed' ? 'installed' : status.health === 'update-available' || status.health === 'needs-repair' ? 'error' : 'not-installed',
+        });
+      });
+    }).catch(() => undefined);
+  }, [updateExtension]);
+
   const handleToggle = useCallback((id: string) => {
-    setExtensions(prev => prev.map(ext => {
-      if (ext.id !== id) return ext;
-      const nextState = !ext.isEnabled;
-      notify(`${ext.name} ${nextState ? 'enabled' : 'disabled'}`);
-      return { ...ext, isEnabled: nextState };
-    }));
-  }, [notify]);
+    const extension = extensions.find((item) => item.id === id);
+    if (!extension) return;
+    toggleExtension(id);
+    notify(`${extension.name} ${extension.enabled ? 'disabled' : 'enabled in the browser toolbar'}`);
+  }, [extensions, notify, toggleExtension]);
 
   const handleInstall = useCallback((id: string) => {
-    setExtensions(prev => prev.map(ext => {
-      if (ext.id !== id) return ext;
-      notify(`Installed ${ext.name}`);
-      return { ...ext, isInstalled: true, isEnabled: true };
-    }));
-  }, [notify]);
+    const extension = extensions.find((item) => item.id === id);
+    if (!extension) return;
+    if (extension.officeHost) {
+      const viewType = extension.officeHost === 'word' ? 'addin-word' : extension.officeHost === 'excel' ? 'addin-excel' : 'addin-ppt';
+      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType } }));
+      notify(`Opened ${extension.name} developer setup`);
+      return;
+    }
+    updateExtension(id, { installStatus: 'installed', enabled: true });
+    notify(`Installed and enabled ${extension.name}`);
+  }, [extensions, notify, updateExtension]);
 
   const handleUninstall = useCallback((id: string) => {
-    setExtensions(prev => prev.map(ext => {
-      if (ext.id !== id) return ext;
-      notify(`Uninstalled ${ext.name}`);
-      return { ...ext, isInstalled: false, isEnabled: false };
-    }));
-  }, [notify]);
+    const extension = extensions.find((item) => item.id === id);
+    if (!extension) return;
+    if (extension.owned) {
+      updateExtension(id, { enabled: false });
+      notify(`${extension.name} disabled`);
+      return;
+    }
+    removeExtension(id);
+    notify(`Uninstalled ${extension.name}`);
+  }, [extensions, notify, removeExtension, updateExtension]);
 
-  const filteredExtensions = useMemo(() => {
-    return extensions.filter(ext => {
-      const matchesSearch = ext.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          ext.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = activeCategory === 'all' || ext.category === activeCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [extensions, searchQuery, activeCategory]);
+  const normalized = useMemo(() => extensions.map((extension) => ({
+    ...extension,
+    author: extension.author || (extension.owned ? 'Allternit' : 'Community'),
+    category: extension.category || 'utilities',
+    isInstalled: extension.installStatus === 'installed',
+    isEnabled: extension.enabled,
+    permissions: Object.keys(extension.permissions || {}),
+  })), [extensions]);
 
-  return {
-    extensions,
-    searchQuery,
-    setSearchQuery,
-    activeCategory,
-    setActiveCategory,
-    showNotification,
-    filteredExtensions,
-    handleToggle,
-    handleInstall,
-    handleUninstall,
-  };
+  const filteredExtensions = useMemo(() => normalized.filter((extension) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesSearch = !query || extension.name.toLowerCase().includes(query) || extension.description.toLowerCase().includes(query);
+    const matchesCategory = activeCategory === 'all' || extension.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  }), [activeCategory, normalized, searchQuery]);
+
+  return { extensions: normalized, searchQuery, setSearchQuery, activeCategory, setActiveCategory, showNotification, filteredExtensions, handleToggle, handleInstall, handleUninstall };
 }

@@ -68,21 +68,28 @@ export class BackendManager {
     }
 
     let binaryPath = this.resolveBinaryPath();
+    let developmentCargoProject: string | null = null;
     if (!binaryPath) {
       const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
       if (isDev) {
-        log.warn('[BackendManager] allternit-api binary not found (dev mode)');
-        return this.getUrl();
-      }
-      // Attempt auto-download from manifest
-      try {
-        binaryPath = await this.downloadBackend();
-      } catch (e) {
-        log.error('[BackendManager] Auto-download failed:', e);
-        throw new Error(
-          'allternit-api binary not found and auto-download failed. ' +
-          'Please build manually: cargo build --release (in cmd/allternit-api)'
-        );
+        const candidate = path.resolve(__dirname, '../../../cmd/allternit-api');
+        if (!fs.existsSync(path.join(candidate, 'Cargo.toml'))) {
+          throw new Error(`allternit-api is unavailable: no binary and no development Cargo project at ${candidate}`);
+        }
+        developmentCargoProject = candidate;
+        binaryPath = 'cargo';
+        log.info(`[BackendManager] allternit-api binary not found; using cargo run from ${candidate}`);
+      } else {
+        // Attempt auto-download from manifest
+        try {
+          binaryPath = await this.downloadBackend();
+        } catch (e) {
+          log.error('[BackendManager] Auto-download failed:', e);
+          throw new Error(
+            'allternit-api binary not found and auto-download failed. ' +
+            'Please build manually: cargo build --release (in cmd/allternit-api)'
+          );
+        }
       }
     }
 
@@ -117,7 +124,8 @@ export class BackendManager {
     };
 
     log.info(`[BackendManager] Starting allternit-api on port ${API_PORT} from ${binaryPath}`);
-    this.kernelProc = spawn(binaryPath, [], {
+    this.kernelProc = spawn(binaryPath, developmentCargoProject ? ['run', '--manifest-path', path.join(developmentCargoProject, 'Cargo.toml')] : [], {
+      cwd: developmentCargoProject ?? undefined,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
@@ -179,10 +187,10 @@ export class BackendManager {
       const res = await fetch(`${this.getUrl()}/health`, {
         signal: AbortSignal.timeout(1000),
       });
-      if (res.ok) {
+      const body = await res.clone().json().catch(() => null) as { version?: string; live?: boolean } | null;
+      if (res.ok || body?.live === true) {
         running = true;
-        const data = await res.json() as { version?: string };
-        version = data.version;
+        version = body?.version;
       }
     } catch {
       running = false;
@@ -207,6 +215,13 @@ export class BackendManager {
         const res = await fetch(url, { signal: AbortSignal.timeout(500) });
         if (res.ok || res.status === 401) {
           return;
+        }
+        if (url.endsWith('/health')) {
+          const health = await res.json().catch(() => null) as { live?: boolean } | null;
+          if (health?.live === true) {
+            log.warn(`[BackendManager] ${label} is live but degraded; continuing startup`);
+            return;
+          }
         }
       } catch {
         // Not ready yet.

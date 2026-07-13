@@ -164,7 +164,9 @@
   --ui-border-strong: var(--border-strong);
 
   /* Shell-specific semantic contract */
-  --shell-frame-bg: var(--surface-canvas);
+  --shell-rail-bg: #ffffff;
+  --shell-view-bg: #ffffff;
+  --shell-frame-bg: var(--shell-view-bg);
   --shell-panel-bg: var(--surface-panel);
   --shell-floating-bg: var(--surface-floating);
   --shell-floating-border: var(--ui-border-muted);
@@ -181,7 +183,7 @@
   --shell-control-fg: var(--ui-text-primary);
   --shell-control-muted-fg: var(--ui-text-secondary);
   --shell-control-active-fg: var(--ui-text-inverse);
-  --shell-overlay-backdrop: rgba(42, 31, 22, 0.18);
+  --shell-overlay-backdrop: rgba(18, 20, 24, 0.14);
   --shell-dialog-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface-floating) 96%, var(--surface-panel)) 0%, color-mix(in srgb, var(--surface-panel) 94%, var(--surface-canvas)) 100%);
   --shell-dialog-border: color-mix(in srgb, var(--accent-primary) 22%, var(--ui-border-default));
   --shell-dialog-title: var(--shell-item-active-fg);
@@ -264,11 +266,11 @@
   --status-info-bg: rgba(59, 130, 246, 0.1);
 
   /* ── View-specific backgrounds (light) ──────────────────────────── */
-  --view-chat-bg:         #ffffff;
-  --view-code-bg:         #ffffff;
-  --view-browser-bg:      #ffffff;
-  --view-settings-bg:     #ffffff;
-  --view-cowork-bg:       #ffffff;
+  --view-chat-bg:         var(--shell-view-bg);
+  --view-code-bg:         var(--shell-view-bg);
+  --view-browser-bg:      var(--shell-view-bg);
+  --view-settings-bg:     var(--shell-view-bg);
+  --view-cowork-bg:       var(--shell-view-bg);
 }
 
 /* ==========================================================================
@@ -339,7 +341,9 @@
   --ui-border-strong: var(--border-strong);
 
   /* Shell-specific semantic contract */
-  --shell-frame-bg: var(--surface-canvas);
+  --shell-rail-bg: #1A1612;
+  --shell-view-bg: #1A1612;
+  --shell-frame-bg: var(--shell-view-bg);
   --shell-panel-bg: var(--surface-panel);
   --shell-floating-bg: var(--surface-floating);
   --shell-floating-border: var(--ui-border-muted);
@@ -436,11 +440,11 @@
   --status-info-bg: rgba(96, 165, 250, 0.15);
 
   /* ── View-specific backgrounds (dark) — all share same warm brown base ── */
-  --view-chat-bg:         #100e0b;
-  --view-code-bg:         #100e0b;
-  --view-browser-bg:      #100e0b;
-  --view-settings-bg:     #100e0b;
-  --view-cowork-bg:       #100e0b;
+  --view-chat-bg:         var(--shell-view-bg);
+  --view-code-bg:         var(--shell-view-bg);
+  --view-browser-bg:      var(--shell-view-bg);
+  --view-settings-bg:     var(--shell-view-bg);
+  --view-cowork-bg:       var(--shell-view-bg);
 }
 
 /* ==========================================================================

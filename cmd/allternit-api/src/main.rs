@@ -62,6 +62,7 @@ use allternit_api::mcp_routes::mcp_router;
 use allternit_api::oauth_routes::oauth_router;
 use allternit_api::office_routes::office_router;
 use allternit_api::onboarding_routes::onboarding_router;
+use allternit_api::orchestrator_routes::orchestrator_router;
 use allternit_api::platform_static::platform_service;
 use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
@@ -75,6 +76,7 @@ use allternit_api::status_routes::status_router;
 use allternit_api::stream::stream_router;
 use allternit_api::swarm_routes::swarm_router;
 use allternit_api::task_routes;
+use allternit_api::agent_operations_routes;
 use allternit_api::team_skill_routes::team_skill_router;
 use allternit_api::terminal_routes::terminal_router;
 use allternit_api::tool_routes;
@@ -217,6 +219,7 @@ async fn main() {
         .merge(canvas_router())
         .merge(v1_router())
         .merge(task_routes::task_router())
+        .merge(agent_operations_routes::agent_operations_router())
         .merge(allternit_api::queue_routes::queue_router())
         .merge(audit_log_router())
         .merge(ssh_key_router())
@@ -233,6 +236,7 @@ async fn main() {
         .merge(artifact_router())
         .merge(conversation_router())
         .merge(office_router())
+        .merge(orchestrator_router())
         .merge(alabs_router())
         .merge(automation_router());
 

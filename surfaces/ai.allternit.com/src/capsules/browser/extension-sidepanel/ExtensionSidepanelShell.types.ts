@@ -66,6 +66,9 @@ export interface ExtensionSidepanelConfig {
   permissionMode: "ask" | "act";
   language: string;
   runtimeLabel: string;
+  brainLabel?: string;
+  harnessLabel?: string;
+  connectionLabel?: string;
   apiKey?: string;
   baseURL?: string;
   model?: string;

@@ -45,7 +45,7 @@ export function SlideScene({ title, content }: SlideSceneProps) {
               </Text>
             ),
             h3: ({ children }) => (
-              <Text variant="subheading" as="h3" style={{ fontSize: 15, fontWeight: 600, margin: '20px 0 8px', color: 'rgba(212,176,140,0.8)' }}>
+              <Text variant="subheading" as="h3" style={{ fontSize: 15, fontWeight: 600, margin: '20px 0 8px', color: 'color-mix(in srgb, var(--accent-primary) 80%, transparent)' }}>
                 {children}
               </Text>
             ),
@@ -80,7 +80,7 @@ export function SlideScene({ title, content }: SlideSceneProps) {
               <li style={{ fontSize: 15, lineHeight: 1.7, color: TEXT_PRIMARY, margin: '6px 0' }}>{children}</li>
             ),
             code: ({ children }) => (
-              <code style={{ fontSize: 13, background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)', padding: '2px 6px', borderRadius: 4, color: 'rgba(212,176,140,0.9)', border: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)', fontFamily: 'var(--font-mono)' }}>
+              <code style={{ fontSize: 13, background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)', padding: '2px 6px', borderRadius: 4, color: 'color-mix(in srgb, var(--accent-primary) 90%, var(--ui-text-secondary))', border: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)', fontFamily: 'var(--font-mono)' }}>
                 {children}
               </code>
             ),

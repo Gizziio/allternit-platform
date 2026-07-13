@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
-import React, { useMemo, useReducer, useState, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo, useReducer, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-client';
 import { getSession } from '../lib/auth-browser';
@@ -17,14 +18,13 @@ import { shouldRunWizard } from '@/lib/wizard-check';
 import { ShellCanvas } from './ShellCanvas';
 import { ShellOverlayLayer } from './ShellOverlayLayer';
 import { VisionGlass } from './VisionGlass';
-import { LegacyWidgetsLayer } from './LegacyWidgets';
 import { initBrowserSurfaceBridge } from '../integration/execution/browser.bridge';
 import { installDesktopStreamingGuard } from '../lib/sse/desktop-streaming-guard';
 import { useAllternitHotkeys, PLATFORM_SHORTCUTS } from '../vendor/hotkeys';
 import { createInitialNavState, navReducer } from '../nav/nav.store';
 import { selectActiveView } from '../nav/nav.selectors';
 import { ViewHost } from '../views/ViewHost';
-import type { ViewContext, ViewType } from '../nav/nav.types';
+import type { ViewType } from '../nav/nav.types';
 import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
 import { useRunnerStore } from '../runner/runner.store';
 import { useSidecarStore } from '../stores/sidecar-store';
@@ -34,29 +34,14 @@ import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
-import { useBrowserStore } from '../capsules/browser';
-import { useBrowserAgentStore } from '../capsules/browser/browserAgent.store';
-import { useBrowserShortcutsStore } from '../capsules/browser/browserShortcuts.store';
-import { cn } from '@/lib/utils';
-
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
-import { ChatViewWrapper } from './ChatViewWrapper';
-import { BrowserPaneWrapper, BrowserSurfaceFrame } from './BrowserPane';
-import { 
-  ChatErrorFallback, 
-  OpenClawErrorFallback, 
-  ErrorFallbackWrapper, 
-  ElementsView 
-} from './ShellFallbacks';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
 import { usePanelLayout } from '../hooks/usePanelLayout';
 import { usePermissionGuide } from '../lib/usePermissionGuide';
 
-import { 
-  TooltipProvider,
-} from '../components/ui/tooltip';
+import { TooltipProvider } from '../components/ui/tooltip';
 import { VoiceProvider } from '../providers/voice-provider';
 import { VoicePresence } from '../components/ai-elements/voice-presence';
 import { ConversationMonitorOverlay } from './ConversationMonitorOverlay';
@@ -73,7 +58,6 @@ import { createModuleLogger } from '@/lib/logger';
 const logger = createModuleLogger('ShellApp');
 
 // Lazy-loaded UI Components
-const IntegrationsPanel    = React.lazy(() => import('./IntegrationsPanel').then(m => ({ default: m.IntegrationsPanel })));
 const ControlCenter        = React.lazy(() => import('./ControlCenter').then(m => ({ default: m.ControlCenter })));
 const SettingsOverlay      = React.lazy(() => import('../views/settings/SettingsView').then(m => ({ default: m.SettingsView })));
 
@@ -147,7 +131,7 @@ function ShellAppInner(): React.ReactNode {
     const loadAgents = async () => {
       try {
         await useAgentStore.getState().fetchAgents()
-      } catch (error) {
+      } catch {
         if (!cancelled && process.env.NODE_ENV === 'development') {
           console.debug("[ShellApp] Agents fetch skipped (backend not running)")
         }
@@ -228,6 +212,11 @@ function ShellAppInner(): React.ReactNode {
     }
   }, [activeMode, sidecarActivePanel, sidecarOpen, setSidecarOpen]);
 
+  const open = useCallback((viewType: ViewType, context?: any): void => {
+    dispatch({ type: 'OPEN_VIEW', viewType, context });
+  }, []);
+  const openNew = useCallback((viewType: ViewType) => dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true }), []);
+
   // Sync view to persisted mode once mode is loaded from localStorage
   useEffect(() => {
     if (!modeLoaded) return;
@@ -237,7 +226,7 @@ function ShellAppInner(): React.ReactNode {
     else if (activeMode === 'design') open('design');
     else if (activeMode === 'browser') open('browser');
     else open('chat'); // fallback
-  }, [modeLoaded, activeMode]);
+  }, [modeLoaded, activeMode, open]);
 
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent): void => {
@@ -265,11 +254,6 @@ function ShellAppInner(): React.ReactNode {
   useAllternitHotkeys(PLATFORM_SHORTCUTS.GLOBAL.TOGGLE_AGENT_RUNNER.keys, () => {
     runner.openCompact();
   });
-
-  const open = useCallback((viewType: ViewType, context?: any): void => {
-    dispatch({ type: 'OPEN_VIEW', viewType, context });
-  }, []);
-  const openNew = useCallback((viewType: ViewType) => dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true }), []);
 
   const handleOpenAgentSession = useCallback(async (text: string, surface: AppMode) => {
     const selectedAgentId = useAgentSurfaceModeStore.getState().selectedAgentIdBySurface[surface];
@@ -363,15 +347,6 @@ function ShellAppInner(): React.ReactNode {
     return () => window.removeEventListener('allternit:open-view', handleOpenView);
   }, []);
 
-  useEffect(() => {
-    const handleSwitchMode = (e: Event): void => {
-      const mode = (e as CustomEvent<{ mode: AppMode }>).detail?.mode;
-      if (mode) handleModeChange(mode);
-    };
-    window.addEventListener('allternit:switch-mode', handleSwitchMode);
-    return () => window.removeEventListener('allternit:switch-mode', handleSwitchMode);
-  }, []);
-
   const handleModeChange = useCallback((mode: AppMode): void => {
     setActiveMode(mode);
     if (mode === 'chat') open('chat');
@@ -380,6 +355,15 @@ function ShellAppInner(): React.ReactNode {
     if (mode === 'design') open('design');
     if (mode === 'browser') open('browser');
   }, [setActiveMode, open]);
+
+  useEffect(() => {
+    const handleSwitchMode = (e: Event): void => {
+      const mode = (e as CustomEvent<{ mode: AppMode }>).detail?.mode;
+      if (mode) handleModeChange(mode);
+    };
+    window.addEventListener('allternit:switch-mode', handleSwitchMode);
+    return () => window.removeEventListener('allternit:switch-mode', handleSwitchMode);
+  }, [handleModeChange]);
 
   useEffect(() => {
     if (BROWSER_MODE_VIEW_TYPES.has(active.viewType)) {
@@ -394,8 +378,6 @@ function ShellAppInner(): React.ReactNode {
 
   const [monitorOverlayOpen, setMonitorOverlayOpen] = useState(false);
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
-  const [pluginPanelOpen, setPluginPanelOpen] = useState(false);
-  const [pluginPanelInitialTab, setPluginPanelInitialTab] = useState<string | undefined>(undefined);
   const permissions = usePermissionGuide();
 
   const shouldHideRail = active.viewType === 'labs';
@@ -475,15 +457,15 @@ function ShellAppInner(): React.ReactNode {
           sidecar={<ArtifactSidecar />}
           overlays={<>
             <ShellOverlayLayer />
-            <LegacyWidgetsLayer />
           </>}
           dock={null}
         />
         
-                {!pluginPanelOpen && active.viewType !== 'settings' && <RailControls
+                {active.viewType !== 'settings' && <RailControls
                   mode={activeMode}
                   onModeChange={handleModeChange}
                   onToggleRail={() => setIsRailCollapsed(!isRailCollapsed)}
+                  railWidth={railWidth}
                   onNewChat={() => {
                     useChatSessionStore.getState().setActiveSession(null);
                     useChatStore.getState().setActiveThread(null);
@@ -556,10 +538,6 @@ function ShellAppInner(): React.ReactNode {
                     }
                   }}
                   isRailCollapsed={isRailCollapsed}
-                  activeViewType={active.viewType}
-                  onOpenView={open as (viewType: string) => void}
-                  onOpenIntegrations={() => setPluginPanelOpen(true)}
-                  onOpenLabs={() => open('labs')}
                   onSearchOpen={() => setIsSearchOpen(true)}
                 />}
                 <SearchOverlay open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
@@ -575,31 +553,16 @@ function ShellAppInner(): React.ReactNode {
           isDevMode={process.env.NODE_ENV === 'development'}
           onOpenView={open as (viewType: string) => void}
         />
-        <IntegrationsPanel
-          isOpen={pluginPanelOpen}
-          initialTab={pluginPanelInitialTab}
-          onClose={() => setPluginPanelOpen(false)}
-          onOpenSettings={() => {
-            // Was writing to sessionStorage keys nothing reads (dead code —
-            // see docs/SETTINGS_PARITY_HANDOFF.md). settingsSection/settingsTab
-            // are the real mechanism SettingsOverlay below actually consumes.
-            setPluginPanelOpen(false);
-            setSettingsSection('integrations');
-            setSettingsTab('connectors');
-            setSettingsOpen(true);
-          }}
-        />
-
         {settingsOpen && (
           <React.Suspense fallback={null}>
+            {/* Settings now renders PluginManager as its own nested overlay
+                for "Browse"/"Open full manager" (see SettingsView.tsx) rather
+                than closing here and reopening a separate top-level
+                IntegrationsPanel — that round-trip navigated away from
+                Settings instead of overlaying on top of it. */}
             <SettingsOverlay
               initialSection={settingsSection}
               initialTab={settingsTab}
-              onOpenFullManager={(tab: string) => {
-                setSettingsOpen(false);
-                setPluginPanelInitialTab(tab);
-                setPluginPanelOpen(true);
-              }}
             />
           </React.Suspense>
         )}

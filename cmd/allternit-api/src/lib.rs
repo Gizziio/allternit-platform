@@ -3,6 +3,7 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod agent_execution;
+pub mod agent_operations_routes;
 pub mod agent_routes;
 pub mod agent_runtime_routes;
 pub mod agent_session_routes;
@@ -32,6 +33,7 @@ pub mod health;
 pub mod oauth_routes;
 pub mod office_routes;
 pub mod onboarding_routes;
+pub mod orchestrator_routes;
 pub mod aci_routes;
 pub mod analytics_routes;
 pub mod playground_routes;

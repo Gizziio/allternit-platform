@@ -19,6 +19,17 @@ import {
   Globe,
   PushPinSlash,
   Palette,
+  House,
+  TerminalWindow,
+  FileText,
+  CalendarCheck,
+  Clock,
+  ArrowsClockwise,
+  FolderOpen,
+  DownloadSimple,
+  SlidersHorizontal,
+  Plus,
+  Target,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -38,6 +49,7 @@ import { ProjectRailSection, type UnifiedProject, type UnifiedItem } from './rai
 import { useSurfaceAgentModeEnabled } from '../lib/agents/surface-agent-context';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useBrowserStore } from '../capsules/browser/browser.store';
+import { useBrowserAgentStore } from '../capsules/browser/browserAgent.store';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import type { ModeSession } from '../lib/agents/mode-session-store';
@@ -109,15 +121,11 @@ const BROWSER_MODE_VIEW_TYPES = new Set<string>([
 export function ShellRail({
   activeViewType,
   onOpen,
-  onNew,
+  onNew: _onNew,
   mode = 'chat',
   isCollapsed,
   onModeChange,
 }: ShellRailProps): React.ReactNode | null {
-  const [foldedCategories, setFoldedCategories] = useState<Set<string>>(new Set(['workspace', 'ai_vision', 'infrastructure', 'security', 'execution', 'observability', 'services']));
-
-  const isBrowser = activeViewType ? BROWSER_MODE_VIEW_TYPES.has(activeViewType) : false;
-
   // Determine current surface for agent mode glow
   const currentSurface: AgentModeSurface = 
     mode === 'browser' ? 'browser' :
@@ -129,180 +137,79 @@ export function ShellRail({
 
   // Chat Store
   const chatStore = useChatStore();
-  const chatProjects = useStoreWithEqualityFn(useChatStore, (s) => s.projects, shallow);
   
   // Mode-specific session stores
   const chatSessions = useStoreWithEqualityFn(useChatSessionStore, (s) => s.sessions ?? [], shallow);
   const codeSessions = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.sessions ?? [], shallow);
-  const nativeSessions = mode === 'code' ? codeSessions : chatSessions;
   const activeChatSessionId = useStoreWithEqualityFn(useChatSessionStore, (s) => s.activeSessionId);
   const activeCodeSessionId = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.activeSessionId);
-  const activeNativeSessionId = mode === 'code' ? activeCodeSessionId : activeChatSessionId;
   const setActiveChatSession = useStoreWithEqualityFn(useChatSessionStore, (s) => s.setActiveSession);
   const setActiveCodeSession = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.setActiveSession);
-  const updateChatSession = useStoreWithEqualityFn(useChatSessionStore, (s) => s.updateSession);
-  const updateCodeSession = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.updateSession);
-  const deleteChatSession = useStoreWithEqualityFn(useChatSessionStore, (s) => s.deleteSession);
-  const deleteCodeSession = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.deleteSession);
   const setActiveNativeSession = mode === 'code' ? setActiveCodeSession : setActiveChatSession;
-  const updateNativeSession = mode === 'code' ? updateCodeSession : updateChatSession;
-  const deleteNativeSession = mode === 'code' ? deleteCodeSession : deleteChatSession;
   
   // Cowork Store
   const coworkStore = useCoworkStore();
   
-  // Code Mode Store
-  const codeStore = useCodeModeStore();
-
-  useStoreWithEqualityFn(useCoworkSessionStore, (s) => s.activeSessionId);
-  
   const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
 
-  const { enabledPlugins } = useFeaturePlugins();
+  const browserAgentSessions = useBrowserAgentStore((state) => state.pageAgentSessions);
 
-  // Pinned mini-apps (browser mode dynamic rail)
-  const pinnedMiniApps = usePinnedMiniApps();
+  const recentItems = useMemo(() => {
+    const list: {
+      id: string;
+      title: string;
+      mode: AppMode;
+      icon: any;
+      isActive: boolean;
+      updatedAt: number;
+    }[] = [];
 
-  // Unified data mapping
-  const unifiedData = useMemo(() => {
-    if (isBrowser) {
-      const browserSessions = chatSessions.filter(s => {
-        const surface = (s.metadata as Record<string, unknown> | undefined)?.surface;
-        return surface === 'browser';
-      });
-      const items: UnifiedItem[] = browserSessions.map(s => ({
+    // Chat sessions
+    (chatSessions || []).forEach(s => {
+      const isAgent = (s.metadata as Record<string, unknown> | undefined)?.sessionMode === 'agent';
+      list.push({
         id: s.id,
         title: s.name || 'Untitled Session',
-        icon: Robot,
-        isActive: activeChatSessionId === s.id,
-        metaLabel: formatAgentSessionMetaLabel(s.metadata)
-      }));
-      return { projects: [], items };
-    }
-
-    if (mode === 'chat') {
-      const projects: UnifiedProject[] = chatProjects.map(p => ({
-        id: p.id,
-        title: p.title,
-        itemIds: p.threadIds
-      }));
-      const chatSessions = nativeSessions.filter(s => {
-        const surface = (s.metadata as Record<string, unknown> | undefined)?.surface;
-        return !surface || surface === 'chat';
+        mode: 'chat',
+        icon: isAgent ? Robot : ChatTeardropText,
+        isActive: activeChatSessionId === s.id && activeViewType === 'chat',
+        updatedAt: Number((s.metadata as any)?.updatedAt || 0),
       });
-      const items: UnifiedItem[] = chatSessions.map(s => ({
-        id: s.id,
-        title: s.name || 'Untitled Session',
-        icon: (s.metadata as Record<string, unknown> | undefined)?.sessionMode === 'agent' ? Robot : ChatTeardropText,
-        projectId: (s.metadata as Record<string, unknown> | undefined)?.projectId as string | undefined,
-        isActive: activeNativeSessionId === s.id || activeChatSessionId === s.id,
-        metaLabel: formatAgentSessionMetaLabel(s.metadata)
-      }));
-      return { projects, items };
-    } 
-    
-    if (mode === 'cowork') {
-      const projects: UnifiedProject[] = coworkStore.projects.map(p => ({
-        id: p.id,
-        title: p.title,
-        itemIds: coworkStore.tasks.filter(t => t.projectId === p.id).map(t => t.id)
-      }));
-      const items: UnifiedItem[] = coworkStore.tasks.map(t => ({
+    });
+
+    // Cowork tasks
+    (coworkStore.tasks || []).forEach(t => {
+      list.push({
         id: t.id,
-        title: t.title,
+        title: t.title || 'Untitled Task',
+        mode: 'cowork',
         icon: t.mode === 'agent' ? Robot : CheckSquare,
-        projectId: t.projectId,
-        isActive: coworkStore.activeTaskId === t.id,
-        metaLabel: t.status
-      }));
-      return { projects, items };
-    }
-
-    if (mode === 'code') {
-      // Real code-mode chat sessions live in the mode session store (CodeSessionStore).
-      // codeStore.sessions is the legacy workspace-runtime list and is normally empty,
-      // which left the Threads rail blank even after sessions were created.
-      const projects: UnifiedProject[] = codeStore.workspaces.map(ws => ({
-        id: ws.workspace_id,
-        title: ws.display_name,
-        itemIds: codeSessions
-          .filter(s => (s.metadata as Record<string, unknown> | undefined)?.workspaceId === ws.workspace_id)
-          .map(s => s.id)
-      }));
-      const items: UnifiedItem[] = codeSessions.map(s => ({
-        id: s.id,
-        title: s.name || 'Untitled Session',
-        icon: (s.metadata as Record<string, unknown> | undefined)?.sessionMode === 'agent' ? Robot : Cpu,
-        projectId: (s.metadata as Record<string, unknown> | undefined)?.workspaceId as string | undefined,
-        isActive: activeCodeSessionId === s.id,
-        metaLabel: formatAgentSessionMetaLabel(s.metadata)
-      }));
-      return { projects, items };
-    }
-    return { projects: [], items: [] };
-  }, [isBrowser, mode, chatProjects, chatSessions, nativeSessions, activeNativeSessionId, activeChatSessionId, codeSessions, activeCodeSessionId, coworkStore, codeStore]);
-
-  // Build active config, then inject any enabled-plugin rail items
-  let activeConfig: RailConfigSection[];
-  if (isBrowser || mode === 'browser') activeConfig = BROWSER_RAIL_CONFIG;
-  else if (mode === 'cowork') activeConfig = COWORK_RAIL_CONFIG;
-  else if (mode === 'code') activeConfig = CODE_RAIL_CONFIG;
-  else if (mode === 'design') activeConfig = DESIGN_RAIL_CONFIG;
-  else {
-    // Deep-clone so we don't mutate the static constant
-    activeConfig = RAIL_CONFIG.map(section => ({ ...section, items: [...section.items] }));
-    // Inject views contributed by enabled plugins
-    enabledPlugins.forEach(plugin => {
-      plugin.views.forEach(view => {
-        const section = activeConfig.find(s => s.id === view.railSection);
-        if (section && !section.items.some(item => item.id === view.viewType)) {
-          const existingIcon = RAIL_CONFIG.flatMap(s => s.items).find(i => i.id === view.viewType)?.icon;
-          section.items.push({
-            id: view.viewType,
-            label: view.label,
-            icon: (existingIcon ?? Sparkle) as Icon,
-            payload: view.viewType,
-          });
-        }
+        isActive: coworkStore.activeTaskId === t.id && activeViewType === 'workspace',
+        updatedAt: Number(t.updatedAt || 0),
       });
     });
-  }
 
-  const toggleFold = useCallback((id: string): void => {
-    setFoldedCategories(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+    // Browser agent sessions
+    (browserAgentSessions || []).forEach(s => {
+      list.push({
+        id: s.id,
+        title: s.task || 'Untitled Browser Run',
+        mode: 'browser',
+        icon: Globe,
+        isActive: activeViewType === 'browser',
+        updatedAt: Number(s.updatedAt || 0),
+      });
     });
-  }, []);
 
-  const openChatSurface = useCallback((): void => {
-    useChatSessionStore.getState().setActiveSession(null);
-    if (onModeChange) {
-      onModeChange('chat');
-      return;
-    }
-    onOpen?.('chat');
-  }, [onModeChange, onOpen]);
-
-  const openCoworkSurface = useCallback((): void => {
-    useCoworkSessionStore.getState().setActiveSession(null);
-    if (onModeChange) {
-      onModeChange('cowork');
-      return;
-    }
-    onOpen?.('workspace');
-  }, [onModeChange, onOpen]);
+    return list.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 15);
+  }, [chatSessions, activeChatSessionId, coworkStore.tasks, coworkStore.activeTaskId, browserAgentSessions, activeViewType]);
 
   const openNativeSessionSurface = useCallback((session: NativeSession): void => {
     const descriptor = getAgentSessionDescriptor(session.metadata);
-    // Default to 'chat' if no originSurface is set - this ensures sessions always navigate
     const originSurface = descriptor.originSurface || 'chat';
 
     setActiveNativeSession(session.id);
 
-    // Always set as active session in the appropriate mode-specific store
     if (originSurface === 'code') {
       useCodeSessionStore.getState().setActiveSession(session.id);
     } else if (originSurface === 'cowork') {
@@ -321,7 +228,6 @@ export function ShellRail({
       return;
     }
 
-    // Always notify mode change AND open the view
     if (originSurface === 'code') {
       onModeChange?.('code');
       onOpen?.('code');
@@ -329,7 +235,6 @@ export function ShellRail({
       onModeChange?.('cowork');
       onOpen?.('workspace');
     } else {
-      // Default to chat for 'chat' surface or any other/unknown surface
       onModeChange?.('chat');
       onOpen?.('chat');
     }
@@ -341,322 +246,255 @@ export function ShellRail({
   ]);
 
   const isCodeMode = mode === 'code';
-  const isDesignMode = mode === 'design';
-  const useBlendedRail = isDesignMode || ['chat', 'cowork', 'code'].includes(mode) || isBrowser;
 
   if (isCollapsed) return null;
 
   return (
-    <div 
-      className="size-full flex flex-col bg-[var(--shell-panel-bg)] relative overflow-hidden outline-none"
+    <div
+      className="size-full flex flex-col bg-[var(--shell-rail-bg)] relative overflow-hidden outline-none"
       style={{
         /* Mode-aware CSS custom properties scoped to this rail */
         ['--shell-item-active-bg' as string]: `color-mix(in srgb, ${surfaceTheme?.accent ?? 'var(--accent-primary)'} 16%, var(--surface-panel))`,
         ['--shell-item-active-fg' as string]: surfaceTheme?.accent ?? 'var(--accent-primary)',
         ['--accent-primary' as string]: surfaceTheme?.accent ?? 'var(--accent-primary)',
-        /* Blended rail for chat, cowork, code, browser, and design modes */
-        ...(useBlendedRail ? {
-          ['--shell-panel-bg' as string]: 'var(--bg-primary)',
-          ['--shell-item-fg' as string]: 'var(--text-primary)',
-          ['--shell-item-muted' as string]: 'var(--text-tertiary)',
-          ['--shell-item-hover' as string]: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-          ['--shell-floating-bg' as string]: 'var(--glass-bg-thick)',
-          ['--shell-floating-border' as string]: 'var(--glass-border)',
-          ['--shell-menu-bg' as string]: 'var(--surface-floating)',
-          ['--shell-menu-border' as string]: 'var(--border-default)',
-          ['--border-subtle' as string]: 'var(--ui-border-muted)',
-        } : {}),
       }}
     >
-      {/* SPACER FOR FIXED CONTROLS — extra clearance in code mode since New Thread has no section title */}
-      <div style={{ height: isCodeMode ? 102 : 86 }} />
+      {/* SPACER FOR FIXED CONTROLS */}
+      <div style={{ height: 44 }} />
 
-      {/* MAIN CONTENT */}
-      <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-1">
-        {activeConfig.map((category) => {
-          const isFolded = foldedCategories.has(category.id);
-          const isCollapsible = category.collapsible !== false;
-          
-          // Add separator before 'threads' section in code mode
-          const showSeparator = isCodeMode && category.id === 'threads';
-
-          return (
-            <div key={category.id} className="mb-1">
-              {showSeparator && (
-                <div className="p-[8px_12px] text-[var(--accent-secondary)] text-[12px] font-extrabold tracking-[0.08em]">
-                  &gt; THREADS
-                </div>
-              )}
-              {isCollapsible ? (
-                <button type="button" 
-                  onClick={() => toggleFold(category.id)}
-                  className="w-full flex items-center gap-1.5 p-[8px_12px] rounded-xl border-none bg-transparent cursor-pointer text-[var(--accent-secondary)] transition-all duration-200 hover:bg-[var(--shell-item-hover)] hover:text-[var(--accent-primary)]"
-                >
-                  {isFolded ? <CaretRight size={10} weight="bold" /> : <CaretDown size={10} weight="bold" />}
-                  <span className="text-[12px] font-extrabold uppercase tracking-[0.08em]">{category.title}</span>
-                </button>
-              ) : null}
-
-              {!isFolded && (
-                <div className="flex flex-col gap-0.5 mt-0.5">
-                  {category.id === 'sessions' || category.id === 'tasks' || category.id === 'threads' ? (
-                    <ProjectRailSection
-                      projects={unifiedData.projects}
-                      items={unifiedData.items}
-                      activeProjectId={
-                        isBrowser ? null :
-                        mode === 'chat' ? chatStore.activeProjectId : 
-                        mode === 'cowork' ? coworkStore.activeProjectId : 
-                        codeStore.activeWorkspaceId
-                      }
-                      onCreateProject={() => {
-                        if (isBrowser) return;
-                        if (mode === 'chat') chatStore.createProject('New Project');
-                        else if (mode === 'cowork') coworkStore.createProject('New Project');
-                        else if (mode === 'code') {
-                          codeStore.createWorkspace('New Workspace');
-                          onOpen?.('code-project');
-                        }
-                      }}
-                      onOpenProject={(id) => {
-                        if (isBrowser) return;
-                        if (mode === 'chat') { chatStore.setActiveProject(id); openChatSurface(); }
-                        else if (mode === 'cowork') { coworkStore.setActiveProject(id); openCoworkSurface(); }
-                        else if (mode === 'code') { codeStore.setActiveWorkspace(id); onOpen?.('code-project'); }
-                      }}
-                      onRenameProject={(id, title) => {
-                        if (isBrowser) return;
-                        if (mode === 'chat') chatStore.renameProject(id, title);
-                        else if (mode === 'cowork') coworkStore.renameProject(id, title);
-                        else if (mode === 'code') codeStore.renameWorkspace(id, title);
-                      }}
-                      onDeleteProject={(id) => {
-                        if (isBrowser) return;
-                        if (mode === 'chat') chatStore.deleteProject(id);
-                        else if (mode === 'cowork') coworkStore.deleteProject(id);
-                        else if (mode === 'code') codeStore.deleteWorkspace(id);
-                      }}
-                      onOpenItem={(id) => {
-                        if (isBrowser) {
-                          const session = chatSessions.find(s => s.id === id);
-                          if (session) {
-                            setActiveChatSession(session.id);
-                            onOpen?.('browser');
-                          }
-                          return;
-                        }
-                        if (mode === 'chat') {
-                          const session = nativeSessions.find(s => s.id === id);
-                          if (session) openNativeSessionSurface(session);
-                        } else if (mode === 'cowork') {
-                          coworkStore.setActiveTask(id);
-                          const coworkTask = coworkStore.tasks.find(t => t.id === id);
-                          useCoworkSessionStore.getState().setActiveSession(coworkTask?.sessionId ?? null);
-                          if (onModeChange) {
-                            onModeChange('cowork');
-                          } else {
-                            onOpen?.('workspace');
-                          }
-                        } else if (mode === 'code') {
-                          if (codeStore.sessions.some(s => s.session_id === id)) {
-                            codeStore.setActiveSession(id);
-                            onOpen?.('code');
-                          } else {
-                            const session = nativeSessions.find(s => s.id === id);
-                            if (session) openNativeSessionSurface(session);
-                          }
-                        }
-                      }}
-                      onRenameItem={(id, title) => {
-                        if (isBrowser) {
-                          updateChatSession(id, { name: title });
-                          return;
-                        }
-                        if (mode === 'chat' || (mode === 'code' && !codeStore.sessions.some(s => s.session_id === id))) {
-                          updateNativeSession(id, { name: title });
-                        } else if (mode === 'cowork') {
-                          coworkStore.renameTask(id, title);
-                        }
-                      }}
-                      onDeleteItem={(id) => {
-                        if (isBrowser) {
-                          deleteChatSession(id);
-                          return;
-                        }
-                        if (mode === 'chat' || (mode === 'code' && !codeStore.sessions.some(s => s.session_id === id))) {
-                          deleteNativeSession(id);
-                        } else if (mode === 'cowork') {
-                          coworkStore.deleteTask(id);
-                        }
-                      }}
-                      onMoveItemToProject={(itemId, projectId) => {
-                        if (isBrowser) return;
-                        if (mode === 'chat') chatStore.moveThreadToProject(itemId, projectId);
-                        else if (mode === 'cowork') coworkStore.moveTaskToProject(itemId, projectId);
-                      }}
-                      sectionTitle={mode === 'code' ? 'Workspaces' : mode === 'cowork' ? 'Projects' : 'Projects'}
-                      sectionCaption={mode === 'code' ? 'Code workspaces' : mode === 'cowork' ? 'Task organizer' : 'Shared organizer'}
-                      newButtonLabel={mode === 'code' ? 'New Workspace' : mode === 'cowork' ? 'New Project' : 'New Project'}
-                      recentItemsLabel={mode === 'code' ? 'Threads' : mode === 'cowork' ? 'Recent Tasks' : 'Recent Sessions'}
-                      emptyNotice={
-                        isBrowser ? {
-                          icon: ChatTeardropText as any,
-                          title: "No browser sessions",
-                          description: "Start a computer agent session to see it here.",
-                          actionLabel: "Open Browser",
-                          onAction: () => onOpen?.('browser')
-                        } : mode === 'chat' ? {
-                          icon: ChatTeardropText as any,
-                          title: "No sessions yet",
-                          description: "Start a chat or create an agent session.",
-                          actionLabel: "Open chat",
-                          onAction: () => onOpen?.('chat')
-                        } : mode === 'cowork' ? {
-                          icon: CheckSquare as any,
-                          title: "No tasks yet",
-                          description: "Create a task to get started.",
-                          actionLabel: "New Task",
-                          onAction: () => onOpen?.('cowork-new-task')
-                        } : mode === 'design' ? {
-                          icon: Palette as any,
-                          title: "No design projects",
-                          description: "Create a design project to start designing.",
-                          actionLabel: "New Design",
-                          onAction: () => onOpen?.('design')
-                        } : {
-                          icon: Cpu as any,
-                          title: "No workspace",
-                          description: "Create a workspace to start coding.",
-                          actionLabel: "New Workspace",
-                          onAction: () => {
-                            codeStore.createWorkspace('New Workspace');
-                            onOpen?.('code-project');
-                          }
-                        }
-                      }
-                    />
-                  ) : category.id === 'mini-apps' && (isBrowser || mode === 'browser') ? (
-                    <div className="flex flex-col gap-1">
-                      {/* Static store entry */}
-                      {category.items.map((item: { id: string; icon: Icon; label: string; isAction?: boolean; payload: string }) => (
-                        <RailItem
-                          key={item.id}
-                          id={item.id}
-                          icon={item.icon}
-                          label={item.label}
-                          isActive={activeViewType === item.payload}
-                          onClick={() => onOpen?.(item.payload)}
-                        />
-                      ))}
-                      {/* Dynamic pinned apps */}
-                      {pinnedMiniApps.map((app) => (
-                        <PinnedMiniAppItem
-                          key={app.id}
-                          app={app}
-                          isActive={activeViewType === app.id}
-                          onOpen={() => {
-                            if (app.id === 'hermes' || app.id === 'openclaw') {
-                              onOpen?.(app.id);
-                            } else {
-                              window.dispatchEvent(new CustomEvent('allternit:open-view', {
-                                detail: { viewType: 'mini-app', context: { url: app.url, name: app.name, category: app.category, version: app.version } },
-                              }));
-                            }
-                          }}
-                          onUnpin={() => unpinMiniApp(app.id)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      {category.items.map((item: { id: string; icon: Icon; label: string; isAction?: boolean; payload: string }) => (
-                        <div key={item.id} className="flex flex-col gap-0.5">
-                          <RailItem
-                            id={item.id}
-                            icon={item.icon}
-                            label={item.label}
-                            isActive={!item.isAction && activeViewType === item.payload}
-                            onClick={() => {
-                              if (item.id === 'new-chat' || item.id === 'chat') {
-                                chatStore.setActiveThread(null);
-                                useChatSessionStore.getState().setActiveSession(null);
-                              }
-                              if (item.id === 'br-new-session') {
-                                useBrowserStore.getState().closeAllTabs();
-                                onOpen?.('browser');
-                                return;
-                              }
-                              if (item.payload === 'browser-extensions') {
-                                onOpen?.('browser-extensions');
-                                return;
-                              }
-                              onOpen?.(item.payload);
-                              if (item.payload === 'chat') onModeChange?.('chat');
-                              else if (item.payload === 'workspace') onModeChange?.('cowork');
-                              else if (item.payload === 'code') onModeChange?.('code');
-                              else if (
-                                item.payload === 'design' ||
-                                item.payload === 'design-marketplace' ||
-                                item.payload.startsWith('design-view-')
-                              ) {
-                                onModeChange?.('design');
-                              }
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                </div>
-              )}
-            </div>
-          );
-        })}
+      {/* SEGMENTED SWITCHER [ Home | Code ] */}
+      <div className="px-3 pt-3 pb-2 shrink-0">
+        <div className="flex p-0.5 bg-[var(--surface-hover)] rounded-xl gap-0.5 border border-solid border-[var(--border-subtle)]">
+          <button
+            type="button"
+            onClick={() => {
+              onModeChange?.('chat');
+              onOpen?.('chat');
+            }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border-none text-[12px] font-bold cursor-pointer transition-all duration-200",
+              !isCodeMode
+                ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-[var(--shadow-sm)]"
+                : "bg-transparent text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
+            )}
+          >
+            <House size={14} weight={!isCodeMode ? "fill" : "bold"} />
+            Home
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onModeChange?.('code');
+              onOpen?.('code');
+            }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg border-none text-[12px] font-bold cursor-pointer transition-all duration-200",
+              isCodeMode
+                ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-[var(--shadow-sm)]"
+                : "bg-transparent text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
+            )}
+          >
+            <TerminalWindow size={14} weight={isCodeMode ? "fill" : "bold"} />
+            Code
+          </button>
+        </div>
       </div>
 
-      {/* FOOTER */}
-      <div className="p-[16px_20px] border-t border-solid border-[var(--shell-divider)] flex items-center gap-3 bg-[var(--shell-panel-bg)] shrink-0">
-        <div className="size-8 rounded-[10px] bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">U</div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[var(--shell-item-fg)] text-[13px] font-semibold overflow-hidden text-ellipsis whitespace-nowrap">User Name</div>
-          <div className="text-[var(--shell-item-muted)] text-[12px] font-medium">Pro Plan</div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button type="button"
-            onClick={() => onOpen?.('labs')}
-            className="size-8 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-            title="A://Labs - Learning Portal"
-          >
-            <GraduationCap size={18} weight="bold" />
-          </button>
-          <button type="button"
-            onClick={() => {
-              onOpen?.('labs');
-              // Dispatch event to switch to research tab inside Labs
-              window.dispatchEvent(new CustomEvent('allternit:open-labs-research', { detail: {} }));
-            }}
-            className="size-8 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-            title="Open Notebook"
-          >
-            <BookOpen size={18} weight="bold" />
-          </button>
-          <button type="button"
-            onClick={() => onOpen?.('products')}
-            className="size-8 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-            title="Allternit Products"
-          >
-            <Sparkle size={18} weight="bold" />
-          </button>
-          <SettingsDrilldown>
-            <button type="button"
-              className="size-8 rounded-lg border-none bg-transparent text-[var(--shell-item-muted)] cursor-pointer flex items-center justify-center transition-all duration-200 hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-              title="Settings"
-            >
-              <Gear size={18} weight="bold" />
+      {/* NEW BUTTON */}
+      <div className="px-3 pb-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => {
+            if (isCodeMode) {
+              useCodeSessionStore.getState().setActiveSession(null);
+              onOpen?.('code');
+            } else {
+              chatStore.setActiveThread(null);
+              useChatSessionStore.getState().setActiveSession(null);
+              onOpen?.('chat');
+            }
+          }}
+          className="w-full flex items-center gap-2 p-[9px_12px] rounded-xl border-none bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] text-[var(--shell-item-fg)] font-semibold cursor-pointer text-left transition-colors"
+        >
+          <Plus size={16} weight="bold" className="text-[var(--accent-primary)]" />
+          <span className="text-[13px]">{isCodeMode ? 'New Thread' : 'New'}</span>
+        </button>
+      </div>
+
+      {/* SIDEBAR MAIN BODY (Home tabs + recents, or Code tabs + threads) */}
+      {!isCodeMode ? (
+        <>
+          {/* HOME TABS */}
+          <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
+            <RailItem
+              icon={FolderOpen}
+              label="Projects"
+              isActive={activeViewType === 'project' && !chatStore.activeProjectId}
+              onClick={() => {
+                useChatStore.getState().setActiveProject(null);
+                onOpen?.('project');
+              }}
+            />
+            <RailItem
+              icon={FileText}
+              label="Artifacts"
+              isActive={activeViewType === 'library'}
+              onClick={() => onOpen?.('library')}
+            />
+            <RailItem
+              icon={Clock}
+              label="Scheduled"
+              isActive={activeViewType === 'goals-list'}
+              onClick={() => onOpen?.('goals-list')}
+            />
+            <div className="relative">
+              <RailItem
+                icon={Target}
+                label="Dispatch"
+                isActive={activeViewType === 'routines-list'}
+                onClick={() => onOpen?.('routines-list')}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-[var(--surface-hover)] text-[var(--shell-item-muted)] text-[10px] px-1.5 py-0.5 rounded-full font-bold border border-solid border-[var(--border-subtle)]">
+                Beta
+              </span>
+            </div>
+            <RailItem
+              icon={SlidersHorizontal}
+              label="Customize"
+              isActive={activeViewType === 'settings'}
+              onClick={() => onOpen?.('settings')}
+            />
+          </div>
+
+          {/* HOME RECENTS HEADER */}
+          <div className="px-4 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
+            <span>Recents</span>
+            <button type="button" className="bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer flex items-center">
+              <SlidersHorizontal size={14} />
             </button>
-          </SettingsDrilldown>
-        </div>
+          </div>
+
+          {/* HOME RECENTS LIST */}
+          <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-0.5">
+            {recentItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    if (item.mode === 'chat') {
+                      const session = chatSessions.find(s => s.id === item.id);
+                      if (session) openNativeSessionSurface(session);
+                    } else if (item.mode === 'cowork') {
+                      coworkStore.setActiveTask(item.id);
+                      const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
+                      useCoworkSessionStore.getState().setActiveSession(coworkTask?.sessionId ?? null);
+                      onModeChange?.('cowork');
+                      onOpen?.('workspace');
+                    } else if (item.mode === 'browser') {
+                      onModeChange?.('browser');
+                      onOpen?.('browser');
+                    }
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium",
+                    item.isActive
+                      ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-bold shadow-[var(--shadow-sm)]"
+                      : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+                  )}
+                >
+                  <IconComponent size={18} weight={item.isActive ? 'fill' : 'bold'} />
+                  <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{item.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* CODE TABS */}
+          <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
+            <RailItem
+              icon={Robot}
+              label="Agent Hub"
+              isActive={activeViewType === 'agent-hub'}
+              onClick={() => onOpen?.('agent-hub')}
+            />
+            <RailItem
+              icon={CalendarCheck}
+              label="Cron"
+              isActive={activeViewType === 'code-automations'}
+              onClick={() => onOpen?.('code-automations')}
+            />
+          </div>
+
+          {/* CODE THREADS HEADER */}
+          <div className="px-4 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
+            <span>Threads</span>
+          </div>
+
+          {/* CODE THREADS LIST */}
+          <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-0.5">
+            {codeSessions.map((s) => {
+              const isActive = activeCodeSessionId === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    openNativeSessionSurface(s);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium",
+                    isActive
+                      ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-bold shadow-[var(--shadow-sm)]"
+                      : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+                  )}
+                >
+                  <Cpu size={18} weight={isActive ? 'fill' : 'bold'} />
+                  <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* FOOTER */}
+      <div className="flex flex-col border-t border-solid border-[var(--shell-divider)] bg-[var(--shell-rail-bg)] shrink-0">
+        <button
+          type="button"
+          onClick={() => {
+            onModeChange?.('design');
+            onOpen?.('design');
+          }}
+          className="w-full flex items-center gap-2.5 p-[10px_16px] text-[var(--shell-item-fg)] cursor-pointer hover:bg-[var(--shell-item-hover)] border-none bg-transparent font-semibold text-[13px] text-left transition-colors"
+        >
+          <Palette size={18} weight="bold" className="text-[var(--shell-item-muted)]" />
+          <span>Design</span>
+        </button>
+
+        <div className="h-px bg-[var(--shell-divider)] w-full" />
+
+        <SettingsDrilldown>
+          <button
+            type="button"
+            className="w-full flex items-center gap-3 p-[10px_16px] border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors"
+          >
+            <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
+              J
+            </div>
+            <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[var(--shell-item-fg)] text-[13px] font-semibold">
+              <span>Joe</span>
+              <span className="text-[var(--shell-item-muted)] font-normal">· Pro</span>
+              <CaretDown size={12} className="text-[var(--shell-item-muted)]" />
+            </div>
+            <div className="size-8 flex items-center justify-center text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] transition-colors">
+              <DownloadSimple size={18} />
+            </div>
+          </button>
+        </SettingsDrilldown>
       </div>
     </div>
   );

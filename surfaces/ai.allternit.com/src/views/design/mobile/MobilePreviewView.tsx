@@ -248,7 +248,7 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden', background: 'var(--bg-secondary)' }}>
+    <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden', background: 'var(--shell-view-bg)' }}>
 
       {/* ── Left: device selector + controls ── */}
       <div style={{ width: 200, background: 'var(--bg-primary)', borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
