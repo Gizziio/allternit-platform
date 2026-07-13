@@ -116,6 +116,8 @@ interface PluginManagerProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenSettings?: () => void;
+  /** Deep-link to a specific tab on open (e.g. from a Settings panel's "Open full manager" link). Defaults to 'skills'. */
+  initialTab?: TabId;
 }
 
 // ============================================================================
@@ -530,16 +532,19 @@ function Icon({ name, size = 16, color }: { name: string; size?: number; color?:
 // Main Component
 // ============================================================================
 
-export function PluginManager({ isOpen, onClose, onOpenSettings }: PluginManagerProps) {
+export function PluginManager({ isOpen, onClose, onOpenSettings, initialTab }: PluginManagerProps) {
   return (
     <ErrorBoundary>
-      <PluginManagerContent isOpen={isOpen} onClose={onClose} onOpenSettings={onOpenSettings} />
+      <PluginManagerContent isOpen={isOpen} onClose={onClose} onOpenSettings={onOpenSettings} initialTab={initialTab} />
     </ErrorBoundary>
   );
 }
 
-function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManagerProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('skills');
+function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: PluginManagerProps) {
+  // IntegrationsPanel fully unmounts this component when closed (isOpen gates
+  // the mount, not just visibility), so seeding useState from a prop here is
+  // sufficient — no sync effect needed for re-opens with a different tab.
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab ?? 'skills');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [activeSelection, setActiveSelection] = useState<'item' | 'file'>('item');

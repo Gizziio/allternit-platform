@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 'use client'
 import React, { useState, useEffect, useCallback } from 'react';
@@ -12,16 +13,13 @@ import {
   DeviceMobile,
   HardDrives,
   Cloud,
-  Warning,
   X,
   CaretRight,
-  CaretDown,
   CheckCircle,
   ArrowsClockwise,
   ShieldCheck,
   DownloadSimple,
   MagnifyingGlass,
-  Sparkle,
   PlugsConnected,
   PuzzlePiece,
 } from '@phosphor-icons/react';
@@ -43,31 +41,16 @@ import { PanelHeader } from '@/components/settings/PanelHeader';
 import { Badge } from '@/components/settings/Badge';
 import { SkeletonRow } from '@/components/settings/SkeletonRow';
 import { EmptyState } from '@/components/settings/EmptyState';
+import { SettingsCard, SettingsCardRow } from '@/components/settings/SettingsCard';
 import { MonoChip } from '@/components/settings/MonoChip';
 import { AgentOpsPanel } from './AgentOpsPanel';
 import { SecurityPanel } from './SecurityPanel';
 import { SkillsSettingsPanel } from './SkillsSettingsPanel';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS, SETTINGS_SELECT_CLASS } from '@/components/settings/buttonStyles';
 import { useFeaturePlugins } from '@/plugins/useFeaturePlugins';
-import { BUNDLED_SKILLS } from '@/lib/design/bundled-skills';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type FontSize = 'small' | 'medium' | 'large';
-type DefaultMode = 'chat' | 'cowork' | 'code';
-
-
-interface MenuItem {
-  id: string;
-  label: string;
-  icon?: React.ReactNode;
-  shortcut?: string;
-  hasSubmenu?: boolean;
-  onClick?: () => void;
-  children?: MenuItem[];
-}
-
 
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -92,10 +75,6 @@ const SHORTCUTS = [
 
 
 // ─── Sub-components (extracted to module scope) ───────────────────────────────
-
-const SectionDivider = (): React.ReactNode => (
-  <div className="h-px bg-[var(--border-subtle)] my-3" />
-);
 
 const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: () => void }> = ({ item, activeSection, onClick }) => {
   const isActive = activeSection === item.id;
@@ -171,7 +150,6 @@ const PermissionRow: React.FC<{
 function ClerkAuthPanel() {
   const { isLoaded, isSignedIn, user: _user } = usePlatformUser();
   const { sessions } = usePlatformSessions();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const user = _user as any;
   const signOut = usePlatformSignOut();
   const hardSignOut = usePlatformHardSignOut();
@@ -504,7 +482,8 @@ const DiagnosticsPanel = () => {
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   initialSection,
-  initialTab
+  initialTab,
+  onOpenFullManager
 }) => {
   // Guard against unknown section ids arriving via event detail
   const safeInitialSection: SettingsSection = SETTINGS_SECTION_MAP[initialSection ?? ''] ?? 'signin';
@@ -550,33 +529,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [showSystemMessages, setShowSystemMessages] = useSettingsState('general.showSystemMessages', true);
   const [enableTelemetry, setEnableTelemetry] = useSettingsState('general.enableTelemetry', true);
   const [autoSave, setAutoSave] = useSettingsState('general.autoSave', true);
-  const [, _setDefaultMode] = useState<DefaultMode>('chat');
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
-  const [, _setFontSize] = useState<FontSize>('medium');
   const [compactDensity, setCompactDensity] = useSettingsState('appearance.compactDensity', false);
   const [showSidebarLabels, setTwoSidebarLabels] = useSettingsState('appearance.showSidebarLabels', true);
-  const [, _setAnimateTransitions] = useState(true);
-  const [, _setAccentColor] = useState('var(--accent-primary)');
-  const [, _setChatModel] = useState('GPT-4o');
-  const [, _setCodeModel] = useState('Claude 3.5');
-  const [, _setAnalysisModel] = useState('Mistral 7B');
-  const [, _setTemperature] = useState(0.7);
-  const [, _setMaxTokens] = useState('2000');
   const [streaming, setStreaming] = useState(true);
-  const [, _setApiKeys] = useState<Record<string, { masked: string; isSet: boolean }>>({
-    OpenAI: { masked: 'sk-••••••••••••••••', isSet: true },
-    Anthropic: { masked: '', isSet: false },
-    Mistral: { masked: '', isSet: false },
-    Google: { masked: '', isSet: false },
-  });
   const [bypassPermissions, setBypassPermissions] = useSettingsState('gizziio-code.bypassPermissions', false);
   const [drawAttentionNotifications, setDrawAttentionNotifications] = useSettingsState('gizziio-code.drawAttentionNotifications', true);
-  const [, _setWorktreeLocation] = useState('Inside project (.claude/)');
   const [gizziRevokeState, setGizziRevokeState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [autoUpdateExtensions, setAutoUpdateExtensions] = useSettingsState('extensions.autoUpdateExtensions', true);
   const [useBuiltinNode, setUseBuiltinNode] = useSettingsState('extensions.useBuiltinNode', true);
-  const [disabledSkillIds, setDisabledSkillIds] = useSettingsState<string[]>('plugins.disabledSkills', []);
 
   // Privacy
   const [locationMetadata, setLocationMetadata] = useSettingsState('privacy.locationMetadata', false);
@@ -712,9 +674,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <h1 className="text-3xl font-semibold m-0 mb-2 text-[var(--ui-text-primary)] tracking-tight">Allternit & <span className="text-[var(--accent-primary)]">Coffee</span></h1>
       <p className="text-[13px] text-[var(--ui-text-muted)] font-mono">v0.9.1-beta</p>
       <div className="mt-10 flex justify-center gap-6">
-        <button type="button" className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Terms</button>
-        <button type="button" className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Privacy</button>
-        <button type="button" className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">GitHub</button>
+        <button type="button" onClick={() => window.open('https://allternit.com/terms', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Terms</button>
+        <button type="button" onClick={() => window.open('https://allternit.com/privacy', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">Privacy</button>
+        <button type="button" onClick={() => window.open('https://github.com/allternit', '_blank', 'noopener,noreferrer')} className="bg-transparent border-none text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors text-[13px] font-medium cursor-pointer">GitHub</button>
       </div>
     </div>
   );
@@ -874,38 +836,60 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </span>
       </SettingsRow>
       <SettingsRow label="Files location" description="Where Cowork stores shared workspace files">
-        <span className="flex items-center gap-2">
-          <span className="text-[13px] text-[var(--accent-primary)] underline underline-offset-2 font-mono cursor-pointer">~/Allternit/Cowork</span>
-          <button type="button"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-solid border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 text-[13px] font-medium text-[var(--status-warning)] cursor-pointer hover:bg-[var(--status-warning)]/15 transition-colors"
-            title="Not wired yet"
-            disabled
-          >
-            <Warning size={14} /> Use recommended
-          </button>
-          <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Change</button>
-        </span>
+        <span className="text-[13px] text-[var(--accent-primary)] font-mono">~/Allternit/Cowork</span>
       </SettingsRow>
 
       <SectionHeading>Access</SectionHeading>
       <SettingsRow label="Trusted folders" description="Folders Cowork agents may read and write">
-        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Manage</button>
+        <span className="text-[13px] text-[var(--text-tertiary)]">Coming soon</span>
       </SettingsRow>
       <SettingsRow label="Global instructions" description="Instructions applied to every Cowork session">
-        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Edit</button>
+        <span className="text-[13px] text-[var(--text-tertiary)]">Coming soon</span>
       </SettingsRow>
     </div>
   );
 
   const renderExtensionsPanel = () => (
-    <div>
-      <SectionHeading>Extensions</SectionHeading>
-      <SettingsRow label="Enable auto-updates for extensions" description="Background update all marketplace and sidecar extensions">
-        <Toggle value={autoUpdateExtensions} onChange={setAutoUpdateExtensions} />
-      </SettingsRow>
-      <SettingsRow label="Use Built-in Node.js for MCP" description="Ensure stability by using Allternit's verified runtime">
-        <Toggle value={useBuiltinNode} onChange={setUseBuiltinNode} />
-      </SettingsRow>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <SectionHeading className="mb-1">Extensions</SectionHeading>
+          <p className="text-[13px] text-[var(--text-secondary)] m-0 leading-relaxed">
+            Allow Allternit to directly interact with apps, data, and tools on your computer.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'marketplace' } }))}
+          className="shrink-0 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-semibold cursor-pointer transition-colors hover:brightness-110"
+        >
+          Browse extensions
+        </button>
+      </div>
+
+      <EmptyState
+        icon={<PuzzlePiece size={56} weight="thin" />}
+        title="No extensions installed"
+        caption="Extensions let Allternit connect to external tools and services."
+        ctaLabel="Browse extensions"
+        primaryCta
+        onCtaClick={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'marketplace' } }))}
+      />
+
+      <SettingsCard title="Extension settings" description="Configure how extensions are installed and updated.">
+        <SettingsCardRow
+          label="Enable auto-updates for extensions"
+          description="Background update all marketplace and sidecar extensions"
+        >
+          <Toggle value={autoUpdateExtensions} onChange={setAutoUpdateExtensions} />
+        </SettingsCardRow>
+        <SettingsCardRow
+          label="Use Built-in Node.js for MCP"
+          description="Ensure stability by using Allternit's verified runtime"
+        >
+          <Toggle value={useBuiltinNode} onChange={setUseBuiltinNode} />
+        </SettingsCardRow>
+      </SettingsCard>
     </div>
   );
 
@@ -918,33 +902,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </span>
       </SettingsRow>
       <SettingsRow label="Billing portal" description="Update payment method, download invoices, or cancel">
-        <button type="button" className={QUIET_BUTTON_CLASS}>Manage billing portal</button>
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => window.open('https://billing.allternit.com', '_blank', 'noopener,noreferrer')}>
+          Manage billing portal
+        </button>
       </SettingsRow>
     </div>
   );
 
   const renderUsagePanel = () => {
-    const sessionRows = [
-      { label: 'Messages this session', used: 8 },
-      { label: 'Tokens this session', used: 14 },
-    ];
-    const weeklyRows = [
-      { label: 'Weekly message limit', used: 34 },
-      { label: 'Weekly token limit', used: 27 },
-    ];
-
-    const renderBarRow = (row: { label: string; used: number }) => (
-      <div key={row.label} className="py-3">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[14px] font-medium text-[var(--text-primary)]">{row.label}</span>
-          <span className="text-[12px] text-[var(--text-secondary)] tabular-nums">{row.used}% used</span>
-        </div>
-        <div className="h-1 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
-          <div className="h-full rounded-full bg-[var(--text-tertiary)] transition-all duration-500" style={{ width: `${row.used}%` }} />
-        </div>
-      </div>
-    );
-
     const handleUsageRefresh = () => {
       setUsageRefreshing(true);
       setTimeout(() => {
@@ -955,26 +920,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     return (
       <div>
-        <SectionHeading>Current session</SectionHeading>
-        {sessionRows.map(renderBarRow)}
-        <SectionHeading>Weekly limits</SectionHeading>
-        {weeklyRows.map(renderBarRow)}
-        <div className="flex items-center justify-between py-3">
+        <EmptyState
+          icon={<ArrowsClockwise size={40} weight="thin" />}
+          caption="Real-time usage breakdown is not available yet. Refresh to check again."
+          ctaLabel={usageRefreshing ? 'Refreshing…' : 'Refresh'}
+          onCtaClick={handleUsageRefresh}
+        />
+        <div className="flex items-center justify-end py-3">
           <span className="text-[12px] text-[var(--text-tertiary)]">Last updated: {usageUpdatedLabel}</span>
-          <button type="button" className={QUIET_BUTTON_CLASS} onClick={handleUsageRefresh} disabled={usageRefreshing}>
-            <ArrowsClockwise size={14} className={usageRefreshing ? 'animate-spin' : ''} /> Refresh
-          </button>
         </div>
         <SectionHeading>Usage details</SectionHeading>
         <ResourceUsageDashboard />
       </div>
     );
-  };
-
-  
-
-  const openView = (viewType: string) => {
-    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType } }));
   };
 
   const handleExportData = () => {
@@ -1031,19 +989,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 
   const renderSkillsPanel = () => (
-    <SkillsSettingsPanel onBrowse={() => setActiveSection('plugins')} />
+    <SkillsSettingsPanel onBrowse={() => onOpenFullManager?.('skills')} />
   );
 
   const renderConnectorsPanel = () => (
     <div>
       <PanelHeader title="Connectors">
-        <button type="button" className="size-8 flex items-center justify-center rounded-lg border-none bg-transparent text-[var(--text-tertiary)] cursor-not-allowed" title="Not wired yet" disabled aria-label="Search connectors">
-          <MagnifyingGlass size={16} />
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => onOpenFullManager?.('connectors')}>
+          Open full manager
         </button>
         <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void fetchConnectors()} disabled={connectorsLoading}>
           <ArrowsClockwise size={14} className={connectorsLoading ? 'animate-spin' : ''} /> Refresh
         </button>
-        <button type="button" className={QUIET_BUTTON_CLASS} title="Not wired yet" disabled>Add <CaretDown size={12} /></button>
       </PanelHeader>
       {connectorsLoading && connectors.length === 0 ? (
         <SkeletonRow lines={4} />
@@ -1100,46 +1057,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </SettingsRow>
   );
 
-  const formatSkillName = (value: string) => value
-    .split(/[-_]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
+  // Note: this panel shows built-in FEATURE toggles (featurePlugins —
+  // enable/disable whole app features like Design/Cowork surfaces), which is
+  // a real, distinct concept from the installed marketplace plugin packages
+  // shown in the full manager's own "Plugins" tab — the two aren't actually
+  // duplicates despite the name overlap. This used to also render a
+  // "Skills" sub-list from the static BUNDLED_SKILLS import, which WAS a
+  // real duplicate of the (now real, filesystem-backed) Customize > Skills
+  // panel above; that block is removed rather than kept in sync with two
+  // data sources.
   const renderPluginsPanel = () => {
-    const skillRows = BUNDLED_SKILLS;
     const pluginRows = featurePlugins.allPlugins;
-    const disabledSkills = new Set(disabledSkillIds);
-    const toggleSkill = (id: string) => {
-      setDisabledSkillIds((prev) => (
-        prev.includes(id)
-          ? prev.filter((skillId) => skillId !== id)
-          : [...prev, id]
-      ));
-    };
 
     return (
       <div>
-        <SectionHeading>Skills</SectionHeading>
-        {skillRows.length === 0 ? (
-          <EmptyState
-            icon={<Sparkle size={40} weight="thin" />}
-            caption="No skills installed."
-          />
-        ) : (
-          <div>
-            {skillRows.map((skill) => renderCapabilityRow({
-              id: skill.id,
-              name: formatSkillName(skill.name),
-              description: skill.description,
-              meta: [skill.mode, skill.assets?.length ? `${skill.assets.length} assets` : undefined].filter(Boolean).join(' · '),
-              enabled: !disabledSkills.has(skill.id),
-              onToggle: () => toggleSkill(skill.id),
-            }))}
-          </div>
-        )}
-
-        <SectionHeading>Plugins</SectionHeading>
+        <PanelHeader title="Allternit Plugins">
+          <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => onOpenFullManager?.('plugins')}>
+            Open full manager
+          </button>
+        </PanelHeader>
+        <SectionHeading>Features</SectionHeading>
         {pluginRows.length === 0 ? (
           <EmptyState
             icon={<PuzzlePiece size={40} weight="thin" />}

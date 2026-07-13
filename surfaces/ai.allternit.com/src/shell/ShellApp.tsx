@@ -395,6 +395,7 @@ function ShellAppInner(): React.ReactNode {
   const [monitorOverlayOpen, setMonitorOverlayOpen] = useState(false);
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
   const [pluginPanelOpen, setPluginPanelOpen] = useState(false);
+  const [pluginPanelInitialTab, setPluginPanelInitialTab] = useState<string | undefined>(undefined);
   const permissions = usePermissionGuide();
 
   const shouldHideRail = active.viewType === 'labs';
@@ -576,18 +577,30 @@ function ShellAppInner(): React.ReactNode {
         />
         <IntegrationsPanel
           isOpen={pluginPanelOpen}
+          initialTab={pluginPanelInitialTab}
           onClose={() => setPluginPanelOpen(false)}
           onOpenSettings={() => {
+            // Was writing to sessionStorage keys nothing reads (dead code —
+            // see docs/SETTINGS_PARITY_HANDOFF.md). settingsSection/settingsTab
+            // are the real mechanism SettingsOverlay below actually consumes.
             setPluginPanelOpen(false);
-            sessionStorage.setItem('allternit-settings-section', 'integrations');
-            sessionStorage.setItem('allternit-settings-tab', 'connectors');
+            setSettingsSection('integrations');
+            setSettingsTab('connectors');
             setSettingsOpen(true);
           }}
         />
 
         {settingsOpen && (
           <React.Suspense fallback={null}>
-            <SettingsOverlay initialSection={settingsSection} initialTab={settingsTab} />
+            <SettingsOverlay
+              initialSection={settingsSection}
+              initialTab={settingsTab}
+              onOpenFullManager={(tab: string) => {
+                setSettingsOpen(false);
+                setPluginPanelInitialTab(tab);
+                setPluginPanelOpen(true);
+              }}
+            />
           </React.Suspense>
         )}
         <FloatingAvatar />
