@@ -3,7 +3,7 @@ import mammoth from 'mammoth';
 import type { AllternitDocument, DocumentBlock, ImportResult, InlineRun, OfficeFileInput, TableCell, TableRow } from './types';
 import { readFileArrayBuffer } from './util';
 
-function parseInlineRuns(element: Element): InlineRun[] {
+export function parseInlineRuns(element: Element): InlineRun[] {
   const runs: InlineRun[] = [];
   const walk = (node: Node) => {
     if (node.nodeType === Node.TEXT_NODE) {

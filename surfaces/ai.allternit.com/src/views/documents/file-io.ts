@@ -15,7 +15,7 @@ import type {
   SlideBlock,
 } from './office-io';
 
-interface EditorSlide {
+export interface EditorSlide {
   id: string;
   title: string;
   body: string;
@@ -97,7 +97,7 @@ export function plaintextToDocument(title: string, body: string): AllternitDocum
   return { title, blocks };
 }
 
-function cellsToWorkbook(cells: Record<string, string>, name: string): AllternitWorkbook {
+export function cellsToWorkbook(cells: Record<string, string>, name: string): AllternitWorkbook {
   const sheetCells: AllternitWorkbook['sheets'][0]['cells'] = {};
   for (const [key, value] of Object.entries(cells)) {
     const num = Number(value);
@@ -109,7 +109,7 @@ function cellsToWorkbook(cells: Record<string, string>, name: string): Allternit
   };
 }
 
-function workbookToCells(workbook: AllternitWorkbook): Record<string, string> {
+export function workbookToCells(workbook: AllternitWorkbook): Record<string, string> {
   const sheet = workbook.sheets[0];
   if (!sheet) return {};
   const cells: Record<string, string> = {};
@@ -132,7 +132,7 @@ function slideBlocksToTitleBody(blocks: SlideBlock[]): { title: string; body: st
   return { title, body };
 }
 
-function slidesToDeck(slides: EditorSlide[], title: string): AllternitDeck {
+export function slidesToDeck(slides: EditorSlide[], title: string): AllternitDeck {
   return {
     title,
     slides: slides.map((slide) => ({
@@ -147,7 +147,7 @@ function slidesToDeck(slides: EditorSlide[], title: string): AllternitDeck {
   };
 }
 
-function deckToSlides(deck: AllternitDeck): EditorSlide[] {
+export function deckToSlides(deck: AllternitDeck): EditorSlide[] {
   return deck.slides.map((slide) => {
     const { title, body } = slideBlocksToTitleBody(slide.blocks);
     return { id: slide.id, title, body, layout: slide.layout, background: slide.background };
@@ -178,13 +178,13 @@ function modelStorageKey(pack: EditorPackId, documentId: string) {
   return `${editorPackStorageKey(pack, documentId)}.office-model`;
 }
 
-function getStoredModel<T>(pack: EditorPackId, documentId: string): T | null {
+export function getStoredModel<T>(pack: EditorPackId, documentId: string): T | null {
   const raw = localStorage.getItem(modelStorageKey(pack, documentId));
   if (!raw) return null;
   try { return JSON.parse(raw) as T; } catch { return null; }
 }
 
-function setStoredModel<T>(pack: EditorPackId, documentId: string, model: T) {
+export function setStoredModel<T>(pack: EditorPackId, documentId: string, model: T) {
   localStorage.setItem(modelStorageKey(pack, documentId), JSON.stringify(model));
 }
 
