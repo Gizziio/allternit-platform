@@ -48,6 +48,7 @@ import { AgentOpsPanel } from './AgentOpsPanel';
 import { SecurityPanel } from './SecurityPanel';
 import { SkillsSettingsPanel } from './SkillsSettingsPanel';
 import { PluginsSettingsPanel } from './PluginsSettingsPanel';
+import { DispatchSettingsPanel } from './DispatchSettingsPanel';
 import { PluginManager } from '../plugins';
 import type { TabId as FullManagerTabId } from '../plugins/PluginManager/types';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS, SETTINGS_SELECT_CLASS } from '@/components/settings/buttonStyles';
@@ -56,6 +57,11 @@ import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface SettingsViewProps {
+  initialSection?: string;
+  initialTab?: string;
+  onClose?: () => void;
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -490,6 +496,7 @@ const DiagnosticsPanel = () => {
 export const SettingsView: React.FC<SettingsViewProps> = ({
   initialSection,
   initialTab,
+  onClose,
 }) => {
   // Guard against unknown section ids arriving via event detail
   const safeInitialSection: SettingsSection = SETTINGS_SECTION_MAP[initialSection ?? ''] ?? 'signin';
@@ -501,7 +508,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // ON TOP of this Settings modal (PluginManager's own root is `fixed
   // inset-0 z-[100]`, above Settings' `z-50`), instead of closing Settings
   // and routing through ShellApp's separate top-level IntegrationsPanel —
-  // matches the Claude Desktop reference where the Directory modal stays
+  // matches the Claude Desktop reference where the Capability Library stays
   // anchored over the panel that opened it rather than navigating away.
   const [fullManagerTab, setFullManagerTab] = useState<FullManagerTabId | null>(null);
   const onOpenFullManager = (tab: string) => setFullManagerTab(tab as FullManagerTabId);
@@ -1254,6 +1261,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'api-keys': return renderApiKeysPanel();
       case 'shortcuts': return renderShortcutsPanel();
       case 'permissions': return <PermissionsPanel />;
+      case 'dispatch': return <DispatchSettingsPanel />;
       case 'gizziio-code': return renderGizziioCodePanel();
       case 'cowork': return renderCoworkPanel();
       case 'extensions': return renderExtensionsPanel();
@@ -1282,7 +1290,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     ? navigationItems.filter((item: any) => item.label.toLowerCase().includes(navSearch))
     : navigationItems;
 
-  const closeSettings = () => window.dispatchEvent(new CustomEvent('allternit:close-settings'));
+  const closeSettings = () => {
+    window.dispatchEvent(new CustomEvent('allternit:close-settings'));
+    onClose?.();
+  };
 
   return (
     <>
@@ -1295,9 +1306,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         aria-modal="true"
         aria-label="Settings"
         className={cn(
-          "flex w-full min-w-[600px] h-[80vh] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-solid border-white/10 bg-[var(--view-settings-bg,var(--surface-canvas))]",
+          "flex w-full min-w-[600px] h-[80vh] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-solid border-white/10",
           'max-w-[1000px]'
         )}
+        style={{ backgroundColor: 'var(--view-settings-bg, var(--surface-canvas))' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Sidebar Nav */}
@@ -1339,21 +1351,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         {/* Content Area */}
         <div className="flex-1 min-w-0 h-full relative bg-[radial-gradient(circle_at_top_right,rgba(212,176,140,0.03),transparent_600px)]">
+          <div className="h-full overflow-y-auto">
+            <div className="p-10 pb-32 w-full max-w-[740px]">
+              <h1 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-6">
+                {navigationItems.find((item: any) => item.id === activeSection)?.label}
+              </h1>
+              {renderContent()}
+            </div>
+          </div>
           <button type="button"
             onClick={closeSettings}
-            className="absolute top-4 right-4 z-10 size-7 flex items-center justify-center rounded-lg bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] active:scale-95 transition-all"
+            className="absolute top-4 right-4 z-[50] size-7 flex items-center justify-center rounded-lg bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] active:scale-95 transition-all"
             aria-label="Close settings"
           >
             <X size={16} weight="bold" />
           </button>
-          <div className="h-full overflow-y-auto">
-          <div className="p-10 pb-32 w-full max-w-[740px]">
-            <h1 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-6">
-              {navigationItems.find((item: any) => item.id === activeSection)?.label}
-            </h1>
-            {renderContent()}
-          </div>
-          </div>
         </div>
       </div>
     </div>

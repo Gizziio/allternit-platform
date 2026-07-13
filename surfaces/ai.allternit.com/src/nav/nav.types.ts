@@ -92,6 +92,8 @@ export type ViewType =
   // Chat History views
   | "history"
   | "archived"
+  // Unified recents view
+  | "chats-and-tasks"
   // Cowork Analytics & Content views
   | "insights"
   | "activity"
@@ -102,6 +104,8 @@ export type ViewType =
   | "goal-detail"
   | "routines-list"
   | "loops-list"
+  | "cron"
+  | "dispatch"
   // Code views
   | "new-file"
   | "code-project"

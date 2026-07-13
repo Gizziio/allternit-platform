@@ -1,14 +1,10 @@
-/**
- * CodeProjectView - Workspace view for Code mode
- * Replicates the structure of ProjectView but for Code workspaces
- * Shows threads list with real ChatComposer, tabs, and wired functionality
- */
+"use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { InputModal } from '@/components/InputModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
-import { 
-  BaseProjectView, 
+import {
+  BaseProjectView,
   ProjectItemCard,
   ProjectMenuButton,
   FileItem,
@@ -30,58 +26,60 @@ import { useNav } from '@/nav/useNav';
 
 interface CodeProjectViewProps {
   workspaceId?: string;
+  onBack?: () => void;
 }
 
-export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
-  const { 
-    workspaces, 
-    activeWorkspaceId, 
+export function CodeProjectView({ workspaceId, onBack: externalOnBack }: CodeProjectViewProps) {
+  const {
+    workspaces,
+    activeWorkspaceId: storeActiveWorkspaceId,
     sessions,
     setActiveSession,
     setActiveWorkspace,
     renameWorkspace,
     deleteWorkspace,
-    createSession,
+    toggleWorkspaceFavorite,
+    toggleWorkspaceArchive,
   } = useCodeModeStore();
-  
+
   const { dispatch } = useNav();
+
   const [activeTab, setActiveTab] = useState('threads');
-  const [isStarred, setIsStarred] = useState(false);
   const [composerInput, setComposerInput] = useState('');
-  
-  // Modal states
   const [showAddFile, setShowAddFile] = useState(false);
   const [showAddInstruction, setShowAddInstruction] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [instructionText, setInstructionText] = useState('');
   const [workspaceInstructions, setWorkspaceInstructions] = useState<string[]>([]);
-  const [workspaceFiles, setWorkspaceFiles] = useState<Array<{id: string; name: string; size: number}>>([]);
-  
-  // Get current workspace
-  const currentWorkspaceId = workspaceId || activeWorkspaceId;
-  const workspace = useMemo(() => 
-    workspaces.find(w => w.workspace_id === currentWorkspaceId),
+  const [workspaceFiles, setWorkspaceFiles] = useState<Array<{ id: string; name: string; size: number }>>([]);
+
+  const currentWorkspaceId = workspaceId || storeActiveWorkspaceId;
+  const workspace = useMemo(
+    () => workspaces.find((w) => w.workspace_id === currentWorkspaceId),
     [workspaces, currentWorkspaceId]
   );
-  
-  // Filter threads for this workspace
-  const workspaceThreads = useMemo(() => 
-    sessions.filter(s => s.workspace_id === currentWorkspaceId && s.mode !== 'AUTO'), // Example filter, assuming AUTO might be agent-like
-    [sessions, currentWorkspaceId]
-  );
-  
-  const workspaceAgentThreads = useMemo(() => 
-    sessions.filter(s => s.workspace_id === currentWorkspaceId && s.mode === 'AUTO'),
-    [sessions, currentWorkspaceId]
-  );
-  
-  const displayThreads = activeTab === 'threads' ? workspaceThreads : workspaceAgentThreads;
-  const hasContent = displayThreads.length > 0 || workspaceFiles.length > 0;
 
-  const handleBack = (): void => {
-    setActiveWorkspace(''); // Clear active workspace
-    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'code' } }));
+  const workspaceThreads = useMemo(
+    () => sessions.filter((s) => s.workspace_id === currentWorkspaceId && s.mode !== 'AUTO'),
+    [sessions, currentWorkspaceId]
+  );
+
+  const workspaceAgentThreads = useMemo(
+    () => sessions.filter((s) => s.workspace_id === currentWorkspaceId && s.mode === 'AUTO'),
+    [sessions, currentWorkspaceId]
+  );
+
+  const displayThreads = activeTab === 'threads' ? workspaceThreads : workspaceAgentThreads;
+  const hasContent = displayThreads.length > 0 || workspaceFiles.length > 0 || activeTab === 'telemetry';
+
+  const handleBack = () => {
+    setActiveWorkspace('');
+    if (externalOnBack) {
+      externalOnBack();
+    } else {
+      dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+    }
   };
 
   const createAndStreamCodeSession = async (text: string) => {
@@ -92,17 +90,16 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     });
     useCodeSessionStore.getState().setActiveSession(sessionId);
     setActiveSession(sessionId);
-    await useCodeSessionStore.getState().sendMessageStream(sessionId, { text });
   };
 
-  const handleSend = async (text: string): Promise<void> => {
+  const handleSend = async (text: string) => {
     if (!text.trim() || !currentWorkspaceId) return;
     setComposerInput('');
     await createAndStreamCodeSession(text);
-    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'code' } }));
+    dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleNewThread = async (): Promise<void> => {
+  const handleNewThread = async () => {
     if (!currentWorkspaceId) return;
     const sessionId = await createCodeSession({
       name: 'New Thread',
@@ -110,24 +107,28 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     });
     useCodeSessionStore.getState().setActiveSession(sessionId);
     setActiveSession(sessionId);
-    window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'code' } }));
-  };
-
-  const handleSessionSelect = (sessionId: string): void => {
-    setActiveSession(sessionId);
-    // Navigate back to code view to show the canvas with the selected session
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleRename = (): void => {
-    setShowRenameModal(true);
+  const handleSessionSelect = (sessionId: string) => {
+    setActiveSession(sessionId);
+    dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleDelete = (): void => {
-    setShowDeleteModal(true);
+  const handleArchive = () => {
+    if (!currentWorkspaceId) return;
+    toggleWorkspaceArchive(currentWorkspaceId);
+    handleBack();
   };
 
-  const handleAddInstruction = (): void => {
+  const handleDelete = () => {
+    if (!currentWorkspaceId) return;
+    deleteWorkspace(currentWorkspaceId);
+    handleBack();
+    setShowDeleteModal(false);
+  };
+
+  const handleAddInstruction = () => {
     if (instructionText.trim()) {
       setWorkspaceInstructions([...workspaceInstructions, instructionText.trim()]);
       setInstructionText('');
@@ -135,78 +136,50 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     setShowAddInstruction(false);
   };
 
-  const handleAddFile = (name: string): void => {
-    setWorkspaceFiles([...workspaceFiles, { id: Date.now().toString(), name, size: 1024 }]);
+  const handleAddFile = (name: string) => {
+    setWorkspaceFiles([...workspaceFiles, { id: Date.now().toString(), name, size: 0 }]);
     setShowAddFile(false);
   };
 
-  if (!workspace) return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      height: '100%', 
-      opacity: 0.5 
-    }}>
-      Select a workspace to view
-    </div>
-  );
+  if (!workspace) {
+    return (
+      <div className="h-full flex items-center justify-center text-[var(--ui-text-secondary)]">
+        <div className="text-center">
+          <p>Select a workspace to view</p>
+          <button
+            type="button"
+            onClick={handleBack}
+            className="mt-4 px-4 py-2 rounded-lg bg-[var(--accent-code)] text-white cursor-pointer"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  // Menu content for the 3-dot menu
   const menuContent = (
     <ProjectMenuButton>
-      <button type="button"
-        onClick={handleRename}
-        style={{
-          width: '100%',
-          padding: '10px 16px',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--ui-text-secondary)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          fontSize: 13,
-          textAlign: 'left',
-        }}
+      <button
+        type="button"
+        onClick={() => setShowRenameModal(true)}
+        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--ui-text-secondary)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--surface-hover)] transition-colors"
       >
         <PencilSimple size={16} />
         Edit details
       </button>
-      <button type="button"
-        style={{
-          width: '100%',
-          padding: '10px 16px',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--ui-text-secondary)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          fontSize: 13,
-          textAlign: 'left',
-        }}
+      <button
+        type="button"
+        onClick={handleArchive}
+        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--ui-text-secondary)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--surface-hover)] transition-colors"
       >
         <Archive size={16} />
-        Archive
+        {workspace.isArchived ? 'Unarchive' : 'Archive'}
       </button>
-      <button type="button"
-        onClick={handleDelete}
-        style={{
-          width: '100%',
-          padding: '10px 16px',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--status-error)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          fontSize: 13,
-          textAlign: 'left',
-        }}
+      <button
+        type="button"
+        onClick={() => setShowDeleteModal(true)}
+        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--status-error)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--status-error-bg)] transition-colors"
       >
         <Trash size={16} />
         Delete
@@ -214,7 +187,6 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     </ProjectMenuButton>
   );
 
-  // Real ChatComposer as input bar
   const inputBar = (
     <ChatComposer
       onSend={handleSend}
@@ -225,32 +197,35 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     />
   );
 
-  // Sidebar sections
   const sidebarSectionsData = {
     memory: null,
-    instructions: workspaceInstructions.length > 0 ? (
-      <div>
-        {workspaceInstructions.map((instruction, idx) => (
-          <InstructionItem
-            key={`codeprojectview-${idx}`}
-            text={instruction}
-            onDelete={() => setWorkspaceInstructions(workspaceInstructions.filter((_, i) => i !== idx))}
-          />
-        ))}
-      </div>
-    ) : null,
-    files: workspaceFiles.length > 0 ? (
-      <div>
-        {workspaceFiles.map(file => (
-          <FileItem
-            key={file.id}
-            name={file.name}
-            size={formatFileSize(file.size)}
-            onDelete={() => setWorkspaceFiles(workspaceFiles.filter(f => f.id !== file.id))}
-          />
-        ))}
-      </div>
-    ) : null,
+    instructions:
+      workspaceInstructions.length > 0 ? (
+        <div>
+          {workspaceInstructions.map((instruction, idx) => (
+            <InstructionItem
+              key={`code-project-${idx}`}
+              text={instruction}
+              onDelete={() =>
+                setWorkspaceInstructions(workspaceInstructions.filter((_, i) => i !== idx))
+              }
+            />
+          ))}
+        </div>
+      ) : null,
+    files:
+      workspaceFiles.length > 0 ? (
+        <div>
+          {workspaceFiles.map((file) => (
+            <FileItem
+              key={file.id}
+              name={file.name}
+              size={formatFileSize(file.size)}
+              onDelete={() => setWorkspaceFiles(workspaceFiles.filter((f) => f.id !== file.id))}
+            />
+          ))}
+        </div>
+      ) : null,
     onAddInstruction: () => setShowAddInstruction(true),
     onAddFile: () => setShowAddFile(true),
   };
@@ -261,8 +236,8 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         title={workspace.display_name}
         description="Code workspace"
         onBack={handleBack}
-        onToggleStar={() => setIsStarred(!isStarred)}
-        isStarred={isStarred}
+        onToggleStar={() => toggleWorkspaceFavorite(workspace.workspace_id)}
+        isStarred={workspace.isFavorite ?? false}
         tabs={[
           { id: 'threads', label: 'Threads', count: workspaceThreads.length },
           { id: 'agent-threads', label: 'Agent Threads', count: workspaceAgentThreads.length },
@@ -278,27 +253,32 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         sidebarSections={sidebarSectionsData}
         showEmptyState={!hasContent}
         emptyState={{
-          message: activeTab === 'threads' 
-            ? 'Threads will appear here.'
-            : activeTab === 'agent-threads'
-            ? 'Agent threads will appear here.'
-            : 'Sources will appear here.',
-          subMessage: activeTab === 'threads' 
-            ? 'Start a thread to get started with this workspace.'
-            : activeTab === 'agent-threads'
-            ? 'Start an agent thread to get autonomous assistance.'
-            : 'Add files to reference them in this workspace.',
+          message:
+            activeTab === 'threads'
+              ? 'Threads will appear here.'
+              : activeTab === 'agent-threads'
+              ? 'Agent threads will appear here.'
+              : activeTab === 'telemetry'
+              ? 'Workspace telemetry will appear here.'
+              : 'Sources will appear here.',
+          subMessage:
+            activeTab === 'threads'
+              ? 'Start a thread to get started with this workspace.'
+              : activeTab === 'agent-threads'
+              ? 'Start an agent thread to get autonomous assistance.'
+              : activeTab === 'telemetry'
+              ? 'Resource usage and runtime metrics are shown here.'
+              : 'Add files to reference them in this workspace.',
         }}
       >
-        {/* Content based on active tab */}
         {activeTab === 'telemetry' && (
-          <div style={{ padding: '20px 0' }}>
+          <div className="py-5">
             <ResourceUsageDashboard />
           </div>
         )}
         {(activeTab === 'threads' || activeTab === 'agent-threads') && (
-          <div>
-            {displayThreads.map(session => (
+          <div className="flex flex-col gap-3">
+            {displayThreads.map((session) => (
               <ProjectItemCard
                 key={session.session_id}
                 title={session.title}
@@ -310,8 +290,8 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
           </div>
         )}
         {activeTab === 'sources' && (
-          <div>
-            {workspaceFiles.map(file => (
+          <div className="flex flex-col gap-3">
+            {workspaceFiles.map((file) => (
               <ProjectItemCard
                 key={file.id}
                 title={file.name}
@@ -323,7 +303,6 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         )}
       </BaseProjectView>
 
-      {/* Rename Modal */}
       <InputModal
         isOpen={showRenameModal}
         title="Rename Workspace"
@@ -331,31 +310,22 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         defaultValue={workspace.display_name}
         confirmLabel="Rename"
         onConfirm={(name) => {
-          if (currentWorkspaceId) renameWorkspace(currentWorkspaceId, name);
+          renameWorkspace(workspace.workspace_id, name);
           setShowRenameModal(false);
         }}
         onCancel={() => setShowRenameModal(false)}
       />
 
-      {/* Delete Confirm Modal */}
       <ConfirmModal
         isOpen={showDeleteModal}
         title="Delete Workspace"
         message={`Delete "${workspace.display_name}"? All threads will be unassigned.`}
         confirmLabel="Delete"
         destructive
-        onConfirm={() => {
-          if (currentWorkspaceId) {
-            deleteWorkspace(currentWorkspaceId);
-            setActiveWorkspace('');
-            dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
-          }
-          setShowDeleteModal(false);
-        }}
+        onConfirm={handleDelete}
         onCancel={() => setShowDeleteModal(false)}
       />
 
-      {/* Add File Modal */}
       <InputModal
         isOpen={showAddFile}
         title="Add File"
@@ -365,168 +335,24 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         onCancel={() => setShowAddFile(false)}
       />
 
-      {/* Add Instruction Modal */}
-      {showAddInstruction && (
-        <AddInstructionModal
-          value={instructionText}
-          onChange={setInstructionText}
-          onClose={() => setShowAddInstruction(false)}
-          onSave={handleAddInstruction}
-        />
-      )}
-    </>
-  );
-}
-
-// Reuse modals from Cowork/Chat or define locally if needed
-// For simplicity, defining locally or assuming they will be shared later
-function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: () => void }) {
-  return (
-    <>
-      <div role="button" tabIndex={0}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'var(--shell-overlay-backdrop)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 10000,
+      <InputModal
+        isOpen={showAddInstruction}
+        title="Set Workspace Instructions"
+        placeholder="Specific rules for this workspace…"
+        confirmLabel="Save"
+        defaultValue={instructionText}
+        onConfirm={(text) => {
+          setInstructionText(text);
+          handleAddInstruction();
         }}
-        onClick={onClose}
+        onCancel={() => setShowAddInstruction(false)}
       />
-      <div
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          background: 'var(--surface-floating)',
-          borderRadius: 16,
-          border: '1px solid var(--ui-border-default)',
-          padding: '24px',
-          minWidth: 360,
-          zIndex: 10001,
-          boxShadow: 'var(--shadow-xl)',
-        }}
-      >
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ui-text-primary)' }}>
-          Add sources
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button type="button"
-            onClick={onUpload}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: '1px solid var(--ui-border-default)',
-              background: 'var(--surface-hover)',
-              borderRadius: 8,
-              color: 'var(--ui-text-secondary)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              fontSize: 13,
-              textAlign: 'left',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" x2="12" y1="3" y2="15" />
-            </svg>
-            Upload from device
-          </button>
-        </div>
-        <button type="button"
-          onClick={onClose}
-          style={{
-            marginTop: 16,
-            width: '100%',
-            padding: '10px',
-            border: '1px solid var(--ui-border-default)',
-            background: 'transparent',
-            borderRadius: 8,
-            color: 'var(--ui-text-secondary)',
-            cursor: 'pointer',
-            fontSize: 13,
-          }}
-        >
-          Cancel
-        </button>
-      </div>
     </>
   );
 }
 
-function AddInstructionModal({ 
-  value, 
-  onChange, 
-  onClose, 
-  onSave 
-}: { 
-  value: string; 
-  onChange: (v: string) => void; 
-  onClose: () => void; 
-  onSave: () => void;
-}) {
-  return (
-    <>
-      <div role="button" tabIndex={0}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'var(--shell-overlay-backdrop)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 10000,
-        }}
-        onClick={onClose}
-      />
-      <div
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          background: 'var(--surface-floating)',
-          borderRadius: 16,
-          border: '1px solid var(--ui-border-default)',
-          padding: '24px',
-          width: '90%',
-          maxWidth: 480,
-          zIndex: 10001,
-          boxShadow: 'var(--shadow-xl)',
-        }}
-      >
-        <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 700, color: 'var(--ui-text-primary)' }}>
-          Set workspace instructions
-        </h3>
-        <textarea aria-label="Text Area" value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Specific rules for this workspace…"
-          style={{
-            width: '100%',
-            minHeight: 120,
-            padding: 12,
-            background: 'var(--bg-tertiary)',
-            border: '1px solid var(--ui-border-default)',
-            borderRadius: 8,
-            color: 'var(--ui-text-primary)',
-            fontSize: 14,
-            outline: 'none',
-            marginBottom: 16,
-          }}
-        />
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button type="button" onClick={onClose} style={{ color: 'var(--ui-text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>Cancel</button>
-          <button type="button" onClick={onSave} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', border: 'none', cursor: 'pointer' }}>Save</button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// Helper functions
 function formatDate(isoString: string): string {
+  if (!isoString) return 'unknown';
   const date = new Date(isoString);
   const now = new Date();
   const diff = now.getTime() - date.getTime();

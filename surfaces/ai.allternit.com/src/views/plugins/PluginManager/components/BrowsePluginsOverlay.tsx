@@ -25,13 +25,16 @@ import type { FileSystemAPI } from '../../../../plugins/fileSystem';
 import { PublishTabView } from './PublishTabView';
 import { CreatePluginModal, ValidatePluginModal, SubmitToMarketplaceModal } from './PublishModals';
 
-function CoworkPluginsView({
+function PluginCatalogView({
   plugins,
   installedIds,
   onInstall,
   onUpdate,
   onUninstall,
   isLoading,
+  title,
+  description,
+  badgeLabel,
 }: {
   plugins: MarketplacePlugin[];
   installedIds: string[];
@@ -39,12 +42,15 @@ function CoworkPluginsView({
   onUpdate: (plugin: MarketplacePlugin) => void;
   onUninstall: (plugin: MarketplacePlugin) => void;
   isLoading: boolean;
+  title: string;
+  description: string;
+  badgeLabel: string;
 }) {
   if (isLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 60, color: THEME.textSecondary }}>
         <CircleNotch size={24} className="animate-spin" style={{ marginRight: 12 }} />
-        Loading cowork plugins...
+        Loading plugins...
       </div>
     );
   }
@@ -53,8 +59,8 @@ function CoworkPluginsView({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 60, color: THEME.textSecondary, textAlign: 'center' }}>
         <UsersThree size={48} weight="thin" color={THEME.textTertiary} style={{ marginBottom: 16 }} />
-        <p style={{ fontSize: 18, fontWeight: 600, color: THEME.textPrimary, margin: '0 0 8px' }}>No cowork plugins found</p>
-        <p style={{ fontSize: 14, margin: 0 }}>Team skills and agent collaboration tools will appear here.</p>
+        <p style={{ fontSize: 18, fontWeight: 600, color: THEME.textPrimary, margin: '0 0 8px' }}>No plugins found</p>
+        <p style={{ fontSize: 14, margin: 0 }}>Try enabling another marketplace source or adjusting the current filters.</p>
       </div>
     );
   }
@@ -66,8 +72,8 @@ function CoworkPluginsView({
           <UsersThree size={22} weight="bold" color="#fff" />
         </div>
         <div>
-          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: THEME.textPrimary }}>Cowork Plugins</h3>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: THEME.textSecondary }}>Team skills and agent collaboration tools</p>
+          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: THEME.textPrimary }}>{title}</h3>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: THEME.textSecondary }}>{description}</p>
         </div>
         <span style={{ marginLeft: 'auto', fontSize: 12, backgroundColor: 'var(--status-info-bg)', color: 'var(--status-info)', padding: '4px 10px', borderRadius: 9999, fontWeight: 600 }}>{plugins.length} available</span>
       </div>
@@ -92,7 +98,7 @@ function CoworkPluginsView({
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto' }}>
                 {plugin.author && <span style={{ fontSize: 12, color: THEME.textTertiary }}>by {plugin.author}</span>}
-                <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--status-info)', backgroundColor: 'var(--status-info-bg)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>cowork</span>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--status-info)', backgroundColor: 'var(--status-info-bg)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{badgeLabel}</span>
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
@@ -114,6 +120,7 @@ function CoworkPluginsView({
 }
 
 export function BrowsePluginsOverlay({
+  initialTab = 'marketplace',
   marketplaceInstalledIds,
   installedVersions,
   curatedSourceEnabled,
@@ -129,6 +136,7 @@ export function BrowsePluginsOverlay({
   onClose,
   fs,
 }: {
+  initialTab?: PluginMarketplaceTab;
   marketplaceInstalledIds: string[];
   installedVersions: Record<string, string>;
   curatedSourceEnabled: Record<string, boolean>;
@@ -144,7 +152,7 @@ export function BrowsePluginsOverlay({
   onClose: () => void;
   fs: FileSystemAPI;
 }) {
-  const [activeTab, setActiveTab] = useState<PluginMarketplaceTab>('marketplace');
+  const [activeTab, setActiveTab] = useState<PluginMarketplaceTab>(initialTab);
   const searchQuery = '';
   const activeCategory = 'all';
   const [marketplacePlugins, setMarketplacePlugins] = useState<MarketplacePlugin[]>([]);
@@ -208,10 +216,21 @@ export function BrowsePluginsOverlay({
   const [showCreatePluginModal, setShowCreatePluginModal] = useState(false);
   const [showValidateModal, setShowValidateModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [newSourceValue, setNewSourceValue] = useState('');
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.92)', backdropFilter: 'blur(12px)', zIndex: 200, display: 'flex', flexDirection: 'column' }} role="dialog">
-      <header style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 40px 16px', borderBottom: `1px solid ${THEME.border}`, backgroundColor: 'rgba(12, 10, 9, 0.8)' }}>
+    <div
+      style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.48)', backdropFilter: 'blur(3px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}
+      onClick={onClose}
+    >
+      <section
+        style={{ width: 'min(940px, calc(100vw - 80px))', height: 'min(700px, calc(100vh - 80px))', display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRadius: 10, border: `1px solid ${THEME.border}`, backgroundColor: 'var(--surface-floating)', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Browse marketplace"
+        onClick={(event) => event.stopPropagation()}
+      >
+      <header style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 40px 12px' }}>
         <button type="button" onClick={onClose} style={{ position: 'absolute', right: 24, top: 24, background: 'transparent', border: 'none', cursor: 'pointer' }}><X size={24} color={THEME.textTertiary} /></button>
         <h2 style={{ fontSize: 28, fontWeight: 600, color: THEME.textPrimary, margin: 0 }}>Browse plugins</h2>
       </header>
@@ -220,7 +239,7 @@ export function BrowsePluginsOverlay({
         {(['marketplace', 'personal', 'directories', 'publish', 'cowork'] as PluginMarketplaceTab[]).map((t) => (
           <button type="button" key={t} onClick={() => setActiveTab(t)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', backgroundColor: activeTab === t ? 'var(--ui-border-default)' : 'transparent', color: activeTab === t ? THEME.textPrimary : THEME.textSecondary, cursor: 'pointer', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: 6 }}>
             {t === 'cowork' && <UsersThree size={16} weight="bold" color={activeTab === t ? 'var(--status-info)' : THEME.textSecondary} />}
-            {t}
+            {t === 'directories' ? 'Sources' : t === 'personal' ? 'Personal sources' : t}
             {t === 'cowork' && (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 16, borderRadius: 9999, backgroundColor: 'var(--status-info)', color: 'var(--ui-text-inverse)', fontSize: 12, fontWeight: 600, padding: '0 6px' }}>NEW</span>
             )}
@@ -229,21 +248,79 @@ export function BrowsePluginsOverlay({
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '24px 40px' }}>
-        {activeTab === 'publish' ? (
+        {activeTab === 'marketplace' ? (
+          <PluginCatalogView
+            plugins={marketplacePlugins}
+            installedIds={marketplaceInstalledIds}
+            onInstall={onInstall}
+            onUpdate={onUpdate}
+            onUninstall={onUninstall}
+            isLoading={isMarketplaceLoading}
+            title="Marketplace plugins"
+            description="Curated plugins from enabled marketplace sources"
+            badgeLabel="plugin"
+          />
+        ) : activeTab === 'personal' ? (
+          <div style={{ maxWidth: 720 }}>
+            <h3 style={{ margin: '0 0 6px', color: THEME.textPrimary, fontSize: 18 }}>Personal sources</h3>
+            <p style={{ margin: '0 0 18px', color: THEME.textSecondary, fontSize: 13 }}>Add a GitHub repository or manifest URL to your private capability sources.</p>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              <input
+                value={newSourceValue}
+                onChange={(event) => setNewSourceValue(event.target.value)}
+                placeholder="owner/repository or https://..."
+                aria-label="Personal marketplace source"
+                style={{ flex: 1, height: 34, border: `1px solid ${THEME.border}`, borderRadius: 6, background: 'var(--surface-canvas)', color: THEME.textPrimary, padding: '0 10px', outline: 'none' }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const value = newSourceValue.trim();
+                  if (!value) return;
+                  onAddPersonalSource({ type: value.startsWith('http') ? 'url' : 'github', value, label: value });
+                  setNewSourceValue('');
+                }}
+                style={{ height: 34, padding: '0 12px', border: `1px solid ${THEME.border}`, borderRadius: 6, background: 'var(--surface-hover)', color: THEME.textPrimary }}
+              >
+                Add source
+              </button>
+            </div>
+            {personalSources.length === 0 ? (
+              <div style={{ padding: 28, border: `1px solid ${THEME.border}`, borderRadius: 8, color: THEME.textSecondary, textAlign: 'center', fontSize: 13 }}>No personal sources added.</div>
+            ) : personalSources.map((source) => (
+              <div key={source.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: `1px solid ${THEME.border}` }}>
+                <div style={{ flex: 1, minWidth: 0 }}><div style={{ color: THEME.textPrimary, fontSize: 13, fontWeight: 600 }}>{source.label || source.value}</div><div style={{ color: THEME.textTertiary, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis' }}>{source.type} · {source.value}</div></div>
+                <button type="button" onClick={() => onRemovePersonalSource(source.id)} style={{ border: `1px solid ${THEME.border}`, borderRadius: 6, background: 'transparent', color: THEME.textSecondary, padding: '6px 9px' }}>Remove</button>
+              </div>
+            ))}
+          </div>
+        ) : activeTab === 'directories' ? (
+          <div style={{ maxWidth: 720 }}>
+            <h3 style={{ margin: '0 0 6px', color: THEME.textPrimary, fontSize: 18 }}>Marketplace sources</h3>
+            <p style={{ margin: '0 0 18px', color: THEME.textSecondary, fontSize: 13 }}>Choose which curated catalogs can contribute plugins to your library.</p>
+            {CURATED_MARKETPLACE_SOURCES.map((source) => {
+              const enabled = curatedSourceEnabled[source.id] !== false;
+              return <div key={source.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: `1px solid ${THEME.border}` }}><div style={{ flex: 1 }}><div style={{ color: THEME.textPrimary, fontSize: 13, fontWeight: 600 }}>{source.label}</div><div style={{ color: THEME.textSecondary, fontSize: 11 }}>{source.description}</div></div><button type="button" aria-pressed={enabled} onClick={() => onSetCuratedSourceEnabled((current) => ({ ...current, [source.id]: !enabled }))} style={{ width: 38, height: 22, padding: 2, border: 'none', borderRadius: 11, background: enabled ? 'var(--accent-primary)' : 'var(--ui-border-default)' }}><span style={{ display: 'block', width: 18, height: 18, borderRadius: '50%', background: '#fff', transform: enabled ? 'translateX(16px)' : 'translateX(0)', transition: 'transform 150ms' }} /></button></div>;
+            })}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderTop: `1px solid ${THEME.border}` }}><div style={{ flex: 1 }}><div style={{ color: THEME.textPrimary, fontSize: 13, fontWeight: 600 }}>Allow untrusted sources</div><div style={{ color: THEME.textSecondary, fontSize: 11 }}>Require explicit confirmation before installing unknown packages.</div></div><button type="button" aria-pressed={allowUntrustedMarketplaceSources} onClick={() => onSetAllowUntrustedMarketplaceSources((value) => !value)} style={{ width: 38, height: 22, padding: 2, border: 'none', borderRadius: 11, background: allowUntrustedMarketplaceSources ? 'var(--accent-primary)' : 'var(--ui-border-default)' }}><span style={{ display: 'block', width: 18, height: 18, borderRadius: '50%', background: '#fff', transform: allowUntrustedMarketplaceSources ? 'translateX(16px)' : 'translateX(0)', transition: 'transform 150ms' }} /></button></div>
+          </div>
+        ) : activeTab === 'publish' ? (
           <PublishTabView fs={fs} onOpenCreateModal={() => setShowCreatePluginModal(true)} onOpenValidateModal={() => setShowValidateModal(true)} onOpenSubmitModal={() => setShowSubmitModal(true)} />
         ) : activeTab === 'cowork' ? (
-          <CoworkPluginsView
+          <PluginCatalogView
             plugins={marketplacePlugins.filter((p) => p.category === 'cowork')}
             installedIds={marketplaceInstalledIds}
             onInstall={onInstall}
             onUpdate={onUpdate}
             onUninstall={onUninstall}
             isLoading={isMarketplaceLoading}
+            title="Cowork plugins"
+            description="Team skills and agent collaboration tools"
+            badgeLabel="cowork"
           />
-        ) : (
-          <div style={{ color: THEME.textPrimary }}>{activeTab} content</div>
-        )}
+        ) : null}
       </div>
+      </section>
 
       {showCreatePluginModal && <CreatePluginModal fs={fs} onClose={() => setShowCreatePluginModal(false)} showInfo={showInfo} showError={showError} />}
       {showValidateModal && <ValidatePluginModal onClose={() => setShowValidateModal(false)} showInfo={showInfo} showError={showError} />}

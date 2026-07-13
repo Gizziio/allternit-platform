@@ -30,6 +30,9 @@ import {
   SlidersHorizontal,
   Plus,
   Target,
+  ArrowSquareOut,
+  Trash,
+  DotsThreeVertical,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -65,6 +68,8 @@ import { SettingsDrilldown } from './SettingsDrilldown';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 
 const MINI_APP_CATEGORY_ICONS: Record<string, Icon> = {
   runtime:       Cpu,
@@ -101,6 +106,7 @@ interface ShellRailProps {
   onOpenControlCenter?: () => void;
   onSidecarToggle?: () => void;
   sidecarOpen?: boolean;
+  onOpenCustomize?: (tab?: string) => void;
 }
 
 const BROWSER_MODE_VIEW_TYPES = new Set<string>([
@@ -125,6 +131,7 @@ export function ShellRail({
   mode = 'chat',
   isCollapsed,
   onModeChange,
+  onOpenCustomize,
 }: ShellRailProps): React.ReactNode | null {
   // Determine current surface for agent mode glow
   const currentSurface: AgentModeSurface = 
@@ -154,6 +161,12 @@ export function ShellRail({
 
   const browserAgentSessions = useBrowserAgentStore((state) => state.pageAgentSessions);
 
+  const [recentsExpanded, setRecentsExpanded] = useState(true);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'task' | 'agent' | 'browser' | 'code'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; kind: string } | null>(null);
+
   const recentItems = useMemo(() => {
     const list: {
       id: string;
@@ -162,6 +175,9 @@ export function ShellRail({
       icon: any;
       isActive: boolean;
       updatedAt: number;
+      kind: 'chat' | 'task' | 'agent' | 'browser' | 'code';
+      status: 'active' | 'completed' | 'archived';
+      sessionId?: string | null;
     }[] = [];
 
     // Chat sessions
@@ -173,19 +189,41 @@ export function ShellRail({
         mode: 'chat',
         icon: isAgent ? Robot : ChatTeardropText,
         isActive: activeChatSessionId === s.id && activeViewType === 'chat',
-        updatedAt: Number((s.metadata as any)?.updatedAt || 0),
+        updatedAt: new Date(s.updatedAt || 0).getTime(),
+        kind: isAgent ? 'agent' : 'chat',
+        status: 'active',
+        sessionId: s.id,
+      });
+    });
+
+    // Code sessions
+    (codeSessions || []).forEach(s => {
+      list.push({
+        id: s.id,
+        title: s.name || 'Untitled Code Session',
+        mode: 'code',
+        icon: Cpu,
+        isActive: activeCodeSessionId === s.id && activeViewType === 'code',
+        updatedAt: new Date(s.updatedAt || 0).getTime(),
+        kind: 'code',
+        status: 'active',
+        sessionId: s.id,
       });
     });
 
     // Cowork tasks
     (coworkStore.tasks || []).forEach(t => {
+      const status = t.status === 'completed' ? 'completed' : t.status === 'archived' ? 'archived' : 'active';
       list.push({
         id: t.id,
         title: t.title || 'Untitled Task',
         mode: 'cowork',
         icon: t.mode === 'agent' ? Robot : CheckSquare,
         isActive: coworkStore.activeTaskId === t.id && activeViewType === 'workspace',
-        updatedAt: Number(t.updatedAt || 0),
+        updatedAt: new Date(t.updatedAt || t.createdAt || 0).getTime(),
+        kind: t.mode === 'agent' ? 'agent' : 'task',
+        status,
+        sessionId: t.sessionId,
       });
     });
 
@@ -197,12 +235,36 @@ export function ShellRail({
         mode: 'browser',
         icon: Globe,
         isActive: activeViewType === 'browser',
-        updatedAt: Number(s.updatedAt || 0),
+        updatedAt: Number(s.createdAt || 0),
+        kind: 'browser',
+        status: 'active',
+        sessionId: s.id,
       });
     });
 
     return list.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 15);
-  }, [chatSessions, activeChatSessionId, coworkStore.tasks, coworkStore.activeTaskId, browserAgentSessions, activeViewType]);
+  }, [chatSessions, activeChatSessionId, codeSessions, activeCodeSessionId, coworkStore.tasks, coworkStore.activeTaskId, browserAgentSessions, activeViewType]);
+
+  const filteredRecentItems = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const monthAgo = new Date(now);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+    return recentItems.filter((item) => {
+      if (typeFilter !== 'all' && item.kind !== typeFilter) return false;
+      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (dateFilter !== 'all') {
+        const date = new Date(item.updatedAt);
+        if (dateFilter === 'today' && date < now) return false;
+        if (dateFilter === 'week' && date < weekAgo) return false;
+        if (dateFilter === 'month' && date < monthAgo) return false;
+      }
+      return true;
+    });
+  }, [recentItems, typeFilter, statusFilter, dateFilter]);
 
   const openNativeSessionSurface = useCallback((session: NativeSession): void => {
     const descriptor = getAgentSessionDescriptor(session.metadata);
@@ -244,6 +306,21 @@ export function ShellRail({
     setActiveNativeSession,
     setSelectedSurfaceAgent,
   ]);
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!deleteTarget) return;
+    const { id, kind } = deleteTarget;
+    if (kind === 'chat' || kind === 'agent') {
+      useChatSessionStore.getState().deleteSession(id);
+    } else if (kind === 'code') {
+      useCodeSessionStore.getState().deleteSession(id);
+    } else if (kind === 'task') {
+      useCoworkStore.getState().deleteTask(id);
+    } else if (kind === 'browser') {
+      useBrowserAgentStore.getState().deletePageAgentSession?.(id);
+    }
+    setDeleteTarget(null);
+  }, [deleteTarget]);
 
   const isCodeMode = mode === 'code';
 
@@ -337,22 +414,22 @@ export function ShellRail({
             />
             <RailItem
               icon={FileText}
-              label="Artifacts"
+              label="Artifacts Library"
               isActive={activeViewType === 'library'}
               onClick={() => onOpen?.('library')}
             />
             <RailItem
               icon={Clock}
-              label="Scheduled"
-              isActive={activeViewType === 'goals-list'}
+              label="Automation Tasks"
+              isActive={activeViewType === 'goals-list' || activeViewType === 'cron' || activeViewType === 'cowork-cron'}
               onClick={() => onOpen?.('goals-list')}
             />
             <div className="relative">
               <RailItem
                 icon={Target}
                 label="Dispatch"
-                isActive={activeViewType === 'routines-list'}
-                onClick={() => onOpen?.('routines-list')}
+                isActive={activeViewType === 'dispatch'}
+                onClick={() => onOpen?.('dispatch')}
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-[var(--surface-hover)] text-[var(--shell-item-muted)] text-[10px] px-1.5 py-0.5 rounded-full font-bold border border-solid border-[var(--border-subtle)]">
                 Beta
@@ -361,55 +438,163 @@ export function ShellRail({
             <RailItem
               icon={SlidersHorizontal}
               label="Customize"
-              isActive={activeViewType === 'settings'}
-              onClick={() => onOpen?.('settings')}
+              isActive={false}
+              onClick={() => onOpenCustomize?.()}
             />
           </div>
 
           {/* HOME RECENTS HEADER */}
-          <div className="px-4 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
-            <span>Recents</span>
-            <button type="button" className="bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer flex items-center">
-              <SlidersHorizontal size={14} />
+          <div className="px-3 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
+            <button
+              type="button"
+              onClick={() => setRecentsExpanded((v) => !v)}
+              className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
+            >
+              <CaretRight
+                size={12}
+                className={cn(
+                  "transition-transform duration-200",
+                  recentsExpanded && "rotate-90"
+                )}
+              />
+              <span>Recents</span>
             </button>
+            <div className="flex items-center gap-0.5">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
+                    title="Filter recents"
+                  >
+                    <SlidersHorizontal size={13} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-56 p-3 bg-[var(--surface-panel)] border-[var(--border-subtle)]"
+                  side="bottom"
+                  align="end"
+                  sideOffset={6}
+                  collisionPadding={12}
+                >
+                  <div className="flex flex-col gap-3">
+                    <FilterRow label="Type" value={typeFilter === 'all' ? 'All' : typeFilter}>
+                      <div className="flex flex-col gap-0.5">
+                        {(['all', 'chat', 'task', 'agent', 'browser', 'code'] as const).map((k) => (
+                          <button
+                            key={k}
+                            type="button"
+                            onClick={() => setTypeFilter(k)}
+                            className={cn(
+                              "text-left px-2 py-1.5 rounded-md text-[12px] capitalize transition-colors",
+                              typeFilter === k ? "bg-[var(--shell-item-hover)] text-[var(--accent-primary)]" : "text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
+                            )}
+                          >
+                            {k}
+                          </button>
+                        ))}
+                      </div>
+                    </FilterRow>
+                    <FilterRow label="Status" value={statusFilter === 'all' ? 'All' : statusFilter}>
+                      <div className="flex flex-col gap-0.5">
+                        {(['all', 'active', 'completed', 'archived'] as const).map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setStatusFilter(s)}
+                            className={cn(
+                              "text-left px-2 py-1.5 rounded-md text-[12px] capitalize transition-colors",
+                              statusFilter === s ? "bg-[var(--shell-item-hover)] text-[var(--accent-primary)]" : "text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
+                            )}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </FilterRow>
+                    <FilterRow label="Last activity" value={dateFilter === 'all' ? 'All' : dateFilter}>
+                      <div className="flex flex-col gap-0.5">
+                        {(['all', 'today', 'week', 'month'] as const).map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setDateFilter(d)}
+                            className={cn(
+                              "text-left px-2 py-1.5 rounded-md text-[12px] transition-colors",
+                              dateFilter === d ? "bg-[var(--shell-item-hover)] text-[var(--accent-primary)]" : "text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
+                            )}
+                          >
+                            {d === 'week' ? 'Last 7 days' : d === 'month' ? 'Last 30 days' : d === 'all' ? 'All' : 'Today'}
+                          </button>
+                        ))}
+                      </div>
+                    </FilterRow>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <button
+                type="button"
+                onClick={() => onOpen?.('chats-and-tasks')}
+                className="size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
+                title="Open all recents"
+              >
+                <ArrowSquareOut size={13} />
+              </button>
+            </div>
           </div>
 
           {/* HOME RECENTS LIST */}
-          <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-0.5">
-            {recentItems.map((item) => {
-              const IconComponent = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    if (item.mode === 'chat') {
-                      const session = chatSessions.find(s => s.id === item.id);
-                      if (session) openNativeSessionSurface(session);
-                    } else if (item.mode === 'cowork') {
-                      coworkStore.setActiveTask(item.id);
-                      const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                      useCoworkSessionStore.getState().setActiveSession(coworkTask?.sessionId ?? null);
-                      onModeChange?.('cowork');
-                      onOpen?.('workspace');
-                    } else if (item.mode === 'browser') {
-                      onModeChange?.('browser');
-                      onOpen?.('browser');
-                    }
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium",
-                    item.isActive
-                      ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-bold shadow-[var(--shadow-sm)]"
-                      : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-                  )}
-                >
-                  <IconComponent size={18} weight={item.isActive ? 'fill' : 'bold'} />
-                  <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{item.title}</span>
-                </button>
-              );
-            })}
-          </div>
+          {recentsExpanded && (
+            <div className="flex-1 overflow-y-auto px-2 flex flex-col gap-0.5">
+              {filteredRecentItems.length === 0 && (
+                <div className="px-3 py-4 text-[12px] text-[var(--shell-item-muted)] text-center">
+                  No recent items match your filters
+                </div>
+              )}
+              {filteredRecentItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    className={cn(
+                      "group relative w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl cursor-pointer transition-all duration-200 font-medium",
+                      item.isActive
+                        ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-bold shadow-[var(--shadow-sm)]"
+                        : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (item.mode === 'chat' || item.mode === 'code') {
+                          const session = item.mode === 'code'
+                            ? codeSessions.find(s => s.id === item.id)
+                            : chatSessions.find(s => s.id === item.id);
+                          if (session) openNativeSessionSurface(session);
+                        } else if (item.mode === 'cowork') {
+                          coworkStore.setActiveTask(item.id);
+                          const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
+                          useCoworkSessionStore.getState().setActiveSession(coworkTask?.sessionId ?? null);
+                          onModeChange?.('cowork');
+                          onOpen?.('workspace');
+                        } else if (item.mode === 'browser') {
+                          onModeChange?.('browser');
+                          onOpen?.('browser');
+                        }
+                      }}
+                      className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
+                    >
+                      <IconComponent size={18} weight={item.isActive ? 'fill' : 'bold'} />
+                      <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{item.title}</span>
+                    </button>
+                    <RecentItemMenu
+                      onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -439,26 +624,42 @@ export function ShellRail({
             {codeSessions.map((s) => {
               const isActive = activeCodeSessionId === s.id;
               return (
-                <button
+                <div
                   key={s.id}
-                  type="button"
-                  onClick={() => {
-                    openNativeSessionSurface(s);
-                  }}
                   className={cn(
-                    "w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium",
+                    "group relative w-full flex items-center gap-2.5 p-[9px_12px] rounded-xl cursor-pointer transition-all duration-200 font-medium",
                     isActive
                       ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-bold shadow-[var(--shadow-sm)]"
                       : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
                   )}
                 >
-                  <Cpu size={18} weight={isActive ? 'fill' : 'bold'} />
-                  <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => openNativeSessionSurface(s)}
+                    className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
+                  >
+                    <Cpu size={18} weight={isActive ? 'fill' : 'bold'} />
+                    <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{s.name || 'Untitled Session'}</span>
+                  </button>
+                  <RecentItemMenu
+                    onDelete={() => setDeleteTarget({ id: s.id, title: s.name || 'Untitled Session', kind: 'code' })}
+                  />
+                </div>
               );
             })}
           </div>
         </>
+      )}
+
+      {/* DELETE CONFIRM MODAL */}
+      {deleteTarget && (
+        <DeleteConfirmModal
+          title={deleteTarget.kind === 'task' ? 'Delete Task?' : 'Delete Session?'}
+          itemName={deleteTarget.title}
+          itemType={deleteTarget.kind === 'task' ? 'task' : 'session'}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
 
       {/* FOOTER */}
@@ -521,6 +722,61 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
       {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
       <span className="text-[13px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{label}</span>
     </button>
+  );
+}
+
+function FilterRow({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value: string;
+  children: React.ReactNode;
+}): React.ReactNode {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between text-[11px] text-[var(--shell-item-muted)] px-1">
+        <span>{label}</span>
+        <span className="capitalize">{value}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function RecentItemMenu({ onDelete }: { onDelete: () => void }): React.ReactNode {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="opacity-0 group-hover:opacity-100 size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all shrink-0"
+          title="More"
+        >
+          <DotsThreeVertical size={14} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-40 p-1.5 bg-[var(--surface-panel)] border-[var(--border-subtle)]"
+        side="bottom"
+        align="end"
+        sideOffset={4}
+        collisionPadding={8}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={() => { setOpen(false); onDelete(); }}
+          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-[var(--status-error)] hover:bg-[var(--shell-danger-soft-bg)] border-none bg-transparent cursor-pointer text-left transition-colors"
+        >
+          <Trash size={14} />
+          Delete
+        </button>
+      </PopoverContent>
+    </Popover>
   );
 }
 

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 // Types
 // ============================================================================
 
-type TaskType = 
+type TaskType =
   | "code-review"
   | "generate-docs"
   | "dependency-check"
@@ -15,6 +15,7 @@ type TaskType =
   | "content-curation"
   | "pr-prep"
   | "smart-backup"
+  | "agent-task"
   | "custom-task";
 
 export interface TaskTemplate {

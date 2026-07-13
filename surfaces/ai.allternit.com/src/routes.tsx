@@ -75,6 +75,7 @@ const SwarmPreviewPage = lazy(() => import('./pages/SwarmPreviewPage'))
 const TerminalTestPage = lazy(() => import('./pages/TerminalTestPage'))
 const TerminalClerkPage = lazy(() => import('./pages/TerminalClerkPage'))
 const OfficeAuthBridgePage = lazy(() => import('./pages/OfficeAuthBridgePage'))
+const DispatchJoinPage = lazy(() => import('./pages/DispatchJoinPage'))
 
 export default function AppRoutes() {
   return (
@@ -84,6 +85,7 @@ export default function AppRoutes() {
         <Route path="/shell" element={<ShellPage />} />
         <Route path="/settings-preview" element={<SettingsPreviewPage />} />
         <Route path="/shell/sessions" element={<SessionsPage />} />
+        <Route path="/shell/recents" element={<ShellPage />} />
         <Route path="/shell/new" element={<Navigate to="/shell" replace />} />
         <Route path="/sign-in" element={<SignInPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
@@ -106,6 +108,7 @@ export default function AppRoutes() {
         <Route path="/terminal-test" element={<TerminalTestPage />} />
         <Route path="/terminal/clerk" element={<TerminalClerkPage />} />
         <Route path="/office-auth-bridge" element={<OfficeAuthBridgePage />} />
+        <Route path="/dispatch/join" element={<DispatchJoinPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

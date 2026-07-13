@@ -8,7 +8,6 @@ import {
   Globe,
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
-import { cn } from '@/lib/utils';
 
 interface RailControlsProps {
   mode: AppMode;
@@ -114,13 +113,23 @@ export function RailControls({
                 onClick={() => onModeChange(btn.id)}
                 title={btn.label}
                 data-testid={`rail-mode-${btn.id}`}
-                className={cn(
-                  'flex items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag]',
-                  isActive
-                    ? 'text-[var(--ui-text-inverse)]'
-                    : 'bg-transparent text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)]'
-                )}
-                style={isActive ? { background: btn.accent } : undefined}
+                className="flex items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag]"
+                style={{
+                  background: isActive ? btn.accent : 'transparent',
+                  color: isActive ? 'var(--ui-text-inverse)' : 'var(--shell-item-muted)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'var(--shell-item-hover)';
+                    e.currentTarget.style.color = 'var(--shell-item-fg)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--shell-item-muted)';
+                  }
+                }}
               >
                 <IconComponent size={15} weight={isActive ? 'fill' : 'bold'} />
               </button>
@@ -156,8 +165,6 @@ export function RailControls({
           </TitleBarButton>
         </div>
       </div>
-
-
     </div>
   );
 }

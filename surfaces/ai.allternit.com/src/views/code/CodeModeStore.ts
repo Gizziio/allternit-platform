@@ -71,6 +71,8 @@ export interface CodeWorkspaceRecord {
   canvasFocusTileId?: string | null;
   canvasSelectedIds?: string[];
   canvasHistory?: CodeCanvasHistory;
+  isFavorite?: boolean;
+  isArchived?: boolean;
 }
 
 export interface CodeSessionRecord {
@@ -108,6 +110,8 @@ interface CodeModeState extends CodeModeStateShape {
   createSession: (title: string, workspaceId: string, mode?: CodeSessionMode) => string;
   renameWorkspace: (workspaceId: string, displayName: string) => void;
   deleteWorkspace: (workspaceId: string) => void;
+  toggleWorkspaceFavorite: (workspaceId: string) => void;
+  toggleWorkspaceArchive: (workspaceId: string) => void;
   // Canvas layout actions
   setWorkspaceLayoutMode: (workspaceId: string, mode: CodeLayoutMode) => void;
   addCanvasTile: (workspaceId: string, tile: Omit<CodeCanvasTile, 'tileId'>) => string;
@@ -346,6 +350,8 @@ export const useCodeModeStore = create<CodeModeState>()(
       },
       context_anchor: null,
       sessions: [],
+      isFavorite: false,
+      isArchived: false,
     };
 
     set((state) => ({
@@ -423,6 +429,20 @@ export const useCodeModeStore = create<CodeModeState>()(
         activeSessionId: nextActiveSessionId,
       };
     }),
+
+  toggleWorkspaceFavorite: (workspaceId) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId ? { ...w, isFavorite: !w.isFavorite } : w
+      ),
+    })),
+
+  toggleWorkspaceArchive: (workspaceId) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId ? { ...w, isArchived: !w.isArchived } : w
+      ),
+    })),
 
   // Canvas layout actions
   setWorkspaceLayoutMode: (workspaceId, mode) =>

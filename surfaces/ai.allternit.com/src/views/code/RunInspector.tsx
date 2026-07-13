@@ -12,6 +12,7 @@ import {
 } from '@phosphor-icons/react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { useRunnerStore } from '@/runner/runner.store';
+import type { RunnerTraceEntry } from '@/runner/runner.types';
 
 type InspectorTab = 'overview' | 'timeline' | 'agents' | 'evidence';
 
@@ -39,7 +40,7 @@ export function RunInspector(): React.ReactNode {
     selectRun,
     cancelExecution,
   } = useUnifiedStore();
-  const runnerTrace = useRunnerStore((state) => state.trace);
+  const runnerTrace = useRunnerStore((state: { trace: RunnerTraceEntry[] }) => state.trace) as RunnerTraceEntry[];
 
   useEffect(() => {
     void Promise.all([fetchDags(), fetchAgents(), fetchReceipts(), fetchLedgerEvents()]);

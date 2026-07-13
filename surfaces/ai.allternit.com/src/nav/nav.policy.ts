@@ -116,6 +116,8 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   // Chat History views
   history: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   archived: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Unified recents view
+  'chats-and-tasks': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Cowork Analytics & Content views
   insights: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
@@ -128,6 +130,8 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'goal-detail': { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
   'routines-list': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'loops-list': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'cron': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'dispatch': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Code views
   'new-file': { singleton: false, maxInstances: 20, allowNew: true, surface: 'view', ownsTabs: false },

@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@/design/ThemeProvider'
 import { PlatformAuthProvider } from '@/lib/platform-auth-client'
 import { FetchInterceptorProvider } from '@/lib/FetchInterceptorProvider'
@@ -32,16 +33,29 @@ import '@/styles/allternit-design/design-mode-overrides.css'
 // into native Allternit buttons.
 import '@/styles/allternit-design/component-tokens.css'
 
+// Shared React Query client for all views (library, cowork tasks, …).
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30_000,
+    },
+  },
+})
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
-    <ThemeProvider>
-      <CompanyConfigProvider>
-        <PlatformAuthProvider>
-          <FetchInterceptorProvider>
-            <AppRoutes />
-          </FetchInterceptorProvider>
-        </PlatformAuthProvider>
-      </CompanyConfigProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <CompanyConfigProvider>
+          <PlatformAuthProvider>
+            <FetchInterceptorProvider>
+              <AppRoutes />
+            </FetchInterceptorProvider>
+          </PlatformAuthProvider>
+        </CompanyConfigProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   </BrowserRouter>
 )

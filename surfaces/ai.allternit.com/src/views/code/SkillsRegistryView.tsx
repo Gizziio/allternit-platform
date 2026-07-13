@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Code, MagnifyingGlass, Play, PencilSimple, Trash } from '@phosphor-icons/react';
 import { GlassCard } from '../../design/glass/GlassCard';
+import { listPromotedDocumentWorkflows, removePromotedDocumentWorkflow } from '../documents/document-workflows';
 
 type SkillMode = 'Network' | 'DOM' | 'API';
 type ModeFilter = 'All' | 'Network' | 'DOM' | 'API';
@@ -13,6 +14,9 @@ interface Skill {
   lastUsed: string;
   confidence: number;
   status: 'active' | 'inactive';
+  origin?: 'server' | 'document-workflow';
+  instruction?: string;
+  host?: string;
 }
 
 
@@ -32,10 +36,27 @@ export function SkillsRegistryView() {
   const [skills, setSkills] = useState<Skill[]>([]);
 
   useEffect(() => {
-    fetch('/api/v1/skills/registry')
-      .then(r => r.json())
-      .then((data: Skill[]) => setSkills(data))
-      .catch(() => {});
+    const load = () => {
+      const localSkills: Skill[] = listPromotedDocumentWorkflows().map((workflow) => ({
+        id: workflow.id,
+        name: workflow.name,
+        description: `Reusable ${workflow.host} workflow with ${workflow.steps.length} verified step${workflow.steps.length === 1 ? '' : 's'}.`,
+        modes: [workflow.host === 'word' || workflow.host === 'excel' || workflow.host === 'powerpoint' ? 'API' : 'DOM'],
+        lastUsed: workflow.createdAt,
+        confidence: Math.min(95, 60 + workflow.runCount * 5),
+        status: 'active',
+        origin: 'document-workflow',
+        instruction: workflow.steps.map((step) => step.instruction).join('\n'),
+        host: workflow.host,
+      }));
+      fetch('/api/v1/skills/registry')
+        .then(r => r.json())
+        .then((data: Skill[]) => setSkills([...localSkills, ...data.map((skill) => ({ ...skill, origin: 'server' as const }))]))
+        .catch(() => setSkills(localSkills));
+    };
+    load();
+    window.addEventListener('allternit:document-workflows-changed', load);
+    return () => window.removeEventListener('allternit:document-workflows-changed', load);
   }, []);
 
   const filteredSkills = skills.filter(skill => {
@@ -190,7 +211,12 @@ export function SkillsRegistryView() {
                 {/* Action Buttons */}
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <button type="button"
-                    onClick={(e) => { e.stopPropagation(); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (skill.origin === 'document-workflow' && skill.instruction) {
+                        window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'chat', context: { initialPrompt: skill.instruction, documentHost: skill.host, workflowId: skill.id } } }));
+                      }
+                    }}
                     style={{
                       padding: '6px 10px',
                       borderRadius: 6,
@@ -208,7 +234,7 @@ export function SkillsRegistryView() {
                     <Play size={12} weight="fill" /> Run
                   </button>
                   <button type="button"
-                    onClick={(e) => { e.stopPropagation(); }}
+                    onClick={(e) => { e.stopPropagation(); if (skill.origin === 'document-workflow') window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'cowork-documents' } })); }}
                     style={{
                       padding: '6px 10px',
                       borderRadius: 6,
@@ -226,7 +252,7 @@ export function SkillsRegistryView() {
                     <PencilSimple size={12} /> Edit
                   </button>
                   <button type="button"
-                    onClick={(e) => { e.stopPropagation(); }}
+                    onClick={(e) => { e.stopPropagation(); if (skill.origin === 'document-workflow') removePromotedDocumentWorkflow(skill.id); }}
                     style={{
                       padding: '6px 10px',
                       borderRadius: 6,

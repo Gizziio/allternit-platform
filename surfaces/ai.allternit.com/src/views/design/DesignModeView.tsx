@@ -11,6 +11,7 @@ import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
 import { useDesignSessionStore, useDesignSessionActions, createDesignSession } from "./DesignSessionStore";
 import { useDesignTabStore } from "../../stores/design-tab.store";
+import { useDesignProjectStore } from "@/views/project/design/design-project.store";
 import { NewProjectScreen } from './NewProjectScreen';
 import { SkillPicker } from './SkillPicker';
 import { SkillParameterPanel } from '../../components/design/SkillParameterPanel';
@@ -416,30 +417,44 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   async function startProject(config: { name: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; skill?: SkillRecord; skillValues?: Record<string, unknown> }) {
     const isContent = config.type === 'content-engine';
     const skill = config.skill;
+    const projectId = `design-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const tabs = [
+      { id: 'files',   label: 'Files',          type: 'files'     as CanvasTab },
+      { id: 'questions', label: 'Discovery',     type: 'questions' as CanvasTab },
+      { id: 'sketch',    label: 'Canvas',         type: 'sketch'    as CanvasTab },
+      { id: 'system',    label: 'Design System',  type: 'system'    as CanvasTab },
+      { id: 'mobile',    label: 'Mobile',         type: 'mobile'    as CanvasTab },
+      { id: 'video',     label: 'Video',          type: 'video'     as CanvasTab },
+      { id: 'docs',      label: 'Documents',      type: 'docs'      as CanvasTab },
+      ...(isContent ? [
+        { id: 'graph',    label: 'Skill Graph', type: 'graph'    as CanvasTab },
+        { id: 'pipeline', label: 'Pipeline',    type: 'pipeline' as CanvasTab },
+      ] : []),
+      { id: 'brand',   label: 'Brand',       type: 'brand'   as CanvasTab },
+      { id: 'team',    label: 'Team',         type: 'team'    as CanvasTab },
+      { id: 'handoff', label: 'Handoff',      type: 'handoff' as CanvasTab },
+      { id: 'critique', label: 'Critique',    type: 'critique' as CanvasTab },
+      { id: 'market',  label: 'Marketplace',  type: 'market'  as CanvasTab },
+      { id: 'live',    label: 'Live',         type: 'live'    as CanvasTab },
+      { id: 'orbit',   label: 'Orbit',        type: 'orbit'   as CanvasTab },
+      { id: 'hyperframes', label: 'HyperFrames', type: 'hyperframes' as CanvasTab },
+    ];
+
+    // Bridge to the unified projects hub so this design project is visible everywhere.
+    useDesignProjectStore.getState().upsertProject({
+      id: projectId,
+      name: config.name,
+      type: config.type as import('@/views/project/design/design-project.store').DesignProjectType,
+      specialist: 'architect',
+      fidelity: 'high',
+      activeTabId: isContent ? 'graph' : 'questions',
+      tabs,
+    });
+
     setActiveProject({
-      id: Date.now().toString(), name: config.name, type: config.type as ProjectType,
+      id: projectId, name: config.name, type: config.type as ProjectType,
       specialist: 'architect', fidelity: 'high', activeTabId: isContent ? 'graph' : 'questions',
-      tabs: [
-        { id: 'files',   label: 'Files',          type: 'files'     as CanvasTab },
-        { id: 'questions', label: 'Discovery',     type: 'questions' as CanvasTab },
-        { id: 'sketch',    label: 'Canvas',         type: 'sketch'    as CanvasTab },
-        { id: 'system',    label: 'Design System',  type: 'system'    as CanvasTab },
-        { id: 'mobile',    label: 'Mobile',         type: 'mobile'    as CanvasTab },
-        { id: 'video',     label: 'Video',          type: 'video'     as CanvasTab },
-        { id: 'docs',      label: 'Documents',      type: 'docs'      as CanvasTab },
-        ...(isContent ? [
-          { id: 'graph',    label: 'Skill Graph', type: 'graph'    as CanvasTab },
-          { id: 'pipeline', label: 'Pipeline',    type: 'pipeline' as CanvasTab },
-        ] : []),
-        { id: 'brand',   label: 'Brand',       type: 'brand'   as CanvasTab },
-        { id: 'team',    label: 'Team',         type: 'team'    as CanvasTab },
-        { id: 'handoff', label: 'Handoff',      type: 'handoff' as CanvasTab },
-        { id: 'critique', label: 'Critique',    type: 'critique' as CanvasTab },
-        { id: 'market',  label: 'Marketplace',  type: 'market'  as CanvasTab },
-        { id: 'live',    label: 'Live',         type: 'live'    as CanvasTab },
-        { id: 'orbit',   label: 'Orbit',        type: 'orbit'   as CanvasTab },
-        { id: 'hyperframes', label: 'HyperFrames', type: 'hyperframes' as CanvasTab },
-      ]
+      tabs,
     });
     const dir = config.direction;
     const directionMd = dir

@@ -57,3 +57,8 @@ export function promoteDocumentWorkflow(id: string): DocumentWorkflowDraft | nul
   window.dispatchEvent(new CustomEvent('allternit:document-workflows-changed'));
   return draft;
 }
+
+export function removePromotedDocumentWorkflow(id: string): void {
+  localStorage.setItem(PROMOTED_KEY, JSON.stringify(listPromotedDocumentWorkflows().filter((item) => item.id !== id)));
+  window.dispatchEvent(new CustomEvent('allternit:document-workflows-changed'));
+}

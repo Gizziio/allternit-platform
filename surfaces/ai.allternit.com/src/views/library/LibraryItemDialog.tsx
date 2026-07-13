@@ -130,11 +130,11 @@ async function downloadItem(item: LibraryItem) {
 
 function FallbackPreview({ item }: { item: LibraryItem }) {
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center gap-4 text-white/60 p-8">
-      <FileIcon size={48} className="text-white/25" />
+    <div className="h-full w-full flex flex-col items-center justify-center gap-4 text-[var(--text-secondary)] p-8">
+      <FileIcon size={48} className="text-[var(--text-tertiary)]" />
       <div className="text-sm text-center">
-        <div className="text-white/80 font-medium">{item.title}</div>
-        <div className="text-xs text-white/40 mt-1">No inline preview available for this item.</div>
+        <div className="text-[var(--text-primary)] font-medium">{item.title}</div>
+        <div className="text-xs text-[var(--text-tertiary)] mt-1">No inline preview available for this item.</div>
       </div>
       {(item.url || item.content) && (
         <Button variant="outline" size="sm" onClick={() => downloadItem(item)}>
@@ -276,10 +276,10 @@ export function LibraryItemDialog({
         className="max-w-6xl w-[95vw] h-[85vh] p-0 gap-0 overflow-hidden flex flex-col"
       >
         {/* Header */}
-        <DialogHeader className="flex flex-row items-center justify-between gap-3 px-4 py-3 border-b border-white/[0.08] text-left space-y-0">
+        <DialogHeader className="flex flex-row items-center justify-between gap-3 px-4 py-3 border-b border-[var(--border-default)] text-left space-y-0">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-white/50">{KIND_ICON[item.kind] ?? <FileIcon size={14} />}</span>
-            <DialogTitle className="text-sm font-medium text-white/90 truncate">
+            <span className="text-[var(--text-secondary)]">{KIND_ICON[item.kind] ?? <FileIcon size={14} />}</span>
+            <DialogTitle className="text-sm font-medium text-[var(--text-primary)] truncate">
               {item.title}
             </DialogTitle>
             <Badge variant="secondary">{item.kind}</Badge>
@@ -291,7 +291,7 @@ export function LibraryItemDialog({
                 size="icon"
                 onClick={() => setZoomed((z) => !z)}
                 title={zoomed ? 'Fit to view' : 'Zoom to natural size'}
-                className={cn(zoomed && 'bg-white/10 text-white')}
+                className={cn(zoomed && 'bg-[var(--border-subtle)] text-[var(--text-primary)]')}
               >
                 <MagnifyingGlassPlus size={16} />
               </Button>
@@ -305,7 +305,7 @@ export function LibraryItemDialog({
             >
               <CaretLeft size={16} />
             </Button>
-            <span className="text-xs text-white/40 min-w-[48px] text-center">
+            <span className="text-xs text-[var(--text-tertiary)] min-w-[48px] text-center">
               {index + 1} / {items.length}
             </span>
             <Button
@@ -329,7 +329,7 @@ export function LibraryItemDialog({
           </div>
 
           {/* Metadata panel */}
-          <aside className="w-full md:w-80 flex-shrink-0 border-t md:border-t-0 md:border-l border-white/[0.08] p-4 flex flex-col gap-4 overflow-auto">
+          <aside className="w-full md:w-80 flex-shrink-0 border-t md:border-t-0 md:border-l border-[var(--border-default)] p-4 flex flex-col gap-4 overflow-auto">
             <MetaRow label="Title" value={item.title} />
             <MetaRow label="Kind" value={item.kind} />
             <MetaRow label="Origin" value={item.origin} />
@@ -346,7 +346,7 @@ export function LibraryItemDialog({
               </>
             )}
 
-            <div className="mt-auto flex flex-col gap-2 pt-2 border-t border-white/[0.08]">
+            <div className="mt-auto flex flex-col gap-2 pt-2 border-t border-[var(--border-default)]">
               {item.origin !== 'uploaded' && openView && (
                 <Button
                   variant="default"
@@ -399,12 +399,12 @@ function MetaRow({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[11px] uppercase tracking-wide text-white/35">{label}</span>
+      <span className="text-[11px] uppercase tracking-wide text-[var(--text-tertiary)]">{label}</span>
       <div className="flex items-center gap-2 min-w-0">
         <span
           className={cn(
-            'text-sm text-white/80 break-all',
-            mono && 'font-mono text-xs text-white/70'
+            'text-sm text-[var(--text-primary)] break-all',
+            mono && 'font-mono text-xs text-[var(--text-secondary)]'
           )}
           title={value}
         >
@@ -414,7 +414,7 @@ function MetaRow({
           <button
             type="button"
             onClick={() => copyToClipboard(value)}
-            className="text-white/40 hover:text-white/80 flex-shrink-0"
+            className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] flex-shrink-0"
             title="Copy"
           >
             <Copy size={12} />

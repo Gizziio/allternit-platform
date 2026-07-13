@@ -48,6 +48,8 @@ export interface TaskProject {
   createdAt: string;
   updatedAt: string;
   instructions?: string;
+  isFavorite?: boolean;
+  isArchived?: boolean;
 }
 
 interface PendingMutation {
@@ -91,6 +93,8 @@ interface TaskState {
   setActiveTask: (id: string | null) => void;
   setActiveProject: (id: string | null) => void;
   bindSessionToTask: (taskId: string, sessionId: string) => void;
+  toggleProjectFavorite: (id: string) => void;
+  toggleProjectArchive: (id: string) => void;
 
   // Team assignment
   assignTask: (taskId: string, assigneeType: 'human' | 'agent', assigneeId: string, assigneeName: string) => void;
@@ -286,6 +290,8 @@ export const useTaskStore = create<TaskState>()(
           title,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          isFavorite: false,
+          isArchived: false,
         };
         set((state) => ({
           projects: [...state.projects, project],
@@ -339,6 +345,20 @@ export const useTaskStore = create<TaskState>()(
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t.id === taskId ? { ...t, sessionId, updatedAt: new Date().toISOString() } : t
+          ),
+        })),
+
+      toggleProjectFavorite: (id) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id ? { ...p, isFavorite: !p.isFavorite, updatedAt: new Date().toISOString() } : p
+          ),
+        })),
+
+      toggleProjectArchive: (id) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id ? { ...p, isArchived: !p.isArchived, updatedAt: new Date().toISOString() } : p
           ),
         })),
 

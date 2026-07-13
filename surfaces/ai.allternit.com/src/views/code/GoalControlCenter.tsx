@@ -10,7 +10,7 @@ import {
   Target,
   WarningCircle,
 } from '@phosphor-icons/react';
-import type { Goal } from '@/lib/agents/automation.types';
+import type { Goal, GoalStatus } from '@/lib/agents/automation.types';
 import { createCodeGoal, listCodeGoals, transitionCodeGoal } from './code-goals.service';
 
 type GoalRunState = GoalStatus | 'planning' | 'running' | 'validating' | 'blocked' | 'failed';

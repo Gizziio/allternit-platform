@@ -227,12 +227,14 @@ export function BaseProjectView({
             title="Instructions"
             isWide={isWide}
             rightElement={
-              <button type="button"
-                onClick={sidebarSections.onAddInstruction}
-                className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
-              >
-                <Plus size={16} />
-              </button>
+              sidebarSections.onAddInstruction ? (
+                <button type="button"
+                  onClick={sidebarSections.onAddInstruction}
+                  className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              ) : null
             }
           >
             {sidebarSections.instructions || (
@@ -246,12 +248,14 @@ export function BaseProjectView({
             title="Files"
             isWide={isWide}
             rightElement={
-              <button type="button"
-                onClick={sidebarSections.onAddFile}
-                className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
-              >
-                <Plus size={16} />
-              </button>
+              sidebarSections.onAddFile ? (
+                <button type="button"
+                  onClick={sidebarSections.onAddFile}
+                  className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              ) : null
             }
           >
             {sidebarSections.files || (

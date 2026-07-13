@@ -56,17 +56,17 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
     ]
   },
 
-  // Cron - Right underneath Agent Hub
+  // Automation Tasks - Right underneath Agent Hub
   {
     id: 'cron',
-    title: 'Cron',
+    title: 'Automation Tasks',
     icon: CalendarCheck,
     collapsible: false,
     defaultExpanded: true,
     items: [
       { 
         id: 'cw-cron', 
-        label: 'Cron', 
+        label: 'Automation Tasks', 
         icon: CalendarCheck, 
         payload: 'cowork-cron',
       },

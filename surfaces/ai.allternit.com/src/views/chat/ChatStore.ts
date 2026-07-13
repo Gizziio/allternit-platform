@@ -54,6 +54,8 @@ export interface ChatProject {
   files: ProjectFile[];
   connectors?: string[];
   createdAt: number;
+  isFavorite?: boolean;
+  isArchived?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,6 +111,10 @@ interface ChatState {
   removeFileFromProject: (projectId: string, fileId: string) => void;
   addConnectorToProject: (projectId: string, connectorId: string) => void;
   removeConnectorFromProject: (projectId: string, connectorId: string) => void;
+
+  // Project metadata
+  toggleProjectFavorite: (projectId: string) => void;
+  toggleProjectArchive: (projectId: string) => void;
 
   // Sync from ChatSessionStore
   _syncFromSessionStore: (sessions: ChatSession[], activeSessionId: string | null) => void;
@@ -178,7 +184,17 @@ export const useChatStore = create<ChatState>()(
         const localKey = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         set((state) => ({
           projects: [
-            { id, localKey, title, threadIds: [], files: [], connectors: [], createdAt: Date.now() },
+            {
+              id,
+              localKey,
+              title,
+              threadIds: [],
+              files: [],
+              connectors: [],
+              createdAt: Date.now(),
+              isFavorite: false,
+              isArchived: false,
+            },
             ...state.projects,
           ],
           activeProjectId: id,
@@ -278,6 +294,20 @@ export const useChatStore = create<ChatState>()(
             p.id === projectId
               ? { ...p, connectors: (p.connectors ?? []).filter((id) => id !== connectorId) }
               : p,
+          ),
+        })),
+
+      toggleProjectFavorite: (projectId) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId ? { ...p, isFavorite: !p.isFavorite } : p
+          ),
+        })),
+
+      toggleProjectArchive: (projectId) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId ? { ...p, isArchived: !p.isArchived } : p
           ),
         })),
 

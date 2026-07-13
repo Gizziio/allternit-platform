@@ -17,7 +17,6 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
-import { Pill } from '@/components/ui/Pill';
 import { useAgentSurfaceModeStore, type AgentModeId } from '@/stores/agent-surface-mode.store';
 
 interface ModeTab {
@@ -55,9 +54,11 @@ export function CoworkModeTabs({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 flex-wrap',
+        'flex items-center gap-1 flex-wrap',
         variant === 'bottom-dock' &&
           'p-1.5 rounded-xl bg-[var(--surface-panel)] border border-[var(--ui-border-muted)]',
+        variant === 'top-pills' &&
+          'p-1.5 rounded-2xl bg-[var(--surface-panel)]/60 border border-[var(--ui-border-muted)] backdrop-blur-sm',
         className
       )}
     >
@@ -66,24 +67,25 @@ export function CoworkModeTabs({
         const isActive = currentMode === tab.id;
 
         return (
-          <motion.div
+          <motion.button
             key={tab.id}
-            whileHover={variant === 'top-pills' ? { scale: 1.02 } : undefined}
+            type="button"
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            onClick={() => handleSelect(tab.id)}
+            title={tab.description}
+            className={cn(
+              'relative inline-flex items-center gap-1.5 rounded-full text-[12px] font-semibold transition-all duration-200 whitespace-nowrap',
+              variant === 'bottom-dock' && 'h-7 px-2.5',
+              variant === 'top-pills' && 'h-8 px-3',
+              isActive
+                ? 'bg-[var(--accent-cowork)] text-white shadow-sm'
+                : 'text-[var(--chat-composer-muted)] hover:text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]'
+            )}
           >
-            <Pill
-              active={isActive}
-              size={variant === 'bottom-dock' ? 'sm' : 'md'}
-              icon={<Icon size={variant === 'bottom-dock' ? 14 : 16} weight={isActive ? 'fill' : 'regular'} />}
-              onClick={() => handleSelect(tab.id)}
-              className={cn(
-                variant === 'top-pills' && 'rounded-full',
-                variant === 'bottom-dock' && 'rounded-lg'
-              )}
-            >
-              {tab.label}
-            </Pill>
-          </motion.div>
+            <Icon size={variant === 'bottom-dock' ? 13 : 14} weight={isActive ? 'fill' : 'bold'} />
+            <span>{tab.label}</span>
+          </motion.button>
         );
       })}
     </div>

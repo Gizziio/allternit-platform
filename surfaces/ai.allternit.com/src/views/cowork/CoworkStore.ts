@@ -62,6 +62,8 @@ interface CoworkState {
   bindSessionToTask: (taskId: string, sessionId: string) => void;
   setActiveTask: (id: string | null) => void;
   setActiveProject: (id: string | null) => void;
+  toggleProjectFavorite: (id: string) => void;
+  toggleProjectArchive: (id: string) => void;
   // === Team Assignment (delegates to useTaskStore) ===
   assignTask: (taskId: string, assigneeType: 'human' | 'agent', assigneeId: string, assigneeName: string) => void;
   unassignTask: (taskId: string) => void;
@@ -174,6 +176,8 @@ export const useCoworkStore = create<CoworkState>()((set, get) => {
     bindSessionToTask: (taskId, sessionId) => useTaskStore.getState().bindSessionToTask(taskId, sessionId),
     setActiveTask: (id) => useTaskStore.getState().setActiveTask(id),
     setActiveProject: (id) => useTaskStore.getState().setActiveProject(id),
+    toggleProjectFavorite: (id) => useTaskStore.getState().toggleProjectFavorite(id),
+    toggleProjectArchive: (id) => useTaskStore.getState().toggleProjectArchive(id),
     // === Team Assignment (delegates to useTaskStore) ===
     assignTask: (taskId, assigneeType, assigneeId, assigneeName) =>
       useTaskStore.getState().assignTask(taskId, assigneeType, assigneeId, assigneeName),

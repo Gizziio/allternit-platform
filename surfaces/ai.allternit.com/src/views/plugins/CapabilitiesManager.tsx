@@ -1,14 +1,14 @@
 /**
  * PluginManager
  * 
- * 3-pane layout:
- * - Left Pane: 7 tabs (Skills, Commands, CLI Tools, Plugins, MCPs, Webhooks, Connectors)
- * - Middle Pane: Search + item list with nested file tree
- * - Right Pane: Detail view with toggle, metadata, file preview
+ * 2-pane capability library:
+ * - Left Pane: capability categories and marketplace actions
+ * - Main Pane: list or selected-item detail
+ * - Child Overlay: file preview with rendered/code modes
  * 
  * Features:
- * - Full-screen overlay with backdrop blur
- * - Toggle in 3rd pane
+ * - Centered application overlay with backdrop blur
+ * - Item detail replaces the list pane
  * - Human/Code view toggle
  * - Browse plugins overlay for Plugins tab
  * - Real file loading and persistence
@@ -44,12 +44,13 @@ import {
   Cpu,
   Shield,
   GearSix,
-  Info,
   ArrowSquareOut,
   ArrowsClockwise,
   CircleNotch,
   PencilSimple,
   Package,
+  Globe,
+  UploadSimple,
 } from '@phosphor-icons/react';
 import { useFileSystem, type FileSystemAPI } from '../../plugins/fileSystem';
 import type { FileNode, MarketplacePlugin } from '../../plugins/capability.types';
@@ -94,6 +95,7 @@ import {
   PersonalMarketplaceType,
   ConnectorConnectionState,
   ConnectorGroupId,
+  PluginMarketplaceTab,
   PluginManagerPersistedState,
   CreateMenuAction
 } from './PluginManager/types';
@@ -151,7 +153,6 @@ const PLUGIN_MANAGER_STATE_FILE = 'ui-state.json';
 const PLUGIN_MANAGER_STATE_VERSION = 1;
 const SKILL_IMPORT_DIR = '.allternit/skills';
 
-const LEFT_PANE_TOP_OFFSET = 98;
 
 // ============================================================================
 // Utility Functions
@@ -541,6 +542,25 @@ export function PluginManager({ isOpen, onClose, onOpenSettings, initialTab }: P
 }
 
 function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: PluginManagerProps) {
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [animateIn, setAnimateIn] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const frame = requestAnimationFrame(() => {
+        setAnimateIn(true);
+      });
+      return () => cancelAnimationFrame(frame);
+    } else {
+      setAnimateIn(false);
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   // IntegrationsPanel fully unmounts this component when closed (isOpen gates
   // the mount, not just visibility), so seeding useState from a prop here is
   // sufficient — no sync effect needed for re-opens with a different tab.
@@ -552,6 +572,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 200);
   const [viewMode, setViewMode] = useState<'human' | 'code'>('human');
   const [showBrowseOverlay, setShowBrowseOverlay] = useState(false);
+  const [browseInitialTab, setBrowseInitialTab] = useState<PluginMarketplaceTab>('marketplace');
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [enabledOverrides, setEnabledOverrides] = useState<Record<string, boolean>>(() => loadEnabledOverrides());
@@ -969,7 +990,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
   const filteredItemIds = useMemo(() => filteredData.map((item) => item.id), [filteredData]);
   const filteredItemIdsKey = useMemo(() => filteredItemIds.join('|'), [filteredItemIds]);
   const filteredItemIdSet = useMemo(() => new Set(filteredItemIds), [filteredItemIdsKey]);
-  const selectedItem = filteredData.find((item) => item.id === selectedItemId) || filteredData[0] || null;
+  const selectedItem = filteredData.find((item) => item.id === selectedItemId) || null;
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -1013,6 +1034,11 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
       }
     },
     onEscape: () => {
+      if (selectedFileId) {
+        setSelectedFileId(null);
+        setActiveSelection('item');
+        return;
+      }
       if (showCreateMenu) setShowCreateMenu(false);
       if (showBrowseOverlay) setShowBrowseOverlay(false);
       if (createFormTab) setCreateFormTab(null);
@@ -1043,7 +1069,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
     },
   });
 
-  // Keep current selection if still valid
+  // Keep current selection if still valid; lists open without forcing a detail view.
   useEffect(() => {
     if (filteredItemIds.length === 0) {
       if (selectedItemId !== null) setSelectedItemId(null);
@@ -1056,7 +1082,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
       return;
     }
 
-    setSelectedItemId(filteredItemIds[0]);
+    setSelectedItemId(null);
     setSelectedFileId(null);
     setActiveSelection('item');
   }, [activeSelection, activeTab, filteredItemIdsKey, selectedItemId, selectedFileId, filteredItemIdSet]);
@@ -1793,7 +1819,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
   // Context menu
   const { state: contextMenuState, menuRef: contextMenuRef, showContextMenu, hideContextMenu } = useContextMenu({});
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   const selectedFileRaw = selectedItem?.files && selectedFileId
     ? findFileContent(selectedItem.files, selectedFileId)
@@ -1815,64 +1841,119 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
   const selectedConnectorBusy = selectedItem && activeTab === 'connectors'
     ? connectorActionInFlight === selectedItem.id
     : false;
+  const handleSelectFile = (id: string) => {
+    setSelectedFileId(id);
+    setActiveSelection('file');
+    void (async () => {
+      const fileNode = selectedItem?.files ? findFileContent(selectedItem.files, id) : null;
+      if (!fileNode || fileNode.type !== 'file') return;
+      if (fileNode.content && fileNode.content.length > 0) return;
+      try {
+        const content = await fs.readFile(fileNode.id);
+        setFileContentOverrides((prev) => ({
+          ...prev,
+          [id]: {
+            content,
+            language: fileNode.language || detectLanguageFromName(fileNode.name),
+          },
+        }));
+      } catch {
+        // The inspector keeps its empty state when a file cannot be read.
+      }
+    })();
+  };
 
   return (
     <div
-      className="fixed inset-0 bg-[var(--view-settings-bg,var(--surface-canvas))] backdrop-blur-[10px] z-[100] block overflow-hidden"
+      className={`fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black/20 p-6 transition-all duration-200 ease-out ${
+        animateIn ? 'opacity-100' : 'opacity-0'
+      }`}
+      style={{
+        '--view-settings-bg': '#ffffff',
+        '--surface-canvas': '#ffffff',
+        '--surface-panel': '#ffffff',
+        '--surface-panel-muted': '#f0f0ec',
+        '--surface-floating': '#ffffff',
+        '--surface-hover': '#f6f6f3',
+        '--ui-text-primary': '#191918',
+        '--ui-text-secondary': '#62625d',
+        '--ui-text-tertiary': '#8d8d86',
+        '--ui-text-muted': '#8d8d86',
+        '--ui-text-inverse': '#ffffff',
+        '--ui-border-muted': '#deded8',
+        '--ui-border-default': '#d4d4cd',
+        '--ui-border-strong': '#c7c7bf',
+        '--text-primary': '#191918',
+        '--text-secondary': '#62625d',
+        '--text-tertiary': '#8d8d86',
+        '--bg-primary': '#ffffff',
+        '--bg-secondary': '#f6f6f3',
+        '--border-subtle': '#deded8',
+        '--accent-primary': '#2d2d2a',
+      } as React.CSSProperties}
+      onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Capabilities Manager"
+      aria-label="Capability Library"
     >
-      <div className="flex h-full pt-7 box-border">
-        {/* Left pane starts lower; middle/right stay top-aligned full height */}
+      <div 
+        className={`flex h-[min(800px,calc(100vh-48px))] min-h-[620px] w-[min(1080px,calc(100vw-48px))] flex-col overflow-hidden rounded-[10px] border border-solid border-[var(--ui-border-muted)] shadow-2xl transition-all duration-200 ease-out ${
+          animateIn ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.97]'
+        }`}
+        style={{ backgroundColor: 'var(--view-settings-bg, var(--surface-canvas))' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex h-16 shrink-0 items-center justify-between px-5">
+          <h1 className="m-0 text-[22px] font-semibold text-[var(--ui-text-primary)]">Capability Library</h1>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-8 items-center justify-center rounded-md border-none bg-transparent text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]"
+            aria-label="Close Capability Library"
+          >
+            <X size={18} />
+          </button>
+        </header>
+
+        <div className="flex min-h-0 flex-1">
         <LeftPane
           activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onClose={onClose}
-          onBrowsePlugins={() => setShowBrowseOverlay(true)}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            setSelectedItemId(null);
+            setSelectedFileId(null);
+            setActiveSelection('item');
+          }}
+          onBrowsePlugins={() => {
+            setBrowseInitialTab('marketplace');
+            setShowBrowseOverlay(true);
+          }}
+          onOpenMarketplaceView={(tab) => {
+            setActiveTab('plugins');
+            setBrowseInitialTab(tab);
+            setShowBrowseOverlay(true);
+          }}
           onCheckForUpdates={handleCheckForUpdates}
           updateCount={availableUpdates.length}
         />
 
-        <div className="flex-1 flex min-w-0 overflow-hidden">
-          {/* Middle Pane - List with Search */}
+        <div className="flex min-w-0 flex-1 overflow-hidden">
+          {!selectedItem ? (
           <MiddlePane
             activeTab={activeTab}
             items={filteredData}
-            selectedItemId={selectedItemId}
-            selectedFileId={selectedFileId}
             onSelectItem={(id) => {
               setSelectedItemId(id);
               setSelectedFileId(null);
               setActiveSelection('item');
             }}
-            onSelectFile={(id) => {
-              setSelectedFileId(id);
-              setActiveSelection('file');
-              void (async () => {
-                const fileNode = selectedItem?.files ? findFileContent(selectedItem.files, id) : null;
-                if (!fileNode || fileNode.type !== 'file') return;
-                if (fileNode.content && fileNode.content.length > 0) return;
-                try {
-                  const content = await fs.readFile(fileNode.id);
-                  setFileContentOverrides((prev) => ({
-                    ...prev,
-                    [id]: {
-                      content,
-                      language: fileNode.language || detectLanguageFromName(fileNode.name),
-                    },
-                  }));
-                } catch {
-                  // Keep empty-state rendering when file cannot be read.
-                }
-              })();
-            }}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchInputRef={searchInputRef}
-            expandedNodes={expandedNodes}
-            onToggleNode={toggleNode}
-            onBrowsePlugins={() => setShowBrowseOverlay(true)}
+            onBrowsePlugins={() => {
+              setBrowseInitialTab('marketplace');
+              setShowBrowseOverlay(true);
+            }}
             showCreateMenu={showCreateMenu}
             onToggleCreateMenu={() => setShowCreateMenu(!showCreateMenu)}
             onCloseCreateMenu={() => setShowCreateMenu(false)}
@@ -1883,22 +1964,17 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
             onRefresh={refresh}
             onOpenSettings={onOpenSettings}
             getConnectorGroupId={getConnectorGroupId}
-            activeSelection={activeSelection}
             updateCount={availableUpdates.length}
             onShowUpdateModal={() => setShowUpdateModal(true)}
           />
-
-          {/* Right Pane - Detail */}
-          {selectedItem ? (
+          ) : (
             <RightPane
               item={selectedItem}
-              selectedFile={selectedFile}
+              selectedFile={null}
               itemType={activeTab}
               viewMode={viewMode}
-              onViewModeChange={setViewMode}
               onToggle={() => handleToggle(selectedItem.id)}
               onEdit={handleEditSelected}
-              onCopy={handleCopySelected}
               onOpenInVsCode={handleOpenInVsCode}
               onShowInFolder={handleShowInFolder}
               onUninstall={handleUninstallSelected}
@@ -1914,16 +1990,71 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
               connectorConnection={selectedConnectorConnection}
               connectorBusy={selectedConnectorBusy}
               onConnectorToggle={() => handleConnectorConnectFlow(selectedItem)}
+              expandedNodes={expandedNodes}
+              onToggleNode={toggleNode}
+              onSelectFile={handleSelectFile}
+              onFileContextMenu={showContextMenu}
+              onBack={() => {
+                setSelectedItemId(null);
+                setSelectedFileId(null);
+                setActiveSelection('item');
+              }}
             />
-          ) : (
-            <RightPaneEmptyState />
           )}
         </div>
+        </div>
       </div>
+
+      {selectedItem && selectedFile && (
+        <div
+          className="fixed inset-0 z-[220] flex items-center justify-center bg-black/45 p-10 backdrop-blur-[2px]"
+          onClick={() => {
+            setSelectedFileId(null);
+            setActiveSelection('item');
+          }}
+        >
+          <section
+            className="flex h-[min(680px,calc(100vh-80px))] w-[min(900px,calc(100vw-80px))] flex-col overflow-hidden rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-floating)] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${selectedFile.name} inspector`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="flex h-14 shrink-0 items-center justify-between border-0 border-b border-solid border-[var(--ui-border-muted)] px-5">
+              <div>
+                <div className="text-[14px] font-semibold text-[var(--ui-text-primary)]">{selectedFile.name}</div>
+                <div className="text-[11px] text-[var(--ui-text-tertiary)]">{selectedFile.path}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFileId(null);
+                  setActiveSelection('item');
+                }}
+                className="flex size-8 items-center justify-center rounded-md border-none bg-transparent text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]"
+                aria-label="Close file inspector"
+              >
+                <X size={17} />
+              </button>
+            </header>
+            <div className="flex min-h-0 flex-1 flex-col p-5">
+              <div className="mb-3 flex items-center justify-end gap-1">
+                <button type="button" onClick={() => setViewMode('human')} className={`flex items-center gap-1.5 rounded-md border-none px-3 py-1.5 text-[12px] ${viewMode === 'human' ? 'bg-[var(--ui-border-muted)] text-[var(--ui-text-primary)]' : 'bg-transparent text-[var(--ui-text-tertiary)]'}`}><Eye size={14} /> Human</button>
+                <button type="button" onClick={() => setViewMode('code')} className={`flex items-center gap-1.5 rounded-md border-none px-3 py-1.5 text-[12px] ${viewMode === 'code' ? 'bg-[var(--ui-border-muted)] text-[var(--ui-text-primary)]' : 'bg-transparent text-[var(--ui-text-tertiary)]'}`}><Code size={14} /> Code</button>
+                <button type="button" onClick={handleCopySelected} className="flex size-8 items-center justify-center border-none bg-transparent text-[var(--ui-text-tertiary)]" aria-label="Copy file"><Copy size={14} /></button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-canvas)]">
+                <FileContent file={selectedFile} viewMode={viewMode} />
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Browse Overlays */}
       {showBrowseOverlay && activeTab === 'plugins' && (
         <BrowsePluginsOverlay
+          initialTab={browseInitialTab}
           marketplaceInstalledIds={marketplaceInstalledIds}
           installedVersions={installedPluginVersions}
           curatedSourceEnabled={curatedSourceEnabled}
@@ -2296,42 +2427,25 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
 function LeftPane({
   activeTab,
   onTabChange,
-  onClose,
   onBrowsePlugins,
+  onOpenMarketplaceView,
   onCheckForUpdates,
   updateCount,
 }: {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
-  onClose: () => void;
   onBrowsePlugins: () => void;
+  onOpenMarketplaceView: (tab: PluginMarketplaceTab) => void;
   onCheckForUpdates?: () => void;
   updateCount?: number;
 }) {
   return (
     <nav
-      className="w-56 ml-4 bg-transparent backdrop-blur-none border-none rounded-none flex flex-col p-[6px_10px_14px] shadow-none overflow-hidden"
-      style={{
-        marginTop: LEFT_PANE_TOP_OFFSET,
-        height: `calc(100% - ${LEFT_PANE_TOP_OFFSET}px)`,
-      }}
+      className="flex h-full w-[220px] shrink-0 flex-col overflow-hidden border-0 border-r border-solid border-[var(--ui-border-muted)] bg-transparent p-[6px_12px_14px] shadow-none"
       aria-label="Capability categories"
     >
-      <div className="flex items-center gap-2.5 mb-2">
-        <button type="button"
-          onClick={onClose}
-          className="size-7 flex items-center justify-center rounded-md border-none bg-transparent text-[var(--ui-text-secondary)] cursor-pointer shrink-0"
-          aria-label="Back"
-        >
-          <CaretRight size={16} className="rotate-180" />
-        </button>
-        <span className="text-[15px] font-semibold text-[var(--ui-text-primary)]">
-          Capabilities
-        </span>
-      </div>
-
       <div className="text-[12px] font-semibold text-[var(--ui-text-tertiary)] uppercase tracking-[0.05em] mb-1 px-2">
-        Categories
+        Capabilities
       </div>
 
       <div className="flex-1 overflow-y-auto pr-0.5">
@@ -2358,6 +2472,27 @@ function LeftPane({
             </button>
           );
         })}
+
+        <div className="mx-2 my-2 border-0 border-t border-solid border-[var(--ui-border-muted)]" />
+        <div className="mb-1 px-2 text-[12px] font-semibold uppercase tracking-[0.05em] text-[var(--ui-text-tertiary)]">
+          Marketplace
+        </div>
+        <button
+          type="button"
+          onClick={() => onOpenMarketplaceView('directories')}
+          className="mb-px flex w-full items-center gap-2.5 rounded-[7px] border-none bg-transparent p-[6px_12px] text-left text-[13px] text-[var(--ui-text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+        >
+          <Globe size={16} />
+          Sources
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenMarketplaceView('publish')}
+          className="mb-px flex w-full items-center gap-2.5 rounded-[7px] border-none bg-transparent p-[6px_12px] text-left text-[13px] text-[var(--ui-text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+        >
+          <UploadSimple size={16} />
+          Publish
+        </button>
       </div>
 
       <div className="border-t border-solid border-[var(--ui-border-muted)] pt-2.5 mt-2.5">
@@ -2401,15 +2536,10 @@ function LeftPane({
 function MiddlePane({
   activeTab,
   items,
-  selectedItemId,
-  selectedFileId,
   onSelectItem,
-  onSelectFile,
   searchQuery,
   onSearchChange,
   searchInputRef,
-  expandedNodes,
-  onToggleNode,
   onBrowsePlugins,
   showCreateMenu,
   onToggleCreateMenu,
@@ -2421,21 +2551,15 @@ function MiddlePane({
   onRefresh,
   onOpenSettings,
   getConnectorGroupId,
-  activeSelection,
   updateCount,
   onShowUpdateModal,
 }: {
   activeTab: TabId;
   items: Capability[];
-  selectedItemId: string | null;
-  selectedFileId: string | null;
   onSelectItem: (id: string) => void;
-  onSelectFile: (id: string) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   searchInputRef: React.RefObject<HTMLInputElement>;
-  expandedNodes: Set<string>;
-  onToggleNode: (id: string) => void;
   onBrowsePlugins: () => void;
   showCreateMenu: boolean;
   onToggleCreateMenu: () => void;
@@ -2447,7 +2571,6 @@ function MiddlePane({
   onRefresh: () => Promise<void>;
   onOpenSettings?: () => void;
   getConnectorGroupId?: (item: Capability) => ConnectorGroupId;
-  activeSelection: 'item' | 'file';
   updateCount: number;
   onShowUpdateModal: () => void;
 }) {
@@ -2488,12 +2611,12 @@ function MiddlePane({
 
   return (
     <div
-      className="w-[340px] ml-[34px] min-w-[340px] shrink-0 bg-transparent backdrop-blur-none border-none rounded-none shadow-none flex flex-col overflow-hidden"
+      className="flex min-w-0 flex-1 flex-col overflow-hidden bg-transparent"
       role="region"
       aria-label="Capability list"
     >
       {/* Header with Search and Add Button */}
-      <div className="p-[12px_16px] border-b border-solid border-[var(--ui-border-muted)] flex items-center gap-2.5">
+      <div className="flex items-center gap-2.5 px-5 pb-3 pt-4">
         <div className="text-[14px] font-[650] text-[var(--ui-text-primary)]">
           {TABS.find(t => t.id === activeTab)?.label}
         </div>
@@ -2583,7 +2706,7 @@ function MiddlePane({
       </div>
 
       {/* Items List */}
-      <div className="flex-1 overflow-auto" role="list">
+      <div className="flex-1 overflow-auto p-[7px_11px_18px]" role="list">
         {error && (
           <div
             style={{
@@ -2602,9 +2725,9 @@ function MiddlePane({
         )}
 
         {groupedSections.map((group) => (
-          <div key={group.id}>
+          <div key={group.id} className="mb-4 grid grid-cols-2 gap-[6px]">
             {group.label && (
-              <div className="text-[12px] font-semibold text-[var(--ui-text-tertiary)] uppercase tracking-[0.05em] p-[10px_16px_6px]">
+              <div className="col-span-2 px-1 pb-1 pt-2 text-[11px] font-semibold text-[var(--ui-text-tertiary)]">
                 {group.label}
               </div>
             )}
@@ -2615,63 +2738,29 @@ function MiddlePane({
                   ? getConnectorGroupId(item)
                   : (isDesktopConnector(item) ? 'desktop' : (item.enabled ? 'connected' : 'not-connected')))
                 : null;
-              const isSelected = item.id === selectedItemId;
-              const isActiveItem = isSelected && activeSelection === 'item';
-              const hasActiveFileInItem = Boolean(isSelected && selectedFileId && activeSelection === 'file');
-              const rowBackground = isActiveItem
-                ? 'bg-[var(--ui-border-muted)]'
-                : hasActiveFileInItem
-                  ? 'bg-[var(--surface-hover)]'
-                  : 'bg-transparent';
               const isConnected = connectorGroup === 'desktop' || connectorGroup === 'connected';
               const isEnabledVisual = activeTab === 'connectors' ? isConnected : item.enabled;
 
 	              return (
-	                <div key={item.id}>
+	                <div key={item.id} className="min-w-0">
 	                  <button type="button"
-	                    className={`pm-list-row group w-auto flex items-center gap-2.5 p-[10px_16px] rounded-lg border-none m-[1px_8px] box-border cursor-pointer text-left transition-colors duration-150 ${rowBackground}`}
+	                    className="w-full min-h-[82px] border border-solid border-transparent bg-transparent rounded-[7px] p-2.5 grid grid-cols-[34px_minmax(0,1fr)_auto] gap-2.5 text-left items-start transition-colors duration-150 hover:bg-[var(--surface-hover)] hover:border-[var(--ui-border-muted)]"
 	                    onClick={() => onSelectItem(item.id)}
 	                    onContextMenu={(e) => onContextMenu(e, 'capability', item.id)}
 	                  role="listitem"
-	                    data-selected={isActiveItem || hasActiveFileInItem ? 'true' : 'false'}
-	                    aria-selected={isActiveItem}
+	                    data-selected="false"
 	                  >
-                    <Icon
-                      name={item.icon}
-                      size={16}
-                      color={isEnabledVisual ? 'var(--ui-text-primary)' : 'var(--ui-text-tertiary)'}
-                    />
-                    <span className={`flex-1 text-[13px] ${isEnabledVisual ? 'font-medium text-[var(--ui-text-primary)]' : 'font-normal text-[var(--ui-text-tertiary)]'}`}>
-                      {item.name}
+                    <span className="flex size-[34px] items-center justify-center rounded-[7px] border border-solid border-[var(--ui-border-muted)] bg-white shrink-0">
+                      <Icon name={item.icon} size={16} color={isEnabledVisual ? 'var(--ui-text-primary)' : 'var(--ui-text-tertiary)'} />
                     </span>
-                    {activeTab === 'connectors' && connectorGroup === 'desktop' && (
-                      <span className="p-[2px_6px] rounded-full border border-solid border-[var(--ui-border-strong)] text-[12px] tracking-[0.05em] text-[var(--ui-text-secondary)] uppercase">
-                        Included
-                      </span>
-                    )}
-                    {isEnabledVisual && (
-                      <div className="size-1.5 rounded-full bg-[var(--status-success)]" aria-label="Enabled" />
-                    )}
-                  </button>
-
-	                  {/* File Tree for selected item */}
-	                  {item.id === selectedItemId && item.files && item.files.length > 0 && (
-	                    <div className="bg-transparent">
-	                      {item.files.map((node) => (
-	                        <FileTreeNode
-                          key={node.id}
-                          node={node}
-                          depth={0}
-                          selectedFileId={selectedFileId}
-                          activeSelection={activeSelection}
-                          expandedNodes={expandedNodes}
-                          onToggle={onToggleNode}
-                          onSelectFile={onSelectFile}
-                          onContextMenu={onContextMenu}
-                        />
-                      ))}
-                    </div>
-                  )}
+                    <span className="min-w-0">
+                      <h3 className="block truncate text-[12px] font-semibold text-[var(--ui-text-primary)] m-0 mt-px mb-0.5">{item.name}</h3>
+                      <p className="line-clamp-2 block text-[10px] leading-[1.4] text-[var(--ui-text-secondary)] m-0">
+                        {item.description || `Manage the ${item.name} capability and its included resources.`}
+                      </p>
+                    </span>
+                    <span className={`size-[7px] rounded-full mt-[5px] shrink-0 ${isEnabledVisual ? 'bg-[#26734d]' : 'bg-[#bbb]'}`} title={isEnabledVisual ? 'Enabled' : 'Available'} />
+	                  </button>
                 </div>
               );
             })}
@@ -2769,46 +2858,40 @@ function FileTreeNode({
     }
   };
 
+    // Determine icon symbol matching prototype
+    let symbol = '▤';
+    if (node.type === 'directory') {
+      symbol = isExpanded ? '📂' : '📁';
+    } else if (node.name.endsWith('.md')) {
+      symbol = '▣';
+    } else if (node.name.endsWith('.json')) {
+      symbol = '⌁';
+    } else if (node.name.endsWith('.ts') || node.name.endsWith('.js') || node.name.endsWith('.tsx')) {
+      symbol = '⌘';
+    }
+
 	  return (
 	    <div>
 		      <button type="button"
-		        className={`pm-file-row group w-auto flex items-center gap-2 p-[8px_16px_8px_${16 + depth * 20}px] rounded-lg border-none m-[1px_8px] box-border cursor-pointer text-left transition-colors duration-150 ${
-              isActiveFile ? 'bg-[color-mix(in_srgb,var(--accent-primary)_15%,transparent)]' :
-              isSelected ? 'bg-[color-mix(in_srgb,var(--accent-primary)_8%,transparent)]' :
-              'bg-transparent'
-            } ${hasChildren || node.type === 'file' ? 'cursor-pointer' : 'cursor-default'}`}
+		        className={`flex h-[38px] w-full items-center gap-2 border-0 border-t border-solid border-[var(--ui-border-muted)] bg-white px-2.5 text-[10px] text-left transition-colors duration-150 hover:bg-[var(--surface-hover)] first:border-t-0`}
+            style={{ paddingLeft: 10 + depth * 16 }}
 		        onClick={handleClick}
 		        onContextMenu={(e) => onContextMenu(e, node.type, node.id, node.path, node.name)}
 	        role="treeitem"
 	        data-selected={isSelected ? 'true' : 'false'}
 	        aria-selected={isActiveFile}
 	        aria-expanded={hasChildren ? isExpanded : undefined}
-          style={{ paddingLeft: 16 + depth * 20 }}
 	      >
-        {hasChildren ? (
-          isExpanded ? (
-            <CaretDown size={14} className="text-[var(--ui-text-tertiary)]" />
-          ) : (
-            <CaretRight size={14} className="text-[var(--ui-text-tertiary)]" />
-          )
-        ) : (
-          <div className="w-3.5" />
-        )}
-        
-        {node.type === 'directory' ? (
-          isExpanded ? (
-            <FolderOpen size={14} className="text-[var(--accent-primary)]" />
-          ) : (
-            <Folder size={14} className="text-[var(--ui-text-tertiary)]" />
-          )
-        ) : (
-          <FileText size={14} className="text-[var(--ui-text-secondary)]" />
-        )}
-        
-        <span className={`text-[12px] ${node.type === 'directory' ? 'text-[var(--ui-text-secondary)]' : 'text-[var(--ui-text-tertiary)]'}`}>
-          {node.name}
-        </span>
-      </button>
+          <span className="text-[12px] text-[var(--ui-text-secondary)] shrink-0 w-4 text-center">
+            {symbol}
+          </span>
+          <span className="flex-1 truncate text-[10px] font-medium text-[var(--ui-text-primary)]">
+            {node.name}
+          </span>
+          <span className="ml-auto text-[9px] text-[var(--ui-text-tertiary)] uppercase tracking-wider shrink-0">
+            {node.type} {hasChildren ? (isExpanded ? '▴' : '▾') : '›'}
+          </span>
+        </button>
 
       {isExpanded && hasChildren && (
         <div role="group">
@@ -2837,60 +2920,16 @@ function FileTreeNode({
 }
 
 // ============================================================================
-// Right Pane - Detail View
+// Main Pane - Selected Capability Detail
 // ============================================================================
-
-function RightPaneEmptyState() {
-  return (
-    <main
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'transparent',
-        backdropFilter: 'none',
-        border: 'none',
-        borderRadius: 0,
-        boxShadow: 'none',
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          width: 58,
-          height: 58,
-          borderRadius: 14,
-          border: `1px solid ${THEME.borderStrong}`,
-          backgroundColor: 'var(--surface-hover)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 14,
-        }}
-      >
-        <Wrench size={24} color={THEME.textSecondary} />
-      </div>
-      <div style={{ fontSize: 16, color: THEME.textPrimary, marginBottom: 6, fontWeight: 600 }}>
-        Manage capabilities
-      </div>
-      <div style={{ fontSize: 13, color: THEME.textSecondary, textAlign: 'center', maxWidth: 420, lineHeight: 1.6 }}>
-        Select any item from the middle pane to inspect files, toggle access, and manage capability details.
-      </div>
-    </main>
-  );
-}
 
 function RightPane({
   item,
   selectedFile,
   itemType,
   viewMode,
-  onViewModeChange,
   onToggle,
   onEdit,
-  onCopy,
   onOpenInVsCode,
   onShowInFolder,
   onUninstall,
@@ -2903,15 +2942,18 @@ function RightPane({
   connectorConnection,
   connectorBusy,
   onConnectorToggle,
+  expandedNodes,
+  onToggleNode,
+  onSelectFile,
+  onFileContextMenu,
+  onBack,
 }: {
   item: Capability;
   selectedFile: FileNode | null;
   itemType: TabId;
   viewMode: 'human' | 'code';
-  onViewModeChange: (mode: 'human' | 'code') => void;
   onToggle: () => void;
   onEdit: () => void;
-  onCopy: () => void;
   onOpenInVsCode: () => void;
   onShowInFolder: () => void;
   onUninstall: () => void;
@@ -2924,6 +2966,11 @@ function RightPane({
   connectorConnection: ConnectorConnectionState | null;
   connectorBusy: boolean;
   onConnectorToggle: () => void;
+  expandedNodes: Set<string>;
+  onToggleNode: (id: string) => void;
+  onSelectFile: (id: string) => void;
+  onFileContextMenu: (e: React.MouseEvent, type: 'file' | 'directory' | 'capability', id: string, path?: string, name?: string) => void;
+  onBack: () => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   
@@ -2935,244 +2982,246 @@ function RightPane({
 
   return (
     <main
-      className="flex-[1_1_auto] flex flex-col bg-transparent backdrop-blur-none border-none rounded-none shadow-none overflow-y-auto overflow-x-hidden min-h-0 min-w-[260px]"
+      className="flex min-h-0 min-w-[260px] flex-[1_1_auto] flex-col overflow-y-auto overflow-x-hidden bg-white"
     >
-      {/* Header with Metadata */}
-      <header
-        className="p-[20px_clamp(16px,2.2vw,32px)_14px]"
-      >
-        {/* Top Row: Name, Edit, Toggle, Menu */}
-        <div className="flex items-start justify-between mb-4">
-          <h1
-            className="pdv-display font-semibold text-[var(--ui-text-primary)] m-0 leading-[1.08] tracking-[-0.015em]"
-            style={{
-              fontSize: isFileView ? 22 : 'clamp(24px, 2.2vw, 34px)',
-            }}
-          >
-            {isFileView ? displayItem.name : (item.trigger || item.name)}
-          </h1>
+      <div className="p-[8px_24px_28px] max-w-[800px] w-full flex flex-col min-h-full">
+        {/* Back Button */}
+        <button
+          type="button"
+          onClick={onBack}
+          className="h-[30px] border-none bg-transparent p-0 text-[11px] text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)] flex items-center gap-1.5 cursor-pointer text-left font-sans"
+        >
+          <CaretRight size={13} className="rotate-180 text-[var(--ui-text-tertiary)]" />
+          Back to {TABS.find((tab) => tab.id === itemType)?.label}
+        </button>
 
-          <div className="flex items-center gap-2">
-            {isEditing ? (
-              <>
-                <button type="button"
-                  onClick={onSaveEdit}
-                  className="p-[6px_12px] rounded-md border-none bg-[var(--accent-primary)] text-[var(--surface-canvas)] text-[13px] font-semibold cursor-pointer"
-                >
-                  Save
-                </button>
-                <button type="button"
-                  onClick={onCancelEdit}
-                  className="p-[6px_12px] rounded-md border border-solid border-[var(--ui-border-muted)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : null}
+        {/* Header (Preview Area) */}
+        <header className="mt-[7px]">
+          <div className="grid grid-cols-[44px_minmax(0,1fr)_auto] gap-3 items-start">
+            {/* Icon */}
+            <span className="flex size-[44px] shrink-0 items-center justify-center rounded-[8px] border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-hover)]">
+              <Icon name={item.icon} size={19} color="var(--ui-text-primary)" />
+            </span>
 
-            {/* Toggle Switch */}
-            {!isFileView && (
-              <button type="button"
-                onClick={isConnectorItem ? onConnectorToggle : onToggle}
-                className={`w-11 h-6 rounded-xl border-none cursor-pointer relative transition-colors duration-200 ${
-                  toggleEnabled ? 'bg-[var(--accent-primary)]' : 'bg-white/20'
-                } ${connectorBusy ? 'opacity-70' : 'opacity-100'}`}
-                aria-pressed={toggleEnabled}
-                aria-label={toggleEnabled ? 'Disable' : 'Enable'}
-              >
-                <div
-                  className={`absolute top-0.5 size-5 rounded-full bg-white transition-all duration-200 ${
-                    toggleEnabled ? 'left-[22px]' : 'left-0.5'
-                  }`}
-                />
-              </button>
-            )}
-
-            {/* Menu */}
-            <div style={{ position: 'relative' }}>
-              <button type="button"
-                onClick={() => setShowMenu(!showMenu)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 4,
-                  borderRadius: 4,
-                }}
-                aria-label="More options"
-                aria-expanded={showMenu}
-              >
-                <DotsThreeOutline size={18} color={THEME.textTertiary} />
-              </button>
-
-              {showMenu && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    marginTop: 4,
-                    backgroundColor: THEME.bgElevated,
-                    border: `1px solid ${THEME.border}`,
-                    borderRadius: 8,
-                    padding: '4px',
-                    minWidth: 160,
-                    zIndex: 10,
-                  }}
-                  role="menu"
-                >
-                  {!isEditing && (
-                    <MenuItem icon={PencilSimple} onClick={() => { onEdit(); setShowMenu(false); }}>
-                      Edit
-                    </MenuItem>
-                  )}
-                  {!isEditing && <div style={{ borderTop: `1px solid ${THEME.border}`, margin: '4px 0' }} />}
-                  <MenuItem icon={ArrowSquareOut} onClick={() => { onOpenInVsCode(); setShowMenu(false); }}>
-                    Open in VS Code
-                  </MenuItem>
-                  <MenuItem icon={Folder} onClick={() => { onShowInFolder(); setShowMenu(false); }}>
-                    Show in folder
-                  </MenuItem>
-                  <div style={{ borderTop: `1px solid ${THEME.border}`, margin: '4px 0' }} />
-                  <MenuItem icon={X} danger onClick={() => { onUninstall(); setShowMenu(false); }}>
-                    Uninstall
-                  </MenuItem>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {!isFileView ? (
-          <div className="max-w-[960px]">
-            <div className="mb-3.5">
-              <div className="text-[12px] text-[var(--ui-text-tertiary)] mb-1">Added by</div>
-              <div className="pdv-display text-[var(--ui-text-primary)] leading-[1.12] tracking-[-0.01em]" style={{ fontSize: 'clamp(20px, 1.55vw, 30px)' }}>
-                {item.author || 'Unknown'}
+            {/* Title / Author */}
+            <div className="min-w-0">
+              <h2 className="m-0 mt-[1px] mb-1 truncate text-[17px] font-semibold leading-tight text-[var(--ui-text-primary)]">
+                {isFileView ? displayItem.name : (item.trigger || item.name)}
+              </h2>
+              <div className="text-[11px] text-[var(--ui-text-secondary)]">
+                by {item.author || 'Allternit'} · <span className="text-[#26734d] font-medium">✓ verified</span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 text-[12px] text-[var(--ui-text-tertiary)] mb-1.5">
-              <span>Description</span>
-              <Info size={12} />
+
+            {/* Actions (Toggles / Edits / Menu) */}
+            <div className="flex items-center gap-2">
+              {isEditing && editingContent !== null ? (
+                <>
+                  <button type="button"
+                    onClick={onSaveEdit}
+                    className="p-[6px_12px] rounded-md border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[12px] font-semibold cursor-pointer"
+                  >
+                    Save
+                  </button>
+                  <button type="button"
+                    onClick={onCancelEdit}
+                    className="p-[6px_12px] rounded-md border border-solid border-[var(--ui-border-muted)] bg-transparent text-[var(--ui-text-secondary)] text-[12px] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : null}
+
+              {/* Toggle Switch */}
+              {!isFileView && (
+                <button type="button"
+                  onClick={isConnectorItem ? onConnectorToggle : onToggle}
+                  className={`w-11 h-6 rounded-xl border-none cursor-pointer relative transition-colors duration-200 ${
+                    toggleEnabled ? 'bg-[var(--accent-primary)]' : 'bg-black/20'
+                  } ${connectorBusy ? 'opacity-70' : 'opacity-100'}`}
+                  aria-pressed={toggleEnabled}
+                  aria-label={toggleEnabled ? 'Disable' : 'Enable'}
+                >
+                  <div
+                    className={`absolute top-0.5 size-5 rounded-full bg-white transition-all duration-200 ${
+                      toggleEnabled ? 'left-[22px]' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              )}
+
+              {/* More options Menu */}
+              <div className="relative">
+                <button type="button"
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="bg-transparent border-none cursor-pointer p-1 rounded hover:bg-[var(--surface-hover)] flex items-center justify-center"
+                  aria-label="More options"
+                  aria-expanded={showMenu}
+                >
+                  <DotsThreeOutline size={18} color="var(--ui-text-tertiary)" />
+                </button>
+
+                {showMenu && (
+                  <div
+                    className="absolute top-full right-0 mt-1 bg-white border border-solid border-[var(--ui-border-muted)] rounded-lg p-1 min-w-[160px] z-[51] shadow-lg"
+                    role="menu"
+                  >
+                    {!isEditing && (
+                      <MenuItem icon={PencilSimple} onClick={() => { onEdit(); setShowMenu(false); }}>
+                        Edit
+                      </MenuItem>
+                    )}
+                    {!isEditing && <div className="border-t border-solid border-[var(--ui-border-muted)] my-1" />}
+                    <MenuItem icon={ArrowSquareOut} onClick={() => { onOpenInVsCode(); setShowMenu(false); }}>
+                      Open in VS Code
+                    </MenuItem>
+                    <MenuItem icon={Folder} onClick={() => { onShowInFolder(); setShowMenu(false); }}>
+                      Show in folder
+                    </MenuItem>
+                    <div className="border-t border-solid border-[var(--ui-border-muted)] my-1" />
+                    <MenuItem icon={X} danger onClick={() => { onUninstall(); setShowMenu(false); }}>
+                      Uninstall
+                    </MenuItem>
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="pdv-serif text-[var(--ui-text-secondary)] m-0 leading-[1.55] overflow-wrap-anywhere break-word" style={{ fontSize: 'clamp(13px, 1vw, 17px)' }}>
+          </div>
+
+          {/* Path or Description */}
+          {isFileView ? (
+            <p className="text-[12px] text-[var(--ui-text-secondary)] m-0 mt-4 mb-2 leading-[1.5] break-all font-mono">
+              {(selectedFile as FileNode).path}
+            </p>
+          ) : (
+            <p className="m-0 mt-5 mb-5 text-[12px] leading-[1.55] text-[#44443f] break-words">
               {item.description || 'No description provided.'}
             </p>
-          </div>
-        ) : (
-          <p className="text-[14px] text-[var(--ui-text-secondary)] m-0 leading-[1.5]">
-            {(selectedFile as FileNode).path}
-          </p>
-        )}
+          )}
+        </header>
 
-        <div className="mt-4 ml-2 w-[calc(100%-18px)] border-b border-solid border-[var(--ui-border-muted)]" />
-      </header>
+        {/* Detailed Sections (Only shown when not file inspection or isEditing) */}
+        {!isFileView && !isEditing ? (
+          <>
+            {/* Section 1: Capabilities */}
+            <div className="py-[17px] border-t border-solid border-[var(--ui-border-muted)]">
+              <h3 className="text-[11px] font-semibold text-[var(--ui-text-primary)] m-0 mb-[9px] uppercase tracking-[0.05em]">
+                Capabilities
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="p-[4px_8px] border border-solid border-[var(--ui-border-muted)] rounded-[11px] bg-[var(--surface-hover)] text-[9px] text-[#55554f]">
+                  {itemType}
+                </span>
+                <span className="p-[4px_8px] border border-solid border-[var(--ui-border-muted)] rounded-[11px] bg-[var(--surface-hover)] text-[9px] text-[#55554f]">
+                  workspace access
+                </span>
+                <span className="p-[4px_8px] border border-solid border-[var(--ui-border-muted)] rounded-[11px] bg-[var(--surface-hover)] text-[9px] text-[#55554f]">
+                  structured output
+                </span>
+                <span className="p-[4px_8px] border border-solid border-[var(--ui-border-muted)] rounded-[11px] bg-[var(--surface-hover)] text-[9px] text-[#55554f]">
+                  automation
+                </span>
+              </div>
+            </div>
 
-      {/* Content Area */}
-      <div className="flex-1 min-h-0 flex flex-col p-[16px_clamp(14px,2.2vw,32px)_20px]">
-        {/* View Mode Toggle */}
-        <div className="flex items-center justify-end gap-2 mb-4">
-          <button type="button"
-            onClick={() => onViewModeChange('human')}
-            className={`flex items-center gap-1.5 p-[6px_12px] rounded-md border-none text-[13px] cursor-pointer transition-colors duration-150 ${
-              viewMode === 'human' ? 'bg-[var(--ui-border-muted)] text-[var(--ui-text-primary)]' : 'bg-transparent text-[var(--ui-text-tertiary)] hover:bg-[var(--surface-hover)]'
-            }`}
-            aria-pressed={viewMode === 'human'}
-          >
-            <Eye size={14} />
-            Human
-          </button>
-          <button type="button"
-            onClick={() => onViewModeChange('code')}
-            className={`flex items-center gap-1.5 p-[6px_12px] rounded-md border-none text-[13px] cursor-pointer transition-colors duration-150 ${
-              viewMode === 'code' ? 'bg-[var(--ui-border-muted)] text-[var(--ui-text-primary)]' : 'bg-transparent text-[var(--ui-text-tertiary)] hover:bg-[var(--surface-hover)]'
-            }`}
-            aria-pressed={viewMode === 'code'}
-          >
-            <Code size={14} />
-            Code
-          </button>
-          <button type="button"
-            onClick={onCopy}
-            className="bg-transparent border-none cursor-pointer p-1.5 text-[var(--ui-text-tertiary)] hover:text-[var(--ui-text-primary)]"
-            aria-label="Copy to clipboard"
-          >
-            <Copy size={14} />
-          </button>
-        </div>
+            {/* Section 2: Included skills, connectors, and files */}
+            {item.files && item.files.length > 0 && (
+              <div className="py-[17px] border-t border-solid border-[var(--ui-border-muted)]">
+                <h3 className="text-[11px] font-semibold text-[var(--ui-text-primary)] m-0 mb-[9px] uppercase tracking-[0.05em]">
+                  Included skills, connectors, and files
+                </h3>
+                <div className="border border-solid border-[var(--ui-border-muted)] rounded-[7px] overflow-hidden">
+                  {item.files.map((node) => (
+                    <FileTreeNode
+                      key={node.id}
+                      node={node}
+                      depth={0}
+                      selectedFileId={null}
+                      activeSelection="item"
+                      expandedNodes={expandedNodes}
+                      onToggle={onToggleNode}
+                      onSelectFile={onSelectFile}
+                      onContextMenu={onFileContextMenu}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* Content Display */}
-        <div className="flex-1 min-h-0 bg-[var(--surface-floating)] border border-solid border-[var(--ui-border-muted)] rounded-lg overflow-auto">
-          {isEditing && editingContent !== null ? (
-            <textarea aria-label="Text Area" value={editingContent}
-              onChange={(e) => onEditingContentChange(e.target.value)}
-              className="size-full p-6 bg-transparent border-none text-[var(--ui-text-primary)] font-mono text-[13px] leading-[1.6] resize-none outline-none"
-            />
-          ) : isFileView ? (
-            <FileContent file={selectedFile!} viewMode={viewMode} />
-          ) : (
-            <>
-              {itemType === 'commands' && (
-                <CommandContent item={item} viewMode={viewMode} />
-              )}
-              {itemType === 'skills' && (
-                <SkillContent item={item} viewMode={viewMode} />
-              )}
-              {itemType === 'connectors' && (
-                <ConnectorContent
-                  item={item}
-                  connectionState={connectorConnection}
-                  connectorGroupId={connectorGroupId}
-                  isBusy={connectorBusy}
-                  onConnectToggle={onConnectorToggle}
-                />
-              )}
-              {(itemType === 'cli-tools' || itemType === 'mcps' || itemType === 'webhooks') && (
-                <GenericContent item={item} viewMode={viewMode} />
-              )}
-              {itemType === 'plugins' && (
-                <>
-                  <GenericContent item={item} viewMode={viewMode} />
-                  
-                  {/* Dependencies Section */}
-                  {(item as Capability & { dependencies?: Record<string, string> }).dependencies && (
-                    <div className="p-[0_24px_24px]">
-                      <div className="border border-solid border-[var(--ui-border-muted)] rounded-[10px] bg-[var(--surface-floating)] p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Package size={16} className="text-[var(--accent-primary)]" />
-                          <span className="text-[14px] font-semibold text-[var(--ui-text-primary)]">
-                            Dependencies
+            {/* Additional custom contents or dependencies if any */}
+            {itemType === 'plugins' && (
+              <>
+                {/* Dependencies Section */}
+                {(item as Capability & { dependencies?: Record<string, string> }).dependencies && (
+                  <div className="py-[17px] border-t border-solid border-[var(--ui-border-muted)]">
+                    <h3 className="text-[11px] font-semibold text-[var(--ui-text-primary)] m-0 mb-[9px] uppercase tracking-[0.05em]">
+                      Dependencies
+                    </h3>
+                    <div className="flex flex-col gap-1.5">
+                      {Object.entries(
+                        (item as Capability & { dependencies?: Record<string, string> }).dependencies || {}
+                      ).map(([depId, versionRange]) => (
+                        <div
+                          key={depId}
+                          className="flex items-center justify-between p-[8px_12px] bg-[var(--surface-hover)] rounded-md border border-solid border-[var(--ui-border-muted)]"
+                        >
+                          <span className="text-[12px] text-[var(--ui-text-primary)] font-medium">
+                            {depId}
+                          </span>
+                          <span className="text-[10px] text-[var(--ui-text-secondary)] p-[2px_8px] bg-[var(--accent-primary)]/10 rounded-[4px]">
+                            {versionRange}
                           </span>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          {Object.entries(
-                            (item as Capability & { dependencies?: Record<string, string> }).dependencies || {}
-                          ).map(([depId, versionRange]) => (
-                            <div
-                              key={depId}
-                              className="flex items-center justify-between p-[8px_12px] bg-[var(--surface-hover)] rounded-md"
-                            >
-                              <span className="text-[13px] text-[var(--ui-text-primary)]">
-                                {depId}
-                              </span>
-                              <span className="text-[12px] text-[var(--ui-text-secondary)] p-[2px_8px] bg-[var(--accent-primary)]/10 rounded-[4px]">
-                                {versionRange}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  )}
-                  
-                  <div className="p-[0_24px_24px]">
-                    <PluginReviews pluginId={item.id} pluginName={item.name} />
                   </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
+                )}
+                
+                <div className="py-[17px] border-t border-solid border-[var(--ui-border-muted)]">
+                  <PluginReviews pluginId={item.id} pluginName={item.name} />
+                </div>
+              </>
+            )}
+
+            {/* Section 3: Details */}
+            <div className="py-[17px] border-t border-solid border-[var(--ui-border-muted)]">
+              <div className="grid grid-cols-2 gap-x-[30px] gap-y-[14px] text-[10px]">
+                <div>
+                  <div className="text-[var(--ui-text-secondary)] font-medium mb-1">Version</div>
+                  <div className="text-[var(--ui-text-primary)]">{item.version || '1.4.0'}</div>
+                </div>
+                <div>
+                  <div className="text-[var(--ui-text-secondary)] font-medium mb-1">Status</div>
+                  <div className="text-[var(--ui-text-primary)]">
+                    {itemType === 'connectors' ? (connectorEnabled ? 'Connected' : 'Available') : (item.enabled ? 'Enabled' : 'Available')}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[var(--ui-text-secondary)] font-medium mb-1">Source</div>
+                  <div className="text-[#3e6183] underline underline-offset-2 cursor-pointer font-medium font-sans">
+                    Allternit Marketplace ↗
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[var(--ui-text-secondary)] font-medium mb-1">Updated</div>
+                  <div className="text-[var(--ui-text-primary)]">{item.updatedAt || 'Today'}</div>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Editor or FileContent (Shown when file is selected or isEditing) */
+          <div className="min-h-0 flex-1 overflow-auto bg-transparent border-t border-solid border-[var(--ui-border-muted)] pt-4">
+            {isEditing && editingContent !== null ? (
+              <textarea aria-label="Text Area" value={editingContent}
+                onChange={(e) => onEditingContentChange(e.target.value)}
+                className="size-full min-h-[300px] p-4 bg-transparent border-none text-[var(--ui-text-primary)] font-mono text-[12px] leading-[1.6] resize-none outline-none"
+              />
+            ) : (
+              <FileContent file={selectedFile!} viewMode={viewMode} />
+            )}
+          </div>
+        )}
       </div>
     </main>
   );

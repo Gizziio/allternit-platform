@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { LockSimple, Paperclip, Sparkle, X } from "@phosphor-icons/react";
+import { Lightning, LockSimple, Paperclip, Sparkle, X } from "@phosphor-icons/react";
 import type { PendingPermissionRequest, PendingQuestionRequest } from "@/lib/agents";
 import { usePermissionActions, useQuestionActions } from "@/lib/agents";
 import { QuestionPrompt, type QuestionAnswer, type QuestionConfig } from "@/components/agent-elements/question/question-prompt";
@@ -197,11 +197,13 @@ export function ComposerQuestionBar({ request }: ComposerQuestionBarProps) {
 
 type ComposerStatusInfoBarProps = {
   modelLabel?: string | null;
+  modeLabel?: string | null;
   attachmentCount?: number;
 };
 
 export function ComposerStatusInfoBar({
   modelLabel,
+  modeLabel,
   attachmentCount,
 }: ComposerStatusInfoBarProps) {
   return (
@@ -222,6 +224,9 @@ export function ComposerStatusInfoBar({
               <InfoPill icon={<Sparkle size={12} />} label={modelLabel} />
             </button>
           </ContextWindowCard>
+        ) : null}
+        {modeLabel ? (
+          <InfoPill icon={<Lightning size={12} />} label={modeLabel} />
         ) : null}
       </div>
       {typeof attachmentCount === "number" ? (

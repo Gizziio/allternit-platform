@@ -1,5 +1,5 @@
-import { RoutinesListView } from '@/views/automation/RoutinesListView';
+import { AutomationTasksView } from '@/views/cowork/AutomationTasksView';
 
 export default function RoutinesListPage() {
-  return <RoutinesListView />;
+  return <AutomationTasksView initialTab="routine" />;
 }

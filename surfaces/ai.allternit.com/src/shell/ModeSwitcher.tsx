@@ -183,6 +183,7 @@ export function ModeSwitcher({
           return (
             <button type="button"
               key={mode.id}
+              data-mode={mode.id}
               onClick={() => handleModeChange(mode.id)}
               onMouseEnter={() => setHoveredMode(mode.id)}
               onMouseLeave={() => setHoveredMode(null)}

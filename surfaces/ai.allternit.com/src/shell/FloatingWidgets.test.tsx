@@ -17,9 +17,9 @@ describe('RailControls', () => {
       />
     );
 
-    expect(screen.getByTestId('rail-mode-chat')).toHaveTextContent('Home');
-    expect(screen.getByTestId('rail-mode-code')).toHaveTextContent('Code');
-    expect(screen.getByTestId('rail-mode-browser')).toHaveTextContent('Browser');
+    expect(screen.getByTestId('rail-mode-chat')).toHaveAttribute('title', 'Home');
+    expect(screen.getByTestId('rail-mode-code')).toHaveAttribute('title', 'Code');
+    expect(screen.getByTestId('rail-mode-browser')).toHaveAttribute('title', 'Browser');
   });
 
   it('calls onModeChange when a mode button is clicked', () => {

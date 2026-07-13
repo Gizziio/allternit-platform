@@ -153,7 +153,7 @@ export function ModeDock({
           </TextShimmer>
         </div>
       )}
-      <div className="flex items-center w-full gap-2 justify-center flex-wrap">
+      <div className="flex items-center w-full gap-1.5 justify-center flex-wrap p-1.5 rounded-2xl bg-[var(--surface-panel)]/60 border border-[var(--ui-border-muted)] backdrop-blur-sm">
         {visibleTabs.map((mode) => {
           const isSelected = selectedMode === mode.id;
           const isActiveTab = isSelected && isLoading;
@@ -163,19 +163,16 @@ export function ModeDock({
               key={mode.id}
               onClick={() => onSelectMode(mode.id)}
               className={cn(
-                "inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12px] cursor-pointer transition-all duration-150 whitespace-nowrap border border-solid",
-                isActiveTab ? "animate-pulse" : "",
+                "relative inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-[12px] cursor-pointer transition-all duration-200 whitespace-nowrap border border-transparent",
+                isActiveTab && "animate-pulse",
                 isSelected
-                  ? "font-bold shadow-sm"
-                  : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--chat-composer-muted)] font-semibold hover:bg-[var(--surface-active)] hover:border-[var(--ui-border-default)] hover:text-[var(--ui-text-secondary)]"
+                  ? "font-bold"
+                  : "text-[var(--chat-composer-muted)] font-semibold hover:text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]"
               )}
               style={isSelected ? {
-                background: `${mode.color}18`,
-                borderColor: `${mode.color}60`,
-                color: mode.color,
-                boxShadow: isActiveTab
-                  ? `0 0 12px ${mode.color}50, 0 0 0 1px ${mode.color}30`
-                  : `0 0 0 1px ${mode.color}30`,
+                background: mode.color,
+                color: '#ffffff',
+                boxShadow: `0 2px 8px ${mode.color}40`,
               } : undefined}
             >
               <ModeIcon size={14} weight={isSelected ? 'fill' : 'bold'} />

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
-import React, { useMemo, useReducer, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useReducer, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-client';
 import { getSession } from '../lib/auth-browser';
@@ -60,6 +60,7 @@ const logger = createModuleLogger('ShellApp');
 // Lazy-loaded UI Components
 const ControlCenter        = React.lazy(() => import('./ControlCenter').then(m => ({ default: m.ControlCenter })));
 const SettingsOverlay      = React.lazy(() => import('../views/settings/SettingsView').then(m => ({ default: m.SettingsView })));
+const PluginManagerOverlay = React.lazy(() => import('../views/plugins').then(m => ({ default: m.PluginManager })));
 
 const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'browser',
@@ -89,6 +90,11 @@ function ShellAppInner(): React.ReactNode {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFindInPageOpen, setIsFindInPageOpen] = useState(false);
   const { railWidth, setRailWidth } = usePanelLayout();
+
+  // Tracks whether the most recent mode change was triggered by a view change
+  // (e.g. opening Dispatch while in browser mode). When true, the mode-to-view
+  // sync effect should not override the view that just opened.
+  const modeChangeSourceRef = useRef<'initial' | 'user' | 'sync'>('initial');
 
   const {
     isOpen: sidecarOpen,
@@ -217,9 +223,19 @@ function ShellAppInner(): React.ReactNode {
   }, []);
   const openNew = useCallback((viewType: ViewType) => dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true }), []);
 
-  // Sync view to persisted mode once mode is loaded from localStorage
+  // Sync view to persisted mode once mode is loaded from localStorage, or when
+  // the user explicitly changes mode. Do not override a view that was just
+  // opened because the mode-sync effect changed mode in response to that view.
   useEffect(() => {
     if (!modeLoaded) return;
+    if (typeof window !== 'undefined' && window.location.pathname === '/shell/recents') {
+      open('chats-and-tasks');
+      return;
+    }
+    if (modeChangeSourceRef.current === 'sync') {
+      modeChangeSourceRef.current = 'initial';
+      return;
+    }
     if (activeMode === 'chat') open('chat');
     else if (activeMode === 'cowork') open('workspace');
     else if (activeMode === 'code') open('code');
@@ -305,6 +321,10 @@ function ShellAppInner(): React.ReactNode {
   const [settingsSection, setSettingsSection] = useState<string | undefined>(undefined);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
 
+  // Plugin Manager overlay (opened from Customize rail tab)
+  const [pluginManagerOpen, setPluginManagerOpen] = useState(false);
+  const [pluginManagerTab, setPluginManagerTab] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     const handleOpenSettings = (e: Event): void => {
       const detail = (e as CustomEvent<{ section?: string; tab?: string }>).detail;
@@ -348,6 +368,7 @@ function ShellAppInner(): React.ReactNode {
   }, []);
 
   const handleModeChange = useCallback((mode: AppMode): void => {
+    modeChangeSourceRef.current = 'user';
     setActiveMode(mode);
     if (mode === 'chat') open('chat');
     if (mode === 'cowork') open('workspace');
@@ -365,10 +386,18 @@ function ShellAppInner(): React.ReactNode {
     return () => window.removeEventListener('allternit:switch-mode', handleSwitchMode);
   }, [handleModeChange]);
 
+  // Keep persisted mode in sync with the current view: browser views put the
+  // app in browser mode; leaving browser mode for a non-browser view switches
+  // back to chat. Mark these as sync-driven so the mode-to-view effect does not
+  // immediately override the view that triggered the change.
   useEffect(() => {
     if (BROWSER_MODE_VIEW_TYPES.has(active.viewType)) {
-      if (activeMode !== 'browser') setActiveMode('browser');
+      if (activeMode !== 'browser') {
+        modeChangeSourceRef.current = 'sync';
+        setActiveMode('browser');
+      }
     } else if (activeMode === 'browser') {
+      modeChangeSourceRef.current = 'sync';
       setActiveMode('chat');
     }
   }, [active.viewType, activeMode, setActiveMode]);
@@ -446,6 +475,10 @@ function ShellAppInner(): React.ReactNode {
               onOpenControlCenter={() => setIsControlCenterOpen(true)}
               onSidecarToggle={handleSidecarToggle}
               sidecarOpen={visibleSidecarOpen}
+              onOpenCustomize={(tab) => {
+                setPluginManagerTab(tab);
+                setPluginManagerOpen(true);
+              }}
             />
           }
           canvas={
@@ -563,6 +596,20 @@ function ShellAppInner(): React.ReactNode {
             <SettingsOverlay
               initialSection={settingsSection}
               initialTab={settingsTab}
+              onClose={() => setSettingsOpen(false)}
+            />
+          </React.Suspense>
+        )}
+        {pluginManagerOpen && (
+          <React.Suspense fallback={null}>
+            <PluginManagerOverlay
+              isOpen
+              initialTab={pluginManagerTab as any}
+              onClose={() => setPluginManagerOpen(false)}
+              onOpenSettings={() => {
+                setPluginManagerOpen(false);
+                setSettingsOpen(true);
+              }}
             />
           </React.Suspense>
         )}

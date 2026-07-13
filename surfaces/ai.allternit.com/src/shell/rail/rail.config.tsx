@@ -95,7 +95,7 @@ export const RAIL_CONFIG: RailConfigSection[] = [
       },
       {
         id: 'library',
-        label: 'Library',
+        label: 'Artifacts Library',
         icon: Images,
         payload: 'library',
       },
@@ -145,28 +145,16 @@ export const RAIL_CONFIG: RailConfigSection[] = [
   },
   {
     id: 'automation',
-    title: 'Automation',
+    title: 'Automation Tasks',
     icon: Target,
-    collapsible: true,
+    collapsible: false,
     defaultExpanded: true,
     items: [
       {
-        id: 'goals-list',
-        label: 'Goals',
+        id: 'automation-tasks',
+        label: 'Automation Tasks',
         icon: Target,
-        payload: 'goals-list',
-      },
-      {
-        id: 'routines-list',
-        label: 'Routines',
-        icon: Clock,
-        payload: 'routines-list',
-      },
-      {
-        id: 'loops-list',
-        label: 'Loops',
-        icon: ArrowsClockwise,
-        payload: 'loops-list',
+        payload: 'cron',
       },
     ],
   },

@@ -1,472 +1,634 @@
 "use client";
 
-import React, { useCallback, useMemo } from 'react';
-import { InputModal } from '@/components/InputModal';
-import { ConfirmModal } from '@/components/ConfirmModal';
-import { 
-  BaseProjectView, 
-  ProjectItemCard,
-  ProjectMenuButton,
-  FileItem,
-  InstructionItem,
-} from './BaseProjectView';
-import { ChatComposer } from './chat/ChatComposer';
+import React, { useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 import {
-  Chat,
-  PencilSimple,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+import {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalButton,
+} from '@/components/ui/Modal';
+import { useUnifiedProjects } from '@/views/project/unified/useUnifiedProjects';
+import { ProjectDetailRouter } from '@/views/project/unified/ProjectDetailRouter';
+import type { UnifiedProject, ProjectCategory, ProjectMode } from '@/views/project/unified/types';
+import {
+  ChatTeardropText,
+  CheckSquare,
+  Code,
+  Palette,
+  Plus,
+  MagnifyingGlass,
+  Star,
   Archive,
   Trash,
-  FileText,
-  Robot,
-  Cpu,
-  Globe,
-  Lightning,
-  PlugsConnected,
-  Plus,
-  X,
+  DotsThreeOutline,
+  CaretDown,
+  FolderOpen,
+  PencilSimple,
 } from '@phosphor-icons/react';
 
-// Modularized ProjectView components
-import { useProjectManager } from './project/main/useProjectManager';
-import { ProjectViewHeader } from './project/main/ProjectViewHeader';
-import { ProjectViewOverview } from './project/main/ProjectViewOverview';
-import { useChatStore } from '@/views/chat/ChatStore';
-import { useCoworkStore } from '@/views/cowork/CoworkStore';
-import { useCodeModeStore } from '@/views/code/CodeModeStore';
-import { useMode } from '@/providers/mode-provider';
+const CATEGORY_CONFIG: Record<
+  ProjectCategory,
+  { label: string; icon: React.ElementType }
+> = {
+  all: { label: 'All Projects', icon: FolderOpen },
+  chat: { label: 'Chat', icon: ChatTeardropText },
+  cowork: { label: 'Cowork', icon: CheckSquare },
+  code: { label: 'Code', icon: Code },
+  design: { label: 'Design', icon: Palette },
+};
+
+type SortMode = 'recent' | 'name' | 'created';
+
+const SORT_OPTIONS: { id: SortMode; label: string }[] = [
+  { id: 'recent', label: 'Recently updated' },
+  { id: 'name', label: 'Name' },
+  { id: 'created', label: 'Date created' },
+];
 
 export function ProjectView(): React.ReactNode {
   const {
-    project,
-    activeTab,
-    setActiveTab,
-    isStarred,
-    setIsStarred,
-    composerInput,
-    setComposerInput,
-    showAddFile,
-    setShowAddFile,
-    showRenameModal,
-    setShowRenameModal,
-    showAddInstruction,
-    setShowAddInstruction,
-    instructionText,
-    setInstructionText,
-    projectInstructions,
-    setProjectInstructions,
-    showAddConnector,
-    setShowAddConnector,
-    confirmDialog,
-    setConfirmDialog,
-    projectThreads,
-    projectAgentSessions,
-    projectFiles,
-    attachedConnectors,
-    availableConnectors,
-    hasContent,
-    setActiveThread,
-    setActiveProject,
-    removeFileFromProject,
-    removeConnectorFromProject,
-    renameProject,
+    allProjects,
+    stats,
+    createProject,
+    toggleFavorite,
+    toggleArchive,
     deleteProject,
-    handleSend,
-    handleAddFile,
-    handleAddConnector,
-    dispatch,
-  } = useProjectManager();
+    renameProject,
+  } = useUnifiedProjects();
 
-  const chatStore = useChatStore();
-  const coworkStore = useCoworkStore();
-  const codeStore = useCodeModeStore();
-  const { setMode } = useMode();
+  const [selectedProject, setSelectedProject] = useState<UnifiedProject | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<ProjectCategory>('all');
+  const [sortBy, setSortBy] = useState<SortMode>('recent');
+  const [showArchived, setShowArchived] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createMode, setCreateMode] = useState<ProjectMode>('chat');
+  const [renameProjectData, setRenameProjectData] = useState<UnifiedProject | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
-  if (!project) {
-    return (
-      <div className="h-full flex flex-col bg-[var(--bg-primary)] overflow-y-auto p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-black tracking-tight text-[var(--shell-item-fg)] font-serif mb-2">Projects</h1>
-          <p className="text-[var(--shell-item-muted)] text-sm">Centralized view of all your projects across Chat, Cowork, and Code.</p>
-        </div>
+  const filteredProjects = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return allProjects
+      .filter((p) => {
+        if (!showArchived && p.isArchived) return false;
+        if (activeCategory !== 'all' && p.mode !== activeCategory) return false;
+        if (query && !p.title.toLowerCase().includes(query)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'recent') {
+          if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
+          return b.updatedAt - a.updatedAt;
+        }
+        if (sortBy === 'name') return a.title.localeCompare(b.title);
+        return b.createdAt - a.createdAt;
+      });
+  }, [allProjects, activeCategory, searchQuery, showArchived, sortBy]);
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Chat Projects */}
-          {chatStore.projects.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => {
-                chatStore.setActiveProject(p.id);
-                setMode('chat');
-                dispatch({ type: 'OPEN_VIEW', viewType: 'project' });
-              }}
-              className="group p-5 rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] hover:border-[var(--accent-chat)] cursor-pointer transition-all duration-200 flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--accent-chat)_15%,transparent)] text-[var(--accent-chat)] border border-solid border-[var(--accent-chat)]/25">
-                  Chat
-                </span>
-                <span className="text-[11px] text-[var(--shell-item-muted)]">
-                  {p.threadIds?.length || 0} threads
-                </span>
-              </div>
-              <h3 className="font-bold text-base text-[var(--shell-item-fg)] group-hover:text-[var(--accent-chat)] transition-colors">
-                {p.title}
-              </h3>
-            </div>
-          ))}
+  const activeCategoryLabel = CATEGORY_CONFIG[activeCategory];
+  const activeSortLabel = SORT_OPTIONS.find((s) => s.id === sortBy)?.label ?? SORT_OPTIONS[0].label;
 
-          {/* Cowork Projects */}
-          {coworkStore.projects.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => {
-                coworkStore.setActiveProject(p.id);
-                setMode('cowork');
-                dispatch({ type: 'OPEN_VIEW', viewType: 'workspace' });
-              }}
-              className="group p-5 rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] hover:border-[var(--accent-cowork)] cursor-pointer transition-all duration-200 flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--accent-cowork)_15%,transparent)] text-[var(--accent-cowork)] border border-solid border-[var(--accent-cowork)]/25">
-                  Cowork
-                </span>
-                <span className="text-[11px] text-[var(--shell-item-muted)]">
-                  Active
-                </span>
-              </div>
-              <h3 className="font-bold text-base text-[var(--shell-item-fg)] group-hover:text-[var(--accent-cowork)] transition-colors">
-                {p.title}
-              </h3>
-            </div>
-          ))}
+  const openCreateModal = () => {
+    setCreateName('');
+    setCreateMode(activeCategory === 'all' ? 'chat' : activeCategory);
+    setShowCreateModal(true);
+  };
 
-          {/* Code Workspaces */}
-          {codeStore.workspaces.map((ws) => (
-            <div
-              key={ws.workspace_id}
-              onClick={() => {
-                codeStore.setActiveWorkspace(ws.workspace_id);
-                setMode('code');
-                dispatch({ type: 'OPEN_VIEW', viewType: 'code-project' });
-              }}
-              className="group p-5 rounded-2xl border border-solid border-[var(--border-subtle)] bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] hover:border-[var(--accent-code)] cursor-pointer transition-all duration-200 flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[color-mix(in_srgb,var(--accent-code)_15%,transparent)] text-[var(--accent-code)] border border-solid border-[var(--accent-code)]/25">
-                  Code
-                </span>
-                <span className="text-[11px] text-[var(--shell-item-muted)]">
-                  Workspace
-                </span>
-              </div>
-              <h3 className="font-bold text-base text-[var(--shell-item-fg)] group-hover:text-[var(--accent-code)] transition-colors">
-                {ws.display_name}
-              </h3>
-            </div>
-          ))}
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setCreateName('');
+  };
 
-          {/* Create New Card */}
-          <div
-            onClick={() => {
-              chatStore.createProject('New Project');
-            }}
-            className="p-5 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-transparent hover:border-[var(--accent-primary)] hover:bg-[var(--surface-hover)] cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 min-h-[140px] text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)]"
-          >
-            <Plus size={24} weight="bold" />
-            <span className="font-bold text-sm">New Project</span>
-          </div>
-        </div>
-      </div>
-    );
+  const handleCreateConfirm = () => {
+    const name = createName.trim();
+    if (!name) return;
+    const mode = activeCategory === 'all' ? createMode : activeCategory;
+    createProject(mode, name);
+    closeCreateModal();
+  };
+
+  const openRenameModal = (project: UnifiedProject) => {
+    setRenameProjectData(project);
+    setRenameValue(project.title);
+  };
+
+  const closeRenameModal = () => {
+    setRenameProjectData(null);
+    setRenameValue('');
+  };
+
+  const handleRenameConfirm = () => {
+    const name = renameValue.trim();
+    if (!name || !renameProjectData) return;
+    renameProject(renameProjectData, name);
+    closeRenameModal();
+  };
+
+  const handleProjectClick = (project: UnifiedProject) => {
+    setSelectedProject(project);
+  };
+
+  const handleBack = () => {
+    setSelectedProject(null);
+  };
+
+  if (selectedProject) {
+    return <ProjectDetailRouter project={selectedProject} onBack={handleBack} />;
   }
 
-  const handleBack = () => setActiveProject(null);
-  const handleNewChat = () => dispatch({ type: 'OPEN_VIEW', viewType: 'chat' });
+  return (
+    <div className="h-full w-full flex flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] overflow-auto">
+      <div className="w-full max-w-6xl mx-auto px-8 pt-10 pb-12 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4">
+          <h1
+            className="text-3xl font-medium tracking-tight"
+            style={{ fontFamily: 'var(--font-serif)' }}
+          >
+            Projects
+          </h1>
 
-  const handleRemoveFile = (fileId: string) => {
-    setConfirmDialog({
-      message: 'Remove this file from the project?',
-      onConfirm: () => { setConfirmDialog(null); removeFileFromProject(project.id, fileId); },
-    });
-  };
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-sm text-[var(--text-secondary)] hover:border-[var(--border-hover)] transition-colors"
+                >
+                  <activeCategoryLabel.icon size={14} />
+                  <span className="font-medium text-[var(--text-primary)]">{activeCategoryLabel.label}</span>
+                  <CaretDown size={12} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(Object.keys(CATEGORY_CONFIG) as ProjectCategory[]).map((cat) => {
+                  const cfg = CATEGORY_CONFIG[cat];
+                  return (
+                    <DropdownMenuItem
+                      key={cat}
+                      onSelect={() => setActiveCategory(cat)}
+                      className={cn(cat === activeCategory && 'font-medium')}
+                    >
+                      <cfg.icon size={16} className="mr-2" />
+                      {cfg.label}
+                      <span className="ml-auto text-xs text-[var(--text-tertiary)]">
+                        {stats[cat === 'all' ? 'total' : cat]}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-  const handleRemoveConnector = (connectorId: string) => {
-    setConfirmDialog({
-      message: 'Remove this connector from the project?',
-      onConfirm: () => { setConfirmDialog(null); removeConnectorFromProject(project.id, connectorId); },
-    });
-  };
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-sm text-[var(--text-secondary)] hover:border-[var(--border-hover)] transition-colors"
+                >
+                  Sort by <span className="font-medium text-[var(--text-primary)]">{activeSortLabel}</span>
+                  <CaretDown size={12} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {SORT_OPTIONS.map((opt) => (
+                  <DropdownMenuItem
+                    key={opt.id}
+                    onSelect={() => setSortBy(opt.id)}
+                    className={cn(opt.id === sortBy && 'font-medium')}
+                  >
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-  const handleAddInstruction = () => {
-    if (instructionText.trim()) {
-      setProjectInstructions([...projectInstructions, instructionText.trim()]);
-      setInstructionText('');
-    }
-    setShowAddInstruction(false);
-  };
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              className={cn(
+                'inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border text-sm transition-colors',
+                showArchived
+                  ? 'border-[var(--accent-primary)] bg-[var(--bg-elevated)] text-[var(--accent-primary)]'
+                  : 'border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
+              )}
+            >
+              <Archive size={14} />
+              Archived
+              <span className="text-xs text-[var(--text-tertiary)]">{stats.archived}</span>
+            </button>
 
-  const handleRemoveInstruction = (index: number) => {
-    setProjectInstructions(projectInstructions.filter((_, i) => i !== index));
-  };
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <Plus size={16} />
+              New
+            </button>
+          </div>
+        </div>
 
-  // Menu content for the 3-dot menu
-  const menuContent = (
-    <ProjectMenuButton>
-      <button type="button"
-        onClick={() => setShowRenameModal(true)}
-        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--ui-text-secondary)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--surface-hover)] transition-colors"
-      >
-        <PencilSimple size={16} />
-        Edit details
-      </button>
-      <button type="button"
-        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--ui-text-secondary)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--surface-hover)] transition-colors"
-      >
-        <Archive size={16} />
-        Archive
-      </button>
-      <button type="button"
-        onClick={() => setConfirmDialog({
-          message: 'Delete this project? All chats in this project will be unlinked but not deleted.',
-          onConfirm: () => { setConfirmDialog(null); deleteProject(project.id); setActiveProject(null); },
-        })}
-        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--status-error)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--status-error-bg)] transition-colors"
-      >
-        <Trash size={16} />
-        Delete
-      </button>
-    </ProjectMenuButton>
-  );
-
-  // Real ChatComposer as input bar
-  const inputBar = (
-    <ChatComposer
-      onSend={handleSend}
-      placeholder={`Message ${project.title}`}
-      inputValue={composerInput}
-      showTopActions={false}
-      variant="default"
-    />
-  );
-
-  // Sidebar sections with actual data
-  const sidebarSectionsData = {
-    memory: null, // Uses default
-    instructions: projectInstructions.length > 0 ? (
-      <div>
-        {projectInstructions.map((instruction, idx) => (
-          <InstructionItem
-            key={`projectview-${idx}`}
-            text={instruction}
-            onDelete={() => handleRemoveInstruction(idx)}
+        {/* Search */}
+        <div className="relative mt-6">
+          <MagnifyingGlass
+            size={16}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
           />
-        ))}
-      </div>
-    ) : null,
-    files: projectFiles.length > 0 ? (
-      <div>
-        {projectFiles.map(file => (
-          <FileItem
-            key={file.id}
-            name={file.name}
-            size={formatFileSize(file.size)}
-            onDelete={() => handleRemoveFile(file.id)}
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search projects…"
+            className="pl-10 h-11 rounded-xl border-[var(--border-default)] text-[15px]"
+            style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
           />
-        ))}
+        </div>
+
+        {/* Content */}
+        <div className="mt-8">
+          {filteredProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-24">
+              <FolderOpen size={48} className="text-[var(--text-tertiary)] opacity-40" />
+              <div className="text-sm text-[var(--text-secondary)]">
+                {searchQuery ? 'No projects match your search.' : 'No projects yet.'}
+              </div>
+              <div className="text-xs text-[var(--text-tertiary)] max-w-sm text-center">
+                Create a project to organize your chats, tasks, code workspaces, and design canvases.
+              </div>
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="mt-2 inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                <Plus size={16} />
+                Create project
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filteredProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onClick={() => handleProjectClick(project)}
+                  onToggleFavorite={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(project);
+                  }}
+                  onToggleArchive={(e) => {
+                    e.stopPropagation();
+                    toggleArchive(project);
+                  }}
+                  onDelete={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Delete "${project.title}"? This cannot be undone.`)) {
+                      deleteProject(project);
+                    }
+                  }}
+                  onRename={() => openRenameModal(project)}
+                />
+              ))}
+
+              {/* Create New Card */}
+              <div
+                onClick={openCreateModal}
+                className="group rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] hover:border-[var(--accent-primary)] hover:bg-[var(--surface-hover)] cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 min-h-[180px] text-[var(--text-tertiary)] hover:text-[var(--accent-primary)]"
+              >
+                <Plus size={28} weight="bold" className="group-hover:scale-110 transition-transform" />
+                <span className="font-medium text-sm">New project</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    ) : null,
-    onAddInstruction: () => setShowAddInstruction(true),
-    onAddFile: () => setShowAddFile(true),
+
+      <CreateProjectModal
+        isOpen={showCreateModal}
+        onClose={closeCreateModal}
+        name={createName}
+        onNameChange={setCreateName}
+        mode={createMode}
+        onModeChange={setCreateMode}
+        onConfirm={handleCreateConfirm}
+        allowModeSelect={activeCategory === 'all'}
+      />
+
+      <RenameProjectModal
+        isOpen={renameProjectData !== null}
+        name={renameValue}
+        onNameChange={setRenameValue}
+        onConfirm={handleRenameConfirm}
+        onCancel={closeRenameModal}
+      />
+    </div>
+  );
+}
+
+interface RenameProjectModalProps {
+  isOpen: boolean;
+  name: string;
+  onNameChange: (value: string) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function RenameProjectModal({ isOpen, name, onNameChange, onConfirm, onCancel }: RenameProjectModalProps) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onConfirm();
   };
 
   return (
-    <>
-      <BaseProjectView
-        title={project.title}
-        description="Project workspace"
-        onBack={handleBack}
-        onToggleStar={() => setIsStarred(!isStarred)}
-        isStarred={isStarred}
-        tabs={[
-          { id: 'chats', label: 'Chats', count: projectThreads.length },
-          { id: 'agent-sessions', label: 'Agent Sessions', count: projectAgentSessions.length },
-          { id: 'sources', label: 'Sources', count: projectFiles.length },
-          { id: 'connectors', label: 'Connectors', count: attachedConnectors.length },
-        ]}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onNewItem={handleNewChat}
-        newButtonLabel="New Chat"
-        menuContent={menuContent}
-        inputBar={inputBar}
-        sidebarSections={sidebarSectionsData}
-        showEmptyState={!hasContent}
-        emptyState={{
-          message: activeTab === 'chats' 
-            ? 'Chats will appear here.' 
-            : activeTab === 'agent-sessions'
-            ? 'Agent sessions will appear here.'
-            : activeTab === 'connectors'
-            ? 'Connectors will appear here.'
-            : 'Sources will appear here.',
-          subMessage: activeTab === 'chats'
-            ? 'Start a chat to keep conversations organized and re-use project knowledge.'
-            : activeTab === 'agent-sessions'
-            ? 'Start an agent session to get autonomous assistance with this project.'
-            : activeTab === 'connectors'
-            ? 'Attach OpenClaw, Hermes, and other mini-apps to this project.'
-            : 'Add files to reference them in this project.',
-        }}
-      >
-        {/* Content based on active tab */}
-        {activeTab === 'chats' && (
-          <div className="flex flex-col gap-3">
-            {projectThreads.map(thread => (
-              <ProjectItemCard
-                key={thread.id}
-                title={thread.title}
-                subtitle={formatDate(thread.updatedAt)}
-                onClick={() => setActiveThread(thread.id)}
-                icon={<Chat size={18} />}
-              />
-            ))}
-          </div>
-        )}
-        {activeTab === 'agent-sessions' && (
-          <div className="flex flex-col gap-3">
-            {projectAgentSessions.map(session => (
-              <ProjectItemCard
-                key={session.id}
-                title={session.title}
-                subtitle={formatDate(session.updatedAt)}
-                onClick={() => setActiveThread(session.id)}
-                icon={<Robot size={18} />}
-              />
-            ))}
-          </div>
-        )}
-        {activeTab === 'sources' && (
-          <div className="flex flex-col gap-3">
-            {projectFiles.map(file => (
-              <ProjectItemCard
-                key={file.id}
-                title={file.name}
-                subtitle={formatFileSize(file.size)}
-                icon={<FileText size={18} />}
-              />
-            ))}
-          </div>
-        )}
-        {activeTab === 'connectors' && (
-          <div className="flex flex-col gap-3">
-            {attachedConnectors.map((connector) => (
-              <ProjectItemCard
-                key={connector.id}
-                title={connector.name}
-                subtitle={connector.description}
-                icon={getConnectorIcon(connector.category)}
-                actions={
-                  <button type="button"
-                    onClick={() => handleRemoveConnector(connector.id)}
-                    className="p-1 rounded text-[var(--ui-text-muted)] hover:text-[var(--status-error)] transition-colors border-none bg-transparent cursor-pointer"
-                    title="Remove connector"
-                  >
-                    <X size={14} />
-                  </button>
-                }
-              />
-            ))}
-            {availableConnectors.length > 0 && (
-              <div className="flex flex-col gap-2 mt-2">
-                <button type="button"
-                  onClick={() => setShowAddConnector((value) => !value)}
-                  className="flex items-center gap-2 rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent px-3 py-2 text-sm text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)] cursor-pointer transition-colors"
-                >
-                  <Plus size={14} />
-                  Add connector
-                </button>
-                {showAddConnector && (
-                  <div className="rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] p-2 flex flex-col gap-1 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
-                    {availableConnectors.map((connector) => (
-                      <button type="button"
-                        key={connector.id}
-                        onClick={() => handleAddConnector(connector.id)}
-                        className="flex items-center gap-2 rounded px-3 py-2 text-left text-sm text-[var(--ui-text-secondary)] hover:bg-[var(--surface-active)] hover:text-white border-none bg-transparent cursor-pointer transition-colors"
-                      >
-                        {getConnectorIcon(connector.category)}
-                        <span className="flex-1">{connector.name}</span>
-                        <Plus size={12} />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </BaseProjectView>
-
-      {/* Rename Modal */}
-      <InputModal
-        isOpen={showRenameModal}
-        title="Rename Project"
-        placeholder="Project name"
-        defaultValue={project.title}
-        confirmLabel="Rename"
-        onConfirm={(name) => {
-          renameProject(project.id, name);
-          setShowRenameModal(false);
-        }}
-        onCancel={() => setShowRenameModal(false)}
-      />
-
-      {/* Add File Modal */}
-      <InputModal
-        isOpen={showAddFile}
-        title="Add File"
-        placeholder="File name"
-        confirmLabel="Add"
-        onConfirm={handleAddFile}
-        onCancel={() => setShowAddFile(false)}
-      />
-
-      <ConfirmModal
-        isOpen={confirmDialog !== null}
-        title="Confirm"
-        message={confirmDialog?.message || ''}
-        confirmLabel="Confirm"
-        destructive
-        onConfirm={confirmDialog?.onConfirm || (() => {})}
-        onCancel={() => setConfirmDialog(null)}
-      />
-    </>
+    <Modal isOpen={isOpen} onClose={onCancel} size="small">
+      <ModalHeader title="Rename project" onClose={onCancel} />
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="Project name"
+            autoFocus
+            className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-sm outline-none focus:border-[var(--accent-primary)] transition-colors"
+          />
+        </ModalBody>
+        <ModalFooter>
+          <ModalButton onClick={onCancel} variant="secondary">
+            Cancel
+          </ModalButton>
+          <ModalButton type="submit" variant="primary" disabled={!name.trim()}>
+            Rename
+          </ModalButton>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }
 
-function getConnectorIcon(category: string) {
-  switch (category) {
-    case 'runtime':
-      return <Cpu size={18} />;
-    case 'connector':
-      return <PlugsConnected size={18} />;
-    case 'data':
-      return <Lightning size={18} />;
-    default:
-      return <Globe size={18} />;
-  }
+interface CreateProjectModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  name: string;
+  onNameChange: (value: string) => void;
+  mode: ProjectMode;
+  onModeChange: (mode: ProjectMode) => void;
+  onConfirm: () => void;
+  allowModeSelect: boolean;
 }
 
-function formatDate(date: string | number) {
-  const d = new Date(date);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function CreateProjectModal({
+  isOpen,
+  onClose,
+  name,
+  onNameChange,
+  mode,
+  onModeChange,
+  onConfirm,
+  allowModeSelect,
+}: CreateProjectModalProps) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onConfirm();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="small">
+      <ModalHeader title="Create new project" onClose={onClose} />
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
+          <div className="flex flex-col gap-5">
+            <div>
+              <label
+                htmlFor="project-name"
+                className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5"
+              >
+                Project name
+              </label>
+              <input
+                id="project-name"
+                type="text"
+                value={name}
+                onChange={(e) => onNameChange(e.target.value)}
+                placeholder="e.g. Q3 Marketing Campaign"
+                autoFocus
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-sm outline-none focus:border-[var(--accent-primary)] transition-colors"
+              />
+            </div>
+
+            {allowModeSelect && (
+              <div>
+                <span className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                  Project type
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(CATEGORY_CONFIG) as ProjectCategory[])
+                    .filter((cat) => cat !== 'all')
+                    .map((cat) => {
+                      const cfg = CATEGORY_CONFIG[cat];
+                      const isSelected = mode === cat;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => onModeChange(cat)}
+                          className={cn(
+                            'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors',
+                            isSelected
+                              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--text-primary)]'
+                              : 'border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]'
+                          )}
+                        >
+                          <cfg.icon size={16} />
+                          {cfg.label}
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <ModalButton onClick={onClose} variant="secondary">
+            Cancel
+          </ModalButton>
+          <ModalButton
+            type="submit"
+            variant="primary"
+            disabled={!name.trim()}
+          >
+            Create project
+          </ModalButton>
+        </ModalFooter>
+      </form>
+    </Modal>
+  );
 }
 
-function formatFileSize(bytes: number) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+interface ProjectCardProps {
+  project: UnifiedProject;
+  onClick: () => void;
+  onToggleFavorite: (e: React.MouseEvent) => void;
+  onToggleArchive: (e: Event) => void;
+  onDelete: (e: Event) => void;
+  onRename: () => void;
+}
+
+const MODE_ACCENT: Record<ProjectCategory, string> = {
+  all: 'var(--accent-primary)',
+  chat: 'var(--accent-chat)',
+  cowork: 'var(--accent-cowork)',
+  code: 'var(--accent-code)',
+  design: 'var(--accent-primary)',
+};
+
+const MODE_ICONS: Record<ProjectCategory, React.ElementType> = {
+  all: FolderOpen,
+  chat: ChatTeardropText,
+  cowork: CheckSquare,
+  code: Code,
+  design: Palette,
+};
+
+function ProjectCard({
+  project,
+  onClick,
+  onToggleFavorite,
+  onToggleArchive,
+  onDelete,
+  onRename,
+}: ProjectCardProps) {
+  const Icon = MODE_ICONS[project.mode];
+  const accent = MODE_ACCENT[project.mode];
+
+  const desc = useMemo(() => {
+    const parts: string[] = [];
+    if (project.mode === 'chat') {
+      parts.push(`${project.threadCount} threads`);
+      if (project.taskCount > 0) parts.push(`${project.taskCount} agents`);
+    } else if (project.mode === 'cowork') {
+      parts.push(`${project.taskCount} tasks`);
+    } else if (project.mode === 'code') {
+      parts.push(`${project.threadCount} sessions`);
+    } else if (project.mode === 'design') {
+      parts.push(`${project.fileCount} canvases`);
+    }
+    return parts.join(' • ') || 'Active workspace';
+  }, [project]);
+
+  return (
+    <div
+      onClick={onClick}
+      className={cn(
+        'group rounded-xl border border-solid bg-[var(--bg-elevated)] hover:bg-[var(--surface-hover)] cursor-pointer transition-all duration-200 flex flex-col gap-4 relative',
+        project.isArchived
+          ? 'opacity-60 border-[var(--border-subtle)]'
+          : 'border-[var(--border-default)] hover:border-[var(--border-hover)]'
+      )}
+    >
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 transition-all duration-200 group-hover:w-1.5"
+        style={{ backgroundColor: accent }}
+      />
+
+      <div className="p-5 flex flex-col gap-3 h-full">
+        <div className="flex items-start justify-between">
+          <div
+            className="size-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: `${accent}15`, color: accent }}
+          >
+            <Icon size={20} weight="duotone" />
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onToggleFavorite}
+              className={cn(
+                'p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors',
+                project.isFavorite
+                  ? 'text-yellow-500'
+                  : 'text-[var(--text-tertiary)] hover:text-yellow-500'
+              )}
+              title={project.isFavorite ? 'Unfavorite' : 'Favorite'}
+            >
+              <Star size={16} weight={project.isFavorite ? 'fill' : 'regular'} />
+            </button>
+            <ProjectCardMenu
+              project={project}
+              onToggleArchive={onToggleArchive}
+              onDelete={onDelete}
+              onRename={onRename}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1">
+          <h3 className="font-medium text-[15px] text-[var(--text-primary)] transition-colors leading-snug">
+            {project.title}
+          </h3>
+          <p className="text-[12px] text-[var(--text-tertiary)] mt-1 capitalize">{desc}</p>
+          {project.createdAt > 0 && (
+            <p className="text-[11px] text-[var(--text-tertiary)] mt-3">
+              Created {new Date(project.createdAt).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectCardMenu({
+  project,
+  onToggleArchive,
+  onDelete,
+  onRename,
+}: {
+  project: UnifiedProject;
+  onToggleArchive: (e: Event) => void;
+  onDelete: (e: Event) => void;
+  onRename: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="p-1.5 rounded-lg border-none bg-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
+        >
+          <DotsThreeOutline size={18} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[160px]">
+        <DropdownMenuItem onSelect={onRename} className="cursor-pointer">
+          <PencilSimple size={16} className="mr-2" />
+          Rename
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onToggleArchive} className="cursor-pointer">
+          <Archive size={16} className="mr-2" />
+          {project.isArchived ? 'Unarchive' : 'Archive'}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={onDelete}
+          className="cursor-pointer text-[var(--status-error)] focus:text-[var(--status-error)]"
+        >
+          <Trash size={16} className="mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export default ProjectView;

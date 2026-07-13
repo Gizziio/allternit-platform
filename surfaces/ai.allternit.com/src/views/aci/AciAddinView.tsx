@@ -24,6 +24,7 @@ import { useChatStore } from '@/views/chat/ChatStore';
 import { openOfficeDesktopApp, openOfficeWebInBrowser, startOfficeWebDeveloperSetup } from './open-office-web';
 import { openInBrowser } from '@/lib/openInBrowser';
 import { recordDocumentWorkflowIntent } from '@/views/documents/document-workflows';
+import { getOfficeWebInstallation, verifyOfficeWebInstallation } from './office-web-installation';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -215,6 +216,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
   const [addinStatus, setAddinStatus] = useState<OfficeAddinStatus | null>(null);
   const [setupBusy, setSetupBusy] = useState(false);
   const [setupMessage, setSetupMessage] = useState<string | null>(null);
+  const [webVerifiedAt, setWebVerifiedAt] = useState<string | null>(() => getOfficeWebInstallation(host)?.verifiedAt ?? null);
 
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const activeProjectId = useChatStore((s) => s.activeProjectId);
@@ -602,6 +604,7 @@ export function AciAddinView({ host, context }: { host: OfficeHost; context?: Vi
               >
                 <PlugsConnected size={13} /> Set up web developer add-in
               </button>
+              {webVerifiedAt ? <div className="flex items-center gap-2 rounded-lg border border-green-500/20 bg-green-500/5 px-3 py-2 text-[11px] text-green-600"><Check size={13} />Web ribbon verified {new Date(webVerifiedAt).toLocaleDateString()}</div> : <button type="button" onClick={() => { const receipt = verifyOfficeWebInstallation(host); setWebVerifiedAt(receipt.verifiedAt); setSetupMessage(`Recorded a browser-profile verification receipt for ${label} on the web.`); }} className="rounded-lg px-3 py-1.5 text-left text-[11px] text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)]">I can see Allternit in the {label} ribbon</button>}
             </div>
           </section>
 

@@ -1,13 +1,30 @@
 import { useEffect, useState } from 'react';
 import { editorPackStorageKey } from '../editor-packs';
-import { downloadDocumentFile } from '../file-io';
+import { downloadDocumentFile, exportDocumentFile } from '../file-io';
+import { registerNativeDocumentSurface } from '../document-surface';
 
 type Slide = { title: string; body: string };
 export default function PresentationEditorPack({ documentId, onClose }: { documentId: string; onClose: () => void }) {
   const key = editorPackStorageKey('presentations', documentId);
   const [slides, setSlides] = useState<Slide[]>(() => JSON.parse(localStorage.getItem(key) || '[{"title":"Untitled presentation","body":"Add a clear idea for this slide"}]'));
   const [active, setActive] = useState(0);
+  const [revision, setRevision] = useState(0);
   useEffect(() => localStorage.setItem(key, JSON.stringify(slides)), [key, slides]);
+  useEffect(() => registerNativeDocumentSurface({
+    id: documentId,
+    kind: 'presentations',
+    snapshot: () => ({ surfaceId: documentId, kind: 'presentations', title: 'Untitled presentation', revision, content: { slides, activeSlide: active } }),
+    apply: (mutation) => {
+      if (mutation.type === 'export-office') {
+        return exportDocumentFile('presentations', documentId, mutation.format).then(() => ({ revision, summary: `Exported as ${mutation.format}.` }));
+      }
+      if (mutation.type === 'add-slide') setSlides((old) => [...old, { title: mutation.title, body: mutation.body }]);
+      else if (mutation.type === 'replace-slide') setSlides((old) => old.map((slide, index) => index === mutation.index ? { title: mutation.title ?? slide.title, body: mutation.body ?? slide.body } : slide));
+      else throw new Error(`Unsupported presentation mutation: ${mutation.type}`);
+      setRevision((value) => value + 1);
+      return { revision: revision + 1, summary: mutation.type === 'add-slide' ? 'Added a slide.' : `Updated slide ${mutation.index + 1}.` };
+    },
+  }), [active, documentId, revision, slides]);
   const update = (patch: Partial<Slide>) => setSlides((old) => old.map((slide,i)=>i===active?{...slide,...patch}:slide));
-  return <div className="flex h-full flex-col bg-[var(--bg-primary)]"><header className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-5 py-3"><button type="button" onClick={onClose} className="text-xs text-[var(--text-secondary)]">← Documents</button><strong className="text-sm">Untitled presentation</strong><button type="button" onClick={() => downloadDocumentFile('allternit-presentation.altdeck', JSON.stringify(slides, null, 2), 'application/json')} className="ml-auto rounded border border-[var(--border-subtle)] px-2 py-1 text-[10px] font-semibold">Export deck</button><button type="button" onClick={()=>{setSlides((s)=>[...s,{title:'New slide',body:''}]);setActive(slides.length)}} className="rounded bg-orange-600 px-3 py-1 text-xs font-semibold text-white">Add slide</button></header><div className="flex min-h-0 flex-1"><aside className="w-48 overflow-auto border-r border-[var(--border-subtle)] p-3">{slides.map((s,i)=><button type="button" key={i} onClick={()=>setActive(i)} className={`mb-2 aspect-video w-full rounded border p-2 text-left text-[10px] ${i===active?'border-orange-500':'border-[var(--border-subtle)]'}`}><b>{i+1}. {s.title}</b></button>)}</aside><main className="flex flex-1 items-center justify-center overflow-auto bg-[var(--bg-secondary)] p-8"><div className="aspect-video w-full max-w-4xl rounded border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-16 shadow-xl"><input aria-label="Slide title" value={slides[active]?.title||''} onChange={(e)=>update({title:e.target.value})} className="w-full bg-transparent text-3xl font-bold outline-none"/><textarea aria-label="Slide body" value={slides[active]?.body||''} onChange={(e)=>update({body:e.target.value})} className="mt-8 h-1/2 w-full resize-none bg-transparent text-lg leading-8 outline-none"/></div></main></div></div>;
+  return <div className="flex h-full flex-col bg-[var(--bg-primary)]"><header className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-5 py-3"><button type="button" onClick={onClose} className="text-xs text-[var(--text-secondary)]">← Documents</button><strong className="text-sm">Untitled presentation</strong><button type="button" onClick={() => void exportDocumentFile('presentations', documentId, 'pptx')} className="ml-auto rounded border border-[var(--border-subtle)] px-2 py-1 text-[10px] font-semibold">Save as .pptx</button><button type="button" onClick={() => downloadDocumentFile('allternit-presentation.altdeck', JSON.stringify(slides, null, 2), 'application/json')} className="rounded border border-[var(--border-subtle)] px-2 py-1 text-[10px] font-semibold">Export deck</button><button type="button" onClick={()=>{setSlides((s)=>[...s,{title:'New slide',body:''}]);setActive(slides.length)}} className="rounded bg-orange-600 px-3 py-1 text-xs font-semibold text-white">Add slide</button></header><div className="flex min-h-0 flex-1"><aside className="w-48 overflow-auto border-r border-[var(--border-subtle)] p-3">{slides.map((s,i)=><button type="button" key={i} onClick={()=>setActive(i)} className={`mb-2 aspect-video w-full rounded border p-2 text-left text-[10px] ${i===active?'border-orange-500':'border-[var(--border-subtle)]'}`}><b>{i+1}. {s.title}</b></button>)}</aside><main className="flex flex-1 items-center justify-center overflow-auto bg-[var(--bg-secondary)] p-8"><div className="aspect-video w-full max-w-4xl rounded border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-16 shadow-xl"><input aria-label="Slide title" value={slides[active]?.title||''} onChange={(e)=>update({title:e.target.value})} className="w-full bg-transparent text-3xl font-bold outline-none"/><textarea aria-label="Slide body" value={slides[active]?.body||''} onChange={(e)=>update({body:e.target.value})} className="mt-8 h-1/2 w-full resize-none bg-transparent text-lg leading-8 outline-none"/></div></main></div></div>;
 }

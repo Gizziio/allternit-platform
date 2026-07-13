@@ -1,5 +1,5 @@
-import { LoopsListView } from '@/views/automation/LoopsListView';
+import { AutomationTasksView } from '@/views/cowork/AutomationTasksView';
 
 export default function LoopsListPage() {
-  return <LoopsListView />;
+  return <AutomationTasksView initialTab="loop" />;
 }

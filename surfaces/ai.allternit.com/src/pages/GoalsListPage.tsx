@@ -1,5 +1,5 @@
-import { GoalsListView } from '@/views/automation/GoalsListView';
+import { AutomationTasksView } from '@/views/cowork/AutomationTasksView';
 
 export default function GoalsListPage() {
-  return <GoalsListView />;
+  return <AutomationTasksView initialTab="goal" />;
 }

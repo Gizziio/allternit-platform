@@ -46,6 +46,7 @@ const ProjectView          = lazy(() => import('../views/ProjectView').then(m =>
 const ToolsView            = lazy(() => import('../views/code/ToolsView').then(m => ({ default: m.ToolsView })));
 const RunReplayView        = lazy(() => import('../views/code/RunReplayView').then(m => ({ default: m.RunReplayView })));
 const PromotionDashboardView = lazy(() => import('../views/code/PromotionDashboardView').then(m => ({ default: m.PromotionDashboardView })));
+const DispatchView           = lazy(() => import('../views/DispatchView').then(m => ({ default: m.DispatchView })));
 const PlaygroundView       = lazy(() => import('../views/PlaygroundView').then(m => ({ default: m.PlaygroundView })));
 const DagIntegrationPage   = lazy(() => import('../views/DagIntegrationPage').then(m => ({ default: m.DagIntegrationPage })));
 const CloudDeployView      = lazy(() => import('../views/cloud-deploy/CloudDeployView').then(m => ({ default: m.CloudDeployView })));
@@ -86,6 +87,7 @@ const PrewarmManagerView     = lazy(() => import('../views/runtime/PrewarmManage
 const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperationsView').then(m => ({ default: m.RuntimeOperationsView })));
 const HistoryView            = lazy(() => import('../views/HistoryView').then(m => ({ default: m.HistoryView })));
 const ArchivedView           = lazy(() => import('../views/ArchivedView').then(m => ({ default: m.ArchivedView })));
+const ChatsAndTasksView      = lazy(() => import('../views/ChatsAndTasksView').then(m => ({ default: m.ChatsAndTasksView })));
 const SearchView             = lazy(() => import('../views/SearchView').then(m => ({ default: m.SearchView })));
 const DebugView              = lazy(() => import('../views/code/DebugView').then(m => ({ default: m.DebugView })));
 const InsightsView           = lazy(() => import('../views/cowork/InsightsView').then(m => ({ default: m.InsightsView })));
@@ -98,7 +100,7 @@ const MonitorView            = lazy(() => import('../views/MonitorView').then(m 
 const CoworkRunsView         = lazy(() => import('../views/cowork/RunsView').then(m => ({ default: m.default })));
 const DraftsView             = lazy(() => import('../views/cowork/DraftsView').then(m => ({ default: m.DraftsView })));
 const TasksView              = lazy(() => import('../views/cowork/TasksView').then(m => ({ default: m.TasksView })));
-const CronView               = lazy(() => import('../views/cowork/CronView').then(m => ({ default: m.CronView })));
+const AutomationTasksView = lazy(() => import('../views/cowork/AutomationTasksView').then(m => ({ default: m.AutomationTasksView })));
 const CoworkProjectView      = lazy(() => import('../views/cowork/CoworkProjectView').then(m => ({ default: m.CoworkProjectView })));
 const DocumentsView          = lazy(() => import('../views/cowork/DocumentsView').then(m => ({ default: m.DocumentsView })));
 const TablesView             = lazy(() => import('../views/cowork/TablesView').then(m => ({ default: m.TablesView })));
@@ -575,6 +577,11 @@ export function getShellViewRegistry(handlers: {
         <ArchivedView />
       </ErrorBoundary>
     ),
+    'chats-and-tasks': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Recents" />}>
+        <ChatsAndTasksView />
+      </ErrorBoundary>
+    ),
     search: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Search" />}>
         <SearchView />
@@ -616,8 +623,8 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'cowork-cron': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cron" />}>
-        <CronView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Automation Tasks" />}>
+        <AutomationTasksView />
       </ErrorBoundary>
     ),
     'cowork-project': ({ context }: { context?: ViewContext }) => (
@@ -656,7 +663,7 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     library: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Library" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Artifacts Library" />}>
         <LibraryView openView={open} />
       </ErrorBoundary>
     ),
@@ -686,8 +693,8 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'code-automations': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Code Cron" />}>
-        <CronView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Automation Tasks" />}>
+        <AutomationTasksView />
       </ErrorBoundary>
     ),
     'code-skills': ({ context }: { context?: ViewContext }) => (
@@ -737,8 +744,8 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'goals-list': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Goals" />}>
-        <GoalsListView onSelectGoal={(goal) => open('goal-detail', { goalId: goal.id })} />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Automation Tasks" />}>
+        <AutomationTasksView initialTab="goal" />
       </ErrorBoundary>
     ),
     'goal-detail': ({ context }: { context?: ViewContext }) => {
@@ -750,13 +757,23 @@ export function getShellViewRegistry(handlers: {
       );
     },
     'routines-list': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Routines" />}>
-        <RoutinesListView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Automation Tasks" />}>
+        <AutomationTasksView initialTab="routine" />
       </ErrorBoundary>
     ),
     'loops-list': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Loops" />}>
-        <LoopsListView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Automation Tasks" />}>
+        <AutomationTasksView initialTab="loop" />
+      </ErrorBoundary>
+    ),
+    'cron': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Automation Tasks" />}>
+        <AutomationTasksView />
+      </ErrorBoundary>
+    ),
+    'dispatch': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Dispatch" />}>
+        <DispatchView />
       </ErrorBoundary>
     ),
   });
