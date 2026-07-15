@@ -125,6 +125,15 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
 
     let chat_id = body_json.get("chatId").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let message = body_json.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let system_prompt = body_json.get("systemPrompt").and_then(|v| v.as_str()).unwrap_or("");
+    let effective_message = if system_prompt.trim().is_empty() {
+        message.clone()
+    } else {
+        format!(
+            "<system-instructions>\n{}\n</system-instructions>\n\n<user-request>\n{}\n</user-request>",
+            system_prompt, message
+        )
+    };
 
     // Parse model from runtimeModelId or modelId — strip provider prefix if present.
     // When nothing is supplied, use the environment-configurable default so the
@@ -219,7 +228,7 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
 
         // POST message to gizzi
         let gizzi_payload = json!({
-            "parts": [{ "type": "text", "text": message }],
+            "parts": [{ "type": "text", "text": effective_message }],
             "model": { "providerID": provider_id, "modelID": model_id },
         });
 

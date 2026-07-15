@@ -13,8 +13,9 @@
   },
   "scripts": {
     "postinstall": "test -f prisma/schema.prisma && prisma generate --schema=./prisma/schema.prisma || true",
-    "dev": "vite --port 3013",
-    "dev:clean": "rm -rf dist && vite --port 3013",
+    "dev": "bash ../../services/open-notebook/dev.sh; vite --port 3013",
+    "dev:clean": "rm -rf dist && bash ../../services/open-notebook/dev.sh; vite --port 3013",
+    "dev:research": "bash ../../services/open-notebook/dev.sh",
     "build": "vite build",
     "build:cloudflare": "vite build",
     "build:desktop-server": "vite build && node scripts/build-desktop-server.cjs",

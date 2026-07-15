@@ -145,20 +145,21 @@ fn chat_event_stream(
                                         }).to_string()));
                                     } else if part_type == "tool_result" {
                                         let id = part.get("toolUseId").and_then(|v| v.as_str()).unwrap_or("");
+                                        let name = part.get("name").and_then(|v| v.as_str()).unwrap_or("tool");
                                         let content = part.get("content").cloned().unwrap_or(json!(null));
                                         let is_error = part.get("isError").and_then(|v| v.as_bool()).unwrap_or(false);
                                         if is_error {
                                             yield Ok(Event::default().data(json!({
                                                 "type": "tool_error",
                                                 "toolCallId": id,
-                                                "toolName": "Tool",
+                                                "toolName": name,
                                                 "error": content
                                             }).to_string()));
                                         } else {
                                             yield Ok(Event::default().data(json!({
                                                 "type": "tool_result",
                                                 "toolCallId": id,
-                                                "toolName": "Tool",
+                                                "toolName": name,
                                                 "result": content
                                             }).to_string()));
                                         }

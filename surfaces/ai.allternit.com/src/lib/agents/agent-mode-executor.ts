@@ -44,6 +44,23 @@ async function executeDocs(prompt: string): Promise<PluginOutput> {
   };
 }
 
+async function executeSheets(prompt: string): Promise<PluginOutput> {
+  const model = await getDefaultPluginModel();
+  const { text } = await generateText({
+    model,
+    temperature: 0.2,
+    prompt: `Create an editable spreadsheet-style deliverable for the request below. Return one self-contained semantic HTML document only. Include a clearly labeled table, typed values, and a Formula column containing spreadsheet formulas beginning with = wherever calculations or forecasting are requested. Include assumptions and source-data sections. Do not use markdown fences.\n\n${prompt}`,
+  });
+  const html = /<(?:table|html|main)[\s>]/i.test(text)
+    ? text
+    : `<main><h1>Spreadsheet</h1><table><tr><th>Result</th></tr><tr><td>${escapeHtml(text)}</td></tr></table></main>`;
+  return {
+    success: true,
+    content: 'Editable spreadsheet created with formulas and assumptions.',
+    artifacts: [{ type: 'file', name: 'spreadsheet.html', url: `data:text/html;charset=utf-8,${encodeURIComponent(html)}`, metadata: { html, format: 'spreadsheet-html' } }],
+  };
+}
+
 function primaryContent(modeId: CanonicalAgentModeId, output: PluginOutput): string {
   const artifacts = output.artifacts ?? [];
   const htmlArtifact = artifacts.find((artifact) => typeof artifact.metadata?.html === 'string');
@@ -71,7 +88,9 @@ export async function executeAgentMode(
   const pluginId = MODE_PLUGIN[modeId];
   const output = modeId === 'docs'
     ? await executeDocs(prompt)
-    : await (await loadPlugin(pluginId!)).execute({
+    : modeId === 'data'
+      ? await executeSheets(prompt)
+      : await (await loadPlugin(pluginId!)).execute({
         prompt,
         options: { templateTitle, format: modeId === 'slides' ? 'html' : undefined },
       });
