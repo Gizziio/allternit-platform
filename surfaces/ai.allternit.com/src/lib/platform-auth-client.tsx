@@ -8,6 +8,7 @@ import {
   SignUp,
   useAuth,
   useClerk as useClerkReact,
+  useSignIn,
   useUser,
 } from "@clerk/clerk-react"
 import { cn } from "@/lib/utils"
@@ -410,12 +411,57 @@ function DisabledAuthCard({
   )
 }
 
+/** True only inside the Allternit desktop shell (preload exposes window.allternit). */
+function isDesktopShell(): boolean {
+  return typeof window !== "undefined" && Boolean((window as any).allternit?.auth?.startLogin)
+}
+
+/**
+ * Fires Clerk's OAuth redirect (e.g. ?strategy=oauth_google) exactly once per
+ * browser session, then lets the normal <SignIn> component below complete the
+ * OAuth callback when the provider returns to this page. Used by the desktop
+ * startup wizard's "Continue with Google" button to jump straight to Google.
+ */
+function ClerkOAuthRedirectOnce({
+  strategy,
+  redirectCompleteUrl,
+}: {
+  strategy: "oauth_google"
+  redirectCompleteUrl: string
+}) {
+  const { isLoaded, signIn } = useSignIn()
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoaded || !signIn) return
+    const guardKey = `allternit-oauth-redirect:${strategy}`
+    if (sessionStorage.getItem(guardKey)) return
+    sessionStorage.setItem(guardKey, "1")
+    signIn
+      .authenticateWithRedirect({
+        strategy,
+        redirectUrl: window.location.href,
+        redirectUrlComplete: redirectCompleteUrl,
+      })
+      .catch((err) => {
+        sessionStorage.removeItem(guardKey)
+        const message = (err as { errors?: Array<{ message?: string }> })?.errors?.[0]?.message
+        setError(message || "Unable to start Google sign-in")
+      })
+  }, [isLoaded, signIn, strategy, redirectCompleteUrl])
+
+  if (error) {
+    return <p className="m-0 mb-3 text-[13px] text-[#f87171] leading-relaxed">{error}</p>
+  }
+  return null
+}
+
 export function PlatformSignIn(props: {
   forceRedirectUrl?: string
   signUpForceRedirectUrl?: string
   signUpUrl?: string
 }) {
-  const browserAuthSurface = useDesktopBrowserAuthSurface()
+  const location = useLocation()
   const { config: companyConfig } = useCompanyConfig()
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -424,7 +470,9 @@ export function PlatformSignIn(props: {
   const selfHosted = companyConfig?.selfHosted ?? false
   const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
-  if (desktopAuthEnabled && !browserAuthSurface) {
+  // Inside the desktop shell always offer the browser-backed desktop sign-in,
+  // including on /sign-in itself — otherwise a signed-out shell dead-ends here.
+  if (desktopAuthEnabled && isDesktopShell()) {
 
     const handleDesktopSignIn = async () => {
       setError(null)
@@ -472,15 +520,21 @@ export function PlatformSignIn(props: {
   }
 
   const redirectUrl = props.forceRedirectUrl || "/shell"
+  const strategy = new URLSearchParams(location.search).get("strategy")
   return (
-    <SignIn
-      appearance={clerkAppearance}
-      forceRedirectUrl={redirectUrl}
-      path={SIGN_IN_URL}
-      routing="path"
-      signUpForceRedirectUrl={props.signUpForceRedirectUrl || redirectUrl}
-      signUpUrl={props.signUpUrl || "/sign-up"}
-    />
+    <>
+      {strategy === "oauth_google" ? (
+        <ClerkOAuthRedirectOnce strategy="oauth_google" redirectCompleteUrl={redirectUrl} />
+      ) : null}
+      <SignIn
+        appearance={clerkAppearance}
+        forceRedirectUrl={redirectUrl}
+        path={SIGN_IN_URL}
+        routing="path"
+        signUpForceRedirectUrl={props.signUpForceRedirectUrl || redirectUrl}
+        signUpUrl={props.signUpUrl || "/sign-up"}
+      />
+    </>
   )
 }
 
