@@ -86,3 +86,4 @@ surfaces/ai.allternit.com/knip-exports.json
 # session debug artifacts
 .playwright-cli/
 *.tmp.cjs
+services/voice/.packaging-venv/

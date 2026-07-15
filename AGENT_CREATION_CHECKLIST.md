@@ -2,6 +2,8 @@
 
 Every new agent or agent type in the Allternit platform must explicitly touch every item below. No stubs, no mock data, no commented-out code, no fallback logic.
 
+**Programmatic creation goes through `defineAgent()`** (`surfaces/ai.allternit.com/src/lib/agents/agent-definition.ts`). It takes the industry-standard definition fields (`name`, `description`, `instructions`, `model`, `tools`) plus overrides, fills canonical defaults (harness, trust tier, write scope, surfaces, character layer), and validates against both the zod schema and `AGENT_CREATION_CHECKLIST` before returning a `CreateAgentInput`. Do not hand-assemble `CreateAgentInput` objects; seeding, imports (OpenClaw), and integrations (mini-apps) all use this factory. `CreateAgentForm` is the interactive equivalent, validated by the same checklist.
+
 ## 1. Canonical schema & identity
 
 - [ ] Assign a stable `id` and `version`.

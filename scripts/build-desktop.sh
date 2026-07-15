@@ -16,6 +16,8 @@ API_DIR="$WORKSPACE_ROOT/cmd/allternit-api"
 GIZZI_DIR="$WORKSPACE_ROOT/cmd/gizzi-code"
 DESKTOP_DIR="$WORKSPACE_ROOT/surfaces/allternit-desktop"
 RESOURCES_DIR="$DESKTOP_DIR/resources"
+VOICE_DIR="$WORKSPACE_ROOT/services/voice"
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python3.11 || command -v python3)}"
 
 # UI Helpers
 ok() { echo -e "\033[32m✓\033[0m $1"; }
@@ -71,6 +73,32 @@ cp "$GIZZI_BIN" "$RESOURCES_DIR/bin/gizzi-code"
 chmod +x "$RESOURCES_DIR/bin/gizzi-code"
 ok "gizzi-code → $RESOURCES_DIR/bin/gizzi-code"
 
+# ── 2b. Build Voice Service Sidecar ─────────────────────────────────────────
+step "Building bundled voice service…"
+VOICE_VENV="$VOICE_DIR/.packaging-venv"
+"$PYTHON_BIN" -m venv "$VOICE_VENV"
+"$VOICE_VENV/bin/pip" install --upgrade pip pyinstaller
+"$VOICE_VENV/bin/pip" install -r "$VOICE_DIR/api/requirements.txt"
+"$VOICE_VENV/bin/pip" install "$VOICE_DIR/voice"
+cd "$VOICE_DIR"
+"$VOICE_VENV/bin/pyinstaller" \
+  --noconfirm \
+  --clean \
+  --onefile \
+  --name allternit-voice-service \
+  --paths "$VOICE_DIR" \
+  --collect-all whisper \
+  --collect-all chatterbox \
+  --collect-all imageio_ffmpeg \
+  packaged_main.py
+
+VOICE_BIN="$VOICE_DIR/dist/allternit-voice-service"
+[ -f "$VOICE_BIN" ] || die "Voice service build failed — binary not found at $VOICE_BIN"
+cp "$VOICE_BIN" "$RESOURCES_DIR/bin/allternit-voice-service"
+chmod +x "$RESOURCES_DIR/bin/allternit-voice-service"
+
+ok "voice service → $RESOURCES_DIR/bin/allternit-voice-service"
+
 # ── 3. Build Rust API ────────────────────────────────────────────────────────
 if [ "$SKIP_API" = false ]; then
   step "Building allternit-api (Rust)…"
@@ -79,8 +107,8 @@ if [ "$SKIP_API" = false ]; then
   
   # Map binary name (Cargo uses underscores, we prefer dashes for distribution)
   # In workspace builds, binary is in the root target dir
-  API_BIN="$WORKSPACE_ROOT/../target/release/allternit-api"
-  [ -f "$API_BIN" ] || API_BIN="$WORKSPACE_ROOT/../target/release/allternit_api"
+  API_BIN="$WORKSPACE_ROOT/target/release/allternit-api"
+  [ -f "$API_BIN" ] || API_BIN="$WORKSPACE_ROOT/target/release/allternit_api"
   [ -f "$API_BIN" ] || API_BIN="$API_DIR/target/release/allternit-api"
   [ -f "$API_BIN" ] || API_BIN="$API_DIR/target/release/allternit_api"
   [ -f "$API_BIN" ] || die "API build failed — binary not found at $API_BIN"
