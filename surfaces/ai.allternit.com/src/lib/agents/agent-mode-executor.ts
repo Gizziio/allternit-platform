@@ -1,6 +1,6 @@
 import { generateText } from 'ai';
 import { getDefaultPluginModel } from '@/lib/ai/providers';
-import { loadPlugin, type PluginId, type PluginOutput } from '@/lib/plugins';
+import { createPluginInstance, type PluginId, type PluginOutput } from '@/lib/plugins';
 import type { ArtifactKind, ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { CanonicalAgentModeId } from './agent-mode-contracts';
 
@@ -27,11 +27,12 @@ function escapeHtml(value: string): string {
   })[character]!);
 }
 
-async function executeDocs(prompt: string): Promise<PluginOutput> {
+async function executeDocs(prompt: string, signal?: AbortSignal): Promise<PluginOutput> {
   const model = await getDefaultPluginModel();
   const { text } = await generateText({
     model,
     temperature: 0.3,
+    abortSignal: signal,
     prompt: `Create a polished professional document for this request. Return semantic HTML only, with a title, headings, paragraphs, lists, and tables where useful. Do not use markdown fences.\n\n${prompt}`,
   });
   const html = /<(?:article|main|html|h1)[\s>]/i.test(text)
@@ -44,11 +45,12 @@ async function executeDocs(prompt: string): Promise<PluginOutput> {
   };
 }
 
-async function executeSheets(prompt: string): Promise<PluginOutput> {
+async function executeSheets(prompt: string, signal?: AbortSignal): Promise<PluginOutput> {
   const model = await getDefaultPluginModel();
   const { text } = await generateText({
     model,
     temperature: 0.2,
+    abortSignal: signal,
     prompt: `Create an editable spreadsheet-style deliverable for the request below. Return one self-contained semantic HTML document only. Include a clearly labeled table, typed values, and a Formula column containing spreadsheet formulas beginning with = wherever calculations or forecasting are requested. Include assumptions and source-data sections. Do not use markdown fences.\n\n${prompt}`,
   });
   const html = /<(?:table|html|main)[\s>]/i.test(text)
@@ -80,24 +82,38 @@ export async function executeAgentMode(
   prompt: string,
   templateTitle: string | undefined,
   callbacks: AgentModeExecutorCallbacks,
+  signal?: AbortSignal,
 ): Promise<void> {
+  if (signal?.aborted) throw new DOMException('Mode execution cancelled', 'AbortError');
   const toolCallId = `mode-${modeId}-${Date.now()}`;
   const toolName = `${modeId}_mode_execute`;
   callbacks.onToolCall?.({ toolCallId, toolName, input: { prompt, templateTitle } });
 
   const pluginId = MODE_PLUGIN[modeId];
+  let plugin: Awaited<ReturnType<typeof createPluginInstance>> | undefined;
   const output = modeId === 'docs'
-    ? await executeDocs(prompt)
+    ? await executeDocs(prompt, signal)
     : modeId === 'data'
-      ? await executeSheets(prompt)
-      : await (await loadPlugin(pluginId!)).execute({
-        prompt,
-        options: { templateTitle, format: modeId === 'slides' ? 'html' : undefined },
-      });
+      ? await executeSheets(prompt, signal)
+      : await (async () => {
+          plugin = await createPluginInstance(pluginId!);
+          const cancel = () => void plugin?.cancel();
+          signal?.addEventListener('abort', cancel, { once: true });
+          try {
+            return await plugin.execute({
+              prompt,
+              options: { templateTitle, format: modeId === 'slides' ? 'html' : undefined },
+            });
+          } finally {
+            signal?.removeEventListener('abort', cancel);
+            await plugin.destroy();
+          }
+        })();
 
   if (!output.success) {
     throw new Error(output.error?.message ?? `${modeId} execution failed`);
   }
+  if (signal?.aborted) throw new DOMException('Mode execution cancelled', 'AbortError');
 
   callbacks.onToolResult?.({ toolCallId, toolName, result: output });
   const artifact: ArtifactUIPart = {

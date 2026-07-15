@@ -538,7 +538,7 @@ async function streamMessageWithContext(
         onToolCall: (event) => callbacks?.onToolCall?.(event),
         onToolResult: (event) => callbacks?.onToolResult?.(event),
         onArtifact: (artifact) => callbacks?.onArtifact?.(artifact),
-      });
+      }, signal);
       callbacks?.onDone?.();
     } catch (error) {
       callbacks?.onError?.(error instanceof Error ? error : new Error(String(error)));

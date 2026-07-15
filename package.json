@@ -29,6 +29,7 @@
     "config:company": "node scripts/generate-company-config.cjs",
     "config:company:write": "node scripts/generate-company-config.cjs --out=resources/company.json",
     "dev:api": "cd cmd/allternit-api && cargo run",
+    "dev:research": "bash services/open-notebook/dev.sh",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config tests/vitest.config.ts",

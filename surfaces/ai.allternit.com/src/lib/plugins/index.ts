@@ -130,6 +130,20 @@ export async function loadPlugin(id: PluginId): Promise<ModePlugin> {
   return plugin;
 }
 
+/** Create an isolated plugin instance for a single execution. */
+export async function createPluginInstance(id: PluginId): Promise<ModePlugin> {
+  const definition = PLUGINS[id];
+  if (!definition) throw new Error(`Plugin not found: ${id}`);
+  const module = await definition.lazyImport() as Record<string, unknown>;
+  const factory = Object.entries(module).find(([name, value]) =>
+    /^create[A-Z].*Plugin$/.test(name) && typeof value === 'function'
+  )?.[1] as (() => ModePlugin) | undefined;
+  if (!factory) throw new Error(`Plugin ${id} does not export an instance factory`);
+  const plugin = factory();
+  await plugin.initialize();
+  return plugin;
+}
+
 /**
  * Get plugin info without loading
  */
