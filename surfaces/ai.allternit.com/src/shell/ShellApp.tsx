@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 import React, { useMemo, useReducer, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -29,6 +28,7 @@ import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
 import { useRunnerStore } from '../runner/runner.store';
 import { useSidecarStore } from '../stores/sidecar-store';
 import { useAgentStore } from '../lib/agents';
+import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
@@ -54,6 +54,12 @@ import { FindInPageOverlay } from './FindInPageOverlay';
 import { ArtifactSidecar } from './ArtifactSidecar';
 
 import { createModuleLogger } from '@/lib/logger';
+import { openDesignWindow } from '@/lib/open-design-window';
+import {
+  buildModeSystemPrompt,
+  getAgentModeContract,
+  type CanonicalAgentModeId,
+} from '@/lib/agents/agent-mode-contracts';
 
 const logger = createModuleLogger('ShellApp');
 
@@ -87,9 +93,24 @@ function ShellAppInner(): React.ReactNode {
   const setThemePreference = useThemeStore((state) => state.setTheme);
   const theme = useResolvedTheme(themePreference);
   const [isRailCollapsed, setIsRailCollapsed] = useState(false);
+  const [hoveredModeIcon, setHoveredModeIcon] = useState<AppMode | null>(null);
+  const [railHovered, setRailHovered] = useState(false);
+  const [isRailPeekOpen, setIsRailPeekOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFindInPageOpen, setIsFindInPageOpen] = useState(false);
   const { railWidth, setRailWidth } = usePanelLayout();
+
+  // Temporarily show a condensed rail while hovering a collapsed mode icon or
+  // moving from that icon into the rail preview. Hovering the collapse control
+  // itself only reveals the mode switchers.
+  useEffect(() => {
+    if (hoveredModeIcon || railHovered) {
+      setIsRailPeekOpen(true);
+      return;
+    }
+    const timer = setTimeout(() => setIsRailPeekOpen(false), 150);
+    return () => clearTimeout(timer);
+  }, [hoveredModeIcon, railHovered]);
 
   // Tracks whether the most recent mode change was triggered by a view change
   // (e.g. opening Dispatch while in browser mode). When true, the mode-to-view
@@ -148,6 +169,9 @@ function ShellAppInner(): React.ReactNode {
       cancelled = true
     }
   }, [])
+
+  // One-time agent seeding bootstrap after auth loads
+  useAgentBootstrap({ enabled: authLoaded && (isSignedIn || isPlatformAuthDisabled()) });
 
   // Load sessions from mode-specific stores and connect to live sync
   useEffect(() => {
@@ -219,9 +243,19 @@ function ShellAppInner(): React.ReactNode {
   }, [activeMode, sidecarActivePanel, sidecarOpen, setSidecarOpen]);
 
   const open = useCallback((viewType: ViewType, context?: any): void => {
+    if (viewType === 'design') {
+      openDesignWindow();
+      return;
+    }
     dispatch({ type: 'OPEN_VIEW', viewType, context });
   }, []);
-  const openNew = useCallback((viewType: ViewType) => dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true }), []);
+  const openNew = useCallback((viewType: ViewType) => {
+    if (viewType === 'design') {
+      openDesignWindow();
+      return;
+    }
+    dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true });
+  }, []);
 
   // Sync view to persisted mode once mode is loaded from localStorage, or when
   // the user explicitly changes mode. Do not override a view that was just
@@ -229,7 +263,7 @@ function ShellAppInner(): React.ReactNode {
   useEffect(() => {
     if (!modeLoaded) return;
     if (typeof window !== 'undefined' && window.location.pathname === '/shell/recents') {
-      open('chats-and-tasks');
+      open('recents');
       return;
     }
     if (modeChangeSourceRef.current === 'sync') {
@@ -239,7 +273,10 @@ function ShellAppInner(): React.ReactNode {
     if (activeMode === 'chat') open('chat');
     else if (activeMode === 'cowork') open('workspace');
     else if (activeMode === 'code') open('code');
-    else if (activeMode === 'design') open('design');
+    else if (activeMode === 'design') {
+      setActiveMode('chat');
+      open('chat');
+    }
     else if (activeMode === 'browser') open('browser');
     else open('chat'); // fallback
   }, [modeLoaded, activeMode, open]);
@@ -271,8 +308,20 @@ function ShellAppInner(): React.ReactNode {
     runner.openCompact();
   });
 
-  const handleOpenAgentSession = useCallback(async (text: string, surface: AppMode) => {
-    const selectedAgentId = useAgentSurfaceModeStore.getState().selectedAgentIdBySurface[surface];
+  const handleOpenAgentSession = useCallback(async (
+    text: string,
+    surface: AppMode,
+    execution?: { modeId: CanonicalAgentModeId; templateTitle?: string },
+  ) => {
+    const surfaceModeState = useAgentSurfaceModeStore.getState();
+    const selectedAgentId = surfaceModeState.selectedAgentIdBySurface[surface];
+    const modeId = execution?.modeId ?? surfaceModeState.selectedModeBySurface[surface];
+    const contract = getAgentModeContract(modeId);
+
+    if (!contract) {
+      logger.error({ modeId, surface }, 'Refusing to start an agent session without a valid mode contract');
+      return;
+    }
 
     try {
       const store = surface === 'code'
@@ -284,8 +333,18 @@ function ShellAppInner(): React.ReactNode {
             : useChatSessionStore;
       const sessionId = await store.getState().createSession({
         name: text.slice(0, 50) || 'New Session',
-        sessionMode: selectedAgentId ? 'agent' : 'regular',
+        sessionMode: 'agent',
         agentId: selectedAgentId ?? undefined,
+        systemPrompt: buildModeSystemPrompt(contract, execution?.templateTitle),
+        metadata: {
+          agentModeId: contract.id,
+          agentModeLabel: contract.label,
+          templateTitle: execution?.templateTitle,
+          artifactKind: contract.artifactKind,
+          requiredCapabilities: contract.requiredCapabilities,
+          requiredEvidence: contract.requiredEvidence,
+          executionStatus: 'pending',
+        },
       });
 
       store.getState().setActiveSession(sessionId);
@@ -297,7 +356,11 @@ function ShellAppInner(): React.ReactNode {
         design: 'design',
         browser: 'browser',
       };
-      dispatch({ type: 'OPEN_VIEW', viewType: viewTypeMap[surface] });
+      if (surface === 'design') {
+        openDesignWindow();
+      } else {
+        dispatch({ type: 'OPEN_VIEW', viewType: viewTypeMap[surface] });
+      }
       void store.getState().sendMessageStream(sessionId, { text });
     } catch (err) {
       logger.error({ err: err }, 'Failed to create session');
@@ -356,6 +419,10 @@ function ShellAppInner(): React.ReactNode {
     const handleOpenView = (e: Event): void => {
       const detail = (e as CustomEvent<{ viewType?: ViewType; allowNew?: boolean; context?: unknown }>).detail;
       if (!detail?.viewType) return;
+      if (detail.viewType === 'design') {
+        openDesignWindow();
+        return;
+      }
       dispatch({
         type: 'OPEN_VIEW',
         viewType: detail.viewType,
@@ -368,12 +435,16 @@ function ShellAppInner(): React.ReactNode {
   }, []);
 
   const handleModeChange = useCallback((mode: AppMode): void => {
+    if (mode === 'design') {
+      openDesignWindow();
+      return;
+    }
+
     modeChangeSourceRef.current = 'user';
     setActiveMode(mode);
     if (mode === 'chat') open('chat');
     if (mode === 'cowork') open('workspace');
     if (mode === 'code') open('code');
-    if (mode === 'design') open('design');
     if (mode === 'browser') open('browser');
   }, [setActiveMode, open]);
 
@@ -410,6 +481,8 @@ function ShellAppInner(): React.ReactNode {
   const permissions = usePermissionGuide();
 
   const shouldHideRail = active.viewType === 'labs';
+  const effectiveRailCollapsed = isRailCollapsed || shouldHideRail;
+  const peekRail = isRailCollapsed && !shouldHideRail && isRailPeekOpen;
 
   return (
     <TooltipProvider>
@@ -458,13 +531,15 @@ function ShellAppInner(): React.ReactNode {
         )}
         
         <ShellFrame
-          isRailCollapsed={isRailCollapsed || shouldHideRail}
+          isRailCollapsed={effectiveRailCollapsed}
           railWidth={railWidth}
           onRailWidthChange={setRailWidth}
+          onRailHover={setRailHovered}
+          peekRail={peekRail}
           rail={
             <ShellRail
               activeViewType={active.viewType}
-              onOpen={open as (view: string) => void}
+              onOpen={open as (view: string, context?: Record<string, unknown>) => void}
               onNew={openNew as unknown as () => void}
               mode={activeMode}
               isCollapsed={isRailCollapsed}
@@ -499,6 +574,7 @@ function ShellAppInner(): React.ReactNode {
                   onModeChange={handleModeChange}
                   onToggleRail={() => setIsRailCollapsed(!isRailCollapsed)}
                   railWidth={railWidth}
+                  onModeHover={setHoveredModeIcon}
                   onNewChat={() => {
                     useChatSessionStore.getState().setActiveSession(null);
                     useChatStore.getState().setActiveThread(null);

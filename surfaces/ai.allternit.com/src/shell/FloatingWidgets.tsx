@@ -8,6 +8,7 @@ import {
   Globe,
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
+import { cn } from '@/lib/utils';
 
 interface RailControlsProps {
   mode: AppMode;
@@ -18,6 +19,8 @@ interface RailControlsProps {
   isRailCollapsed: boolean;
   railWidth?: number;
   onSearchOpen?: () => void;
+  onModeHover?: (mode: AppMode | null) => void;
+  onCollapsedHover?: (hovered: boolean) => void;
 }
 
 interface ModeButton {
@@ -42,8 +45,11 @@ export function RailControls({
   isRailCollapsed,
   railWidth = 248,
   onSearchOpen,
+  onModeHover,
+  onCollapsedHover,
 }: RailControlsProps): React.ReactNode {
   const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [collapsedHovered, setCollapsedHovered] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -62,18 +68,68 @@ export function RailControls({
       <div
         data-testid="shell-rail-controls"
         className="fixed top-0 left-0 z-[150] pointer-events-none"
-        style={{ width: 120 }}
       >
         <div
           className="h-11 flex items-center pointer-events-auto [WebkitAppRegion:no-drag]"
-          style={{ paddingLeft: 80 }}
+          style={{ marginLeft: 100 }}
+          onMouseEnter={() => { setCollapsedHovered(true); onCollapsedHover?.(true); }}
+          onMouseLeave={() => { setCollapsedHovered(false); onCollapsedHover?.(false); }}
         >
-          <TitleBarButton
-            onClick={onToggleRail}
-            title="Expand Sidebar"
+          <div
+            className={cn(
+              "flex items-center gap-1 rounded-lg transition-all duration-200",
+              collapsedHovered
+                ? "bg-[var(--shell-control-bg)] border border-solid border-[var(--border-subtle)] px-1 py-0.5"
+                : "border border-solid border-transparent"
+            )}
           >
-            <SidebarSimple size={15} weight="bold" />
-          </TitleBarButton>
+            <TitleBarButton
+              onClick={onToggleRail}
+              title="Expand Sidebar"
+            >
+              <SidebarSimple size={15} weight="bold" />
+            </TitleBarButton>
+            {collapsedHovered && (
+              <>
+                <div className="w-px h-4 bg-[var(--shell-divider)]" />
+                {MODE_BUTTONS.map((btn) => {
+                  const isActive = mode === btn.id;
+                  const IconComponent = btn.icon;
+                  return (
+                    <button
+                      key={btn.id}
+                      type="button"
+                      onClick={() => onModeChange(btn.id)}
+                      title={btn.label}
+                      data-testid={`rail-mode-${btn.id}`}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag]"
+                      style={{
+                        background: isActive ? btn.accent : 'transparent',
+                        color: isActive ? 'var(--ui-text-inverse)' : 'var(--shell-item-muted)',
+                      }}
+                      onMouseEnter={(e) => {
+                        onModeHover?.(btn.id);
+                        onModeChange(btn.id);
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'var(--shell-item-hover)';
+                          e.currentTarget.style.color = 'var(--shell-item-fg)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        onModeHover?.(null);
+                        if (!isActive) {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = 'var(--shell-item-muted)';
+                        }
+                      }}
+                    >
+                      <IconComponent size={15} weight={isActive ? 'fill' : 'bold'} />
+                    </button>
+                  );
+                })}
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -87,54 +143,16 @@ export function RailControls({
     >
       {/* Title bar widget row */}
       <div
-        className="h-11 flex items-center pr-2 pointer-events-auto [WebkitAppRegion:drag]"
-        style={{ paddingLeft: 56 }}
+        className="h-11 flex items-center pr-2 pointer-events-auto [WebkitAppRegion:no-drag]"
+        style={{ paddingLeft: 100 }}
       >
-        <div
-          className="flex items-center gap-1 [WebkitAppRegion:no-drag]"
-        >
+        <div className="flex items-center gap-1 [WebkitAppRegion:no-drag]">
           <TitleBarButton
             onClick={onToggleRail}
             title={isRailCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
             <SidebarSimple size={15} weight="bold" />
           </TitleBarButton>
-
-          <div className="w-px h-4 bg-[var(--shell-divider)] mx-1" />
-
-          {/* Primary mode switcher: Home | Code | Browser */}
-          {MODE_BUTTONS.map((btn) => {
-            const isActive = mode === btn.id;
-            const IconComponent = btn.icon;
-            return (
-              <button
-                key={btn.id}
-                type="button"
-                onClick={() => onModeChange(btn.id)}
-                title={btn.label}
-                data-testid={`rail-mode-${btn.id}`}
-                className="flex items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag]"
-                style={{
-                  background: isActive ? btn.accent : 'transparent',
-                  color: isActive ? 'var(--ui-text-inverse)' : 'var(--shell-item-muted)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'var(--shell-item-hover)';
-                    e.currentTarget.style.color = 'var(--shell-item-fg)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'var(--shell-item-muted)';
-                  }
-                }}
-              >
-                <IconComponent size={15} weight={isActive ? 'fill' : 'bold'} />
-              </button>
-            );
-          })}
 
           <div className="w-px h-4 bg-[var(--shell-divider)] mx-1" />
 
@@ -164,6 +182,9 @@ export function RailControls({
             <MagnifyingGlass size={15} weight="bold" />
           </TitleBarButton>
         </div>
+
+        {/* Draggable title-bar spacer to the right of the controls */}
+        <div className="flex-1 h-full [WebkitAppRegion:drag]" />
       </div>
     </div>
   );
@@ -181,6 +202,7 @@ function TitleBarButton({
   return (
     <button type="button"
       onClick={onClick}
+      onMouseDown={(e) => e.stopPropagation()}
       title={title}
       className="bg-transparent border-none rounded-md w-7 h-7 flex items-center justify-center text-[var(--shell-item-muted)] cursor-pointer transition-all duration-150 shrink-0 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)]"
     >

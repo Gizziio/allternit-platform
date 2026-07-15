@@ -14,11 +14,8 @@ export type ViewType =
   | "addin-excel"
   | "addin-ppt"
   // Agent views
-  | "studio"
-  | "agent"
   | "agent-hub"
   | "native-agent"
-  | "rails"
   | "registry"
   | "memory"
   // Service views
@@ -77,13 +74,12 @@ export type ViewType =
   // Other views
   | "settings"
   | "terminal"
-  | "runner"
   | "monitor"
   | "code"
   | "plugins"
   | "models-manage"
   | "run-replay"
-  | "promotion"
+  | "apps-extensions"
   // Runtime Management Views (N11, N12, N16)
   | "runtime-ops"
   | "budget-dashboard"
@@ -93,7 +89,7 @@ export type ViewType =
   | "history"
   | "archived"
   // Unified recents view
-  | "chats-and-tasks"
+  | "recents"
   // Cowork Analytics & Content views
   | "insights"
   | "activity"

@@ -18,6 +18,7 @@ import {
 import { createViewRegistry } from '../views/registry';
 import type { ViewContext } from '../nav/nav.types';
 import type { AppMode } from './ShellHeader';
+import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 
 const SkillsRegistryView   = lazy(() => import('../views/code/SkillsRegistryView').then(m => ({ default: m.SkillsRegistryView })));
 const DesignRegistryView   = lazy(() => import('../views/design/DesignRegistryView').then(m => ({ default: m.DesignRegistryView })));
@@ -34,8 +35,6 @@ const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').the
 const PluginRegistryView   = lazy(() => import('../views/cowork/PluginRegistryView').then(m => ({ default: m.PluginRegistryView })));
 const TerminalView         = lazy(() => import('../views/TerminalView').then(m => ({ default: m.TerminalView })));
 const CodeRoot             = lazy(() => import('../views/code/CodeRoot').then(m => ({ default: m.CodeRoot })));
-const AgentSystemView      = lazy(() => import('../views/AgentSystemView').then(m => ({ default: m.AgentSystemView })));
-const AgentView            = lazy(() => import('../views/AgentView').then(m => ({ default: m.AgentView })));
 const AgentHub             = lazy(() => import('../views/AgentHub').then(m => ({ default: m.AgentHub })));
 const NativeAgentView      = lazy(() => import('../views/NativeAgentView').then(m => ({ default: m.NativeAgentView })));
 const BrowserCapsuleEnhanced = lazy(() => import('../capsules/browser/BrowserCapsuleEnhanced').then(m => ({ default: m.BrowserCapsuleEnhanced })));
@@ -45,7 +44,7 @@ const AciAddinView = lazy(() => import('../views/aci/AciAddinView').then(m => ({
 const ProjectView          = lazy(() => import('../views/ProjectView').then(m => ({ default: m.ProjectView })));
 const ToolsView            = lazy(() => import('../views/code/ToolsView').then(m => ({ default: m.ToolsView })));
 const RunReplayView        = lazy(() => import('../views/code/RunReplayView').then(m => ({ default: m.RunReplayView })));
-const PromotionDashboardView = lazy(() => import('../views/code/PromotionDashboardView').then(m => ({ default: m.PromotionDashboardView })));
+const AppsExtensionsView     = lazy(() => import('../views/AppsExtensionsView').then(m => ({ default: m.AppsExtensionsView })));
 const DispatchView           = lazy(() => import('../views/DispatchView').then(m => ({ default: m.DispatchView })));
 const PlaygroundView       = lazy(() => import('../views/PlaygroundView').then(m => ({ default: m.PlaygroundView })));
 const DagIntegrationPage   = lazy(() => import('../views/DagIntegrationPage').then(m => ({ default: m.DagIntegrationPage })));
@@ -87,7 +86,7 @@ const PrewarmManagerView     = lazy(() => import('../views/runtime/PrewarmManage
 const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperationsView').then(m => ({ default: m.RuntimeOperationsView })));
 const HistoryView            = lazy(() => import('../views/HistoryView').then(m => ({ default: m.HistoryView })));
 const ArchivedView           = lazy(() => import('../views/ArchivedView').then(m => ({ default: m.ArchivedView })));
-const ChatsAndTasksView      = lazy(() => import('../views/ChatsAndTasksView').then(m => ({ default: m.ChatsAndTasksView })));
+const RecentsView            = lazy(() => import('../views/RecentsView').then(m => ({ default: m.RecentsView })));
 const SearchView             = lazy(() => import('../views/SearchView').then(m => ({ default: m.SearchView })));
 const DebugView              = lazy(() => import('../views/code/DebugView').then(m => ({ default: m.DebugView })));
 const InsightsView           = lazy(() => import('../views/cowork/InsightsView').then(m => ({ default: m.InsightsView })));
@@ -124,7 +123,7 @@ const RoutinesListView       = lazy(() => import('../views/automation/RoutinesLi
 const LoopsListView          = lazy(() => import('../views/automation/LoopsListView').then(m => ({ default: m.LoopsListView })));
 
 export function getShellViewRegistry(handlers: {
-  handleOpenAgentSession: (text: string, surface: AppMode) => void;
+  handleOpenAgentSession: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   open: (viewType: any, context?: any) => void;
 }) {
   const { handleOpenAgentSession, open } = handlers;
@@ -201,11 +200,6 @@ export function getShellViewRegistry(handlers: {
         </ErrorBoundary>
       </BrowserSurfaceFrame>
     ),
-    studio: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Studio" />}>
-        <AgentView />
-      </ErrorBoundary>
-    ),
     marketplace: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Marketplace" />}>
         <MarketplaceView />
@@ -246,24 +240,14 @@ export function getShellViewRegistry(handlers: {
         <MonitorView />
       </ErrorBoundary>
     ),
-    runner: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Runner" />}>
-        <AgentSystemView />
-      </ErrorBoundary>
-    ),
-    rails: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Rails" />}>
-        <AgentSystemView />
-      </ErrorBoundary>
-    ),
     "run-replay": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Run Replay" />}>
         <RunReplayView sessionId={(context?.context as any)?.sessionId} />
       </ErrorBoundary>
     ),
-    promotion: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Promotion Dashboard" />}>
-        <PromotionDashboardView />
+    'apps-extensions': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Apps & Extensions" />}>
+        <AppsExtensionsView />
       </ErrorBoundary>
     ),
     "models-manage": ({ context }: { context?: ViewContext }) => (
@@ -284,11 +268,6 @@ export function getShellViewRegistry(handlers: {
     elements: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Elements" />}>
         <ElementsView />
-      </ErrorBoundary>
-    ),
-    agent: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Hub" />}>
-        <AgentHub />
       </ErrorBoundary>
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
@@ -577,9 +556,9 @@ export function getShellViewRegistry(handlers: {
         <ArchivedView />
       </ErrorBoundary>
     ),
-    'chats-and-tasks': ({ context }: { context?: ViewContext }) => (
+    recents: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Recents" />}>
-        <ChatsAndTasksView />
+        <RecentsView />
       </ErrorBoundary>
     ),
     search: ({ context }: { context?: ViewContext }) => (
@@ -688,7 +667,7 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'code-threads': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Code Threads" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Code Recents" />}>
         <ThreadsView />
       </ErrorBoundary>
     ),

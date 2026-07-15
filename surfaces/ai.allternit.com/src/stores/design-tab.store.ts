@@ -39,6 +39,9 @@ interface DesignTabStore {
   // persisted project across mode switches
   activeProject: StoredProject | null;
   setStoredProject: (project: StoredProject | null) => void;
+  // prompt carried from project view composer into design mode
+  pendingPrompt: string | null;
+  setPendingPrompt: (prompt: string | null) => void;
   openProjectTab: (tabId: string, label: string) => void;
   closeProjectTab: (tabId: string) => void;
   // rail → canvas project creation bus
@@ -58,6 +61,8 @@ export const useDesignTabStore = create<DesignTabStore>((set, get) => ({
   setProjectName: (v) => set({ projectName: v }),
   activeProject: null,
   setStoredProject: (project) => set({ activeProject: project }),
+  pendingPrompt: null,
+  setPendingPrompt: (prompt) => set({ pendingPrompt: prompt }),
   openProjectTab: (tabId, label) => {
     const { activeProject } = get();
     if (!activeProject) return;

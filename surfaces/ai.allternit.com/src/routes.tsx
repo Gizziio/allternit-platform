@@ -76,6 +76,7 @@ const TerminalTestPage = lazy(() => import('./pages/TerminalTestPage'))
 const TerminalClerkPage = lazy(() => import('./pages/TerminalClerkPage'))
 const OfficeAuthBridgePage = lazy(() => import('./pages/OfficeAuthBridgePage'))
 const DispatchJoinPage = lazy(() => import('./pages/DispatchJoinPage'))
+const DesignPage = lazy(() => import('./pages/DesignPage'))
 
 export default function AppRoutes() {
   return (
@@ -109,6 +110,7 @@ export default function AppRoutes() {
         <Route path="/terminal/clerk" element={<TerminalClerkPage />} />
         <Route path="/office-auth-bridge" element={<OfficeAuthBridgePage />} />
         <Route path="/dispatch/join" element={<DispatchJoinPage />} />
+        <Route path="/design" element={<DesignPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

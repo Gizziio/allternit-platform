@@ -195,6 +195,7 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
     const unsubscribe = speechToText.subscribe((event) => {
       switch (event.type) {
         case 'start':
+          setError(null);
           setIsRecording(true);
           setPersonaState('listening');
           break;
@@ -203,11 +204,16 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
           setPersonaState('idle');
           break;
         case 'error':
+          setError(event.error || 'Voice input failed');
           setIsRecording(false);
           setPersonaState('idle');
           break;
         case 'processing':
           setPersonaState('thinking');
+          break;
+        case 'no-match':
+          setError('No speech was detected. Try again.');
+          setPersonaState('idle');
           break;
         case 'result':
           if (event.result?.transcript) {
@@ -226,6 +232,22 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
 
     return () => unsubscribe();
   }, []);
+
+  // Drive listening visualizations from the microphone analyser while STT is
+  // recording. Playback energy continues to come from VoiceService above.
+  useEffect(() => {
+    if (!isRecording) return;
+    let frame = 0;
+    const sample = () => {
+      setAudioLevel(speechToText.getAudioLevel());
+      frame = window.requestAnimationFrame(sample);
+    };
+    frame = window.requestAnimationFrame(sample);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      setAudioLevel(0);
+    };
+  }, [isRecording]);
 
   // Actions
   const setVoice = useCallback((voice: string) => {
@@ -305,9 +327,11 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
   }, [serviceAvailable, availableVoices.length, isLoadingVoices, refreshVoices]);
 
   const startRecording = useCallback(async () => {
+    const available = serviceAvailable ?? await checkHealth();
+    if (!available) return false;
     const started = await speechToText.start();
     return started;
-  }, []);
+  }, [checkHealth, serviceAvailable]);
 
   const stopRecording = useCallback(() => {
     speechToText.stop();

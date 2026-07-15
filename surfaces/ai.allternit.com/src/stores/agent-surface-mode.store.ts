@@ -11,7 +11,7 @@ export type AgentModeId =
   // Collaborative modes
   | 'team'
   // Additional modes
-  | 'swarms' | 'website' | 'image' | 'video';
+  | 'swarms' | 'website' | 'docs' | 'image' | 'video';
 
 type SurfaceAgentMap = Record<AgentModeSurface, string | null>;
 type SurfaceModeMap = Record<AgentModeSurface, AgentModeId | null>;

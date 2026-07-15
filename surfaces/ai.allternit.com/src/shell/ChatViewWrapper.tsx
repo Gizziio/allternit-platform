@@ -15,6 +15,7 @@ import { ErrorBoundary } from '../components/error-boundary';
 import { ChatErrorFallback } from './ShellFallbacks';
 import { useDefaultModelSelection } from '../hooks/use-default-model-selection';
 import type { AppMode } from './ShellHeader';
+import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 
 const lazy = <T extends React.ComponentType<any>>(
   factory: () => Promise<any>,
@@ -31,7 +32,7 @@ const ProjectView = lazy(() => import('../views/ProjectView'), 'ProjectView');
 export const ChatViewWrapper = React.memo(function ChatViewWrapper({
   onOpenAgentSession
 }: {
-  onOpenAgentSession?: (text: string, surface: AppMode) => void;
+  onOpenAgentSession?: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
 }): React.ReactNode {
   const { activeProjectId, activeThreadId } = useChatStore();
   const embeddedChatSessionId = useChatSessionStore(
@@ -77,7 +78,7 @@ export const ChatViewWrapper = React.memo(function ChatViewWrapper({
               <ChatInputProvider>
                 <ChatModelsProvider>
                   <ModelSelectionProvider defaultSelection={defaultModelSelection}>
-                    <ChatView key={effectiveChatId} />
+                    <ChatView key={effectiveChatId} onOpenAgentSession={onOpenAgentSession} />
                   </ModelSelectionProvider>
                 </ChatModelsProvider>
               </ChatInputProvider>

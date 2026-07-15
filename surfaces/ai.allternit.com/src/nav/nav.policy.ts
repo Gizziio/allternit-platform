@@ -16,27 +16,24 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'addin-word': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'addin-excel': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'addin-ppt': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
-  studio: { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   marketplace: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   registry: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   memory: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   settings: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
-  runner: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
-  rails: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
-  agent: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "agent-hub": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   
   // Mode-specific Agent Session views
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "code-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "design-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   
   terminal: { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
 
   plugins: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   code: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'run-replay': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
-  promotion: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'apps-extensions': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'models-manage': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   monitor: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   hermes: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
@@ -117,7 +114,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   history: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   archived: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   // Unified recents view
-  'chats-and-tasks': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  recents: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Cowork Analytics & Content views
   insights: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

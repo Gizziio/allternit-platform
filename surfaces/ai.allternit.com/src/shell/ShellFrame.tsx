@@ -45,6 +45,8 @@ export function ShellFrame({
   isRailCollapsed,
   railWidth: railWidthProp,
   onRailWidthChange,
+  onRailHover,
+  peekRail,
 }: {
   rail: React.ReactNode;
   header?: React.ReactNode;
@@ -59,6 +61,10 @@ export function ShellFrame({
   railWidth?: number;
   /** Called when the user drags the rail resize handle. */
   onRailWidthChange?: (width: number) => void;
+  /** Called when the pointer enters or leaves the rail panel. */
+  onRailHover?: (hovered: boolean) => void;
+  /** When true, render the rail as a fixed slide-out overlay even if collapsed. */
+  peekRail?: boolean;
 
 }) {
   const { mode } = useMode();
@@ -161,28 +167,33 @@ export function ShellFrame({
       background: 'var(--shell-frame-bg)',
       color: 'var(--shell-item-fg)',
       overflow: 'hidden',
-      position: 'relative'
+      position: 'relative',
+      transition: railResizing ? 'none' : 'grid-template-columns 0.25s ease',
     }}>
       <WorkspaceBackground />
 
       {/* Rail Container — solid panel with subtle border */}
       {!isRailCollapsed && (
-        <div style={{
-          gridRow: '1',
-          gridColumn: '1',
-          display: 'flex',
-          minHeight: 0,
-          overflow: 'hidden',
-          padding: '0px',
-          zIndex: 1,
-          background: isAgentActive
-            ? 'color-mix(in srgb, var(--shell-rail-bg) 88%, transparent)'
-            : 'var(--shell-rail-bg)',
-          borderRight: '1px solid var(--border-subtle)',
-          borderTopRightRadius: '16px',
-          borderBottomRightRadius: '16px',
-          position: 'relative',
-        }}>
+        <div
+          onMouseEnter={() => onRailHover?.(true)}
+          onMouseLeave={() => onRailHover?.(false)}
+          style={{
+            gridRow: '1',
+            gridColumn: '1',
+            display: 'flex',
+            minHeight: 0,
+            overflow: 'hidden',
+            padding: '0px',
+            zIndex: 1,
+            background: isAgentActive
+              ? 'color-mix(in srgb, var(--shell-rail-bg) 88%, transparent)'
+              : 'var(--shell-rail-bg)',
+            borderRight: '1px solid var(--border-subtle)',
+            borderTopRightRadius: '16px',
+            borderBottomRightRadius: '16px',
+            position: 'relative',
+          }}
+        >
           {rail}
 
           {/* Rail → Canvas resize handle (right edge of rail) */}
@@ -206,6 +217,36 @@ export function ShellFrame({
           >
             <ResizeGrip hovered={railHandleHovered || railResizing} />
           </div>
+        </div>
+      )}
+
+      {/* Peek Rail — slides out when hovering collapsed mode icons */}
+      {peekRail && (
+        <div
+          onMouseEnter={() => onRailHover?.(true)}
+          onMouseLeave={() => onRailHover?.(false)}
+          style={{
+            position: 'fixed',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: RAIL_MIN_WIDTH,
+            zIndex: 140,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            padding: '0px',
+            background: isAgentActive
+              ? 'color-mix(in srgb, var(--shell-rail-bg) 95%, transparent)'
+              : 'var(--shell-rail-bg)',
+            borderRight: '1px solid var(--border-subtle)',
+            borderTopRightRadius: '16px',
+            borderBottomRightRadius: '16px',
+          }}
+        >
+          {React.isValidElement(rail)
+            ? React.cloneElement(rail as React.ReactElement<{ isCollapsed?: boolean }>, { isCollapsed: false })
+            : rail}
         </div>
       )}
 
