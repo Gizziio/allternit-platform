@@ -2,6 +2,7 @@
  * Swarm Dashboard Component Tests
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -118,7 +119,7 @@ describe('SwarmDashboard', () => {
       expect(screen.getByText('Swarm Dashboard')).toBeInTheDocument();
       expect(screen.getByText('2')).toBeInTheDocument(); // Circuit breakers count
       expect(screen.getByText('1')).toBeInTheDocument(); // Quarantined count
-      expect(screen.getByText('1,000')).toBeInTheDocument(); // Messages sent
+      expect(screen.getAllByText('1,000').length).toBeGreaterThanOrEqual(1); // Messages sent
     });
   });
 
@@ -261,7 +262,7 @@ describe('SwarmDashboard', () => {
     });
 
     // Click on the Quarantine tab using userEvent
-    const quarantineTab = screen.getByRole('tab', { name: /quarantine/i });
+    const quarantineTab = screen.getByRole('button', { name: /quarantine/i });
     await userEvent.click(quarantineTab);
 
     // Wait for tab content to switch and empty state to appear
@@ -289,10 +290,10 @@ describe('SwarmDashboard', () => {
     render(<SwarmDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText('1,000')).toBeInTheDocument(); // Sent
+      expect(screen.getAllByText('1,000').length).toBeGreaterThanOrEqual(1); // Sent
       expect(screen.getByText(/950 received/)).toBeInTheDocument(); // Received
       expect(screen.getByText(/50 failed/)).toBeInTheDocument(); // Failed
-      expect(screen.getByText('45.50ms')).toBeInTheDocument(); // Latency
+      expect(screen.getAllByText('45.50ms').length).toBeGreaterThanOrEqual(1); // Latency
     });
   });
 

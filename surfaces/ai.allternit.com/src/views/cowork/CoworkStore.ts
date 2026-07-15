@@ -57,6 +57,7 @@ interface CoworkState {
   createProject: (title: string) => TaskProject;
   deleteProject: (id: string) => void;
   renameProject: (id: string, title: string) => void;
+  updateProjectDetails: (id: string, details: { title?: string; description?: string }) => void;
   updateProjectInstructions: (id: string, instructions: string) => void;
   moveTaskToProject: (taskId: string, projectId: string | null) => void;
   bindSessionToTask: (taskId: string, sessionId: string) => void;
@@ -171,6 +172,7 @@ export const useCoworkStore = create<CoworkState>()((set, get) => {
     createProject: (title) => useTaskStore.getState().createProject(title),
     deleteProject: (id) => useTaskStore.getState().deleteProject(id),
     renameProject: (id, title) => useTaskStore.getState().renameProject(id, title),
+    updateProjectDetails: (id, details) => useTaskStore.getState().updateProjectDetails(id, details),
     updateProjectInstructions: (id, instructions) => useTaskStore.getState().updateProjectInstructions(id, instructions),
     moveTaskToProject: (taskId, projectId) => useTaskStore.getState().moveTaskToProject(taskId, projectId),
     bindSessionToTask: (taskId, sessionId) => useTaskStore.getState().bindSessionToTask(taskId, sessionId),

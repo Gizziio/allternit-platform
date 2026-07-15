@@ -35,7 +35,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
 
   return (
     <div className="flex flex-col items-center justify-center p-12 text-center">
-      <div className="size-20  rounded-full bg-white/5 flex items-center justify-center mb-6 border border-white/10">
+      <div className="size-20  rounded-full bg-[var(--surface-hover)] flex items-center justify-center mb-6 border border-[var(--border-subtle)]">
         <Sparkle size={40} className="text-muted-foreground opacity-50" />
       </div>
       <h3 className="text-xl font-medium mb-2" style={{ color: STUDIO_THEME.textPrimary }}>No Agents Found</h3>
@@ -48,7 +48,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
           onClick={onCreate}
           className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
           style={{ 
-            background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+            background: `linear-gradient(to right, ${STUDIO_THEME.accent}, var(--accent-secondary))`,
             color: 'var(--ui-text-inverse)'
           }}
         >
@@ -59,9 +59,9 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
 
       <div className="w-full max-w-4xl">
         <div className="flex items-center gap-4 mb-6">
-          <div className="h-px flex-1 bg-white/10" />
+          <div className="h-px flex-1 bg-[var(--border-subtle)]" />
           <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Quick Templates</span>
-          <div className="h-px flex-1 bg-white/10" />
+          <div className="h-px flex-1 bg-[var(--border-subtle)]" />
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -69,7 +69,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
             <button type="button"
               key={template.id}
               onClick={() => onCreateFromTemplate(template)}
-              className="text-left p-6 rounded-xl border border-white/5 bg-white/5 hover:bg-white/10 transition-colors"
+              className="text-left p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-hover)] hover:bg-[var(--surface-panel)] transition-colors"
             >
               <h4 className="font-semibold mb-1" style={{ color: STUDIO_THEME.textPrimary }}>{template.name}</h4>
               <p className="text-sm" style={{ color: STUDIO_THEME.textSecondary }}>{template.description}</p>

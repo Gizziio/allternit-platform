@@ -1,7 +1,11 @@
-import React, { useMemo } from 'react';
-import { Globe } from '@phosphor-icons/react';
+import React, { useMemo, useState } from 'react';
+import { Globe, ArrowSquareOut } from '@phosphor-icons/react';
 import { GizziMascot } from '@/components/ai-elements/GizziMascot';
 import { getActiveSession, useCodeModeStore } from './CodeModeStore';
+
+function isValidPreviewUrl(value: string): boolean {
+  return /^https?:\/\//.test(value);
+}
 
 export function CodePreviewPane(): React.ReactNode {
   const workspaces = useCodeModeStore((state) => state.workspaces);
@@ -16,7 +20,26 @@ export function CodePreviewPane(): React.ReactNode {
   const previewSessions = Array.isArray(activeSession?.preview_sessions)
     ? activeSession.preview_sessions
     : [];
-  const hasPreviewSession = previewSessions.length > 0;
+  const configuredUrl = previewSessions.find(isValidPreviewUrl);
+  const hasPreviewSession = Boolean(configuredUrl);
+
+  const [urlInput, setUrlInput] = useState(configuredUrl ?? '');
+  const [loadedUrl, setLoadedUrl] = useState(configuredUrl ?? '');
+
+  // Keep input in sync if the active session changes and supplies a new URL.
+  if (configuredUrl && configuredUrl !== loadedUrl) {
+    setLoadedUrl(configuredUrl);
+    if (configuredUrl !== urlInput) {
+      setUrlInput(configuredUrl);
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isValidPreviewUrl(urlInput)) {
+      setLoadedUrl(urlInput);
+    }
+  };
 
   return (
     <div
@@ -39,6 +62,7 @@ export function CodePreviewPane(): React.ReactNode {
           background: 'rgba(12, 15, 18, 0.12)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
+          flexShrink: 0,
         }}
       >
         <div
@@ -54,6 +78,58 @@ export function CodePreviewPane(): React.ReactNode {
           <Globe size={14} />
           Preview
         </div>
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flex: 1,
+            justifyContent: 'flex-end',
+            minWidth: 0,
+          }}
+        >
+          <input
+            aria-label="Preview URL"
+            data-testid="code-preview-url-input"
+            type="text"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="https://localhost:3000"
+            style={{
+              width: '100%',
+              maxWidth: 320,
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(255, 255, 255, 0.03)',
+              color: 'var(--text-primary)',
+              fontSize: 12,
+              fontFamily: 'var(--font-mono)',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="submit"
+            data-testid="code-preview-url-go"
+            disabled={!isValidPreviewUrl(urlInput)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(255, 255, 255, 0.08)',
+              color: 'var(--text-primary)',
+              cursor: isValidPreviewUrl(urlInput) ? 'pointer' : 'not-allowed',
+              opacity: isValidPreviewUrl(urlInput) ? 1 : 0.5,
+            }}
+          >
+            <ArrowSquareOut size={14} />
+          </button>
+        </form>
       </div>
 
       <div
@@ -68,9 +144,10 @@ export function CodePreviewPane(): React.ReactNode {
           textAlign: 'center',
         }}
       >
-        {hasPreviewSession ? (
+        {loadedUrl ? (
           <iframe
-            src="http://localhost:3000"
+            data-testid="code-preview-frame"
+            src={loadedUrl}
             title="Web Preview"
             style={{
               width: '100%',
@@ -79,24 +156,24 @@ export function CodePreviewPane(): React.ReactNode {
               borderRadius: 14,
               background: 'rgba(10,12,14,0.5)',
             }}
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-same-origin"
           />
         ) : (
           <>
             <GizziMascot size={50} emotion="steady" />
             <div style={{ marginTop: 14, fontSize: 18, fontWeight: 600, color: 'var(--text-primary)' }}>
-              Setting up preview
+              No preview session
             </div>
             <div
               style={{
                 marginTop: 8,
-                maxWidth: 240,
+                maxWidth: 260,
                 fontSize: 12,
                 lineHeight: 1.6,
                 color: 'var(--text-secondary)',
               }}
             >
-              Start or attach a preview session and the web surface will stay docked here without adding extra chrome to the workspace.
+              Start or attach a preview session, or enter a URL above to load a preview here without adding extra chrome to the workspace.
             </div>
           </>
         )}
@@ -108,6 +185,7 @@ export function CodePreviewPane(): React.ReactNode {
           borderTop: '1px solid rgba(255, 255, 255, 0.05)',
           fontSize: 12,
           color: 'var(--text-tertiary)',
+          flexShrink: 0,
         }}
       >
         View session logs

@@ -53,8 +53,8 @@ export function CoworkAnimatedBackground(): React.ReactNode {
           const wave1 = Math.sin(t + x * FREQ_X + y * FREQ_Y);
           const wave2 = Math.sin(t * 1.31 + x * FREQ_X2 - y * FREQ_Y2 + 1.4);
           const intensity = ((wave1 + wave2) / 2 + 1) / 2; // [0,1]
-          const minOp = 0.04;
-          const maxOp = dark ? 0.30 : 0.18;
+          const minOp = dark ? 0.04 : 0.025;
+          const maxOp = dark ? 0.30 : 0.12;
           const alpha = minOp + intensity * (maxOp - minOp);
 
           ctx.beginPath();
@@ -82,17 +82,30 @@ export function CoworkAnimatedBackground(): React.ReactNode {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        display: 'block',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="coworkAnimatedBackground"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      <style>{`
+        .coworkAnimatedBackground {
+          /* Match Chat's clean canvas while retaining Cowork's moving dot field. */
+          background: var(--view-chat-bg);
+        }
+
+        [data-theme='dark'] .coworkAnimatedBackground {
+          background: transparent;
+        }
+      `}</style>
+    </>
   );
 }

@@ -3,6 +3,14 @@ import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
 
 export type CodeSessionMode = 'SAFE' | 'DEFAULT' | 'AUTO' | 'PLAN';
+
+export const CODE_SESSION_MODE_LABELS: Record<CodeSessionMode, string> = {
+  SAFE: 'Safe',
+  DEFAULT: 'Default',
+  AUTO: 'Auto',
+  PLAN: 'Plan',
+};
+
 export type CodeSessionState =
   | 'IDLE'
   | 'PLANNING'
@@ -17,6 +25,14 @@ export type CodeSessionState =
   | 'TERMINATED';
 export type CodeIsolation = 'worktree' | 'sandbox';
 export type CodeLayoutMode = 'thread' | 'canvas';
+
+export interface CodeWorkspaceFile {
+  id: string;
+  name: string;
+  size: number;
+  type?: string;
+  content?: string;
+}
 
 export interface CodeCanvasTile {
   tileId: string;
@@ -62,9 +78,12 @@ export interface CodeWorkspaceRecord {
   workspace_id: string;
   root_path: string;
   display_name: string;
+  description?: string;
   repo_status: RepoStatusSnapshot;
   context_anchor: string | null;
   sessions: string[];
+  instructions?: string[];
+  files?: CodeWorkspaceFile[];
   layoutMode?: CodeLayoutMode;
   canvasTiles?: CodeCanvasTile[];
   canvasViewport?: CodeCanvasViewport;
@@ -109,9 +128,13 @@ interface CodeModeState extends CodeModeStateShape {
   createWorkspace: (displayName: string) => string;
   createSession: (title: string, workspaceId: string, mode?: CodeSessionMode) => string;
   renameWorkspace: (workspaceId: string, displayName: string) => void;
+  updateWorkspaceDetails: (workspaceId: string, details: { displayName?: string; description?: string }) => void;
+  updateWorkspaceInstructions: (workspaceId: string, instructions: string[]) => void;
   deleteWorkspace: (workspaceId: string) => void;
   toggleWorkspaceFavorite: (workspaceId: string) => void;
   toggleWorkspaceArchive: (workspaceId: string) => void;
+  addWorkspaceFile: (workspaceId: string, file: Omit<CodeWorkspaceFile, 'id'>) => void;
+  removeWorkspaceFile: (workspaceId: string, fileId: string) => void;
   // Canvas layout actions
   setWorkspaceLayoutMode: (workspaceId: string, mode: CodeLayoutMode) => void;
   addCanvasTile: (workspaceId: string, tile: Omit<CodeCanvasTile, 'tileId'>) => string;
@@ -126,6 +149,8 @@ interface CodeModeState extends CodeModeStateShape {
   selectCanvasTiles: (workspaceId: string, tileIds: string[]) => void;
   clearCanvasSelection: (workspaceId: string) => void;
   updateSessionFilesTouched: (sessionId: string, files: string[]) => void;
+  setSessionMode: (sessionId: string, mode: CodeSessionMode) => void;
+  setSessionIsolation: (sessionId: string, isolation: CodeIsolation) => void;
 }
 
 function nowIso(offsetMinutes = 0): string {
@@ -411,6 +436,26 @@ export const useCodeModeStore = create<CodeModeState>()(
       ),
     })),
 
+  updateWorkspaceDetails: (workspaceId, details) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId
+          ? {
+              ...w,
+              ...(details.displayName !== undefined ? { display_name: details.displayName } : {}),
+              ...(details.description !== undefined ? { description: details.description } : {}),
+            }
+          : w,
+      ),
+    })),
+
+  updateWorkspaceInstructions: (workspaceId, instructions) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId ? { ...w, instructions } : w,
+      ),
+    })),
+
   deleteWorkspace: (workspaceId) =>
     set((state) => {
       const nextWorkspaces = state.workspaces.filter((w) => w.workspace_id !== workspaceId);
@@ -441,6 +486,24 @@ export const useCodeModeStore = create<CodeModeState>()(
     set((state) => ({
       workspaces: state.workspaces.map((w) =>
         w.workspace_id === workspaceId ? { ...w, isArchived: !w.isArchived } : w
+      ),
+    })),
+
+  addWorkspaceFile: (workspaceId, file) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId
+          ? { ...w, files: [...(w.files ?? []), { ...file, id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }] }
+          : w
+      ),
+    })),
+
+  removeWorkspaceFile: (workspaceId, fileId) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId
+          ? { ...w, files: (w.files ?? []).filter((f) => f.id !== fileId) }
+          : w
       ),
     })),
 
@@ -614,6 +677,20 @@ export const useCodeModeStore = create<CodeModeState>()(
     set((state) => ({
       workspaces: state.workspaces.map((w) =>
         w.workspace_id === workspaceId ? { ...w, canvasSelectedIds: [] } : w,
+      ),
+    })),
+
+  setSessionMode: (sessionId, mode) =>
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.session_id === sessionId ? { ...s, mode } : s,
+      ),
+    })),
+
+  setSessionIsolation: (sessionId, isolation) =>
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.session_id === sessionId ? { ...s, isolation } : s,
       ),
     })),
 

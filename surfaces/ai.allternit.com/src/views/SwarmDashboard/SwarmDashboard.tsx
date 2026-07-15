@@ -63,6 +63,7 @@ export function SwarmDashboard() {
   const [messageStats, setMessageStats] = useState<MessageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('circuit-breakers');
 
   // Fetch all data
   const fetchData = async () => {
@@ -253,7 +254,7 @@ export function SwarmDashboard() {
       </div>
 
       {/* Tabs for different views */}
-      <Tabs value="circuit-breakers">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="circuit-breakers">
             Circuit Breakers

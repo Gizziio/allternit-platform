@@ -118,6 +118,251 @@ export const ExitEffects = React.memo(({ animState, theme, isClient }: ExitEffec
     );
   }
 
+  if (animState === 'fizzle-out') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.5, 0.3, 0] }}
+          transition={{ duration: 1.2 }}
+          className="absolute -inset-[30px] pointer-events-none z-[35]"
+          style={{ background: `repeating-linear-gradient(0deg, transparent 0px, transparent 3px, ${theme.accent}22 3px, ${theme.accent}22 6px)` }}
+        />
+        {isClient && [...Array(20)].map((_, i) => (
+          <m.div
+            key={`static-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+            animate={{ opacity: [0, 1, 0], x: (Math.random() - 0.5) * 70, y: (Math.random() - 0.5) * 70, scale: [0, Math.random() * 2 + 1, 0] }}
+            transition={{ duration: 0.4, delay: i * 0.04, repeat: 2 }}
+            className="absolute bottom-1/2 left-1/2 size-1 -ml-0.5 -mb-0.5 rounded-sm pointer-events-none z-[40]"
+            style={{ background: i % 2 === 0 ? theme.accent : '#fff' }}
+          />
+        ))}
+        <m.div
+          initial={{ opacity: 0, y: 0 }}
+          animate={{ opacity: [0, 1, 1, 0], y: [-10, -30, -50] }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
+          className="absolute bottom-[110%] left-1/2 -translate-x-1/2 px-2 py-1 bg-zinc-900/90 border border-solid border-zinc-600 rounded text-[10px] font-mono font-bold text-zinc-300 pointer-events-none z-[50]"
+        >
+          SIGNAL LOST
+        </m.div>
+      </>
+    );
+  }
+
+  if (animState === 'black-hole') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: [0, 0.8, 0.4], scale: [0, 1, 1.5] }}
+          transition={{ duration: 1.0 }}
+          className="absolute bottom-1/2 left-1/2 -translate-x-1/2 translate-y-1/2 size-[40px] rounded-full pointer-events-none z-[40]"
+          style={{ background: 'radial-gradient(circle, #000 0%, #1a1a1a 40%, transparent 70%)', boxShadow: `0 0 30px ${theme.glow}` }}
+        />
+        {[...Array(12)].map((_, i) => (
+          <m.div
+            key={`suck-${i}`}
+            initial={{ opacity: 1, x: Math.cos((i * Math.PI * 2) / 12) * 80, y: Math.sin((i * Math.PI * 2) / 12) * 80, scale: 1 }}
+            animate={{ opacity: [1, 0], x: 0, y: 0, scale: [1, 0] }}
+            transition={{ duration: 0.8, delay: i * 0.03, ease: 'easeIn' }}
+            className="absolute bottom-1/2 left-1/2 size-1.5 -ml-[3px] -mb-[3px] rounded-full pointer-events-none z-[38]"
+            style={{ background: theme.accent }}
+          />
+        ))}
+        <m.div
+          initial={{ opacity: 0, scaleX: 1 }}
+          animate={{ opacity: [0, 0.6, 0], scaleX: [1, 0.2, 0] }}
+          transition={{ duration: 1.0, ease: 'easeIn' }}
+          className="absolute bottom-1/2 left-1/2 -translate-x-1/2 translate-y-1/2 w-[120px] h-[10px] rounded-full pointer-events-none z-[39]"
+          style={{ background: `linear-gradient(90deg, transparent 0%, ${theme.glow} 50%, transparent 100%)`, filter: 'blur(4px)' }}
+        />
+      </>
+    );
+  }
+
+  if (animState === 'teleport-out') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, scaleY: 1 }}
+          animate={{ opacity: [0, 0.7, 0.3, 0], scaleY: [1, 1, 0] }}
+          transition={{ duration: 1.2 }}
+          className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-[60px] h-[250px] origin-bottom pointer-events-none z-[35]"
+          style={{ background: `linear-gradient(to top, ${theme.accent} 0%, ${theme.glow} 50%, transparent 100%)`, filter: 'blur(8px)' }}
+        />
+        {[...Array(16)].map((_, i) => (
+          <m.div
+            key={`tele-particle-${i}`}
+            initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+            animate={{ opacity: [1, 0], x: (Math.random() - 0.5) * 40, y: -60 - Math.random() * 80, scale: [1, 0] }}
+            transition={{ duration: 0.8, delay: i * 0.04, ease: 'easeOut' }}
+            className="absolute bottom-1/2 left-1/2 size-1 -ml-0.5 -mb-0.5 rounded-full pointer-events-none z-[45]"
+            style={{ background: theme.glow, boxShadow: `0 0 8px ${theme.accent}` }}
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animState === 'shrink-out') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, scale: 1 }}
+          animate={{ opacity: [0, 0.5, 0], scale: [1, 0.5, 0] }}
+          transition={{ duration: 0.5 }}
+          className="absolute -inset-[20px] rounded-full pointer-events-none z-[35]"
+          style={{ background: `radial-gradient(circle, ${theme.soft}33 0%, transparent 70%)` }}
+        />
+        {[...Array(6)].map((_, i) => (
+          <m.div
+            key={`wobble-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 0], x: [0, (i % 2 === 0 ? 8 : -8), 0], y: [0, -5, 0] }}
+            transition={{ duration: 0.12, delay: i * 0.06, repeat: 3 }}
+            className="absolute -inset-[10px] border-2 border-solid rounded-xl pointer-events-none z-[40]"
+            style={{ borderColor: theme.accent }}
+          />
+        ))}
+        <m.div
+          initial={{ opacity: 0, scale: 1, y: 0 }}
+          animate={{ opacity: [0, 1, 0], scale: [1, 0.4, 0], y: [0, 10, 20] }}
+          transition={{ duration: 0.5, ease: 'easeIn' }}
+          className="absolute bottom-[120%] left-1/2 -translate-x-1/2 text-[18px] font-black text-white pointer-events-none z-[50]"
+        >
+          POP!
+        </m.div>
+      </>
+    );
+  }
+
+  if (animState === 'wave-goodbye') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: [0, 1, 1, 0], y: [10, -20, -30, -50] }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+          className="absolute bottom-[110%] left-1/2 -translate-x-1/2 px-2.5 py-1 bg-zinc-900/80 border border-solid border-zinc-600 rounded-full text-[10px] font-black text-white pointer-events-none z-[50]"
+        >
+          BYE!
+        </m.div>
+        {[...Array(3)].map((_, i) => (
+          <m.div
+            key={`bye-spark-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+            animate={{ opacity: [0, 1, 0], scale: [0, 1, 0], x: (i - 1) * 20, y: -15 - i * 10 }}
+            transition={{ duration: 0.4, delay: 0.2 + i * 0.1 }}
+            className="absolute bottom-1/2 left-1/2 size-1 -ml-0.5 -mb-0.5 rounded-full pointer-events-none z-[40]"
+            style={{ background: theme.accent, boxShadow: `0 0 8px ${theme.glow}` }}
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animState === 'sleep-curl') {
+    return (
+      <>
+        {[...Array(3)].map((_, i) => (
+          <m.div
+            key={`zzz-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0.5 }}
+            animate={{ opacity: [0, 1, 0], x: 10 + i * 8, y: -25 - i * 18, scale: [0.5, 1, 1.2] }}
+            transition={{ duration: 1.0, delay: 0.3 + i * 0.25, ease: 'easeOut' }}
+            className="absolute bottom-[100%] left-1/2 text-[14px] font-black text-zinc-300 pointer-events-none z-[50]"
+          >
+            Z
+          </m.div>
+        ))}
+        <m.div
+          initial={{ opacity: 0, scale: 1 }}
+          animate={{ opacity: [0, 0.4, 0], scale: [1, 0.9, 0.8] }}
+          transition={{ duration: 1.2 }}
+          className="absolute -inset-[15px] rounded-full pointer-events-none z-[35]"
+          style={{ background: `radial-gradient(circle, ${theme.soft}22 0%, transparent 70%)` }}
+        />
+        <m.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.3, 0] }}
+          transition={{ duration: 1.2 }}
+          className="absolute bottom-[110%] left-1/2 -translate-x-1/2 px-2 py-0.5 bg-zinc-900/60 border border-solid border-zinc-700 rounded text-[9px] font-mono text-zinc-400 pointer-events-none z-[45]"
+        >
+          sleeping…
+        </m.div>
+      </>
+    );
+  }
+
+  if (animState === 'rocket-blast') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 1, y: 0, scale: 1 }}
+          animate={{ opacity: [1, 1, 0], y: [0, -60, -200], scale: [1, 0.9, 0.6] }}
+          transition={{ duration: 1.0, times: [0, 0.6, 1] }}
+          className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-7 h-12 z-[40] pointer-events-none"
+        >
+          <div className="w-full h-full bg-[linear-gradient(180deg,#e2e8f0_0%,#94a3b8_50%,#475569_100%)] rounded-t-full rounded-b-md relative border border-solid border-slate-500">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-sky-400 border border-solid border-sky-600" />
+            <div className="absolute -left-1 bottom-1.5 w-1.5 h-3.5 bg-slate-600 rounded-l-sm" />
+            <div className="absolute -right-1 bottom-1.5 w-1.5 h-3.5 bg-slate-600 rounded-r-sm" />
+          </div>
+        </m.div>
+        <m.div
+          initial={{ opacity: 0, scaleY: 0 }}
+          animate={{ opacity: [0, 0.9, 0.6, 0], scaleY: [0, 1, 1.5, 0] }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-5 h-24 origin-top pointer-events-none z-[35]"
+          style={{ background: `linear-gradient(to bottom, ${theme.accent} 0%, ${theme.glow} 50%, transparent 100%)`, filter: 'blur(5px)' }}
+        />
+        {[...Array(8)].map((_, i) => (
+          <m.div
+            key={`blast-particle-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+            animate={{ opacity: [0, 0.8, 0], x: (Math.random() - 0.5) * 50, y: 20 + Math.random() * 40, scale: [0, 1, 0] }}
+            transition={{ duration: 0.5, delay: 0.3 + i * 0.05 }}
+            className="absolute bottom-[35%] left-1/2 size-1 -ml-0.5 -mb-0.5 rounded-full pointer-events-none z-[38]"
+            style={{ background: theme.glow }}
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animState === 'smoke-poof') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: [0, 0.8, 0], scale: [0.5, 1.6, 2.2] }}
+          transition={{ duration: 0.6 }}
+          className="absolute bottom-1/2 left-1/2 -translate-x-1/2 translate-y-1/2 size-[70px] rounded-full pointer-events-none z-[40]"
+          style={{ background: `radial-gradient(circle, rgba(200,200,200,0.6) 0%, rgba(150,150,150,0.3) 40%, transparent 70%)`, filter: 'blur(6px)' }}
+        />
+        {[...Array(5)].map((_, i) => (
+          <m.div
+            key={`poof-puff-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+            animate={{ opacity: [0, 0.7, 0], x: (Math.random() - 0.5) * 60, y: -20 - Math.random() * 30, scale: [0, 1 + Math.random(), 1.5] }}
+            transition={{ duration: 0.5, delay: i * 0.05 }}
+            className="absolute bottom-1/2 left-1/2 size-4 -ml-2 -mb-2 rounded-full pointer-events-none z-[38]"
+            style={{ background: `radial-gradient(circle, rgba(220,220,220,0.5) 0%, transparent 70%)`, filter: 'blur(3px)' }}
+          />
+        ))}
+        <m.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: [0, 1, 0], scale: [0.8, 1.1, 0.9] }}
+          transition={{ duration: 0.5 }}
+          className="absolute bottom-[110%] left-1/2 -translate-x-1/2 text-[12px] font-black text-zinc-300 pointer-events-none z-[50]"
+        >
+          POOF!
+        </m.div>
+      </>
+    );
+  }
+
   return null;
 });
 

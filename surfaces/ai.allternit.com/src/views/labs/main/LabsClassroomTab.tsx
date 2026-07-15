@@ -5,7 +5,7 @@ import { Stagger } from '@/design/animation/Stagger';
 import { Text } from '@/components/typography/Text';
 import { EmptyState } from '@/components/settings/EmptyState';
 import type { ALABSCourse, ALABSLesson } from "./LabsView.constants";
-import { L } from "./LabsView.constants";
+import { L, normalizeLesson } from "./LabsView.constants";
 import {
   getTierIcon,
   getTierColor,
@@ -47,7 +47,7 @@ export const LabsClassroomTab: React.FC<LabsClassroomTabProps> = ({
             <div className="w-4 h-px bg-[var(--accent-primary)] opacity-50" />
             <Text variant="label" className="text-[12.5px] font-bold tracking-widest uppercase text-[var(--accent-primary)]">Lesson Catalog</Text>
           </div>
-          <Text variant="researchHeading" as="h2" className="text-3xl font-black italic m-0 mb-1.5 tracking-tight text-[var(--ui-text-primary)] leading-none">
+          <Text variant="heading" as="h2" className="text-3xl font-black m-0 mb-1.5 tracking-tight text-[var(--ui-text-primary)] leading-none">
             A://Labs Classroom
           </Text>
           <Text variant="body" className="text-[12px] text-[var(--ui-text-secondary)] m-0 tracking-[0.01em] leading-relaxed">
@@ -80,7 +80,7 @@ export const LabsClassroomTab: React.FC<LabsClassroomTabProps> = ({
                   });
                   const data = await res.json();
                   if (data.lesson) {
-                    setLessons(prev => [...prev, data.lesson]);
+                    setLessons(prev => [...prev, normalizeLesson(data.lesson)]);
                     showNotification(`Generated lesson for ${firstCourse.title}`);
                   }
                 } catch {
@@ -106,7 +106,7 @@ export const LabsClassroomTab: React.FC<LabsClassroomTabProps> = ({
                         });
                         const data = await res.json();
                         if (data.lesson) {
-                          setLessons(prev => [...prev, data.lesson]);
+                          setLessons(prev => [...prev, normalizeLesson(data.lesson)]);
                           showNotification(`Generated lesson for ${course.title}`);
                         }
                       } catch {

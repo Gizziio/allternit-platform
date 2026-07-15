@@ -199,12 +199,14 @@ type ComposerStatusInfoBarProps = {
   modelLabel?: string | null;
   modeLabel?: string | null;
   attachmentCount?: number;
+  permissionModeLabel?: string | null;
 };
 
 export function ComposerStatusInfoBar({
   modelLabel,
   modeLabel,
   attachmentCount,
+  permissionModeLabel,
 }: ComposerStatusInfoBarProps) {
   return (
     <div
@@ -227,6 +229,9 @@ export function ComposerStatusInfoBar({
         ) : null}
         {modeLabel ? (
           <InfoPill icon={<Lightning size={12} />} label={modeLabel} />
+        ) : null}
+        {permissionModeLabel ? (
+          <InfoPill icon={<LockSimple size={12} />} label={permissionModeLabel} />
         ) : null}
       </div>
       {typeof attachmentCount === "number" ? (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { BookOpen, Plus, ChevronDown, Send, Loader2, WifiOff } from 'lucide-react';
+import { BookOpen, Plus, ChevronDown, Send, Loader2, WifiOff, Monitor } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { SourcePanel } from './components/SourcePanel';
 import { ChatWorkspace } from './components/ChatWorkspace';
@@ -21,6 +21,7 @@ export function ResearchTab() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
+  const [hasDesktopBridge, setHasDesktopBridge] = useState(false);
   const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showToolsOnMobile, setShowToolsOnMobile] = useState(false);
@@ -38,14 +39,19 @@ export function ResearchTab() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Lazy-start research backend via desktop shell
+  // Lazy-start research backend via desktop shell. The notebook engine only
+  // ever launches through this Electron preload bridge — in a plain browser
+  // session there is nothing that can start it, so we track bridge presence
+  // to tell "still booting" apart from "needs the desktop app" for the user.
   useEffect(() => {
+    // @ts-ignore — Electron preload bridge
+    const bridge = window.allternit?.research;
+    setHasDesktopBridge(Boolean(bridge?.start));
+
     const startBackend = async () => {
-      // @ts-ignore — Electron preload bridge
-      if (window.allternit?.research?.start) {
+      if (bridge?.start) {
         try {
-          // @ts-ignore
-          await window.allternit.research.start();
+          await bridge.start();
         } catch {
           // Backend may already be running
         }
@@ -277,8 +283,33 @@ export function ResearchTab() {
     setTimeout(() => setHighlightedSourceId(null), 3000);
   }, []);
 
-  // Backend offline state
+  // Backend offline state — the message differs depending on whether a desktop
+  // shell is even present to launch the research engine, since retrying can
+  // never succeed in a plain browser session.
   if (apiAvailable === false) {
+    if (!hasDesktopBridge) {
+      return (
+        <div className="research-empty-state">
+          <div className="size-14 rounded-2xl bg-[var(--accent-primary)]/10 flex items-center justify-center">
+            <Monitor size={28} className="text-[var(--accent-primary)]" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-[var(--text-primary,#e5e5e5)] mb-1.5">
+              Research needs the desktop app
+            </p>
+            <p className="text-[13px] max-w-sm">
+              The notebook engine runs locally and only launches from the Allternit desktop app. Open it there to use Research — this browser session can't start it.
+            </p>
+          </div>
+          <button type="button"
+            onClick={() => window.open('https://allternit.com/download', '_blank', 'noopener,noreferrer')}
+            className="research-btn-secondary"
+          >
+            Get the desktop app
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="research-empty-state">
         <div className="size-14  rounded-2xl bg-red-500/10 flex items-center justify-center">

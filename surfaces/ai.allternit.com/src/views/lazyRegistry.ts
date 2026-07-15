@@ -45,7 +45,6 @@ export const TerminalView = lazy(() => import('./TerminalView').then(m => ({ def
 // Agent views
 export const AgentView = lazy(() => import('./AgentView').then(m => ({ default: m.AgentView })));
 export const AgentHub = lazy(() => import('./AgentHub').then(m => ({ default: m.AgentHub })));
-export const AgentSystemView = lazy(() => import('./AgentSystemView').then(m => ({ default: m.AgentSystemView })));
 export const NativeAgentView = lazy(() => import('./NativeAgentView').then(m => ({ default: m.NativeAgentView })));
 
 // OpenClaw - Heavy control UI
@@ -103,8 +102,6 @@ export const ReplayManagerView = lazy(() => import('./runtime/ReplayManagerView'
 export const PrewarmManagerView = lazy(() => import('./runtime/PrewarmManagerView').then(m => ({ default: m.PrewarmManagerView })));
 
 // Other views
-export const RunnerView = lazy(() => import('./RunnerView').then(m => ({ default: m.RunnerView })));
-export const RailsView = lazy(() => import('./RailsView').then(m => ({ default: m.RailsView })));
 export const ProjectView = lazy(() => import('./ProjectView').then(m => ({ default: m.ProjectView })));
 
 // ============================================================================

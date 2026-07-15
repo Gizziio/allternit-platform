@@ -92,14 +92,19 @@ export function CourseCard({ course, tierColor, canvasToken, onOpenNotebook, onS
         blur="md"
         className="overflow-hidden flex flex-col h-full"
       >
-        {/* Cover image */}
-        <div className="relative h-40 shrink-0 overflow-hidden group">
-          <img
-            src={course.coverImage}
-            alt={course.title}
-            className="size-full object-cover block transition-transform duration-500 ease-out group-hover:scale-110"
-            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-          />
+        {/* Cover image (tier-tinted gradient shows through if the asset is missing) */}
+        <div
+          className="relative h-40 shrink-0 overflow-hidden group"
+          style={{ background: `linear-gradient(135deg, ${tierColor}38, ${tierColor}10 55%, transparent)` }}
+        >
+          {course.coverImage && (
+            <img
+              src={course.coverImage}
+              alt={course.title}
+              className="size-full object-cover block transition-transform duration-500 ease-out group-hover:scale-110"
+              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
           <div className="absolute top-3 left-3">
             <TierBadge tier={course.tier} color={tierColor} />
@@ -114,7 +119,7 @@ export function CourseCard({ course, tierColor, canvasToken, onOpenNotebook, onS
 
         {/* Content */}
         <div className="p-5 flex-1 flex flex-col">
-          <Text variant="researchHeading" as="h3" className="text-[17px] font-black italic m-0 mb-2.5 tracking-tight leading-snug text-[var(--ui-text-primary)]">
+          <Text variant="heading" as="h3" className="text-[17px] font-bold m-0 mb-2.5 tracking-tight leading-snug text-[var(--ui-text-primary)]">
             {course.title}
           </Text>
 

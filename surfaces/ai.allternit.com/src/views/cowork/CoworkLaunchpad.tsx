@@ -17,218 +17,38 @@ import { ModelPicker } from '@/components/model-picker';
 import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
 import { RecentSessionsStrip } from './RecentSessionsStrip';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
-
-// ============================================================================
-// Animation Keyframes - Each headline gets a unique entrance
-// ============================================================================
-
-const animationStyles = `
-@keyframes fadeSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-25px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideFromLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-60px) skewX(-8deg);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) skewX(0);
-  }
-}
-
-@keyframes slideFromRight {
-  from {
-    opacity: 0;
-    transform: translateX(60px) skewX(8deg);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) skewX(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes blurIn {
-  from {
-    opacity: 0;
-    filter: blur(12px);
-    transform: scale(1.1);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: scale(1);
-  }
-}
-
-@keyframes clipReveal {
-  from {
-    clip-path: inset(0 100% 0 0);
-    opacity: 0;
-  }
-  to {
-    clip-path: inset(0 0% 0 0);
-    opacity: 1;
-  }
-}
-
-@keyframes letterSpacingIn {
-  from {
-    opacity: 0;
-    letter-spacing: 0.3em;
-    transform: translateY(15px);
-  }
-  to {
-    opacity: 1;
-    letter-spacing: -0.01em;
-    transform: translateY(0);
-  }
-}
-
-@keyframes bounceIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.3) translateY(-50px);
-  }
-  50% {
-    transform: scale(1.05) translateY(5px);
-  }
-  70% {
-    transform: scale(0.95) translateY(-2px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes waveIn {
-  0% {
-    opacity: 0;
-    transform: translateY(40px) rotate(-5deg);
-  }
-  60% {
-    transform: translateY(-5px) rotate(2deg);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) rotate(0);
-  }
-}
-`;
+import {
+  LAUNCH_TOP_PADDING,
+  LAUNCH_SECTION_GAP,
+  LAUNCH_COMPOSER_WIDTH,
+} from '../chat/main/launchScreenLayout';
+import { LaunchHeader } from '../chat/main/LaunchHeader';
+import {
+  DEFAULT_LAUNCH_GREETING,
+  getLaunchGreeting,
+  peekLaunchGreeting,
+} from '../chat/main/launchGreeting';
 
 interface CoworkLaunchpadProps {
   onStartChat: (text: string) => void;
   onResumeThread: (id: string) => void;
 }
 
-// Animated headline component with various entrance effects
-interface AnimatedHeadlineProps {
-  children: React.ReactNode;
-  animationIndex: number;
-  delay?: number;
-  as?: 'h1' | 'p' | 'span';
-  style?: React.CSSProperties;
-}
-
-function AnimatedHeadline({ children, animationIndex, delay = 0, as: Component = 'span', style = {} }: AnimatedHeadlineProps) {
-  const animations = [
-    { name: 'fadeSlideUp', duration: '0.7s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
-    { name: 'fadeSlideDown', duration: '0.6s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
-    { name: 'slideFromLeft', duration: '0.8s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
-    { name: 'slideFromRight', duration: '0.8s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
-    { name: 'scaleIn', duration: '0.6s', timingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
-    { name: 'blurIn', duration: '0.9s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
-    { name: 'clipReveal', duration: '0.7s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
-    { name: 'letterSpacingIn', duration: '0.8s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
-    { name: 'bounceIn', duration: '0.9s', timingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)' },
-    { name: 'waveIn', duration: '0.8s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
-  ];
-  
-  const animation = animations[animationIndex % animations.length];
-  
-  return (
-    <Component
-      style={{
-        opacity: 0,
-        animationName: animation.name,
-        animationDuration: animation.duration,
-        animationTimingFunction: animation.timingFunction,
-        animationDelay: `${delay}ms`,
-        animationFillMode: 'forwards',
-        display: 'inline-block',
-        ...style,
-      }}
-    >
-      {children}
-    </Component>
-  );
-}
-
-// Cowork-specific greetings - platform focused, fun, collaborative
-const COWORK_TITLES = [
-  'What are we moving forward today?',
-  'Ready to coordinate the next deliverable?',
-  'Let’s turn this brief into completed work',
-  'What needs a plan, review, or handoff?',
-  'Cowork is ready for the next task',
-];
-
-const COWORK_TAGLINES = [
-  'Start from a concrete task and keep the work, files, and follow-ups in one thread.',
-  'Use Cowork for execution plans, workspace review, and coordinated next steps.',
-  'Launch a task, keep context attached, and work toward a real handoff.',
-  'Cowork is built for shared execution, not a generic chat surface.',
-  'Move from request to deliverable without leaving the workspace.',
-];
-
 export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpadProps) {
   const agentModeEnabled = useSurfaceAgentModeEnabled('cowork');
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
   const [showPluginsOverlay, setShowPluginsOverlay] = useState(false);
-  const [greeting, setGreeting] = useState({ title: COWORK_TITLES[0], tagline: COWORK_TAGLINES[0] });
-  const [titleAnimation, setTitleAnimation] = useState(0);
-  const [taglineAnimation, setTaglineAnimation] = useState(0);
+  // Same session greeting as the Chat launch screen — must not re-roll on toggle.
+  const [greeting, setGreeting] = useState(() => peekLaunchGreeting() ?? DEFAULT_LAUNCH_GREETING);
 
-  // Randomize greeting on mount with animations
   useEffect(() => {
-    const randomTitle = COWORK_TITLES[Math.floor(Math.random() * COWORK_TITLES.length)];
-    const randomTagline = COWORK_TAGLINES[Math.floor(Math.random() * COWORK_TAGLINES.length)];
-    const randomTitleAnim = Math.floor(Math.random() * 8);
-    const randomTaglineAnim = Math.floor(Math.random() * 6);
-    setGreeting({ title: randomTitle, tagline: randomTagline });
-    setTitleAnimation(randomTitleAnim);
-    setTaglineAnimation(randomTaglineAnim);
+    let cancelled = false;
+    getLaunchGreeting().then((g) => {
+      if (!cancelled) setGreeting(g);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleTaskClick = (prompt: string) => {
@@ -238,7 +58,7 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
 
   return (
     <div style={{
-      padding: '80px 40px',
+      padding: `${LAUNCH_TOP_PADDING} 40px 80px`,
       height: '100%',
       overflowY: 'auto',
       background: 'transparent',
@@ -249,49 +69,24 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
       position: 'relative',
       isolation: 'isolate',
     }}>
-      <style>{animationStyles}</style>
       <AgentModeBackdrop
         active={agentModeEnabled}
         surface="cowork"
         dataTestId="agent-mode-cowork-backdrop"
       />
       <div style={{ width: '100%', maxWidth: '720px', position: 'relative', zIndex: 1 }}>
-        {/* Header - Randomized with animated entrance */}
-        <div style={{ marginBottom: '48px', textAlign: 'center' }}>
-          <AnimatedHeadline 
-            animationIndex={titleAnimation} 
-            delay={100}
-            as="h1"
-            style={{
-              fontSize: '32px',
-              fontWeight: 500,
-              margin: '0 0 12px 0',
-              letterSpacing: '-0.01em',
-              fontFamily: 'var(--font-sans)',
-              color: 'var(--ui-text-primary)',
-            }}
-          >
-            {greeting.title}
-          </AnimatedHeadline>
-          <div style={{ marginTop: '12px' }}>
-            <AnimatedHeadline 
-              animationIndex={taglineAnimation} 
-              delay={350}
-              as="p"
-              style={{
-                fontSize: '14px',
-                color: 'var(--ui-text-muted)',
-                margin: 0,
-                display: 'block',
-              }}
-            >
-              {greeting.tagline}
-            </AnimatedHeadline>
-          </div>
-        </div>
+        {/* Greeting header — identical to the Chat launch screen (shared
+            component + session greeting) so toggling modes doesn't change it. */}
+        <LaunchHeader greeting={greeting} logo="matrix" />
 
-        {/* Primary Functional Composer */}
-        <div style={{ marginBottom: '64px', width: '100%' }}>
+        {/* Primary Functional Composer — same column width as the Chat
+            launch screen. The attached CoworkTopDeck inside ChatComposer
+            occupies the band where Chat shows its quick-action pill row. */}
+        <div style={{
+          width: '100%',
+          maxWidth: LAUNCH_COMPOSER_WIDTH,
+          margin: `0 auto ${LAUNCH_SECTION_GAP}px`,
+        }}>
           <ChatComposer 
             onSend={onStartChat}
             variant="large"

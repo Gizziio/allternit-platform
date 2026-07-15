@@ -56,7 +56,7 @@ function TopDeckDropdown({ label, value, icon, options, onSelect, isOpen, onTogg
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 w-64 bg-menu-bg rounded-xl border border-menu-border shadow-xl z-[200] overflow-hidden">
+        <div className="absolute bottom-full left-0 mb-2 w-64 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl z-[200] overflow-hidden">
           <div className="px-3 py-2 border-b border-input-border">
             <div className="text-[10px] font-extrabold text-muted uppercase tracking-wider">{label}</div>
           </div>
@@ -113,8 +113,12 @@ export function CoworkTopDeck(): React.ReactNode {
   const selectedPermission = PERMISSION_OPTIONS.find((p) => p.id === permission) ?? PERMISSION_OPTIONS[1];
 
   return (
+    // Tray tucked behind the composer card: inset, bottom 12px hidden under
+    // the box (negative margin + z-0 vs the box's z-10), sliding up from
+    // behind on mount. Visible height stays LAUNCH_TOP_ACTIONS_HEIGHT (44px)
+    // so the composer box never moves.
     <div
-      className="w-full bg-input-bg border border-input-border rounded-2xl px-4 py-2 flex items-center gap-3 animate-slide-up z-10 relative shadow-sm"
+      className="relative z-0 w-full h-[56px] -mb-3 box-border bg-input-bg border-t border-r border-l border-input-border rounded-t-2xl px-4 pb-3 flex items-center gap-3 animate-deck-rise"
     >
       <TopDeckDropdown
         label="Project"
@@ -136,21 +140,6 @@ export function CoworkTopDeck(): React.ReactNode {
         onToggle={() => setOpenDropdown((prev) => (prev === 'permission' ? null : 'permission'))}
         onClose={() => setOpenDropdown(null)}
       />
-      <style>{`
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-slide-up {
-          animation: slide-up 0.25s ease-out forwards;
-        }
-      `}</style>
     </div>
   );
 }

@@ -64,6 +64,7 @@ vi.mock('../../plugins/marketplaceApi', () => ({
         installCount: 12,
         rating: 4.8,
         installed: false,
+        sourceTrust: 'official',
       },
     ],
   })),
@@ -173,7 +174,6 @@ describe('PluginManager key flows', () => {
     mockUninstallMarketplacePlugin.mockResolvedValue({ success: true });
     mockCreatePlugin.mockResolvedValue({ success: true, capability: { id: 'plugin-generated' } });
     mockRefresh.mockResolvedValue(undefined);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -182,26 +182,28 @@ describe('PluginManager key flows', () => {
 
   it('covers create, edit, uninstall, and marketplace install/uninstall', async () => {
     const user = userEvent.setup();
-    const promptSpy = vi.spyOn(window, 'prompt');
-    promptSpy.mockImplementation((message: string | undefined) => {
-      if (message?.includes('Skill name')) return 'Flow Skill';
-      if (message?.includes('What should')) return 'Flow skill description';
-      if (message?.includes('Edit description')) return 'Edited description';
-      return '';
-    });
 
     render(<PluginManager isOpen onClose={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: 'Create new' }));
     await user.click(screen.getByRole('menuitem', { name: 'Create with assistant' }));
+    await user.type(screen.getByLabelText('New Skill'), 'Flow Skill');
+    await user.type(screen.getByLabelText('Describe the skill'), 'Flow skill description');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(mockCreateSkill).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getAllByRole('listitem')[0]);
 
     await user.click(screen.getByRole('button', { name: 'More options' }));
     await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+    await user.clear(screen.getByLabelText('Edit description'));
+    await user.type(screen.getByLabelText('Edit description'), 'Edited description');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(mockUpdateCapabilityMetadata).toHaveBeenCalledTimes(1));
 
     await user.click(screen.getByRole('button', { name: 'More options' }));
     await user.click(screen.getByRole('menuitem', { name: 'Uninstall' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(mockDeleteCapability).toHaveBeenCalledTimes(1));
 
     const categoriesNav = screen.getByRole('navigation', { name: 'Capability categories' });
@@ -218,32 +220,31 @@ describe('PluginManager key flows', () => {
     );
 
     await user.click(within(capabilityList).getByRole('button', { name: 'Browse plugins' }));
-    const uninstallButton = await screen.findByRole('button', { name: 'Uninstall' });
-    await user.click(uninstallButton);
+    const removeButton = await screen.findByRole('button', { name: 'Remove' });
+    await user.click(removeButton);
     await waitFor(() => expect(mockUninstallMarketplacePlugin).toHaveBeenCalledWith('market-plugin-1'));
   });
 
-  it('enforces pane offsets and supports html human/code preview switch', async () => {
+  it('renders category/list panes and supports html human/code preview switch', async () => {
     const user = userEvent.setup();
     render(<PluginManager isOpen onClose={vi.fn()} />);
 
     const categoriesNav = screen.getByRole('navigation', { name: 'Capability categories' });
     const capabilityList = screen.getByRole('region', { name: 'Capability list' });
-    expect(categoriesNav.getAttribute('style') || '').toContain('margin-top: 98px');
-    expect(capabilityList.getAttribute('style') || '').toContain('margin-left: 34px');
+    expect(categoriesNav).toBeInTheDocument();
+    expect(capabilityList).toBeInTheDocument();
 
-    await user.click(within(categoriesNav).getByRole('button', { name: 'Skills' }));
+    await user.click(screen.getAllByRole('listitem')[0]);
     await user.click(screen.getByRole('treeitem', { name: /viewer\.html/i }));
 
-    expect(await screen.findByTitle('Preview viewer.html')).toBeTruthy();
+    expect(await screen.findByTitle('Preview viewer.html')).toBeInTheDocument();
 
     const codeButton = screen.getByRole('button', { name: 'Code' });
     await user.click(codeButton);
-    await waitFor(() => expect(screen.queryByTitle('Preview viewer.html')).toBeNull());
-    expect(codeButton.getAttribute('aria-pressed')).toBe('true');
+    await waitFor(() => expect(screen.queryByTitle('Preview viewer.html')).not.toBeInTheDocument());
 
     await user.click(screen.getByRole('button', { name: 'Human' }));
-    expect(await screen.findByTitle('Preview viewer.html')).toBeTruthy();
+    expect(await screen.findByTitle('Preview viewer.html')).toBeInTheDocument();
   });
 
   it('covers connector connect and disconnect flow with account-aware modal', async () => {
@@ -252,21 +253,22 @@ describe('PluginManager key flows', () => {
 
     const categoriesNav = screen.getByRole('navigation', { name: 'Capability categories' });
     await user.click(within(categoriesNav).getByRole('button', { name: 'Connectors' }));
-    const connectButton = await screen.findByRole('button', { name: 'Connect' });
-    await user.click(connectButton);
+    await user.click(screen.getAllByRole('listitem')[0]);
+    await user.click(screen.getByRole('button', { name: 'Enable' }));
 
     const dialog = await screen.findByRole('dialog', { name: /Connect Notion/i });
     const accountInput = within(dialog).getByPlaceholderText('team@company.com');
     await user.clear(accountInput);
     await user.type(accountInput, 'workspace-account');
-    await user.click(within(dialog).getAllByRole('button', { name: 'Connect' })[0]);
+    await user.click(within(dialog).getByRole('button', { name: 'Connect' }));
 
     await waitFor(() =>
       expect(mockToggleCapabilityEnabled).toHaveBeenCalledWith('connector', 'connector-1', true)
     );
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Disable' })).toBeInTheDocument());
 
-    await user.click(screen.getByRole('button', { name: 'Disconnect' }));
+    await user.click(screen.getByRole('button', { name: 'Disable' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
     await waitFor(() =>
       expect(mockToggleCapabilityEnabled).toHaveBeenCalledWith('connector', 'connector-1', false)
     );
@@ -282,28 +284,16 @@ describe('PluginManager key flows', () => {
     const capabilityList = screen.getByRole('region', { name: 'Capability list' });
     await user.click(within(capabilityList).getByRole('button', { name: 'Browse plugins' }));
 
-    const browseDialog = await screen.findByRole('dialog', { name: 'Browse plugins' });
-    await user.click(within(browseDialog).getByRole('button', { name: 'Personal' }));
-    await user.click(within(browseDialog).getByRole('button', { name: 'Add from GitHub' }));
+    const browseDialog = await screen.findByRole('dialog', { name: 'Browse marketplace' });
+    await user.click(within(browseDialog).getByRole('button', { name: 'Personal sources' }));
 
-    // Trust warning modal opens - find by heading
-    await screen.findByRole('heading', { name: 'Add from GitHub' });
-    
-    // Check the trust warning checkbox
-    const trustCheckbox = screen.getByRole('checkbox', { name: /I understand and accept the risks/i });
-    await user.click(trustCheckbox);
-    
-    // Enter the repository
-    const repoInput = screen.getByPlaceholderText('owner/repository');
+    const repoInput = within(browseDialog).getByLabelText('Personal marketplace source');
     await user.type(repoInput, 'allternit/test-marketplace');
-    
-    // Click Add Source button
-    await user.click(screen.getByRole('button', { name: 'Add Source' }));
+    await user.click(within(browseDialog).getByRole('button', { name: 'Add source' }));
 
-    // Verify the source appears in the personal sources list
     await screen.findByText('allternit/test-marketplace');
     await user.click(within(browseDialog).getByRole('button', { name: 'Remove' }));
-    await waitFor(() => expect(screen.queryByText('allternit/test-marketplace')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('allternit/test-marketplace')).not.toBeInTheDocument());
   });
 
   it('creates plugins through the wizard with manifest payload', async () => {

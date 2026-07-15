@@ -1,4 +1,5 @@
 import { createAgent, listAgents, updateAgent } from '@/lib/agents/agent.service';
+import { defineAgent } from '@/lib/agents/agent-definition';
 import type { HarnessConfig } from '@/lib/agents/agent.types';
 import type { InstalledMiniApp, MiniAppHarnessContract } from './mini-app.types';
 import { gizziBaseUrl } from '@/lib/agents/api-config';
@@ -48,21 +49,18 @@ export async function ensureMiniAppAgent(app: InstalledMiniApp): Promise<{ agent
     return { agentId: existing.id };
   }
 
-  const agent = await createAgent({
+  const agent = await createAgent(defineAgent({
     name: `${app.name} via Allternit`,
     description: `Allternit-managed integration for ${app.name}. All tasks enter through the platform session, policy, skill, and receipt system.`,
     type: 'specialist',
     model: contract?.model ?? app.id,
     provider: contract?.transport === 'http' ? 'local' : 'custom',
     capabilities: ['mini-app', contract?.transport ?? 'unknown'],
-    tools: [],
     source: 'vendor',
     harness: readiness.harness,
     allowedSurfaces: ['chat', 'browser', 'cowork'],
-    trustTier: 'standard',
-    writeScope: 'workspace',
     tags: ['mini-app', tag],
     config: { source: 'mini-app', miniAppId: app.id, repo: app.repo, surface: app.surface },
-  });
+  }));
   return { agentId: agent.id };
 }

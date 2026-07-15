@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
+import { GlobalDropzoneProvider } from '@/components/GlobalDropzone';
 
 const embeddedSessionState = vi.hoisted(() => ({
   isEmbedded: false,
@@ -9,8 +10,6 @@ const embeddedSessionState = vi.hoisted(() => ({
   session: null,
   descriptor: { sessionMode: 'regular' as 'agent' | 'regular', agentId: null as string | null },
 }));
-
-
 
 vi.mock('@/lib/agents/surface-agent-context', () => ({
   useSurfaceAgentSelection: () => ({
@@ -68,15 +67,13 @@ vi.mock('./CodeLaunchBranding', () => ({
   CodeLaunchBranding: () => <div data-testid="mock-code-launch-branding" />,
 }));
 
-vi.mock('@/components/ai-elements/GizziMascot', () => ({
-  GizziMascot: () => <div data-testid="mock-gizzi-mascot" />,
-}));
-
 vi.mock('../chat/ChatComposer', () => ({
-  ChatComposer: ({ inputValue, showTopActions }: { inputValue?: string; showTopActions?: boolean }) => (
+  ChatComposer: ({ inputValue, showTopActions, topDeckContent, bottomDockContent }: { inputValue?: string; showTopActions?: boolean; topDeckContent?: React.ReactNode; bottomDockContent?: React.ReactNode }) => (
     <div data-testid="mock-chat-composer">
+      {topDeckContent ? <div data-testid="mock-chat-composer-top-deck">{topDeckContent}</div> : null}
       <span data-testid="mock-chat-composer-input">{inputValue || ''}</span>
       <span data-testid="mock-chat-composer-top-actions">{String(showTopActions)}</span>
+      {bottomDockContent ? <div data-testid="mock-chat-composer-bottom-dock">{bottomDockContent}</div> : null}
     </div>
   ),
 }));
@@ -102,8 +99,16 @@ vi.mock('@/components/ai-elements/shimmer', () => ({
   Shimmer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('./CodeUsageDashboard', () => ({
+  CodeUsageDashboard: () => <div data-testid="code-usage-dashboard">Usage Dashboard</div>,
+}));
+
 import { createCodeModeFixtureState, useCodeModeStore, type CodeWorkspaceRecord } from './CodeModeStore';
 import { CodeCanvas } from './CodeCanvas';
+
+function renderWithDropzone(ui: React.ReactElement) {
+  return render(<GlobalDropzoneProvider>{ui}</GlobalDropzoneProvider>);
+}
 
 describe('CodeCanvas', () => {
   beforeEach(() => {
@@ -128,65 +133,62 @@ describe('CodeCanvas', () => {
     setConsoleTab.mockClear();
   });
 
-  it('renders the minimal launchpad with the shared composer and bottom utility controls', () => {
-    render(<CodeCanvas isPreviewCollapsed={false} />);
+  it('renders the launchpad shell with header, shared composer and branding', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
 
-    expect(screen.getByTestId('code-canvas-shell')).toBeInTheDocument();
+    expect(await screen.findByTestId('code-canvas-shell')).toBeInTheDocument();
+    expect(screen.getByTestId('code-launchpad-greeting')).toBeInTheDocument();
+    expect(screen.getByText('Run a command or describe a task to start coding.')).toBeInTheDocument();
     expect(screen.getByTestId('mock-code-launch-branding')).toBeInTheDocument();
     expect(screen.getByTestId('mock-chat-composer')).toBeInTheDocument();
     expect(screen.getByTestId('mock-chat-composer-top-actions')).toHaveTextContent('false');
-    expect(screen.getByTestId('code-session-selector')).toBeInTheDocument();
-    expect(screen.getByTestId('code-folder-button')).toBeInTheDocument();
-    expect(screen.getByText('Scaffold')).toBeInTheDocument();
-    expect(screen.getByText('Refactor')).toBeInTheDocument();
-    expect(screen.getByText('Debug')).toBeInTheDocument();
-    expect(screen.getByText('Optimize')).toBeInTheDocument();
-    expect(screen.getByText('Explore')).toBeInTheDocument();
   });
 
-  it('seeds the shared composer when a quick action template is selected', () => {
-    render(<CodeCanvas isPreviewCollapsed={false} />);
+  it('renders the workspace bar above the composer', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
 
-    fireEvent.click(screen.getByText('Scaffold'));
-    fireEvent.click(screen.getByText('New component'));
-
-    expect(screen.getByTestId('mock-chat-composer-input')).toHaveTextContent(
-      'Create a production-ready UI component for this workspace.',
-    );
+    expect(await screen.findByTestId('code-workspace-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('code-workspace-bar-workspace')).toHaveTextContent('Allternit Platform');
   });
 
-  it('previews the first action prompt in the composer on hover before opening the panel', () => {
-    render(<CodeCanvas isPreviewCollapsed={false} />);
+  it('shows the connected top deck with environment, workspace, branch, worktree and sync pills', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
 
-    fireEvent.mouseEnter(screen.getByText('Optimize'));
-
-    expect(screen.getByTestId('mock-chat-composer-input')).toHaveTextContent(
-      'Review this UI path for avoidable renders and expensive layout work.',
-    );
+    expect(await screen.findByTestId('code-workspace-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('code-workspace-bar-environment')).toHaveTextContent('Local');
+    expect(screen.getByTestId('code-workspace-bar-workspace')).toHaveTextContent('Allternit Platform');
+    expect(screen.getByTestId('code-workspace-bar-branch')).toHaveTextContent('main');
+    expect(screen.getByTestId('code-workspace-bar-worktree')).toHaveTextContent('worktree');
+    expect(screen.getByTestId('code-workspace-bar-sync')).toBeInTheDocument();
   });
 
-  it('opens the session popover with consistent overlay styling controls', () => {
-    render(<CodeCanvas isPreviewCollapsed={false} />);
+  it('updates the active session permission mode from the bottom status bar', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
 
-    fireEvent.click(screen.getByTestId('code-session-selector'));
+    const modeButton = await screen.findByTestId('code-bottom-status-mode');
+    expect(modeButton).toHaveTextContent('Plan first');
 
-    const popover = screen.getByTestId('code-session-popover');
+    fireEvent.click(modeButton);
+    const autoOption = screen.getByText('Auto');
+    fireEvent.click(autoOption);
 
-    expect(popover).toBeInTheDocument();
-    expect(screen.getByText('Session')).toBeInTheDocument();
-    expect(popover).toHaveTextContent('Code Mode Layout Stabilization');
+    expect(useCodeModeStore.getState().sessions.find((s) => s.session_id === 'sess_code_ui')?.mode).toBe('AUTO');
+    expect(modeButton).toHaveTextContent('Accept edits');
   });
 
-  it('opens the shared console drawer terminal tab from the utility row', () => {
-    render(<CodeCanvas isPreviewCollapsed={false} />);
+  it('toggles worktree isolation from the top deck', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
 
-    fireEvent.click(screen.getByTestId('code-console-button'));
+    const worktreePill = await screen.findByTestId('code-workspace-bar-worktree');
+    expect(worktreePill).toHaveTextContent('worktree');
 
-    expect(setConsoleTab).toHaveBeenCalledWith('terminal');
-    expect(openDrawer).toHaveBeenCalledWith('console', { tab: 'terminal', minHeight: 320 });
+    fireEvent.click(worktreePill);
+
+    expect(useCodeModeStore.getState().sessions.find((s) => s.session_id === 'sess_code_ui')?.isolation).toBe('sandbox');
+    expect(worktreePill).toHaveTextContent('worktree');
   });
 
-  it('keeps rendering when persisted workspace data is missing repo status', () => {
+  it('keeps rendering when persisted workspace data is missing repo status', async () => {
     const fixtureState = createCodeModeFixtureState();
     useCodeModeStore.setState({
       ...fixtureState,
@@ -194,29 +196,34 @@ describe('CodeCanvas', () => {
         index === 0 ? ({ ...workspace, repo_status: undefined } as unknown as CodeWorkspaceRecord) : workspace,
       ),
     });
-    chatState.threads = [{ id: 'thread-code' }];
 
-    render(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
 
-    expect(screen.getByTestId('code-canvas-shell')).toBeInTheDocument();
-    expect(screen.getByTestId('code-folder-button')).toHaveTextContent('Select folder');
+    expect(await screen.findByTestId('code-canvas-shell')).toBeInTheDocument();
+    expect(screen.getByTestId('code-workspace-bar-workspace')).toHaveTextContent('Allternit Platform');
   });
 
-  it('renders the code agent backdrop when code agent mode is enabled', () => {
-    embeddedSessionState.isEmbedded = true;
-    embeddedSessionState.sessionId = 'session-code-1';
-    embeddedSessionState.descriptor = { sessionMode: 'agent', agentId: 'agent-1' };
-    useAgentSurfaceModeStore.setState({
-      selectedAgentIdBySurface: {
-        chat: null,
-        cowork: null,
-        code: 'agent-1',
-        browser: null,
-      },
-    });
+  it('renders a clickable workspace picker in the workspace bar', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
 
-    render(<CodeCanvas isPreviewCollapsed={false} />);
+    const workspacePill = await screen.findByTestId('code-workspace-bar-workspace');
 
-    expect(screen.getByTestId('agent-mode-code-backdrop')).toHaveAttribute('data-surface', 'code');
+    expect(workspacePill).toHaveTextContent('Allternit Platform');
+    expect(workspacePill).not.toBeDisabled();
+  });
+
+  it('renders the bottom status bar with mode selector and plus menu', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+
+    expect(await screen.findByTestId('code-bottom-status-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('code-bottom-status-mode')).toBeInTheDocument();
+    expect(screen.getByTestId('code-bottom-status-plus')).toBeInTheDocument();
+    expect(screen.getByTestId('code-composer-metadata')).toBeInTheDocument();
+  });
+
+  it('renders usage stats on the landing page', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+
+    expect(await screen.findByTestId('code-usage-dashboard')).toBeInTheDocument();
   });
 });

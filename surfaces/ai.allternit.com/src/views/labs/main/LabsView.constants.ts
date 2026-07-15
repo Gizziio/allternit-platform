@@ -32,69 +32,80 @@ export interface ALABSLesson {
   courseTitle: string;
 }
 
+/* The labs API returns snake_case fields; normalize at the fetch boundary. */
+
+export function normalizeCourse(raw: Record<string, any>): ALABSCourse {
+  const code = raw.code ?? '';
+  const coverImage = raw.coverImage || raw.cover_image
+    || (code ? `/images/alabs-covers/${code}.png` : '');
+  return {
+    id: String(raw.id ?? ''),
+    code,
+    title: raw.title ?? '',
+    description: raw.description ?? '',
+    tier: raw.tier ?? 'CORE',
+    canvasUrl: raw.canvasUrl ?? raw.canvas_url ?? '',
+    modules: raw.modules ?? 0,
+    capstone: raw.capstone ?? '',
+    coverImage,
+    demosUrl: raw.demosUrl ?? raw.demos_url ?? undefined,
+  };
+}
+
+export function normalizeLesson(raw: Record<string, any>): ALABSLesson {
+  return {
+    id: String(raw.id ?? ''),
+    courseId: String(raw.courseId ?? raw.course_id ?? ''),
+    moduleNumber: raw.moduleNumber ?? raw.module_number ?? 0,
+    lessonNumber: raw.lessonNumber ?? raw.lesson_number ?? 0,
+    title: raw.title ?? '',
+    description: raw.description ?? '',
+    sceneJson: raw.sceneJson ?? raw.scene_json ?? null,
+    videoUrl: raw.videoUrl ?? raw.video_url ?? null,
+    durationMinutes: raw.durationMinutes ?? raw.duration_minutes ?? 0,
+    status: raw.status ?? 'published',
+    publishedAt: raw.publishedAt ?? raw.published_at ?? null,
+    createdAt: raw.createdAt ?? raw.created_at ?? '',
+    courseCode: raw.courseCode ?? raw.course_code ?? '',
+    courseTitle: raw.courseTitle ?? raw.course_title ?? '',
+  };
+}
+
+/*
+ * Mirrors the live /api/v1/courses catalog exactly (same ids/titles/tiers) so
+ * an offline fallback never shows courses that don't actually exist server-side.
+ * (A larger 10-course legacy catalog previously lived here with orphaned ids —
+ * its cover art is still on disk under /images/alabs-covers/ but the courses
+ * themselves are no longer served by the API.)
+ */
 export const FALLBACK_COURSES: ALABSCourse[] = [
   {
-    id: '14593493', code: 'ALABS-CORE-COPILOT', title: 'Build AI-Assisted Software with Copilot & Cursor',
-    description: 'Learn to use GitHub Copilot and Cursor as infrastructure layers for code generation, refactoring, and MCP tool building.',
-    tier: 'CORE', canvasUrl: 'https://canvas.instructure.com/courses/14593493', modules: 7,
-    capstone: 'Build a TypeScript MCP Server with Cursor', coverImage: '/images/alabs-covers/ALABS-CORE-COPILOT.png',
+    id: 'course-copilot', code: 'ALABS-CORE-COPILOT', title: 'A://Labs — Core Copilot',
+    description: 'Master the fundamentals of AI-assisted development and Allternit platform operations.',
+    tier: 'CORE', canvasUrl: 'https://canvas.instructure.com/courses/14593493', modules: 4,
+    capstone: 'Build a working copilot extension that integrates with the Allternit API.',
+    coverImage: '/images/alabs-covers/ALABS-CORE-COPILOT.png',
   },
   {
-    id: '14593495', code: 'ALABS-CORE-PROMPTS', title: 'Prompt Engineering & Systematic LLM Reasoning',
-    description: 'Master prompt engineering from first principles: systematic prompting, Python API patterns, and red-teaming.',
-    tier: 'CORE', canvasUrl: 'https://canvas.instructure.com/courses/14593495', modules: 7,
-    capstone: 'Design a 3-Prompt Suite + Red-Team Report', coverImage: '/images/alabs-covers/ALABS-CORE-PROMPTS.png',
+    id: 'course-ops', code: 'ALABS-OPS-RAG', title: 'A://Labs — OPS RAG',
+    description: 'Production-grade RAG systems, vector search, and memory architecture for operations teams.',
+    tier: 'OPS', canvasUrl: 'https://canvas.instructure.com/courses/14593494', modules: 5,
+    capstone: 'Deploy a RAG pipeline with >90% retrieval accuracy on your own dataset.',
+    coverImage: '/images/alabs-covers/ALABS-OPS-RAG.png',
   },
   {
-    id: '14593499', code: 'ALABS-OPS-N8N', title: 'Orchestrate Agents & Automations with n8n',
-    description: 'Build production business workflows with n8n: architecture, patterns, OpenAI agent nodes, and self-hosted scaling.',
-    tier: 'OPS', canvasUrl: 'https://canvas.instructure.com/courses/14593499', modules: 8,
-    capstone: 'Build a Self-Hosted n8n MCP Workflow', coverImage: '/images/alabs-covers/ALABS-OPS-N8N.png',
+    id: 'course-agents', code: 'ALABS-AGENTS-AGENTS', title: 'A://Labs — Agents × Agents',
+    description: 'Multi-agent orchestration, swarm design, and autonomous agent systems.',
+    tier: 'AGENTS', canvasUrl: 'https://canvas.instructure.com/courses/14593495', modules: 6,
+    capstone: 'Build a 3-agent swarm that collaboratively completes a complex research task.',
+    coverImage: '/images/alabs-covers/ALABS-AGENTS-AGENTS.png',
   },
   {
-    id: '14593501', code: 'ALABS-OPS-VISION', title: 'Computer Vision for Agent Systems',
-    description: 'Connect OpenCV and vision models to agent systems. Feature detection, object tracking, and screen-state analysis.',
-    tier: 'OPS', canvasUrl: 'https://canvas.instructure.com/courses/14593501', modules: 6,
-    capstone: 'Build a Screen-State Analyzer for LLM Agents', coverImage: '/images/alabs-covers/ALABS-OPS-VISION.png',
-  },
-  {
-    id: '14593503', code: 'ALABS-OPS-RAG', title: 'Local RAG & Document Intelligence',
-    description: 'Build privacy-preserving RAG pipelines with local LLMs, semantic search, and offline document Q&A agents.',
-    tier: 'OPS', canvasUrl: 'https://canvas.instructure.com/courses/14593503', modules: 7,
-    capstone: 'Offline Document-QA Agent', coverImage: '/images/alabs-covers/ALABS-OPS-RAG.png',
-  },
-  {
-    id: '14593505', code: 'ALABS-AGENTS-ML', title: 'ML Models as Agent Tools',
-    description: 'When to use ML vs. LLMs vs. rules. Wrap scikit-learn models as MCP tools and integrate them into agent workflows.',
-    tier: 'AGENTS', canvasUrl: 'https://canvas.instructure.com/courses/14593505', modules: 6,
-    capstone: 'Wrap a Scikit-Learn Model as an MCP Tool', coverImage: '/images/alabs-covers/ALABS-AGENTS-ML.png',
-  },
-  {
-    id: '14593507', code: 'ALABS-AGENTS-AGENTS', title: 'Multi-Agent Systems & Orchestration',
-    description: 'Design collaborative agent swarms: tool-using agents, code-generation agents, and multi-agent orchestration patterns.',
-    tier: 'AGENTS', canvasUrl: 'https://canvas.instructure.com/courses/14593507', modules: 7,
-    capstone: 'Design a 3-Agent Collaborative Blog-Writing System', coverImage: '/images/alabs-covers/ALABS-AGENTS-AGENTS.png',
-  },
-  {
-    id: '14612851', code: 'ALABS-ADV-PLUGINSDK', title: 'Build Plugins for Allternit',
-    description: 'Deep dive into the Allternit Plugin SDK: architecture, adapters, PluginHost, publishing, and production integration.',
-    tier: 'ADV', canvasUrl: 'https://canvas.instructure.com/courses/14612851', modules: 4,
-    capstone: 'Build a Cross-Platform Plugin with PluginHost', coverImage: '/images/alabs-covers/ALABS-ADV-PLUGINSDK.png',
-    demosUrl: '/demos/ALABS-ADV-PLUGINSDK-module1.html',
-  },
-  {
-    id: '14612861', code: 'ALABS-ADV-WORKFLOW', title: 'The Allternit Workflow Engine',
-    description: 'Visual DAG orchestration, scheduler, execution model, and production workflow integration.',
-    tier: 'ADV', canvasUrl: 'https://canvas.instructure.com/courses/14612861', modules: 3,
-    capstone: 'Build a Custom Workflow Node', coverImage: '/images/alabs-covers/ALABS-ADV-WORKFLOW.png',
-    demosUrl: '/demos/ALABS-ADV-WORKFLOW-module1.html',
-  },
-  {
-    id: '14612869', code: 'ALABS-ADV-ADAPTERS', title: 'Provider Adapters & Unified APIs',
-    description: 'Abstraction layers, rate limiting, resilience patterns, failover, and production API integration.',
-    tier: 'ADV', canvasUrl: 'https://canvas.instructure.com/courses/14612869', modules: 3,
-    capstone: 'Build a Provider Adapter for a New API', coverImage: '/images/alabs-covers/ALABS-ADV-ADAPTERS.png',
-    demosUrl: '/demos/ALABS-ADV-ADAPTERS-module1.html',
+    id: 'course-adv', code: 'ALABS-ADV-MCP', title: 'A://Labs — ADV MCP',
+    description: 'Advanced model context protocols, custom tool ecosystems, and deep integration patterns.',
+    tier: 'ADV', canvasUrl: 'https://canvas.instructure.com/courses/14593496', modules: 4,
+    capstone: 'Design and publish an MCP server with 5+ custom tools used by 10+ users.',
+    coverImage: '',
   },
 ];
 

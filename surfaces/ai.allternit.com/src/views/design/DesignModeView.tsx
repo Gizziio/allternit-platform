@@ -338,6 +338,8 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
 
   const pendingProject = useDesignTabStore(s => s.pendingProject);
   const clearPendingProject = useDesignTabStore(s => s.clearPendingProject);
+  const pendingPrompt = useDesignTabStore(s => s.pendingPrompt);
+  const setPendingPrompt = useDesignTabStore(s => s.setPendingPrompt);
 
   const { sendMessageStream, loadSessions } = useDesignSessionActions();
   const activeSessionId = useDesignSessionStore(s => s.activeSessionId);
@@ -372,6 +374,14 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   }, [backendMessages]);
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
+
+  // Seed the composer with any prompt carried over from the project view.
+  useEffect(() => {
+    if (pendingPrompt) {
+      setComposerSeed(pendingPrompt);
+      setPendingPrompt(null);
+    }
+  }, [pendingPrompt, setPendingPrompt]);
 
   // Sync state when initialTab prop changes.
   useEffect(() => {
@@ -414,7 +424,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     }
   }
 
-  async function startProject(config: { name: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; skill?: SkillRecord; skillValues?: Record<string, unknown> }) {
+  async function startProject(config: { name: string; prompt?: string; type: string; direction?: import('../../lib/design/directions').DesignDirection; skill?: SkillRecord; skillValues?: Record<string, unknown> }) {
     const isContent = config.type === 'content-engine';
     const skill = config.skill;
     const projectId = `design-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -469,17 +479,18 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       skillValues: { ...config.skillValues, ...skillParameters },
       isDeckSession: config.type === 'slides' || skill?.mode === 'deck',
     });
-    const sessionId = await createDesignSession({ name: config.name, sessionMode: 'agent', systemPrompt });
+    const sessionId = await createDesignSession({ name: config.name, projectId, sessionMode: 'agent', systemPrompt });
+    const userRequest = config.prompt?.trim() || config.name;
     if (isContent) {
-      await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] I am starting a Content Engine project called "${config.name}". Please run skill_graph_ops action="sync" to read /content-skill-graph/index.md.` });
+      await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] Project: "${config.name}". User request: ${userRequest}\n\nRun skill_graph_ops action="sync" to read /content-skill-graph/index.md, then create the first working artifact for this request and open it in the canvas.` });
     } else if (skill) {
       const opener = skill.examplePrompt ?? `Run the ${skill.name} skill for this project.`;
       const inputs = skill.inputs.map((i) => `${i.label ?? i.name}: ${config.skillValues?.[i.name] ?? i.default ?? ''}`).join('\n');
       const params = skill.parameters.map((p) => `${p.label ?? p.name}: ${skillParameters[p.name] ?? p.default}`).join('\n');
-      await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Please begin with the skill workflow.` });
+      await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nUser request: ${userRequest}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Begin the skill workflow now. Create the first usable design artifact and open it in the canvas; do not stop at a discovery question unless a required detail is truly missing.` });
     } else {
       const dirContext = dir ? ` The visual direction is "${dir.label}" — ${dir.mood}. Key references: ${dir.references.join(', ')}.` : '';
-      await sendMessageStream(sessionId, { text: `I am starting a ${config.type} project called "${config.name}".${dirContext} Please begin with a discovery brief.` });
+      await sendMessageStream(sessionId, { text: `Create a ${config.type} for this request:\n\n${userRequest}\n\nProject name: "${config.name}".${dirContext}\n\nStart building immediately. Produce the first complete, editable design artifact, save it as a project file, and open it in the canvas. Make reasonable design decisions from the request instead of replying with only a discovery brief.` });
     }
   }
 
@@ -494,6 +505,54 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     <>
       <NewProjectScreen
         onStart={startProject}
+        onOpenProject={async (project) => {
+          const projectTabs = Array.isArray(project.tabs) ? project.tabs : [];
+          const safeTab = projectTabs.some((tab) => tab.id === project.activeTabId)
+            ? project.activeTabId as CanvasTab
+            : 'questions';
+          useDesignProjectStore.getState().setActiveProject(project.id);
+          setActiveProject({
+            id: project.id,
+            name: project.name,
+            type: project.type as ProjectType,
+            specialist: project.specialist,
+            fidelity: project.fidelity,
+            activeTabId: safeTab,
+            tabs: projectTabs.map((tab) => ({ ...tab, type: tab.type as CanvasTab })),
+          });
+          setActiveTab(safeTab);
+
+          try {
+            await loadSessions();
+            const sessionStore = useDesignSessionStore.getState();
+            const linkedSession = sessionStore.sessions.find(
+              (session) => session.metadata?.projectId === project.id
+            );
+            if (linkedSession) {
+              sessionStore.setActiveSession(linkedSession.id);
+              return;
+            }
+
+            // Projects created before project/session linking was introduced
+            // need a recovery session so their workspace and composer remain usable.
+            const sessionId = await createDesignSession({
+              name: project.name,
+              projectId: project.id,
+              sessionMode: 'agent',
+              systemPrompt: composeStudioSystemPrompt({
+                designSystemBody: designMd ?? undefined,
+                designSystemTitle: installedDesignId ? 'Installed design system' : undefined,
+              }),
+            });
+            useDesignSessionStore.getState().setActiveSession(sessionId);
+          } catch (error) {
+            logger.error({ err: error, projectId: project.id }, 'Failed to restore Design project session');
+          }
+        }}
+        onSelectDesignSystem={(system) => {
+          setInstalledDesignId(system.id);
+          setDesignMd(system.body);
+        }}
         selectedSkill={selectedSkill}
         onSelectSkill={(skill) => { if (!skill) setShowSkillPicker(true); else setSelectedSkill(skill); }}
         skillValues={skillValues}
@@ -934,7 +993,7 @@ function DesignChatPanel({
           onSend={handleSend}
           isLoading={isStreaming}
           placeholder={selectedAgent ? `Message ${selectedAgent.name}...` : 'Describe your design request...'}
-          seedText={composerSeed}
+          inputValue={composerSeed}
           agentModeSurface="design"
         />
       </div>

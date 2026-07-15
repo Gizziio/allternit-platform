@@ -163,4 +163,129 @@ describe('office-io', () => {
     const model = imported.model as AllternitDeck;
     expect(model.slides.length).toBe(1);
   });
+
+  it('round-trips a presentation with an image', async () => {
+    const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const src = `data:image/png;base64,${tinyPng}`;
+    const deck: AllternitDeck = {
+      title: 'Image Deck',
+      slides: [
+        {
+          id: 'slide-1',
+          layout: 'title',
+          background: { type: 'color', value: '#FFFFFF' },
+          blocks: [
+            { type: 'text', text: 'Title', x: 0.5, y: 0.5, w: 8, h: 1, style: { fontSize: 32, bold: true } },
+            { type: 'image', src, x: 1, y: 2, w: 2, h: 2 },
+          ],
+        },
+      ],
+    };
+
+    const exported = await exportPptxFile(deck);
+    expect(exported.size).toBeGreaterThan(0);
+
+    const file = await blobToFile(exported, 'image.pptx');
+    const imported = await importOfficeFile(file);
+    const model = imported.model as AllternitDeck;
+    expect(model.slides.length).toBe(1);
+    const images = model.slides[0].blocks.filter((b): b is Extract<typeof b, { type: 'image' }> => b.type === 'image');
+    expect(images.length).toBe(1);
+    expect(images[0].src).toContain('data:image');
+  });
+
+  it('round-trips a document with native lists', async () => {
+    const document: AllternitDocument = {
+      title: 'List Doc',
+      blocks: [
+        {
+          type: 'list',
+          style: 'bulleted',
+          items: [
+            { type: 'paragraph', content: [{ text: 'First bullet' }] },
+            { type: 'paragraph', content: [{ text: 'Second bullet', bold: true }] },
+          ],
+        },
+        {
+          type: 'list',
+          style: 'numbered',
+          items: [
+            { type: 'paragraph', content: [{ text: 'One' }] },
+            { type: 'paragraph', content: [{ text: 'Two' }] },
+          ],
+        },
+      ],
+    };
+
+    const exported = await exportDocxFile(document);
+    const file = await blobToFile(exported, 'lists.docx');
+    const imported = await importOfficeFile(file);
+    const model = imported.model as AllternitDocument;
+
+    const lists = model.blocks.filter((b): b is Extract<typeof b, { type: 'list' }> => b.type === 'list');
+    expect(lists.length).toBe(2);
+    expect(lists[0].style).toBe('bulleted');
+    expect(lists[0].items.length).toBeGreaterThanOrEqual(1);
+    expect(lists[1].style).toBe('numbered');
+    expect(lists[1].items.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('round-trips a document with a table', async () => {
+    const document: AllternitDocument = {
+      title: 'Table Doc',
+      blocks: [
+        {
+          type: 'table',
+          rows: [
+            {
+              cells: [
+                { blocks: [{ type: 'paragraph', content: [{ text: 'A1' }] }] },
+                { blocks: [{ type: 'paragraph', content: [{ text: 'B1', bold: true }] }] },
+              ],
+            },
+            {
+              cells: [
+                { blocks: [{ type: 'paragraph', content: [{ text: 'A2' }] }] },
+                { blocks: [{ type: 'paragraph', content: [{ text: 'B2' }] }] },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const exported = await exportDocxFile(document);
+    const file = await blobToFile(exported, 'table.docx');
+    const imported = await importOfficeFile(file);
+    const model = imported.model as AllternitDocument;
+
+    const table = model.blocks.find((b): b is Extract<typeof b, { type: 'table' }> => b.type === 'table');
+    expect(table).toBeDefined();
+    expect(table!.rows.length).toBe(2);
+    expect(table!.rows[0].cells.length).toBe(2);
+  });
+
+  it('round-trips a document with an image', async () => {
+    const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const src = `data:image/png;base64,${tinyPng}`;
+    const document: AllternitDocument = {
+      title: 'Image Doc',
+      blocks: [
+        { type: 'paragraph', content: [{ text: 'Before' }] },
+        { type: 'image', src, alt: 'Tiny', width: 64, height: 64 },
+        { type: 'paragraph', content: [{ text: 'After' }] },
+      ],
+    };
+
+    const exported = await exportDocxFile(document);
+    expect(exported.size).toBeGreaterThan(0);
+
+    const file = await blobToFile(exported, 'image.docx');
+    const imported = await importOfficeFile(file);
+    const model = imported.model as AllternitDocument;
+
+    const images = model.blocks.filter((b): b is Extract<typeof b, { type: 'image' }> => b.type === 'image');
+    expect(images.length).toBe(1);
+    expect(images[0].src).toContain('data:image');
+  });
 });

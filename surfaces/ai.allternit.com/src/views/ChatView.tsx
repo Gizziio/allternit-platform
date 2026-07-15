@@ -8,7 +8,7 @@ import { ModelPicker } from "@/components/model-picker";
 import { AgentContextStrip } from "@/components/agents/AgentContextStrip";
 
 import { ArtifactSidePanel, type SelectedArtifact } from "@/components/ai-elements/artifact-panel";
-import { getSession } from "@/lib/auth-browser";
+import { DEFAULT_LAUNCH_GREETING, getLaunchGreeting, peekLaunchGreeting } from "@/views/chat/main/launchGreeting";
 import {
   usePendingPermissions,
   usePendingQuestions,
@@ -23,9 +23,11 @@ import {
   getAgentSessionStatusLabel,
 } from "@/lib/agents/session-metadata";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
+import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
 import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
+import { useVoice } from "@/providers/voice-provider";
 import {
   ComposerPermissionInfoBar,
   ComposerQuestionBar,
@@ -57,7 +59,7 @@ export function ChatView({
   mode?: 'chat' | 'cowork' | 'code',
   initialMessage?: string,
   onInitialMessageSent?: () => void,
-  onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code') => void;
+  onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code', execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
 }) {
   const { id: chatId } = useChatId();
   const { renameThread } = useChatStore();
@@ -172,6 +174,40 @@ export function ChatView({
   const activeIsLoading = isAgentSessionEmbedded
     ? nativeStreaming.isStreaming
     : chatStreaming;
+  const { interactionMode, speak, setInteractionMode } = useVoice();
+  const voiceWasLoadingRef = useRef(false);
+  const lastSpokenMessageRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (activeIsLoading) {
+      voiceWasLoadingRef.current = true;
+      return;
+    }
+    if (!voiceWasLoadingRef.current || interactionMode !== 'voice') return;
+    voiceWasLoadingRef.current = false;
+
+    const response = [...nativeMessages].reverse().find((message) => message.role === 'assistant');
+    if (!response?.content?.trim() || lastSpokenMessageRef.current === response.id) {
+      setInteractionMode('text');
+      return;
+    }
+
+    lastSpokenMessageRef.current = response.id;
+    const spokenResponse = response.content
+      .replace(/```[\s\S]*?```/g, ' Code block omitted. ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/[>*_~]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!spokenResponse) {
+      setInteractionMode('text');
+      return;
+    }
+    void speak(spokenResponse).finally(() => setInteractionMode('text'));
+  }, [activeIsLoading, interactionMode, nativeMessages, setInteractionMode, speak]);
 
   const hasAutoTitledRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -254,11 +290,8 @@ export function ChatView({
     }
   }, [activeIsLoading, nativeMessages, shouldAutoScroll, scrollToBottom]);
 
-  const [greeting, setGreeting] = useState({
-    title: "Allternit & Coffee",
-    tagline: "The Intelligent Workspace",
-    effectType: "reveal" as "typing" | "reveal"
-  });
+  // Shared with the Cowork launch screen — same greeting across mode toggles.
+  const [greeting, setGreeting] = useState(() => peekLaunchGreeting() ?? DEFAULT_LAUNCH_GREETING);
   const [launchMascotEmotion, setLaunchMascotEmotion] = useState<GizziEmotion>('steady');
   const [mentionAgentId, setMentionAgentId] = useState<string | null>(null);
   const [launchMascotAttention, setLaunchMascotAttention] = useState<GizziAttention | null>(null);
@@ -309,43 +342,13 @@ export function ChatView({
   ]);
 
   useEffect(() => {
-    async function selectGreeting() {
-      const session = await getSession();
-      const userName = session?.name || "Eoj";
-
-      const titles = [
-        "Allternit & Coffee",
-        `Welcome back, ${userName}`,
-        "Ready to Build?",
-        "The Architect's Den",
-        "Allternit",
-        "Good to see you, Architect",
-        "Creative Control",
-        "Morning Ritual"
-      ];
-
-      const taglines = [
-        "The Intelligent Workspace",
-        "Your Architecture, Amplified",
-        "Coffee, Code, and Creativity",
-        "Building the Future, One Block at a Time",
-        "Where Logic Meets Elegance",
-        "Precision in Every Interaction",
-        "Designing Better Workflows",
-        "Stay curious, stay creative."
-      ];
-
-      const randomTitle = titles[Math.floor(Math.random() * titles.length)];
-      const randomTagline = taglines[Math.floor(Math.random() * taglines.length)];
-      const randomEffect = Math.random() > 0.5 ? "typing" : "reveal";
-
-      setGreeting({
-        title: randomTitle,
-        tagline: randomTagline,
-        effectType: randomEffect
-      });
-    }
-    selectGreeting();
+    let cancelled = false;
+    getLaunchGreeting().then((g) => {
+      if (!cancelled) setGreeting(g);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -427,6 +430,7 @@ export function ChatView({
   const isChatEmpty = !isAgentSessionEmbedded && nativeMessages.length === 0;
   const showTopActions = !isAgentSessionEmbedded;
   const useMonolithLogo = mode === 'code';
+  const launchLogo: 'gizzi' | 'matrix' | 'allternit' = mode === 'chat' || mode === 'cowork' || useMonolithLogo ? 'matrix' : 'gizzi';
 
   const embeddedAgentDescriptor = embeddedAgentSession.descriptor;
   // Only sessions actually bound to an agent (agent metadata present) get the
@@ -476,6 +480,7 @@ export function ChatView({
               modelReady={modelReady}
               startSelection={startSelection}
               useMonolithLogo={useMonolithLogo}
+              launchLogo={launchLogo}
               launchMascotEmotion={launchMascotEmotion}
               launchMascotAttention={launchMascotAttention}
               greeting={greeting}

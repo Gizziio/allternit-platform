@@ -3,14 +3,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import {
-  CaretDown,
-  Code as CodeIcon,
-  FolderSimple,
   Sparkle,
-  TerminalWindow,
   Bug,
   Stack,
   Lightning,
+  FolderSimple,
 } from '@phosphor-icons/react';
 import {
   Conversation,
@@ -31,8 +28,12 @@ import {
   getActiveWorkspace,
   getSessionsForWorkspace,
   useCodeModeStore,
+  type CodeSessionMode,
 } from './CodeModeStore';
 import { CodeLaunchBranding } from './CodeLaunchBranding';
+import { CodeWorkspaceBar } from './CodeWorkspaceBar';
+import { CodeBottomStatusBar } from './CodeBottomStatusBar';
+import { CodeUsageDashboard } from './CodeUsageDashboard';
 import {
   buildAgentConversationContext,
   useSurfaceAgentSelection,
@@ -43,7 +44,6 @@ import {
   getAgentSessionStatusLabel,
 } from '@/lib/agents';
 import { useCodeSessionStore, createCodeSession, type CodeSession } from './CodeSessionStore';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ACIComputerUseBar } from '@/capsules/browser/ACIComputerUseSidecar';
 import { useModeCanvasBridge } from '@/hooks/useModeCanvasBridge';
 import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
@@ -51,7 +51,6 @@ import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem }
 import {
   ComposerPermissionInfoBar,
   ComposerQuestionBar,
-  ComposerStatusInfoBar,
 } from '../chat/ChatComposerEnhancements';
 import { usePendingPermissions, usePendingQuestions } from '@/lib/agents';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
@@ -91,6 +90,7 @@ interface ActionGroup {
 
 interface CodeCanvasProps {
   isPreviewCollapsed: boolean;
+  onOpenSideTab?: (tab: 'files' | 'preview' | 'terminal' | 'git') => void;
 }
 
 interface CodeModelSelection {
@@ -232,6 +232,20 @@ const utilityControlStyle: React.CSSProperties = {
   WebkitBackdropFilter: 'blur(12px)',
 };
 
+const pillControlStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '6px 12px',
+  borderRadius: 10,
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+  background: 'rgba(255, 255, 255, 0.03)',
+  color: 'var(--text-secondary)',
+  fontSize: 12,
+  fontWeight: 600,
+  cursor: 'pointer',
+};
+
 const codeMenuTheme = {
   menuBg: 'var(--surface-floating)',
   menuBorder: 'var(--ui-border-muted)',
@@ -242,7 +256,7 @@ const codeMenuTheme = {
   hoverBg: 'var(--surface-hover)',
 };
 
-export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanvasProps) {
+export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed, onOpenSideTab }: CodeCanvasProps) {
   const openDrawer = useDrawerStore((state) => state.openDrawer);
   const setConsoleTab = useDrawerStore((state) => state.setConsoleTab);
   const embeddedSessionId = useCodeSessionStore((s) => s.activeSessionId);
@@ -632,7 +646,7 @@ function CodeSessionSurface({
   const prevAgentModeEnabledRef = useRef(agentModeEnabled);
   if (prevAgentModeEnabledRef.current !== agentModeEnabled) {
     prevAgentModeEnabledRef.current = agentModeEnabled;
-    if (agentModeEnabled) setAgentModePulse((p) => p + 1);
+    setAgentModePulse((p) => p + 1);
   }
   const setActiveCodeSession = useCodeSessionStore(
     (state) => state.setActiveSession,
@@ -675,6 +689,51 @@ function CodeSessionSurface({
     : isLoading;
   const effectiveWorkspaceReady = isEmbeddedAgentSession || workspaceReady;
   const hasMessages = displayMessages.length > 0;
+  const layoutMode = activeWorkspace?.layoutMode ?? 'thread';
+  const sessionMode = activeSession?.mode ?? 'DEFAULT';
+  const handleSessionModeChange = useCallback(
+    (mode: CodeSessionMode) => {
+      if (activeSessionId) {
+        useCodeModeStore.getState().setSessionMode(activeSessionId, mode);
+      }
+    },
+    [activeSessionId],
+  );
+  const handleToggleLayoutMode = useCallback(() => {
+    if (!activeWorkspaceId) return;
+    useCodeModeStore.getState().setWorkspaceLayoutMode(
+      activeWorkspaceId,
+      layoutMode === 'thread' ? 'canvas' : 'thread',
+    );
+  }, [activeWorkspaceId, layoutMode]);
+  const handleToggleWorktree = useCallback(() => {
+    if (!activeSessionId) return;
+    useCodeModeStore.getState().setSessionIsolation(
+      activeSessionId,
+      activeSession?.isolation === 'worktree' ? 'sandbox' : 'worktree',
+    );
+  }, [activeSessionId, activeSession?.isolation]);
+  const handleOpenFolder = useCallback(async () => {
+    try {
+      if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
+        const dirHandle = await (window as unknown as { showDirectoryPicker: () => Promise<{ name: string }> }).showDirectoryPicker();
+        const path = dirHandle?.name ?? '';
+        if (path) {
+          logger.info({ path }, '[CodeCanvas] Opened folder');
+        }
+      } else {
+        logger.warn('[CodeCanvas] showDirectoryPicker is not supported in this environment');
+      }
+    } catch {
+      // User cancelled or picker unavailable.
+    }
+  }, []);
+  const handleRefreshWorkspace = useCallback(() => {
+    // Reserved for refreshing repo status / workspace metadata.
+  }, []);
+  const handleSwitchBranch = useCallback((_branch: string) => {
+    // Reserved for git branch switching once a backend action is available.
+  }, []);
   const codeSession = embeddedAgentSession?.session as CodeSession | null | undefined;
   // Only sessions actually bound to an agent (agent metadata present) get the
   // context strip — a plain code session must not render the agent card.
@@ -843,11 +902,19 @@ function CodeSessionSurface({
   const composerQuestionBar = pendingQuestions[0]
     ? <ComposerQuestionBar request={pendingQuestions[0]} />
     : null;
-  const composerBottomInfoBar = (
-    <ComposerStatusInfoBar
-      modelLabel={selectedModelDisplayName || selectedModel || null}
-      modeLabel={brainMode === 'plan' ? 'Plan' : 'Build'}
-      attachmentCount={attachments.length}
+  const bottomDockContent = (
+    <CodeBottomStatusBar
+      sessionMode={sessionMode}
+      onSessionModeChange={handleSessionModeChange}
+      selectedModelDisplayName={selectedModelDisplayName || selectedModel || 'Model'}
+      onAddAttachment={onAddChatAttachment}
+      metadata={
+        <CodeComposerMetadata
+          workspacePath={activeWorkspace?.root_path}
+          branch={activeWorkspace?.repo_status?.branch}
+          workspaceName={activeWorkspace?.display_name}
+        />
+      }
     />
   );
 
@@ -883,6 +950,9 @@ function CodeSessionSurface({
         workspaces={workspaces}
         activeSessionId={activeSessionId}
         activeWorkspaceId={activeWorkspaceId}
+        agentModeEnabled={agentModeEnabled}
+        agentModePulse={agentModePulse}
+        selectedAgentName={selectedAgent?.name ?? null}
         onConfirmWorkspace={onConfirmWorkspace}
         attachments={attachments}
         onRemoveAttachment={onRemoveAttachment}
@@ -894,7 +964,11 @@ function CodeSessionSurface({
         onClosePreviewModal={onClosePreviewModal}
         composerTopInfoBar={composerTopInfoBar}
         composerQuestionBar={composerQuestionBar}
-        composerBottomInfoBar={composerBottomInfoBar}
+        bottomDockContent={bottomDockContent}
+        onOpenFolder={handleOpenFolder}
+        onRefreshWorkspace={handleRefreshWorkspace}
+        onToggleWorktree={handleToggleWorktree}
+        onSwitchBranch={handleSwitchBranch}
       />
     );
   }
@@ -903,6 +977,7 @@ function CodeSessionSurface({
     <LaunchpadStage
       activeAction={activeAction}
       activeWorkspace={activeWorkspace}
+      activeSession={activeSession}
       agentContextStrip={embeddedAgentStrip}
       composerSeed={composerSeed}
       composerVersion={composerVersion}
@@ -940,7 +1015,11 @@ function CodeSessionSurface({
       onClosePreviewModal={onClosePreviewModal}
       composerTopInfoBar={composerTopInfoBar}
       composerQuestionBar={composerQuestionBar}
-      composerBottomInfoBar={composerBottomInfoBar}
+      bottomDockContent={bottomDockContent}
+      onOpenFolder={handleOpenFolder}
+      onRefreshWorkspace={handleRefreshWorkspace}
+      onToggleWorktree={handleToggleWorktree}
+      onSwitchBranch={handleSwitchBranch}
     />
   );
 }
@@ -948,6 +1027,7 @@ function CodeSessionSurface({
 function LaunchpadStage({
   activeAction,
   activeWorkspace,
+  activeSession,
   agentContextStrip,
   composerSeed,
   composerVersion,
@@ -985,10 +1065,16 @@ function LaunchpadStage({
   onClosePreviewModal,
   composerTopInfoBar,
   composerQuestionBar,
-  composerBottomInfoBar,
+  bottomDockContent,
+  onOpenSideTab,
+  onOpenFolder,
+  onRefreshWorkspace,
+  onToggleWorktree,
+  onSwitchBranch,
 }: {
   activeAction: ActionGroup | null;
   activeWorkspace: ReturnType<typeof getActiveWorkspace>;
+  activeSession: ReturnType<typeof getActiveSession>;
   agentContextStrip?: React.ReactNode;
   composerSeed: string;
   composerVersion: number;
@@ -1026,39 +1112,117 @@ function LaunchpadStage({
   onClosePreviewModal: () => void;
   composerTopInfoBar: React.ReactNode;
   composerQuestionBar: React.ReactNode;
-  composerBottomInfoBar: React.ReactNode;
+  bottomDockContent: React.ReactNode;
+  onOpenSideTab?: (tab: 'files' | 'preview' | 'terminal' | 'git') => void;
+  onOpenFolder?: () => void;
+  onRefreshWorkspace?: () => void;
+  onToggleWorktree?: () => void;
+  onSwitchBranch?: (branch: string) => void;
 }) {
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
+  const [showUsage, setShowUsage] = useState(true);
+  const [greetingIndex, setGreetingIndex] = useState(0);
+
+  const greetings = useMemo(
+    () => [
+      "What's up next?",
+      'Ready to ship something?',
+      'What are we building today?',
+      'Pick a task and let\'s run it.',
+      'Need a hand with the codebase?',
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setGreetingIndex((i) => (i + 1) % greetings.length);
+    }, 4000);
+    return () => window.clearInterval(interval);
+  }, [greetings.length]);
 
   return (
-    <div data-testid="code-canvas-shell" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 24px 120px', boxSizing: 'border-box', overflow: 'auto', minHeight: 0 }}>
+    <div
+      data-testid="code-canvas-shell"
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '32px 32px 40px',
+        boxSizing: 'border-box',
+        overflow: 'auto',
+        minHeight: 0,
+      }}
+    >
       {agentContextStrip ? (
         <div style={{ width: '100%', textAlign: 'left', marginBottom: 18 }}>
           {agentContextStrip}
         </div>
       ) : null}
-      <CodeLaunchBranding
-        workspaceReady={workspaceReady}
-        attention={brandingAttention}
-        agentModeEnabled={agentModeEnabled}
-        agentModePulse={agentModePulse}
-        selectedAgentName={selectedAgentName}
-      />
 
-      <div style={{ width: '100%', marginTop: 28 }}>
-        {/* CodeActionPills removed per annotation - pills no longer necessary */}
-        <div data-testid="code-shared-composer" style={{ marginTop: 14 }}>
-          {attachmentPreviewItems.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <AttachmentPreview
-                attachments={attachmentPreviewItems}
-                onRemove={onRemoveAttachment}
-                onPreview={onPreviewAttachment}
-                variant="compact"
-                maxHeight={120}
-              />
-            </div>
-          )}
+      {/* Top command-center header */}
+      <div style={{ width: '100%', maxWidth: 720, margin: '0 auto', paddingTop: 24 }}>
+        <div
+          data-testid="code-launchpad-greeting"
+          style={{
+            fontSize: 28,
+            lineHeight: 1.2,
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-research)',
+            minHeight: '1.2em',
+          }}
+        >
+          {greetings[greetingIndex]}
+        </div>
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: 14,
+            lineHeight: 1.5,
+            color: 'var(--text-secondary)',
+          }}
+        >
+          Run a command or describe a task to start coding.
+        </div>
+        {showUsage && (
+          <div style={{ marginTop: 24 }}>
+            <CodeUsageDashboard onClose={() => setShowUsage(false)} />
+          </div>
+        )}
+      </div>
+
+      {/* Spacer pushes composer to the bottom */}
+      <div style={{ flex: 1, minHeight: 40 }} />
+
+      {/* Bottom command input area */}
+      <div className="w-full max-w-[600px] lg:max-w-[760px] mx-auto">
+        {/* Top deck sits behind the composer card, full composer width */}
+        <div
+          data-testid="code-top-deck"
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            marginBottom: -12,
+            padding: '0 0 16px',
+          }}
+        >
+          <CodeWorkspaceBar
+            activeWorkspace={activeWorkspace}
+            activeSession={activeSession}
+            activeWorkspaceId={activeWorkspaceId}
+            workspaces={workspaces}
+            workspaceReady={workspaceReady}
+            onConfirmWorkspace={onConfirmWorkspace}
+            onOpenFolder={onOpenFolder}
+            onRefresh={onRefreshWorkspace}
+            onToggleWorktree={onToggleWorktree}
+            onSwitchBranch={onSwitchBranch}
+          />
+        </div>
+        <div data-testid="code-shared-composer" style={{ position: 'relative', zIndex: 2 }}>
           <ChatComposer
             key={`code-launchpad-composer-${composerVersion}`}
             onSend={onSend}
@@ -1069,12 +1233,13 @@ function LaunchpadStage({
             onSelectModel={onSelectModel}
             placeholder={
               workspaceReady
-                ? 'Describe what you want to build or modify...'
+                ? 'Run a command or describe a task...'
                 : 'Choose a workspace folder to unlock the session...'
             }
             showTopActions={false}
             inputValue={composerSeed}
             variant="large"
+            compact
             onAttentionChange={setBrandingAttention}
             agentModeSurface="code"
             attachments={attachments}
@@ -1082,18 +1247,29 @@ function LaunchpadStage({
             onAddAttachment={onAddChatAttachment}
             topInfoBarContent={composerTopInfoBar}
             questionBarContent={composerQuestionBar}
-            bottomInfoBarContent={composerBottomInfoBar}
-            bottomDockContent={
-              <CompactUtilityBar
-                activeWorkspace={activeWorkspace}
-                activeWorkspaceId={activeWorkspaceId}
-                onConfirmWorkspace={onConfirmWorkspace}
-                onOpenConsole={onOpenConsole}
-                workspaceReady={workspaceReady}
-                workspaces={workspaces}
-              />
-            }
+            bottomDockContent={bottomDockContent}
+            showModeToggle={false}
           />
+
+          {/* Real Gizzi mascot as a bottom-right companion in code mode */}
+          <div
+            style={{
+              position: 'absolute',
+              right: -48,
+              bottom: -8,
+              pointerEvents: 'auto',
+              zIndex: 100,
+            }}
+          >
+            <CodeLaunchBranding
+              workspaceReady={workspaceReady}
+              attention={brandingAttention}
+              agentModeEnabled={agentModeEnabled}
+              agentModePulse={agentModePulse}
+              selectedAgentName={selectedAgentName}
+              variant="companion"
+            />
+          </div>
         </div>
       </div>
       <AttachmentPreviewModal
@@ -1135,6 +1311,9 @@ function ConversationStage({
   workspaces,
   activeSessionId,
   activeWorkspaceId,
+  agentModeEnabled,
+  agentModePulse,
+  selectedAgentName,
   onConfirmWorkspace,
   attachments,
   onRemoveAttachment,
@@ -1146,7 +1325,12 @@ function ConversationStage({
   onClosePreviewModal,
   composerTopInfoBar,
   composerQuestionBar,
-  composerBottomInfoBar,
+  bottomDockContent,
+  onOpenSideTab,
+  onOpenFolder,
+  onRefreshWorkspace,
+  onToggleWorktree,
+  onSwitchBranch,
 }: {
   activeAction: ActionGroup | null;
   activeSession: ReturnType<typeof getActiveSession>;
@@ -1177,6 +1361,9 @@ function ConversationStage({
   workspaces: ReturnType<typeof useCodeModeStore.getState>['workspaces'];
   activeSessionId: string;
   activeWorkspaceId: string;
+  agentModeEnabled: boolean;
+  agentModePulse: number;
+  selectedAgentName: string | null;
   onConfirmWorkspace: (workspaceId?: string) => void;
   attachments: ChatAttachment[];
   onRemoveAttachment: (id: string) => void;
@@ -1188,10 +1375,21 @@ function ConversationStage({
   onClosePreviewModal: () => void;
   composerTopInfoBar: React.ReactNode;
   composerQuestionBar: React.ReactNode;
-  composerBottomInfoBar: React.ReactNode;
+  bottomDockContent: React.ReactNode;
+  onOpenSideTab?: (tab: 'files' | 'preview' | 'terminal' | 'git') => void;
+  onOpenFolder?: () => void;
+  onRefreshWorkspace?: () => void;
+  onToggleWorktree?: () => void;
+  onSwitchBranch?: (branch: string) => void;
 }) {
-  const workspaceBranch = activeWorkspace?.repo_status?.branch ?? 'workspace';
-
+  const codeSessions = useCodeSessionStore((s) => s.sessions ?? []);
+  const activeCodeSessionId = useCodeSessionStore((s) => s.activeSessionId);
+  const activeCodeSession = useMemo(
+    () => codeSessions.find((s) => s.id === activeCodeSessionId) ?? null,
+    [activeCodeSessionId, codeSessions],
+  );
+  const sessionDisplayName = activeCodeSession?.name ?? activeSession?.title ?? 'Code Session';
+  const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
   return (
     <div data-testid="code-canvas-shell" style={{
       height: '100%',
@@ -1201,6 +1399,74 @@ function ConversationStage({
       overflow: 'hidden',
       // Background now handled at CodeRoot level for full-screen effect
     }}>
+      {/* Session header: session name + workspace tag */}
+      <div
+        data-testid="code-session-header"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '10px 20px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: 'var(--text-primary)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={sessionDisplayName}
+          >
+            {sessionDisplayName}
+          </span>
+          <select
+            aria-label="Session"
+            data-testid="code-session-header-selector"
+            value={activeSessionId}
+            onChange={(e) => onSetActiveSession(e.target.value)}
+            style={{
+              maxWidth: 200,
+              padding: '4px 8px',
+              borderRadius: 8,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(255, 255, 255, 0.03)',
+              color: 'var(--text-secondary)',
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            {workspaceSessions.map((session) => (
+              <option key={session.session_id} value={session.session_id}>
+                {session.title}
+              </option>
+            ))}
+          </select>
+        </div>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '5px 10px',
+            borderRadius: 999,
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: 'rgba(255, 255, 255, 0.03)',
+            color: 'var(--text-secondary)',
+            fontSize: 11,
+            fontWeight: 700,
+          }}
+        >
+          <FolderSimple size={12} />
+          {activeWorkspace?.display_name ?? 'Workspace'}
+        </span>
+      </div>
       <Conversation style={{ minHeight: 0 }}>
         <ConversationContent>
           <div
@@ -1241,40 +1507,30 @@ function ConversationStage({
         }}
       >
         <div style={{ width: '100%', maxWidth: CONTENT_WIDTH, margin: '0 auto' }}>
+          {/* Top deck sits behind the composer card, full composer width */}
           <div
+            data-testid="code-top-deck"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 10,
-              flexWrap: 'wrap',
-              padding: '10px 2px 0',
-              fontSize: 12,
-              color: 'var(--text-tertiary)',
+              position: 'relative',
+              zIndex: 1,
+              marginBottom: -12,
+              padding: '0 0 16px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 8px',
-                  borderRadius: 999,
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                }}
-              >
-                <CodeIcon size={12} weight="bold" />
-                {workspaceBranch}
-              </span>
-            </div>
-            {activeSession?.pending_approvals_count ? (
-              <span>{`${activeSession.pending_approvals_count} approval${activeSession.pending_approvals_count === 1 ? '' : 's'} pending`}</span>
-            ) : null}
+            <CodeWorkspaceBar
+              activeWorkspace={activeWorkspace}
+              activeSession={activeSession}
+              activeWorkspaceId={activeWorkspaceId}
+              workspaces={workspaces}
+              workspaceReady={workspaceReady}
+              onConfirmWorkspace={onConfirmWorkspace}
+              onOpenFolder={onOpenFolder}
+              onRefresh={onRefreshWorkspace}
+              onToggleWorktree={onToggleWorktree}
+              onSwitchBranch={onSwitchBranch}
+            />
           </div>
-
-          <div data-testid="code-shared-composer" style={{ marginTop: 8 }}>
+          <div data-testid="code-shared-composer" style={{ position: 'relative', zIndex: 2, marginTop: 8 }}>
             <ACIComputerUseBar suppressInBrowserMode />
             {attachmentPreviewItems.length > 0 && (
               <div style={{ marginBottom: 10 }}>
@@ -1298,32 +1554,38 @@ function ConversationStage({
               placeholder="Reply…"
               showTopActions={false}
               inputValue={composerSeed}
+              compact
               agentModeSurface="code"
               attachments={attachments}
               onRemoveAttachment={onRemoveAttachment}
               onAddAttachment={onAddChatAttachment}
               topInfoBarContent={composerTopInfoBar}
               questionBarContent={composerQuestionBar}
-              bottomInfoBarContent={composerBottomInfoBar}
+              bottomDockContent={bottomDockContent}
+              showModeToggle={false}
+              onAttentionChange={setBrandingAttention}
             />
-          </div>
 
-          <ComposerUtilityBar
-            activeWorkspace={activeWorkspace}
-            activeWorkspaceId={activeWorkspaceId}
-            activeSessionId={activeSessionId}
-            onConfirmWorkspace={onConfirmWorkspace}
-            onOpenConsole={onOpenConsole}
-            onSetActiveSession={onSetActiveSession}
-            onToggleSessionPicker={onToggleSessionPicker}
-            onToggleWorkspacePicker={onToggleWorkspacePicker}
-            showSessionPicker={showSessionPicker}
-            showWorkspacePicker={showWorkspacePicker}
-            workspaceReady={workspaceReady}
-            workspaceSessions={workspaceSessions}
-            workspaces={workspaces}
-            activeSession={activeSession}
-          />
+            {/* Real Gizzi mascot as a bottom-right companion in code mode */}
+            <div
+              style={{
+                position: 'absolute',
+                right: -48,
+                bottom: -8,
+                pointerEvents: 'auto',
+                zIndex: 100,
+              }}
+            >
+              <CodeLaunchBranding
+                workspaceReady={workspaceReady}
+                attention={brandingAttention}
+                agentModeEnabled={agentModeEnabled}
+                agentModePulse={agentModePulse}
+                selectedAgentName={selectedAgentName}
+                variant="companion"
+              />
+            </div>
+          </div>
         </div>
       </div>
       <AttachmentPreviewModal
@@ -1335,384 +1597,59 @@ function ConversationStage({
   );
 }
 
-function ComposerUtilityBar({
-  activeSession,
-  activeWorkspace,
-  activeWorkspaceId,
-  activeSessionId,
-  onConfirmWorkspace,
-  onOpenConsole,
-  onSetActiveSession,
-  onToggleSessionPicker,
-  onToggleWorkspacePicker,
-  showSessionPicker,
-  showWorkspacePicker,
-  workspaceReady,
-  workspaceSessions,
-  workspaces,
+
+function CodeComposerMetadata({
+  workspacePath,
+  branch,
+  workspaceName,
 }: {
-  activeSession: ReturnType<typeof getActiveSession>;
-  activeWorkspace: ReturnType<typeof getActiveWorkspace>;
-  activeWorkspaceId: string;
-  activeSessionId: string;
-  onConfirmWorkspace: (workspaceId?: string) => void;
-  onOpenConsole: () => void;
-  onSetActiveSession: (sessionId: string) => void;
-  onToggleSessionPicker: () => void;
-  onToggleWorkspacePicker: () => void;
-  showSessionPicker: boolean;
-  showWorkspacePicker: boolean;
-  workspaceReady: boolean;
-  workspaceSessions: ReturnType<typeof getSessionsForWorkspace>;
-  workspaces: ReturnType<typeof useCodeModeStore.getState>['workspaces'];
+  workspacePath?: string;
+  branch?: string;
+  workspaceName?: string;
 }) {
-  // Real chat sessions live in CodeSessionStore (the mode session store) — the
-  // selector reads it directly so it lists the sessions the composer creates.
-  const codeSessions = useCodeSessionStore((s) => s.sessions ?? []);
-  const activeCodeSessionId = useCodeSessionStore((s) => s.activeSessionId);
-  const setActiveCodeSession = useCodeSessionStore((s) => s.setActiveSession);
-  const activeCodeSession = useMemo(
-    () => codeSessions.find((s) => s.id === activeCodeSessionId) ?? null,
-    [activeCodeSessionId, codeSessions],
-  );
+  const items: string[] = [];
+  if (workspaceName) items.push(workspaceName);
+  if (workspacePath) items.push(workspacePath);
+  if (branch) items.push(branch);
+
+  if (items.length === 0) return null;
+
   return (
     <div
+      data-testid="code-composer-metadata"
       style={{
-        marginTop: 10,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-        flexWrap: 'wrap',
-        position: 'relative',
+        gap: 8,
+        padding: '4px 10px',
+        borderRadius: 999,
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: 'rgba(255, 255, 255, 0.03)',
+        color: 'var(--ui-text-muted)',
+        fontSize: 11,
+        fontWeight: 600,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
       }}
+      title={items.join(' · ')}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative' }}>
-          <button
-            type="button"
-            aria-label="Code session selector"
-            data-testid="code-session-selector"
-            onClick={onToggleSessionPicker}
-            style={{ ...utilityControlStyle, minWidth: 240, justifyContent: 'space-between' }}
-          >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-              <CodeIcon size={14} weight="bold" />
-              <span
-                style={{
-                  display: 'inline-flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  minWidth: 0,
-                  lineHeight: 1.15,
-                }}
-              >
-                <span
-                  style={{
-                    maxWidth: 170,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    color: 'var(--text-primary)',
-                  }}
-                >
-                  {activeCodeSession?.name ?? activeSession?.title ?? 'Select session'}
-                </span>
-                {activeCodeSession ? (
-                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {activeCodeSession.metadata?.sessionMode === 'agent' ? 'agent' : 'chat'} / {activeCodeSession.messageCount ?? activeCodeSession.messages?.length ?? 0} messages
-                  </span>
-                ) : activeSession ? (
-                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {activeSession.mode} / {activeSession.state}
-                  </span>
-                ) : null}
-              </span>
-            </span>
-            <CaretDown size={12} />
-          </button>
-
-          {showSessionPicker ? (
-            <>
-              <div role="button" tabIndex={0} style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleSessionPicker} />
-              <div
-                data-testid="code-session-picker-list"
-                style={{
-                  position: 'absolute',
-                  bottom: 'calc(100% + 8px)',
-                  left: 0,
-                  zIndex: 130,
-                  width: 300,
-                  maxHeight: 320,
-                  overflowY: 'auto',
-                  background: 'var(--surface-floating, #1a1d20)',
-                  border: '1px solid var(--ui-border-muted, rgba(255,255,255,0.1))',
-                  borderRadius: 12,
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
-                  padding: 6,
-                }}
-              >
-                {codeSessions.length === 0 ? (
-                  <div style={{ padding: '14px 12px', fontSize: 12, color: 'var(--text-tertiary)' }}>
-                    No sessions yet — send a message to start one.
-                  </div>
-                ) : codeSessions.map((session) => {
-                  const isActive = session.id === activeCodeSessionId;
-                  return (
-                    <button
-                      type="button"
-                      key={session.id}
-                      data-testid="code-session-picker-item"
-                      onClick={() => {
-                        setActiveCodeSession(session.id);
-                        onToggleSessionPicker();
-                      }}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        gap: 2,
-                        width: '100%',
-                        padding: '9px 12px',
-                        border: 'none',
-                        borderRadius: 9,
-                        background: isActive ? 'var(--shell-item-active-bg, rgba(255,255,255,0.08))' : 'transparent',
-                        color: 'var(--text-primary)',
-                        fontSize: 13,
-                        fontWeight: isActive ? 700 : 500,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <span style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {session.name || 'Untitled Session'}
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        {session.metadata?.sessionMode === 'agent' ? 'agent' : 'chat'} / {session.messageCount ?? session.messages?.length ?? 0} messages
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
-        </div>
-
-        <div style={{ position: 'relative' }}>
-          <button
-            type="button"
-            data-testid="code-folder-button"
-            onClick={onToggleWorkspacePicker}
-            style={utilityControlStyle}
-          >
-            <FolderSimple size={14} weight="bold" />
-            {workspaceReady ? activeWorkspace?.display_name ?? 'Workspace' : 'Select folder'}
-            <CaretDown size={12} />
-          </button>
-
-          {showWorkspacePicker ? (
-            <div role="button" tabIndex={0} style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleWorkspacePicker} />
-          ) : null}
-        </div>
-
-        <button
-          type="button"
-          data-testid="code-console-button"
-          onClick={onOpenConsole}
-          style={utilityControlStyle}
-        >
-          <TerminalWindow size={14} />
-          Terminal
-        </button>
-      </div>
-
-      <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'right' }}>
-        {workspaceReady ? activeWorkspace?.root_path : 'Workspace required before execution'}
-      </span>
-    </div>
-  );
-}
-
-/** Compact utility bar for bottom dock - simplified version without session selector stub */
-function CompactUtilityBar({
-  activeWorkspace,
-  activeWorkspaceId,
-  onConfirmWorkspace,
-  onOpenConsole,
-  workspaceReady,
-  workspaces,
-}: {
-  activeWorkspace: ReturnType<typeof getActiveWorkspace>;
-  activeWorkspaceId: string;
-  onConfirmWorkspace: (workspaceId?: string) => void;
-  onOpenConsole: () => void;
-  workspaceReady: boolean;
-  workspaces: ReturnType<typeof useCodeModeStore.getState>['workspaces'];
-}) {
-  const [open, setOpen] = useState(false);
-  const layoutMode = activeWorkspace?.layoutMode ?? 'thread';
-  const setWorkspaceLayoutMode = useCodeModeStore((s) => s.setWorkspaceLayoutMode);
-  
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {/* Workspace picker - using Popover for proper portal rendering */}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            data-testid="code-folder-button"
+      {items.map((item, index) => (
+        <React.Fragment key={index}>
+          {index > 0 && <span style={{ opacity: 0.4 }}>·</span>}
+          <span
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '6px 10px',
-              borderRadius: 8,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer',
+              maxWidth: 180,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
-            <FolderSimple size={14} weight="bold" />
-            {workspaceReady ? activeWorkspace?.display_name ?? 'Workspace' : 'Select folder'}
-            <CaretDown size={12} />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent 
-          side="top" 
-          align="start" 
-          sideOffset={8}
-          style={{
-            width: 320,
-            padding: 0,
-            background: 'var(--surface-panel)',
-            border: '1px solid var(--ui-border-muted)',
-            borderRadius: 12,
-            boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
-          }}
-        >
-          <div style={{ padding: 8 }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              padding: '8px 12px 10px',
-              borderBottom: '1px solid var(--ui-border-muted)'
-            }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Workspace
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{workspaces.length} repos</div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 6 }}>
-              {workspaces.map((workspace) => (
-                <button
-                  key={workspace.workspace_id}
-                  type="button"
-                  onClick={() => {
-                    onConfirmWorkspace(workspace.workspace_id);
-                    setOpen(false);
-                  }}
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: workspace.workspace_id === activeWorkspaceId
-                      ? 'var(--surface-hover)'
-                      : 'transparent',
-                    color: 'var(--ui-text-primary)',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (workspace.workspace_id !== activeWorkspaceId) {
-                      e.currentTarget.style.background = 'var(--surface-hover)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (workspace.workspace_id !== activeWorkspaceId) {
-                      e.currentTarget.style.background = 'transparent';
-                    }
-                  }}
-                >
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{workspace.display_name}</div>
-                  <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
-                    {workspace.root_path}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-
-      {/* Terminal button (opens terminal in console drawer) */}
-      <button
-        type="button"
-        data-testid="code-console-button"
-        onClick={onOpenConsole}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '6px 10px',
-          borderRadius: 8,
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'transparent',
-          color: 'var(--text-secondary)',
-          fontSize: 12,
-          fontWeight: 600,
-          cursor: 'pointer',
-        }}
-      >
-        <TerminalWindow size={14} />
-        Terminal
-      </button>
-
-      {/* Layout mode toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
-        <button
-          type="button"
-          onClick={() => activeWorkspaceId && setWorkspaceLayoutMode(activeWorkspaceId, 'thread')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '6px 10px',
-            borderRadius: '8px 0 0 8px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRight: 'none',
-            background: layoutMode === 'thread' ? 'var(--ui-border-muted)' : 'transparent',
-            color: layoutMode === 'thread' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Thread
-        </button>
-        <button
-          type="button"
-          onClick={() => activeWorkspaceId && setWorkspaceLayoutMode(activeWorkspaceId, 'canvas')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '6px 10px',
-            borderRadius: '0 8px 8px 0',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            background: layoutMode === 'canvas' ? 'var(--ui-border-muted)' : 'transparent',
-            color: layoutMode === 'canvas' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Canvas
-        </button>
-      </div>
+            {item}
+          </span>
+        </React.Fragment>
+      ))}
     </div>
   );
 }
+
+

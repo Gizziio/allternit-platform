@@ -14,6 +14,8 @@ export interface AgentModeGizziProps {
   selectedAgentName?: string | null;
   theme: AgentModeGizziTheme;
   hasActionPills?: boolean;
+  /** Position the rail guide above the composer (default) or as a bottom-right companion */
+  position?: 'top' | 'bottom-right';
 }
 
 export type AnimationState =
@@ -33,6 +35,15 @@ export type AnimationState =
   | 'one-up'            // Entry: token refresh with progress bar
   | 'checkpoint'        // Entry: pulse/glow with save progress bar
   | 'warp-star'         // Entry: rainbow flash teleport with 12 sparkles
+  | 'glitch-in'         // Entry: digital glitch / decode into existence
+  | 'beam-in'           // Entry: sci-fi transporter materialization
+  | 'bounce-in'         // Entry: high-energy bounce from below
+  | 'flip-in'           // Entry: 3D card-flip entrance
+  // ENTRY ANIMATIONS (Claude-style mascot personality):
+  | 'wave-hello'        // Entry: friendly wave bounce in
+  | 'coffee-boost'      // Entry: sips coffee, jitters to life
+  | 'rocket-land'       // Entry: tiny rocket descends and lands
+  | 'typing-emerge'     // Entry: types on mini keyboard, code brackets fly out
   // EXIT ANIMATIONS (nostalgic video game style):
   | 'to-the-cloud'      // Exit: fly up with data packets to cloud
   | 'wheel-out'         // Exit: spin out with dust cloud and longer screech marks
@@ -41,6 +52,15 @@ export type AnimationState =
   | 'context-scatter'   // Exit: 20 tokens with sparkle on impact
   | 'fan-spin'          // Exit: overheating CPU fan with smoke (was processing)
   | 'system-crash'      // Exit: BSOD style blue screen
+  | 'fizzle-out'        // Exit: pixelated dissolve into static
+  | 'black-hole'        // Exit: stretched and sucked into a point
+  | 'teleport-out'      // Exit: beam-up dematerialization
+  | 'shrink-out'        // Exit: quick shrink with wobble
+  // EXIT ANIMATIONS (Claude-style mascot personality):
+  | 'wave-goodbye'      // Exit: waves and fades out
+  | 'sleep-curl'        // Exit: curls up, Zzz floats away
+  | 'rocket-blast'      // Exit: hops in rocket and launches up
+  | 'smoke-poof'        // Exit: classic smoke-puff disappear
   | 'collapse';         // Exit: TV turn-off pixel collapse (was duck-cover)
 
 export interface SurfaceConfig {

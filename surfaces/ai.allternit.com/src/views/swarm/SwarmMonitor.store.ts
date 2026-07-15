@@ -9,6 +9,7 @@ import { useCodeSessionStore, type CodeSession } from '@/views/code/CodeSessionS
 import { useCoworkSessionStore } from '@/views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '@/views/design/DesignSessionStore';
 import type { ModeSessionMessage } from '@/lib/agents/mode-session-store';
+import { getDefaultAgentModel } from '@/lib/agents/agent-models';
 import { STATUS } from '@/design/allternit.tokens';
 import {
   SwarmAgent,
@@ -157,7 +158,7 @@ function mapSessionToAgent(
     status,
     color: roleColors[role],
     icon: roleIcons[role],
-    model: (session.metadata as any)?.model as string || 'gpt-4o',
+    model: (session.metadata as any)?.model as string || getDefaultAgentModel().id,
     tasksActive: tasks.filter(t => t.status === 'active').length,
     tokensUsed: Math.round(tokensUsed),
     costAccumulated,

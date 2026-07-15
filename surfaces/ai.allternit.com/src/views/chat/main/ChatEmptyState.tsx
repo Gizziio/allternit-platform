@@ -1,11 +1,10 @@
 import React from "react";
 import { ChatComposer } from "@/views/chat/ChatComposer";
-import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
-import { GizziMascot, type GizziAttention, type GizziEmotion } from "@/components/ai-elements/GizziMascot";
-import { Suggestions } from "@/components/agent-elements/input/suggestions";
-import { THEME, EMPTY_STATE_SUGGESTIONS } from "./ChatView.constants";
-import { TypingText, StaggeredReveal } from "./ChatViewAnimations";
+import type { GizziAttention, GizziEmotion } from "@/components/ai-elements/GizziMascot";
+import { LAUNCH_TOP_PADDING, LAUNCH_SECTION_GAP } from "./launchScreenLayout";
+import { LaunchHeader } from "./LaunchHeader";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
+import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 
 interface ChatEmptyStateProps {
   embeddedAgentStrip: React.ReactNode;
@@ -15,11 +14,12 @@ interface ChatEmptyStateProps {
   modelReady: boolean;
   startSelection: () => void;
   useMonolithLogo: boolean;
+  launchLogo?: 'gizzi' | 'matrix' | 'allternit';
   launchMascotEmotion: GizziEmotion;
   launchMascotAttention: GizziAttention | null;
   greeting: { title: string; tagline: string; effectType: "typing" | "reveal" };
   handleSend: (text: string) => void;
-  onOpenAgentSession?: (text: string, surface: any) => void;
+  onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   agentSurface: AgentModeSurface;
   setMentionAgentId: (id: string | null) => void;
   mentionAgentId: string | null;
@@ -42,6 +42,7 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
   modelReady,
   startSelection,
   useMonolithLogo,
+  launchLogo,
   launchMascotEmotion,
   launchMascotAttention,
   greeting,
@@ -61,7 +62,10 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
   composerBottomInfoBar,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-start w-full max-w-[640px] px-6 py-[10vh] pb-20 box-border flex-1 min-h-0">
+    <div
+      className="flex flex-col items-center justify-start w-full max-w-[640px] px-6 pb-20 box-border flex-1 min-h-0"
+      style={{ paddingTop: LAUNCH_TOP_PADDING }}
+    >
       {embeddedAgentStrip}
 
       {/* No-provider banner — shown when nothing is connected */}
@@ -91,53 +95,20 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
         </div>
       )}
 
-      {/* Interactive Logo Section */}
-      <div className="mb-16 text-center flex flex-col items-center">
-        <div
-          className="relative group cursor-pointer mb-12 inline-flex items-center justify-center p-5 transition-all duration-[600ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-        >
-          <div className="absolute inset-0 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[color-mix(in_srgb,var(--accent-chat)_8%,transparent)]" />
-          <div
-            className="relative z-10 transition-transform duration-500 group-hover:scale-110"
-          >
-            {useMonolithLogo ? (
-              <MatrixLogo state="idle" size={84} />
-            ) : (
-              <GizziMascot
-                size={76}
-                emotion={launchMascotEmotion}
-                attention={launchMascotAttention}
-              />
-            )}
-          </div>
-        </div>
-
-        <h1 className="text-5xl font-medium text-[var(--ui-text-primary)] mb-6 mt-0 font-[var(--font-research)] tracking-tight min-h-[60px]">
-          {greeting.effectType === "typing" ? (
-            <TypingText text={greeting.title} speed={0.08} />
-          ) : (
-            <StaggeredReveal text={greeting.title} />
-          )}
-        </h1>
-
-        <div className="flex items-center gap-4 justify-center">
-          <div className="h-px w-8 bg-[var(--ui-border-muted)]" />
-          <div className="text-[14px] text-[var(--ui-text-secondary)] uppercase tracking-[0.2em] font-semibold min-w-[200px]">
-            {greeting.effectType === "typing" ? (
-              <TypingText text={greeting.tagline} delay={1.5} speed={0.04} />
-            ) : (
-              <StaggeredReveal text={greeting.tagline} delay={0.8} />
-            )}
-          </div>
-          <div className="h-px w-8 bg-[var(--ui-border-muted)]" />
-        </div>
-      </div>
+      {/* Greeting header — shared with CoworkLaunchpad (fixed zone) */}
+      <LaunchHeader
+        greeting={greeting}
+        useMonolithLogo={useMonolithLogo}
+        logo={launchLogo}
+        mascotEmotion={launchMascotEmotion}
+        mascotAttention={launchMascotAttention}
+      />
 
       {/* Centered Composer */}
-      <div className="w-full mb-16 mx-auto">
+      <div className="w-full mx-auto" style={{ marginBottom: LAUNCH_SECTION_GAP }}>
         <ChatComposer
           onSend={handleSend}
-          onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
+          onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}
           onMentionAgentChange={setMentionAgentId}
           mentionAgentId={mentionAgentId}
           isLoading={activeIsLoading}
@@ -157,17 +128,6 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
         />
       </div>
 
-      <div className="w-full max-w-[520px] mt-8 mx-auto flex flex-col gap-2.5 items-center">
-        <span className="text-[12px] font-medium text-[var(--ui-text-muted)] text-center">
-          Try asking
-        </span>
-        <Suggestions
-          items={EMPTY_STATE_SUGGESTIONS}
-          onSelect={(item) => handleSend(item.value || item.label)}
-          className="justify-center"
-          itemClassName="h-8 rounded-full border-[var(--ui-border-muted)] bg-[var(--chat-composer-soft)] px-3 text-[13px] text-[var(--ui-text-secondary)] hover:bg-[var(--chat-composer-hover)] hover:text-[var(--ui-text-primary)]"
-        />
-      </div>
     </div>
   );
 };

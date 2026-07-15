@@ -25,6 +25,7 @@ function RoleIcon({ icon, color, size = 14 }: { icon: string; color: string; siz
 }
 import type { AgentTemplate, AgentRole } from '../types';
 import { templateStorage } from '../lib/template-storage';
+import { AGENT_MODELS, getDefaultAgentModel } from '@/lib/agents/agent-models';
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmModal } from '@/components/ConfirmModal';
 
@@ -447,7 +448,7 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
     name: template?.name || '',
     description: template?.description || '',
     role: template?.role || 'worker',
-    model: template?.model || 'gpt-4o',
+    model: template?.model || getDefaultAgentModel().id,
     capabilities: template?.capabilities?.join(', ') || '',
   });
 
@@ -546,10 +547,9 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
                   color: TEXT.primary,
                 }}
               >
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                <option value="claude-3-opus">Claude 3 Opus</option>
-                <option value="claude-3-sonnet">Claude 3 Sonnet</option>
+                {AGENT_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
               </select>
             </div>
           </div>

@@ -19,7 +19,7 @@ describe('CodeSessionBar', () => {
       'sess_code_ui',
     );
     expect(screen.getByTestId('code-sessionbar-workspace-pill')).toHaveTextContent(
-      'mainDIRTY',
+      'main DIRTY',
     );
     expect(screen.getByTestId('code-sessionbar-state-pill')).toHaveTextContent(
       'PLANPLAN_READY',
@@ -37,7 +37,7 @@ describe('CodeSessionBar', () => {
       'sess_merge_back',
     );
     expect(screen.getByTestId('code-sessionbar-workspace-pill')).toHaveTextContent(
-      'demo/launch-readinessCLEAN',
+      'demo/launch-readiness CLEAN',
     );
     expect(screen.getByTestId('code-sessionbar-state-pill')).toHaveTextContent(
       'SAFEVERIFYING',

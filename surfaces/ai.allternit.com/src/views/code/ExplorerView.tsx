@@ -161,7 +161,11 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   );
 };
 
-export const ExplorerView: React.FC = () => {
+interface ExplorerViewProps {
+  onOpenFile?: (path: string) => void;
+}
+
+export const ExplorerView: React.FC<ExplorerViewProps> = ({ onOpenFile }) => {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -233,6 +237,7 @@ export const ExplorerView: React.FC = () => {
 
   const handleSelectFile = (path: string) => {
     setSelectedFile(path);
+    onOpenFile?.(path);
   };
 
   const getDroppedFileIcon = (file: DroppedFile) => {

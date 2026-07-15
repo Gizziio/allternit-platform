@@ -1207,6 +1207,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
             inputValue={composerInputValue}
             placeholder="Write a message…"
             showTopActions={false}
+            showModeToggle={false}
             agentModeSurface="cowork"
           />
         </div>

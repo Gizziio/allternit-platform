@@ -2,9 +2,133 @@ import JSZip from 'jszip';
 import type { AllternitDeck, ImportResult, OfficeFileInput, Slide, SlideBlock, TextStyle } from './types';
 import { readFileArrayBuffer } from './util';
 
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return globalThis.btoa(binary);
+}
+
+function mimeFromPath(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'png':
+      return 'image/png';
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'gif':
+      return 'image/gif';
+    case 'bmp':
+      return 'image/bmp';
+    case 'svg':
+      return 'image/svg+xml';
+    default:
+      return 'image/png';
+  }
+}
+
+function dataUrlToArrayBuffer(src: string): ArrayBuffer | null {
+  const match = src.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) return null;
+  try {
+    const binary = globalThis.atob(match[2]);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchImageAsBase64(src: string): Promise<string | null> {
+  try {
+    if (src.startsWith('data:')) {
+      const buffer = dataUrlToArrayBuffer(src);
+      if (!buffer) return null;
+      const mime = src.match(/^data:([^;]+);/)?.[1] ?? 'image/png';
+      return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+    }
+    const response = await fetch(src);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    const buffer = await blob.arrayBuffer();
+    const mime = blob.type || 'image/png';
+    return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+  } catch {
+    return null;
+  }
+}
+
+function parseRels(relsXml: string | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!relsXml) return map;
+  const doc = new DOMParser().parseFromString(relsXml, 'application/xml');
+  for (const rel of Array.from(doc.querySelectorAll('Relationship'))) {
+    const id = rel.getAttribute('Id');
+    const target = rel.getAttribute('Target');
+    if (id && target) map.set(id, target);
+  }
+  return map;
+}
+
+function resolveRelTarget(target: string, sourcePath: string): string {
+  const sourceDir = sourcePath.split('/').slice(0, -1).join('/') + '/';
+  const resolved = new URL(target, 'file:///' + sourceDir).pathname.slice(1);
+  return resolved;
+}
+
+function parseShapeStyle(shape: Element, isTitle: boolean): TextStyle {
+  const style: TextStyle = { align: 'left' };
+  if (isTitle) {
+    style.fontSize = 32;
+    style.bold = true;
+  }
+
+  // Prefer the first explicit run's properties, then paragraph defaults.
+  const firstRun = shape.querySelector('r');
+  const rPr = firstRun?.querySelector('rPr') ?? shape.querySelector('defRPr');
+  if (rPr) {
+    const sz = rPr.getAttribute('sz');
+    if (sz) style.fontSize = parseInt(sz, 10) / 100;
+    const b = rPr.getAttribute('b');
+    if (b === '1') style.bold = true;
+    const solidFill = rPr.querySelector('solidFill');
+    const color = solidFill?.querySelector('srgbClr')?.getAttribute('val');
+    if (color) style.color = `#${color}`;
+  }
+
+  const bodyPr = shape.querySelector('bodyPr');
+  if (bodyPr) {
+    const anchor = bodyPr.getAttribute('anchor');
+    if (anchor === 'ctr') style.align = 'center';
+    else if (anchor === 'r') style.align = 'right';
+  }
+
+  return style;
+}
+
+function parseShapeText(shape: Element): string {
+  const paragraphs: string[] = [];
+  for (const paragraph of Array.from(shape.querySelectorAll('p'))) {
+    const runs: string[] = [];
+    for (const run of Array.from(paragraph.querySelectorAll('r'))) {
+      const t = run.querySelector('t');
+      if (t) runs.push(t.textContent || '');
+    }
+    if (runs.length > 0) paragraphs.push(runs.join(''));
+  }
+  return paragraphs.join('\n');
+}
+
 async function parseSlideXml(
   slideXml: string,
   relsXml: string | undefined,
+  slidePath: string | undefined,
   zip: JSZip
 ): Promise<Slide> {
   const parser = new DOMParser();
@@ -24,11 +148,12 @@ async function parseSlideXml(
     }
   }
 
-  // Parse text shapes.
-  const blocks: SlideBlock[] = [];
-  const shapes = doc.querySelectorAll('sp');
+  const relsMap = parseRels(relsXml);
 
-  for (const shape of Array.from(shapes)) {
+  const blocks: SlideBlock[] = [];
+
+  // Parse text shapes.
+  for (const shape of Array.from(doc.querySelectorAll('sp'))) {
     const placeholder = shape.querySelector('ph');
     const isTitle = placeholder?.getAttribute('type') === 'title' || placeholder?.getAttribute('type') === 'ctrTitle';
 
@@ -38,44 +163,44 @@ async function parseSlideXml(
     const ext = xfrm.querySelector('ext');
     if (!off || !ext) continue;
 
-    const x = parseInt(off.getAttribute('x') || '0', 10) / 914400; // EMUs to inches
+    const x = parseInt(off.getAttribute('x') || '0', 10) / 914400;
     const y = parseInt(off.getAttribute('y') || '0', 10) / 914400;
     const w = parseInt(ext.getAttribute('cx') || '0', 10) / 914400;
     const h = parseInt(ext.getAttribute('cy') || '0', 10) / 914400;
 
-    const texts: string[] = [];
-    const textRuns = shape.querySelectorAll('t');
-    for (const t of Array.from(textRuns)) {
-      texts.push(t.textContent || '');
+    const text = parseShapeText(shape);
+    if (text.trim()) {
+      blocks.push({ type: 'text', text, x, y, w, h, style: parseShapeStyle(shape, isTitle) });
     }
-    const text = texts.join('');
-    if (!text.trim()) continue;
+  }
 
-    const style: TextStyle = { align: 'left' };
-    if (isTitle) {
-      style.fontSize = 32;
-      style.bold = true;
-    }
+  // Parse pictures.
+  for (const pic of Array.from(doc.querySelectorAll('pic'))) {
+    const xfrm = pic.querySelector('spPr > xfrm') || pic.querySelector('xfrm');
+    if (!xfrm) continue;
+    const off = xfrm.querySelector('off');
+    const ext = xfrm.querySelector('ext');
+    if (!off || !ext) continue;
 
-    const rPr = shape.querySelector('defRPr, rPr');
-    if (rPr) {
-      const sz = rPr.getAttribute('sz');
-      if (sz) style.fontSize = parseInt(sz, 10) / 100;
-      const b = rPr.getAttribute('b');
-      if (b === '1') style.bold = true;
-      const solidFill = rPr.querySelector('solidFill');
-      const color = solidFill?.querySelector('srgbClr')?.getAttribute('val');
-      if (color) style.color = `#${color}`;
-    }
+    const x = parseInt(off.getAttribute('x') || '0', 10) / 914400;
+    const y = parseInt(off.getAttribute('y') || '0', 10) / 914400;
+    const w = parseInt(ext.getAttribute('cx') || '0', 10) / 914400;
+    const h = parseInt(ext.getAttribute('cy') || '0', 10) / 914400;
 
-    const bodyPr = shape.querySelector('bodyPr');
-    if (bodyPr) {
-      const anchor = bodyPr.getAttribute('anchor');
-      if (anchor === 'ctr') style.align = 'center';
-      else if (anchor === 'r') style.align = 'right';
-    }
+    const blip = pic.querySelector('blip');
+    const embedId = blip?.getAttribute('r:embed') || blip?.getAttribute('embed');
+    if (!embedId || !slidePath) continue;
 
-    blocks.push({ type: 'text', text, x, y, w, h, style });
+    const target = relsMap.get(embedId);
+    if (!target) continue;
+
+    const imagePath = resolveRelTarget(target, slidePath);
+    const imageBuffer = await zip.file(imagePath)?.async('arraybuffer');
+    if (!imageBuffer) continue;
+
+    const mime = mimeFromPath(imagePath);
+    const src = `data:${mime};base64,${arrayBufferToBase64(imageBuffer)}`;
+    blocks.push({ type: 'image', src, x, y, w, h });
   }
 
   // Sort blocks top-to-bottom, left-to-right so title usually comes first.
@@ -133,9 +258,9 @@ export async function importPptx(file: OfficeFileInput): Promise<ImportResult<Al
     const slideXml = await zip.file(path)?.async('text');
     if (!slideXml) continue;
 
-    const relsPath = path.replace(/\.xml$/, '.xml.rels').replace('ppt/', 'ppt/_rels/');
+    const relsPath = path.replace(/\/([^/]+)\.xml$/, '/_rels/$1.xml.rels');
     const relsXml = await zip.file(relsPath)?.async('text');
-    const slide = await parseSlideXml(slideXml, relsXml, zip);
+    const slide = await parseSlideXml(slideXml, relsXml, path, zip);
     slides.push(slide);
   }
 
@@ -178,6 +303,17 @@ export async function exportPptx(deck: AllternitDeck): Promise<Blob> {
           align: style.align || 'left',
           wrap: true,
         });
+      } else if (block.type === 'image') {
+        const imageData = await fetchImageAsBase64(block.src);
+        if (imageData) {
+          pSlide.addImage({
+            data: imageData,
+            x: block.x,
+            y: block.y,
+            w: block.w,
+            h: block.h,
+          });
+        }
       }
     }
   }

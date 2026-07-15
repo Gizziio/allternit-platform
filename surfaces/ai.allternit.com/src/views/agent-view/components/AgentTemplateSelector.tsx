@@ -104,8 +104,8 @@ export function AgentTemplateSelector({
           placeholder="Search templates…"
           style={{
             flex: 1,
-            background: `${STUDIO_THEME.textPrimary}05`,
-            border: `1px solid ${STUDIO_THEME.textPrimary}10`,
+            background: `${STUDIO_THEME.textPrimary05}`,
+            border: `1px solid ${STUDIO_THEME.textPrimary10}`,
             borderRadius: "8px",
             padding: "8px 12px",
             color: STUDIO_THEME.textPrimary,
@@ -127,13 +127,13 @@ export function AgentTemplateSelector({
           borderRadius: "10px",
           border: `1px solid ${
             selectedTemplateId === null
-              ? `${STUDIO_THEME.accent}4D`
-              : `${STUDIO_THEME.textPrimary}10`
+              ? `${STUDIO_THEME.accent30}`
+              : `${STUDIO_THEME.textPrimary10}`
           }`,
           background:
             selectedTemplateId === null
-              ? `${STUDIO_THEME.accent}14`
-              : `${STUDIO_THEME.textPrimary}05`,
+              ? `${STUDIO_THEME.accent14}`
+              : `${STUDIO_THEME.textPrimary05}`,
           cursor: "pointer",
           transition: "all 0.15s ease",
           textAlign: "left",
@@ -145,7 +145,7 @@ export function AgentTemplateSelector({
             width: "36px",
             height: "36px",
             borderRadius: "8px",
-            background: `${STUDIO_THEME.textPrimary}10`,
+            background: `${STUDIO_THEME.textPrimary10}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -235,12 +235,12 @@ export function AgentTemplateSelector({
                     borderRadius: "10px",
                     border: `1px solid ${
                       isSelected
-                        ? `${STUDIO_THEME.accent}4D`
-                        : `${STUDIO_THEME.textPrimary}10`
+                        ? `${STUDIO_THEME.accent30}`
+                        : `${STUDIO_THEME.textPrimary10}`
                     }`,
                     background: isSelected
-                      ? `${STUDIO_THEME.accent}14`
-                      : `${STUDIO_THEME.textPrimary}05`,
+                      ? `${STUDIO_THEME.accent14}`
+                      : `${STUDIO_THEME.textPrimary05}`,
                     cursor: "pointer",
                     transition: "all 0.15s ease",
                     textAlign: "left",
@@ -311,7 +311,7 @@ export function AgentTemplateSelector({
                           fontSize: "9px",
                           padding: "1px 5px",
                           borderRadius: "4px",
-                          background: `${STUDIO_THEME.textPrimary}08`,
+                          background: `${STUDIO_THEME.textPrimary08}`,
                           color: STUDIO_THEME.textMuted,
                         }}
                       >

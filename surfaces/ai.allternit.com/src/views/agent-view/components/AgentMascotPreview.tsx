@@ -81,7 +81,7 @@ export function MascotPreview({ config, name }: { config: any; name: string }) {
           position: 'relative'
         }}
       >
-        <div style={{ position: 'absolute', inset: '-2px', borderRadius: '50%', background: `radial-gradient(circle, ${STUDIO_THEME.accent}10 0%, transparent 70%)` }} />
+        <div style={{ position: 'absolute', inset: '-2px', borderRadius: '50%', background: `radial-gradient(circle, ${STUDIO_THEME.accent10} 0%, transparent 70%)` }} />
         {getAvatarIcon()}
       </motion.div>
       <div style={{ 

@@ -6,6 +6,7 @@
  */
 
 import type { AgentTemplate, AgentRole } from '../types';
+import { getDefaultAgentModel, getLatestAgentModelByTier } from '@/lib/agents/agent-models';
 
 const STORAGE_KEY = 'allternit_agent_templates';
 
@@ -20,7 +21,7 @@ const DEFAULT_TEMPLATES: AgentTemplate[] = [
     name: 'Orchestrator',
     description: 'Central coordinator for multi-agent workflows',
     role: 'orchestrator',
-    model: 'gpt-4o',
+    model: getDefaultAgentModel().id,
     capabilities: ['coordination', 'planning', 'task-distribution'],
     config: {
       temperature: 0.3,
@@ -34,7 +35,7 @@ const DEFAULT_TEMPLATES: AgentTemplate[] = [
     name: 'General Worker',
     description: 'Versatile agent for general-purpose tasks',
     role: 'worker',
-    model: 'gpt-4o-mini',
+    model: getLatestAgentModelByTier('openai', 'fast').id,
     capabilities: ['code-generation', 'analysis', 'refactoring'],
     config: {
       temperature: 0.5,
@@ -48,7 +49,7 @@ const DEFAULT_TEMPLATES: AgentTemplate[] = [
     name: 'Code Specialist',
     description: 'Specialized in deep code analysis and optimization',
     role: 'specialist',
-    model: 'claude-3-sonnet',
+    model: getLatestAgentModelByTier('anthropic', 'balanced').id,
     capabilities: ['code-review', 'optimization', 'architecture'],
     config: {
       temperature: 0.2,
@@ -62,7 +63,7 @@ const DEFAULT_TEMPLATES: AgentTemplate[] = [
     name: 'Quality Reviewer',
     description: 'Focuses on code quality and security review',
     role: 'reviewer',
-    model: 'gpt-4o',
+    model: getDefaultAgentModel().id,
     capabilities: ['security-review', 'quality-check', 'best-practices'],
     config: {
       temperature: 0.1,

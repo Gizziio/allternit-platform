@@ -41,9 +41,9 @@ export const LabsViewHeader: React.FC<LabsViewHeaderProps> = ({
           <div className="size-10 bg-[var(--accent-primary)]/10 rounded-xl flex items-center justify-center border border-solid border-[var(--accent-primary)]/20 shadow-[0_0_20px_var(--accent-primary)/10]">
             <span className="text-[20px] font-black italic text-[var(--accent-primary)] tracking-tighter">A:</span>
           </div>
-          <div>
-            <Text variant="researchHeading" className="text-[19px] font-black italic m-0 tracking-tight text-[var(--ui-text-primary)] leading-none">Labs</Text>
-            <Text variant="label" className="text-[10px] font-bold tracking-[0.2em] uppercase text-[var(--ui-text-muted)] mt-1 opacity-60">Learning Portal</Text>
+          <div className="flex flex-col">
+            <Text variant="heading" className="block text-[19px] font-black m-0 tracking-tight text-[var(--ui-text-primary)] leading-none">Labs</Text>
+            <Text variant="label" className="block text-[10px] font-bold tracking-[0.2em] uppercase text-[var(--ui-text-muted)] mt-1 opacity-60">Learning Portal</Text>
           </div>
         </div>
 

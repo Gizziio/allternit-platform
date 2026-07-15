@@ -3,6 +3,7 @@ import type { Publication, ContentType } from '@/types/publication';
 export interface DiscoveryItem {
   id: string;
   type: 'article' | 'video' | 'publication' | 'gallery' | 'research';
+  contentType: ContentType;
   title: string;
   subtitle: string;
   excerpt: string;
@@ -57,6 +58,7 @@ export function mapPublicationToDiscoveryItem(pub: Publication): DiscoveryItem {
   return {
     id: pub.id,
     type: TYPE_MAP[ct] ?? 'article',
+    contentType: ct,
     title: pub.title,
     subtitle: pub.subtitle ?? pub.series ?? 'Allternit Research',
     excerpt: pub.abstract,

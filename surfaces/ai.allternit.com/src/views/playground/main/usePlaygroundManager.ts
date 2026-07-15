@@ -10,6 +10,7 @@ import type {
   TemplateDefinition
 } from './PlaygroundView.types';
 import { TEMPLATES } from './PlaygroundView.constants';
+import { getDefaultAgentModel } from '@/lib/agents/agent-models';
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -23,7 +24,7 @@ export function usePlaygroundManager() {
   ]);
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(4096);
-  const [model, setModel] = useState('claude-sonnet-4-6');
+  const [model, setModel] = useState(getDefaultAgentModel().id);
   const [systemExpanded, setSystemExpanded] = useState(true);
 
   const [isStreaming, setIsStreaming] = useState(false);

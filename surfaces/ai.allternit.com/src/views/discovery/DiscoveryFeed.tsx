@@ -461,7 +461,7 @@ export function DiscoveryFeed() {
                   backgroundPosition: 'center',
                 }} />
               ) : (
-                <GenerativeCover id={currentItem.id} badgeColor={currentItem.badgeColor} />
+                <GenerativeCover contentType={currentItem.contentType} badgeColor={currentItem.badgeColor} />
               )}
 
               {/* Content */}

@@ -63,8 +63,10 @@ export function LabsView() {
 
   return (
     <div className="flex flex-col h-full w-full bg-[var(--shell-view-bg)] relative overflow-hidden">
+      {/* Spacer for the shell's floating rail controls (rail is hidden for labs) */}
+      <div className="h-11 shrink-0" />
       {/* ── Header ── */}
-      <LabsViewHeader 
+      <LabsViewHeader
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         notification={notification} 

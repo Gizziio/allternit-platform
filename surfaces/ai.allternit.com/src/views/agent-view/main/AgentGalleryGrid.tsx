@@ -117,7 +117,7 @@ function AgentSection({
         )}
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {(expanded ? agents : agents.slice(0, 6)).map((agent, i) => (
           <AgentGalleryCard
             key={agent.id}

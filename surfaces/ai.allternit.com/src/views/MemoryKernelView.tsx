@@ -130,9 +130,7 @@ function EntityCard({ entity }: { entity: Entity }) {
         </div>
       </div>
 
-      <button type="button" className="w-full mt-3 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--accent-primary)] hover:bg-[var(--bg-primary)] transition-colors border border-[var(--border-subtle)]">
-        View Details
-      </button>
+
     </div>
   );
 }

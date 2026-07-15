@@ -10,44 +10,28 @@ import {
   Pulse as Activity, 
   CaretRight, 
   SpeakerHigh,
-  CircleNotch,
-  CheckCircle,
-  Warning,
-  Square,
-  FloppyDisk,
-  GitCommit,
   Star,
   Shield,
   ArrowsLeftRight
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import type { 
-  AgentRun, 
-  AgentTask, 
-  Checkpoint as AgentCheckpoint, 
-  Commit as AgentCommit,
-  TaskStatus
-} from "@/lib/agents/agent.types";
+
+
 import { parseCharacterBlueprint } from "@/lib/agents";
 import type { AvatarConfig } from "@/lib/agents/character.types";
 import { createDefaultAvatarConfig } from "@/lib/agents/character.types";
 import { AgentAvatar } from "@/components/Avatar";
 import { AgentDashboard } from "@/components/AgentDashboard";
-import { formatRelativeTime } from "@/lib/time";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Task } from "@/components/ai-elements/task";
-import { Checkpoint } from "@/components/ai-elements/checkpoint";
-import { Commit } from "@/components/ai-elements/commit";
 
-// Assuming STUDIO_THEME is shared
+// Platform theme tokens
 const STUDIO_THEME = {
-  accent: "#D4956A",
-  bgCard: "rgba(26, 22, 18, 0.95)",
-  borderSubtle: "rgba(212, 176, 140, 0.1)",
-  textPrimary: "#E7E5E4",
-  textSecondary: "#A8A29E",
-  textMuted: "#78716C"
+  accent: "var(--accent-primary)",
+  bgCard: "var(--surface-panel)",
+  borderSubtle: "var(--border-subtle)",
+  border: "var(--border-default)",
+  textPrimary: "var(--text-primary)",
+  textSecondary: "var(--text-secondary)",
+  textMuted: "var(--text-tertiary)",
 };
 
 export function AgentDetailView({ agentId }: { agentId: string }) {
@@ -80,7 +64,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.85)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(8px)',
           zIndex: 100,
           display: 'flex',
@@ -132,7 +116,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.8)',
+        background: 'var(--shell-overlay-backdrop)',
         backdropFilter: 'blur(8px)',
         zIndex: 100,
         display: 'flex',
@@ -242,7 +226,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   <span style={{
                     padding: '3px 10px',
                     borderRadius: '999px',
-                    background: `${STUDIO_THEME.accent}15`,
+                    background: `color-mix(in srgb, var(--accent-primary) 15%, transparent)`,
                     color: STUDIO_THEME.accent,
                     fontSize: '12px',
                     fontWeight: 500,
@@ -296,7 +280,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                     <span style={{
                       padding: '2px 8px',
                       borderRadius: '999px',
-                      border: `1px solid ${STUDIO_THEME.accent}40`,
+                      border: `1px solid color-mix(in srgb, var(--accent-primary) 40%, transparent)`,
                       color: STUDIO_THEME.accent,
                       fontSize: '12px',
                       fontWeight: 500,
@@ -473,8 +457,8 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                     <span style={{
                       display: 'flex', alignItems: 'center', gap: '4px',
                       padding: '2px 8px', borderRadius: '999px',
-                      background: 'rgba(139,92,246,0.12)',
-                      color: '#a78bfa',
+                      background: 'color-mix(in srgb, var(--status-info) 12%, transparent)',
+                      color: 'var(--status-info)',
                       fontSize: '12px',
                     }}>
                       <ArrowsLeftRight style={{ width: 10, height: 10 }} />
@@ -484,7 +468,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   {agent.category && (
                     <span style={{
                       padding: '2px 8px', borderRadius: '999px',
-                      background: `${STUDIO_THEME.accent}15`,
+                      background: `color-mix(in srgb, var(--accent-primary) 15%, transparent)`,
                       color: STUDIO_THEME.accent,
                       fontSize: '12px',
                     }}>
@@ -494,8 +478,8 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   {agent.isPublic && (
                     <span style={{
                       padding: '2px 8px', borderRadius: '999px',
-                      background: 'rgba(56,189,248,0.12)',
-                      color: '#38bdf8',
+                      background: 'color-mix(in srgb, var(--status-info) 12%, transparent)',
+                      color: 'var(--status-info)',
                       fontSize: '12px',
                     }}>
                       Public
@@ -570,8 +554,8 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                         <span key={s} style={{
                           padding: '2px 8px',
                           borderRadius: '999px',
-                          background: 'rgba(139, 92, 246, 0.15)',
-                          color: '#a78bfa',
+                          background: 'color-mix(in srgb, var(--status-info) 15%, transparent)',
+                          color: 'var(--status-info)',
                           fontSize: '12px',
                         }}>{s}</span>
                       ))}
@@ -606,7 +590,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   <span key={cap} style={{
                     padding: '4px 10px',
                     borderRadius: '999px',
-                    background: `${STUDIO_THEME.accent}15`,
+                    background: `color-mix(in srgb, var(--accent-primary) 15%, transparent)`,
                     color: STUDIO_THEME.accent,
                     fontSize: '12px',
                     fontWeight: 500,
@@ -646,7 +630,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   borderRadius: '8px',
                   background: 'var(--status-error)',
                   border: 'none',
-                  color: 'white',
+                  color: 'var(--ui-text-inverse)',
                   fontSize: '13px',
                   cursor: 'pointer',
                   display: 'flex',
@@ -696,8 +680,8 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   marginBottom: '20px',
                   padding: '12px 16px',
                   borderRadius: '12px',
-                  background: `${STUDIO_THEME.accent}10`,
-                  border: `1px solid ${STUDIO_THEME.accent}30`,
+                  background: `color-mix(in srgb, var(--accent-primary) 10%, transparent)`,
+                  border: `1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)`,
                 }}>
                   <div>
                     <div style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginBottom: '2px' }}>Class</div>
@@ -736,7 +720,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                           <div style={{
                             width: `${agentCharacterStats.stats[statKey]}%`,
                             height: '100%',
-                            background: `linear-gradient(90deg, ${STUDIO_THEME.accent}, #B08D6E)`,
+                            background: `linear-gradient(90deg, ${STUDIO_THEME.accent}, var(--accent-secondary))`,
                             borderRadius: '3px',
                           }} />
                         </div>
@@ -783,7 +767,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
           transform: 'translateX(-50%)',
           padding: '12px 24px',
           borderRadius: '999px',
-          background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+          background: `linear-gradient(to right, ${STUDIO_THEME.accent}, var(--accent-secondary))`,
           border: 'none',
           color: 'var(--ui-text-inverse)',
           fontSize: '14px',
@@ -805,7 +789,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
         <div role="button" tabIndex={0} style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.9)',
+          background: 'var(--shell-overlay-backdrop)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -859,7 +843,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   borderRadius: '8px',
                   background: 'var(--status-error)',
                   border: 'none',
-                  color: 'white',
+                  color: 'var(--ui-text-inverse)',
                   fontSize: '13px',
                   cursor: 'pointer',
                 }}
@@ -874,129 +858,4 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
   );
 }
 
-// Sub-components for AgentDetailView
 
-function RunCard({ run, isActive, onClick }: { 
-  run: AgentRun;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const statusIcon = {
-    running: <CircleNotch className="size-4  animate-spin text-yellow-500" />,
-    completed: <CheckCircle className="size-4  text-green-500" />,
-    failed: <Warning className="size-4  text-red-500" />,
-    cancelled: <Square className="size-4  text-[var(--text-tertiary)]" />,
-  }[run.status];
-
-  return (
-    <Card 
-      className={`cursor-pointer transition-colors ${isActive ? 'border-primary' : 'hover:border-primary/50'}`}
-      onClick={onClick}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          {statusIcon}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium truncate">{run.input.slice(0, 50)}…</span>
-              <Badge variant="outline" className="text-xs capitalize">
-                {run.status}
-              </Badge>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {formatRelativeTime(run.startedAt)} • {run.checkpointCount} checkpoints
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function TaskCard({ task }: { task: AgentTask }) {
-  const statusColors: Record<TaskStatus, string> = {
-    pending: 'bg-white/30',
-    'in-progress': 'bg-yellow-500',
-    completed: 'bg-green-500',
-    failed: 'bg-red-500',
-    cancelled: 'bg-white/25',
-  };
-
-  return (
-    <Task>
-      <Card className="border-0 shadow-none">
-        <CardContent className="p-3">
-          <div className="flex items-start gap-3">
-            <div className={`size-2  rounded-full mt-2 ${statusColors[task.status]}`} />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{task.title}</span>
-                <Badge variant="outline" className="text-xs capitalize">
-                  {task.status}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {task.description}
-              </p>
-              {task.result && (
-                <div className="mt-2 p-2 bg-muted rounded text-sm">
-                  {task.result}
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </Task>
-  );
-}
-
-function CheckpointCard({ checkpoint }: { checkpoint: AgentCheckpoint }) {
-  return (
-    <Checkpoint>
-      <Card className="border-0 shadow-none">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <FloppyDisk className="size-4  text-green-500" />
-            <div className="flex-1">
-              <div className="font-medium">{checkpoint.label}</div>
-              {checkpoint.description && (
-                <p className="text-sm text-muted-foreground">
-                  {checkpoint.description}
-                </p>
-              )}
-              <div className="text-xs text-muted-foreground mt-1">
-                {formatRelativeTime(checkpoint.timestamp)}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </Checkpoint>
-  );
-}
-
-function CommitCard({ commit }: { commit: AgentCommit }) {
-  return (
-    <Commit>
-      <Card className="border-0 shadow-none">
-        <CardContent className="p-3">
-          <div className="flex items-start gap-3">
-            <GitCommit className="size-4  text-blue-500" />
-            <div className="flex-1">
-              <div className="font-medium">{commit.message}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {commit.author} • {formatRelativeTime(commit.timestamp)}
-              </div>
-              {commit.changes.length > 0 && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  {commit.changes.length} changes
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </Commit>
-  );
-}

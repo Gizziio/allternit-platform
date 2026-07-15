@@ -18,8 +18,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { validateAgentCreationChecklist } from "@/lib/agents";
-
-import { createModuleLogger } from '@/lib/logger';
+import { createModuleLogger } from "@/lib/logger";
 
 const logger = createModuleLogger('EditAgentForm');
 
@@ -39,10 +38,12 @@ export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () 
   const [writeScope, setWriteScope] = useState(agent.writeScope ?? 'workspace');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checklistError, setChecklistError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setChecklistError(null);
+    setSubmitError(null);
     const updates = { name, description, type, harness, allowedSurfaces, trustTier, writeScope };
     const merged = { ...agent, ...updates };
     const checklist = validateAgentCreationChecklist(merged);
@@ -59,7 +60,8 @@ export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () 
       await updateAgent(agent.id, updates);
       onCancel();
     } catch (err) {
-      console.error("Failed to update agent:", err);
+      logger.error({ err }, 'Failed to update agent');
+      setSubmitError(err instanceof Error ? err.message : 'Failed to update agent');
     } finally {
       setIsSubmitting(false);
     }
@@ -152,6 +154,12 @@ export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () 
           {checklistError && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-[var(--status-error)] text-sm">
               {checklistError}
+            </div>
+          )}
+
+          {submitError && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-[var(--status-error)] text-sm">
+              {submitError}
             </div>
           )}
 

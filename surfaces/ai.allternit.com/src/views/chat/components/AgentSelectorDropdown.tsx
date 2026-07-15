@@ -40,7 +40,7 @@ export function AgentSelectorDropdown({
     <>
       <div role="button" tabIndex={0} className="fixed inset-0 z-199" onClick={onClose} />
       <div
-        className="absolute bottom-full right-36 w-72 max-h-80 bg-menu-bg rounded-xl border border-menu-border shadow-xl z-200 flex flex-col overflow-hidden"
+        className="absolute bottom-full right-36 w-72 max-h-80 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl z-200 flex flex-col overflow-hidden"
         style={{
           boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
         }}

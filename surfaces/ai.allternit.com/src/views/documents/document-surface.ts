@@ -10,9 +10,13 @@ export interface NativeDocumentSnapshot {
 
 export type NativeDocumentMutation =
   | { type: 'replace-document'; body: string; title?: string }
+  | { type: 'insert-block'; block: unknown; index?: number }
+  | { type: 'append-to-document'; body: string }
   | { type: 'set-cell'; row: number; column: number; value: string }
+  | { type: 'set-cell-formula'; row: number; column: number; formula: string }
   | { type: 'replace-slide'; index: number; title?: string; body?: string }
   | { type: 'add-slide'; title: string; body: string }
+  | { type: 'add-slide-block'; block: unknown }
   | { type: 'export-office'; format: 'docx' | 'xlsx' | 'pptx' | 'md' | 'csv' | 'altdeck' | 'altdoc' | 'altsheet' };
 
 export interface NativeDocumentSurfaceAdapter {

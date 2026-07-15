@@ -1,3 +1,4 @@
+import { marked, type Token } from 'marked';
 import { editorPackStorageKey, type EditorPackId } from './editor-packs';
 import {
   detectOfficeFormat,
@@ -97,6 +98,180 @@ export function plaintextToDocument(title: string, body: string): AllternitDocum
   return { title, blocks };
 }
 
+function childTokens(token: Token): Token[] {
+  return (token as any).tokens ?? (token as any).items ?? [];
+}
+
+function inlineTokensToRuns(tokens: Token[]): InlineRun[] {
+  const runs: InlineRun[] = [];
+  const walk = (items: Token[], inherited: Partial<InlineRun>) => {
+    for (const token of items) {
+      switch (token.type) {
+        case 'text': {
+          const nested = childTokens(token);
+          if (nested.length > 0) {
+            walk(nested, inherited);
+          } else {
+            runs.push({ text: token.text ?? '', ...inherited });
+          }
+          break;
+        }
+        case 'strong':
+          walk(childTokens(token), { ...inherited, bold: true });
+          break;
+        case 'em':
+          walk(childTokens(token), { ...inherited, italic: true });
+          break;
+        case 'codespan':
+          runs.push({ text: token.text ?? '', ...inherited, code: true });
+          break;
+        case 'del':
+          walk(childTokens(token), { ...inherited, strike: true });
+          break;
+        case 'br':
+          runs.push({ text: '\n', ...inherited });
+          break;
+        case 'link':
+          walk(childTokens(token), inherited);
+          break;
+        default:
+          if ('text' in token && typeof token.text === 'string') {
+            runs.push({ text: token.text, ...inherited });
+          }
+      }
+    }
+  };
+  walk(tokens, {});
+  return runs.filter((run) => run.text !== '');
+}
+
+function blockFromMarkedToken(token: Token): DocumentBlock | null {
+  switch (token.type) {
+    case 'heading':
+      return {
+        type: 'heading',
+        level: Math.min(token.depth, 3) as 1 | 2 | 3,
+        content: inlineTokensToRuns(token.tokens ?? []),
+      };
+    case 'paragraph':
+      return { type: 'paragraph', content: inlineTokensToRuns(token.tokens ?? []) };
+    case 'list': {
+      const parseListItem = (item: Token): DocumentBlock[] => {
+        if (item.type !== 'list_item') return [];
+        const children = childTokens(item);
+        const blocks: DocumentBlock[] = [];
+        for (const child of children) {
+          if (child.type === 'list') {
+            const nested = blockFromMarkedToken(child);
+            if (nested) blocks.push(nested);
+          } else if (child.type === 'paragraph' || child.type === 'text') {
+            blocks.push({ type: 'paragraph', content: inlineTokensToRuns(childTokens(child)) });
+          } else {
+            const parsed = blockFromMarkedToken(child);
+            if (parsed) blocks.push(parsed);
+          }
+        }
+        return blocks.length > 0 ? blocks : [{ type: 'paragraph', content: [] }];
+      };
+
+      const items: DocumentBlock[] = [];
+      for (const item of token.items ?? []) {
+        items.push(...parseListItem(item));
+      }
+      return { type: 'list', style: token.ordered ? 'numbered' : 'bulleted', items };
+    }
+    case 'table': {
+      const rows = [];
+      const headerRow = {
+        cells: (token.header ?? []).map((cell: Token) => ({
+          blocks: [{ type: 'paragraph', content: inlineTokensToRuns(childTokens(cell)) } as DocumentBlock],
+        })),
+      };
+      if (headerRow.cells.length > 0) rows.push(headerRow);
+      for (const row of token.rows ?? []) {
+        rows.push({
+          cells: row.map((cell: Token) => ({
+            blocks: [{ type: 'paragraph', content: inlineTokensToRuns(childTokens(cell)) } as DocumentBlock],
+          })),
+        });
+      }
+      return { type: 'table', rows };
+    }
+    case 'hr':
+      return { type: 'divider' };
+    case 'code':
+      return {
+        type: 'paragraph',
+        content: [{ text: token.text ?? '', code: true }],
+      };
+    case 'blockquote':
+      return {
+        type: 'paragraph',
+        content: [{ text: token.text ?? '' }],
+      };
+    case 'html':
+      return {
+        type: 'paragraph',
+        content: [{ text: (token.text ?? '').replace(/<[^>]+>/g, '') }],
+      };
+    default:
+      return null;
+  }
+}
+
+export function markdownToDocument(title: string, body: string): AllternitDocument {
+  const tokens = marked.lexer(body) as Token[];
+  const blocks = tokens.map(blockFromMarkedToken).filter((b): b is DocumentBlock => b !== null);
+  return { title, blocks: blocks.length > 0 ? blocks : [{ type: 'paragraph', content: [] }] };
+}
+
+function runsToMarkdown(runs: InlineRun[]): string {
+  return runs
+    .map((run) => {
+      let text = run.text;
+      if (run.code) text = `\`${text.replace(/`/g, '\\`')}\``;
+      if (run.strike) text = `~~${text}~~`;
+      if (run.italic) text = `_${text}_`;
+      if (run.bold) text = `**${text}**`;
+      return text;
+    })
+    .join('');
+}
+
+function blockToMarkdown(block: DocumentBlock): string {
+  switch (block.type) {
+    case 'paragraph':
+      return runsToMarkdown(block.content);
+    case 'heading':
+      return `${'#'.repeat(block.level)} ${runsToMarkdown(block.content)}`;
+    case 'list':
+      return block.items
+        .map((item, index) => {
+          const prefix = block.style === 'numbered' ? `${index + 1}. ` : '- ';
+          return prefix + blockToMarkdown(item).replace(/\n/g, '\n  ');
+        })
+        .join('\n');
+    case 'table': {
+      if (block.rows.length === 0) return '';
+      const rows = block.rows.map((row) => row.cells.map((cell) => cell.blocks.map(blockToMarkdown).join(' ').replace(/\|/g, '\\|') || ' '));
+      const widths = rows[0].map((_, i) => Math.max(...rows.map((row) => row[i]?.length ?? 0), 3));
+      const divider = widths.map((w) => '-'.repeat(w)).join(' | ');
+      return [rows[0].map((cell, i) => cell.padEnd(widths[i])).join(' | '), divider, ...rows.slice(1).map((row) => row.map((cell, i) => cell.padEnd(widths[i])).join(' | '))].join('\n');
+    }
+    case 'image':
+      return `![${block.alt || ''}](${block.src})`;
+    case 'divider':
+      return '---';
+    default:
+      return '';
+  }
+}
+
+export function documentToMarkdown(document: AllternitDocument): string {
+  const parts = document.blocks.map(blockToMarkdown).filter(Boolean);
+  return parts.join('\n\n');
+}
+
 export function cellsToWorkbook(cells: Record<string, string>, name: string): AllternitWorkbook {
   const sheetCells: AllternitWorkbook['sheets'][0]['cells'] = {};
   for (const [key, value] of Object.entries(cells)) {
@@ -109,8 +284,8 @@ export function cellsToWorkbook(cells: Record<string, string>, name: string): Al
   };
 }
 
-export function workbookToCells(workbook: AllternitWorkbook): Record<string, string> {
-  const sheet = workbook.sheets[0];
+export function workbookToCells(workbook: AllternitWorkbook, sheetIndex = 0): Record<string, string> {
+  const sheet = workbook.sheets[sheetIndex];
   if (!sheet) return {};
   const cells: Record<string, string> = {};
   for (const [key, cell] of Object.entries(sheet.cells)) {
@@ -136,7 +311,7 @@ export function slidesToDeck(slides: EditorSlide[], title: string): AllternitDec
   return {
     title,
     slides: slides.map((slide) => ({
-      id: slide.id,
+      id: slide.id || id(),
       layout: slide.layout || 'title',
       background: slide.background,
       blocks: [
@@ -239,6 +414,13 @@ export async function importDocumentFile(file: File): Promise<ImportedDocument> 
     localStorage.setItem(`${editorPackStorageKey('documents', documentId)}.title`, parsed.title ?? title);
     return { pack: 'documents', documentId, title: parsed.title ?? title, warnings: [] };
   }
+  if (extension === 'md') {
+    const doc = markdownToDocument(title, text);
+    setStoredModel('documents', documentId, doc);
+    localStorage.setItem(editorPackStorageKey('documents', documentId), documentToPlaintext(doc));
+    localStorage.setItem(`${editorPackStorageKey('documents', documentId)}.title`, doc.title || title);
+    return { pack: 'documents', documentId, title: doc.title || title, warnings: [] };
+  }
   localStorage.setItem(editorPackStorageKey('documents', documentId), text);
   localStorage.setItem(`${editorPackStorageKey('documents', documentId)}.title`, title);
   return { pack: 'documents', documentId, title, warnings: [] };
@@ -264,7 +446,8 @@ export async function exportDocumentFile(
       return;
     }
     if (format === 'md') {
-      downloadDocumentFile(`${title || 'document'}.md`, body, 'text/markdown');
+      const document = model || plaintextToDocument(title, body);
+      downloadDocumentFile(`${title || 'document'}.md`, documentToMarkdown(document), 'text/markdown');
       return;
     }
     if (format === 'altdoc') {

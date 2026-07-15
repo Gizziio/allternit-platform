@@ -19,6 +19,7 @@ import {
   ArrowCounterClockwise,
   Lightning,
 } from '@phosphor-icons/react';
+import { getLatestAgentModelByTier } from '@/lib/agents/agent-models';
 
 interface FormSchema {
   id: string;
@@ -91,8 +92,13 @@ const AGENT_CONFIG_FIELDS: FormField[] = [
     label: 'Model',
     type: 'select',
     required: true,
-    options: ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5', 'gpt-4o'],
-    defaultValue: 'claude-opus-4-5',
+    options: [
+      getLatestAgentModelByTier('anthropic', 'flagship').id,
+      getLatestAgentModelByTier('anthropic', 'balanced').id,
+      getLatestAgentModelByTier('anthropic', 'fast').id,
+      getLatestAgentModelByTier('openai', 'balanced').id,
+    ],
+    defaultValue: getLatestAgentModelByTier('anthropic', 'flagship').id,
   },
   {
     name: 'maxTokens',

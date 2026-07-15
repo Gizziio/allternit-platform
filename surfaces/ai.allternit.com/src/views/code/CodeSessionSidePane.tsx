@@ -1,20 +1,37 @@
 "use client";
 
 import React, { useState } from 'react';
-import { FolderSimple, Globe, Terminal, GitBranch } from '@phosphor-icons/react';
+import { FolderSimple, Globe, Terminal, GitBranch, FileCode } from '@phosphor-icons/react';
 import { CodePreviewPane } from './CodePreviewPane';
+import { CodeDiffPanel } from './CodeDiffPanel';
+import { CodeFileEditor } from './CodeFileEditor';
 import { ExplorerView } from './ExplorerView';
 import GitView from './GitView';
 import { UnifiedTerminal } from '@/components/workspace/UnifiedTerminal';
 
-type SidePaneTab = 'files' | 'preview' | 'terminal' | 'git';
+type SidePaneTab = 'files' | 'preview' | 'terminal' | 'git' | 'diff';
 
 const TABS: { id: SidePaneTab; label: string; icon: typeof FolderSimple }[] = [
   { id: 'files', label: 'Files', icon: FolderSimple },
+  { id: 'diff', label: 'Diff', icon: FileCode },
   { id: 'preview', label: 'Preview', icon: Globe },
   { id: 'terminal', label: 'Terminal', icon: Terminal },
   { id: 'git', label: 'Git', icon: GitBranch },
 ];
+
+interface TerminalContext {
+  repoName?: string;
+  branch?: string;
+  shortSha?: string;
+}
+
+interface CodeSessionSidePaneProps {
+  activeTab?: SidePaneTab;
+  onTabChange?: (tab: SidePaneTab) => void;
+  sessionId?: string;
+  workingDir?: string;
+  terminalContext?: TerminalContext;
+}
 
 /**
  * Right-hand pane for an active code session: turns code mode into a real
@@ -22,8 +39,19 @@ const TABS: { id: SidePaneTab; label: string; icon: typeof FolderSimple }[] = [
  * thread — workspace files, live preview, terminal, and git one click away.
  * Tabs are keep-alive so the terminal session and preview survive switching.
  */
-export function CodeSessionSidePane(): React.ReactNode {
-  const [activeTab, setActiveTab] = useState<SidePaneTab>('files');
+export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, sessionId, workingDir, terminalContext }: CodeSessionSidePaneProps): React.ReactNode {
+  const [internalTab, setInternalTab] = useState<SidePaneTab>('files');
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const activeTab = controlledTab ?? internalTab;
+  const setActiveTab = (tab: SidePaneTab) => {
+    setInternalTab(tab);
+    onTabChange?.(tab);
+  };
+  const openFile = (path: string) => {
+    setSelectedFilePath(path);
+    setActiveTab('files');
+  };
+  const closeFile = () => setSelectedFilePath(null);
 
   return (
     <div
@@ -83,14 +111,21 @@ export function CodeSessionSidePane(): React.ReactNode {
             force direct children to fill the pane so the file tree / git /
             terminal stretch the full session height. */}
         <style>{`.code-side-fill > * { flex: 1 1 auto; min-height: 0; }`}</style>
-        <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'files' ? 'flex' : 'none', flexDirection: 'column', overflow: 'auto' }}>
-          <ExplorerView />
+        <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'files' ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden' }}>
+          {selectedFilePath ? (
+            <CodeFileEditor filePath={selectedFilePath} onClose={closeFile} />
+          ) : (
+            <ExplorerView onOpenFile={openFile} />
+          )}
+        </div>
+        <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'diff' ? 'flex' : 'none', flexDirection: 'column' }}>
+          <CodeDiffPanel />
         </div>
         <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'preview' ? 'flex' : 'none', flexDirection: 'column' }}>
           <CodePreviewPane />
         </div>
         <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'terminal' ? 'flex' : 'none', flexDirection: 'column', background: '#0d1117' }}>
-          <UnifiedTerminal sessionId="allternit-session" />
+          <UnifiedTerminal sessionId={sessionId ?? 'allternit-session'} workingDir={workingDir} terminalContext={terminalContext} />
         </div>
         <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'git' ? 'flex' : 'none', flexDirection: 'column', overflow: 'auto' }}>
           <GitView />

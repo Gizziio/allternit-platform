@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Tab, ALABSCourse, ALABSLesson } from './LabsView.constants';
-import { LABS_STORAGE_KEY, FALLBACK_COURSES } from './LabsView.constants';
+import { LABS_STORAGE_KEY, FALLBACK_COURSES, normalizeCourse, normalizeLesson } from './LabsView.constants';
 import { notebookApi } from '../../research/hooks/useNotebookApi';
 
 import { createModuleLogger } from '@/lib/logger';
@@ -35,8 +35,9 @@ export function useLabsManager() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((data: ALABSCourse[]) => {
-        if (Array.isArray(data) && data.length > 0) setCourses(data);
+      .then((data: unknown) => {
+        const items = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+        if (items.length > 0) setCourses(items.map(normalizeCourse));
         else setCourses(FALLBACK_COURSES);
         setCoursesLoading(false);
       })
@@ -53,8 +54,9 @@ export function useLabsManager() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((data: ALABSLesson[]) => {
-        if (Array.isArray(data)) setLessons(data);
+      .then((data: unknown) => {
+        const items = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+        if (items.length > 0) setLessons(items.map(normalizeLesson));
         else setLessons([]);
         setLessonsLoading(false);
       })

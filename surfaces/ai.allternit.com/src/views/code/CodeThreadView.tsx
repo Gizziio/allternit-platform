@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from 'react';
-import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, TerminalWindow, FolderOpen, Globe, DotsThree, FileCode } from '@phosphor-icons/react';
 import { CodeCanvas } from './CodeCanvas';
 import { CodeSessionSidePane } from './CodeSessionSidePane';
-import { CodeUsageDashboard } from './CodeUsageDashboard';
 import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { ChatIdProvider } from '@/providers/chat-id-provider';
@@ -34,7 +33,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
   // session — code mode should look like a coding session, not a bare chat.
   const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(PREVIEW_DEFAULT_WIDTH);
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [activeSideTab, setActiveSideTab] = useState<'files' | 'preview' | 'terminal' | 'git' | 'diff'>('files');
   const rootRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startX: number; startW: number } | null>(null);
   const codeAgentModeEnabled = useSurfaceAgentModeEnabled('code');
@@ -47,6 +46,11 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
 
   const togglePreview = useCallback(() => {
     setIsPreviewCollapsed((prev) => !prev);
+  }, []);
+
+  const openSideTab = useCallback((tab: 'files' | 'preview' | 'terminal' | 'git' | 'diff') => {
+    setActiveSideTab(tab);
+    setIsPreviewCollapsed(false);
   }, []);
 
   const onResizeStart = useCallback(
@@ -96,7 +100,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         dataTestId="agent-mode-code-backdrop"
       />
 
-      {/* Preview toggle button — only shown during an active session */}
+      {/* Integrated toolbar — only shown during an active session */}
       {hasSession && (
         <div
           style={{
@@ -105,9 +109,143 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
             right: 18,
             zIndex: 4,
             pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
           }}
         >
-          <button type="button"
+          <button
+            type="button"
+            data-testid="code-toolbar-terminal"
+            onClick={() => openSideTab('terminal')}
+            title="Terminal"
+            style={{
+              pointerEvents: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: activeSideTab === 'terminal' && !isPreviewCollapsed
+                ? 'rgba(255, 255, 255, 0.10)'
+                : 'rgba(11, 14, 16, 0.54)',
+              color: activeSideTab === 'terminal' && !isPreviewCollapsed
+                ? 'var(--text-primary)'
+                : 'var(--text-secondary)',
+              cursor: 'pointer',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          >
+            <TerminalWindow size={16} />
+          </button>
+          <button
+            type="button"
+            data-testid="code-toolbar-files"
+            onClick={() => openSideTab('files')}
+            title="Files & diff"
+            style={{
+              pointerEvents: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: activeSideTab === 'files' && !isPreviewCollapsed
+                ? 'rgba(255, 255, 255, 0.10)'
+                : 'rgba(11, 14, 16, 0.54)',
+              color: activeSideTab === 'files' && !isPreviewCollapsed
+                ? 'var(--text-primary)'
+                : 'var(--text-secondary)',
+              cursor: 'pointer',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          >
+            <FolderOpen size={16} />
+          </button>
+          <button
+            type="button"
+            data-testid="code-toolbar-diff"
+            onClick={() => openSideTab('diff')}
+            title="Diff review"
+            style={{
+              pointerEvents: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: activeSideTab === 'diff' && !isPreviewCollapsed
+                ? 'rgba(255, 255, 255, 0.10)'
+                : 'rgba(11, 14, 16, 0.54)',
+              color: activeSideTab === 'diff' && !isPreviewCollapsed
+                ? 'var(--text-primary)'
+                : 'var(--text-secondary)',
+              cursor: 'pointer',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          >
+            <FileCode size={16} />
+          </button>
+          <button
+            type="button"
+            data-testid="code-toolbar-browser"
+            onClick={() => openSideTab('preview')}
+            title="Browser preview"
+            style={{
+              pointerEvents: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: activeSideTab === 'preview' && !isPreviewCollapsed
+                ? 'rgba(255, 255, 255, 0.10)'
+                : 'rgba(11, 14, 16, 0.54)',
+              color: activeSideTab === 'preview' && !isPreviewCollapsed
+                ? 'var(--text-primary)'
+                : 'var(--text-secondary)',
+              cursor: 'pointer',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          >
+            <Globe size={16} />
+          </button>
+          <button
+            type="button"
+            data-testid="code-toolbar-overflow"
+            title="More"
+            style={{
+              pointerEvents: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(11, 14, 16, 0.54)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          >
+            <DotsThree size={18} />
+          </button>
+          <button
+            type="button"
             data-testid="code-preview-toggle"
             onClick={togglePreview}
             style={{
@@ -158,7 +296,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                   <PromptInputProvider>
                     <ChatModelsProvider>
                       <ModelSelectionProvider defaultSelection={defaultSelection}>
-                        <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} />
+                        <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} onOpenSideTab={openSideTab} />
                       </ModelSelectionProvider>
                     </ChatModelsProvider>
                   </PromptInputProvider>
@@ -167,29 +305,6 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
             </DataStreamProvider>
           </ChatIdProvider>
         </div>
-
-        {/* Heatmap dashboard — floating centered overlay on landing (no session).
-            The wrapper is click-through so it never blocks the composer behind
-            it; only the card itself captures pointer events. */}
-        {!hasSession && showDashboard && (
-          <div style={{
-            position: 'absolute',
-            top: 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '100%',
-            maxWidth: 540,
-            padding: '0 12px',
-            boxSizing: 'border-box',
-            zIndex: 10,
-            pointerEvents: 'none',
-            borderRadius: 14,
-          }}>
-            <div style={{ pointerEvents: 'auto' }}>
-              <CodeUsageDashboard onClose={() => setShowDashboard(false)} />
-            </div>
-          </div>
-        )}
 
         {/* Resize handle + session side pane (Files/Preview/Terminal/Git) — session only */}
         {hasSession && !isPreviewCollapsed && (
@@ -252,7 +367,17 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                   boxShadow: '0 14px 34px rgba(0, 0, 0, 0.12)',
                 }}
               >
-                <CodeSessionSidePane />
+                <CodeSessionSidePane
+                  activeTab={activeSideTab}
+                  onTabChange={setActiveSideTab}
+                  sessionId={activeCodeSessionId ?? undefined}
+                  workingDir={workspace?.root_path}
+                  terminalContext={{
+                    repoName: workspace?.display_name,
+                    branch: workspace?.repo_status?.branch,
+                    shortSha: workspace?.repo_status?.last_commit?.slice(0, 7),
+                  }}
+                />
               </div>
             </div>
           </>

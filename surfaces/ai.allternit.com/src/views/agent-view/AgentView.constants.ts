@@ -1,5 +1,6 @@
 import type { MascotTemplate } from "@/lib/agents/agent.types";
-export { AGENT_MODELS, AGENT_TYPES, SETUP_CAPABILITY_PRESETS, BAN_CATEGORY_OPTIONS } from "@/lib/agents/agent.types";
+export { AGENT_TYPES, SETUP_CAPABILITY_PRESETS, BAN_CATEGORY_OPTIONS } from "@/lib/agents/agent.types";
+export { AGENT_MODELS } from "@/lib/agents/agent-models";
 export { CHARACTER_SETUPS } from "@/lib/agents/character.service";
 import {
   Brain,
@@ -203,15 +204,23 @@ export const ENHANCED_HARD_BAN_CATEGORIES = {
 // Studio theme for agent creation UI
 // NOTE: Heavy components should use useStudioTheme() hook for perf (caches getComputedStyle).
 // This export is a lightweight fallback for smaller components that don't warrant a hook.
+// Migrated to platform CSS variables so the studio follows the global light/dark contract.
 export const STUDIO_THEME = {
-  accent: '#D4B08C',
-  bg: '#1A1612',
-  bgCard: 'rgba(26, 22, 18, 0.95)',
-  border: 'rgba(212, 176, 140, 0.16)',
-  borderSubtle: 'rgba(212, 176, 140, 0.10)',
-  textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6E6E6E',
+  accent: 'var(--accent-primary)',
+  accent10: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+  accent14: 'color-mix(in srgb, var(--accent-primary) 14%, transparent)',
+  accent15: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
+  accent30: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)',
+  bg: 'var(--bg-primary)',
+  bgCard: 'var(--surface-panel)',
+  border: 'var(--border-default)',
+  borderSubtle: 'var(--border-subtle)',
+  textPrimary: 'var(--text-primary)',
+  textPrimary05: 'color-mix(in srgb, var(--text-primary) 5%, transparent)',
+  textPrimary08: 'color-mix(in srgb, var(--text-primary) 8%, transparent)',
+  textPrimary10: 'color-mix(in srgb, var(--text-primary) 10%, transparent)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted: 'var(--text-tertiary)',
 };
 
 export const DEFAULT_AGENT_NAME = 'New Agent';

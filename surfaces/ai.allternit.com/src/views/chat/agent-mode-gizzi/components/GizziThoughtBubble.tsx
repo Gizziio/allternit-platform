@@ -1,14 +1,17 @@
 import React from 'react';
 import { m } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import type { AgentModeGizziTheme } from '../AgentModeGizzi.types';
 
 interface GizziThoughtBubbleProps {
   thought: string;
   thoughtIndex: number;
   theme: AgentModeGizziTheme;
+  position?: 'top' | 'bottom-right';
 }
 
-export const GizziThoughtBubble = React.memo(({ thought, thoughtIndex, theme }: GizziThoughtBubbleProps) => {
+export const GizziThoughtBubble = React.memo(({ thought, thoughtIndex, theme, position = 'top' }: GizziThoughtBubbleProps) => {
+  const isCompanion = position === 'bottom-right';
   return (
     <m.div
       key={`bubble-${thoughtIndex}`}
@@ -16,7 +19,10 @@ export const GizziThoughtBubble = React.memo(({ thought, thoughtIndex, theme }: 
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 6, scale: 0.96 }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none"
+      className={cn(
+        'absolute bottom-full mb-2 pointer-events-none',
+        isCompanion ? 'right-0' : 'left-1/2 -translate-x-1/2'
+      )}
     >
       <div
         className="flex flex-col items-start gap-1.5 w-[236px] p-[10px_12px] rounded-[18px] border border-solid bg-[rgba(14,17,20,0.82)] backdrop-blur-md shadow-lg"

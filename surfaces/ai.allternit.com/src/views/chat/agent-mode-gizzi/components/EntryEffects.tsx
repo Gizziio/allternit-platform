@@ -227,6 +227,247 @@ export const EntryEffects = React.memo(({ animState, theme, isClient }: EntryEff
     );
   }
 
+  if (animState === 'glitch-in') {
+    return (
+      <>
+        {[...Array(6)].map((_, i) => (
+          <m.div
+            key={`glitch-slice-${i}`}
+            initial={{ opacity: 0, x: 0 }}
+            animate={{ opacity: [0, 0.8, 0], x: [0, (i % 2 === 0 ? 1 : -1) * (10 + Math.random() * 20), 0] }}
+            transition={{ duration: 0.1, delay: i * 0.06, repeat: 4 }}
+            className="absolute left-1/2 -translate-x-1/2 w-[90px] h-[8px] pointer-events-none z-[40]"
+            style={{ bottom: `${20 + i * 10}%`, background: i % 2 === 0 ? theme.accent : theme.glow }}
+          />
+        ))}
+        <m.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.4, 0, 0.6, 0] }}
+          transition={{ duration: 0.8 }}
+          className="absolute -inset-[40px] pointer-events-none z-[35]"
+          style={{ background: `repeating-linear-gradient(0deg, transparent 0px, transparent 2px, ${theme.soft}22 2px, ${theme.soft}22 4px)` }}
+        />
+        <m.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: [0, 1, 0], scale: [0.8, 1.2, 1] }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="absolute bottom-[110%] left-1/2 -translate-x-1/2 px-2 py-1 bg-black/80 border border-solid border-[#00ff41] rounded text-[10px] font-mono font-bold text-[#00ff41] pointer-events-none z-[50]"
+        >
+          DECODING...
+        </m.div>
+      </>
+    );
+  }
+
+  if (animState === 'beam-in') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, scaleY: 0 }}
+          animate={{ opacity: [0, 0.7, 0.4, 0], scaleY: [0, 1, 1, 0] }}
+          transition={{ duration: 1.2 }}
+          className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-[60px] h-[300px] origin-bottom pointer-events-none z-[35]"
+          style={{ background: `linear-gradient(to top, ${theme.accent} 0%, ${theme.glow} 40%, transparent 100%)`, filter: 'blur(8px)' }}
+        />
+        {[...Array(12)].map((_, i) => (
+          <m.div
+            key={`beam-particle-${i}`}
+            initial={{ opacity: 0, y: -120, x: 0, scale: 0 }}
+            animate={{ opacity: [0, 1, 0], y: [-120, 0, 40], x: (Math.random() - 0.5) * 60, scale: [0, 1, 0] }}
+            transition={{ duration: 0.8, delay: 0.2 + i * 0.06, ease: 'easeOut' }}
+            className="absolute bottom-1/2 left-1/2 size-1.5 -ml-[3px] -mb-[3px] rounded-full pointer-events-none z-[45]"
+            style={{ background: theme.glow, boxShadow: `0 0 10px ${theme.accent}` }}
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animState === 'bounce-in') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: [0, 0.6, 0], scale: [0, 1.5, 2] }}
+          transition={{ duration: 0.4, delay: 0.55 }}
+          className="absolute bottom-[15%] left-1/2 -translate-x-1/2 size-[80px] rounded-full pointer-events-none z-[35]"
+          style={{ background: `radial-gradient(circle, ${theme.glow} 0%, transparent 70%)` }}
+        />
+        {[...Array(8)].map((_, i) => (
+          <m.div
+            key={`dust-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+            animate={{ opacity: [0, 0.8, 0], x: Math.cos((i * Math.PI * 2) / 8) * 50, y: Math.sin((i * Math.PI * 2) / 8) * 20, scale: [0, 1, 0] }}
+            transition={{ duration: 0.5, delay: 0.55, ease: 'easeOut' }}
+            className="absolute bottom-[20%] left-1/2 size-1.5 -ml-[3px] -mb-[3px] rounded-full pointer-events-none z-[40] bg-zinc-400/60"
+          />
+        ))}
+        <m.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: [0, 1, 0], y: [10, -30, -50] }}
+          transition={{ duration: 0.8, delay: 0.6, ease: 'easeOut' }}
+          className="absolute bottom-[110%] left-1/2 -translate-x-1/2 px-2 py-0.5 bg-zinc-900/80 border border-solid border-zinc-600 rounded text-[10px] font-black text-white pointer-events-none z-[50]"
+        >
+          BOING!
+        </m.div>
+      </>
+    );
+  }
+
+  if (animState === 'flip-in') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, rotateY: 90, scale: 0.6 }}
+          animate={{ opacity: [0, 0.5, 0], rotateY: [90, 0, -30], scale: [0.6, 1.1, 1] }}
+          transition={{ duration: 0.7 }}
+          className="absolute -inset-[30px] rounded-2xl pointer-events-none z-[35]"
+          style={{ background: `radial-gradient(circle, ${theme.soft}44 0%, transparent 70%)` }}
+        />
+        <m.div
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: [0, 1, 0], scale: [0, 1.4, 0], rotate: 180 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          className="absolute bottom-1/2 left-1/2 -translate-x-1/2 translate-y-1/2 size-[100px] rounded-full pointer-events-none z-[36]"
+          style={{ background: `conic-gradient(from 0deg, ${theme.accent}, ${theme.glow}, ${theme.accent})`, filter: 'blur(10px)' }}
+        />
+      </>
+    );
+  }
+
+  if (animState === 'wave-hello') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, scale: 0.5, x: 0 }}
+          animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.2, 1, 0.8], x: [0, 8, -4, 0] }}
+          transition={{ duration: 0.9, times: [0, 0.3, 0.6, 1] }}
+          className="absolute bottom-[110%] left-1/2 -translate-x-1/2 px-2.5 py-1 bg-zinc-900/80 border border-solid border-zinc-600 rounded-full text-[10px] font-black text-white pointer-events-none z-[50]"
+        >
+          HELLO!
+        </m.div>
+        {[...Array(3)].map((_, i) => (
+          <m.div
+            key={`wave-spark-${i}`}
+            initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+            animate={{ opacity: [0, 1, 0], scale: [0, 1, 0], x: 25 + i * 12, y: -10 - i * 8 }}
+            transition={{ duration: 0.4, delay: 0.3 + i * 0.1, ease: 'easeOut' }}
+            className="absolute bottom-1/2 left-1/2 size-1 -ml-0.5 -mb-0.5 rounded-full pointer-events-none z-[40]"
+            style={{ background: theme.accent, boxShadow: `0 0 8px ${theme.glow}` }}
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animState === 'coffee-boost') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, y: 30, scale: 0.5, rotate: 10 }}
+          animate={{ opacity: [0, 1, 1, 0], y: [30, -10, -20, -40], scale: [0.5, 1, 1, 0.8], rotate: [10, 0, -5, 0] }}
+          transition={{ duration: 1.1, times: [0, 0.2, 0.5, 1] }}
+          className="absolute bottom-full left-1/2 -translate-x-1/2 w-7 h-8 z-[45] pointer-events-none"
+        >
+          <div className="size-full bg-[#8B4513] rounded-t-sm rounded-b-md border-2 border-solid border-[#5D3A1A] relative">
+            <div className="absolute -right-2 top-1 w-2 h-3 rounded-r-sm border-2 border-l-0 border-solid border-[#5D3A1A] bg-[#8B4513]" />
+            <div className="absolute top-1 left-1 right-1 h-2 bg-[#D2691E] rounded-sm" />
+            <m.div animate={{ y: [0, -8, 0] }} transition={{ duration: 0.4, repeat: 2 }} className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white/20 blur-[2px]" />
+          </div>
+        </m.div>
+        {[...Array(4)].map((_, i) => (
+          <m.div
+            key={`coffee-aura-${i}`}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: [0, 0.6, 0], scale: [0, 1.5, 2], x: (Math.random() - 0.5) * 40, y: -30 - Math.random() * 30 }}
+            transition={{ duration: 0.5, delay: 0.6 + i * 0.1 }}
+            className="absolute bottom-1/2 left-1/2 size-1 -ml-0.5 -mb-0.5 rounded-full pointer-events-none z-[35]"
+            style={{ background: theme.glow }}
+          />
+        ))}
+        <m.div
+          initial={{ opacity: 0, y: 0 }}
+          animate={{ opacity: [0, 1, 1, 0], y: [-20, -40, -60] }}
+          transition={{ duration: 0.8, delay: 0.7, ease: 'easeOut' }}
+          className="absolute bottom-[120%] left-1/2 -translate-x-1/2 text-[11px] font-black text-[#D2691E] pointer-events-none z-[50]"
+        >
+          ZING!
+        </m.div>
+      </>
+    );
+  }
+
+  if (animState === 'rocket-land') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, y: -300, scale: 0.6 }}
+          animate={{ opacity: [0, 1, 1, 0], y: [-300, -20, 0, 20], scale: [0.6, 0.8, 0.9, 0.6] }}
+          transition={{ duration: 1.4, times: [0, 0.6, 0.85, 1] }}
+          className="absolute bottom-[60%] left-1/2 -translate-x-1/2 w-8 h-14 z-[40] pointer-events-none"
+        >
+          <div className="w-full h-full bg-[linear-gradient(180deg,#e2e8f0_0%,#94a3b8_50%,#475569_100%)] rounded-t-full rounded-b-md relative border border-solid border-slate-500">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-sky-400 border border-solid border-sky-600" />
+            <div className="absolute -left-1 bottom-2 w-1.5 h-4 bg-slate-600 rounded-l-sm" />
+            <div className="absolute -right-1 bottom-2 w-1.5 h-4 bg-slate-600 rounded-r-sm" />
+          </div>
+        </m.div>
+        <m.div
+          initial={{ opacity: 0, scaleY: 0 }}
+          animate={{ opacity: [0, 0.8, 0.4, 0], scaleY: [0, 1, 1.2, 0] }}
+          transition={{ duration: 0.6, delay: 0.9 }}
+          className="absolute bottom-[30%] left-1/2 -translate-x-1/2 w-6 h-16 origin-top pointer-events-none z-[35]"
+          style={{ background: `linear-gradient(to top, ${theme.accent} 0%, ${theme.glow} 60%, transparent 100%)`, filter: 'blur(4px)' }}
+        />
+        {[...Array(6)].map((_, i) => (
+          <m.div
+            key={`land-dust-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+            animate={{ opacity: [0, 0.8, 0], x: (Math.random() - 0.5) * 70, y: Math.random() * 20, scale: [0, 1, 0] }}
+            transition={{ duration: 0.6, delay: 1.0 + i * 0.05 }}
+            className="absolute bottom-[25%] left-1/2 size-1.5 -ml-[3px] -mb-[3px] rounded-full pointer-events-none z-[38] bg-zinc-400/70"
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animState === 'typing-emerge') {
+    return (
+      <>
+        <m.div
+          initial={{ opacity: 0, scale: 0.4, y: 60 }}
+          animate={{ opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 0.7], y: [60, 0, -5, -30] }}
+          transition={{ duration: 1.2, times: [0, 0.25, 0.7, 1] }}
+          className="absolute bottom-full left-1/2 -translate-x-1/2 w-16 h-8 bg-zinc-800/90 border border-solid border-zinc-600 rounded-md z-[40] pointer-events-none flex items-center justify-center gap-0.5"
+        >
+          {[0, 1, 2].map((i) => (
+            <m.div key={`key-${i}`} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 0.3, repeat: 3, delay: i * 0.1 }} className="w-3 h-2.5 rounded-[2px] bg-zinc-500" />
+          ))}
+        </m.div>
+        {['{ }', '( )', '[ ]', '</>'].map((sym, i) => (
+          <m.div
+            key={`bracket-${i}`}
+            initial={{ opacity: 0, x: 0, y: 0, scale: 0, rotate: 0 }}
+            animate={{ opacity: [0, 1, 0], x: (i % 2 === 0 ? -1 : 1) * (30 + i * 15), y: -40 - i * 10, scale: [0, 1, 0], rotate: i * 45 }}
+            transition={{ duration: 0.7, delay: 0.4 + i * 0.12, ease: 'easeOut' }}
+            className="absolute bottom-1/2 left-1/2 text-[12px] font-black font-mono pointer-events-none z-[45]"
+            style={{ color: theme.accent, textShadow: `0 0 8px ${theme.glow}` }}
+          >
+            {sym}
+          </m.div>
+        ))}
+        <m.div
+          initial={{ opacity: 0, width: 0 }}
+          animate={{ opacity: [0, 1, 0], width: ['0%', '80%', '80%'] }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="absolute bottom-[110%] left-1/2 -translate-x-1/2 h-1 rounded-full pointer-events-none z-[35]"
+          style={{ background: `linear-gradient(90deg, transparent, ${theme.accent}, transparent)` }}
+        />
+      </>
+    );
+  }
+
   return null;
 });
 

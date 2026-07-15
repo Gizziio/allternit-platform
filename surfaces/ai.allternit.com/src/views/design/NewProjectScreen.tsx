@@ -1,58 +1,99 @@
 "use client";
-import React, { useState } from 'react';
-import { ArrowRight, Palette, Layout, Slideshow, DeviceMobile, Browsers, Megaphone, CaretDown, Robot, X } from '@phosphor-icons/react';
+
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  ArrowUp,
+  Browsers,
+  Check,
+  FileText,
+  FolderOpen,
+  GridFour,
+  List,
+  MagnifyingGlass,
+  Palette,
+  Paperclip,
+  Play,
+  Plus,
+  Robot,
+  Slideshow,
+  SquaresFour,
+  X,
+} from '@phosphor-icons/react';
 import { DESIGN_DIRECTIONS, type DesignDirection } from '../../lib/design/directions';
+import { DESIGN_SYSTEMS_LIBRARY, type DesignSystemEntry } from '../../lib/design/design-systems-library';
 import type { SkillRecord } from '../../lib/design/skill-registry';
-import { SKILL_MODE_LABELS } from '../../lib/design/skill-registry';
+import { useDesignProjectStore, type DesignProject } from '@/views/project/design/design-project.store';
+import './new-project-screen.css';
 
-// ── Project types ──────────────────────────────────────────────────────────────
+const CREATION_TYPES = [
+  { id: 'prototype', label: 'Prototype', hint: 'Interactive product flow', icon: Browsers },
+  { id: 'slides', label: 'Slides', hint: 'Deck or presentation', icon: Slideshow },
+  { id: 'dashboard', label: 'Document', hint: 'Structured visual document', icon: FileText },
+  { id: 'brand', label: 'Wireframe', hint: 'Interface structure', icon: GridFour },
+  { id: 'content-engine', label: 'Animation', hint: 'Motion concept or sequence', icon: Play },
+] as const;
 
-const PROJECT_TYPES = [
-  { id: 'prototype',      label: 'Web Prototype',   description: 'Interactive UI with components and flows', icon: <Browsers size={18} weight="duotone" /> },
-  { id: 'slides',         label: 'Deck / Slides',   description: 'Presentations, pitch decks, reports',      icon: <Slideshow size={18} weight="duotone" /> },
-  { id: 'mobile',         label: 'Mobile App',      description: 'iOS / Android native-feel prototype',      icon: <DeviceMobile size={18} weight="duotone" /> },
-  { id: 'brand',          label: 'Brand System',    description: 'Tokens, palette, typography, components',  icon: <Palette size={18} weight="duotone" /> },
-  { id: 'dashboard',      label: 'Dashboard',       description: 'Data-rich admin or analytics surface',     icon: <Layout size={18} weight="duotone" /> },
-  { id: 'content-engine', label: 'Content Engine',  description: 'Multi-channel content + campaign system',  icon: <Megaphone size={18} weight="duotone" /> },
-];
-
-// Core 5 shown by default; rest revealed on "show all"
-const CORE_DIRECTION_IDS = ['editorial-monocle', 'modern-minimal', 'warm-soft', 'tech-utility', 'brutalist-experimental'];
-
-// ── Props ──────────────────────────────────────────────────────────────────────
+type LibraryTab = 'projects' | 'systems' | 'templates';
 
 interface NewProjectScreenProps {
-  onStart: (config: { name: string; type: string; direction: DesignDirection; skill?: SkillRecord; skillValues?: Record<string, unknown> }) => void;
+  onStart: (config: {
+    name: string;
+    prompt: string;
+    type: string;
+    direction: DesignDirection;
+    skill?: SkillRecord;
+    skillValues?: Record<string, unknown>;
+  }) => void;
+  onOpenProject?: (project: DesignProject) => void;
+  onSelectDesignSystem?: (system: DesignSystemEntry) => void;
   selectedSkill?: SkillRecord | null;
   onSelectSkill?: (skill: SkillRecord | null) => void;
   skillValues?: Record<string, unknown>;
   onChangeSkillValues?: (values: Record<string, unknown>) => void;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
-
 export function NewProjectScreen({
   onStart,
+  onOpenProject,
+  onSelectDesignSystem,
   selectedSkill,
   onSelectSkill,
   skillValues,
-  onChangeSkillValues,
 }: NewProjectScreenProps) {
-  const [name, setName] = useState('');
+  const projects = useDesignProjectStore((state) => state.projects);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [prompt, setPrompt] = useState('');
   const [selectedType, setSelectedType] = useState('prototype');
   const [selectedDirection, setSelectedDirection] = useState('modern-minimal');
-  const [showAllDirections, setShowAllDirections] = useState(false);
+  const [selectedSystem, setSelectedSystem] = useState<DesignSystemEntry | null>(null);
+  const [activeMenu, setActiveMenu] = useState<'system' | 'type' | 'attach' | null>(null);
+  const [libraryTab, setLibraryTab] = useState<LibraryTab>('projects');
+  const [query, setQuery] = useState('');
+  const [gridView, setGridView] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
 
-  const canStart = name.trim().length > 0;
-  const direction = DESIGN_DIRECTIONS.find(d => d.id === selectedDirection) ?? DESIGN_DIRECTIONS[0];
-  const visibleDirections = showAllDirections
-    ? DESIGN_DIRECTIONS
-    : DESIGN_DIRECTIONS.filter(d => CORE_DIRECTION_IDS.includes(d.id));
+  const direction = DESIGN_DIRECTIONS.find((item) => item.id === selectedDirection) ?? DESIGN_DIRECTIONS[0];
+  const activeType = CREATION_TYPES.find((item) => item.id === selectedType) ?? CREATION_TYPES[0];
+  const visibleSystems = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return DESIGN_SYSTEMS_LIBRARY.filter((system) =>
+      !normalized || system.title.toLowerCase().includes(normalized) || system.category.toLowerCase().includes(normalized)
+    ).slice(0, libraryTab === 'systems' ? 24 : 8);
+  }, [libraryTab, query]);
+  const visibleProjects = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return projects
+      .filter((project) => !project.isArchived)
+      .filter((project) => !normalized || project.name.toLowerCase().includes(normalized));
+  }, [projects, query]);
 
-  function handleStart() {
-    if (!canStart) return;
+  function submit() {
+    const request = prompt.trim();
+    if (!request) return;
+    const name = request.length > 54 ? `${request.slice(0, 51).trimEnd()}…` : request;
     onStart({
-      name: name.trim(),
+      name,
+      prompt: request,
       type: selectedType,
       direction,
       skill: selectedSkill ?? undefined,
@@ -60,329 +101,180 @@ export function NewProjectScreen({
     });
   }
 
+  function chooseSystem(system: DesignSystemEntry) {
+    setSelectedSystem(system);
+    onSelectDesignSystem?.(system);
+    setActiveMenu(null);
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', background: 'var(--shell-view-bg)', overflowY: 'auto' }}>
+    <div className="ad-launch">
+      <header className="ad-launch__header">
+        <div className="ad-launch__brand">
+          <span className="ad-launch__mark">A://</span>
+          <span>LLTERNIT DESIGN</span>
+          <span className="ad-launch__beta">BETA</span>
+        </div>
+        <button type="button" className="ad-launch__quiet">What’s new</button>
+      </header>
 
-      {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 32px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-        <Palette size={16} weight="fill" color="var(--accent-primary)" />
-        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          Allternit Design
-        </span>
-      </div>
+      <main className="ad-launch__main">
+        <h1>What should we create?</h1>
 
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '48px 24px 80px' }}>
-        <div style={{ width: '100%', maxWidth: 760 }}>
+        <section className="ad-composer" aria-label="Create a design project">
+          <textarea
+            autoFocus
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                submit();
+              }
+            }}
+            placeholder="Describe the design you want to create"
+            rows={2}
+          />
 
-          {/* Heading */}
-          <div style={{ marginBottom: 36 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.04em', color: 'var(--text-primary)', margin: '0 0 8px' }}>
-              New project
-            </h1>
-            <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-              Name your project, pick a type and a visual direction — the agent uses these to guide every design decision.
-            </p>
-          </div>
-
-          {/* Project name */}
-          <Section label="Project name">
-            <input aria-label="Input" autoFocus
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && canStart) handleStart(); }}
-              placeholder="e.g. Acme Dashboard, Pitch Deck v3, Brand Refresh"
-              style={{
-                width: '100%', boxSizing: 'border-box', padding: '12px 16px',
-                borderRadius: 10, border: '1.5px solid var(--border-default)',
-                background: 'var(--bg-primary)', color: 'var(--text-primary)',
-                fontSize: 15, fontWeight: 600, outline: 'none',
-              }}
-            />
-          </Section>
-
-          {/* Project type */}
-          <Section label="Project type">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-              {PROJECT_TYPES.map(pt => {
-                const active = selectedType === pt.id;
-                return (
-                  <button type="button" key={pt.id} onClick={() => setSelectedType(pt.id)} style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6,
-                    padding: '14px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
-                    border: `1.5px solid ${active ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                    background: active ? 'color-mix(in srgb, var(--accent-primary) 8%, transparent)' : 'var(--bg-primary)',
-                    transition: 'all 0.12s',
-                  }}>
-                    <span style={{ color: active ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>{pt.icon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: active ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{pt.label}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>{pt.description}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </Section>
-
-          {/* Skill */}
-          <Section label="Allternit Design skill">
-            {!selectedSkill ? (
-              <button
-                type="button"
-                onClick={() => onSelectSkill?.(null)}
-                style={{
-                  width: '100%', padding: '14px 16px', borderRadius: 12,
-                  border: '1.5px dashed var(--border-default)', background: 'transparent',
-                  color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 700,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                }}
-              >
-                <Robot size={16} />
-                Pick a skill (optional)
-              </button>
-            ) : (
-              <div style={{
-                padding: 14, borderRadius: 12, border: '1.5px solid var(--accent-primary)',
-                background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--accent-primary)' }}>
-                      {selectedSkill.name}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                      {SKILL_MODE_LABELS[selectedSkill.mode]} · {selectedSkill.description.slice(0, 90)}
-                      {selectedSkill.description.length > 90 ? '…' : ''}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onSelectSkill?.(null)}
-                    style={{
-                      width: 28, height: 28, borderRadius: 6, border: '1px solid var(--border-subtle)',
-                      background: 'transparent', color: 'var(--text-secondary)', display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
-                    }}
-                  ><X size={14} /></button>
-                </div>
-                {selectedSkill.inputs.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-                    {selectedSkill.inputs.map((input) => (
-                      <SkillInputField
-                        key={input.name}
-                        input={input}
-                        value={skillValues?.[input.name] ?? input.default ?? ''}
-                        onChange={(value) => onChangeSkillValues?.({ ...(skillValues ?? {}), [input.name]: value })}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </Section>
-
-          {/* Visual direction */}
-          <Section label="Visual direction">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {visibleDirections.map(dir => (
-                <DirectionCard
-                  key={dir.id}
-                  direction={dir}
-                  active={selectedDirection === dir.id}
-                  onSelect={() => setSelectedDirection(dir.id)}
-                />
+          {attachments.length > 0 && (
+            <div className="ad-composer__attachments">
+              {attachments.map((file, index) => (
+                <span key={`${file.name}-${index}`}>
+                  <Paperclip size={12} /> {file.name}
+                  <button type="button" onClick={() => setAttachments((items) => items.filter((_, itemIndex) => itemIndex !== index))}><X size={11} /></button>
+                </span>
               ))}
             </div>
-            {!showAllDirections && DESIGN_DIRECTIONS.length > CORE_DIRECTION_IDS.length && (
-              <button type="button"
-                onClick={() => setShowAllDirections(true)}
-                style={{
-                  marginTop: 10, display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-subtle)',
-                  background: 'transparent', color: 'var(--text-tertiary)', fontSize: 12,
-                  fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                <CaretDown size={12} /> Show {DESIGN_DIRECTIONS.length - CORE_DIRECTION_IDS.length} more directions
+          )}
+
+          <div className="ad-composer__toolbar">
+            <div className="ad-menu-anchor">
+              <button type="button" className="ad-icon-button" aria-label="Add context" onClick={() => setActiveMenu(activeMenu === 'attach' ? null : 'attach')}>
+                <Plus size={17} />
               </button>
-            )}
-          </Section>
+              {activeMenu === 'attach' && (
+                <div className="ad-popover ad-popover--attach">
+                  <button type="button" onClick={() => fileInputRef.current?.click()}><Paperclip size={15} /><span><b>Attach files</b><small>Images, documents, and references</small></span></button>
+                  <button type="button" onClick={() => onSelectSkill?.(null)}><Robot size={15} /><span><b>Allternit skill</b><small>Add a specialized design workflow</small></span></button>
+                  <button type="button"><FolderOpen size={15} /><span><b>Project context</b><small>Use files already in Allternit</small></span></button>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                hidden
+                onChange={(event) => setAttachments(Array.from(event.target.files ?? []))}
+              />
+            </div>
 
-          {/* CTA */}
-          <button type="button"
-            onClick={handleStart}
-            disabled={!canStart}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              width: '100%', padding: '14px 24px', borderRadius: 12, border: 'none',
-              background: canStart ? 'var(--accent-primary)' : 'var(--surface-hover)',
-              color: canStart ? '#fff' : 'var(--text-tertiary)',
-              fontSize: 14, fontWeight: 800, cursor: canStart ? 'pointer' : 'default',
-              transition: 'all 0.15s',
-            }}
-          >
-            Start with {direction.label.split(' — ')[0]} direction
-            <ArrowRight size={16} weight="bold" />
-          </button>
+            <div className="ad-menu-anchor">
+              <button type="button" className="ad-toolbar-button" onClick={() => setActiveMenu(activeMenu === 'system' ? null : 'system')}>
+                <Palette size={15} weight="duotone" />
+                <span><small>Design system</small>{selectedSystem?.title.replace('Design System Inspired by ', '') ?? direction.label.split(' — ')[0]}</span>
+              </button>
+              {activeMenu === 'system' && (
+                <div className="ad-popover ad-system-picker">
+                  <div className="ad-popover__search"><MagnifyingGlass size={14} /><input autoFocus placeholder="Search design systems" value={query} onChange={(event) => setQuery(event.target.value)} /></div>
+                  <div className="ad-system-picker__grid">
+                    {visibleSystems.map((system) => (
+                      <button type="button" key={system.id} className={selectedSystem?.id === system.id ? 'is-selected' : ''} onClick={() => chooseSystem(system)}>
+                        <span className="ad-swatches">{system.swatches.slice(0, 4).map((color) => <i key={color} style={{ background: color }} />)}</span>
+                        <b>{system.title.replace('Design System Inspired by ', '')}</b>
+                        <small>{system.category}</small>
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" className="ad-popover__footer" onClick={() => { setLibraryTab('systems'); setActiveMenu(null); }}>Browse all design systems</button>
+                </div>
+              )}
+            </div>
 
-        </div>
-      </div>
-    </div>
-  );
-}
+            <div className="ad-menu-anchor">
+              <button type="button" className="ad-toolbar-button" onClick={() => setActiveMenu(activeMenu === 'type' ? null : 'type')}>
+                <activeType.icon size={15} />
+                <span><small>Format</small>{activeType.label}</span>
+              </button>
+              {activeMenu === 'type' && (
+                <div className="ad-popover ad-type-picker">
+                  {CREATION_TYPES.map((type) => (
+                    <button type="button" key={type.id} onClick={() => { setSelectedType(type.id); setActiveMenu(null); }}>
+                      <type.icon size={16} /><span><b>{type.label}</b><small>{type.hint}</small></span>{selectedType === type.id && <Check size={14} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-// ── Section wrapper ────────────────────────────────────────────────────────────
+            {selectedSkill && <span className="ad-composer__skill"><Robot size={12} />{selectedSkill.name}</span>}
+            <span className="ad-composer__agent">Allternit Agent</span>
+            <button type="button" className="ad-submit" disabled={!prompt.trim()} onClick={submit} aria-label="Create project"><ArrowUp size={17} weight="bold" /></button>
+          </div>
+        </section>
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 28 }}>
-      <div style={{ display: 'block', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 12 }}>
-        {label}
-      </div>
-      {children}
-    </div>
-  );
-}
+        <section className="ad-templates">
+          <p>Use a template</p>
+          <div>
+            {CREATION_TYPES.map((type) => (
+              <button type="button" key={type.id} className={selectedType === type.id ? 'is-selected' : ''} onClick={() => setSelectedType(type.id)}>
+                <span><type.icon size={24} weight="light" /></span>
+                <b>{type.label}</b>
+                <small>{type.hint}</small>
+              </button>
+            ))}
+          </div>
+        </section>
 
-// ── Direction card ─────────────────────────────────────────────────────────────
+        <section className="ad-library">
+          <div className="ad-library__bar">
+            <nav>
+              <button type="button" className={libraryTab === 'projects' ? 'is-active' : ''} onClick={() => setLibraryTab('projects')}>Projects</button>
+              <button type="button" className={libraryTab === 'systems' ? 'is-active' : ''} onClick={() => setLibraryTab('systems')}>Design systems</button>
+              <button type="button" className={libraryTab === 'templates' ? 'is-active' : ''} onClick={() => setLibraryTab('templates')}>Templates</button>
+            </nav>
+            <div className="ad-library__tools">
+              <label><MagnifyingGlass size={13} /><input placeholder="Search" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+              <button type="button" aria-label="List view" className={!gridView ? 'is-active' : ''} onClick={() => setGridView(false)}><List size={14} /></button>
+              <button type="button" aria-label="Grid view" className={gridView ? 'is-active' : ''} onClick={() => setGridView(true)}><SquaresFour size={14} /></button>
+            </div>
+          </div>
 
-function SkillInputField({ input, value, onChange }: { input: SkillRecord['inputs'][number]; value: unknown; onChange: (value: unknown) => void }) {
-  const label = input.label ?? input.name;
-  const id = `skill-input-${input.name}`;
-  if (input.type === 'boolean') {
-    return (
-      <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={Boolean(value)}
-          onChange={(e) => onChange(e.target.checked)}
-          style={{ width: 16, height: 16, accentColor: 'var(--accent-primary)' }}
-        />
-        {label}
-      </label>
-    );
-  }
-  if (input.type === 'enum' && input.values && input.values.length > 0) {
-    return (
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</div>
-        <select
-          value={String(value)}
-          onChange={(e) => onChange(e.target.value)}
-          style={{
-            width: '100%', padding: '10px 12px', borderRadius: 8,
-            border: '1px solid var(--border-default)', background: 'var(--bg-primary)',
-            color: 'var(--text-primary)', fontSize: 13,
-          }}
-        >
-          {input.values.map((v) => <option key={v} value={v}>{v}</option>)}
-        </select>
-      </div>
-    );
-  }
-  if (input.type === 'integer') {
-    return (
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</div>
-        <input
-          type="number"
-          min={input.min}
-          max={input.max}
-          value={Number(value)}
-          onChange={(e) => onChange(Number(e.target.value))}
-          style={{
-            width: '100%', padding: '10px 12px', borderRadius: 8,
-            border: '1px solid var(--border-default)', background: 'var(--bg-primary)',
-            color: 'var(--text-primary)', fontSize: 13,
-          }}
-        />
-      </div>
-    );
-  }
-  const isTextarea = input.type === 'text' || input.type === 'string';
-  const InputTag = isTextarea ? 'textarea' : 'input';
-  return (
-    <div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</div>
-      <InputTag
-        id={id}
-        value={String(value)}
-        onChange={(e) => onChange(e.currentTarget.value)}
-        placeholder={input.placeholder ?? ''}
-        style={{
-          width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8,
-          border: '1px solid var(--border-default)', background: 'var(--bg-primary)',
-          color: 'var(--text-primary)', fontSize: 13, minHeight: isTextarea ? 80 : undefined,
-          resize: isTextarea ? 'vertical' : undefined,
-        }}
-      />
-    </div>
-  );
-}
-
-function DirectionCard({ direction, active, onSelect }: { direction: DesignDirection; active: boolean; onSelect: () => void }) {
-  const swatchKeys: (keyof typeof direction.palette)[] = ['bg', 'surface', 'fg', 'accent'];
-
-  return (
-    <button type="button" onClick={onSelect} style={{
-      display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px',
-      borderRadius: 12, cursor: 'pointer', textAlign: 'left', width: '100%',
-      border: `1.5px solid ${active ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-      background: active ? 'color-mix(in srgb, var(--accent-primary) 6%, transparent)' : 'var(--bg-primary)',
-      transition: 'all 0.12s',
-    }}>
-      {/* OKLch palette swatches */}
-      <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-        {swatchKeys.map(key => (
-          <div key={key} style={{
-            width: 16, height: 36, borderRadius: 5,
-            background: direction.palette[key],
-            border: '1px solid rgba(0,0,0,0.07)',
-            flexShrink: 0,
-          }} />
-        ))}
-      </div>
-
-      {/* Label + font preview + mood */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: active ? 'var(--accent-primary)' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-            {direction.label.split(' — ')[0]}
-          </span>
-          {direction.label.includes(' — ') && (
-            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {direction.label.split(' — ')[1]}
-            </span>
+          {libraryTab === 'projects' && (
+            <div className={`ad-project-list ${gridView ? 'is-grid' : ''}`}>
+              {visibleProjects.length === 0 ? (
+                <div className="ad-library__empty"><Palette size={18} /><span>Your Allternit Design projects will appear here.</span></div>
+              ) : visibleProjects.map((project) => (
+                <button type="button" key={project.id} onClick={() => onOpenProject?.(project)}>
+                  <span className="ad-project-list__icon"><Palette size={15} /></span>
+                  <span><b>{project.name}</b><small>{project.type} · Updated {new Date(project.updatedAt).toLocaleDateString()}</small></span>
+                </button>
+              ))}
+            </div>
           )}
-        </div>
-        {/* Live font preview */}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'baseline', marginBottom: 4 }}>
-          <span style={{ fontFamily: direction.displayFont, fontSize: 14, color: 'var(--text-primary)', fontWeight: 700 }}>
-            Display
-          </span>
-          <span style={{ fontFamily: direction.bodyFont, fontSize: 12, color: 'var(--text-secondary)' }}>
-            Body text
-          </span>
-          {direction.monoFont && (
-            <span style={{ fontFamily: direction.monoFont, fontSize: 12, color: 'var(--text-tertiary)' }}>
-              mono()
-            </span>
-          )}
-        </div>
-        {/* References */}
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {direction.references.slice(0, 3).map(ref => (
-            <span key={ref} style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'var(--surface-hover)', borderRadius: 4, padding: '2px 6px', fontWeight: 600 }}>
-              {ref}
-            </span>
-          ))}
-        </div>
-      </div>
 
-      {/* Accent pip */}
-      <div style={{
-        width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
-        background: direction.palette.accent,
-        boxShadow: `0 0 0 2px var(--bg-primary), 0 0 0 3.5px ${direction.palette.accent}`,
-      }} />
-    </button>
+          {libraryTab === 'systems' && (
+            <div className="ad-library-systems">
+              {visibleSystems.map((system) => (
+                <button type="button" key={system.id} onClick={() => chooseSystem(system)}>
+                  <span className="ad-swatches ad-swatches--large">{system.swatches.slice(0, 5).map((color) => <i key={color} style={{ background: color }} />)}</span>
+                  <b>{system.title.replace('Design System Inspired by ', '')}</b>
+                  <small>{system.category}</small>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {libraryTab === 'templates' && (
+            <div className="ad-library-templates">
+              {CREATION_TYPES.map((type) => (
+                <button type="button" key={type.id} onClick={() => { setSelectedType(type.id); setPrompt(`Create a new ${type.label.toLowerCase()}`); }}>
+                  <type.icon size={21} /><span><b>{type.label}</b><small>{type.hint}</small></span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
   );
 }

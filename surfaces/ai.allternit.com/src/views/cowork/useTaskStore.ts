@@ -45,6 +45,7 @@ export interface Task {
 export interface TaskProject {
   id: string;
   title: string;
+  description?: string;
   createdAt: string;
   updatedAt: string;
   instructions?: string;
@@ -88,6 +89,7 @@ interface TaskState {
   createProject: (title: string) => TaskProject;
   deleteProject: (id: string) => void;
   renameProject: (id: string, title: string) => void;
+  updateProjectDetails: (id: string, details: { title?: string; description?: string }) => void;
   updateProjectInstructions: (id: string, instructions: string) => void;
   moveTaskToProject: (taskId: string, projectId: string | null) => void;
   setActiveTask: (id: string | null) => void;
@@ -315,6 +317,21 @@ export const useTaskStore = create<TaskState>()(
         set((state) => ({
           projects: state.projects.map((p) =>
             p.id === id ? { ...p, title, updatedAt: new Date().toISOString() } : p
+          ),
+        }));
+      },
+
+      updateProjectDetails: (id, details) => {
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  ...(details.title !== undefined ? { title: details.title } : {}),
+                  ...(details.description !== undefined ? { description: details.description } : {}),
+                  updatedAt: new Date().toISOString(),
+                }
+              : p
           ),
         }));
       },

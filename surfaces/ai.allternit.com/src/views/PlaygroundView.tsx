@@ -23,6 +23,7 @@ import { ArtifactPreview } from "./playground/main/ArtifactPreview";
 import { ToggleSwitch } from "./playground/main/ToggleSwitch";
 import { TEMPLATES } from "./playground/main/PlaygroundView.constants";
 import type { Message, LeftTab, RightTab } from "./playground/main/PlaygroundView.types";
+import { AGENT_MODELS } from "@/lib/agents/agent-models";
 
 export function PlaygroundView() {
   const {
@@ -201,9 +202,9 @@ export function PlaygroundView() {
                     onChange={e => setModel(e.target.value)}
                     className="w-full bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded-lg p-2 text-[13px] text-[var(--ui-text-primary)] outline-none focus:border-[var(--accent-primary)] transition-colors"
                   >
-                    <option value="claude-sonnet-4-6">Claude 3.5 Sonnet</option>
-                    <option value="gpt-4o">GPT-4o (Omni)</option>
-                    <option value="deepseek-r1">DeepSeek R1</option>
+                    {AGENT_MODELS.map((m) => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
                   </select>
                 </ConfigItem>
                 <ConfigItem label={`Temperature: ${temperature}`}>

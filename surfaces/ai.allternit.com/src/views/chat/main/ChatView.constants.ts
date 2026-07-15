@@ -1,4 +1,5 @@
 import { SuggestionItem } from "@/components/agent-elements/input/suggestions";
+import { getDefaultAgentModel, getLatestAgentModel } from "@/lib/agents/agent-models";
 
 export const THEME = {
   bg: 'var(--surface-canvas)',
@@ -11,11 +12,16 @@ export const THEME = {
   borderSubtle: 'var(--ui-border-muted)',
 };
 
+// MODELS[0] is the platform's zen-tier free default and the ultimate
+// fallback when no model is selected (see ChatView.tsx). The rest are
+// registry-derived so ids stay valid gateway references — a bare
+// "claude-3-5-sonnet"/"deepseek-r1" (no provider prefix, wrong version
+// separator) would be rejected by the gateway if ever selected.
 export const MODELS = [
   { id: "kimi/kimi-for-coding", name: "Kimi K2.5 (Coding)", provider: "kimi" },
-  { id: "gpt-4o", name: "GPT-4o", provider: "openai" },
-  { id: "claude-3-5-sonnet", name: "Claude 3.5 Sonnet", provider: "anthropic" },
-  { id: "deepseek-r1", name: "DeepSeek R1", provider: "deepseek" },
+  { id: getDefaultAgentModel().id, name: getDefaultAgentModel().name, provider: getDefaultAgentModel().provider },
+  { id: getLatestAgentModel('anthropic').id, name: getLatestAgentModel('anthropic').name, provider: "anthropic" as const },
+  { id: "deepseek/deepseek-r1", name: "DeepSeek R1", provider: "deepseek" },
 ] as const;
 
 export const EMPTY_STATE_SUGGESTIONS: SuggestionItem[] = [
