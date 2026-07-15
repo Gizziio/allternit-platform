@@ -662,6 +662,8 @@ struct CreateProjectBody {
     description: Option<String>,
     instructions: Option<String>,
     metadata: Option<String>,
+    git_remote: Option<String>,
+    default_branch: Option<String>,
 }
 
 async fn create_project(
@@ -678,8 +680,8 @@ async fn create_project(
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         conn.execute(
-            "INSERT INTO cowork_projects (id, user_id, title, description, instructions, metadata)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO cowork_projects (id, user_id, title, description, instructions, metadata, git_remote, default_branch)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 id2,
                 user_id,
@@ -687,6 +689,8 @@ async fn create_project(
                 body.description,
                 body.instructions,
                 body.metadata,
+                body.git_remote,
+                body.default_branch,
             ],
         )?;
         Ok::<_, rusqlite::Error>(())
@@ -759,6 +763,8 @@ struct UpdateProjectBody {
     description: Option<String>,
     instructions: Option<String>,
     metadata: Option<String>,
+    git_remote: Option<String>,
+    default_branch: Option<String>,
 }
 
 async fn update_project(
@@ -779,13 +785,17 @@ async fn update_project(
                 description = COALESCE(?2, description),
                 instructions = COALESCE(?3, instructions),
                 metadata = COALESCE(?4, metadata),
+                git_remote = COALESCE(?5, git_remote),
+                default_branch = COALESCE(?6, default_branch),
                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?5 AND user_id = ?6",
+             WHERE id = ?7 AND user_id = ?8",
             params![
                 body.title,
                 body.description,
                 body.instructions,
                 body.metadata,
+                body.git_remote,
+                body.default_branch,
                 id,
                 user_id,
             ],
