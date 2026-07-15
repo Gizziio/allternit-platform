@@ -83,6 +83,14 @@ function checkRequiredBinaries() {
     process.exit(1);
   }
   log(`gizzi-code brain present at ${gizziBin}`);
+
+  const voiceBin = path.join(resourcesBin, process.platform === 'win32' ? 'allternit-voice-service.exe' : 'allternit-voice-service');
+  if (!fs.existsSync(voiceBin)) {
+    log('ERROR: resources/bin/allternit-voice-service is missing — packaged Voice Mode would not start.');
+    log('Build it first via the canonical pipeline: ../../scripts/build-desktop.sh');
+    process.exit(1);
+  }
+  log(`voice service present at ${voiceBin}`);
 }
 
 function main() {

@@ -533,6 +533,27 @@ function createMainWindow() {
         window.focus();
     });
     window.webContents.setWindowOpenHandler(({ url }) => {
+        try {
+            const requestedUrl = new URL(url);
+            const appUrl = new URL(window.webContents.getURL());
+            if (requestedUrl.origin === appUrl.origin && requestedUrl.pathname === '/design') {
+                return {
+                    action: 'allow',
+                    overrideBrowserWindowOptions: {
+                        width: 1440,
+                        height: 960,
+                        minWidth: 960,
+                        minHeight: 640,
+                        backgroundColor: '#0F0C0A',
+                        autoHideMenuBar: true,
+                        title: 'Allternit Design',
+                    },
+                };
+            }
+        }
+        catch {
+            // Invalid or non-standard URLs fall through to the external browser.
+        }
         shell.openExternal(url);
         return { action: 'deny' };
     });

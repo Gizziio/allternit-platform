@@ -20,6 +20,8 @@ export const PORTS = {
   ACU_RELAY: 3012,
   /** Open Notebook research backend */
   NOTEBOOK: 5055,
+  /** Local speech-to-text and text-to-speech service */
+  VOICE: 8001,
 } as const;
 
 export const HOSTS = {
@@ -35,6 +37,7 @@ export const URLS = {
   EXTENSION_BRIDGE: `http://${HOSTS.LOOPBACK}:${PORTS.EXTENSION_BRIDGE}`,
   ACU_RELAY: `http://${HOSTS.LOOPBACK}:${PORTS.ACU_RELAY}`,
   NOTEBOOK: `http://${HOSTS.LOOPBACK}:${PORTS.NOTEBOOK}`,
+  VOICE: `http://${HOSTS.LOOPBACK}:${PORTS.VOICE}`,
   PRODUCTION_UI: 'https://ai.allternit.com',
   /** Local static platform UI fallback served by the Rust API at the root path. */
   PLATFORM_STATIC: `http://${HOSTS.LOOPBACK}:${PORTS.API}`,

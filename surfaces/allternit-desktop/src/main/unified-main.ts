@@ -29,6 +29,7 @@ import { OfficeAddinManager, type OfficeProductId } from './office-addin-manager
 import { tunnelManager } from './tunnel-manager.js';
 import { authManager } from './auth-manager.js';
 import { notebookManager } from './notebook-manager.js';
+import { voiceManager } from './voice-manager.js';
 import { PLATFORM_MANIFEST, shouldUpdateBackend } from './manifest.js';
 import {
   checkPermissions,
@@ -82,6 +83,7 @@ const isMac = process.platform === 'darwin';
 // ============================================================================
 
 let mainWindow: BrowserWindow | null = null;
+let designWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 
 // Service state for splash screen progress (module-level so IPC handlers can update it)
@@ -800,6 +802,28 @@ function createMainWindow(): BrowserWindow {
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const requestedUrl = new URL(url);
+      const appUrl = new URL(window.webContents.getURL());
+
+      if (requestedUrl.origin === appUrl.origin && requestedUrl.pathname === '/design') {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1440,
+            height: 960,
+            minWidth: 960,
+            minHeight: 640,
+            backgroundColor: '#0F0C0A',
+            autoHideMenuBar: true,
+            title: 'Allternit Design',
+          },
+        };
+      }
+    } catch {
+      // Invalid or non-standard URLs fall through to the external browser.
+    }
+
     shell.openExternal(url);
     return { action: 'deny' };
   });
@@ -858,6 +882,12 @@ function createMainWindow(): BrowserWindow {
 
 async function initializeApp(): Promise<void> {
   log.info('[Main] Initializing Allternit Desktop v' + PLATFORM_MANIFEST.version);
+
+  // Voice is an optional local capability: start it automatically, but never
+  // prevent the rest of the desktop from opening if model initialization fails.
+  void voiceManager.start().catch((error) => {
+    log.warn('[Main] Voice service unavailable; continuing without Voice Mode:', error);
+  });
   
   const backendConfig = store.get('backend');
   
@@ -1663,10 +1693,17 @@ app.whenReady().then(async () => {
     }
 
     try {
+      // Electron exposes the custom-protocol request body as a ReadableStream.
+      // Passing that stream directly to Node's fetch requires a non-standard
+      // `duplex` option and caused all Design POST requests to fail. Buffer the
+      // payload first so ordinary RequestInit semantics work reliably.
+      const requestBody = request.method === 'GET' || request.method === 'HEAD'
+        ? undefined
+        : await request.arrayBuffer();
       const response = await fetch(targetUrl, {
         method: request.method,
         headers,
-        body: request.body,
+        body: requestBody,
       });
 
       const responseHeaders = new Headers(response.headers);
@@ -1783,6 +1820,7 @@ app.on('before-quit', async () => {
 
   gizziManager.stop();
   notebookManager.stop();
+  voiceManager.stop();
   stopVM().catch(() => {}); // best-effort Lima VM shutdown
   // Remove dev session credentials file so stale credentials don't persist across restarts
   if (isDev) {
@@ -1841,6 +1879,40 @@ ipcMain.handle('app:get-info', () => ({
   // Shell
 ipcMain.handle('shell:open-external', (_event, url: string) => {
   shell.openExternal(url);
+});
+ipcMain.handle('shell:open-design', () => {
+  if (designWindow && !designWindow.isDestroyed()) {
+    void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
+    designWindow.show();
+    designWindow.focus();
+    return;
+  }
+
+  designWindow = new BrowserWindow({
+    width: 1440,
+    height: 960,
+    minWidth: 960,
+    minHeight: 640,
+    title: 'Allternit Design',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  designWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  designWindow.once('ready-to-show', () => designWindow?.show());
+  designWindow.on('closed', () => { designWindow = null; });
+  void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
 });
 ipcMain.handle('shell:get-office-host-status', async () => detectOfficeHostStatus());
 ipcMain.handle('office-addins:get-status', async () => {

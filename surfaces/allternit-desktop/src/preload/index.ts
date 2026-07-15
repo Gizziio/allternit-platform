@@ -191,6 +191,7 @@ const authAPI = {
 
 const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
+  openDesign: (): Promise<void> => ipcRenderer.invoke('shell:open-design'),
   getOfficeHostStatus: (): Promise<Record<'word' | 'excel' | 'powerpoint', {
     installed: boolean;
     running: boolean;
