@@ -6,7 +6,7 @@
  */
 
 import { generateText } from 'ai';
-import { getLanguageModel } from '@/lib/ai/providers';
+import { getDefaultPluginModel } from '@/lib/ai/providers';
 import type { 
   ModePlugin, 
   PluginConfig, 
@@ -210,7 +210,7 @@ class FlowPlugin implements ModePlugin {
       timestamp: Date.now() 
     });
 
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const { text } = await generateText({
       model,

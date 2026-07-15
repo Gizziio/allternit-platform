@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from 'framer-motion';
 
@@ -7,7 +9,6 @@ import { motion } from 'framer-motion';
 // ResponsiveContainer, DockPanel
 // ============================================================================
 
-"use client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {

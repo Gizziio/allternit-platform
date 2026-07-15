@@ -1,7 +1,7 @@
+"use client";
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-
-"use client";
 import type {
   ExtensionSidepanelActivity,
   ExtensionSidepanelAdapter,

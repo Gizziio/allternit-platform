@@ -19,6 +19,7 @@ import {
   buildGlassClasses,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useGlassDarkMode } from './useGlass';
 
 // ============================================================================
 // Props Interface
@@ -105,7 +106,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
     success = false,
     helperText,
     label,
-    darkMode = false,
+    darkMode: darkModeProp,
     containerClassName,
     containerStyle,
     disabled = false,
@@ -115,6 +116,7 @@ export const GlassInput = forwardRef<HTMLInputElement, GlassInputProps>(
     onBlur,
     ...inputProps
   }, ref) {
+  const darkMode = useGlassDarkMode(darkModeProp);
     const [isFocused, setIsFocused] = useState(false);
 
     const hasBackdropFilter = supportsBackdropFilter();

@@ -1,6 +1,6 @@
-import React, { useCallback, useRef, useState } from "react";
-
 "use client";
+
+import React, { useCallback, useRef, useState } from "react";
 import { useToast } from '@/hooks/use-toast';
 import { useSidecarStore } from '../stores/useSidecarStore';
 import type { AllternitProgram, ResearchDocEvidence, ResearchDocCitation, ResearchDocState } from '../types/programs';

@@ -25,6 +25,7 @@ import {
   getHoverStyles,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useGlassDarkMode } from './useGlass';
 
 // Legacy intensity type for backwards compatibility
 export type GlassIntensity = 'thin' | 'base' | 'elevated' | 'thick';
@@ -111,8 +112,9 @@ export function GlassSurface({
   onClick,
   onMouseEnter,
   onMouseLeave,
-  darkMode = false,
+  darkMode: darkModeProp,
 }: GlassSurfaceProps) {
+  const darkMode = useGlassDarkMode(darkModeProp);
   // Interactive state
   const [isHovered, setIsHovered] = useState(false);
 

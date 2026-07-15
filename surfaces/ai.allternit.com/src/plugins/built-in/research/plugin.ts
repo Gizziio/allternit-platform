@@ -10,7 +10,7 @@ import {
   createComputerUseClient,
   type AllternitComputerUseClient,
 } from '@allternit/sdk/computer-use';
-import { getLanguageModel } from '@/lib/ai/providers';
+import { getDefaultPluginModel } from '@/lib/ai/providers';
 import type { 
   ModePlugin, 
   PluginConfig, 
@@ -270,7 +270,7 @@ class ResearchPlugin implements ModePlugin {
 
   private async performAIResearch(query: string): Promise<ResearchResult['sources']> {
     // Use AI SDK with web-capable model for research
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const { text } = await generateText({
       model,
@@ -312,7 +312,7 @@ Format your response as JSON:
     query: string, 
     sources: ResearchResult['sources']
   ): Promise<ResearchResult> {
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const sourcesText = sources.map((s, i) => 
       `${i + 1}. ${s.title}\n   URL: ${s.url}\n   Summary: ${s.snippet}`

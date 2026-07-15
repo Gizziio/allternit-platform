@@ -59,7 +59,19 @@ const config: Config = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			}
+  			},
+  			// Composer / dropdown surface tokens (theme.css). Classes like
+  			// bg-menu-bg and bg-input-bg were previously undefined, which left
+  			// the composer and every menu opened from it transparent.
+  			'menu-bg': 'var(--shell-menu-bg)',
+  			'menu-border': 'var(--shell-menu-border)',
+  			'input-bg': 'var(--chat-composer-bg)',
+  			'input-border': 'var(--chat-composer-border)',
+  			'composer-bg': 'var(--chat-composer-bg)',
+  			'composer-border': 'var(--chat-composer-border)',
+  			'composer-soft': 'var(--chat-composer-soft)',
+  			'composer-hover': 'var(--chat-composer-hover)',
+  			hover: 'var(--surface-hover)'
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -67,6 +79,15 @@ const config: Config = {
   			sm: 'calc(var(--radius) - 4px)'
   		},
   		keyframes: {
+  			// Composer deck trays sliding out from behind the input-bar card
+  			'deck-rise': {
+  				from: { transform: 'translateY(44px)' },
+  				to: { transform: 'translateY(0)' }
+  			},
+  			'deck-fall': {
+  				from: { transform: 'translateY(-44px)' },
+  				to: { transform: 'translateY(0)' }
+  			},
   			'accordion-down': {
   				from: {
   					height: '0'
@@ -85,6 +106,8 @@ const config: Config = {
   			}
   		},
   		animation: {
+  			'deck-rise': 'deck-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
+  			'deck-fall': 'deck-fall 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
   		}

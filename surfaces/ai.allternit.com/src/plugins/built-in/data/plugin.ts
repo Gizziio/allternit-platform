@@ -6,7 +6,7 @@
  */
 
 import { generateText } from 'ai';
-import { getLanguageModel } from '@/lib/ai/providers';
+import { getDefaultPluginModel } from '@/lib/ai/providers';
 import type { 
   ModePlugin, 
   PluginConfig, 
@@ -382,7 +382,7 @@ class DataPlugin implements ModePlugin {
 
   private async enhanceWithAI(analysis: DataAnalysisResult, prompt: string): Promise<DataAnalysisResult> {
     try {
-      const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+      const model = await getDefaultPluginModel();
       
       const columnsInfo = analysis.columns.map(c => 
         `${c.name} (${c.type})${c.stats ? ` - unique: ${c.stats.unique}` : ''}`
@@ -454,7 +454,7 @@ Format as JSON:
 
   private async answerDataQuestion(prompt: string, context?: PluginInput['context']): Promise<PluginOutput> {
     try {
-      const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+      const model = await getDefaultPluginModel();
       
       const { text } = await generateText({
         model,

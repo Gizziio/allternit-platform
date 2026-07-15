@@ -19,6 +19,7 @@ import {
   buildGlassClasses,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useGlassDarkMode } from './useGlass';
 
 // ============================================================================
 // Props Interface
@@ -117,11 +118,12 @@ export function GlassDialog({
   onClose,
   title,
   description,
-  darkMode = false,
+  darkMode: darkModeProp,
   zIndex = 100,
   showBackdrop = true,
   backdropOpacity = 0.5,
 }: GlassDialogProps) {
+  const darkMode = useGlassDarkMode(darkModeProp);
   const hasBackdropFilter = supportsBackdropFilter();
 
   // Handle escape key

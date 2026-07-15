@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-
 "use client";
+
+import React, { useEffect, useRef, useState } from "react";
 import type { 
   ResearchDocSection, 
   ResearchDocCitation, 

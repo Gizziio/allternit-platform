@@ -6,7 +6,7 @@
  */
 
 import { generateText } from 'ai';
-import { getLanguageModel } from '@/lib/ai/providers';
+import { getDefaultPluginModel } from '@/lib/ai/providers';
 import type { 
   ModePlugin, 
   PluginConfig, 
@@ -183,7 +183,7 @@ class CodePlugin implements ModePlugin {
       timestamp: Date.now() 
     });
 
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const languageInstructions: Record<string, string> = {
       python: 'Generate Python code. Include comments and type hints where appropriate.',
@@ -287,7 +287,7 @@ Respond with ONLY the code block, no additional explanation.`,
     const codeMatch = prompt.match(/```(?:\w+)?\n?([\s\S]*?)```/);
     const code = codeMatch ? codeMatch[1].trim() : prompt;
 
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const { text } = await generateText({
       model,

@@ -6,7 +6,7 @@
  */
 
 import { generateText } from 'ai';
-import { getLanguageModel } from '@/lib/ai/providers';
+import { getDefaultPluginModel } from '@/lib/ai/providers';
 import type { 
   ModePlugin, 
   PluginConfig, 
@@ -231,7 +231,7 @@ class SlidesPlugin implements ModePlugin {
   }
 
   private async generateSlides(topic: string, slideCount: number, theme: string): Promise<SlideContent> {
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const { text } = await generateText({
       model,

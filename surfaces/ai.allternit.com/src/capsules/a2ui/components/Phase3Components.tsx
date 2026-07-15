@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useMemo, useState } from "react";
 
 // ============================================================================
@@ -6,7 +8,6 @@ import React, { useMemo, useState } from "react";
 // AgentThinking, ToolCall, ArtifactPreview
 // ============================================================================
 
-"use client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -16,6 +16,17 @@ import {
   getActiveStyles,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useThemeStore, useResolvedTheme } from '../ThemeStore';
+
+/**
+ * Resolve the effective glass dark mode: an explicit override wins,
+ * otherwise follow the app theme (including "system").
+ */
+export function useGlassDarkMode(override?: boolean): boolean {
+  const theme = useThemeStore((s) => s.theme);
+  const resolved = useResolvedTheme(theme);
+  return override ?? resolved === 'dark';
+}
 
 // ============================================================================
 // Hook Options Interface
@@ -76,13 +87,14 @@ interface UseGlassReturn {
  */
 export function useGlass(options: UseGlassOptions = {}): UseGlassReturn {
   const {
-    darkMode = false,
+    darkMode: darkModeProp,
     className: customClassName,
     style: customStyle,
     focusable = false,
     hover,
     ...glassOptions
   } = options;
+  const darkMode = useGlassDarkMode(darkModeProp);
 
   // State for interactive effects
   const [isHovered, setIsHovered] = useState(false);

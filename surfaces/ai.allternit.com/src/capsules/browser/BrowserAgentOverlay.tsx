@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useEffect, useRef } from "react";
 
 /**
@@ -18,7 +20,6 @@ import React, { useCallback, useEffect, useRef } from "react";
  * - Below BrowserAgentBar (z-index managed by parent)
  */
 
-"use client";
 import {
   CursorClick,
   Hand,

@@ -1,7 +1,7 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import React, { useCallback, useRef, useState } from "react";
-
-"use client";
 import { useSidecarStore } from '../stores/useSidecarStore';
 import { useFileSystem, DriveEntry } from '../services/FileSystemService';
 import type { AllternitProgram } from '../types/programs';

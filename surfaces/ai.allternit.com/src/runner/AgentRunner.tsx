@@ -23,6 +23,17 @@ import {
 import { GizziMascot } from "@/components/ai-elements/GizziMascot";
 import { ContextWindowCard } from "@/components/ai-elements/ContextWindowCard";
 import { cn } from "@/lib/utils";
+import { getDefaultAgentModel, getLatestAgentModel } from "@/lib/agents/agent-models";
+
+// Compact model picker: the zen-tier free default plus the platform's
+// current default and Anthropic models — derived from the registry so ids
+// stay valid (this previously hardcoded 'gpt-4o' and a bare 'claude-3' that
+// didn't even match its own "Claude 3.5 Sonnet" label).
+const QUICK_MODEL_PICKS = [
+  { id: 'kimi/kimi-for-coding', name: 'Kimi K2.5' },
+  { id: getDefaultAgentModel().id, name: getDefaultAgentModel().name },
+  { id: getLatestAgentModel('anthropic').id, name: getLatestAgentModel('anthropic').name },
+];
 
 const THEME = {
   bg: 'var(--surface-panel)',
@@ -446,11 +457,7 @@ export function AgentRunner() {
                     onKeyDown={(e) => { if (e.key === 'Escape' || e.key === 'Enter') setShowModelMenu(false); }}
                   />
                   <div className="absolute right-0 top-full mt-1 min-w-[160px] bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded-lg p-1 z-[51] shadow-md">
-                    {[
-                      { id: 'kimi/kimi-for-coding', name: 'Kimi K2.5' },
-                      { id: 'gpt-4o', name: 'GPT-4o' },
-                      { id: 'claude-3', name: 'Claude 3.5 Sonnet' },
-                    ].map((model) => (
+                    {QUICK_MODEL_PICKS.map((model) => (
                       <button type="button"
                         key={model.id}
                         onClick={() => {
@@ -700,11 +707,7 @@ export function AgentRunner() {
                   onClick={() => setShowModelMenu(false)}
                 />
                 <div className="absolute right-0 top-full mt-1 min-w-[160px] bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] rounded-lg p-1 z-[51] shadow-md">
-                  {[
-                    { id: 'kimi/kimi-for-coding', name: 'Kimi K2.5' },
-                    { id: 'gpt-4o', name: 'GPT-4o' },
-                    { id: 'claude-3', name: 'Claude 3.5 Sonnet' },
-                  ].map((model) => (
+                  {QUICK_MODEL_PICKS.map((model) => (
                     <button type="button"
                       key={model.id}
                       onClick={() => {

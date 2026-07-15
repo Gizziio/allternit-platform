@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
-
 "use client";
+
+import React, { useCallback, useEffect, useState } from "react";
 import { useSidecarStore } from '../stores/useSidecarStore';
 import type { AllternitProgram, PresentationState } from '../types/programs';
 import { cn } from "@/lib/utils";

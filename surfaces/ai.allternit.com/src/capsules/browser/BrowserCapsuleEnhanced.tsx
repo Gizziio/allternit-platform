@@ -1,3 +1,6 @@
+// @ts-nocheck
+"use client";
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -26,7 +29,6 @@ import {
   X,
 } from "@phosphor-icons/react";
 
-// @ts-nocheck
 /**
  * BrowserCapsuleEnhanced - P5.2.2
  * Chrome-style browser with Claude-style chat sidebar
@@ -34,7 +36,6 @@ import {
  * Migrated to Tailwind CSS for architectural compliance.
  */
 
-"use client";
 import { AllternitLogo } from '@/components/AllternitLogo';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { isElectronShell, getWebProxyUrl } from '@/lib/platform';

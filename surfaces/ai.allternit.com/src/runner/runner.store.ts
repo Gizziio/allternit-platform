@@ -8,6 +8,7 @@
 import { create } from "zustand";
 import type { RunnerRun, RunnerTraceEntry } from "./runner.types";
 import { api } from "../integration/api-client";
+import { getDefaultAgentModel } from "@/lib/agents/agent-models";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -137,7 +138,7 @@ export const useRunnerStore = create<{
   open: false,
   mode: "compact",
   draft: "",
-  modelId: "gpt-4o",
+  modelId: getDefaultAgentModel().id,
   trace: [],
   agentEnabled: false,
   context: {},
@@ -247,7 +248,7 @@ export const useRunnerStore = create<{
           trace: session.trace || [],
           draft: session.draft || '',
           agentEnabled: session.agentEnabled ?? false,
-          modelId: session.modelId || 'gpt-4o',
+          modelId: session.modelId || getDefaultAgentModel().id,
         });
       }
     } catch (error) {

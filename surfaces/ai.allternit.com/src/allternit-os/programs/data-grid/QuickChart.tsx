@@ -1,6 +1,6 @@
-import React, { useMemo } from "react";
-
 "use client";
+
+import React, { useMemo } from "react";
 import type { DataGridColumn, DataGridRow, DataGridVisualization } from '../../types/programs';
 import { buildChartJsHtml } from './chartUtils';
 

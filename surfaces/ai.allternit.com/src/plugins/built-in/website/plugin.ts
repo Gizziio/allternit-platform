@@ -6,7 +6,7 @@
  */
 
 import { generateText } from 'ai';
-import { getLanguageModel } from '@/lib/ai/providers';
+import { getDefaultPluginModel } from '@/lib/ai/providers';
 import type { 
   ModePlugin, 
   PluginConfig, 
@@ -211,7 +211,7 @@ class WebsitePlugin implements ModePlugin {
     pages: string[],
     style: string
   ): Promise<WebsiteProject> {
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const stackInstructions: Record<string, string> = {
       nextjs: 'Generate a Next.js 14 App Router project with TypeScript and Tailwind CSS.',

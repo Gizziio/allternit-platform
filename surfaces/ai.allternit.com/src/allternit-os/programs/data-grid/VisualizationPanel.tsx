@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from "react";
-
 "use client";
+
+import React, { useCallback, useState } from "react";
 import { usePythonExecution, VisualizationLibrary } from '../../services/PythonExecutionService';
 import type { DataGridColumn, DataGridRow, DataGridVisualization } from '../../types/programs';
 

@@ -19,6 +19,7 @@ import {
   buildGlassClasses,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useGlassDarkMode } from './useGlass';
 
 // ============================================================================
 // Props Interface
@@ -86,9 +87,10 @@ export function GlassPanel({
   resizable = false,
   open = true,
   onClose,
-  darkMode = false,
+  darkMode: darkModeProp,
   zIndex = 50,
 }: GlassPanelProps) {
+  const darkMode = useGlassDarkMode(darkModeProp);
   const [isResizing, setIsResizing] = useState(false);
   const [panelSize, setPanelSize] = useState(size);
 

@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-
 "use client";
+
+import React, { useEffect, useRef, useState } from "react";
 import { useBrowserAgentStore } from './browserAgent.store';
 import { Check, Monitor, Pause, Play, Square, X } from "@phosphor-icons/react";
 // Theme-aware tokens for browser chrome

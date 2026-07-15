@@ -1,5 +1,7 @@
 "use client";
 
+import { getDefaultAgentModel } from "@/lib/agents/agent-models";
+
 /**
  * Allternit API Client - Canonical Enterprise Implementation
  * 
@@ -138,7 +140,7 @@ export interface Agent {
   type?: 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
   parentAgentId?: string;
   model: string;
-  provider: 'openai' | 'anthropic' | 'local' | 'custom';
+  provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
   capabilities: string[];
   systemPrompt?: string;
   tools: string[];
@@ -548,7 +550,7 @@ class AllternitApiClient {
     onEvent?: (event: { type: string; [key: string]: unknown }) => void;
     onError?: (error: { code: string; message: string }) => void;
   }): Promise<void> {
-    const { message, chatId, modelId = 'gpt-4o', runtimeModelId, onEvent, onError } = options;
+    const { message, chatId, modelId = getDefaultAgentModel().id, runtimeModelId, onEvent, onError } = options;
     
     const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',

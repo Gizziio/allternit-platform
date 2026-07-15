@@ -22,6 +22,7 @@ import {
   getActiveStyles,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useGlassDarkMode } from './useGlass';
 
 // ============================================================================
 // Props Interface
@@ -100,7 +101,7 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
     loading = false,
     leftIcon,
     rightIcon,
-    darkMode = false,
+    darkMode: darkModeProp,
     disabled = false,
     children,
     className,
@@ -114,6 +115,7 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
     onBlur,
     ...buttonProps
   }, ref) {
+  const darkMode = useGlassDarkMode(darkModeProp);
     const [isHovered, setIsHovered] = useState(false);
     const [isActive, setIsActive] = useState(false);
     const [isFocused, setIsFocused] = useState(false);

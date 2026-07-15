@@ -29,6 +29,7 @@ import {
   getActiveStyles,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useGlassDarkMode } from './useGlass';
 
 // ============================================================================
 // Props Interface
@@ -127,8 +128,9 @@ export function GlassCard({
   role,
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
-  darkMode = false,
+  darkMode: darkModeProp,
 }: GlassCardProps) {
+  const darkMode = useGlassDarkMode(darkModeProp);
   // Interactive state
   const [isHovered, setIsHovered] = useState(false);
   const [isActive, setIsActive] = useState(false);

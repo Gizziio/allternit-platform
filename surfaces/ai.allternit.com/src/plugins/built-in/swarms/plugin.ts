@@ -6,7 +6,8 @@
  */
 
 import { generateText } from 'ai';
-import { getLanguageModel } from '@/lib/ai/providers';
+import { getLanguageModel, getDefaultPluginModel } from '@/lib/ai/providers';
+import { getLatestAgentModel } from '@/lib/agents/agent-models';
 import type { 
   ModePlugin, 
   PluginConfig, 
@@ -71,9 +72,9 @@ class SwarmsPlugin implements ModePlugin {
     maxRounds: 3,
     enableCoordination: true,
     modelPool: [
-      'anthropic/claude-3-5-sonnet',
-      'openai/gpt-4o',
-      'google/gemini-1.5-pro',
+      getLatestAgentModel('anthropic').id,
+      getLatestAgentModel('openai').id,
+      getLatestAgentModel('google').id,
     ],
   };
 
@@ -211,7 +212,7 @@ class SwarmsPlugin implements ModePlugin {
   }
 
   private createAgents(swarmType: string, task: string): SwarmAgent[] {
-    const baseModel = this.config.modelPool?.[0] || 'anthropic/claude-3-5-sonnet';
+    const baseModel = this.config.modelPool?.[0] || getLatestAgentModel('anthropic').id;
 
     const agentTemplates: Record<string, Partial<SwarmAgent>[]> = {
       coding: [
@@ -351,7 +352,7 @@ Provide your expert contribution. Be specific and actionable. If you identify is
     responses: Array<{ agentId: string; response: string }>, 
     task: string
   ): Promise<{ isComplete: boolean; summary: string }> {
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const { text } = await generateText({
       model,
@@ -395,7 +396,7 @@ Respond in JSON:
     rounds: SwarmResult['rounds'],
     task: string
   ): Promise<string> {
-    const model = await getLanguageModel('anthropic/claude-3-5-sonnet');
+    const model = await getDefaultPluginModel();
     
     const allResponses = rounds.flatMap(r => 
       r.agentResponses.map(ar => `${agents.find(a => a.id === ar.agentId)?.name || ar.agentId}:\n${ar.response.substring(0, 600)}...`)

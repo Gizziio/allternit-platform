@@ -19,6 +19,7 @@ import {
   buildGlassClasses,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useGlassDarkMode } from './useGlass';
 
 // ============================================================================
 // Props Interface
@@ -118,11 +119,12 @@ export function GlassPopover({
   closeOnClickOutside = true,
   closeOnEscape = true,
   trigger = 'click',
-  darkMode = false,
+  darkMode: darkModeProp,
   zIndex = 100,
   disabled = false,
   matchTriggerWidth = false,
 }: GlassPopoverProps) {
+  const darkMode = useGlassDarkMode(darkModeProp);
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const [triggerWidth, setTriggerWidth] = useState<number>(0);
   const triggerRef = useRef<HTMLDivElement>(null);

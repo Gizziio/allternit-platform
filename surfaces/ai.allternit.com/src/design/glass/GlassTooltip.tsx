@@ -19,6 +19,7 @@ import {
   buildGlassClasses,
   supportsBackdropFilter,
 } from './glass-utils';
+import { useGlassDarkMode } from './useGlass';
 
 // ============================================================================
 // Props Interface
@@ -98,11 +99,12 @@ export function GlassTooltip({
   hideDelay = 100,
   visible: visibleProp,
   maxWidth = 250,
-  darkMode = false,
+  darkMode: darkModeProp,
   zIndex = 168,
   disabled = false,
   arrow = true,
 }: GlassTooltipProps) {
+  const darkMode = useGlassDarkMode(darkModeProp);
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);

@@ -6,10 +6,19 @@
  */
 
 import { useSidecarStore } from '../stores/useSidecarStore';
+import { getLatestAgentModelByTier } from '@/lib/agents/agent-models';
 import type {
   OrchestratorState,
   OrchestratorAgent,
 } from '../types/programs';
+
+// Workflow-preset agent models, resolved from the registry by tier — never
+// hardcode ids here (this file previously pinned 'claude-3-opus'/'gpt-4',
+// both retired/malformed for the current gateway).
+const ANTHROPIC_FLAGSHIP = getLatestAgentModelByTier('anthropic', 'flagship').id;
+const ANTHROPIC_BALANCED = getLatestAgentModelByTier('anthropic', 'balanced').id;
+const ANTHROPIC_FAST = getLatestAgentModelByTier('anthropic', 'fast').id;
+const OPENAI_BALANCED = getLatestAgentModelByTier('openai', 'balanced').id;
 
 // ============================================================================
 // Types
@@ -112,35 +121,35 @@ function createResearchPlan(prompt: string): ExecutionPlan {
         id: 'planner',
         name: 'Planner',
         role: 'planner',
-        model: 'claude-3-opus',
+        model: ANTHROPIC_FLAGSHIP,
         systemPrompt: 'You are a research planner. Break down complex topics into searchable queries.',
       },
       {
         id: 'researcher',
         name: 'Researcher',
         role: 'researcher',
-        model: 'gpt-4',
+        model: OPENAI_BALANCED,
         systemPrompt: 'You are a web researcher. Gather comprehensive information on topics.',
       },
       {
         id: 'analyst',
         name: 'Analyst',
         role: 'writer',
-        model: 'claude-3-sonnet',
+        model: ANTHROPIC_BALANCED,
         systemPrompt: 'You analyze information and extract key insights.',
       },
       {
         id: 'fact-checker',
         name: 'Fact Checker',
         role: 'fact-checker',
-        model: 'claude-3-haiku',
+        model: ANTHROPIC_FAST,
         systemPrompt: 'You verify facts and identify potential inaccuracies.',
       },
       {
         id: 'synthesizer',
         name: 'Synthesizer',
         role: 'synthesizer',
-        model: 'claude-3-opus',
+        model: ANTHROPIC_FLAGSHIP,
         systemPrompt: 'You synthesize multiple sources into coherent reports.',
       },
     ],
@@ -185,28 +194,28 @@ function createCodePlan(prompt: string): ExecutionPlan {
         id: 'architect',
         name: 'Architect',
         role: 'planner',
-        model: 'claude-3-opus',
+        model: ANTHROPIC_FLAGSHIP,
         systemPrompt: 'You design software architecture and plan implementations.',
       },
       {
         id: 'developer',
         name: 'Developer',
         role: 'writer',
-        model: 'gpt-4',
+        model: OPENAI_BALANCED,
         systemPrompt: 'You write clean, efficient code.',
       },
       {
         id: 'tester',
         name: 'Tester',
         role: 'fact-checker',
-        model: 'claude-3-sonnet',
+        model: ANTHROPIC_BALANCED,
         systemPrompt: 'You write comprehensive tests.',
       },
       {
         id: 'reviewer',
         name: 'Reviewer',
         role: 'synthesizer',
-        model: 'claude-3-opus',
+        model: ANTHROPIC_FLAGSHIP,
         systemPrompt: 'You review code for quality and best practices.',
       },
     ],
@@ -244,14 +253,14 @@ function createDesignPlan(prompt: string): ExecutionPlan {
         id: 'researcher',
         name: 'Researcher',
         role: 'researcher',
-        model: 'gpt-4',
+        model: OPENAI_BALANCED,
         systemPrompt: 'You research design trends and user needs.',
       },
       {
         id: 'designer',
         name: 'Designer',
         role: 'designer',
-        model: 'claude-3-opus',
+        model: ANTHROPIC_FLAGSHIP,
         systemPrompt: 'You create beautiful, functional designs.',
       },
     ],
@@ -275,7 +284,7 @@ function createDefaultPlan(prompt: string): ExecutionPlan {
         id: 'agent',
         name: 'Agent',
         role: 'writer',
-        model: 'claude-3-opus',
+        model: ANTHROPIC_FLAGSHIP,
         systemPrompt: 'You are a helpful assistant.',
       },
     ],

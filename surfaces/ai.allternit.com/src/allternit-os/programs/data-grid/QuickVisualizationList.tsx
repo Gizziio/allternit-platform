@@ -1,6 +1,6 @@
-import React from "react";
-
 "use client";
+
+import React from "react";
 import { usePythonExecution } from '../../services/PythonExecutionService';
 import type { DataGridColumn, DataGridRow, DataGridVisualization } from '../../types/programs';
 import { QuickChart } from './QuickChart';

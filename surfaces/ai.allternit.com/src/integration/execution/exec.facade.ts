@@ -19,6 +19,7 @@
 
 import { execEvents } from './exec.events';
 import { RunRequest } from './exec.types';
+import { getLatestAgentModel } from '@/lib/agents/agent-models';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -78,7 +79,7 @@ function buildBrainConfig(modelId: string): BrainConfig {
         id: "claude-code",
         name: "Claude Code CLI",
         brain_type: "cli",
-        model: "claude-3-5-sonnet",
+        model: getLatestAgentModel('anthropic').id,
         api_key_env: "ANTHROPIC_API_KEY",
         command: "claude",
         args: ["--output-format", "stream-json"],
