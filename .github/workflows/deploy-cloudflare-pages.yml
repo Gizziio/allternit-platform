@@ -30,7 +30,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
+          # Cache disabled temporarily to clear a stale pnpm-store snapshot that
+          # resolved incompatible @blocksuite/icons transitive versions. Re-enable
+          # once this run produces a good store snapshot.
 
       # Install from monorepo root so all workspace:* packages resolve correctly.
       # Use --frozen-lockfile so CI matches the committed pnpm-lock.yaml and local
