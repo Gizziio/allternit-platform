@@ -226,7 +226,7 @@ export function BrowserPaneWrapper({ children }: { children: React.ReactNode }):
       {showLanding && (
         <div
           className={cn(
-            "w-full h-full flex flex-col items-center justify-center bg-[var(--view-browser-bg,var(--surface-canvas))] text-[var(--text-primary)] font-sans relative overflow-auto",
+            "w-full min-h-full flex flex-col items-center justify-start bg-[var(--view-browser-bg,var(--surface-canvas))] text-[var(--text-primary)] font-sans relative overflow-auto py-12",
             landingAnim === 'out' ? "animate-[browserLandingFadeOut_0.25s_ease-out_forwards]" : 
             landingAnim === 'in' ? "animate-[browserLandingFadeIn_0.35s_ease-out_forwards]" : ""
           )}

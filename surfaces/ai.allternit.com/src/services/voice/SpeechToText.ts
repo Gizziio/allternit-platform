@@ -121,6 +121,9 @@ class SpeechToTextService {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private isRecording = false;
+  private voiceActivityFrame: number | null = null;
+  private lastVoiceActivityAt = 0;
+  private hasDetectedSpeech = false;
 
   // Native SpeechRecognition (disabled - using MediaRecorder + backend instead)
   private recognition: SpeechRecognition | null = null;
@@ -369,7 +372,10 @@ class SpeechToTextService {
           // Send to backend for transcription
           try {
             const transcript = await this.transcribeWithBackend(audioBlob);
-            if (transcript && transcript !== this.lastTranscript) {
+            // Always publish a final result. The final transcript commonly
+            // matches the last streaming result; suppressing that duplicate
+            // leaves consumers waiting forever for completion.
+            if (transcript) {
               this.notify({
                 type: 'result',
                 result: {
@@ -403,6 +409,7 @@ class SpeechToTextService {
       this.mediaRecorder.start(100);
       this.isRecording = true;
       this.notify({ type: 'start' });
+      this.startSilenceDetection();
 
       // Start streaming transcription every 1.5 seconds
       this.streamingInterval = setInterval(() => {
@@ -480,7 +487,36 @@ class SpeechToTextService {
     }
   }
 
+  private startSilenceDetection(): void {
+    if (typeof window === 'undefined') return;
+    this.hasDetectedSpeech = false;
+    this.lastVoiceActivityAt = performance.now();
+
+    const sample = () => {
+      if (!this.isRecording || this.mediaRecorder?.state !== 'recording') return;
+      const now = performance.now();
+      const level = this.getAudioLevel();
+      if (level > 0.035) {
+        this.hasDetectedSpeech = true;
+        this.lastVoiceActivityAt = now;
+      } else if (this.hasDetectedSpeech && now - this.lastVoiceActivityAt > 1400) {
+        this.mediaRecorder.stop();
+        return;
+      } else if (!this.hasDetectedSpeech && now - this.lastVoiceActivityAt > 8000) {
+        this.mediaRecorder.stop();
+        return;
+      }
+      this.voiceActivityFrame = window.requestAnimationFrame(sample);
+    };
+
+    this.voiceActivityFrame = window.requestAnimationFrame(sample);
+  }
+
   private cleanupMediaRecorder(): void {
+    if (this.voiceActivityFrame !== null && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(this.voiceActivityFrame);
+      this.voiceActivityFrame = null;
+    }
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;

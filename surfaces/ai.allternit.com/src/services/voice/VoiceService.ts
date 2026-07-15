@@ -225,7 +225,7 @@ class VoiceService {
     );
     this.nextHealthRetryAt = Date.now() + backoffMs;
 
-    const error = `Voice service unavailable at ${this.baseUrl}. Run: python3 launch.py in 4-services/ml-ai-services/voice-service`;
+    const error = `Voice service unavailable at ${this.baseUrl}. Restart Allternit Desktop or check the desktop service logs.`;
     this.emit({ type: 'state', state: { serviceAvailable: false, error } });
     this.emit({ type: 'error', error });
 
@@ -303,7 +303,7 @@ class VoiceService {
     const { voice = 'default', useParalinguistic = true, autoPlay = true } = options;
 
     if (!this.isServiceAvailable) {
-      const error = 'Voice service not available. Start with: python3 launch.py';
+      const error = 'Voice service is not available. Restart Allternit Desktop or check the desktop service logs.';
       this.emit({ type: 'error', error });
       return { success: false, error };
     }

@@ -4,6 +4,8 @@
  * Allternit AI backend (Open WebUI-derived FastAPI service).
  */
 
+import { getDefaultAgentModel } from '@/lib/agents/agent-models';
+
 const ALLTERNIT_AI_URL = process.env.NEXT_PUBLIC_ALLTERNIT_AI_URL || 'http://localhost:8080';
 const ALLTERNIT_AI_KEY = process.env.NEXT_PUBLIC_ALLTERNIT_AI_KEY || '';
 
@@ -274,7 +276,7 @@ export const allternitAiChatApi = {
     messages.push({ role: 'user', content: message });
 
     const body = {
-      model: modelId || 'gpt-4o',
+      model: modelId || getDefaultAgentModel().id,
       messages,
       stream: true,
       metadata: {
