@@ -198,7 +198,7 @@ class VideoPlugin implements ModePlugin {
       model: this.config.model!,
       duration: this.config.duration!,
       resolution: this.config.resolution!,
-    });
+    }, { minimax: this.config.apiKey });
 
     return {
       success: true,

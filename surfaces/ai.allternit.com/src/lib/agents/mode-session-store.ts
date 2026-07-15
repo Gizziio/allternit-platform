@@ -36,6 +36,7 @@ import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contracts';
 import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
+import { executeAgentMode } from './agent-mode-executor';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -529,6 +530,21 @@ async function streamMessageWithContext(
   chatApi: ChatApi,
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
+
+  if (!skipContext && session.metadata.agentModeId) {
+    try {
+      await executeAgentMode(session.metadata.agentModeId, text, session.metadata.templateTitle, {
+        onChunk: (content) => callbacks?.onChunk?.(content),
+        onToolCall: (event) => callbacks?.onToolCall?.(event),
+        onToolResult: (event) => callbacks?.onToolResult?.(event),
+        onArtifact: (artifact) => callbacks?.onArtifact?.(artifact),
+      });
+      callbacks?.onDone?.();
+    } catch (error) {
+      callbacks?.onError?.(error instanceof Error ? error : new Error(String(error)));
+    }
+    return;
+  }
   
   // Build context pack if agent mode
   let agentContext: AgentContext | undefined;

@@ -236,8 +236,9 @@ class ResearchPlugin implements ModePlugin {
       }
     }
 
-    // Fallback: Use Perplexity AI for web research
-    return await this.performAIResearch(query);
+    // Browser automation is optional; public scholarly/reference APIs provide
+    // real, attributable sources when it is unavailable.
+    return await this.performPublicSourceResearch(query);
   }
 
   private extractSourcesFromBrowserResult(output: unknown): ResearchResult['sources'] {
@@ -268,44 +269,56 @@ class ResearchPlugin implements ModePlugin {
     return sources;
   }
 
-  private async performAIResearch(query: string): Promise<ResearchResult['sources']> {
-    // Use AI SDK with web-capable model for research
-    const model = await getDefaultPluginModel();
-    
-    const { text } = await generateText({
-      model,
-      prompt: `Research the following topic thoroughly: "${query}"
+  private async performPublicSourceResearch(query: string): Promise<ResearchResult['sources']> {
+    const sources: ResearchResult['sources'] = [];
+    const encoded = encodeURIComponent(query);
 
-Based on your knowledge, provide a comprehensive response with:
-1. A detailed summary
-2. At least 5 credible sources with actual URLs
-3. Key findings as bullet points
-4. Related questions for further research
+    const [wikipediaResponse, crossrefResponse] = await Promise.allSettled([
+      fetch(`https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encoded}&gsrlimit=5&prop=extracts|info&exintro=1&explaintext=1&inprop=url&format=json&origin=*`).then((response) => {
+        if (!response.ok) throw new Error(`Wikipedia search failed (${response.status})`);
+        return response.json();
+      }),
+      fetch(`https://api.crossref.org/works?query=${encoded}&rows=5&select=DOI,title,URL,abstract,published`).then((response) => {
+        if (!response.ok) throw new Error(`Crossref search failed (${response.status})`);
+        return response.json();
+      }),
+    ]);
 
-Format your response as JSON:
-{
-  "summary": "detailed summary",
-  "sources": [
-    { "title": "…", "url": "https://...", "snippet": "…", "credibility": "high|medium|low" }
-  ],
-  "keyFindings": ["…"],
-  "relatedQuestions": ["…"]
-}`,
-      temperature: 0.3,
-    });
-
-    try {
-      // Extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const data = JSON.parse(jsonMatch[0]);
-        return data.sources || this.getFallbackSources(query);
+    if (wikipediaResponse.status === 'fulfilled') {
+      const pages = Object.values((wikipediaResponse.value as any)?.query?.pages ?? {}) as any[];
+      for (const page of pages) {
+        if (!page?.fullurl || !page?.title) continue;
+        sources.push({
+          title: page.title,
+          url: page.fullurl,
+          snippet: String(page.extract ?? '').slice(0, 600),
+          credibility: 'medium',
+        });
       }
-    } catch {
-      // Fall through to fallback
     }
 
-    return this.getFallbackSources(query);
+    if (crossrefResponse.status === 'fulfilled') {
+      const works = (crossrefResponse.value as any)?.message?.items ?? [];
+      for (const work of works) {
+        const title = Array.isArray(work.title) ? work.title[0] : work.title;
+        const url = work.URL || (work.DOI ? `https://doi.org/${work.DOI}` : undefined);
+        if (!title || !url) continue;
+        sources.push({
+          title,
+          url,
+          snippet: String(work.abstract ?? `Scholarly work indexed by Crossref. DOI: ${work.DOI ?? 'not supplied'}`).replace(/<[^>]+>/g, '').slice(0, 600),
+          credibility: 'high',
+          publishedAt: work.published?.['date-parts']?.[0]?.join('-'),
+        });
+      }
+    }
+
+    const uniqueSources = [...new Map(sources.map((source) => [source.url, source])).values()]
+      .slice(0, this.config.maxSources);
+    if (uniqueSources.length < 3) {
+      throw new Error('Live research did not return enough verifiable sources. Try a more specific query or check network access.');
+    }
+    return uniqueSources;
   }
 
   private async synthesizeWithAI(
@@ -346,28 +359,6 @@ Format as well-structured markdown.`,
     };
   }
 
-  private getFallbackSources(query: string): ResearchResult['sources'] {
-    return [
-      {
-        title: `Research on "${query}" - Academic Overview`,
-        url: `https://scholar.google.com/scholar?q=${encodeURIComponent(query)}`,
-        snippet: 'Academic research and scholarly articles on this topic.',
-        credibility: 'high',
-      },
-      {
-        title: 'Industry Analysis Report',
-        url: 'https://example.com/industry-report',
-        snippet: 'Comprehensive industry analysis with market data.',
-        credibility: 'medium',
-      },
-      {
-        title: 'Expert Insights',
-        url: 'https://example.com/expert-opinion',
-        snippet: 'Professional insights and expert opinions.',
-        credibility: 'medium',
-      },
-    ];
-  }
 
   private extractKeyFindings(text: string): string[] {
     const findings: string[] = [];
