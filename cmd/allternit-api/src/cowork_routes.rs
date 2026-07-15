@@ -65,6 +65,8 @@ struct ProjectRow {
     description: Option<String>,
     instructions: Option<String>,
     metadata: Option<String>,
+    git_remote: Option<String>,
+    default_branch: Option<String>,
     created_at: String,
     updated_at: String,
 }
@@ -623,7 +625,7 @@ async fn list_projects(
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
-            "SELECT id, user_id, title, description, instructions, metadata, created_at, updated_at
+            "SELECT id, user_id, title, description, instructions, metadata, git_remote, default_branch, created_at, updated_at
              FROM cowork_projects WHERE user_id = ?1 ORDER BY updated_at DESC"
         )?;
         let rows = stmt.query_map(params![user_id], |row| {
@@ -634,8 +636,10 @@ async fn list_projects(
                 description: row.get(3)?,
                 instructions: row.get(4)?,
                 metadata: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
+                git_remote: row.get(6)?,
+                default_branch: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -722,7 +726,7 @@ async fn get_project(
     let row = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
-            "SELECT id, user_id, title, description, instructions, metadata, created_at, updated_at
+            "SELECT id, user_id, title, description, instructions, metadata, git_remote, default_branch, created_at, updated_at
              FROM cowork_projects WHERE id = ?1 AND user_id = ?2"
         )?;
         let row = stmt.query_row(params![id, user_id], |row| {
@@ -733,8 +737,10 @@ async fn get_project(
                 description: row.get(3)?,
                 instructions: row.get(4)?,
                 metadata: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
+                git_remote: row.get(6)?,
+                default_branch: row.get(7)?,
+                created_at: row.get(8)?,
+                updated_at: row.get(9)?,
             })
         })?;
         Ok::<_, rusqlite::Error>(row)
