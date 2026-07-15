@@ -37,6 +37,12 @@ def install_deps(pip_path: Path, api_dir: Path):
         print("Installing dependencies...")
         subprocess.run([str(pip_path), "install", "-r", str(req_file)], check=True)
 
+def install_local_voice(pip_path: Path, service_dir: Path):
+    """Install the bundled Chatterbox source used by TTS."""
+    voice_package = service_dir / "voice"
+    if voice_package.exists():
+        subprocess.run([str(pip_path), "install", str(voice_package)], check=True)
+
 def download_models(python_path: Path, api_dir: Path):
     """Download voice models on first run"""
     print("Checking voice models...")
@@ -60,6 +66,7 @@ def main():
     
     if args.setup:
         install_deps(pip_path, api_dir)
+        install_local_voice(pip_path, service_dir)
         print("Setup complete!")
         return
     
@@ -74,6 +81,11 @@ def main():
         import fastapi
     except ImportError:
         install_deps(pip_path, api_dir)
+
+    try:
+        import chatterbox
+    except ImportError:
+        install_local_voice(pip_path, service_dir)
     
     # Set environment
     os.environ["PORT"] = args.port
