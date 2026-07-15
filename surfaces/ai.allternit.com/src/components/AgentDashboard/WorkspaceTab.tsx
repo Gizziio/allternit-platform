@@ -1,7 +1,7 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import React, { useEffect, useMemo, useState } from "react";
-
-"use client";
 import {
   FolderOpen,
   FileText,

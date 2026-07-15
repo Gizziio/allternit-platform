@@ -1,6 +1,6 @@
-import React, { memo, useMemo } from "react";
-
 "use client";
+
+import React, { memo, useMemo } from "react";
 import { m, MotionConfig, useSpring, useMotionValue, useTransform, useMotionTemplate, LazyMotion, domAnimation } from 'framer-motion';
 import { cn } from '@/lib/utils';
 

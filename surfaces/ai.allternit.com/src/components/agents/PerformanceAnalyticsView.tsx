@@ -3,7 +3,14 @@ import { useAgentMetricsStore } from '@/lib/agents/agent-metrics.store';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, Clock, DollarSign, Zap, TrendingUp, BarChart3 } from 'lucide-react';
+import {
+  Pulse,
+  Clock,
+  CurrencyDollar,
+  Lightning,
+  TrendUp,
+  ChartBar,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 export function PerformanceAnalyticsView() {
@@ -32,15 +39,15 @@ export function PerformanceAnalyticsView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-            <BarChart3 className="size-5  text-cyan-400" />
+          <h2 className="text-xl font-semibold text-[var(--text-primary)] flex items-center gap-2">
+            <ChartBar className="size-5 text-[var(--accent-primary)]" />
             Performance Analytics
           </h2>
-          <p className="text-sm text-white/50 mt-1">
+          <p className="text-sm text-[var(--text-secondary)] mt-1">
             Cost, latency, and reliability metrics across all agents
           </p>
         </div>
-        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-[var(--surface-hover)] rounded-lg p-1">
           {timeRangeOptions.map((opt) => (
             <button type="button"
               key={opt.value}
@@ -48,8 +55,8 @@ export function PerformanceAnalyticsView() {
               className={cn(
                 'px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
                 timeRange === opt.value
-                  ? 'bg-cyan-500/20 text-cyan-400'
-                  : 'text-white/50 hover:text-white/80'
+                  ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               )}
             >
               {opt.label}
@@ -61,44 +68,40 @@ export function PerformanceAnalyticsView() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          icon={<Activity className="size-4  text-emerald-400" />}
+          icon={<Pulse className="size-4 text-emerald-400" />}
           label="Total Runs"
           value={totalRuns.toLocaleString()}
-          trend="+12%"
         />
         <MetricCard
-          icon={<Clock className="size-4  text-amber-400" />}
+          icon={<Clock className="size-4 text-amber-400" />}
           label="Avg Latency"
           value={`${Math.round(avgLatency)}ms`}
-          trend="-8%"
         />
         <MetricCard
-          icon={<Zap className="size-4  text-cyan-400" />}
+          icon={<Lightning className="size-4 text-cyan-400" />}
           label="Tokens Consumed"
           value={totalTokens.toLocaleString()}
-          trend="+23%"
         />
         <MetricCard
-          icon={<DollarSign className="size-4  text-rose-400" />}
+          icon={<CurrencyDollar className="size-4 text-rose-400" />}
           label="Est. Cost"
           value={`$${totalCost.toFixed(2)}`}
-          trend="-3%"
         />
       </div>
 
       {/* Agent Breakdown */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-[var(--surface-hover)] border-[var(--border-subtle)]">
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-white/80 flex items-center gap-2">
-            <TrendingUp className="size-4  text-cyan-400" />
+          <CardTitle className="text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
+            <TrendUp className="size-4 text-[var(--accent-primary)]" />
             Agent Performance Breakdown
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-white/40">Loading metrics…</div>
+            <div className="text-center py-8 text-[var(--text-tertiary)]">Loading metrics…</div>
           ) : summary.length === 0 ? (
-            <div className="text-center py-8 text-white/40">
+            <div className="text-center py-8 text-[var(--text-tertiary)]">
               No metrics available yet. Run some agents to collect data.
             </div>
           ) : (
@@ -108,23 +111,23 @@ export function PerformanceAnalyticsView() {
                 return (
                   <div
                     key={s.agentId}
-                    className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg bg-[var(--surface-hover)] hover:bg-[var(--surface-panel)] transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="size-8  rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-bold">
+                      <div className="size-8 rounded-full bg-[var(--accent-primary)]/20 flex items-center justify-center text-[var(--accent-primary)] text-xs font-bold">
                         {agent?.name?.charAt(0).toUpperCase() || 'A'}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-white">
+                        <p className="text-sm font-medium text-[var(--text-primary)]">
                           {agent?.name || 'Unknown Agent'}
                         </p>
-                        <p className="text-xs text-white/40">
+                        <p className="text-xs text-[var(--text-tertiary)]">
                           {s.totalRuns} runs · {Math.round(s.avgLatency)}ms avg
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge variant="secondary" className="bg-white/5 text-white/60">
+                      <Badge variant="secondary" className="bg-[var(--surface-panel)] text-[var(--text-secondary)]">
                         {s.totalTokens.toLocaleString()} tokens
                       </Badge>
                       <Badge
@@ -149,25 +152,25 @@ export function PerformanceAnalyticsView() {
       </Card>
 
       {/* Recent Metrics */}
-      <Card className="bg-white/5 border-white/10">
+      <Card className="bg-[var(--surface-hover)] border-[var(--border-subtle)]">
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-white/80">Recent Events</CardTitle>
+          <CardTitle className="text-sm font-medium text-[var(--text-secondary)]">Recent Events</CardTitle>
         </CardHeader>
         <CardContent>
           {metrics.length === 0 ? (
-            <div className="text-center py-8 text-white/40">No recent events</div>
+            <div className="text-center py-8 text-[var(--text-tertiary)]">No recent events</div>
           ) : (
             <div className="space-y-2 max-h-64 overflow-auto">
               {metrics.slice(0, 20).map((m) => (
                 <div
                   key={m.id}
-                  className="flex items-center justify-between text-xs p-2 rounded bg-white/5"
+                  className="flex items-center justify-between text-xs p-2 rounded bg-[var(--surface-hover)]"
                 >
-                  <span className="text-white/60 capitalize">{m.metricType.replace('_', ' ')}</span>
-                  <span className="text-white font-mono">
+                  <span className="text-[var(--text-secondary)] capitalize">{m.metricType.replace('_', ' ')}</span>
+                  <span className="text-[var(--text-primary)] font-mono">
                     {m.value.toFixed(m.metricType === 'latency' ? 0 : 2)} {m.unit}
                   </span>
-                  <span className="text-white/30">
+                  <span className="text-[var(--text-tertiary)]">
                     {new Date(m.timestamp).toLocaleTimeString()}
                   </span>
                 </div>
@@ -184,30 +187,19 @@ function MetricCard({
   icon,
   label,
   value,
-  trend,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  trend: string;
 }) {
-  const isPositive = trend.startsWith('+');
   return (
-    <Card className="bg-white/5 border-white/10">
+    <Card className="bg-[var(--surface-hover)] border-[var(--border-subtle)]">
       <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="p-2 rounded-lg bg-white/5">{icon}</div>
-          <span
-            className={cn(
-              'text-xs font-medium',
-              isPositive ? 'text-emerald-400' : 'text-rose-400'
-            )}
-          >
-            {trend}
-          </span>
+        <div className="flex items-center mb-2">
+          <div className="p-2 rounded-lg bg-[var(--surface-panel)]">{icon}</div>
         </div>
-        <p className="text-2xl font-bold text-white">{value}</p>
-        <p className="text-xs text-white/50 mt-1">{label}</p>
+        <p className="text-2xl font-bold text-[var(--text-primary)]">{value}</p>
+        <p className="text-xs text-[var(--text-secondary)] mt-1">{label}</p>
       </CardContent>
     </Card>
   );

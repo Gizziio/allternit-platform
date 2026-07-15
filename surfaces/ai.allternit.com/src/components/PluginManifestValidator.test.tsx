@@ -11,6 +11,7 @@
  * - Example loading
  */
 
+import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { PluginManifestValidator } from './PluginManifestValidator';
@@ -120,7 +121,7 @@ describe('PluginManifestValidator', () => {
       render(<PluginManifestValidator />);
 
       const pluginTab = screen.getByTestId('tab-plugin');
-      expect(pluginTab).toHaveStyle({ borderBottom: '2px solid #d4b08c' });
+      expect(pluginTab.getAttribute('style')).toContain('border-bottom: 2px solid var(--accent-primary)');
     });
   });
 
@@ -134,7 +135,7 @@ describe('PluginManifestValidator', () => {
         fireEvent.click(marketplaceTab);
       });
 
-      expect(marketplaceTab).toHaveStyle({ borderBottom: '2px solid #d4b08c' });
+      expect(marketplaceTab.getAttribute('style')).toContain('border-bottom: 2px solid var(--accent-primary)');
       expect(screen.getByText('Marketplace Manifest JSON')).toBeInTheDocument();
     });
 

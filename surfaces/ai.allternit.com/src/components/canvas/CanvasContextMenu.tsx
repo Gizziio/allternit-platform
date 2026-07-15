@@ -1,7 +1,7 @@
+"use client";
+
 import React, { Fragment, useEffect, useRef } from "react";
 import { BookBookmark, Browser, ChatTeardropText, GitDiff, Graph, NotePencil, SquaresFour, Target, Terminal, TerminalIcon } from "@phosphor-icons/react";
-
-"use client";
 import type { CodeCanvasTile } from '@/views/code/CodeModeStore';
 
 interface ContextMenuItem {

@@ -1,7 +1,7 @@
+"use client";
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { CodeCanvasViewport } from "@/views/code/CodeModeStore";
-
-"use client";
 import { CanvasGrid } from './CanvasGrid';
 
 interface InfiniteCanvasProps {

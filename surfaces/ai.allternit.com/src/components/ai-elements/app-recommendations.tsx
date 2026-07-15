@@ -1,6 +1,6 @@
-import React from "react";
-
 "use client";
+
+import React from "react";
 import { ArrowSquareOut, Star } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 

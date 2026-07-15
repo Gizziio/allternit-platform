@@ -81,6 +81,7 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
     personaState,
     startRecording,
     stopRecording,
+    stopAudio,
     interimTranscript,
     interactionMode,
     setInteractionMode,
@@ -129,9 +130,10 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
     setIsDismissed(true);
     // Stop any playing audio when dismissed
     if (personaState === 'speaking') {
-      stopRecording();
+      stopAudio();
+      setInteractionMode('text');
     }
-  }, [personaState, stopRecording]);
+  }, [personaState, setInteractionMode, stopAudio]);
 
   // Compact mode (input bar)
   if (compact) {

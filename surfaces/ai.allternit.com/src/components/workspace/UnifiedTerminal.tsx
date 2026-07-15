@@ -38,8 +38,16 @@ async function loadXterm() {
 
 type TerminalMode = 'single' | 'grid';
 
+interface TerminalContext {
+  repoName?: string;
+  branch?: string;
+  shortSha?: string;
+}
+
 interface UnifiedTerminalProps {
   sessionId?: string;
+  workingDir?: string;
+  terminalContext?: TerminalContext;
 }
 
 // Single terminal component
@@ -196,7 +204,7 @@ function TerminalInstance({ pane, isActive }: {
   );
 }
 
-export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerminalProps) {
+export function UnifiedTerminal({ sessionId = 'allternit-session', workingDir, terminalContext }: UnifiedTerminalProps) {
   const [mode, setMode] = useState<TerminalMode>('single');
   const [panes, setPanes] = useState<Pane[]>([]);
   const [activePaneId, setActivePaneId] = useState<string | null>(null);
@@ -214,7 +222,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
       
       if (!exists) {
         console.debug('Creating session:', sessionId);
-        await workspaceClient.createSession({ name: sessionId });
+        await workspaceClient.createSession({ name: sessionId, working_dir: workingDir });
       }
       return true;
     } catch (err) {
@@ -319,8 +327,38 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: '#f3f4f6' }}>
-            Session: {sessionId}
+            {terminalContext?.repoName ?? sessionId}
           </span>
+          {terminalContext?.branch && (
+            <span
+              style={{
+                fontSize: 12,
+                color: '#9ca3af',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 8px',
+                borderRadius: 4,
+                background: '#1f2937',
+              }}
+            >
+              {terminalContext.branch}
+            </span>
+          )}
+          {terminalContext?.shortSha && (
+            <span
+              style={{
+                fontSize: 12,
+                fontFamily: 'var(--font-mono)',
+                color: '#9ca3af',
+                padding: '2px 8px',
+                borderRadius: 4,
+                background: '#1f2937',
+              }}
+            >
+              {terminalContext.shortSha}
+            </span>
+          )}
           <span
             style={{
               fontSize: 12,

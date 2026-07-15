@@ -165,7 +165,7 @@ export function PromptModelSelector({
           sideOffset={8}
           avoidCollisions
           collisionPadding={16}
-          className="w-[min(92vw,280px)] max-h-[min(420px,70vh)] rounded-xl bg-menu-bg border border-menu-border shadow-xl p-0 z-[200] flex flex-col overflow-hidden"
+          className="w-[min(92vw,280px)] max-h-[min(420px,70vh)] rounded-xl bg-menu-bg backdrop-blur-[20px] border border-menu-border shadow-xl p-0 z-[200] flex flex-col overflow-hidden"
         >
           {/* Search */}
           <div className="flex-none p-2 border-b border-input-border flex items-center gap-2">

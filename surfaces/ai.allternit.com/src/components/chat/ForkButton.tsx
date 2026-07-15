@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-
 "use client";
+
+import React, { useState } from "react";
 import { Loader2, Check, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

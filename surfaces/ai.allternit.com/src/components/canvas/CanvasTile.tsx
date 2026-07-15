@@ -1,6 +1,6 @@
-import React, { useCallback, useRef, useState } from "react";
-
 "use client";
+
+import React, { useCallback, useRef, useState } from "react";
 import { X, ArrowsOut } from '@phosphor-icons/react';
 import { CodeCanvasTile } from "@/views/code/CodeModeStore";
 
