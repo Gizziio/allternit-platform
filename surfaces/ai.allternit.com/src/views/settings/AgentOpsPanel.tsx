@@ -13,9 +13,6 @@ import {
   CaretDown,
   CaretRight,
   GitBranch,
-  FileCode,
-  Stack,
-  Shield,
   ThumbsUp,
   ThumbsDown,
   Warning,
@@ -735,11 +732,10 @@ export function AgentOpsPanel() {
                 {task.status === 'pending_approval' && (
                   <div className="mb-5 p-4 bg-[var(--surface-hover)] rounded-xl border border-solid border-[var(--ui-border-muted)]">
                     <h5 className="text-[13px] font-bold text-[var(--ui-text-primary)] m-0 mb-3 uppercase tracking-widest opacity-60">Changes Pending Approval</h5>
-                    <div className="p-3 bg-black/20 rounded-lg mb-4 overflow-x-auto">
-                      <code className="text-[12px] text-[var(--accent-primary)] font-mono leading-relaxed whitespace-pre">
-                        // Generated code example<br/>fn optimized_auth() {"{"}<br/>&nbsp;&nbsp;validate_jwt_token()?;<br/>{"}"}
-                      </code>
-                    </div>
+                    <p className="text-[12px] text-[var(--ui-text-muted)] leading-relaxed mb-4">
+                      Code Factory doesn't generate a real diff yet — approving or rejecting records
+                      your decision without executing any code changes.
+                    </p>
                     <div className="flex gap-3">
                       <button type="button" onClick={() => handleApproveChange(task.id, 'change-1')} className={cn(QUIET_BUTTON_CLASS, "flex-1 justify-center")}>
                         <ThumbsUp size={14} /> Approve & merge
@@ -750,41 +746,25 @@ export function AgentOpsPanel() {
                     </div>
                   </div>
                 )}
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center flex flex-col items-center gap-1.5">
-                    <GitBranch size={18} className="text-[var(--accent-primary)]" />
-                    <div className="text-[10px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">Branch</div>
-                    <div className="text-[12px] text-[var(--ui-text-primary)] font-mono truncate w-full">auto/{task.specRef.split('/').pop()}</div>
-                  </div>
-                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center flex flex-col items-center gap-1.5">
-                    <FileCode size={18} className="text-[var(--accent-primary)]" />
-                    <div className="text-[10px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">Modified</div>
-                    <div className="text-[12px] text-[var(--ui-text-primary)] font-bold">12 files</div>
-                  </div>
-                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center flex flex-col items-center gap-1.5">
-                    <Stack size={18} className="text-[var(--accent-primary)]" />
-                    <div className="text-[10px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">Risk</div>
-                    <div className="text-[12px] text-[var(--ui-text-primary)] font-bold">Medium</div>
-                  </div>
-                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center flex flex-col items-center gap-1.5">
-                    <Shield size={18} className="text-[var(--accent-primary)]" />
-                    <div className="text-[10px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">CI</div>
-                    <div className="text-[12px] text-[var(--status-success)] font-black uppercase tracking-tighter">Passing</div>
-                  </div>
-                </div>
               </div>
             )}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        {[
-          { label: 'Tasks Completed', value: '127', color: 'var(--accent-primary)' },
-          { label: 'Approval Rate', value: '94%', color: 'var(--status-success)' },
-          { label: 'Lines Generated', value: '3.2k', color: 'var(--status-info)' },
-          { label: 'Active Tasks', value: '12', color: 'var(--accent-cowork)' },
-        ].map((stat, i) => (
+      <div className="grid grid-cols-3 gap-4">
+        {(() => {
+          const completed = factoryTasks.filter((t) => t.status === 'completed').length;
+          const rejected = factoryTasks.filter((t) => t.status === 'rejected').length;
+          const decided = completed + rejected;
+          const approvalRate = decided > 0 ? `${Math.round((completed / decided) * 100)}%` : '—';
+          const active = factoryTasks.filter((t) => !['completed', 'rejected'].includes(t.status)).length;
+          return [
+            { label: 'Tasks Completed', value: String(completed), color: 'var(--accent-primary)' },
+            { label: 'Approval Rate', value: approvalRate, color: 'var(--status-success)' },
+            { label: 'Active Tasks', value: String(active), color: 'var(--accent-cowork)' },
+          ];
+        })().map((stat, i) => (
           <div key={`agentops-i-${i}`} className="p-5 bg-[var(--surface-panel)] rounded-xl border border-solid border-transparent hover:border-[var(--ui-border-muted)] text-center transition-colors">
             <div className="text-3xl font-black tabular-nums" style={{ color: stat.color }}>{stat.value}</div>
             <div className="text-[11px] text-[var(--ui-text-muted)] mt-1 uppercase font-bold tracking-widest opacity-60">{stat.label}</div>
