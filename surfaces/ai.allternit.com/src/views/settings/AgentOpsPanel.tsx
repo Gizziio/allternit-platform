@@ -38,6 +38,7 @@ import { createModuleLogger } from '@/lib/logger';
 import { SectionHeading } from '@/components/settings/SectionHeading';
 import { PanelHeader } from '@/components/settings/PanelHeader';
 import { Toggle } from '@/components/settings/Toggle';
+import { SettingsCard } from '@/components/settings/SettingsCard';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from '@/components/settings/buttonStyles';
 
 const logger = createModuleLogger('AgentOpsPanel');
@@ -89,6 +90,12 @@ interface GcHistoryEntry {
   issuesFixed: number;
   entropyReduction: number;
   runId?: string;
+}
+
+interface CoworkProject {
+  id: string;
+  title: string;
+  git_remote?: string | null;
 }
 
 interface Toast {
@@ -168,6 +175,24 @@ const api = {
   async getCoworkProjects() {
     const res = await fetch(`/api/v1/cowork/projects`);
     if (!res.ok) throw new Error('Failed to fetch projects');
+    return res.json();
+  },
+  async createProject(data: { title: string; git_remote: string; default_branch?: string }) {
+    const res = await fetch(`/api/v1/cowork/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create project');
+    return res.json();
+  },
+  async updateProject(id: string, data: { git_remote: string; default_branch?: string }) {
+    const res = await fetch(`/api/v1/cowork/projects/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update project');
     return res.json();
   },
   async getGCQueue(projectId: string) {
@@ -271,6 +296,11 @@ export function AgentOpsPanel() {
   const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [gcProjectId, setGcProjectId] = useState<string | null>(null);
+  const [gcProject, setGcProject] = useState<CoworkProject | null>(null);
+  const [gcProjectResolved, setGcProjectResolved] = useState(false);
+  const [repoUrl, setRepoUrl] = useState('');
+  const [defaultBranch, setDefaultBranch] = useState('');
+  const [isConnectingRepo, setIsConnectingRepo] = useState(false);
 
   // Toast System
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info', agentName?: string) => {
@@ -329,11 +359,11 @@ export function AgentOpsPanel() {
     }
   }, []);
 
-  const fetchGCData = useCallback(async () => {
-    if (!gcProjectId) return;
+  const fetchGCData = useCallback(async (projectId = gcProjectId) => {
+    if (!projectId) return;
     try {
       const [queueData, policiesData, historyData] = await Promise.all([
-        api.getGCQueue(gcProjectId), api.getGCPolicies(gcProjectId), api.getGCHistory(gcProjectId),
+        api.getGCQueue(projectId), api.getGCPolicies(projectId), api.getGCHistory(projectId),
       ]);
       setGcQueue(queueData.queue || []);
       setGcPolicies(policiesData.policies || []);
@@ -350,10 +380,17 @@ export function AgentOpsPanel() {
     try {
       const data = await api.getCoworkProjects();
       // TODO: real project picker; Phase 1 uses the first project returned by the Cowork API.
-      setGcProjectId(data.projects?.[0]?.id || null);
+      const project: CoworkProject | null = data.projects?.[0] || null;
+      setGcProject(project);
+      setGcProjectId(project?.id || null);
+      setGcProjectResolved(true);
+      return project;
     } catch (err) {
       logger.error({ err }, 'Failed to resolve GC project');
+      setGcProject(null);
       setGcProjectId(null);
+      setGcProjectResolved(true);
+      return null;
     }
   }, []);
 
@@ -361,10 +398,10 @@ export function AgentOpsPanel() {
     if (agentOpsTab === 'evaluation') { fetchEvaluations(); fetchBenchmarkHistory(); }
     else if (agentOpsTab === 'factory') fetchFactoryTasks();
     else if (agentOpsTab === 'gc') {
-      if (gcProjectId) fetchGCData();
-      else resolveGCProject();
+      if (!gcProjectResolved) resolveGCProject();
+      else if (gcProjectId && gcProject?.git_remote?.trim()) fetchGCData();
     }
-  }, [agentOpsTab, fetchEvaluations, fetchBenchmarkHistory, fetchFactoryTasks, fetchGCData, gcProjectId, resolveGCProject]);
+  }, [agentOpsTab, fetchEvaluations, fetchBenchmarkHistory, fetchFactoryTasks, fetchGCData, gcProject, gcProjectId, gcProjectResolved, resolveGCProject]);
 
   // Handlers
   const handleRunEvaluation = async (evalId: string) => {
@@ -408,6 +445,35 @@ export function AgentOpsPanel() {
   const handleRejectChange = async (taskId: string, changeId: string) => {
     try { await api.rejectFactoryChange(taskId, changeId); fetchFactoryTasks(); }
     catch { fetchFactoryTasks(); }
+  };
+
+  const handleConnectRepository = async () => {
+    const gitRemote = repoUrl.trim();
+    const branch = defaultBranch.trim();
+    if (!gitRemote) {
+      addToast('Enter a repository URL to connect', 'error');
+      return;
+    }
+
+    setIsConnectingRepo(true);
+    try {
+      const body = { git_remote: gitRemote, ...(branch ? { default_branch: branch } : {}) };
+      if (gcProjectId) {
+        await api.updateProject(gcProjectId, body);
+      } else {
+        const data = await api.createProject({ title: 'My Codebase', ...body });
+        setGcProjectId(data.project.id);
+      }
+
+      const project = await resolveGCProject();
+      if (project?.id && project.git_remote?.trim()) await fetchGCData(project.id);
+      addToast('Repository connected successfully', 'success');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to connect repository';
+      addToast(`Failed to connect repository: ${errorMessage}`, 'error');
+    } finally {
+      setIsConnectingRepo(false);
+    }
   };
 
   const handleTriggerCleanup = async () => {
@@ -729,6 +795,43 @@ export function AgentOpsPanel() {
   );
 
   const renderGCTab = () => {
+    if (gcProjectResolved && !gcProject?.git_remote?.trim()) {
+      return (
+        <div className="flex flex-col gap-6">
+          <ToastContainer toasts={toasts} onRemove={removeToast} />
+          <SettingsCard
+            title="Connect a repository"
+            description="GC Agents analyze your codebase for maintainability risks and keep documentation, dependencies, observability, and tests aligned. Their findings roll up into an entropy score—lower is healthier."
+          >
+            <div className="flex flex-col gap-5">
+              <ul className="m-0 pl-5 space-y-2 text-[13px] leading-relaxed text-[var(--ui-text-muted)]">
+                <li><span className="font-semibold text-[var(--ui-text-primary)]">Duplicate Detector</span> — finds duplicated code blocks/functions that should be a shared utility.</li>
+                <li><span className="font-semibold text-[var(--ui-text-primary)]">Boundary Type Checker</span> — finds untyped error boundaries (e.g. <code>unwrap()</code>/<code>expect()</code> in Rust) that can panic instead of returning a handled error.</li>
+                <li><span className="font-semibold text-[var(--ui-text-primary)]">Dependency Validator</span> — flags imports that violate the intended layering/dependency direction.</li>
+                <li><span className="font-semibold text-[var(--ui-text-primary)]">Observability Checker</span> — finds code paths with no logging/tracing.</li>
+                <li><span className="font-semibold text-[var(--ui-text-primary)]">Documentation Sync</span> — finds docs that no longer match the implementation they describe.</li>
+                <li><span className="font-semibold text-[var(--ui-text-primary)]">Test Coverage Checker</span> — finds modules with no test coverage.</li>
+              </ul>
+              <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] gap-3 items-end">
+                <label className="flex flex-col gap-1.5 text-[12px] font-semibold text-[var(--ui-text-muted)]">
+                  Repository URL
+                  <input aria-label="Repository URL" required type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/organization/repository.git" className="w-full p-2.5 px-3 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)] text-[14px] outline-none focus:border-[var(--accent-primary)]" />
+                </label>
+                <label className="flex flex-col gap-1.5 text-[12px] font-semibold text-[var(--ui-text-muted)]">
+                  Branch (optional)
+                  <input aria-label="Default branch" type="text" value={defaultBranch} onChange={(e) => setDefaultBranch(e.target.value)} placeholder="main" className="w-full p-2.5 px-3 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)] text-[14px] outline-none focus:border-[var(--accent-primary)]" />
+                </label>
+                <button type="button" onClick={handleConnectRepository} disabled={isConnectingRepo} className={QUIET_BUTTON_CLASS}>
+                  {isConnectingRepo ? <ArrowsClockwise size={14} className="animate-spin" /> : <GitBranch size={14} />}
+                  {isConnectingRepo ? 'Connecting…' : 'Connect'}
+                </button>
+              </div>
+            </div>
+          </SettingsCard>
+        </div>
+      );
+    }
+
     const entropyColor = getEntropyColor(entropyScore);
     const entropyStatus = getEntropyStatus(entropyScore);
 
