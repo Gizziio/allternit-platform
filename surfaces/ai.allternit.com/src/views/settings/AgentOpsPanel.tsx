@@ -165,18 +165,23 @@ const api = {
     if (!res.ok) throw new Error('Failed to reject');
     return res.json();
   },
-  async getGCQueue() {
-    const res = await fetch(`/api/v1/agents/operations/gc/queue`);
+  async getCoworkProjects() {
+    const res = await fetch(`/api/v1/cowork/projects`);
+    if (!res.ok) throw new Error('Failed to fetch projects');
+    return res.json();
+  },
+  async getGCQueue(projectId: string) {
+    const res = await fetch(`/api/v1/agents/operations/gc/queue?projectId=${encodeURIComponent(projectId)}`);
     if (!res.ok) throw new Error('Failed to fetch queue');
     return res.json();
   },
-  async getGCPolicies() {
-    const res = await fetch(`/api/v1/agents/operations/gc/policies`);
+  async getGCPolicies(projectId: string) {
+    const res = await fetch(`/api/v1/agents/operations/gc/policies?projectId=${encodeURIComponent(projectId)}`);
     if (!res.ok) throw new Error('Failed to fetch policies');
     return res.json();
   },
-  async updateGCPolicy(id: string, data: Partial<GcPolicy>) {
-    const res = await fetch(`/api/v1/agents/operations/gc/policies/${id}`, {
+  async updateGCPolicy(projectId: string, id: string, data: Partial<GcPolicy>) {
+    const res = await fetch(`/api/v1/agents/operations/gc/policies/${id}?projectId=${encodeURIComponent(projectId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -184,18 +189,18 @@ const api = {
     if (!res.ok) throw new Error('Failed to update policy');
     return res.json();
   },
-  async triggerGCCleanup() {
-    const res = await fetch(`/api/v1/agents/operations/gc/cleanup`, { method: 'POST' });
+  async triggerGCCleanup(projectId: string) {
+    const res = await fetch(`/api/v1/agents/operations/gc/cleanup?projectId=${encodeURIComponent(projectId)}`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to trigger cleanup');
     return res.json();
   },
-  async getGCHistory() {
-    const res = await fetch(`/api/v1/agents/operations/gc/history`);
+  async getGCHistory(projectId: string) {
+    const res = await fetch(`/api/v1/agents/operations/gc/history?projectId=${encodeURIComponent(projectId)}`);
     if (!res.ok) throw new Error('Failed to fetch history');
     return res.json();
   },
-  async runGCAgent(agentName: string) {
-    const res = await fetch(`/api/v1/agents/operations/gc/agents/${agentName}/run`, { method: 'POST' });
+  async runGCAgent(projectId: string, agentName: string) {
+    const res = await fetch(`/api/v1/agents/operations/gc/agents/${agentName}/run?projectId=${encodeURIComponent(projectId)}`, { method: 'POST' });
     if (!res.ok) throw new Error('Failed to run agent');
     return res.json();
   },
@@ -265,6 +270,7 @@ export function AgentOpsPanel() {
   const [gcErrors, setGcErrors] = useState<Record<string, string>>({});
   const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [gcProjectId, setGcProjectId] = useState<string | null>(null);
 
   // Toast System
   const addToast = useCallback((message: string, type: 'error' | 'success' | 'info', agentName?: string) => {
@@ -324,9 +330,10 @@ export function AgentOpsPanel() {
   }, []);
 
   const fetchGCData = useCallback(async () => {
+    if (!gcProjectId) return;
     try {
       const [queueData, policiesData, historyData] = await Promise.all([
-        api.getGCQueue(), api.getGCPolicies(), api.getGCHistory(),
+        api.getGCQueue(gcProjectId), api.getGCPolicies(gcProjectId), api.getGCHistory(gcProjectId),
       ]);
       setGcQueue(queueData.queue || []);
       setGcPolicies(policiesData.policies || []);
@@ -337,13 +344,27 @@ export function AgentOpsPanel() {
     } catch (err) {
       logger.error({ err }, 'Failed to fetch GC data');
     }
+  }, [gcProjectId]);
+
+  const resolveGCProject = useCallback(async () => {
+    try {
+      const data = await api.getCoworkProjects();
+      // TODO: real project picker; Phase 1 uses the first project returned by the Cowork API.
+      setGcProjectId(data.projects?.[0]?.id || null);
+    } catch (err) {
+      logger.error({ err }, 'Failed to resolve GC project');
+      setGcProjectId(null);
+    }
   }, []);
 
   useEffect(() => {
     if (agentOpsTab === 'evaluation') { fetchEvaluations(); fetchBenchmarkHistory(); }
     else if (agentOpsTab === 'factory') fetchFactoryTasks();
-    else if (agentOpsTab === 'gc') fetchGCData();
-  }, [agentOpsTab, fetchEvaluations, fetchBenchmarkHistory, fetchFactoryTasks, fetchGCData]);
+    else if (agentOpsTab === 'gc') {
+      if (gcProjectId) fetchGCData();
+      else resolveGCProject();
+    }
+  }, [agentOpsTab, fetchEvaluations, fetchBenchmarkHistory, fetchFactoryTasks, fetchGCData, gcProjectId, resolveGCProject]);
 
   // Handlers
   const handleRunEvaluation = async (evalId: string) => {
@@ -390,11 +411,12 @@ export function AgentOpsPanel() {
   };
 
   const handleTriggerCleanup = async () => {
+    if (!gcProjectId) { addToast('No Cowork project is available for GC', 'error'); return; }
     setIsRunningGC(true);
     setGcErrors(prev => ({ ...prev, cleanup: '' }));
 
     try {
-      const result = await api.triggerGCCleanup();
+      const result = await api.triggerGCCleanup(gcProjectId);
       const entropyReduced = result.entropyReduction?.toFixed(1) || '0.0';
       addToast(`Full cleanup completed: ${entropyReduced} entropy reduced`, 'success');
       await fetchGCData();
@@ -408,11 +430,12 @@ export function AgentOpsPanel() {
   };
 
   const handleRunGCAgent = async (agentName: string) => {
+    if (!gcProjectId) { addToast('No Cowork project is available for GC', 'error', agentName); return; }
     setRunningAgents(prev => new Set(prev).add(agentName));
     setGcErrors(prev => ({ ...prev, [agentName]: '' }));
 
     try {
-      const result: GcAgentResult = await api.runGCAgent(agentName);
+      const result: GcAgentResult = await api.runGCAgent(gcProjectId, agentName);
       const issuesFound = result.issuesFound?.length || 0;
       const issuesFixed = result.issuesFixed || 0;
       const entropyReduced = result.entropyReduction?.toFixed(1) || '0.0';
@@ -432,12 +455,13 @@ export function AgentOpsPanel() {
   };
 
   const handleUpdateGCPolicy = async (policyId: string, updates: Partial<GcPolicy>) => {
+    if (!gcProjectId) { addToast('No Cowork project is available for GC', 'error'); return; }
     const policy = gcPolicies.find(p => p.id === policyId);
     if (!policy) return;
     const previousPolicy = { ...policy };
     setGcPolicies(prev => prev.map(p => p.id === policyId ? { ...p, ...updates } : p));
     try {
-      await api.updateGCPolicy(policyId, updates);
+      await api.updateGCPolicy(gcProjectId, policyId, updates);
       addToast(`Policy "${policy.name}" updated successfully`, 'success');
       await fetchGCData();
     } catch (error) {

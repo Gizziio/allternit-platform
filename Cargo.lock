@@ -248,6 +248,7 @@ dependencies = [
  "allternit-cowork-scheduler",
  "allternit-driver-interface",
  "allternit-firecracker-driver",
+ "allternit-gc-agents",
  "allternit-session-manager",
  "anyhow",
  "async-stream",
