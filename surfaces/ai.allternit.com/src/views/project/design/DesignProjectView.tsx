@@ -9,9 +9,9 @@ import {
   BaseProjectView,
   ProjectMenuButton,
   ProjectItemCard,
+  ProjectEditDetailsModal,
 } from '@/views/BaseProjectView';
 import { ChatComposer } from '@/views/chat/ChatComposer';
-import { InputModal } from '@/components/InputModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import {
   Palette,
@@ -42,7 +42,7 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps) {
-  const { projects, renameProject, deleteProject, toggleFavorite, toggleArchive } =
+  const { projects, updateProjectDetails, deleteProject, toggleFavorite, toggleArchive } =
     useDesignProjectStore();
   const designTabStore = useDesignTabStore();
   const { dispatch } = useNav();
@@ -83,7 +83,7 @@ export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps)
     );
   }
 
-  const handleOpenInDesignMode = () => {
+  const handleOpenInDesignMode = (prompt?: string) => {
     designTabStore.setStoredProject({
       id: project.id,
       name: project.name,
@@ -95,9 +95,14 @@ export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps)
     });
     designTabStore.setProjectName(project.name);
     designTabStore.setHasProject(true);
+    if (prompt?.trim()) {
+      designTabStore.setPendingPrompt(prompt.trim());
+    }
     setMode('design');
     dispatch({ type: 'OPEN_VIEW', viewType: 'design' });
   };
+
+  const handleOpenInDesignModeClick = () => handleOpenInDesignMode();
 
   const handleArchive = () => {
     toggleArchive(project.id);
@@ -144,9 +149,10 @@ export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps)
 
   const inputBar = (
     <ChatComposer
-      onSend={() => handleOpenInDesignMode()}
+      onSend={handleOpenInDesignMode}
       placeholder={`Describe what you want to design for ${project.name}`}
       showTopActions={false}
+      showModeToggle={false}
       variant="default"
     />
   );
@@ -155,19 +161,41 @@ export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps)
     <>
       <BaseProjectView
         title={project.name}
-        description={`Design project — ${project.type}`}
+        description={project.description || `Design project — ${project.type}`}
         onBack={onBack}
         onToggleStar={() => toggleFavorite(project.id)}
         isStarred={project.isFavorite}
         tabs={tabs.length > 0 ? tabs : [{ id: 'files', label: 'Files' }]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onNewItem={handleOpenInDesignMode}
+        onNewItem={() => handleOpenInDesignMode()}
         newButtonLabel="Open in Design Mode"
         menuContent={menuContent}
         inputBar={inputBar}
         sidebarSections={{
-          memory: null,
+          memory: (
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between text-[12px]">
+                <span className="text-[var(--ui-text-muted)]">Type</span>
+                <span className="text-[var(--ui-text-secondary)] font-medium capitalize">{project.type}</span>
+              </div>
+              <div className="flex justify-between text-[12px]">
+                <span className="text-[var(--ui-text-muted)]">Fidelity</span>
+                <span className="text-[var(--ui-text-secondary)] font-medium capitalize">{project.fidelity}</span>
+              </div>
+              <div className="flex justify-between text-[12px]">
+                <span className="text-[var(--ui-text-muted)]">Specialist</span>
+                <span className="text-[var(--ui-text-secondary)] font-medium capitalize">{project.specialist}</span>
+              </div>
+              <div className="flex justify-between text-[12px]">
+                <span className="text-[var(--ui-text-muted)]">Canvases</span>
+                <span className="text-[var(--ui-text-secondary)] font-medium">{project.tabs.length}</span>
+              </div>
+              <p className="m-0 mt-1 text-[12px] text-[var(--ui-text-muted)] leading-relaxed">
+                Memory will be built from design iterations in this project.
+              </p>
+            </div>
+          ),
           instructions: (
             <p className="m-0 text-[13px] text-[var(--ui-text-muted)]">
               Design instructions and brand rules can be managed inside Design Mode.
@@ -206,7 +234,7 @@ export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps)
             </p>
             <button
               type="button"
-              onClick={handleOpenInDesignMode}
+              onClick={handleOpenInDesignModeClick}
               className="px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity"
             >
               Open in Design Mode
@@ -220,21 +248,22 @@ export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps)
                 title={tab.label}
                 subtitle={tab.id}
                 icon={TAB_ICONS[tab.id] || <Palette size={18} />}
-                onClick={handleOpenInDesignMode}
+                onClick={handleOpenInDesignModeClick}
               />
             ))}
           </div>
         </div>
       </BaseProjectView>
 
-      <InputModal
+      <ProjectEditDetailsModal
         isOpen={showRenameModal}
-        title="Rename Design Project"
-        placeholder="Project name"
-        defaultValue={project.name}
-        confirmLabel="Rename"
-        onConfirm={(name) => {
-          renameProject(project.id, name);
+        initialName={project.name}
+        initialDescription={project.description}
+        onConfirm={(details) => {
+          updateProjectDetails(project.id, {
+            name: details.title,
+            description: details.description,
+          });
           setShowRenameModal(false);
         }}
         onCancel={() => setShowRenameModal(false)}

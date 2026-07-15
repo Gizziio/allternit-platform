@@ -8,6 +8,7 @@ import {
   Plus,
   Square,
   ArrowUp,
+  ArrowElbowDownRight,
   CaretDown,
   Folder,
   Code,
@@ -28,9 +29,9 @@ import {
   CircleNotch,
   Image as ImageIcon,
   Link as LinkIcon,
+  Waveform,
 } from '@phosphor-icons/react';
 import { AttachmentButton } from '@/components/agent-elements/input/attachment-button';
-import { SpeechInput } from '@/components/ai-elements/speech-input';
 import { useVoice } from '@/providers/voice-provider';
 import { FileAttachment } from '@/components/agent-elements/input/file-attachment';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
@@ -77,7 +78,9 @@ import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { TaskBar } from './components/TaskBar';
 import { ModeDock } from './components/ModeDock';
+import { TemplateGallery } from './components/TemplateGallery';
 import { BottomDock } from './components/BottomDock';
+import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
 import { PromptModelSelector } from '@/components/prompt-kit/prompt-model-selector';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
@@ -177,6 +180,8 @@ interface ChatComposerProps {
   placeholder?: string;
   variant?: 'default' | 'large';
   showTopActions?: boolean;
+  /** Compact input bar (narrower vertical padding) for terminal-style surfaces like Code Mode. */
+  compact?: boolean;
   inputValue?: string;
   onInteractionSignal?: (emotion: GizziEmotion) => void;
   onAttentionChange?: (attention: GizziAttention | null) => void;
@@ -186,7 +191,7 @@ interface ChatComposerProps {
   onRemoveAttachment?: (id: string) => void;
   onAddAttachment?: (attachment: ChatAttachment) => void;
   /** Called when sending in agent mode - if provided, opens full agent session view instead of embedded chat */
-  onAgentSend?: (text: string) => void;
+  onAgentSend?: (text: string, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   /** Called when the @mention agent selection changes (Phase 2: per-message routing) */
   onMentionAgentChange?: (agentId: string | null) => void;
   /** External @mention agent ID to sync with parent (for persistent pill restoration) */
@@ -201,12 +206,16 @@ interface ChatComposerProps {
   };
   /** Custom content to render in the bottom dock (left side) instead of "Choose Agent" */
   bottomDockContent?: React.ReactNode;
+  /** Show the Chat/Cowork mode toggle in the bottom dock. Pass false for in-session composers, which are locked to their session's mode. */
+  showModeToggle?: boolean;
   /** Optional inline info bar rendered at the top of the composer shell. */
   topInfoBarContent?: React.ReactNode;
   /** Optional inline question bar rendered between info and textarea. */
   questionBarContent?: React.ReactNode;
   /** Optional inline info bar rendered above the composer toolbar. */
   bottomInfoBarContent?: React.ReactNode;
+  /** Optional top deck content rendered inside the composer card, above the input area. */
+  topDeckContent?: React.ReactNode;
 }
 
 const CATEGORY_EMOTIONS: Record<string, { hover: GizziEmotion; select: GizziEmotion }> = {
@@ -383,6 +392,7 @@ export function ChatComposer({
   placeholder = "How can I help you today?",
   variant = 'default',
   showTopActions = true,
+  compact = false,
   inputValue = '',
   onInteractionSignal,
   onAttentionChange,
@@ -395,11 +405,25 @@ export function ChatComposer({
   onMentionAgentChange,
   mentionAgentId: externalMentionAgentId,
   bottomDockContent,
+  showModeToggle,
   topInfoBarContent,
   questionBarContent,
+  topDeckContent,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
-  const { isRecording: isVoiceRecording, interimTranscript } = useVoice();
+  const {
+    isRecording: isVoiceRecording,
+    interimTranscript,
+    transcript: voiceTranscript,
+    audioLevel,
+    personaState,
+    error: voiceError,
+    startRecording: startVoiceRecording,
+    stopRecording: stopVoiceRecording,
+    clearTranscript: clearVoiceTranscript,
+    setInteractionMode,
+  } = useVoice();
+  const [voiceModeActive, setVoiceModeActive] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [composerFocused, setComposerFocused] = useState(false);
   const lastAgentFetchPulseRef = useRef<number | null>(null);
@@ -429,12 +453,13 @@ export function ChatComposer({
     [activeSession],
   );
   const [locallyEnabled, setLocallyEnabled] = useState(false);
+  const [selectedTemplateTitle, setSelectedTemplateTitle] = useState<string | undefined>();
   const agentModeEnabled = hasEmbeddedSession || locallyEnabled;
   const [agentModePulse, setAgentModePulse] = useState(0);
   const prevAgentModeEnabledRef = useRef(agentModeEnabled);
   if (prevAgentModeEnabledRef.current !== agentModeEnabled) {
     prevAgentModeEnabledRef.current = agentModeEnabled;
-    if (agentModeEnabled) setAgentModePulse((p) => p + 1);
+    setAgentModePulse((p) => p + 1);
   }
   
   const {
@@ -979,6 +1004,67 @@ export function ChatComposer({
 
   const requiresAgentSelection = Boolean(agentModeSurface && agentModeEnabled);
   const canSubmit = Boolean(input.trim()) && !isLoading && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
+
+  const enterVoiceMode = useCallback(async () => {
+    clearVoiceTranscript();
+    setInteractionMode('voice');
+    setVoiceModeActive(true);
+    const started = await startVoiceRecording();
+    if (!started) {
+      setVoiceModeActive(false);
+      setInteractionMode('text');
+    }
+  }, [clearVoiceTranscript, setInteractionMode, startVoiceRecording]);
+
+  const leaveVoiceMode = useCallback(() => {
+    if (isVoiceRecording) stopVoiceRecording();
+    setVoiceModeActive(false);
+    setInteractionMode('text');
+  }, [isVoiceRecording, setInteractionMode, stopVoiceRecording]);
+
+  useEffect(() => {
+    if (!voiceModeActive || !voiceTranscript?.trim()) return;
+    const spokenInput = voiceTranscript.trim();
+    if (requiresAgentSelection && !selectedSurfaceAgent) {
+      setInput(spokenInput);
+      setInteractionMode('text');
+      setVoiceModeActive(false);
+      clearVoiceTranscript();
+      return;
+    }
+
+    const stylePrefix = activeStyle
+      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
+      : '';
+    const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
+    const enrichedInput = `${webSearchPrefix}${stylePrefix}${spokenInput}`.trim();
+
+    if (selectedModeId === 'computer-use') {
+      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
+    }
+    if (agentModeEnabled && onAgentSend && agentModeSurface) {
+      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
+    } else {
+      onSend(enrichedInput);
+    }
+
+    setVoiceModeActive(false);
+    clearVoiceTranscript();
+  }, [
+    activeStyle,
+    agentModeEnabled,
+    agentModeSurface,
+    clearVoiceTranscript,
+    onAgentSend,
+    onSend,
+    requiresAgentSelection,
+    selectedModeId,
+    selectedSurfaceAgent,
+    setInteractionMode,
+    voiceModeActive,
+    voiceTranscript,
+    webSearchEnabled,
+  ]);
   const hasTopInfoBar = Boolean(topInfoBarContent);
   const hasQuestionBar = Boolean(questionBarContent);
   const agentWorkspaceSummary = selectedWorkspacePreview.artifactCount > 0
@@ -1088,7 +1174,7 @@ export function ChatComposer({
     }
 
     if (agentModeEnabled && onAgentSend && agentModeSurface) {
-      onAgentSend(enrichedInput);
+      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
     } else {
       onSend(enrichedInput);
     }
@@ -1347,6 +1433,64 @@ export function ChatComposer({
     onAttentionChange?.(null);
   }, [onAttentionChange]);
 
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionOpen && filteredMentionAgents.length > 0) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setMentionOpen(false);
+        setMentionQuery('');
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionIndex((prev) =>
+          Math.min(prev + 1, filteredMentionAgents.length - 1)
+        );
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex((prev) => Math.max(prev - 1, 0));
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        handleSelectMentionAgent(filteredMentionAgents[mentionIndex]);
+        return;
+      }
+    }
+    if (slashMenuVisible && filteredSlashCommands.length > 0) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setSlashMenuVisible(false);
+        setSlashFilter('');
+        return;
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+        e.preventDefault();
+        handleSlashCommand(filteredSlashCommands[0]);
+        return;
+      }
+    }
+    if (agentCommandMenuVisible && filteredAgentCommands.length > 0) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setAgentCommandMenuVisible(false);
+        setAgentCommandFilter('');
+        return;
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !input.trim().includes(' '))) {
+        e.preventDefault();
+        handleAgentCommand(filteredAgentCommands[0]);
+        return;
+      }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -1430,7 +1574,7 @@ export function ChatComposer({
 
       {showTopActions && !agentModeEnabled && activeCategory && (
         <div
-          className="absolute bottom-[calc(100%-30px)] left-1/2 -translate-x-1/2 w-full max-w-[600px] lg:max-w-[760px] bg-menu-bg rounded-2xl border border-menu-border shadow-xl z-100 p-2 mb-10"
+          className="absolute bottom-[calc(100%-30px)] left-1/2 -translate-x-1/2 w-full max-w-[600px] lg:max-w-[760px] bg-menu-bg backdrop-blur-[20px] rounded-2xl border border-menu-border shadow-xl z-100 p-2 mb-10"
           onMouseEnter={() => setTrackingAttention(0, 0.26, 'locked-on')}
           onMouseLeave={() => {
             setActiveCategory(null);
@@ -1491,14 +1635,10 @@ export function ChatComposer({
             hasActionPills={showTopActions}
           />
         ) : null}
-        {agentModeSurface === 'cowork' && (
-          <div className="absolute bottom-full left-0 right-0 mb-1">
-            <CoworkTopDeck />
-          </div>
-        )}
+        {agentModeSurface === 'cowork' && <CoworkTopDeck />}
         <div
           className={cn(
-            'w-full bg-input-bg rounded-t-2xl border-t border-r border-l border-input-border flex flex-col overflow-visible transition-shadow z-10 relative',
+            'w-full bg-input-bg rounded-2xl border border-input-border flex flex-col overflow-visible transition-shadow z-10 relative',
             agentModeEnabled && 'border-glow shadow-glow',
             composerFocused && !agentModeEnabled && 'shadow-glow-accent'
           )}
@@ -1513,6 +1653,11 @@ export function ChatComposer({
           {agentModeSurface && agentModeEnabled ? (
             <div className="absolute inset-0 rounded-2xl pointer-events-none bg-agent-mode-sweep mix-blend-screen opacity-30" />
           ) : null}
+
+          {topDeckContent && (
+            <div className="relative z-10">{topDeckContent}</div>
+          )}
+
           <input aria-label="Upload images" ref={fileInputRef}
             type="file"
             accept="image/*"
@@ -1521,8 +1666,61 @@ export function ChatComposer({
             onChange={handleImageFileSelect}
           />
 
+          {voiceModeActive && (
+            <div className="absolute inset-0 z-[260] min-h-[132px] rounded-2xl bg-input-bg border border-input-border flex items-center px-5 animate-in fade-in zoom-in-95 duration-200">
+              <button
+                type="button"
+                onClick={leaveVoiceMode}
+                aria-label="Cancel voice mode"
+                className="size-8 shrink-0 rounded-full border border-input-border bg-composer-soft text-composer-muted hover:text-primary flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X size={15} weight="bold" />
+              </button>
+
+              <div className="flex-1 min-w-0 flex flex-col items-center gap-2 px-5">
+                <div className="h-9 flex items-center justify-center gap-[3px]" aria-hidden="true">
+                  {Array.from({ length: 17 }, (_, index) => {
+                    const distance = Math.abs(index - 8);
+                    const level = Math.max(0.16, audioLevel || 0.18);
+                    const height = 7 + Math.max(0, 20 - distance * 2) * level;
+                    return (
+                      <span
+                        key={index}
+                        className="w-[3px] rounded-full bg-[var(--accent-chat)] transition-[height,opacity] duration-100 animate-pulse"
+                        style={{
+                          height: `${height}px`,
+                          opacity: Math.max(0.35, 1 - distance * 0.065),
+                          animationDelay: `${index * 45}ms`,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="w-full text-center text-sm text-primary truncate">
+                  {voiceError || interimTranscript || (personaState === 'thinking' ? 'Transcribing…' : 'Listening…')}
+                </div>
+                <div className={cn('text-[11px]', voiceError ? 'text-[var(--status-error)]' : 'text-muted')}>
+                  {voiceError ? 'Check the microphone and voice service, then retry' : 'Speak naturally, then press stop'}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => voiceError ? void enterVoiceMode() : stopVoiceRecording()}
+                aria-label={voiceError ? 'Retry voice input' : 'Finish voice input'}
+                className="size-9 shrink-0 rounded-full border-none bg-[var(--accent-chat)] text-white flex items-center justify-center cursor-pointer shadow-[var(--shadow-glow)] transition-transform hover:scale-105"
+              >
+                {voiceError
+                  ? <Waveform size={17} weight="bold" />
+                  : personaState === 'thinking'
+                  ? <CircleNotch size={17} className="animate-spin" />
+                  : <Square size={12} weight="fill" />}
+              </button>
+            </div>
+          )}
+
           {slashMenuVisible && filteredSlashCommands.length > 0 && (
-            <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 max-w-full bg-menu-bg rounded-xl border border-menu-border shadow-xl p-1.5 z-250">
+            <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 max-w-full bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-250">
               <div className="py-1.5 px-3 text-xs text-muted font-semibold uppercase tracking-wider">
                 Commands
               </div>
@@ -1572,113 +1770,244 @@ export function ChatComposer({
             </div>
           )}
           
-          <div className="p-4">
-            {isAgentCommandMode ? (
-              <div className="flex items-center justify-between gap-3 mb-2.5 py-2 px-2.5 rounded-xl border border-input-border bg-composer-soft">
-                <div className="flex items-center gap-2 min-w-0">
-                  <TextShimmer as="span" className="text-xs font-medium text-accent">
-                    A:// command mode
-                  </TextShimmer>
-                  <span className="text-secondary text-xs truncate">
-                    Tab autocompletes. Enter submits after the first space.
-                  </span>
+          {compact ? (
+            <div className="flex flex-col">
+              {isAgentCommandMode ? (
+                <div className="flex items-center justify-between gap-3 mb-2.5 py-2 px-2.5 mx-3 mt-2 rounded-xl border border-input-border bg-composer-soft">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <TextShimmer as="span" className="text-xs font-medium text-accent">
+                      A:// command mode
+                    </TextShimmer>
+                    <span className="text-secondary text-xs truncate">
+                      Tab autocompletes. Enter submits after the first space.
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+              {selectedMentionAgent && (
+                <div className="mb-2 flex gap-1.5 flex-wrap px-3">
+                  <AgentPill
+                    agent={selectedMentionAgent}
+                    onRemove={handleRemoveMentionAgent}
+                  />
+                </div>
+              )}
+              <div className="flex items-center gap-2 py-2 px-3">
+                <AttachmentButton
+                  onClick={() => fileInputRef.current?.click()}
+                  className="size-7 transition-colors bg-transparent shadow-none border-none text-composer-muted hover:text-primary"
+                  icon={
+                    <Plus
+                      size={18}
+                      strokeWidth={2.5}
+                      className="transition-transform"
+                    />
+                  }
+                />
+                <textarea aria-label="Text Area" ref={textareaRef}
+                  value={input}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setInput(val);
+                    if (slashCommands && slashCommands.length > 0) {
+                      if (val.startsWith('/')) {
+                        setSlashMenuVisible(true);
+                        setSlashFilter(val);
+                      } else {
+                        setSlashMenuVisible(false);
+                        setSlashFilter('');
+                      }
+                    }
+                    if (val.trimStart().startsWith('A://')) {
+                      setAgentCommandMenuVisible(true);
+                      setAgentCommandFilter(val.trimStart());
+                    } else {
+                      setAgentCommandMenuVisible(false);
+                      setAgentCommandFilter('');
+                    }
+                    parseMention(val);
+                  }}
+                  onKeyDown={handleTextareaKeyDown}
+                  placeholder={placeholder}
+                  rows={1}
+                  onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
+                  className={cn(
+                    'flex-1 min-w-0 bg-transparent border-none outline-none text-primary resize-none font-inherit p-0 m-0 block text-sm'
+                  )}
+                />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => void enterVoiceMode()}
+                    aria-label="Start voice mode"
+                    title="Voice mode"
+                    className="size-7 rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer"
+                  >
+                    <Waveform size={17} weight="bold" />
+                  </button>
+                  <button type="button"
+                    onClick={() => setShowModelMenu(!showModelMenu)}
+                    disabled={terminalModelsLoading && allModels.length === 0}
+                    className="flex items-center gap-1 py-1 px-2 rounded-full text-xs font-medium transition-all"
+                    style={{
+                      background: showModelMenu ? THEME.hoverBg : 'transparent',
+                      color: terminalModelsLoading && allModels.length === 0 ? THEME.textMuted : THEME.textSecondary,
+                      cursor: terminalModelsLoading && allModels.length === 0 ? 'wait' : 'pointer',
+                      opacity: terminalModelsLoading && allModels.length === 0 ? 0.7 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!(terminalModelsLoading && allModels.length === 0)) {
+                        e.currentTarget.style.color = THEME.textPrimary;
+                        onInteractionSignal?.('curious');
+                        setTrackingAttention(0.4, 0.56, 'locked-on');
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = showModelMenu ? THEME.textPrimary : THEME.textSecondary;
+                      setTrackingAttention(0, 0.44);
+                    }}
+                  >
+                    {terminalModelsLoading && allModels.length === 0 ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="size-3 border-2 border-muted border-t-transparent rounded-full animate-spin" />
+                      </span>
+                    ) : (
+                      <>
+                        <div
+                          className="size-4 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
+                          style={{
+                            background: `${selectedProviderMeta.color}18`,
+                            border: `1px solid ${selectedProviderMeta.color}40`,
+                          }}
+                        >
+                          <img
+                            src={`/assets/runtime-logos/${selectedProviderMeta.icon}`}
+                            alt={selectedProviderMeta.name}
+                            className="w-3 h-3 object-contain"
+                          />
+                        </div>
+                        <span className="font-medium hidden sm:inline">{displayModelName}</span>
+                      </>
+                    )}
+                    <CaretDown size={11} className={cn('transition-transform opacity-80', showModelMenu && 'rotate-180')} />
+                  </button>
+
+                  {showModelMenu && (
+                    <PromptModelSelector
+                      models={allModels}
+                      selectedModel={selectedModel}
+                      onSelect={handleModelSelect}
+                      onClose={() => setShowModelMenu(false)}
+                      onBrowseAllModels={handleBrowseAllModels}
+                      onOpenProviderConnect={() => setShowProviderConnect(true)}
+                      isTerminalModels={terminalModels.length > 0}
+                    />
+                  )}
+
+                  <ProviderGallery
+                    isOpen={showProviderConnect}
+                    onClose={() => setShowProviderConnect(false)}
+                  />
+
+                  {isLoading ? (
+                    <button
+                      onClick={onStop}
+                      type="button"
+                      className="size-7 rounded-full bg-composer-soft border border-input-border text-accent flex items-center justify-center cursor-pointer transition-all"
+                    >
+                      <Square size={11} fill="currentColor" />
+                    </button>
+                  ) : canSubmit ? (
+                    <button
+                      onClick={handleSubmit}
+                      disabled={!canSubmit}
+                      type="button"
+                      className="size-7 rounded-full flex items-center justify-center transition-all"
+                      style={{
+                        background: canSubmit ? THEME.accent : 'var(--chat-composer-soft)',
+                        border: canSubmit ? 'none' : `1px solid ${THEME.inputBorder}`,
+                        color: canSubmit ? 'var(--shell-control-active-fg)' : THEME.textSecondary,
+                        cursor: canSubmit ? 'pointer' : 'default',
+                        boxShadow: canSubmit ? 'var(--shadow-glow)' : 'none',
+                      }}
+                      onMouseEnter={() => {
+                        if (canSubmit) {
+                          setTrackingAttention(0.58, 0.6, 'locked-on');
+                          onInteractionSignal?.('proud');
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (canSubmit) {
+                          setTrackingAttention(0, 0.44);
+                        }
+                      }}
+                    >
+                      {agentModeSurface === 'code' ? (
+                        <ArrowElbowDownRight size={16} strokeWidth={2.5} />
+                      ) : (
+                        <ArrowUp size={16} strokeWidth={2.5} />
+                      )}
+                    </button>
+                  ) : null}
                 </div>
               </div>
-            ) : null}
-            {selectedMentionAgent && (
-              <div className="mb-2 flex gap-1.5 flex-wrap">
-                <AgentPill
-                  agent={selectedMentionAgent}
-                  onRemove={handleRemoveMentionAgent}
-                />
-              </div>
-            )}
-            <textarea aria-label="Text Area" ref={textareaRef}
-              value={input}
-              onChange={(e) => {
-                const val = e.target.value;
-                setInput(val);
-                if (slashCommands && slashCommands.length > 0) {
-                  if (val.startsWith('/')) {
-                    setSlashMenuVisible(true);
-                    setSlashFilter(val);
+            </div>
+          ) : (
+            <div className="p-4">
+              {isAgentCommandMode ? (
+                <div className="flex items-center justify-between gap-3 mb-2.5 py-2 px-2.5 rounded-xl border border-input-border bg-composer-soft">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <TextShimmer as="span" className="text-xs font-medium text-accent">
+                      A:// command mode
+                    </TextShimmer>
+                    <span className="text-secondary text-xs truncate">
+                      Tab autocompletes. Enter submits after the first space.
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+              {selectedMentionAgent && (
+                <div className="mb-2 flex gap-1.5 flex-wrap">
+                  <AgentPill
+                    agent={selectedMentionAgent}
+                    onRemove={handleRemoveMentionAgent}
+                  />
+                </div>
+              )}
+              <textarea aria-label="Text Area" ref={textareaRef}
+                value={input}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInput(val);
+                  if (slashCommands && slashCommands.length > 0) {
+                    if (val.startsWith('/')) {
+                      setSlashMenuVisible(true);
+                      setSlashFilter(val);
+                    } else {
+                      setSlashMenuVisible(false);
+                      setSlashFilter('');
+                    }
+                  }
+                  if (val.trimStart().startsWith('A://')) {
+                    setAgentCommandMenuVisible(true);
+                    setAgentCommandFilter(val.trimStart());
                   } else {
-                    setSlashMenuVisible(false);
-                    setSlashFilter('');
-                  }
-                }
-                if (val.trimStart().startsWith('A://')) {
-                  setAgentCommandMenuVisible(true);
-                  setAgentCommandFilter(val.trimStart());
-                } else {
-                  setAgentCommandMenuVisible(false);
-                  setAgentCommandFilter('');
-                }
-                parseMention(val);
-              }}
-              onKeyDown={(e) => {
-                if (mentionOpen && filteredMentionAgents.length > 0) {
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setMentionOpen(false);
-                    setMentionQuery('');
-                    return;
-                  }
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    setMentionIndex((prev) =>
-                      Math.min(prev + 1, filteredMentionAgents.length - 1)
-                    );
-                    return;
-                  }
-                  if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    setMentionIndex((prev) => Math.max(prev - 1, 0));
-                    return;
-                  }
-                  if (e.key === 'Enter' || e.key === 'Tab') {
-                    e.preventDefault();
-                    handleSelectMentionAgent(filteredMentionAgents[mentionIndex]);
-                    return;
-                  }
-                }
-                if (slashMenuVisible && filteredSlashCommands.length > 0) {
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setSlashMenuVisible(false);
-                    setSlashFilter('');
-                    return;
-                  }
-                  if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
-                    e.preventDefault();
-                    handleSlashCommand(filteredSlashCommands[0]);
-                    return;
-                  }
-                }
-                if (agentCommandMenuVisible && filteredAgentCommands.length > 0) {
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
                     setAgentCommandMenuVisible(false);
                     setAgentCommandFilter('');
-                    return;
                   }
-                  if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !input.trim().includes(' '))) {
-                    e.preventDefault();
-                    handleAgentCommand(filteredAgentCommands[0]);
-                    return;
-                  }
-                }
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
-              placeholder={placeholder}
-              rows={1}
-              onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
-              className="w-full bg-transparent border-none outline-none text-primary text-base resize-none font-inherit p-0 m-0 block"
-            />
-          </div>
+                  parseMention(val);
+                }}
+                onKeyDown={handleTextareaKeyDown}
+                placeholder={placeholder}
+                rows={1}
+                onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
+                className={cn(
+                  'w-full bg-transparent border-none outline-none text-primary resize-none font-inherit p-0 m-0 block',
+                  compact ? 'text-sm' : 'text-base'
+                )}
+              />
+            </div>
+          )}
           {isVoiceRecording && interimTranscript && (
             <div className="py-0.5 px-4 pb-1.5 flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-red-500/80 flex-shrink-0 animate-pulse" />
@@ -1752,7 +2081,7 @@ export function ChatComposer({
             </div>
           ) : null}
 
-          <div className="flex items-center justify-between p-3">
+          {!compact && (<div className="flex items-center justify-between p-3">
             <div className="flex items-center gap-1 relative">
               <AttachmentButton
                 onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
@@ -1776,9 +2105,36 @@ export function ChatComposer({
                 }}
               />
 
+              <BottomDock
+                inline
+                selectedModeId={selectedModeId}
+                agentModeSurface={agentModeSurface}
+                agentModeEnabled={agentModeEnabled}
+                agentModeTheme={agentModeTheme}
+                setShowAgentMenu={setShowAgentMenu}
+                showAgentMenu={showAgentMenu}
+                selectedSurfaceAgent={selectedSurfaceAgent}
+                onToggleAgentMode={handleToggleAgentMode}
+                customLeftContent={bottomDockContent}
+                showModeToggle={showModeToggle}
+                agents={agents}
+                isLoadingAgents={isLoadingAgents}
+                selectedSurfaceAgentId={selectedSurfaceAgentId}
+                workspaceArtifacts={characterArtifacts}
+                agentError={agentError}
+                openClawCandidatesCount={openClawCandidates.length}
+                onOpenImportWizard={() => setShowOpenClawImportDialog(true)}
+                onSelectAgent={(agent) => {
+                  if (agentModeSurface) setSelectedSurfaceAgent(agentModeSurface, agent.id);
+                }}
+                onClearAgent={() => {
+                  if (agentModeSurface) setSelectedSurfaceAgent(agentModeSurface, null);
+                }}
+              />
+
               {showPlusMenu && (
                 <div
-                  className="absolute bottom-[calc(100%+12px)] left-0 w-60 bg-menu-bg rounded-xl border border-menu-border shadow-xl p-1.5 z-200"
+                  className="absolute bottom-[calc(100%+12px)] left-0 w-60 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-200"
                   onMouseEnter={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
                   onMouseLeave={() => {
                     if (!activeSubMenu) setShowPlusMenu(false);
@@ -1882,7 +2238,7 @@ export function ChatComposer({
                       </button>
                       {activeSubMenu === item.id && item.submenuItems && (
                         <div
-                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
+                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
                           onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
                           onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
                         >
@@ -1927,7 +2283,7 @@ export function ChatComposer({
                       </button>
                       {activeSubMenu === item.id && item.submenuItems && (
                         <div
-                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
+                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
                           onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
                           onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
                         >
@@ -1971,13 +2327,15 @@ export function ChatComposer({
             </div>
 
             <div className="flex items-center gap-2 relative">
-              <SpeechInput
-                size="icon"
-                variant="ghost"
-                className="size-7 rounded-full text-composer-muted hover:text-primary hover:bg-transparent transition-colors"
-                onTranscriptionChange={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
-                title="Voice input"
-              />
+              <button
+                type="button"
+                onClick={() => void enterVoiceMode()}
+                aria-label="Start voice mode"
+                title="Voice mode"
+                className="size-7 rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer"
+              >
+                <Waveform size={17} weight="bold" />
+              </button>
               <button type="button"
                 onClick={() => setShowModelMenu(!showModelMenu)}
                 disabled={terminalModelsLoading && allModels.length === 0}
@@ -2062,7 +2420,7 @@ export function ChatComposer({
                     <Square size={12} fill="currentColor" />
                   </button>
                 </div>
-              ) : (
+              ) : canSubmit ? (
                 <button
                   onClick={handleSubmit}
                   disabled={!canSubmit}
@@ -2087,44 +2445,51 @@ export function ChatComposer({
                     }
                   }}
                 >
-                  <ArrowUp size={18} strokeWidth={2.5} />
+                  {agentModeSurface === 'code' ? (
+                    <ArrowElbowDownRight size={18} strokeWidth={2.5} />
+                  ) : (
+                    <ArrowUp size={18} strokeWidth={2.5} />
+                  )}
                 </button>
-              )}
+              ) : null}
             </div>
-          </div>
+          </div>)}
         </div>
       </div>
-      
-      <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center -mt-px">
-        <BottomDock
-          selectedModeId={selectedModeId}
-          agentModeSurface={agentModeSurface}
-          agentModeEnabled={agentModeEnabled}
-          agentModeTheme={agentModeTheme}
-          setShowAgentMenu={setShowAgentMenu}
-          showAgentMenu={showAgentMenu}
-          selectedSurfaceAgent={selectedSurfaceAgent}
-          onToggleAgentMode={handleToggleAgentMode}
-          customLeftContent={bottomDockContent}
-          agents={agents}
-          isLoadingAgents={isLoadingAgents}
-          selectedSurfaceAgentId={selectedSurfaceAgentId}
-          workspaceArtifacts={characterArtifacts}
-          agentError={agentError}
-          openClawCandidatesCount={openClawCandidates.length}
-          onOpenImportWizard={() => setShowOpenClawImportDialog(true)}
-          onSelectAgent={(agent) => {
-            if (agentModeSurface) {
-              setSelectedSurfaceAgent(agentModeSurface, agent.id);
-            }
-          }}
-          onClearAgent={() => {
-            if (agentModeSurface) {
-              setSelectedSurfaceAgent(agentModeSurface, null);
-            }
-          }}
-        />
-      </div>
+
+      {/* Agent-mode bottom deck — tray tucked behind the card's bottom
+          edge (z-0 under the composer card's z-10), sliding down from behind
+          with the same deck-rise/fall motion as the top deck. */}
+      {agentModeSurface && agentModeEnabled && !voiceModeActive && (
+        <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
+          <div className="relative z-0 w-full h-[60px] -mt-3 box-border bg-input-bg border-b border-r border-l border-input-border rounded-b-2xl px-4 pt-4 flex items-start gap-3 animate-deck-fall">
+            <ModeDock
+              selectedMode={selectedModeId}
+              onSelectMode={(modeId) => {
+                if (agentModeSurface) {
+                  setSelectedMode(agentModeSurface, modeId as AgentModeId);
+                  setSelectedTemplateTitle(undefined);
+                }
+              }}
+              agentModeSurface={agentModeSurface}
+              isLoading={isLoading}
+              selectedSurfaceAgent={selectedSurfaceAgent}
+            />
+          </div>
+          {selectedModeId && (
+            <div className="w-full mt-8 pb-4">
+              <TemplateGallery
+                modeId={selectedModeId}
+                onSelectTemplate={(prompt, template) => {
+                  setInput(prompt);
+                  setSelectedTemplateTitle(template.title);
+                  window.requestAnimationFrame(() => textareaRef.current?.focus());
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
       
       {mentionOpen && agentModeSurface && (
         <AgentMentionDropdown
@@ -2147,29 +2512,6 @@ export function ChatComposer({
         />
       )}
       
-      {agentModeSurface && agentModeSurface !== 'cowork' && agentModeEnabled && (
-        <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
-          <ModeDock
-            selectedMode={selectedModeId}
-            onSelectMode={(modeId) => {
-              if (agentModeSurface) {
-                setSelectedMode(agentModeSurface, modeId as AgentModeId);
-              }
-            }}
-            agentModeSurface={agentModeSurface}
-            isLoading={isLoading}
-            selectedSurfaceAgent={selectedSurfaceAgent}
-            onSelectTemplate={(prompt) => {
-              setInput(prompt);
-              const textarea = textareaRef.current;
-              if (textarea) {
-                textarea.focus();
-              }
-            }}
-          />
-        </div>
-      )}
-
       <Dialog open={showOpenClawImportDialog} onOpenChange={(open) => {
         setShowOpenClawImportDialog(open);
         if (!open) {

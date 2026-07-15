@@ -27,6 +27,25 @@ describe('BottomDock Chat/Cowork toggle', () => {
     expect(screen.getByRole('button', { name: /Cowork/i })).toBeInTheDocument();
   });
 
+  it('does not render the toggle when showModeToggle is false (in-session composer)', () => {
+    render(
+      <Wrapper>
+        <BottomDock
+          selectedModeId={null}
+          agentModeEnabled={false}
+          agentModeTheme={{ glow: '', soft: '', accent: '' }}
+          setShowAgentMenu={() => {}}
+          showAgentMenu={false}
+          selectedSurfaceAgent={null}
+          showModeToggle={false}
+        />
+      </Wrapper>
+    );
+
+    expect(screen.queryByRole('button', { name: /Chat/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Cowork/i })).not.toBeInTheDocument();
+  });
+
   it('does not render the toggle in code or browser mode', () => {
     render(
       <ModeProvider defaultMode="code">

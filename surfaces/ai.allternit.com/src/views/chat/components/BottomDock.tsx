@@ -4,6 +4,7 @@ import { Robot, CaretDown, ChatTeardropText, UsersThree } from '@phosphor-icons/
 import { useMode } from '@/providers/mode-provider';
 import { cn } from '@/lib/utils';
 import { AgentSelectorDropdown } from './AgentSelectorDropdown';
+import { MODE_TABS } from './ModeDock';
 import type { Agent } from '@/lib/agents';
 
 const THEME = {
@@ -65,6 +66,7 @@ interface AgentModePillProps {
   agentModeEnabled: boolean;
   agentModeTheme: { glow: string; soft: string; accent: string };
   selectedSurfaceAgent: { name: string } | null;
+  selectedModeId: string | null;
   onToggle: () => void;
   onOpenMenu: () => void;
   showMenu: boolean;
@@ -74,6 +76,7 @@ function AgentModePill({
   agentModeEnabled,
   agentModeTheme,
   selectedSurfaceAgent,
+  selectedModeId,
   onToggle,
   onOpenMenu,
   showMenu,
@@ -81,10 +84,17 @@ function AgentModePill({
   const glowColor = agentModeEnabled ? agentModeTheme.glow : 'var(--chat-composer-border)';
   const softColor = agentModeEnabled ? agentModeTheme.soft : 'transparent';
   const accentColor = agentModeEnabled ? agentModeTheme.accent : 'var(--chat-composer-muted)';
+  const selectedModeLabel = selectedModeId
+    ? MODE_TABS.find((m) => m.id === selectedModeId)?.label ?? null
+    : null;
   const label = agentModeEnabled
-    ? selectedSurfaceAgent
-      ? `Agent | ${selectedSurfaceAgent.name}`
-      : 'Agent On'
+    ? selectedSurfaceAgent && selectedModeLabel
+      ? `Agent | ${selectedModeLabel}`
+      : selectedModeLabel
+        ? `Agent | ${selectedModeLabel}`
+        : selectedSurfaceAgent
+          ? `Agent | ${selectedSurfaceAgent.name}`
+          : 'Agent On'
     : 'Agent Off';
 
   return (
@@ -153,6 +163,10 @@ interface BottomDockProps {
   onOpenImportWizard?: () => void;
   onSelectAgent?: (agent: Agent) => void;
   onClearAgent?: () => void;
+  /** Chat/Cowork mode toggle is only for pre-session composers; hide once a session is active */
+  showModeToggle?: boolean;
+  /** Render as toolbar controls beside the composer's attachment button. */
+  inline?: boolean;
 }
 
 export function BottomDock({
@@ -174,19 +188,29 @@ export function BottomDock({
   onOpenImportWizard,
   onSelectAgent,
   onClearAgent,
+  showModeToggle = true,
+  inline = false,
 }: BottomDockProps) {
   const borderColor = agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder;
 
   return (
     <div
-      className="w-full box-border mt-0 flex items-center justify-between py-2 px-4 bg-input-bg rounded-b-2xl z-11 relative"
-      style={{
+      className={cn(
+        'box-border flex items-center justify-start gap-2 z-11 relative',
+        inline ? 'w-auto p-0 bg-transparent' : 'w-full mt-0 py-2 px-4 bg-input-bg rounded-b-2xl'
+      )}
+      style={inline ? undefined : {
         borderTop: `1px solid ${borderColor}`,
         borderRight: `1px solid ${borderColor}`,
         borderBottom: `1px solid ${borderColor}`,
         borderLeft: `1px solid ${borderColor}`,
       }}
     >
+      {showModeToggle && (
+        <div className="flex items-center">
+          <ChatCoworkToggle />
+        </div>
+      )}
       {customLeftContent ? (
         <div className="flex items-center">{customLeftContent}</div>
       ) : (
@@ -194,14 +218,12 @@ export function BottomDock({
           agentModeEnabled={agentModeEnabled}
           agentModeTheme={agentModeTheme}
           selectedSurfaceAgent={selectedSurfaceAgent}
+          selectedModeId={_selectedModeId}
           onToggle={onToggleAgentMode || (() => {})}
           onOpenMenu={() => setShowAgentMenu(true)}
           showMenu={showAgentMenu}
         />
       )}
-      <div className="flex items-center gap-2">
-        <ChatCoworkToggle />
-      </div>
 
       {showAgentMenu && agentModeSurface && (
         <div className="absolute bottom-full left-4 mb-2">

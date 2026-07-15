@@ -11,10 +11,19 @@
 
 import React, { ReactNode, useState, useEffect } from 'react';
 import {
-  ArrowLeft,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalButton,
+} from '@/components/ui/Modal';
+import {
+  CaretRight,
+  ChatTeardropText,
   DotsThreeOutline,
-  Star,
+  HandWaving,
   Plus,
+  PushPin,
   FileText,
   X,
   PencilSimple,
@@ -101,61 +110,65 @@ export function BaseProjectView({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-5 px-6 pb-4 border-b border-[var(--ui-border-muted)] shrink-0">
-        <div className="flex items-start justify-between">
-          <div className="w-[120px]" />
+      <div className="p-5 px-8 pb-4 shrink-0">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1.5 text-[13px] text-[var(--ui-text-muted)] mb-5">
+          <button type="button"
+            onClick={onBack}
+            className="p-0 bg-transparent border-none text-[var(--ui-text-muted)] text-[13px] cursor-pointer transition-colors duration-150 hover:text-[var(--ui-text-primary)]"
+          >
+            Projects
+          </button>
+          <CaretRight size={11} aria-hidden />
+          <span className="text-[var(--ui-text-secondary)] truncate max-w-[360px]">{title}</span>
+        </div>
 
-          <div className="text-center flex-1">
-            <h1 className="m-0 text-[28px] font-semibold text-[var(--ui-text-primary)] mb-1">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1
+              className="m-0 text-[32px] font-medium tracking-tight text-[var(--ui-text-primary)] mb-1.5"
+              style={{ fontFamily: 'var(--font-serif)' }}
+            >
               {title}
             </h1>
             {description && (
-              <p className="m-0 text-sm text-[var(--ui-text-muted)]">
+              <p className="m-0 text-[15px] leading-relaxed text-[var(--ui-text-secondary)] max-w-2xl">
                 {description}
               </p>
             )}
           </div>
 
-          <div className="flex items-center gap-2 w-[120px] justify-end">
+          <div className="flex items-center gap-1.5 shrink-0">
             {onNewItem && (
               <button type="button"
                 data-testid="project-view-new-item-btn"
                 onClick={onNewItem}
-                className="px-3 h-8 bg-[var(--accent-primary)] border-none rounded-lg text-[var(--ui-text-inverse)] text-[13px] font-semibold cursor-pointer flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-90 active:scale-95 whitespace-nowrap"
+                className="px-3 h-8 bg-[var(--accent-primary)] border-none rounded-lg text-[var(--ui-text-inverse)] text-[13px] font-semibold cursor-pointer flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-90 active:scale-95 whitespace-nowrap mr-1"
               >
                 <Plus size={16} />
                 {newButtonLabel}
               </button>
             )}
 
-            {menuContent && <div className="relative">{menuContent}</div>}
-
             {onToggleStar && (
               <button type="button"
                 onClick={onToggleStar}
+                title={isStarred ? 'Unpin project' : 'Pin project'}
                 className={`size-8 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center transition-colors duration-150 ${
                   isStarred ? 'text-[var(--accent-primary)]' : 'text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)]'
                 }`}
               >
-                <Star size={18} fill={isStarred ? 'currentColor' : 'none'} />
+                <PushPin size={18} weight={isStarred ? 'fill' : 'regular'} />
               </button>
             )}
+
+            {menuContent && <div className="relative">{menuContent}</div>}
           </div>
         </div>
 
         {/* Tabs row */}
         <div className="flex items-center justify-between mt-5">
           <div className="flex flex-col gap-2">
-            {onBack && (
-              <button type="button"
-                onClick={onBack}
-                className="flex items-center gap-1.5 p-0 bg-transparent border-none text-[var(--ui-text-muted)] text-[13px] cursor-pointer transition-colors duration-150 mb-1 hover:text-[var(--ui-text-secondary)]"
-              >
-                <ArrowLeft size={16} />
-                <span>All projects</span>
-              </button>
-            )}
-
             <div className="flex gap-2" data-testid="project-view-tabs">
               {tabs.map((tab) => (
                 <button type="button"
@@ -190,12 +203,13 @@ export function BaseProjectView({
           <div className="mb-6 shrink-0">{inputBar}</div>
 
           {showEmptyState && emptyState ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-10 px-5 border border-[var(--ui-border-muted)] rounded-xl">
-              <p className="m-0 text-sm text-[var(--ui-text-muted)] text-center">
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 p-10 px-5">
+              <ChatTeardropText size={32} className="text-[var(--ui-text-muted)]" aria-hidden />
+              <p className="m-0 text-[15px] text-[var(--ui-text-secondary)] text-center">
                 {emptyState.message}
               </p>
               {emptyState.subMessage && (
-                <p className="m-0 mt-2 text-[13px] text-[var(--ui-text-muted)] text-center opacity-70">
+                <p className="m-0 text-[13px] text-[var(--ui-text-muted)] text-center max-w-sm">
                   {emptyState.subMessage}
                 </p>
               )}
@@ -211,10 +225,26 @@ export function BaseProjectView({
             ? 'w-[320px] p-6 pl-0 flex-col overflow-auto' 
             : 'w-full p-6 pt-0 flex-row overflow-visible border-t border-[var(--ui-border-muted)]'
         }`}>
+          {isWide && (
+            <div className="p-5 bg-[var(--surface-active)] rounded-2xl shrink-0">
+              <HandWaving size={22} className="text-[var(--ui-text-secondary)] mb-3" aria-hidden />
+              <div className="text-[14px] font-semibold text-[var(--ui-text-primary)] mb-2">
+                Add relevant context for your project
+              </div>
+              <p className="m-0 text-[13px] leading-relaxed text-[var(--ui-text-secondary)]">
+                Upload documents, code, and other files to the project to reference them in your sessions.
+              </p>
+            </div>
+          )}
+
           <SidebarSection
             title="Memory"
             isWide={isWide}
-            rightElement={<span className="text-[12px] text-[var(--ui-text-muted)]">Only you</span>}
+            rightElement={
+              <span className="text-[12px] text-[var(--ui-text-muted)] px-2 py-0.5 rounded-full border border-solid border-[var(--ui-border-muted)]">
+                Only you
+              </span>
+            }
           >
             {sidebarSections.memory || (
               <p className="m-0 text-[13px] text-[var(--ui-text-muted)]">
@@ -245,7 +275,7 @@ export function BaseProjectView({
           </SidebarSection>
 
           <SidebarSection
-            title="Files"
+            title="Context"
             isWide={isWide}
             rightElement={
               sidebarSections.onAddFile ? (
@@ -440,5 +470,90 @@ export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps
         )}
       </div>
     </div>
+  );
+}
+
+interface ProjectEditDetailsModalProps {
+  isOpen: boolean;
+  initialName: string;
+  initialDescription?: string;
+  onConfirm: (details: { title: string; description: string }) => void;
+  onCancel: () => void;
+}
+
+export function ProjectEditDetailsModal({
+  isOpen,
+  initialName,
+  initialDescription = '',
+  onConfirm,
+  onCancel,
+}: ProjectEditDetailsModalProps) {
+  const [name, setName] = useState(initialName);
+  const [description, setDescription] = useState(initialDescription);
+
+  useEffect(() => {
+    if (isOpen) {
+      setName(initialName);
+      setDescription(initialDescription);
+    }
+  }, [isOpen, initialName, initialDescription]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onConfirm({ title: name.trim(), description: description.trim() });
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onCancel} size="small">
+      <ModalHeader title="Edit details" onClose={onCancel} />
+      <form onSubmit={handleSubmit}>
+        <ModalBody>
+          <div className="flex flex-col gap-4">
+            <div>
+              <label
+                htmlFor="project-edit-name"
+                className="block text-sm font-medium text-[var(--ui-text-secondary)] mb-1.5"
+              >
+                Name
+              </label>
+              <input
+                id="project-edit-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Project name"
+                autoFocus
+                className="w-full h-10 px-3.5 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--bg-primary)] text-[var(--ui-text-primary)] text-sm outline-none focus:border-[var(--accent-primary)] transition-colors"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="project-edit-description"
+                className="block text-sm font-medium text-[var(--ui-text-secondary)] mb-1.5"
+              >
+                Description
+              </label>
+              <textarea
+                id="project-edit-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What is this project about?"
+                rows={3}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--bg-primary)] text-[var(--ui-text-primary)] text-sm outline-none focus:border-[var(--accent-primary)] transition-colors resize-y"
+              />
+            </div>
+          </div>
+        </ModalBody>
+        <ModalFooter>
+          <ModalButton onClick={onCancel} variant="secondary">
+            Cancel
+          </ModalButton>
+          <ModalButton type="submit" variant="primary" disabled={!name.trim()}>
+            Save
+          </ModalButton>
+        </ModalFooter>
+      </form>
+    </Modal>
   );
 }

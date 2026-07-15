@@ -43,7 +43,7 @@ export function useUnifiedProjects() {
         threadCount: projectThreads.length,
         taskCount: agentSessions.length,
         fileCount: p.files?.length ?? 0,
-        description: 'Chat project',
+        description: p.description || 'Chat project',
       };
     });
 
@@ -65,7 +65,7 @@ export function useUnifiedProjects() {
         threadCount: 0,
         taskCount: projectTasks.length,
         fileCount: 0,
-        description: 'Cowork workspace',
+        description: p.description || 'Cowork workspace',
       };
     });
 
@@ -89,7 +89,7 @@ export function useUnifiedProjects() {
         threadCount: workspaceSessions.length,
         taskCount: workspaceSessions.filter((s) => s.mode === 'AUTO').length,
         fileCount: w.canvasTiles?.length ?? 0,
-        description: w.root_path || 'Code workspace',
+        description: w.description || w.root_path || 'Code workspace',
       };
     });
 
@@ -105,7 +105,7 @@ export function useUnifiedProjects() {
       threadCount: 0,
       taskCount: 0,
       fileCount: p.tabs?.length ?? 0,
-      description: `Design — ${p.type}`,
+      description: p.description || `Design — ${p.type}`,
     }));
 
     const list = [
@@ -247,6 +247,32 @@ export function useUnifiedProjects() {
     [chatStore, taskStore, codeStore, designStore]
   );
 
+  const updateProjectDetails = useCallback(
+    (project: UnifiedProject, details: { title?: string; description?: string }) => {
+      switch (project.mode) {
+        case 'chat':
+          chatStore.updateProjectDetails(project.nativeId, details);
+          break;
+        case 'cowork':
+          taskStore.updateProjectDetails(project.nativeId, details);
+          break;
+        case 'code':
+          codeStore.updateWorkspaceDetails(project.nativeId, {
+            displayName: details.title,
+            description: details.description,
+          });
+          break;
+        case 'design':
+          designStore.updateProjectDetails(project.nativeId, {
+            name: details.title,
+            description: details.description,
+          });
+          break;
+      }
+    },
+    [chatStore, taskStore, codeStore, designStore]
+  );
+
   const renameProject = useCallback(
     (project: UnifiedProject, title: string) => {
       switch (project.mode) {
@@ -289,6 +315,7 @@ export function useUnifiedProjects() {
     toggleArchive,
     deleteProject,
     renameProject,
+    updateProjectDetails,
     filterProjects,
   };
 }

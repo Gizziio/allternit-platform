@@ -43,6 +43,7 @@ export interface ProjectFile {
   name: string;
   size: number;
   type: string;
+  content?: string;
   addedAt: number;
 }
 
@@ -50,9 +51,11 @@ export interface ChatProject {
   id: string;
   localKey?: string;
   title: string;
+  description?: string;
   threadIds: string[];
   files: ProjectFile[];
   connectors?: string[];
+  instructions?: string[];
   createdAt: number;
   isFavorite?: boolean;
   isArchived?: boolean;
@@ -105,12 +108,14 @@ interface ChatState {
   createProject: (title: string) => Promise<string>;
   deleteProject: (id: string) => void;
   renameProject: (id: string, title: string) => void;
+  updateProjectDetails: (id: string, details: { title?: string; description?: string }) => void;
   setActiveProject: (id: string | null, localKey?: string | null) => void;
   moveThreadToProject: (threadId: string, projectId: string | null) => void;
   addFileToProject: (projectId: string, file: Omit<ProjectFile, 'id' | 'addedAt'>) => void;
   removeFileFromProject: (projectId: string, fileId: string) => void;
   addConnectorToProject: (projectId: string, connectorId: string) => void;
   removeConnectorFromProject: (projectId: string, connectorId: string) => void;
+  updateProjectInstructions: (projectId: string, instructions: string[]) => void;
 
   // Project metadata
   toggleProjectFavorite: (projectId: string) => void;
@@ -176,7 +181,15 @@ export const useChatStore = create<ChatState>()(
       createProject: async (title) => {
         let id: string;
         try {
-          const proj = await kernelProjects.createProject(title);
+          // The workflow-creation call has no client-side timeout; race it so a slow
+          // or unresponsive backend can't leave project creation hanging forever with
+          // no feedback (matches the instant, local-first UX of the other project modes).
+          const proj = await Promise.race([
+            kernelProjects.createProject(title),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('createProject timed out')), 4000),
+            ),
+          ]);
           id = proj.id;
         } catch {
           id = `local-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -215,6 +228,19 @@ export const useChatStore = create<ChatState>()(
       renameProject: (id, title) =>
         set((state) => ({
           projects: state.projects.map((p) => (p.id === id ? { ...p, title } : p)),
+        })),
+
+      updateProjectDetails: (id, details) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  ...(details.title !== undefined ? { title: details.title } : {}),
+                  ...(details.description !== undefined ? { description: details.description } : {}),
+                }
+              : p,
+          ),
         })),
 
       setActiveProject: (id, localKey = null) =>
@@ -294,6 +320,13 @@ export const useChatStore = create<ChatState>()(
             p.id === projectId
               ? { ...p, connectors: (p.connectors ?? []).filter((id) => id !== connectorId) }
               : p,
+          ),
+        })),
+
+      updateProjectInstructions: (projectId, instructions) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId ? { ...p, instructions } : p
           ),
         })),
 

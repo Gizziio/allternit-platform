@@ -18,6 +18,7 @@ export type DesignProjectType =
 export interface DesignProject {
   id: string;
   name: string;
+  description?: string;
   type: DesignProjectType;
   specialist: 'architect' | 'growth' | 'purist' | 'creative';
   fidelity: 'wireframe' | 'high';
@@ -36,6 +37,7 @@ interface DesignProjectState {
   createProject: (name: string, type?: DesignProjectType) => DesignProject;
   upsertProject: (project: Omit<DesignProject, 'createdAt' | 'updatedAt' | 'isFavorite' | 'isArchived'> & Partial<Pick<DesignProject, 'isFavorite' | 'isArchived'>>) => DesignProject;
   renameProject: (id: string, name: string) => void;
+  updateProjectDetails: (id: string, details: { name?: string; description?: string }) => void;
   deleteProject: (id: string) => void;
   setActiveProject: (id: string | null) => void;
   toggleFavorite: (id: string) => void;
@@ -134,6 +136,20 @@ export const useDesignProjectStore = create<DesignProjectState>()(
         set((state) => ({
           projects: state.projects.map((p) =>
             p.id === id ? { ...p, name, updatedAt: Date.now() } : p
+          ),
+        })),
+
+      updateProjectDetails: (id, details) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  ...(details.name !== undefined ? { name: details.name } : {}),
+                  ...(details.description !== undefined ? { description: details.description } : {}),
+                  updatedAt: Date.now(),
+                }
+              : p
           ),
         })),
 

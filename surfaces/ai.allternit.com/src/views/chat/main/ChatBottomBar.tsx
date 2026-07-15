@@ -3,13 +3,14 @@ import { ChatComposer } from "@/views/chat/ChatComposer";
 import { THEME } from "./ChatView.constants";
 import type { GizziEmotion, GizziAttention } from "@/components/ai-elements/GizziMascot";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
+import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 
 interface ChatBottomBarProps {
   mode: 'chat' | 'cowork' | 'code';
   isChatEmpty: boolean;
   hideEmptyState: boolean;
   handleSend: (text: string) => void;
-  onOpenAgentSession?: (text: string, surface: any) => void;
+  onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   agentSurface: AgentModeSurface;
   setMentionAgentId: (id: string | null) => void;
   mentionAgentId: string | null;
@@ -60,7 +61,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
       <div className="w-full max-w-[760px] pointer-events-auto px-5 box-border">
         <ChatComposer
           onSend={handleSend}
-          onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
+          onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}
           onMentionAgentChange={setMentionAgentId}
           mentionAgentId={mentionAgentId}
           isLoading={activeIsLoading}
@@ -71,6 +72,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           onSelectModel={selectModel}
           placeholder="Reply…"
           showTopActions={false}
+          showModeToggle={false}
           agentModeSurface={agentSurface}
           topInfoBarContent={composerTopInfoBar}
           questionBarContent={composerQuestionBar}

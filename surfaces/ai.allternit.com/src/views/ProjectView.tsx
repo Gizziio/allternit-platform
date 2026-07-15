@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,6 +16,7 @@ import {
   ModalFooter,
   ModalButton,
 } from '@/components/ui/Modal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { useUnifiedProjects } from '@/views/project/unified/useUnifiedProjects';
 import { ProjectDetailRouter } from '@/views/project/unified/ProjectDetailRouter';
 import type { UnifiedProject, ProjectCategory, ProjectMode } from '@/views/project/unified/types';
@@ -33,6 +34,7 @@ import {
   CaretDown,
   FolderOpen,
   PencilSimple,
+  PushPin,
 } from '@phosphor-icons/react';
 
 const CATEGORY_CONFIG: Record<
@@ -48,6 +50,19 @@ const CATEGORY_CONFIG: Record<
 
 type SortMode = 'recent' | 'name' | 'created';
 
+function formatCardDate(ts: number): string {
+  const date = new Date(ts);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (ts >= startOfToday) return 'today';
+  if (ts >= startOfToday - 24 * 60 * 60 * 1000) return 'yesterday';
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric',
+  });
+}
+
 const SORT_OPTIONS: { id: SortMode; label: string }[] = [
   { id: 'recent', label: 'Recently updated' },
   { id: 'name', label: 'Name' },
@@ -62,10 +77,18 @@ export function ProjectView(): React.ReactNode {
     toggleFavorite,
     toggleArchive,
     deleteProject,
-    renameProject,
+    updateProjectDetails,
   } = useUnifiedProjects();
 
   const [selectedProject, setSelectedProject] = useState<UnifiedProject | null>(null);
+
+  // Re-clicking "Projects" in the rail re-focuses this same singleton view rather than
+  // remounting it, so without this listener the detail view would never clear.
+  useEffect(() => {
+    const reset = () => setSelectedProject(null);
+    window.addEventListener('allternit:projects-reset', reset);
+    return () => window.removeEventListener('allternit:projects-reset', reset);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<ProjectCategory>('all');
   const [sortBy, setSortBy] = useState<SortMode>('recent');
@@ -73,8 +96,10 @@ export function ProjectView(): React.ReactNode {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createMode, setCreateMode] = useState<ProjectMode>('chat');
-  const [renameProjectData, setRenameProjectData] = useState<UnifiedProject | null>(null);
-  const [renameValue, setRenameValue] = useState('');
+  const [editProjectData, setEditProjectData] = useState<UnifiedProject | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [deleteProjectData, setDeleteProjectData] = useState<UnifiedProject | null>(null);
 
   const filteredProjects = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -117,21 +142,23 @@ export function ProjectView(): React.ReactNode {
     closeCreateModal();
   };
 
-  const openRenameModal = (project: UnifiedProject) => {
-    setRenameProjectData(project);
-    setRenameValue(project.title);
+  const openEditModal = (project: UnifiedProject) => {
+    setEditProjectData(project);
+    setEditName(project.title);
+    setEditDescription(project.description ?? '');
   };
 
-  const closeRenameModal = () => {
-    setRenameProjectData(null);
-    setRenameValue('');
+  const closeEditModal = () => {
+    setEditProjectData(null);
+    setEditName('');
+    setEditDescription('');
   };
 
-  const handleRenameConfirm = () => {
-    const name = renameValue.trim();
-    if (!name || !renameProjectData) return;
-    renameProject(renameProjectData, name);
-    closeRenameModal();
+  const handleEditConfirm = () => {
+    const name = editName.trim();
+    if (!name || !editProjectData) return;
+    updateProjectDetails(editProjectData, { title: name, description: editDescription.trim() });
+    closeEditModal();
   };
 
   const handleProjectClick = (project: UnifiedProject) => {
@@ -291,11 +318,9 @@ export function ProjectView(): React.ReactNode {
                   }}
                   onDelete={(e) => {
                     e.stopPropagation();
-                    if (confirm(`Delete "${project.title}"? This cannot be undone.`)) {
-                      deleteProject(project);
-                    }
+                    setDeleteProjectData(project);
                   }}
-                  onRename={() => openRenameModal(project)}
+                  onEditDetails={() => openEditModal(project)}
                 />
               ))}
 
@@ -323,26 +348,57 @@ export function ProjectView(): React.ReactNode {
         allowModeSelect={activeCategory === 'all'}
       />
 
-      <RenameProjectModal
-        isOpen={renameProjectData !== null}
-        name={renameValue}
-        onNameChange={setRenameValue}
-        onConfirm={handleRenameConfirm}
-        onCancel={closeRenameModal}
+      <EditProjectDetailsModal
+        isOpen={editProjectData !== null}
+        name={editName}
+        onNameChange={setEditName}
+        description={editDescription}
+        onDescriptionChange={setEditDescription}
+        onConfirm={handleEditConfirm}
+        onCancel={closeEditModal}
+      />
+
+      <ConfirmModal
+        isOpen={deleteProjectData !== null}
+        title="Delete Project"
+        message={
+          deleteProjectData
+            ? `Delete "${deleteProjectData.title}"? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (deleteProjectData) {
+            deleteProject(deleteProjectData);
+          }
+          setDeleteProjectData(null);
+        }}
+        onCancel={() => setDeleteProjectData(null)}
       />
     </div>
   );
 }
 
-interface RenameProjectModalProps {
+interface EditProjectDetailsModalProps {
   isOpen: boolean;
   name: string;
   onNameChange: (value: string) => void;
+  description: string;
+  onDescriptionChange: (value: string) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-function RenameProjectModal({ isOpen, name, onNameChange, onConfirm, onCancel }: RenameProjectModalProps) {
+function EditProjectDetailsModal({
+  isOpen,
+  name,
+  onNameChange,
+  description,
+  onDescriptionChange,
+  onConfirm,
+  onCancel,
+}: EditProjectDetailsModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onConfirm();
@@ -350,24 +406,51 @@ function RenameProjectModal({ isOpen, name, onNameChange, onConfirm, onCancel }:
 
   return (
     <Modal isOpen={isOpen} onClose={onCancel} size="small">
-      <ModalHeader title="Rename project" onClose={onCancel} />
+      <ModalHeader title="Edit details" onClose={onCancel} />
       <form onSubmit={handleSubmit}>
         <ModalBody>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => onNameChange(e.target.value)}
-            placeholder="Project name"
-            autoFocus
-            className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-sm outline-none focus:border-[var(--accent-primary)] transition-colors"
-          />
+          <div className="flex flex-col gap-4">
+            <div>
+              <label
+                htmlFor="edit-project-name"
+                className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5"
+              >
+                Name
+              </label>
+              <input
+                id="edit-project-name"
+                type="text"
+                value={name}
+                onChange={(e) => onNameChange(e.target.value)}
+                placeholder="Project name"
+                autoFocus
+                className="w-full h-10 px-3.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-sm outline-none focus:border-[var(--accent-primary)] transition-colors"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="edit-project-description"
+                className="block text-sm font-medium text-[var(--text-secondary)] mb-1.5"
+              >
+                Description
+              </label>
+              <textarea
+                id="edit-project-description"
+                value={description}
+                onChange={(e) => onDescriptionChange(e.target.value)}
+                placeholder="What is this project about?"
+                rows={3}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-sm outline-none focus:border-[var(--accent-primary)] transition-colors resize-y"
+              />
+            </div>
+          </div>
         </ModalBody>
         <ModalFooter>
           <ModalButton onClick={onCancel} variant="secondary">
             Cancel
           </ModalButton>
           <ModalButton type="submit" variant="primary" disabled={!name.trim()}>
-            Rename
+            Save
           </ModalButton>
         </ModalFooter>
       </form>
@@ -481,7 +564,7 @@ interface ProjectCardProps {
   onToggleFavorite: (e: React.MouseEvent) => void;
   onToggleArchive: (e: Event) => void;
   onDelete: (e: Event) => void;
-  onRename: () => void;
+  onEditDetails: () => void;
 }
 
 const MODE_ACCENT: Record<ProjectCategory, string> = {
@@ -506,7 +589,7 @@ function ProjectCard({
   onToggleFavorite,
   onToggleArchive,
   onDelete,
-  onRename,
+  onEditDetails,
 }: ProjectCardProps) {
   const Icon = MODE_ICONS[project.mode];
   const accent = MODE_ACCENT[project.mode];
@@ -567,7 +650,8 @@ function ProjectCard({
               project={project}
               onToggleArchive={onToggleArchive}
               onDelete={onDelete}
-              onRename={onRename}
+              onEditDetails={onEditDetails}
+              onTogglePin={onToggleFavorite}
             />
           </div>
         </div>
@@ -577,11 +661,11 @@ function ProjectCard({
             {project.title}
           </h3>
           <p className="text-[12px] text-[var(--text-tertiary)] mt-1 capitalize">{desc}</p>
-          {project.createdAt > 0 && (
-            <p className="text-[11px] text-[var(--text-tertiary)] mt-3">
-              Created {new Date(project.createdAt).toLocaleDateString()}
-            </p>
-          )}
+          <div className="flex items-center gap-2 mt-3 text-[11px] text-[var(--text-tertiary)]">
+            {project.updatedAt > 0 && <span>Updated {formatCardDate(project.updatedAt)}</span>}
+            {project.updatedAt > 0 && project.createdAt > 0 && <span aria-hidden>&middot;</span>}
+            {project.createdAt > 0 && <span>Created {formatCardDate(project.createdAt)}</span>}
+          </div>
         </div>
       </div>
     </div>
@@ -592,12 +676,14 @@ function ProjectCardMenu({
   project,
   onToggleArchive,
   onDelete,
-  onRename,
+  onEditDetails,
+  onTogglePin,
 }: {
   project: UnifiedProject;
   onToggleArchive: (e: Event) => void;
   onDelete: (e: Event) => void;
-  onRename: () => void;
+  onEditDetails: () => void;
+  onTogglePin: (e: React.MouseEvent) => void;
 }) {
   return (
     <DropdownMenu>
@@ -610,10 +696,21 @@ function ProjectCardMenu({
           <DotsThreeOutline size={18} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[160px]">
-        <DropdownMenuItem onSelect={onRename} className="cursor-pointer">
+      <DropdownMenuContent
+        align="end"
+        onClick={(e) => e.stopPropagation()}
+        className="min-w-[160px] z-[9999] bg-[var(--surface-floating)] border-[var(--border-default)] shadow-xl"
+      >
+        <DropdownMenuItem
+          onSelect={(e) => onTogglePin(e as unknown as React.MouseEvent)}
+          className="cursor-pointer"
+        >
+          <PushPin size={16} className="mr-2" />
+          {project.isFavorite ? 'Unpin' : 'Pin'}
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onEditDetails} className="cursor-pointer">
           <PencilSimple size={16} className="mr-2" />
-          Rename
+          Edit details
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onToggleArchive} className="cursor-pointer">
           <Archive size={16} className="mr-2" />

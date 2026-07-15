@@ -2,16 +2,18 @@
 
 import React, { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { InputModal } from '@/components/InputModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import {
   BaseProjectView,
   ProjectMenuButton,
   InstructionItem,
+  ProjectEditDetailsModal,
 } from '../BaseProjectView';
 import { ChatComposer } from '../chat/ChatComposer';
 import { useCoworkStore } from './CoworkStore';
+import { useCoworkSessionStore, createCoworkSession } from './CoworkSessionStore';
 import { useNav } from '@/nav/useNav';
+import { useMode } from '@/providers/mode-provider';
 import {
   CheckSquare,
   Robot,
@@ -19,7 +21,6 @@ import {
   Archive,
   Trash,
   DotsThreeOutline,
-  Star,
 } from '@phosphor-icons/react';
 
 interface CoworkProjectViewProps {
@@ -37,8 +38,9 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
     deleteTask,
     renameTask,
     deleteProject,
-    renameProject,
+    updateProjectDetails,
     updateProjectInstructions,
+    bindSessionToTask,
     activeTaskId,
     setActiveTask,
     toggleProjectFavorite,
@@ -46,6 +48,7 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
   } = useCoworkStore();
 
   const { dispatch } = useNav();
+  const { setMode } = useMode();
 
   const currentProjectId = projectId || storeActiveProjectId;
   const project = useMemo(
@@ -82,11 +85,33 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
     }
   };
 
-  const handleSend = (text: string) => {
-    if (!text.trim() || !currentProjectId) return;
+  const handleSend = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || !currentProjectId) return;
     const mode = activeTab === 'agent-tasks' ? 'agent' : 'task';
-    createTask(text.trim(), mode, currentProjectId);
+    const task = createTask(trimmed.slice(0, 64), mode, currentProjectId);
+    setActiveTask(task.id);
     setComposerInput('');
+    try {
+      const sessionId = await createCoworkSession({
+        name: trimmed.slice(0, 64) || 'New Cowork Session',
+        sessionMode: mode === 'agent' ? 'agent' : 'regular',
+      });
+      bindSessionToTask(task.id, sessionId);
+      useCoworkSessionStore.getState().setActiveSession(sessionId);
+      void useCoworkSessionStore.getState().sendMessageStream(sessionId, { text: trimmed });
+    } catch {
+      // Task exists even if the session could not start; still hand off.
+    }
+    setMode('cowork');
+    dispatch({ type: 'OPEN_VIEW', viewType: 'workspace' });
+  };
+
+  const handleOpenTask = (task: { id: string; sessionId?: string | null }) => {
+    setActiveTask(task.id);
+    useCoworkSessionStore.getState().setActiveSession(task.sessionId ?? null);
+    setMode('cowork');
+    dispatch({ type: 'OPEN_VIEW', viewType: 'workspace' });
   };
 
   const handleNewTask = () => {
@@ -172,12 +197,32 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
       placeholder={`Message ${project.title}`}
       inputValue={composerInput}
       showTopActions={false}
+      showModeToggle={false}
       variant="default"
     />
   );
 
   const sidebarSectionsData = {
-    memory: null,
+    memory: (
+      <div className="flex flex-col gap-2">
+        <div className="flex justify-between text-[12px]">
+          <span className="text-[var(--ui-text-muted)]">Tasks</span>
+          <span className="text-[var(--ui-text-secondary)] font-medium">{projectTasks.length}</span>
+        </div>
+        <div className="flex justify-between text-[12px]">
+          <span className="text-[var(--ui-text-muted)]">Agent tasks</span>
+          <span className="text-[var(--ui-text-secondary)] font-medium">{projectAgentTasks.length}</span>
+        </div>
+        {project?.instructions && (
+          <div className="mt-1 text-[12px] text-[var(--ui-text-muted)] leading-relaxed line-clamp-4">
+            {project.instructions}
+          </div>
+        )}
+        <p className="m-0 mt-1 text-[12px] text-[var(--ui-text-muted)] leading-relaxed">
+          Memory will be built from tasks and runs in this project.
+        </p>
+      </div>
+    ),
     onAddInstruction: handleEditInstructions,
     instructions: isEditingInstructions ? (
       <div>
@@ -222,7 +267,7 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
     <>
       <BaseProjectView
         title={project.title}
-        description="Cowork project workspace"
+        description={project.description || 'Cowork project workspace'}
         onBack={handleBack}
         onToggleStar={() => toggleProjectFavorite(project.id)}
         isStarred={project.isFavorite ?? false}
@@ -261,7 +306,11 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
                 key={task.id}
                 task={task}
                 isActive={activeTaskId === task.id}
-                onClick={() => setActiveTask(task.id)}
+                onClick={() => {
+                  setActiveTask(task.id);
+                  window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: 'cowork' } }));
+                  dispatch({ type: 'OPEN_VIEW', viewType: 'workspace' });
+                }}
                 onRename={(newTitle) => renameTask(task.id, newTitle)}
                 onDelete={() => deleteTask(task.id)}
                 isAgent={task.mode === 'agent'}
@@ -278,14 +327,12 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
         )}
       </BaseProjectView>
 
-      <InputModal
+      <ProjectEditDetailsModal
         isOpen={showRenameModal}
-        title="Rename Project"
-        placeholder="Project name"
-        defaultValue={project.title}
-        confirmLabel="Rename"
-        onConfirm={(name) => {
-          renameProject(project.id, name);
+        initialName={project.title}
+        initialDescription={project.description}
+        onConfirm={(details) => {
+          updateProjectDetails(project.id, details);
           setShowRenameModal(false);
         }}
         onCancel={() => setShowRenameModal(false)}
