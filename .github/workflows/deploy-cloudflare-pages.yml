@@ -56,10 +56,8 @@ jobs:
 
       - name: Build static export
         working-directory: surfaces/ai.allternit.com
-        # build-cloudflare.sh temporarily hides src/app/api, runs next build
-        # with CLOUDFLARE_PAGES=1, then restores it — API routes are never
-        # permanently deleted from the working tree.
-        run: bash scripts/build-cloudflare.sh
+        # Vite SPA build — outputs dist/, which the deploy step below publishes.
+        run: pnpm build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
