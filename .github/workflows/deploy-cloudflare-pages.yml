@@ -33,10 +33,11 @@ jobs:
           cache: 'pnpm'
 
       # Install from monorepo root so all workspace:* packages resolve correctly.
-      # build-cloudflare.sh must run from surfaces/ai.allternit.com but pnpm
-      # needs the workspace root context.
+      # Use --frozen-lockfile so CI matches the committed pnpm-lock.yaml and local
+      # builds; --no-frozen-lockfile was resolving newer transitive versions that
+      # broke production builds (e.g. @blocksuite/icons re-exports).
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Generate Prisma client
         working-directory: surfaces/ai.allternit.com
@@ -57,9 +58,12 @@ jobs:
       - name: Build static export
         working-directory: surfaces/ai.allternit.com
         # Vite SPA build — outputs dist/, which the deploy step below publishes.
+        # NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH enables the desktop session shim so
+        # the startup wizard sign-in is the only login inside the desktop shell.
         run: pnpm build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
 
       - name: Deploy to Cloudflare Pages
