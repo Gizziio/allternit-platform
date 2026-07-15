@@ -1,6 +1,6 @@
-import React, { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
-
 "use client"
+
+import React, { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom"
 import {
   ClerkProvider,

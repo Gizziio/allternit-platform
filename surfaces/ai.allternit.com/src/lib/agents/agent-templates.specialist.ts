@@ -19,6 +19,11 @@
 import type { CreateAgentInput, AgentType } from './agent.types';
 import type { AgentSetup, AvatarConfig } from './character.types';
 import { createDefaultAvatarConfig } from './character.types';
+import { getLatestAgentModel } from './agent-models';
+
+// All specialist templates run on the current anthropic model from the
+// platform registry — never pin model ids in templates, they rot.
+const SPECIALIST_MODEL = getLatestAgentModel('anthropic').id;
 
 // ============================================================================
 // Template Types
@@ -121,7 +126,7 @@ export const SPECIALIST_TEMPLATES: SpecialistTemplate[] = [
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'web-search'],
       tools: ['file_write', 'file_read', 'search', 'browser'],
@@ -254,7 +259,7 @@ export const Component: React.FC<Props> = ({}) => {
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'database', 'api-integration'],
       tools: ['file_write', 'file_read', 'search', 'terminal'],
@@ -357,7 +362,7 @@ You prioritize:
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'browser-automation'],
       tools: ['file_write', 'file_read', 'terminal', 'browser'],
@@ -452,7 +457,7 @@ You prioritize:
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'web-search'],
       tools: ['file_write', 'file_read', 'browser'],
@@ -547,7 +552,7 @@ You prioritize:
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'terminal'],
       tools: ['file_write', 'file_read', 'terminal'],
@@ -642,7 +647,7 @@ You prioritize:
     
     agentConfig: {
       type: 'orchestrator' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'web-search'],
       tools: ['file_write', 'file_read', 'search'],
@@ -737,7 +742,7 @@ You prioritize:
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'web-search'],
       tools: ['file_write', 'file_read', 'search'],
@@ -832,7 +837,7 @@ You prioritize:
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'web-search'],
       tools: ['file_write', 'file_read', 'search', 'terminal'],
@@ -927,7 +932,7 @@ You prioritize:
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'database'],
       tools: ['file_write', 'file_read', 'terminal'],
@@ -1022,7 +1027,7 @@ You prioritize:
     
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'web-search'],
       tools: ['file_write', 'file_read', 'search'],
@@ -1121,7 +1126,7 @@ You prioritize:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['conversation', 'knowledge-retrieval', 'ticket-management'],
       tools: ['file_read', 'search', 'web_search'],
@@ -1242,7 +1247,7 @@ EXAMPLE RESPONSES:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['scheduling', 'communication', 'research', 'document-management'],
       tools: ['file_read', 'file_write', 'search', 'web_search'],
@@ -1371,7 +1376,7 @@ EXAMPLE OUTPUTS:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['research', 'analysis', 'synthesis', 'fact-checking'],
       tools: ['file_read', 'file_write', 'search', 'web_search'],
@@ -1513,7 +1518,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'data-analysis', 'ml-modeling', 'visualization'],
       tools: ['file_read', 'file_write', 'terminal', 'search'],
@@ -1655,7 +1660,7 @@ BEST PRACTICES:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'fullstack-development', 'database', 'deployment'],
       tools: ['file_read', 'file_write', 'terminal', 'search', 'browser'],
@@ -1793,7 +1798,7 @@ BEST PRACTICES:
 
     agentConfig: {
       type: 'specialist' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['architecture-design', 'infrastructure', 'security', 'cost-optimization'],
       tools: ['file_read', 'file_write', 'search', 'terminal'],
@@ -1936,7 +1941,7 @@ BEST PRACTICES:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['writing', 'seo', 'research', 'editing'],
       tools: ['file_read', 'file_write', 'search', 'web_search'],
@@ -2085,7 +2090,7 @@ QUALITY CHECKLIST:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['content-creation', 'analytics', 'community-management', 'scheduling'],
       tools: ['file_read', 'file_write', 'search', 'web_search'],
@@ -2235,7 +2240,7 @@ CONTENT PILLARS:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['analysis', 'documentation', 'process-modeling', 'stakeholder-management'],
       tools: ['file_read', 'file_write', 'search'],
@@ -2382,7 +2387,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'orchestrator' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['planning', 'tracking', 'risk-management', 'communication'],
       tools: ['file_read', 'file_write', 'search'],
@@ -2533,7 +2538,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['prospecting', 'qualification', 'communication', 'crm-management'],
       tools: ['file_read', 'file_write', 'search', 'web_search'],
@@ -2683,7 +2688,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'specialist' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['document-review', 'legal-research', 'compliance', 'risk-analysis'],
       tools: ['file_read', 'file_write', 'search', 'web_search'],
@@ -2835,7 +2840,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['financial-modeling', 'analysis', 'reporting', 'valuation'],
       tools: ['file_read', 'file_write', 'search', 'web_search'],
@@ -2991,7 +2996,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'orchestrator' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['task-decomposition', 'delegation', 'synthesis', 'quality-control'],
       tools: ['file_read', 'file_write', 'search'],
@@ -3141,7 +3146,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'reviewer' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['review', 'validation', 'quality-assurance', 'feedback'],
       tools: ['file_read', 'search'],
@@ -3295,7 +3300,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['writing', 'editing', 'communication'],
       tools: ['file_read', 'file_write'],
@@ -3431,7 +3436,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['communication', 'emotional-intelligence', 'active-listening'],
       tools: ['file_read', 'file_write'],
@@ -3569,7 +3574,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'specialist' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['analysis', 'critical-thinking', 'problem-solving', 'synthesis'],
       tools: ['file_read', 'file_write', 'search', 'terminal'],
@@ -3708,7 +3713,7 @@ PLACEHOLDERS TO CUSTOMIZE:
 
     agentConfig: {
       type: 'worker' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['automation', 'scripting', 'integration', 'process-optimization'],
       tools: ['file_read', 'file_write', 'terminal', 'search'],
@@ -3859,7 +3864,7 @@ PLACEHOLDERS TO CUSTOMIZE:
     
     agentConfig: {
       type: 'orchestrator' as AgentType,
-      model: 'claude-3-5-sonnet',
+      model: SPECIALIST_MODEL,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'web-search', 'cloud-api'],
       tools: ['file_write', 'file_read', 'search', 'terminal', 'cloud_cli'],

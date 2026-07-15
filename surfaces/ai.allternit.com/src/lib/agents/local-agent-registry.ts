@@ -99,6 +99,7 @@ function coerceAgent(value: unknown): Agent | null {
     provider:
       value.provider === "openai" ||
       value.provider === "anthropic" ||
+      value.provider === "google" ||
       value.provider === "local" ||
       value.provider === "custom"
         ? value.provider

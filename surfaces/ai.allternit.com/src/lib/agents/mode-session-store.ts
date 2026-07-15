@@ -34,6 +34,8 @@ import { subscribeSSE } from '../sse/global-sse-manager';
 import { createModuleLogger } from '@/lib/logger';
 import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
+import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contracts';
+import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -66,6 +68,7 @@ export interface ModeSession {
   messageCount: number;
   messages: ModeSessionMessage[];
   metadata: {
+    [key: string]: unknown;
     sessionMode?: 'regular' | 'agent';
     agentId?: string;
     agentName?: string;
@@ -88,6 +91,14 @@ export interface ModeSession {
       tools?: boolean;
       automation?: boolean;
     };
+    agentModeId?: CanonicalAgentModeId;
+    agentModeLabel?: string;
+    templateTitle?: string;
+    artifactKind?: AgentArtifactKind;
+    requiredCapabilities?: string[];
+    requiredEvidence?: string[];
+    executionStatus?: 'pending' | 'running' | 'complete' | 'blocked' | 'invalid';
+    validationErrors?: string[];
   };
   // Runtime context pack (not persisted, rebuilt on load)
   _contextPack?: AgentContextPack;
@@ -156,6 +167,7 @@ function mapBackendSession(backend: BackendSession): ModeSession {
     messageCount: backend.message_count,
     messages: [],
     metadata: {
+      ...metadata,
       originSurface: metadata.originSurface || 'chat',
       sessionMode: metadata.sessionMode,
       agentId: metadata.agentId,
@@ -535,7 +547,14 @@ async function streamMessageWithContext(
         agentProvider: agent?.provider,
         agentModel: agent?.model,
         harness: agent?.harness,
-        systemPrompt: contextPack.systemPrompt,
+        systemPrompt: [contextPack.systemPrompt, session.metadata.systemPrompt]
+          .filter(Boolean)
+          .join('\n\n'),
+        agentModeId: session.metadata.agentModeId,
+        artifactKind: session.metadata.artifactKind,
+        templateTitle: session.metadata.templateTitle,
+        requiredCapabilities: session.metadata.requiredCapabilities,
+        requiredEvidence: session.metadata.requiredEvidence,
         identityContext: {
           trustTiers: contextPack.trustTiers as unknown as string[],
           agentName: contextPack.agentName,
@@ -705,6 +724,7 @@ export function createModeSessionStore(config: StoreConfig) {
               messageCount: 0,
               messages: [],
               metadata: {
+                ...options.metadata,
                 originSurface: config.originSurface,
                 sessionMode: options.sessionMode || 'regular',
                 agentId: options.agentId,
@@ -713,6 +733,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 taskId: options.taskId,
                 workspaceId: options.workspaceId,
                 workspaceFiles: options.workspaceFiles,
+                systemPrompt: options.systemPrompt,
                 contextRefreshedAt: now,
               },
             };
@@ -737,7 +758,10 @@ export function createModeSessionStore(config: StoreConfig) {
               }
 
               // Build system prompt from workspace
-              const systemPrompt = workspace ? buildSystemPrompt(workspace) : undefined;
+              const workspaceSystemPrompt = workspace ? buildSystemPrompt(workspace) : undefined;
+              const systemPrompt = [workspaceSystemPrompt, options.systemPrompt]
+                .filter(Boolean)
+                .join('\n\n') || undefined;
 
               // Create backend session
               const backendSession = await sessionApiClient.createSession({
@@ -753,7 +777,7 @@ export function createModeSessionStore(config: StoreConfig) {
                   taskId: options.taskId,
                   workspaceId: options.workspaceId,
                   workspaceFiles: workspace?.files.map(f => f.path) || options.workspaceFiles,
-                  systemPrompt: systemPrompt ?? options.systemPrompt,
+                  systemPrompt,
                   contextRefreshedAt: now,
                 },
               });
@@ -957,6 +981,8 @@ export function createModeSessionStore(config: StoreConfig) {
             let assistantToolParts: Array<Record<string, unknown>> = [];
             const assistantMessageId = `assistant-${Date.now()}`;
             const artifactCanvasIds = new Map<string, string>();
+            let emittedArtifactCount = 0;
+            const executedToolNames = new Set<string>();
 
             // Add placeholder assistant message IMMEDIATELY so React renders it
             // while isStreaming=true. Without this, when the backend responds in a
@@ -1090,6 +1116,8 @@ export function createModeSessionStore(config: StoreConfig) {
                     options.callbacks?.onThinking?.(thinking);
                   },
                   onToolCall: (toolCall) => {
+                    const toolName = (toolCall as { toolName?: string } | undefined)?.toolName;
+                    if (toolName) executedToolNames.add(toolName);
                     deltaBuffer.push({ type: 'toolCall', toolCall });
                     scheduleDeltaFlush();
                     options.callbacks?.onToolCall?.(toolCall);
@@ -1105,6 +1133,7 @@ export function createModeSessionStore(config: StoreConfig) {
                     if (tr?.toolName === 'generateWebArtifact' && tr.result && typeof tr.result === 'object') {
                       const r = tr.result as { content?: string; kind?: string; title?: string };
                       if (r.content) {
+                        emittedArtifactCount += 1;
                         const artifact: ArtifactUIPart = {
                           type: 'artifact',
                           artifactId: `artifact-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -1123,6 +1152,7 @@ export function createModeSessionStore(config: StoreConfig) {
                     scheduleDeltaFlush();
                   },
                   onArtifact: (artifact) => {
+                    emittedArtifactCount += 1;
                     // Persist artifact to backend canvas so it survives reloads
                     // and can be reopened from any surface.
                     void persistArtifactToCanvas(sessionId, artifact, artifactCanvasIds);
@@ -1198,13 +1228,44 @@ export function createModeSessionStore(config: StoreConfig) {
                         };
                       });
                     }
+                    const contract = getAgentModeContract(session.metadata.agentModeId);
+                    const validation = contract
+                      ? validateAgentModeExecution(contract, {
+                          content: assistantContent,
+                          toolNames: [...executedToolNames],
+                          artifactCount: emittedArtifactCount,
+                        })
+                      : null;
+                    const validationNotice = validation?.status === 'invalid'
+                      ? `\n\nMODE_EXECUTION_INVALID\n${validation.errors.map((error) => `- ${error}`).join('\n')}`
+                      : '';
+
                     set((state) => ({
                       streamingBySession: {
                         ...state.streamingBySession,
                         [sessionId]: { isStreaming: false, error: null, abortController: null },
                       },
                       sessions: state.sessions.map((s) =>
-                        s.id === sessionId ? { ...s, messageCount: s.messageCount + 1 } : s
+                        s.id === sessionId
+                          ? {
+                              ...s,
+                              messageCount: s.messageCount + 1,
+                              messages: validationNotice
+                                ? s.messages.map((message) =>
+                                    message.id === assistantMessageId
+                                      ? { ...message, content: `${message.content}${validationNotice}` }
+                                      : message
+                                  )
+                                : s.messages,
+                              metadata: validation
+                                ? {
+                                    ...s.metadata,
+                                    executionStatus: validation.status,
+                                    validationErrors: validation.errors,
+                                  }
+                                : s.metadata,
+                            }
+                          : s
                       ),
                     }));
                     options.callbacks?.onDone?.();

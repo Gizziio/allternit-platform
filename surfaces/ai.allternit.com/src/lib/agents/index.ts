@@ -64,7 +64,9 @@ export type {
   BanViolation,
 } from "./character.types";
 
-export { AGENT_MODELS, AGENT_TYPES } from "./agent.types";
+export { AGENT_TYPES } from "./agent.types";
+export { AGENT_MODELS, getDefaultAgentModel } from "./agent-models";
+export type { AgentModelOption } from "./agent-models";
 
 export { acknowledgeMail, buildSeedTelemetryEvents, cancelAgentRun, checkGateStatus, connectAgentEventStream, createAgent, createCheckpoint, createCommit, createDefaultAvatarConfig, createExecutionPlan, deleteAgent, dequeueTask, detectPluginConflicts, enqueueTask, generateEnhancedWorkspaceDocuments, getAgent, getAgentInbox, getAgentRun, getAgentTask, getAgentThreads, getCommit, getExecutionPlan, getGateRules, getPendingReviews, listAgentRuns, listAgentTasks, listAgents, listCheckpoints, listCommits, listQueueItems, mutateViaGate, pauseAgentRun, requestAgentReview, restoreCheckpoint, resumeAgentRun, sendAgentMail, setupSeedDefaults, splitLines, startAgentRun, submitGateDecision, updateAgent, updateTaskStatus } from './agent.service';
 export {
@@ -76,6 +78,19 @@ export type {
   ChecklistItem,
   ChecklistResult,
 } from './agent-creation-checklist';
+export {
+  defineAgent,
+  buildCharacterLayer,
+  DEFAULT_AGENT_MODEL,
+  DEFAULT_AGENT_PROVIDER,
+  DEFAULT_AGENT_HARNESS,
+  DEFAULT_AGENT_SURFACES,
+} from './agent-definition';
+export type {
+  AgentDefinition,
+  CharacterLayerSpec,
+  DefineAgentOptions,
+} from './agent-definition';
 export { CHARACTER_SETUPS, appendTelemetryEvent, applyRelationshipDrift, compileCharacterLayer, computeCharacterStats, detectBanViolation, getDefaultCharacterLayer, getSetupStatDefinitions, getSpecialtyOptions, loadCharacterArtifacts, loadCharacterLayer, loadCompiledCharacterLayer, loadTelemetryEvents, parseCharacterBlueprint, parseCharacterSeed, saveCharacterLayer } from './character.service';
 
 // Workspace Service

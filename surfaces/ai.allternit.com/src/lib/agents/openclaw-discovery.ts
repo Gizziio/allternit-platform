@@ -1,6 +1,7 @@
 import { api } from "@/integration/api-client";
 
 import type { Agent, CreateAgentInput } from "./agent.types";
+import { defineAgent } from "./agent-definition";
 
 interface OpenClawDiscoveryFiles {
   models: boolean;
@@ -79,6 +80,10 @@ function mapProvider(providerId?: string | null): CreateAgentInput["provider"] {
     return "anthropic";
   }
 
+  if (normalized.startsWith("google") || normalized.includes("gemini")) {
+    return "google";
+  }
+
   if (normalized === "local") {
     return "local";
   }
@@ -130,12 +135,11 @@ export function buildOpenClawImportInput(
   const upstreamProvider = discovered.primary_provider || primaryModel.split("/")[0] || "openclaw";
   const fallbackModels = discovered.models.filter((model) => model !== primaryModel);
 
-  return {
+  return defineAgent({
     name: discovered.display_name,
     description: discovered.workspace_path
       ? `Imported from OpenClaw agent "${discovered.agent_id}" with workspace linked at ${discovered.workspace_path}.`
       : `Imported from OpenClaw agent "${discovered.agent_id}".`,
-    type: "worker",
     model: primaryModel,
     provider: mapProvider(upstreamProvider),
     capabilities: [
@@ -144,19 +148,9 @@ export function buildOpenClawImportInput(
       ...(discovered.files.sessions_store ? ["history"] : []),
       ...(discovered.auth_providers.length > 0 ? ["connected"] : []),
     ],
-    tools: [],
-    maxIterations: 10,
-    temperature: 0.7,
-    harness: { mode: "cloud" },
-    allowedSurfaces: ["chat"],
-    trustTier: "standard",
-    writeScope: "workspace",
-    characterLayer: {
-      identity: { setup: "generalist", className: "OpenClaw Import", specialtySkills: [], temperament: "balanced", personalityTraits: [], backstory: "" },
-      roleCard: { domain: "openclaw workspace", inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
-      voice: { style: "", rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
-      progression: { class: "OpenClaw Import", relevantStats: [], level: { maxLevel: 99, xpFormula: "linear" } },
-      avatar: { type: "mascot", mascot: { template: "bot" }, style: { primaryColor: "#6366f1", accentColor: "#1e1c1a" } },
+    character: {
+      className: "OpenClaw Import",
+      domain: "openclaw workspace",
     },
     config: {
       source: "openclaw",
@@ -169,7 +163,7 @@ export function buildOpenClawImportInput(
         modelIds: discovered.models,
       },
     },
-  };
+  });
 }
 
 export function getOpenClawWorkspacePathFromAgent(

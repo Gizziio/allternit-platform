@@ -2,6 +2,8 @@
  * Cost accumulator for tracking AI API usage
  */
 
+import { getUsage } from '@/lib/tokenlens';
+
 export interface CostEntry {
   type: "llm" | "api";
   modelOrTool: string;
@@ -63,23 +65,12 @@ export class CostAccumulator {
   }
 
   /**
-   * Calculate approximate LLM cost based on model
+   * Calculate LLM cost based on model. Delegates to tokenlens's
+   * registry-derived pricing table — never hand-maintain a pricing map here,
+   * it immediately drifts from the actual model catalog.
    */
   private calculateLLMCost(model: string, inputTokens: number, outputTokens: number): number {
-    // Default pricing per 1M tokens (can be replaced with actual pricing)
-    const pricing: Record<string, { input: number; output: number }> = {
-      "gpt-4": { input: 30, output: 60 },
-      "gpt-4o": { input: 5, output: 15 },
-      "gpt-4o-mini": { input: 0.15, output: 0.6 },
-      "claude-3": { input: 3, output: 15 },
-      "gemini": { input: 0.5, output: 1.5 },
-      default: { input: 1, output: 2 },
-    };
-
-    const modelKey = Object.keys(pricing).find((k) => model.includes(k)) ?? "default";
-    const { input, output } = pricing[modelKey];
-
-    return (inputTokens * input + outputTokens * output) / 1_000_000;
+    return getUsage({ modelId: model, usage: { input: inputTokens, output: outputTokens } }).costUSD.totalUSD;
   }
 
   /**

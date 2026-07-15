@@ -6,6 +6,7 @@
  */
 
 import { getAgent, createAgent, normalizeCreateAgentInput } from './agent.service';
+import { getDefaultAgentModel } from './agent-models';
 import { filesApi } from './files-api';
 import type {
   CreateAgentInput,
@@ -634,8 +635,8 @@ async function importWorkspace(
     name: (manifest.agentName as string) || `Imported-${Date.now()}`,
     description: (manifest.description as string) || `Imported from ${file.name}`,
     type: 'worker',
-    model: (manifest.model as string) || 'gpt-4o',
-    provider: (manifest.provider as 'openai' | 'anthropic' | 'local' | 'custom') || 'openai',
+    model: (manifest.model as string) || getDefaultAgentModel().id,
+    provider: (manifest.provider as 'openai' | 'anthropic' | 'google' | 'local' | 'custom') || getDefaultAgentModel().provider,
     harness: { mode: 'cloud' },
     allowedSurfaces: ['chat'],
     trustTier: 'standard',

@@ -50,6 +50,9 @@ interface AgentState {
   agents: Agent[];
   activeAgentId: string | null;
   activeRunId: string | null;
+
+  // Create/edit draft
+  draftAgent: Partial<CreateAgentInput> | undefined;
   
   // Related data
   tasks: Record<string, AgentTask[]>; // keyed by agentId
@@ -166,6 +169,10 @@ interface AgentActions {
   setIsCreating: (isCreating: boolean) => void;
   setIsEditing: (agentId: string | null) => void;
   clearError: () => void;
+
+  // Draft agent for create/duplicate flow
+  setDraftAgent: (draft: Partial<CreateAgentInput> | undefined) => void;
+  clearDraftAgent: () => void;
   
   // Runner integration - trace and streaming
   appendTraceEntry: (entry: Omit<AgentTraceEntry, 'id' | 'timestamp'>) => void;
@@ -245,6 +252,7 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       isCreating: false,
       isEditing: null,
       viewMode: 'list',
+      draftAgent: undefined,
       isLoadingAgents: false,
       isLoadingRuns: false,
       isLoadingTasks: false,
@@ -1141,6 +1149,14 @@ export const useAgentStore = create<AgentState & AgentActions>()(
 
       clearError: () => {
         set({ error: null });
+      },
+
+      setDraftAgent: (draft) => {
+        set({ draftAgent: draft });
+      },
+
+      clearDraftAgent: () => {
+        set({ draftAgent: undefined });
       },
 
       // ----------------------------------------------------------------------

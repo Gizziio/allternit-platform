@@ -8,6 +8,8 @@
  */
 
 import type { ModelData } from "./types";
+import { models as generatedModels } from "./models.generated";
+import { config } from "@/lib/config";
 
 // SVG Logos (embedded as data URIs for reliability)
 const LOGOS = {
@@ -34,126 +36,77 @@ const LOGOS = {
   terminal: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM4 18V6h16v12H4zM7.5 9l2.5 2.5L7.5 14l-1-1 1.5-1.5L6.5 10l1-1zm4.5 5h4v1h-4v-1z"/></svg>`,
 };
 
-// AI SDK Models (API-based)
-const AI_SDK_MODELS: ModelData[] = [
+// Providers whose gateway models are offered in the picker; other providers'
+// models appear only when curated in config.models.
+const GATEWAY_PICKER_PROVIDERS = new Set(["openai", "anthropic", "google", "mistral", "deepseek"]);
+const CURATED_MODEL_IDS = new Set([config.models.defaults.primary, ...config.models.curatedDefaults]);
+
+const PROVIDER_LOGOS: Record<string, string> = {
+  openai: LOGOS.openai,
+  anthropic: LOGOS.anthropic,
+  google: LOGOS.gemini,
+  mistral: LOGOS.mistral,
+  deepseek: LOGOS.deepseek,
+  alibaba: LOGOS.qwen,
+  moonshotai: LOGOS.qwen,
+};
+
+function firstSentence(text: string | undefined): string {
+  if (!text) return "";
+  const period = text.indexOf(". ");
+  const cut = period === -1 ? text : text.slice(0, period + 1);
+  return cut.length > 110 ? `${cut.slice(0, 107)}…` : cut;
+}
+
+// AI SDK Models (API-based) — derived from the AI-gateway registry snapshot
+// (models.generated.ts). Never hand-pin gateway model ids here: they rot
+// (this list previously still offered gemini-1.5 and claude-3.5 long after
+// retirement). Model ids are gateway-namespaced ("provider/model"), the same
+// format the send path composes (see CodeCanvas backendDefaultModel).
+const GATEWAY_MODELS: ModelData[] = [...(generatedModels as unknown as readonly {
+  id: string;
+  name: string;
+  owned_by: string;
+  type: string;
+  description?: string;
+  tags?: string[];
+}[])]
+  .filter((m) =>
+    m.type === "language" &&
+    (m.tags ?? []).includes("tool-use") &&
+    !config.models.disabledModels.includes(m.id) &&
+    (GATEWAY_PICKER_PROVIDERS.has(m.owned_by) || CURATED_MODEL_IDS.has(m.id)),
+  )
+  .map((m) => {
+    const tags = m.tags ?? [];
+    return {
+      id: m.id,
+      name: m.name,
+      provider: m.owned_by,
+      modelId: m.id,
+      runtimeType: "api" as const,
+      description: firstSentence(m.description),
+      logo: PROVIDER_LOGOS[m.owned_by] ?? LOGOS.terminal,
+      features: {
+        vision: tags.includes("vision"),
+        fileUpload: tags.includes("vision") || tags.includes("pdf"),
+        webSearch: false,
+        reasoning: tags.includes("reasoning"),
+        codeExecution: false,
+      },
+    };
+  });
+
+// Models served outside the gateway snapshot (Terminal Server "zen" tier).
+const ZEN_MODELS: ModelData[] = [
   {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    provider: "openai",
-    modelId: "gpt-4o",
+    id: "kimi/kimi-for-coding",
+    name: "Kimi for Coding",
+    provider: "moonshot",
+    modelId: "kimi/kimi-for-coding",
     runtimeType: "api",
-    description: "Most capable multimodal model",
-    logo: LOGOS.openai,
-    features: { vision: true, fileUpload: true, webSearch: true, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "gpt-4o-mini",
-    name: "GPT-4o Mini",
-    provider: "openai",
-    modelId: "gpt-4o-mini",
-    runtimeType: "api",
-    description: "Fast and affordable",
-    logo: LOGOS.openai,
-    features: { vision: true, fileUpload: true, webSearch: true, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "o1",
-    name: "o1",
-    provider: "openai",
-    modelId: "o1",
-    runtimeType: "api",
-    description: "Advanced reasoning model",
-    logo: LOGOS.openai,
-    features: { vision: false, fileUpload: true, webSearch: false, reasoning: true, codeExecution: false },
-  },
-  {
-    id: "o1-mini",
-    name: "o1 Mini",
-    provider: "openai",
-    modelId: "o1-mini",
-    runtimeType: "api",
-    description: "Fast reasoning model",
-    logo: LOGOS.openai,
-    features: { vision: false, fileUpload: true, webSearch: false, reasoning: true, codeExecution: false },
-  },
-  {
-    id: "claude-3-5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "anthropic",
-    modelId: "claude-3-5-sonnet-20241022",
-    runtimeType: "api",
-    description: "Excellent for coding",
-    logo: LOGOS.anthropic,
-    features: { vision: true, fileUpload: true, webSearch: false, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "claude-3-5-haiku",
-    name: "Claude 3.5 Haiku",
-    provider: "anthropic",
-    modelId: "claude-3-5-haiku-20241022",
-    runtimeType: "api",
-    description: "Fast and efficient",
-    logo: LOGOS.anthropic,
-    features: { vision: true, fileUpload: true, webSearch: false, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "claude-3-opus",
-    name: "Claude 3 Opus",
-    provider: "anthropic",
-    modelId: "claude-3-opus-20240229",
-    runtimeType: "api",
-    description: "Most capable Claude model",
-    logo: LOGOS.anthropic,
-    features: { vision: true, fileUpload: true, webSearch: false, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "gemini-1.5-pro",
-    name: "Gemini 1.5 Pro",
-    provider: "google",
-    modelId: "gemini-1.5-pro",
-    runtimeType: "api",
-    description: "Google's most capable model",
-    logo: LOGOS.gemini,
-    features: { vision: true, fileUpload: true, webSearch: true, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "gemini-1.5-flash",
-    name: "Gemini 1.5 Flash",
-    provider: "google",
-    modelId: "gemini-1.5-flash",
-    runtimeType: "api",
-    description: "Fast and versatile",
-    logo: LOGOS.gemini,
-    features: { vision: true, fileUpload: true, webSearch: true, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "mistral-large",
-    name: "Mistral Large",
-    provider: "mistral",
-    modelId: "mistral-large-latest",
-    runtimeType: "api",
-    description: "Most capable Mistral model",
-    logo: LOGOS.mistral,
-    features: { vision: false, fileUpload: true, webSearch: false, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "deepseek-r1",
-    name: "DeepSeek R1",
-    provider: "deepseek",
-    modelId: "deepseek-reasoner",
-    runtimeType: "api",
-    description: "Open reasoning model",
-    logo: LOGOS.deepseek,
-    features: { vision: false, fileUpload: false, webSearch: false, reasoning: true, codeExecution: false },
-  },
-  {
-    id: "deepseek-chat",
-    name: "DeepSeek Chat",
-    provider: "deepseek",
-    modelId: "deepseek-chat",
-    runtimeType: "api",
-    description: "General purpose chat",
-    logo: LOGOS.deepseek,
+    description: "Kimi coding model via Terminal Server",
+    logo: LOGOS.qwen,
     features: { vision: false, fileUpload: false, webSearch: false, reasoning: false, codeExecution: false },
   },
   {
@@ -177,6 +130,8 @@ const AI_SDK_MODELS: ModelData[] = [
     features: { vision: false, fileUpload: false, webSearch: false, reasoning: false, codeExecution: false },
   },
 ];
+
+const AI_SDK_MODELS: ModelData[] = [...ZEN_MODELS, ...GATEWAY_MODELS];
 
 // OpenClaw CLI Subprocess Models
 const OPENCLAW_CLI_MODELS: ModelData[] = [

@@ -13,6 +13,9 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import fs from 'fs/promises';
+import path from 'node:path';
+import os from 'os';
 import { agentWorkspaceFS } from '../agent-workspace-files';
 import { AgentTrustTiers } from '../agent-trust-tiers';
 import { HeartbeatTaskManager, parseHeartbeatTasks } from '../agent-heartbeat-executor';
@@ -22,19 +25,76 @@ import { WorkspaceFileWatcher } from '../agent-workspace-watcher';
 
 const TEST_AGENT_ID = 'test-agent';
 
+function getTestWorkspacePath(): string {
+  return path.join(os.homedir(), 'agents', TEST_AGENT_ID, '.allternit');
+}
+
+async function setupTestWorkspace(): Promise<void> {
+  const workspacePath = getTestWorkspacePath();
+  await fs.mkdir(workspacePath, { recursive: true });
+
+  const soulMd = `# Agent SOUL
+
+## Tier 1 - Autonomous
+- read files
+- view logs
+
+## Tier 2 - Notify After
+- write small files
+- run tests
+
+## Tier 3 - Require Permission
+- delete files
+- Shell rm -rf
+- modify production
+`;
+
+  const heartbeatMd = `# HEARTBEAT
+
+### Startup
+- Check workspace health
+- Load project context
+
+### Daily
+- Check workspace health
+- Load project context
+`;
+
+  const files: Record<string, string> = {
+    'SOUL.md': soulMd,
+    'HEARTBEAT.md': heartbeatMd,
+    'IDENTITY.md': '# Identity\n\nTest agent identity.\n',
+    'VOICE.md': '# Voice\n\nTest agent voice.\n',
+    'POLICY.md': '# Policy\n\nTest agent policy.\n',
+    'PLAYBOOK.md': '# Playbook\n\nTest agent playbook.\n',
+    'TOOLS.md': '# Tools\n\nTest agent tools.\n',
+    'SYSTEM.md': '# System\n\nTest agent system.\n',
+    'BRAIN.md': '# Brain\n\nTest agent brain.\n',
+    'MEMORY.md': '# Memory\n\nTest agent memory.\n',
+    'LESSONS.md': '# Lessons\n\nTest agent lessons.\n',
+  };
+
+  for (const [fileName, content] of Object.entries(files)) {
+    await fs.writeFile(path.join(workspacePath, fileName), content, 'utf-8');
+  }
+}
+
+async function teardownTestWorkspace(): Promise<void> {
+  const workspacePath = getTestWorkspacePath();
+  await fs.rm(workspacePath, { recursive: true, force: true });
+}
+
 describe('Full Agent Integration', () => {
   beforeAll(async () => {
-    // Ensure test workspace exists
-    const exists = await agentWorkspaceFS.workspaceExists(TEST_AGENT_ID);
-    if (!exists) {
-      throw new Error(`Test workspace not found. Run setup first.`);
-    }
+    await teardownTestWorkspace();
+    await setupTestWorkspace();
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     // Cleanup
     agentCronScheduler.stop();
     agentWorkspaceFS.clearCache();
+    await teardownTestWorkspace();
   });
 
   describe('1. File System → Workspace Loading', () => {
@@ -258,10 +318,9 @@ describe('Full Agent Integration', () => {
       console.debug(`   Cowork tasks: ${coworkTasks.length}`);
     });
   });
-});
 
-// Integration status report
-describe('Integration Status', () => {
+  // Integration status report
+  describe('Integration Status', () => {
   it('should report all systems operational', async () => {
     const status = {
       fileSystem: false,
@@ -324,4 +383,5 @@ describe('Integration Status', () => {
       throw error;
     }
   });
+});
 });

@@ -9,6 +9,7 @@ import type {
 } from "../models/image-model-id";
 import type { AppModelId, ModelId } from "./app-models";
 import { getAppModelDefinition } from "./app-models";
+import { getLatestAgentModel } from "@/lib/agents/agent-models";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -45,6 +46,17 @@ const getMultimodalImageModel = (modelId: MultimodalImageModelId) =>
   gateway(modelId);
 
 // Model aliases removed - use getLanguageModel directly with specific model IDs
+
+/**
+ * Strong reasoning/coding model for built-in plugins (code, research, slides,
+ * swarms, etc.) that need a capable model without pinning a specific gateway
+ * id. Resolves the current Anthropic model from the registry snapshot —
+ * plugins previously hardcoded 'anthropic/claude-3-5-sonnet', which doesn't
+ * match the gateway's id format (claude-3.5-sonnet) and would throw on every
+ * invocation, on top of naming an already-superseded model.
+ */
+export const getDefaultPluginModel = async () =>
+  getLanguageModel(getLatestAgentModel('anthropic').id as ModelId);
 
 const getModelProviderOptions = async (
   providerModelId: AppModelId

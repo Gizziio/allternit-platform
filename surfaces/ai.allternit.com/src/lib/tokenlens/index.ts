@@ -9,9 +9,15 @@
  */
 
 import type { LanguageModelUsage } from "ai";
+import { models as generatedModels } from "@/lib/ai/models.generated";
 
-// Pricing per 1M tokens (input/output) for common models
-const MODEL_PRICING: Record<string, { input: number; output: number; cacheRead?: number; cacheWrite?: number }> = {
+interface PricingEntry { input: number; output: number; cacheRead?: number; cacheWrite?: number }
+
+// Legacy pricing per 1M tokens, kept only as a fallback for old cached
+// bare-name model ids (e.g. sessions persisted before gateway-namespaced ids
+// existed). Current models are priced from the registry below — never add
+// new entries here, they immediately start rotting.
+const LEGACY_MODEL_PRICING: Record<string, PricingEntry> = {
   "gpt-4": { input: 30, output: 60 },
   "gpt-4-turbo": { input: 10, output: 30 },
   "gpt-4o": { input: 5, output: 15, cacheRead: 1.25, cacheWrite: 5 },
@@ -25,6 +31,44 @@ const MODEL_PRICING: Record<string, { input: number; output: number; cacheRead?:
   "gemini-ultra": { input: 1, output: 3 },
   "default": { input: 1, output: 2 },
 };
+
+interface GeneratedPricingModel {
+  id: string;
+  context_window?: number;
+  max_tokens?: number;
+  pricing?: { input?: string; output?: string; input_cache_read?: string; input_cache_write?: string };
+}
+
+function perMillion(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n * 1_000_000 : undefined;
+}
+
+// Registry-derived pricing/context tables, keyed both by the full gateway id
+// ("openai/gpt-5-mini") and its bare suffix ("gpt-5-mini") since callers pass
+// either form.
+const REGISTRY_PRICING = new Map<string, PricingEntry>();
+const REGISTRY_CONTEXT = new Map<string, number>();
+for (const m of generatedModels as readonly GeneratedPricingModel[]) {
+  const input = perMillion(m.pricing?.input);
+  const output = perMillion(m.pricing?.output);
+  if (input !== undefined && output !== undefined) {
+    const entry: PricingEntry = {
+      input,
+      output,
+      cacheRead: perMillion(m.pricing?.input_cache_read),
+      cacheWrite: perMillion(m.pricing?.input_cache_write),
+    };
+    REGISTRY_PRICING.set(m.id, entry);
+    REGISTRY_PRICING.set(m.id.split('/').pop()!, entry);
+  }
+  const context = m.context_window ?? m.max_tokens;
+  if (context) {
+    REGISTRY_CONTEXT.set(m.id, context);
+    REGISTRY_CONTEXT.set(m.id.split('/').pop()!, context);
+  }
+}
 
 /**
  * Estimate the number of tokens in a text string
@@ -42,14 +86,17 @@ export interface EstimatedLanguageModelUsage extends LanguageModelUsage {
 /**
  * Get pricing for a model
  */
-function getModelPricing(modelId?: string): { input: number; output: number; cacheRead?: number; cacheWrite?: number } {
-  if (!modelId) return MODEL_PRICING.default;
-  
-  const matchedModel = Object.keys(MODEL_PRICING).find(key => 
+function getModelPricing(modelId?: string): PricingEntry {
+  if (!modelId) return LEGACY_MODEL_PRICING.default;
+
+  const exact = REGISTRY_PRICING.get(modelId) ?? REGISTRY_PRICING.get(modelId.split('/').pop()!);
+  if (exact) return exact;
+
+  // Fallback for old cached bare-name ids that predate gateway namespacing.
+  const legacyKey = Object.keys(LEGACY_MODEL_PRICING).find((key) =>
     modelId.toLowerCase().includes(key.toLowerCase())
   );
-  
-  return matchedModel ? MODEL_PRICING[matchedModel] : MODEL_PRICING.default;
+  return legacyKey ? LEGACY_MODEL_PRICING[legacyKey] : LEGACY_MODEL_PRICING.default;
 }
 
 /**
@@ -204,29 +251,31 @@ function isNearTokenLimit(
 /**
  * Get max tokens for a given model
  */
+// Legacy context windows, kept only as a fallback for old cached bare-name
+// model ids. Current models are read from the registry (REGISTRY_CONTEXT).
+const LEGACY_MODEL_LIMITS: Record<string, number> = {
+  "gpt-4": 8192,
+  "gpt-4-turbo": 128000,
+  "gpt-4o": 128000,
+  "gpt-4o-mini": 128000,
+  "gpt-3.5-turbo": 16385,
+  "claude-3-opus": 200000,
+  "claude-3-sonnet": 200000,
+  "claude-3-haiku": 200000,
+  "claude-3-5-sonnet": 200000,
+  "gemini-pro": 1000000,
+  "gemini-ultra": 1000000,
+  "default": 4096,
+};
+
 function getModelMaxTokens(modelId?: string): number {
-  // Default context window sizes for common models
-  const modelLimits: Record<string, number> = {
-    "gpt-4": 8192,
-    "gpt-4-turbo": 128000,
-    "gpt-4o": 128000,
-    "gpt-4o-mini": 128000,
-    "gpt-3.5-turbo": 16385,
-    "claude-3-opus": 200000,
-    "claude-3-sonnet": 200000,
-    "claude-3-haiku": 200000,
-    "claude-3-5-sonnet": 200000,
-    "gemini-pro": 1000000,
-    "gemini-ultra": 1000000,
-    "default": 4096,
-  };
-  
-  if (!modelId) return modelLimits.default;
-  
-  // Find matching model or return default
-  const matchedModel = Object.keys(modelLimits).find(key => 
+  if (!modelId) return LEGACY_MODEL_LIMITS.default;
+
+  const exact = REGISTRY_CONTEXT.get(modelId) ?? REGISTRY_CONTEXT.get(modelId.split('/').pop()!);
+  if (exact) return exact;
+
+  const legacyKey = Object.keys(LEGACY_MODEL_LIMITS).find((key) =>
     modelId.toLowerCase().includes(key.toLowerCase())
   );
-  
-  return matchedModel ? modelLimits[matchedModel] : modelLimits.default;
+  return legacyKey ? LEGACY_MODEL_LIMITS[legacyKey] : LEGACY_MODEL_LIMITS.default;
 }

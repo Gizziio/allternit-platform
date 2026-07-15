@@ -10,6 +10,7 @@
  */
 
 import type { Agent, AgentRun } from './agent.types';
+import { getDefaultAgentModel, getLatestAgentModel } from './agent-models';
 
 // ============================================================================
 // Subagent Configuration
@@ -642,7 +643,7 @@ export const PREDEFINED_AGENT_TEMPLATES: AgentTemplate[] = [
     category: 'Development',
     tags: ['coding', 'testing', 'debugging'],
     config: {
-      model: 'claude-3-5-sonnet',
+      model: getLatestAgentModel('anthropic').id,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'terminal'],
       defaultCallOptions: {
@@ -688,8 +689,8 @@ export const PREDEFINED_AGENT_TEMPLATES: AgentTemplate[] = [
     category: 'Research',
     tags: ['research', 'analysis', 'writing'],
     config: {
-      model: 'gpt-4o',
-      provider: 'openai',
+      model: getDefaultAgentModel().id,
+      provider: getDefaultAgentModel().provider,
       capabilities: ['web-search', 'file-operations', 'memory'],
       defaultCallOptions: {
         temperature: 0.3,
@@ -717,7 +718,7 @@ export const PREDEFINED_AGENT_TEMPLATES: AgentTemplate[] = [
     category: 'Development',
     tags: ['review', 'quality', 'security'],
     config: {
-      model: 'claude-3-5-sonnet',
+      model: getLatestAgentModel('anthropic').id,
       provider: 'anthropic',
       capabilities: ['code-generation', 'file-operations', 'reasoning'],
       defaultCallOptions: {
@@ -741,8 +742,8 @@ export const PREDEFINED_AGENT_TEMPLATES: AgentTemplate[] = [
     category: 'Orchestration',
     tags: ['orchestration', 'multi-agent', 'swarm'],
     config: {
-      model: 'gpt-4o',
-      provider: 'openai',
+      model: getDefaultAgentModel().id,
+      provider: getDefaultAgentModel().provider,
       capabilities: ['planning', 'memory', 'reasoning'],
       subagents: [],
     },

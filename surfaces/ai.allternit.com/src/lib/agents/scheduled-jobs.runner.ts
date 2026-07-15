@@ -100,9 +100,12 @@ export function startJobRunner(userConfig?: Partial<JobRunnerConfig>): void {
 
   // Request notification permission if enabled
   if (runnerState.enableNotifications && "Notification" in window) {
-    Notification.requestPermission().catch(() => {
-      // Ignore permission errors
-    });
+    const permissionPromise = Notification.requestPermission();
+    if (permissionPromise && typeof permissionPromise.catch === "function") {
+      permissionPromise.catch(() => {
+        // Ignore permission errors
+      });
+    }
   }
 }
 

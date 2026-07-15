@@ -199,7 +199,7 @@ export interface Agent {
   type: AgentType;
   parentAgentId?: string; // For sub-agents
   model: string;
-  provider: 'openai' | 'anthropic' | 'local' | 'custom';
+  provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
   capabilities: string[];
   systemPrompt?: string;
   tools: string[];
@@ -284,7 +284,7 @@ export const agentSchema = z.object({
   type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
-  provider: z.enum(['openai', 'anthropic', 'local', 'custom']),
+  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
   capabilities: z.array(z.string()),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()),
@@ -393,7 +393,7 @@ export interface CreateAgentInput {
   type?: AgentType;
   parentAgentId?: string;
   model: string;
-  provider: 'openai' | 'anthropic' | 'local' | 'custom';
+  provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
   capabilities?: string[];
   systemPrompt?: string;
   tools?: string[];
@@ -426,7 +426,7 @@ const createAgentInputSchema = z.object({
   type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']).optional(),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
-  provider: z.enum(['openai', 'anthropic', 'local', 'custom']),
+  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
   capabilities: z.array(z.string()).optional(),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()).optional(),
@@ -436,6 +436,7 @@ const createAgentInputSchema = z.object({
   config: z.record(z.unknown()).optional(),
   workspaceId: z.string().optional(),
   ownerId: z.string().optional(),
+  source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
   trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
@@ -833,15 +834,8 @@ const AGENT_CAPABILITIES = [
   { id: 'plugin-install', name: 'Plugin Install', description: 'Install Allternit Design plugins into agent workspaces' },
 ] as const;
 
-// Available models
-export const AGENT_MODELS = [
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
-  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'anthropic' },
-  { id: 'claude-3-5-haiku', name: 'Claude 3.5 Haiku', provider: 'anthropic' },
-  { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic' },
-  { id: 'local-llama', name: 'Local Llama', provider: 'local' },
-] as const;
+// Available models: see ./agent-models.ts — derived from the platform model
+// registry instead of a hand-maintained list.
 
 // Agent type definitions
 export const AGENT_TYPES: { id: AgentType; name: string; description: string; icon: string }[] = [

@@ -69,6 +69,7 @@ declare global {
       };
       shell?: {
         openExternal: (url: string) => Promise<void>;
+        openDesign: () => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;
           running: boolean;

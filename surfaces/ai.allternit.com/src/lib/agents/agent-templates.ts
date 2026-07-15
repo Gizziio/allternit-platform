@@ -6,6 +6,7 @@
  */
 
 import type { CreateAgentInput } from './agent.types';
+import { getDefaultAgentModel } from './agent-models';
 
 interface TemplateVariable {
   name: string;
@@ -64,12 +65,12 @@ const TEMPLATE_VARIABLES: Record<string, TemplateVariable> = {
   // Model/Runtime variables
   '{{model}}': {
     name: 'model',
-    defaultValue: 'gpt-4o',
+    defaultValue: () => getDefaultAgentModel().id,
     description: 'AI model to use'
   },
   '{{provider}}': {
     name: 'provider',
-    defaultValue: 'openai',
+    defaultValue: () => getDefaultAgentModel().provider,
     description: 'Model provider'
   },
   '{{temperature}}': {
@@ -132,12 +133,12 @@ const TEMPLATE_VARIABLES: Record<string, TemplateVariable> = {
   // Platform variables (resolved at runtime)
   '{{PLATFORM_DEFAULT_MODEL}}': {
     name: 'PLATFORM_DEFAULT_MODEL',
-    defaultValue: 'gpt-4o',
+    defaultValue: () => getDefaultAgentModel().id,
     description: 'Platform default AI model'
   },
   '{{PLATFORM_DEFAULT_PROVIDER}}': {
     name: 'PLATFORM_DEFAULT_PROVIDER',
-    defaultValue: 'openai',
+    defaultValue: () => getDefaultAgentModel().provider,
     description: 'Platform default provider'
   },
   '{{PLATFORM_VERSION}}': {
@@ -359,8 +360,8 @@ export function buildVariablesFromInput(
     nature: 'AI Assistant',
     vibe: 'Helpful and professional',
     emoji: '🤖',
-    model: input.model || 'gpt-4o',
-    provider: input.provider || 'openai',
+    model: input.model || getDefaultAgentModel().id,
+    provider: input.provider || getDefaultAgentModel().provider,
     temperature: String(input.temperature ?? 0.7),
     max_iterations: String(input.maxIterations ?? 10),
     system_prompt: input.systemPrompt || '',

@@ -20,7 +20,6 @@
 import { api } from '../../integration/api-client';
 import type {
   Agent,
-  AgentType,
   AppMode,
   CreateAgentInput,
   VoiceConfig,
@@ -38,9 +37,9 @@ import type {
 import {
   validateCreateAgentInput,
   safeValidate,
-  agentListResponseSchema,
   agentSchema,
 } from './agent.types';
+import { getDefaultAgentModel } from './agent-models';
 import {
   createLocalAgent,
   deleteLocalAgent,
@@ -69,17 +68,20 @@ export async function listAgents(): Promise<Agent[]> {
   try {
     const response = await api.listAgents();
 
-    // Validate API response with Zod
-    const validated = safeValidate(agentListResponseSchema, response);
-    if (!validated) {
-      // Silent fail - backend may return incomplete data, use local agents
+    // Normalize casing first, then validate each canonical agent. Validating
+    // the raw rows rejects every snake_case backend response (and rails-api
+    // omits `total`), which silently hid all API agents behind the local
+    // registry fallback.
+    const rawAgents = (response as { agents?: unknown })?.agents;
+    if (!Array.isArray(rawAgents)) {
       return listLocalAgents();
     }
 
-    return mergeAgentCatalog(
-      validated.agents.map(transformAgentFromApi),
-      listLocalAgents(),
-    );
+    const apiAgents = rawAgents
+      .map(transformAgentFromApi)
+      .filter((agent) => safeValidate(agentSchema, agent) !== null);
+
+    return mergeAgentCatalog(apiAgents, listLocalAgents());
   } catch (error) {
     if (shouldUseLocalAgentRegistryFallback(error)) {
       return listLocalAgents();
@@ -93,31 +95,23 @@ export async function getAgent(agentId: string): Promise<Agent> {
   try {
     const agent = await api.getAgent(agentId);
 
-    // Validate with Zod before transforming
-    const validated = safeValidate(agentSchema, agent);
+    // Normalize casing first, then validate the canonical shape. Validating
+    // the raw payload rejects every snake_case backend response.
+    const transformed = transformAgentFromApi(agent);
+    const validated = safeValidate(agentSchema, transformed);
     if (!validated) {
-      // Instead of throwing, create a minimal valid agent from the partial data
-      // This handles cases where backend returns incomplete responses
+      // Instead of throwing, repair the transformed agent in place. This
+      // handles cases where backend returns incomplete responses.
       const minimalAgent: Agent = {
-        id: agentId,
-        name: (agent as any).name || 'Unknown Agent',
-        description: (agent as any).description || '',
-        type: ((agent as any).type as AgentType) || 'worker',
-        model: (agent as any).model || 'gpt-4',
-        provider: ((agent as any).provider as any) || 'openai',
-        capabilities: [],
-        tools: [],
-        maxIterations: (agent as any).maxIterations || 10,
-        temperature: (agent as any).temperature || 0.7,
-        config: {},
-        status: 'idle',
-        createdAt: (agent as any).createdAt || new Date().toISOString(),
-        updatedAt: (agent as any).updatedAt || new Date().toISOString(),
+        ...transformed,
+        id: transformed.id || agentId,
+        name: transformed.name || 'Unknown Agent',
+        model: transformed.model || getDefaultAgentModel().id,
       };
       return minimalAgent;
     }
 
-    return transformAgentFromApi(validated);
+    return transformed;
   } catch (error) {
     if (shouldUseLocalAgentRegistryFallback(error)) {
       const localAgent = getLocalAgent(agentId);
@@ -132,8 +126,8 @@ export async function getAgent(agentId: string): Promise<Agent> {
       name: 'Unknown Agent',
       description: '',
       type: 'worker',
-      model: 'gpt-4',
-      provider: 'openai',
+      model: getDefaultAgentModel().id,
+      provider: getDefaultAgentModel().provider,
       capabilities: [],
       tools: [],
       maxIterations: 10,
@@ -226,7 +220,9 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
       auto_speak: input.voice.autoSpeak,
       speak_on_checkpoint: input.voice.speakOnCheckpoint,
     } : undefined,
-    config: input.config || {},
+    // The agents API has no dedicated `source` column; persist the ownership
+    // tier inside config (config.source is taken by integration origins).
+    config: input.source ? { ...(input.config || {}), agentSource: input.source } : (input.config || {}),
     workspace_id: input.workspaceId,
     owner_id: input.ownerId,
     avatar: input.avatar,
@@ -285,51 +281,69 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
  * Transform agent data from API (snake_case) to frontend (camelCase)
  * Note: Input should already be validated by Zod before calling this
  */
-function transformAgentFromApi(apiAgent: unknown): Agent {
+export function transformAgentFromApi(apiAgent: unknown): Agent {
   const a = apiAgent as Record<string, unknown>;
   const voiceData = a.voice as Record<string, unknown> | undefined;
-  
+  const config = (a.config as Record<string, unknown>) || {};
+  // Backends differ in casing (allternit-api returns snake_case rows,
+  // already-normalized payloads are camelCase) — accept both.
+  const pick = <T,>(...values: unknown[]): T | undefined =>
+    values.find((v) => v !== undefined && v !== null) as T | undefined;
+
+  const allowedSurfaces = pick<AppMode[]>(
+    Array.isArray(a.enabled_modes) ? a.enabled_modes : undefined,
+    Array.isArray(a.allowedSurfaces) ? a.allowedSurfaces : undefined,
+  );
+
   return {
     id: String(a.id || ''),
     name: String(a.name || ''),
     description: String(a.description || ''),
-    type: (a.agent_type as Agent['type']) || 'worker',
-    parentAgentId: a.parent_agent_id as string | undefined,
+    type: pick<Agent['type']>(a.agent_type, a.type) || 'worker',
+    parentAgentId: pick<string>(a.parent_agent_id, a.parentAgentId),
     model: String(a.model || ''),
     provider: (a.provider as Agent['provider']) || 'openai',
     capabilities: Array.isArray(a.capabilities) ? a.capabilities.map(String) : [],
-    systemPrompt: a.system_prompt as string | undefined,
+    systemPrompt: pick<string>(a.system_prompt, a.systemPrompt),
     tools: Array.isArray(a.tools) ? a.tools.map(String) : [],
-    maxIterations: typeof a.max_iterations === 'number' ? a.max_iterations : 10,
+    maxIterations: pick<number>(
+      typeof a.max_iterations === 'number' ? a.max_iterations : undefined,
+      typeof a.maxIterations === 'number' ? a.maxIterations : undefined,
+    ) ?? 10,
     temperature: typeof a.temperature === 'number' ? a.temperature : 0.7,
     voice: voiceData ? {
-      voiceId: String(voiceData.voice_id || 'default'),
-      voiceLabel: voiceData.voice_label as string | undefined,
+      voiceId: String(pick(voiceData.voice_id, voiceData.voiceId) || 'default'),
+      voiceLabel: pick<string>(voiceData.voice_label, voiceData.voiceLabel),
       engine: voiceData.engine as VoiceConfig['engine'],
       enabled: Boolean(voiceData.enabled),
-      autoSpeak: voiceData.auto_speak as boolean | undefined,
-      speakOnCheckpoint: voiceData.speak_on_checkpoint as boolean | undefined,
+      autoSpeak: pick<boolean>(voiceData.auto_speak, voiceData.autoSpeak),
+      speakOnCheckpoint: pick<boolean>(voiceData.speak_on_checkpoint, voiceData.speakOnCheckpoint),
     } : undefined,
-    config: (a.config as Record<string, unknown>) || {},
+    config,
     status: (a.status as Agent['status']) || 'idle',
-    createdAt: String(a.created_at || new Date().toISOString()),
-    updatedAt: String(a.updated_at || new Date().toISOString()),
-    lastRunAt: a.last_run_at as string | undefined,
-    workspaceId: a.workspace_id as string | undefined,
-    ownerId: a.owner_id as string | undefined,
+    source: pick<Agent['source']>(config.agentSource, a.source),
+    createdAt: String(pick(a.created_at, a.createdAt) || new Date().toISOString()),
+    updatedAt: String(pick(a.updated_at, a.updatedAt) || new Date().toISOString()),
+    lastRunAt: pick<string>(a.last_run_at, a.lastRunAt),
+    workspaceId: pick<string>(a.workspace_id, a.workspaceId),
+    ownerId: pick<string>(a.owner_id, a.ownerId),
     avatar: (a.avatar as Agent['avatar']) || undefined,
-    characterLayer: (a.character_json as Agent['characterLayer']) || undefined,
-    trustTier: (a.trust_tier as Agent['trustTier']) || 'standard',
-    harness: (a.harness_config as Agent['harness']) || undefined,
-    allowedSurfaces: Array.isArray(a.enabled_modes)
-      ? (a.enabled_modes as AppMode[])
-      : ['chat'],
-    allowedSkills: Array.isArray(a.allowed_skills) ? (a.allowed_skills as string[]) : undefined,
-    allowedTools: Array.isArray(a.allowed_tools) ? (a.allowed_tools as string[]) : undefined,
+    characterLayer: pick<Agent['characterLayer']>(a.character_json, a.characterLayer),
+    trustTier: pick<Agent['trustTier']>(a.trust_tier, a.trustTier) || 'standard',
+    harness: pick<Agent['harness']>(a.harness_config, a.harness),
+    allowedSurfaces: allowedSurfaces ?? ['chat'],
+    allowedSkills: pick<string[]>(
+      Array.isArray(a.allowed_skills) ? a.allowed_skills : undefined,
+      Array.isArray(a.allowedSkills) ? a.allowedSkills : undefined,
+    ),
+    allowedTools: pick<string[]>(
+      Array.isArray(a.allowed_tools) ? a.allowed_tools : undefined,
+      Array.isArray(a.allowedTools) ? a.allowedTools : undefined,
+    ),
     category: (a.category as Agent['category']) || undefined,
     tags: Array.isArray(a.tags) ? (a.tags as string[]) : undefined,
-    dataClassification: (a.data_classification as string) || undefined,
-    writeScope: (a.write_scope as string) || undefined,
+    dataClassification: pick<string>(a.data_classification, a.dataClassification),
+    writeScope: pick<string>(a.write_scope, a.writeScope),
   };
 }
 
@@ -365,6 +379,11 @@ export async function updateAgent(
     } : null;
   }
   if (updates.config !== undefined) apiUpdates.config = updates.config;
+  if (updates.source !== undefined) {
+    // No dedicated column — persist the ownership tier inside config, merged
+    // over the config update (if any) so neither write clobbers the other.
+    apiUpdates.config = { ...((apiUpdates.config as Record<string, unknown>) || {}), agentSource: updates.source };
+  }
   if (updates.avatar !== undefined) apiUpdates.avatar = updates.avatar;
   if (updates.characterLayer !== undefined) apiUpdates.character_json = updates.characterLayer;
   if (updates.trustTier !== undefined) apiUpdates.trust_tier = updates.trustTier;
@@ -1293,8 +1312,8 @@ export function generateEnhancedWorkspaceDocuments(
 ): Array<{ path: string; content: string }> {
   const name = metadata.name || 'Agent';
   const description = metadata.description || '';
-  const model = metadata.model || 'gpt-4o';
-  const provider = metadata.provider || 'openai';
+  const model = metadata.model || getDefaultAgentModel().id;
+  const provider = metadata.provider || getDefaultAgentModel().provider;
   const agentType = metadata.type || 'worker';
   const trustTier = metadata.trustTier || 'standard';
   const writeScope = metadata.writeScope || 'workspace';
