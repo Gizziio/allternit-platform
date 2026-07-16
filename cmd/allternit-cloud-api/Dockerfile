@@ -1,7 +1,7 @@
 # Allternit Cloud API — Railway/Fly/Docker deployment
 # Build context: repository root
 
-FROM rust:1.78-slim AS builder
+FROM rust:1.97-slim AS builder
 
 WORKDIR /app
 
@@ -23,17 +23,15 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m allternit
 WORKDIR /app
 
 COPY --from=builder /app/target/release/allternit-cloud-api /usr/local/bin/allternit-cloud-api
 
-RUN mkdir -p /data && chown -R allternit:allternit /data
-USER allternit
+RUN mkdir -p /data
 
 ENV PORT=8080 \
     HOST=0.0.0.0 \
-    DATABASE_URL=/data/api.db \
+    DATABASE_URL=sqlite:///data/api.db \
     RUST_LOG=info
 
 EXPOSE 8080

@@ -363,7 +363,9 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
 
 /// Initialize the database with configured connection pooling
 pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
-    use sqlx::sqlite::SqlitePoolOptions;
+    use sqlx::ConnectOptions;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
 
     // Get pool configuration from environment
     let max_connections = std::env::var("DB_MAX_CONNECTIONS")
@@ -396,13 +398,16 @@ pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
         max_connections, min_connections, acquire_timeout_secs, max_lifetime_mins, idle_timeout_mins
     );
 
+    let connect_options =
+        SqliteConnectOptions::from_str(database_url)?.create_if_missing(true);
+
     let pool = SqlitePoolOptions::new()
         .max_connections(max_connections)
         .min_connections(min_connections)
         .acquire_timeout(std::time::Duration::from_secs(acquire_timeout_secs))
         .max_lifetime(std::time::Duration::from_secs(max_lifetime_mins * 60))
         .idle_timeout(std::time::Duration::from_secs(idle_timeout_mins * 60))
-        .connect(database_url)
+        .connect_with(connect_options)
         .await?;
 
     // Run migrations

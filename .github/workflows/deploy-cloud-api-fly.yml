@@ -1,0 +1,27 @@
+name: Deploy Cloud API to Fly.io
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/allternit-cloud-api/**'
+      - 'cmd/allternit-cloud-api/migrations/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'fly.toml'
+      - '.github/workflows/deploy-cloud-api-fly.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy to Fly.io
+        run: bash cmd/allternit-cloud-api/deploy-fly.sh
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
