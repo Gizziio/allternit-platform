@@ -1,8 +1,8 @@
 /**
  * Unified Terminal Component
  *
- * Multi-tab terminal pane backed by the real platform PTY service
- * (`/api/terminal/*`). Each tab is an independent shell session that streams
+ * Multi-tab terminal pane backed by the platform terminal service
+ * (`/terminal/*`). Each tab is an independent shell session that streams
  * output over Server-Sent Events and accepts stdin via HTTP POST.
  *
  * The chrome is styled as a liquid-glass surface so it matches the rest of
@@ -18,11 +18,17 @@ import {
   Terminal as TerminalIcon,
   Warning,
   ArrowsClockwise,
+  GitBranch,
 } from '@phosphor-icons/react';
 
 import { createModuleLogger } from '@/lib/logger';
+import { GATEWAY_BASE_URL } from '@/lib/agents/api-config';
 
 const logger = createModuleLogger('UnifiedTerminal');
+
+function terminalUrl(path: string): string {
+  return `${GATEWAY_BASE_URL}${path}`;
+}
 
 // Dynamically import xterm only on the client side.
 let Terminal: typeof import('xterm').Terminal | null = null;
@@ -70,8 +76,10 @@ interface TerminalSession {
   errorMsg: string;
 }
 
-interface CreateTerminalResponse {
-  sessionId: string;
+interface TerminalCreateResponse {
+  sessionId?: string;
+  session_id?: string;
+  data?: { session_id?: string };
 }
 
 interface TerminalStreamMessage {
@@ -88,15 +96,22 @@ function generateTabId(): string {
 // PTY service API
 // ─────────────────────────────────────────────────────────────────────────────
 
-function createTerminalSession(options: {
+function terminalHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = typeof window !== 'undefined' ? window.localStorage.getItem('allternit_token') : null;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+async function createTerminalSession(options: {
   cwd?: string;
   shell?: string;
   cols?: number;
   rows?: number;
 }): Promise<string> {
-  const response = await fetch('/api/terminal/create', {
+  const response = await fetch(terminalUrl('/terminal/create'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: terminalHeaders(),
     body: JSON.stringify({
       shell: options.shell ?? '/bin/zsh',
       cols: options.cols ?? 80,
@@ -105,32 +120,40 @@ function createTerminalSession(options: {
     }),
   });
 
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.details || `Failed to create terminal: ${response.status}`);
+  const body = (await response.json().catch(() => ({}))) as TerminalCreateResponse & { success?: boolean; message?: string; details?: string };
+
+  if (!response.ok || body.success === false) {
+    throw new Error(body.message || body.details || `Failed to create terminal: ${response.status}`);
   }
 
-  const { sessionId } = (await response.json()) as CreateTerminalResponse;
+  const sessionId = body.sessionId ?? body.session_id ?? body.data?.session_id;
+  if (!sessionId) {
+    throw new Error('Terminal service did not return a session id');
+  }
   return sessionId;
 }
 
 async function sendTerminalInput(remoteSessionId: string, data: string): Promise<void> {
-  await fetch(`/api/terminal/${remoteSessionId}/input`, {
+  await fetch(terminalUrl(`/terminal/${remoteSessionId}/input`), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data }),
+    headers: terminalHeaders(),
+    body: JSON.stringify({ session_id: remoteSessionId, content: data }),
   });
 }
 
 async function closeTerminalSession(remoteSessionId: string): Promise<void> {
-  await fetch(`/api/terminal/${remoteSessionId}/close`, { method: 'POST' }).catch(() => {});
+  await fetch(terminalUrl(`/terminal/${remoteSessionId}/close`), {
+    method: 'POST',
+    headers: terminalHeaders(),
+    body: JSON.stringify({ session_id: remoteSessionId }),
+  }).catch(() => {});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Single terminal surface
 // ─────────────────────────────────────────────────────────────────────────────
 
-function TerminalSurface({
+export function TerminalSurface({
   remoteSessionId,
   isActive,
   onStatusChange,
@@ -155,7 +178,7 @@ function TerminalSurface({
       const term = new Terminal!({
         cursorBlink: true,
         theme: {
-          background: 'rgba(10, 12, 14, 0.35)',
+          background: 'rgba(11, 17, 32, 0.55)',
           foreground: 'var(--text-primary, #f3f4f6)',
           cursor: 'var(--text-primary, #f3f4f6)',
           black: '#111827',
@@ -194,7 +217,7 @@ function TerminalSurface({
         void sendTerminalInput(remoteSessionId, data);
       });
 
-      const es = new EventSource(`/api/terminal/${remoteSessionId}/stream`);
+      const es = new EventSource(terminalUrl(`/terminal/${remoteSessionId}/stream`));
       esRef.current = es;
 
       es.onopen = () => {
@@ -242,15 +265,27 @@ function TerminalSurface({
 
   // Refit when the pane becomes active or its container resizes.
   useEffect(() => {
-    if (!isActive || !fitAddonRef.current) return;
-    const timeout = setTimeout(() => {
+    if (!isActive || !fitAddonRef.current || !containerRef.current) return;
+    const fit = () => {
       try {
         fitAddonRef.current?.fit();
       } catch {
         // Ignore fit errors.
       }
-    }, 100);
-    return () => clearTimeout(timeout);
+    };
+    fit();
+    const timeout = setTimeout(fit, 100);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if ('ResizeObserver' in window) {
+      resizeObserver = new ResizeObserver(() => fit());
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      clearTimeout(timeout);
+      resizeObserver?.disconnect();
+    };
   }, [isActive]);
 
   return (
@@ -407,9 +442,10 @@ export function UnifiedTerminal({
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--surface-canvas)',
+        color: 'var(--text-primary)',
       }}
     >
-      {/* Liquid-glass toolbar */}
+      {/* Liquid-glass telemetry bar */}
       <div
         style={{
           padding: '8px 10px',
@@ -419,8 +455,8 @@ export function UnifiedTerminal({
           gap: 12,
           borderBottom: '1px solid var(--border-subtle)',
           background: 'var(--glass-bg-thick)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           flexShrink: 0,
         }}
       >
@@ -429,7 +465,7 @@ export function UnifiedTerminal({
           <span
             style={{
               fontSize: 12,
-              fontWeight: 650,
+              fontWeight: 700,
               color: 'var(--text-primary)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -442,15 +478,20 @@ export function UnifiedTerminal({
           {terminalContext?.branch && (
             <span
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
                 fontSize: 11,
                 color: 'var(--text-secondary)',
                 padding: '2px 8px',
                 borderRadius: 999,
                 border: '1px solid var(--border-subtle)',
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--surface-panel)',
                 whiteSpace: 'nowrap',
+                fontFamily: 'var(--font-mono)',
               }}
             >
+              <GitBranch size={10} />
               {terminalContext.branch}
             </span>
           )}
@@ -464,11 +505,28 @@ export function UnifiedTerminal({
                 padding: '2px 8px',
                 borderRadius: 999,
                 border: '1px solid var(--border-subtle)',
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--surface-panel)',
                 whiteSpace: 'nowrap',
               }}
             >
               {terminalContext.shortSha}
+            </span>
+          )}
+
+          {workingDir && (
+            <span
+              style={{
+                fontSize: 11,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-tertiary)',
+                padding: '2px 8px',
+                borderRadius: 999,
+                border: '1px solid var(--border-subtle)',
+                background: 'var(--surface-panel)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {workingDir.split('/').pop()}
             </span>
           )}
 
@@ -478,16 +536,13 @@ export function UnifiedTerminal({
               alignItems: 'center',
               gap: 6,
               fontSize: 11,
-              color: allConnected
-                ? 'var(--status-success)'
-                : anyConnecting
-                  ? 'var(--status-warning)'
-                  : 'var(--status-error)',
+              color: allConnected ? 'var(--status-success)' : anyConnecting ? 'var(--status-warning)' : 'var(--status-error)',
               whiteSpace: 'nowrap',
+              fontFamily: 'var(--font-mono)',
             }}
           >
             <StatusDot status={allConnected ? 'connected' : anyConnecting ? 'connecting' : 'error'} />
-            {allConnected ? 'Connected' : anyConnecting ? 'Connecting…' : 'Disconnected'}
+            {allConnected ? 'ONLINE' : anyConnecting ? 'SYNC' : 'OFFLINE'}
           </span>
         </div>
 
@@ -501,7 +556,7 @@ export function UnifiedTerminal({
               padding: 2,
               borderRadius: 999,
               border: '1px solid var(--border-subtle)',
-              background: 'rgba(255,255,255,0.03)',
+              background: 'var(--surface-panel)',
             }}
           >
             <button
@@ -512,10 +567,11 @@ export function UnifiedTerminal({
                 ...glassButton,
                 width: 24,
                 height: 24,
-                ...(mode === 'single' ? { background: 'rgba(255,255,255,0.10)', color: 'var(--text-primary)' } : {}),
+                color: mode === 'single' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                ...(mode === 'single' ? { background: 'var(--surface-active)' } : {}),
               }}
               onMouseEnter={(e) => {
-                if (mode !== 'single') Object.assign(e.currentTarget.style, glassButtonHover);
+                if (mode !== 'single') Object.assign(e.currentTarget.style, { background: 'var(--surface-hover)', color: 'var(--text-primary)' });
               }}
               onMouseLeave={(e) => {
                 if (mode !== 'single') {
@@ -534,10 +590,11 @@ export function UnifiedTerminal({
                 ...glassButton,
                 width: 24,
                 height: 24,
-                ...(mode === 'grid' ? { background: 'rgba(255,255,255,0.10)', color: 'var(--text-primary)' } : {}),
+                color: mode === 'grid' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                ...(mode === 'grid' ? { background: 'var(--surface-active)' } : {}),
               }}
               onMouseEnter={(e) => {
-                if (mode !== 'grid') Object.assign(e.currentTarget.style, glassButtonHover);
+                if (mode !== 'grid') Object.assign(e.currentTarget.style, { background: 'var(--surface-hover)', color: 'var(--text-primary)' });
               }}
               onMouseLeave={(e) => {
                 if (mode !== 'grid') {
@@ -561,8 +618,8 @@ export function UnifiedTerminal({
               padding: '5px 10px',
               borderRadius: 999,
               border: '1px solid var(--border-subtle)',
-              background: 'rgba(255,255,255,0.06)',
-              color: 'var(--text-secondary)',
+              background: 'var(--surface-panel)',
+              color: 'var(--accent-code)',
               fontSize: 11,
               fontWeight: 600,
               cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -571,13 +628,11 @@ export function UnifiedTerminal({
             }}
             onMouseEnter={(e) => {
               if (!isLoading) {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.10)';
-                e.currentTarget.style.color = 'var(--text-primary)';
+                e.currentTarget.style.background = 'var(--surface-hover)';
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.background = 'var(--surface-panel)';
             }}
           >
             <Plus size={13} />
@@ -753,13 +808,13 @@ export function UnifiedTerminal({
               style={{
                 flex: 1,
                 minHeight: 0,
-                borderRadius: 12,
+                borderRadius: 14,
                 border: '1px solid var(--border-subtle)',
-                background: 'rgba(8, 10, 12, 0.45)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
+                background: 'var(--glass-bg-thick)',
+                backdropFilter: 'blur(14px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(14px) saturate(160%)',
                 overflow: 'hidden',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.28)',
               }}
             >
               {activeTab?.remoteSessionId && (
@@ -791,16 +846,18 @@ export function UnifiedTerminal({
               <div
                 key={tab.id}
                 style={{
-                  borderRadius: 12,
+                  borderRadius: 14,
                   border: `1px solid ${tab.id === activeTabId ? 'var(--accent-code)' : 'var(--border-subtle)'}`,
-                  background: 'rgba(8, 10, 12, 0.45)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
+                  background: 'var(--glass-bg-thick)',
+                  backdropFilter: 'blur(14px) saturate(160%)',
+                  WebkitBackdropFilter: 'blur(14px) saturate(160%)',
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'hidden',
                   minHeight: 120,
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+                  boxShadow: tab.id === activeTabId
+                    ? 'inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px var(--accent-code)22, 0 8px 24px rgba(0,0,0,0.28)'
+                    : 'inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.28)',
                 }}
               >
                 <div
