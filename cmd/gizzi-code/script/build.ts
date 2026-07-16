@@ -44,11 +44,15 @@ Options:
   if (all) cmd.push('--all')
 
   console.log(`Running: ${cmd.join(' ')}`)
-  await Bun.spawn(cmd, {
+  const exitCode = await Bun.spawn(cmd, {
     stdout: 'inherit',
     stderr: 'inherit',
     stdin: 'inherit',
   }).exited
+
+  if (exitCode !== 0) {
+    throw new Error(`Production build exited with code ${exitCode}`)
+  }
 }
 
 main().catch((err) => {
