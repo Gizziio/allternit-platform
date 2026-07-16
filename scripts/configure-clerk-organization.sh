@@ -75,8 +75,8 @@ fi
 
 organizations="$(request GET '/organizations?limit=500&order_by=-created_at')"
 organization_id="$(
-  jq -r --arg slug "$CLERK_ORGANIZATION_SLUG" '
-    [ .data[]? | select(.slug == $slug) | .id ]
+  jq -r --arg slug "$CLERK_ORGANIZATION_SLUG" --arg name "$CLERK_ORGANIZATION_NAME" '
+    [ .data[]? | select(.slug == $slug or .name == $name) | .id ]
     | if length == 1 then .[0] else empty end
   ' <<<"$organizations"
 )"
@@ -84,17 +84,15 @@ organization_id="$(
 if [[ -z "$organization_id" ]]; then
   organization_payload="$(jq -cn \
     --arg name "$CLERK_ORGANIZATION_NAME" \
-    --arg slug "$CLERK_ORGANIZATION_SLUG" \
     --arg created_by "$owner_user_id" \
-    '{name:$name, slug:$slug, created_by:$created_by}')"
+    '{name:$name, created_by:$created_by}')"
   organization="$(request POST /organizations "$organization_payload")"
   organization_id="$(jq -r '.id' <<<"$organization")"
   action='created'
 else
   organization_payload="$(jq -cn \
     --arg name "$CLERK_ORGANIZATION_NAME" \
-    --arg slug "$CLERK_ORGANIZATION_SLUG" \
-    '{name:$name, slug:$slug}')"
+    '{name:$name}')"
   request PATCH "/organizations/${organization_id}" "$organization_payload" >/dev/null
   action='updated'
 fi
@@ -130,6 +128,6 @@ if [[ "$(jq -r '.role' <<<"$membership")" != 'org:admin' ]]; then
   exit 1
 fi
 
-printf 'Clerk organization %s: %s (%s); owner role: %s; organization membership: enabled.\n' \
-  "$action" "$CLERK_ORGANIZATION_NAME" "$CLERK_ORGANIZATION_SLUG" \
+printf 'Clerk organization %s: %s; owner role: %s; organization membership: enabled.\n' \
+  "$action" "$CLERK_ORGANIZATION_NAME" \
   "$(jq -r '.role' <<<"$membership")"
