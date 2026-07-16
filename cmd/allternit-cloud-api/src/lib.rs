@@ -46,8 +46,12 @@ pub struct ApiState {
     pub session_manager: Arc<runtime::session_manager::SessionManager>,
     /// Rate limiter for API protection
     pub rate_limiter: Arc<RateLimiter>,
+    /// Public-route rate limiter for pairing and relay endpoints
+    pub public_rate_limiter: Arc<RateLimiter>,
     /// Cost service for tracking run costs
     pub cost_service: Arc<dyn services::CostService>,
+    /// Quota service for free-tier guardrails
+    pub quota_service: services::SharedQuotaService,
 }
 
 /// Create the API router
@@ -273,19 +277,25 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .with_state(state.clone());
 
     // Create public routes (no auth required)
-    let public_routes = Router::new()
+    let public_runtime_routes = Router::new()
+        // Runtime pairing performs its own Clerk or device-credential checks on
+        // each endpoint. Pairing creation/exchange intentionally remain public
+        // like an OAuth device authorization endpoint.
+        .merge(routes::runtime_pairing::routes())
+        .merge(routes::runtime_relay::routes())
+        .layer(axum_middleware::from_fn_with_state(
+            state.public_rate_limiter.clone(),
+            crate::middleware::rate_limit::rate_limit_middleware,
+        ))
+        .with_state(state.clone());
+
+    let public_health_routes = Router::new()
         // Health endpoints (public)
         .route("/api/v1/health", get(routes::health::health_check))
         .route("/api/v1/health/ready", get(routes::health::readiness_check))
         .route("/api/v1/health/live", get(routes::health::liveness_check))
         .route("/api/v1/metrics", get(routes::health::metrics))
-        // Auth endpoints (public)
-        .route("/api/v1/auth/validate", post(routes::auth::validate_token))
-        // Runtime pairing performs its own Clerk or device-credential checks on
-        // each endpoint. Pairing creation/exchange intentionally remain public
-        // like an OAuth device authorization endpoint.
-        .merge(routes::runtime_pairing::routes())
-        .merge(routes::runtime_relay::routes());
+        .with_state(state.clone());
 
     // Create auth-protected routes (require auth but listed separately for clarity)
     let auth_routes = Router::new()
@@ -353,7 +363,8 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
 
     // Combine all routes
     Router::new()
-        .merge(public_routes)
+        .merge(public_health_routes)
+        .merge(public_runtime_routes)
         .merge(auth_routes)
         .merge(protected_routes)
         .layer(DefaultBodyLimit::max(max_body_size))
@@ -363,7 +374,6 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
 
 /// Initialize the database with configured connection pooling
 pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
-    use sqlx::ConnectOptions;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
 
@@ -398,8 +408,7 @@ pub async fn init_db(database_url: &str) -> Result<sqlx::SqlitePool, ApiError> {
         max_connections, min_connections, acquire_timeout_secs, max_lifetime_mins, idle_timeout_mins
     );
 
-    let connect_options =
-        SqliteConnectOptions::from_str(database_url)?.create_if_missing(true);
+    let connect_options = SqliteConnectOptions::from_str(database_url)?.create_if_missing(true);
 
     let pool = SqlitePoolOptions::new()
         .max_connections(max_connections)

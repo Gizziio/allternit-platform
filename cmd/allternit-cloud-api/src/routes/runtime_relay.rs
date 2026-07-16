@@ -262,6 +262,7 @@ async fn create_socket_ticket(
 
 async fn connect_browser_socket(
     ws: WebSocketUpgrade,
+    State(state): State<Arc<ApiState>>,
     Path(runtime_id): Path<String>,
     Query(query): Query<SocketTicketQuery>,
 ) -> Result<Response, ApiError> {
@@ -271,10 +272,38 @@ async fn connect_browser_socket(
         .ok_or_else(|| {
             ApiError::Unauthorized("Invalid or expired runtime socket ticket".to_string())
         })?;
-    Ok(ws.on_upgrade(move |socket| browser_socket(socket, runtime_id, ticket.path)))
+
+    // Resolve the runtime owner and enforce relay socket/bandwidth quotas.
+    let user_id = runtime_user_id(&state, &runtime_id).await?;
+    let quota = state.quota_service.ensure_quota(&user_id).await?;
+    state
+        .quota_service
+        .check_relay_socket_allowed(&user_id, &quota)
+        .await?;
+    let relay_socket_id = state
+        .quota_service
+        .open_relay_socket(&runtime_id, &ticket.path)
+        .await?;
+    let quota_service = state.quota_service.clone();
+
+    Ok(ws.on_upgrade(move |socket| {
+        browser_socket(
+            socket,
+            runtime_id,
+            ticket.path,
+            relay_socket_id,
+            quota_service,
+        )
+    }))
 }
 
-async fn browser_socket(socket: WebSocket, runtime_id: String, path: String) {
+async fn browser_socket(
+    socket: WebSocket,
+    runtime_id: String,
+    path: String,
+    relay_socket_id: String,
+    quota_service: crate::services::SharedQuotaService,
+) {
     let connection = relay_hub().read().await.get(&runtime_id).cloned();
     let Some(connection) = connection else {
         return;
@@ -299,6 +328,7 @@ async fn browser_socket(socket: WebSocket, runtime_id: String, path: String) {
         return;
     }
 
+    let mut egress_bytes: i64 = 0;
     let (mut sink, mut stream) = socket.split();
     loop {
         tokio::select! {
@@ -327,9 +357,11 @@ async fn browser_socket(socket: WebSocket, runtime_id: String, path: String) {
                         if sink.send(Message::Text("{\"type\":\"allternit_socket_ready\"}".to_string())).await.is_err() { break; }
                     }
                     Some(RuntimeSocketFrame::Data(body, true)) => {
+                        egress_bytes += body.len() as i64;
                         if sink.send(Message::Binary(body.to_vec())).await.is_err() { break; }
                     }
                     Some(RuntimeSocketFrame::Data(body, false)) => {
+                        egress_bytes += body.len() as i64;
                         let text = String::from_utf8_lossy(&body).into_owned();
                         if sink.send(Message::Text(text)).await.is_err() { break; }
                     }
@@ -348,6 +380,11 @@ async fn browser_socket(socket: WebSocket, runtime_id: String, path: String) {
         code: 1000,
         reason: "Browser disconnected".to_string(),
     });
+
+    // Best-effort accounting: record socket close and egress bytes.
+    let _ = quota_service
+        .close_relay_socket(&relay_socket_id, egress_bytes)
+        .await;
 }
 
 async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: String) {
@@ -607,6 +644,16 @@ async fn runtime_capabilities(
     .await?
     .ok_or_else(|| ApiError::NotFound("Runtime not found".to_string()))?;
     Ok(serde_json::from_str(&capabilities).unwrap_or_default())
+}
+
+async fn runtime_user_id(state: &ApiState, runtime_id: &str) -> Result<String, ApiError> {
+    sqlx::query_scalar::<_, String>(
+        "SELECT user_id FROM runtime_devices WHERE id = ? AND revoked_at IS NULL",
+    )
+    .bind(runtime_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| ApiError::NotFound("Runtime not found".to_string()))
 }
 
 fn decode_relay_body(body: &str, encoding: &str) -> Bytes {

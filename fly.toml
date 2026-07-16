@@ -12,6 +12,9 @@ primary_region = 'lax'
   RUST_LOG = 'info'
   ALLTERNIT_PLATFORM_URL = 'https://platform.allternit.com'
   CORS_ALLOWED_ORIGINS = 'https://platform.allternit.com,https://ai.allternit.com'
+  DEFAULT_PLAN_TIER = 'free'
+  RATE_LIMIT_RPM = '60'
+  PUBLIC_RATE_LIMIT_RPM = '30'
 
 [[mounts]]
   source = 'allternit_cloud_api_data'

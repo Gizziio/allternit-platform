@@ -278,6 +278,17 @@ async fn approve_pairing(
         ));
     }
 
+    // Ensure the user has a quota row and enforce guardrails before approval.
+    let quota = state.quota_service.ensure_quota(&user.id).await?;
+    state
+        .quota_service
+        .check_spend_cap(&user.id, &quota)
+        .await?;
+    state
+        .quota_service
+        .record_pairing_approved(&user.id)
+        .await?;
+
     let email = user
         .email
         .clone()
@@ -408,6 +419,18 @@ async fn exchange_pairing(
         .user_id
         .clone()
         .ok_or_else(|| ApiError::Internal("Approved pairing has no user".to_string()))?;
+
+    // Enforce quotas before creating the device row.
+    let quota = state.quota_service.ensure_quota(&user_id).await?;
+    state
+        .quota_service
+        .check_active_device_cap(&user_id, &quota)
+        .await?;
+    state
+        .quota_service
+        .record_pairing_created(&user_id, &quota)
+        .await?;
+
     let runtime_id = format!("rt_{}", Uuid::new_v4().simple());
     let device_token = format!("allternit_runtime_{}", random_secret(48));
     let credential_hash = sha256_hex(device_token.as_bytes());

@@ -2,6 +2,7 @@
 
 pub mod cost_service;
 pub mod event_store;
+pub mod quota_service;
 pub mod run_service;
 pub mod scheduler_service;
 pub mod task_service;
@@ -12,6 +13,7 @@ pub use cost_service::{
     SetCostRateRequest, UpdateBudgetRequest, UserCostBudget, UserCostSummary,
 };
 pub use event_store::{event_utils, EventStore, EventStoreImpl};
+pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};
 pub use scheduler_service::{
     start_scheduler_service, MisfirePolicy, SchedulerConfig, SchedulerService,
