@@ -7,6 +7,12 @@ node_modules
 .pnpm-store
 **/node_modules
 
+# Python virtual environments
+.venv
+**/.venv
+venv
+**/venv
+
 # Build outputs
 target
 dist
