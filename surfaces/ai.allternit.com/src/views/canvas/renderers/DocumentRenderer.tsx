@@ -31,8 +31,8 @@ export function DocumentRenderer({
       <AllternitDocumentEditor
         initialContent={artifact.content || ''}
         title={artifact.title}
-        readOnly={true}
-        showToolbar={false}
+        readOnly={false}
+        showToolbar={true}
         className="h-full"
         metadata={{
           source: sessionId ? `Session: ${sessionId}` : undefined,

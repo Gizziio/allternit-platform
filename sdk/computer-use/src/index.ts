@@ -49,6 +49,35 @@ export type {
 
 export { AllternitComputerUseClient } from './client';
 
+export { COMPUTER_USE_CONTRACT_VERSION } from './canonical';
+export type {
+  ComputerActionEvidence,
+  ComputerActionStep,
+  ComputerActionTarget,
+  ComputerActionTransaction,
+  ComputerApprovalGrant,
+  ComputerCapabilityManifest,
+  ComputerElementNode,
+  ComputerEnvironment,
+  ComputerEnvironmentRecord,
+  ComputerEnvironmentLease,
+  ComputerEnvironmentProviderManifest,
+  ComputerEvent,
+  ComputerExecutionMode,
+  ComputerImageEvidence,
+  ComputerImageRecord,
+  ComputerIsolation,
+  ComputerObservation,
+  ComputerOperatingSystem,
+  ComputerOutcomeStatus,
+  ComputerPostcondition,
+  ComputerRect,
+  ComputerRoot,
+  ComputerRootDiscovery,
+  ComputerStepOutcome,
+  ComputerTransactionOutcome,
+} from './canonical';
+
 export type {
   ActionIntent,
   BrowserEvent,

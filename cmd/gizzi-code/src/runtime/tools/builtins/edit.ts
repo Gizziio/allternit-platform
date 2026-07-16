@@ -16,7 +16,7 @@ import { FileTime } from "@/shared/file/time"
 import { Filesystem } from "@/shared/util/filesystem"
 import { Instance } from "@/runtime/context/project/instance"
 import { Snapshot } from "@/runtime/session/snapshot"
-import { assertExternalDirectory } from "@/runtime/tools/builtins/external-directory"
+import { assertExternalDirectory, assertSandboxWriteAllowed } from "@/runtime/tools/builtins/external-directory"
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 
@@ -43,6 +43,7 @@ export const EditTool = Tool.define("edit", {
 
     const filePath = path.isAbsolute(params.filePath) ? params.filePath : path.join(Instance.directory, params.filePath)
     await assertExternalDirectory(ctx, filePath)
+    assertSandboxWriteAllowed(ctx, filePath)
 
     let diff = ""
     let contentOld = ""

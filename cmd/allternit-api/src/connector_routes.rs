@@ -32,7 +32,9 @@ const META_JSON: &str = include_str!("../assets/connectors.meta.json");
 
 fn catalog() -> &'static Value {
     static C: std::sync::OnceLock<Value> = std::sync::OnceLock::new();
-    C.get_or_init(|| serde_json::from_str(CATALOG_JSON).unwrap_or_else(|_| json!({"connectors": []})))
+    C.get_or_init(|| {
+        serde_json::from_str(CATALOG_JSON).unwrap_or_else(|_| json!({"connectors": []}))
+    })
 }
 
 fn meta() -> &'static Value {
@@ -48,7 +50,10 @@ fn meta() -> &'static Value {
 /// one-click-config knob (`ALLTERNIT_<ID>_CLIENT_ID`), so Connect never answers
 /// "not supported"; it answers "register the Allternit OAuth app once (this env)".
 fn synthesize_meta(id: &str) -> Value {
-    let env = format!("ALLTERNIT_{}_CLIENT_ID", id.to_uppercase().replace('-', "_"));
+    let env = format!(
+        "ALLTERNIT_{}_CLIENT_ID",
+        id.to_uppercase().replace('-', "_")
+    );
     json!({
         "auth_type": "oauth2",
         "tier": 2,
@@ -111,7 +116,9 @@ async fn mcp_proxy(headers: axum::http::HeaderMap, Json(body): Json<Value>) -> i
         Ok(resp) => (StatusCode::OK, Json(resp)),
         Err(e) if e.unreachable => (
             StatusCode::BAD_GATEWAY,
-            Json(json!({ "error": "sidecar_unavailable", "message": "Connector sidecar unavailable — the open-connector process is down or still starting." })),
+            Json(
+                json!({ "error": "sidecar_unavailable", "message": "Connector sidecar unavailable — the open-connector process is down or still starting." }),
+            ),
         ),
         Err(e) => (
             StatusCode::from_u16(e.status).unwrap_or(StatusCode::BAD_GATEWAY),
@@ -177,8 +184,11 @@ fn is_curated(id: &str) -> bool {
 /// (`None` = sidecar unreachable — degrade gracefully) and THIS user's live
 /// connections (service -> account label), alias-filtered inside the proxy.
 struct SidecarView {
-    providers:
-        Option<std::sync::Arc<std::collections::HashMap<String, crate::open_connector_proxy::ProviderSummary>>>,
+    providers: Option<
+        std::sync::Arc<
+            std::collections::HashMap<String, crate::open_connector_proxy::ProviderSummary>,
+        >,
+    >,
     connections: std::collections::HashMap<String, String>,
 }
 
@@ -186,10 +196,18 @@ async fn sidecar_view(user_id: &str) -> SidecarView {
     use crate::open_connector_proxy as sidecar;
     match sidecar::provider_summaries().await {
         Ok(map) => {
-            let conns = sidecar::list_user_connections(user_id).await.unwrap_or_default();
-            SidecarView { providers: Some(map), connections: conns.into_iter().collect() }
+            let conns = sidecar::list_user_connections(user_id)
+                .await
+                .unwrap_or_default();
+            SidecarView {
+                providers: Some(map),
+                connections: conns.into_iter().collect(),
+            }
         }
-        Err(_) => SidecarView { providers: None, connections: std::collections::HashMap::new() },
+        Err(_) => SidecarView {
+            providers: None,
+            connections: std::collections::HashMap::new(),
+        },
     }
 }
 
@@ -199,16 +217,28 @@ async fn sidecar_view(user_id: &str) -> SidecarView {
 /// light up the same way. Never returns the token itself — only presence.
 fn detect_local_cli(m: &Value) -> Value {
     let lc = m.get("local_cli").cloned().unwrap_or_else(|| json!({}));
-    let cmd = lc.get("cmd").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let cmd = lc
+        .get("cmd")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     let token_args: Vec<String> = lc
         .get("token_args")
         .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default();
     let account_args: Vec<String> = lc
         .get("account_args")
         .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default();
     if cmd.is_empty() {
         return json!({ "installed": false, "authed": false, "account": "", "cmd": "" });
@@ -223,7 +253,10 @@ fn detect_local_cli(m: &Value) -> Value {
             let authed = !String::from_utf8_lossy(&o.stdout).trim().is_empty();
             let mut account = String::new();
             if authed && !account_args.is_empty() {
-                if let Ok(a) = std::process::Command::new(&cmd).args(&account_args).output() {
+                if let Ok(a) = std::process::Command::new(&cmd)
+                    .args(&account_args)
+                    .output()
+                {
                     if a.status.success() {
                         account = String::from_utf8_lossy(&a.stdout).trim().to_string();
                     }
@@ -278,13 +311,28 @@ fn merge(
         return merge_sidecar(c, user_id, db, sv, rows);
     }
     let m = meta_for(id);
-    let auth_type = m.get("auth_type").and_then(|v| v.as_str()).unwrap_or("unknown");
+    let auth_type = m
+        .get("auth_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
     let tier = m.get("tier").and_then(|v| v.as_i64()).unwrap_or(2);
-    let mcp_backed = m.get("mcp_backed").and_then(|v| v.as_bool()).unwrap_or(false);
-    let connectable = m.get("connectable").and_then(|v| v.as_bool()).unwrap_or(false);
+    let mcp_backed = m
+        .get("mcp_backed")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let connectable = m
+        .get("connectable")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
     let base_url = m.get("base_url").and_then(|v| v.as_str());
-    let synthesized = m.get("synthesized").and_then(|v| v.as_bool()).unwrap_or(false);
-    let setup_env = m.get("setup_env").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let synthesized = m
+        .get("synthesized")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let setup_env = m
+        .get("setup_env")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
     let tools_mapped = m
         .get("tools")
         .and_then(|v| v.as_array())
@@ -300,7 +348,10 @@ fn merge(
     let mut out = c.clone();
     if let Some(obj) = out.as_object_mut() {
         obj.insert("provider".to_string(), json!("allternit"));
-        obj.insert("auth".to_string(), json!({ "type": auth_type, "owned": true, "synthesized": synthesized }));
+        obj.insert(
+            "auth".to_string(),
+            json!({ "type": auth_type, "owned": true, "synthesized": synthesized }),
+        );
         obj.insert("auth_type".to_string(), json!(auth_type));
         obj.insert("tier".to_string(), json!(tier));
         obj.insert("mcp_backed".to_string(), json!(mcp_backed));
@@ -325,7 +376,10 @@ fn merge(
         if auth_type == "local_cli" {
             obj.insert("availability".to_string(), detect_local_cli(&m));
         }
-        obj.insert("connection".to_string(), json!({ "status": conn_status, "account": account }));
+        obj.insert(
+            "connection".to_string(),
+            json!({ "status": conn_status, "account": account }),
+        );
     }
     out
 }
@@ -358,8 +412,15 @@ fn merge_sidecar(
         obj.insert("backend".to_string(), json!("open_connector"));
         match sv.providers.as_ref().and_then(|m| m.get(id)) {
             Some(p) => {
-                provider_auth_type = p.auth_types.first().cloned().unwrap_or_else(|| "unknown".to_string());
-                obj.insert("auth".to_string(), json!({ "type": provider_auth_type, "owned": true, "synthesized": false }));
+                provider_auth_type = p
+                    .auth_types
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| "unknown".to_string());
+                obj.insert(
+                    "auth".to_string(),
+                    json!({ "type": provider_auth_type, "owned": true, "synthesized": false }),
+                );
                 obj.insert("auth_type".to_string(), json!(provider_auth_type));
                 obj.insert("connectable".to_string(), json!(true));
                 obj.insert("executable".to_string(), json!(p.executable_actions > 0));
@@ -371,7 +432,10 @@ fn merge_sidecar(
                 }
             }
             None if sv.providers.is_none() => {
-                obj.insert("auth".to_string(), json!({ "type": "unknown", "owned": true, "synthesized": false }));
+                obj.insert(
+                    "auth".to_string(),
+                    json!({ "type": "unknown", "owned": true, "synthesized": false }),
+                );
                 obj.insert("auth_type".to_string(), json!("unknown"));
                 obj.insert("connectable".to_string(), json!(false));
                 obj.insert("executable".to_string(), json!(false));
@@ -382,7 +446,10 @@ fn merge_sidecar(
                 }));
             }
             None => {
-                obj.insert("auth".to_string(), json!({ "type": "unknown", "owned": true, "synthesized": false }));
+                obj.insert(
+                    "auth".to_string(),
+                    json!({ "type": "unknown", "owned": true, "synthesized": false }),
+                );
                 obj.insert("auth_type".to_string(), json!("unknown"));
                 obj.insert("connectable".to_string(), json!(false));
                 obj.insert("executable".to_string(), json!(false));
@@ -399,9 +466,15 @@ fn merge_sidecar(
             if db_status != "connected" {
                 mark_sidecar_connected(db, id, user_id, &provider_auth_type, account);
             }
-            obj.insert("connection".to_string(), json!({ "status": "connected", "account": account }));
+            obj.insert(
+                "connection".to_string(),
+                json!({ "status": "connected", "account": account }),
+            );
         } else {
-            obj.insert("connection".to_string(), json!({ "status": db_status, "account": db_account }));
+            obj.insert(
+                "connection".to_string(),
+                json!({ "status": db_status, "account": db_account }),
+            );
         }
     }
     out
@@ -410,7 +483,13 @@ fn merge_sidecar(
 /// Lazily sync the index row when the sidecar reports a live connection the DB
 /// doesn't know about yet (e.g. OAuth completed in the popup while this row
 /// was still 'pending'). Index-only: tokens stay NULL, backend='open_connector'.
-fn mark_sidecar_connected(db: &crate::db::DbHandle, id: &str, user_id: &str, auth_type: &str, account: &str) {
+fn mark_sidecar_connected(
+    db: &crate::db::DbHandle,
+    id: &str,
+    user_id: &str,
+    auth_type: &str,
+    account: &str,
+) {
     if let Ok(conn) = db.connect() {
         let _ = conn.execute(
             "INSERT INTO connector_connections (id, connector_id, user_id, auth_type, status, account, backend)
@@ -428,7 +507,10 @@ fn mark_sidecar_connected(db: &crate::db::DbHandle, id: &str, user_id: &str, aut
 /// `merge_sidecar` exactly like a real catalog entry — that function only
 /// ever reads `id` from its input and otherwise sources everything from the
 /// sidecar, so a synthesized base is indistinguishable downstream.
-fn synthesize_sidecar_catalog_entry(id: &str, p: &crate::open_connector_proxy::ProviderSummary) -> Value {
+fn synthesize_sidecar_catalog_entry(
+    id: &str,
+    p: &crate::open_connector_proxy::ProviderSummary,
+) -> Value {
     json!({
         "id": id,
         "name": p.display_name,
@@ -445,7 +527,10 @@ fn synthesize_sidecar_catalog_entry(id: &str, p: &crate::open_connector_proxy::P
 /// actually has 1,000+ providers": without this, only providers Allternit's
 /// legacy catalog already happened to list could ever show up, no matter how
 /// many the sidecar supports.
-fn sidecar_only_entries(sv: &SidecarView, legacy_ids: &std::collections::HashSet<&str>) -> Vec<Value> {
+fn sidecar_only_entries(
+    sv: &SidecarView,
+    legacy_ids: &std::collections::HashSet<&str>,
+) -> Vec<Value> {
     sv.providers
         .as_ref()
         .map(|providers| {
@@ -468,9 +553,14 @@ async fn list_connectors(
     let sidecar_ok = sv.providers.is_some();
     let rows = fetch_connection_rows(&db, &user_id);
     let legacy = catalog_connectors();
-    let legacy_ids: std::collections::HashSet<&str> =
-        legacy.iter().filter_map(|c| c.get("id").and_then(|i| i.as_str())).collect();
-    let mut list: Vec<Value> = legacy.iter().map(|c| merge(c, &user_id, &db, &sv, &rows)).collect();
+    let legacy_ids: std::collections::HashSet<&str> = legacy
+        .iter()
+        .filter_map(|c| c.get("id").and_then(|i| i.as_str()))
+        .collect();
+    let mut list: Vec<Value> = legacy
+        .iter()
+        .map(|c| merge(c, &user_id, &db, &sv, &rows))
+        .collect();
     for extra in sidecar_only_entries(&sv, &legacy_ids) {
         list.push(merge_sidecar(&extra, &user_id, &db, &sv, &rows));
     }
@@ -494,7 +584,10 @@ async fn get_connector(
     match find_catalog(&id) {
         Some(c) => {
             let sv = sidecar_view(&user_id).await;
-            (StatusCode::OK, Json(merge(&c, &user_id, &state.db, &sv, &rows)))
+            (
+                StatusCode::OK,
+                Json(merge(&c, &user_id, &state.db, &sv, &rows)),
+            )
         }
         None => {
             // Not in the legacy 181-entry catalog — check whether it's one of
@@ -503,9 +596,15 @@ async fn get_connector(
             match sv.providers.as_ref().and_then(|m| m.get(&id)) {
                 Some(p) => {
                     let base = synthesize_sidecar_catalog_entry(&id, p);
-                    (StatusCode::OK, Json(merge_sidecar(&base, &user_id, &state.db, &sv, &rows)))
+                    (
+                        StatusCode::OK,
+                        Json(merge_sidecar(&base, &user_id, &state.db, &sv, &rows)),
+                    )
                 }
-                None => (StatusCode::NOT_FOUND, Json(json!({ "error": "connector_not_found", "id": id }))),
+                None => (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({ "error": "connector_not_found", "id": id })),
+                ),
             }
         }
     }
@@ -530,18 +629,29 @@ async fn connect_connector(
     let c = find_catalog(&id).unwrap_or_else(|| json!({ "id": id }));
     let m = meta_for(&id);
     let user_id = caller(&headers);
-    let body = body.map(|Json(b)| b).unwrap_or(ConnectBody { via: None, api_key: None });
+    let body = body.map(|Json(b)| b).unwrap_or(ConnectBody {
+        via: None,
+        api_key: None,
+    });
     if !is_curated(&id) {
         return connect_sidecar(&state, &user_id, &id, &c, body).await;
     }
-    let via = body.via.unwrap_or_else(|| m.get("auth_type").and_then(|v| v.as_str()).unwrap_or("").to_string());
+    let via = body.via.unwrap_or_else(|| {
+        m.get("auth_type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string()
+    });
 
     match via.as_str() {
         "local_cli" => connect_local_cli(&state, &user_id, &id, &c, &m).await,
         "api_key" => connect_api_key(&state, &user_id, &id, &c, body.api_key.as_deref()).await,
         "oauth2" => connect_oauth2(&state, &user_id, &id, &c, &m).await,
         "device_flow" => connect_device(&state, &user_id, &id, &c, &m).await,
-        other => (StatusCode::BAD_REQUEST, Json(json!({ "error": "unsupported_auth_type", "via": other }))),
+        other => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "unsupported_auth_type", "via": other })),
+        ),
     }
 }
 
@@ -562,7 +672,9 @@ async fn connect_sidecar(
         Err(e) if e.unreachable => {
             return (
                 StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." })),
+                Json(
+                    json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." }),
+                ),
             );
         }
         Err(e) => {
@@ -575,9 +687,16 @@ async fn connect_sidecar(
     let auth_types: Vec<String> = provider
         .get("authTypes")
         .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default();
-    let via = body.via.clone().unwrap_or_else(|| auth_types.first().cloned().unwrap_or_default());
+    let via = body
+        .via
+        .clone()
+        .unwrap_or_else(|| auth_types.first().cloned().unwrap_or_default());
 
     match via.as_str() {
         "oauth2" => {
@@ -586,25 +705,40 @@ async fn connect_sidecar(
                 Err(e) if e.unreachable => {
                     return (
                         StatusCode::BAD_GATEWAY,
-                        Json(json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." })),
+                        Json(
+                            json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." }),
+                        ),
                     );
                 }
                 Err(e) => {
                     return (
                         StatusCode::from_u16(e.status).unwrap_or(StatusCode::BAD_GATEWAY),
-                        Json(json!({ "error": "sidecar_oauth_failed", "id": id, "message": e.message })),
+                        Json(
+                            json!({ "error": "sidecar_oauth_failed", "id": id, "message": e.message }),
+                        ),
                     );
                 }
             };
-            let authorize_url = auth.get("authorizationUrl").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let authorize_url = auth
+                .get("authorizationUrl")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             if authorize_url.is_empty() {
                 return (
                     StatusCode::BAD_GATEWAY,
-                    Json(json!({ "error": "sidecar_bad_response", "id": id, "message": "Sidecar returned no authorizationUrl — is an OAuth client configured for this provider?" })),
+                    Json(
+                        json!({ "error": "sidecar_bad_response", "id": id, "message": "Sidecar returned no authorizationUrl — is an OAuth client configured for this provider?" }),
+                    ),
                 );
             }
-            if let Err(e) = persist_sidecar_row(&state.db, user_id, id, "oauth2", "pending", "").await {
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e })));
+            if let Err(e) =
+                persist_sidecar_row(&state.db, user_id, id, "oauth2", "pending", "").await
+            {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
             }
             (
                 StatusCode::OK,
@@ -620,9 +754,15 @@ async fn connect_sidecar(
             )
         }
         "api_key" => {
-            let key = body.api_key.map(|s| s.trim().to_string()).unwrap_or_default();
+            let key = body
+                .api_key
+                .map(|s| s.trim().to_string())
+                .unwrap_or_default();
             if key.is_empty() {
-                return (StatusCode::BAD_REQUEST, Json(json!({ "error": "api_key_required", "id": id })));
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({ "error": "api_key_required", "id": id })),
+                );
             }
             let resp = sidecar::upsert_credential(
                 id,
@@ -633,14 +773,20 @@ async fn connect_sidecar(
             finish_sidecar_connect(state, user_id, id, c, "api_key", resp).await
         }
         "no_auth" => {
-            let resp = sidecar::upsert_credential(id, user_id, json!({ "authType": "no_auth" })).await;
+            let resp =
+                sidecar::upsert_credential(id, user_id, json!({ "authType": "no_auth" })).await;
             finish_sidecar_connect(state, user_id, id, c, "no_auth", resp).await
         }
         "custom_credential" => (
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "custom_credential_requires_values", "id": id, "message": "This provider needs structured credentials the connect dialog cannot collect yet." })),
+            Json(
+                json!({ "error": "custom_credential_requires_values", "id": id, "message": "This provider needs structured credentials the connect dialog cannot collect yet." }),
+            ),
         ),
-        other => (StatusCode::BAD_REQUEST, Json(json!({ "error": "unsupported_auth_type", "via": other }))),
+        other => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "unsupported_auth_type", "via": other })),
+        ),
     }
 }
 
@@ -660,7 +806,9 @@ async fn finish_sidecar_connect(
         Err(e) if e.unreachable => {
             return (
                 StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." })),
+                Json(
+                    json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." }),
+                ),
             );
         }
         Err(e) => {
@@ -689,7 +837,10 @@ async fn finish_sidecar_connect(
                 "backend": "open_connector",
             })),
         ),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e }))),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e })),
+        ),
     }
 }
 
@@ -756,15 +907,39 @@ async fn refresh_connector(
     .await;
     let (stored_auth, _stored_status) = match row {
         Ok(Ok(v)) => v,
-        _ => return (StatusCode::CONFLICT, Json(json!({ "error": "not_connected", "id": id, "message": "Nothing to refresh — connect this connector first." }))),
+        _ => {
+            return (
+                StatusCode::CONFLICT,
+                Json(
+                    json!({ "error": "not_connected", "id": id, "message": "Nothing to refresh — connect this connector first." }),
+                ),
+            )
+        }
     };
 
     if !is_curated(&id) {
         // Sidecar-backed: oauth2 re-opens the sidecar authorization; api_key
         // rotation is a fresh /connect, same as the rust-native rule.
         return match stored_auth.as_str() {
-            "api_key" => (StatusCode::BAD_REQUEST, Json(json!({ "error": "api_key_refresh_via_connect", "id": id, "message": "Re-POST /connect with {\"api_key\":\"...\"} to rotate an api_key connector." }))),
-            other => connect_sidecar(&state, &user_id, &id, &c, ConnectBody { via: Some(other.to_string()), api_key: None }).await,
+            "api_key" => (
+                StatusCode::BAD_REQUEST,
+                Json(
+                    json!({ "error": "api_key_refresh_via_connect", "id": id, "message": "Re-POST /connect with {\"api_key\":\"...\"} to rotate an api_key connector." }),
+                ),
+            ),
+            other => {
+                connect_sidecar(
+                    &state,
+                    &user_id,
+                    &id,
+                    &c,
+                    ConnectBody {
+                        via: Some(other.to_string()),
+                        api_key: None,
+                    },
+                )
+                .await
+            }
         };
     }
 
@@ -772,8 +947,16 @@ async fn refresh_connector(
         "local_cli" => connect_local_cli(&state, &user_id, &id, &c, &m).await,
         "oauth2" => connect_oauth2(&state, &user_id, &id, &c, &m).await,
         "device_flow" => connect_device(&state, &user_id, &id, &c, &m).await,
-        "api_key" => (StatusCode::BAD_REQUEST, Json(json!({ "error": "api_key_refresh_via_connect", "id": id, "message": "Re-POST /connect with {\"api_key\":\"...\"} to rotate an api_key connector." }))),
-        other => (StatusCode::BAD_REQUEST, Json(json!({ "error": "unsupported_auth_type", "via": other }))),
+        "api_key" => (
+            StatusCode::BAD_REQUEST,
+            Json(
+                json!({ "error": "api_key_refresh_via_connect", "id": id, "message": "Re-POST /connect with {\"api_key\":\"...\"} to rotate an api_key connector." }),
+            ),
+        ),
+        other => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "unsupported_auth_type", "via": other })),
+        ),
     }
 }
 
@@ -785,24 +968,42 @@ async fn connect_local_cli(
     m: &Value,
 ) -> (StatusCode, Json<Value>) {
     let lc = m.get("local_cli").cloned().unwrap_or_else(|| json!({}));
-    let cmd = lc.get("cmd").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let cmd = lc
+        .get("cmd")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     let token_args: Vec<String> = lc
         .get("token_args")
         .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default();
     let account_args: Vec<String> = lc
         .get("account_args")
         .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default();
 
     if cmd.is_empty() || token_args.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "local_cli_not_configured", "id": id })));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "local_cli_not_configured", "id": id })),
+        );
     }
 
     // Run `<cmd> <token_args>` (e.g. `gh auth token`).
-    let token_out = tokio::process::Command::new(&cmd).args(&token_args).output().await;
+    let token_out = tokio::process::Command::new(&cmd)
+        .args(&token_args)
+        .output()
+        .await;
     let token = match token_out {
         Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         Ok(o) => {
@@ -830,13 +1031,20 @@ async fn connect_local_cli(
     };
 
     if token.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "local_cli_empty_token", "id": id })));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "local_cli_empty_token", "id": id })),
+        );
     }
 
     // Best-effort account label (e.g. `gh api user --jq .login`).
     let mut account = String::new();
     if !account_args.is_empty() {
-        if let Ok(o) = tokio::process::Command::new(&cmd).args(&account_args).output().await {
+        if let Ok(o) = tokio::process::Command::new(&cmd)
+            .args(&account_args)
+            .output()
+            .await
+        {
             if o.status.success() {
                 account = String::from_utf8_lossy(&o.stdout).trim().to_string();
             }
@@ -849,7 +1057,11 @@ async fn connect_local_cli(
     let uid = user_id.to_string();
     let tok = crate::token_crypto::seal(&token);
     let acc = account.clone();
-    let scopes = m.get("scopes").cloned().unwrap_or_else(|| json!([])).to_string();
+    let scopes = m
+        .get("scopes")
+        .cloned()
+        .unwrap_or_else(|| json!([]))
+        .to_string();
     let res = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         conn.execute(
@@ -865,15 +1077,24 @@ async fn connect_local_cli(
     .await;
 
     match res {
-        Ok(Ok(())) => (StatusCode::OK, Json(json!({
-            "status": "connected",
-            "connector": c.get("id"),
-            "auth_type": "local_cli",
-            "owned": true,
-            "account": account,
-        }))),
-        Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": format!("db task: {}", e) }))),
+        Ok(Ok(())) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "connected",
+                "connector": c.get("id"),
+                "auth_type": "local_cli",
+                "owned": true,
+                "account": account,
+            })),
+        ),
+        Ok(Err(e)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": format!("db task: {}", e) })),
+        ),
     }
 }
 
@@ -886,7 +1107,10 @@ async fn connect_api_key(
 ) -> (StatusCode, Json<Value>) {
     let key = api_key.map(|s| s.trim().to_string()).unwrap_or_default();
     if key.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({ "error": "api_key_required", "id": id })));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "api_key_required", "id": id })),
+        );
     }
     let db = state.db.clone();
     let cid = uuid::Uuid::new_v4().to_string();
@@ -906,9 +1130,20 @@ async fn connect_api_key(
     })
     .await;
     match res {
-        Ok(Ok(())) => (StatusCode::OK, Json(json!({ "status": "connected", "connector": c.get("id"), "auth_type": "api_key", "owned": true }))),
-        Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": format!("db task: {}", e) }))),
+        Ok(Ok(())) => (
+            StatusCode::OK,
+            Json(
+                json!({ "status": "connected", "connector": c.get("id"), "auth_type": "api_key", "owned": true }),
+            ),
+        ),
+        Ok(Err(e)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": format!("db task: {}", e) })),
+        ),
     }
 }
 
@@ -926,14 +1161,29 @@ struct ExecuteBody {
 /// `query` / `body` arrays in a tool entry restrict which input keys are forwarded;
 /// otherwise GET forwards all leftover scalar inputs as query and writes send all
 /// leftover input as the JSON body.
-fn generic_dispatch(meta: &Value, tool: &str, input: &Value, base_url: &str) -> Option<(String, String, Option<Value>)> {
+fn generic_dispatch(
+    meta: &Value,
+    tool: &str,
+    input: &Value,
+    base_url: &str,
+) -> Option<(String, String, Option<Value>)> {
     if tool.is_empty() {
         return None;
     }
     let tools = meta.get("tools").and_then(|v| v.as_array())?;
-    let t = tools.iter().find(|t| t.get("name").and_then(|n| n.as_str()) == Some(tool))?;
-    let method = t.get("method").and_then(|v| v.as_str()).unwrap_or("GET").to_uppercase();
-    let mut path = t.get("path").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let t = tools
+        .iter()
+        .find(|t| t.get("name").and_then(|n| n.as_str()) == Some(tool))?;
+    let method = t
+        .get("method")
+        .and_then(|v| v.as_str())
+        .unwrap_or("GET")
+        .to_uppercase();
+    let mut path = t
+        .get("path")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     if path.is_empty() {
         return None;
     }
@@ -959,14 +1209,16 @@ fn generic_dispatch(meta: &Value, tool: &str, input: &Value, base_url: &str) -> 
         }
     }
 
-    let query_keys: Option<Vec<String>> = t
-        .get("query")
-        .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect());
-    let body_keys: Option<Vec<String>> = t
-        .get("body")
-        .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect());
+    let query_keys: Option<Vec<String>> = t.get("query").and_then(|v| v.as_array()).map(|a| {
+        a.iter()
+            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+            .collect()
+    });
+    let body_keys: Option<Vec<String>> = t.get("body").and_then(|v| v.as_array()).map(|a| {
+        a.iter()
+            .filter_map(|x| x.as_str().map(|s| s.to_string()))
+            .collect()
+    });
 
     let mut url = format!("{}{}", base_url, path);
     let mut req_body: Option<Value> = None;
@@ -1030,7 +1282,11 @@ async fn execute_connector(
     // of 404ing for sidecar-only ids.
     let c = find_catalog(&id).unwrap_or_else(|| json!({ "id": id }));
     let m = meta_for(&id);
-    let base_url = m.get("base_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let base_url = m
+        .get("base_url")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     let user_id = caller(&headers);
 
     if !is_curated(&id) {
@@ -1053,11 +1309,21 @@ async fn execute_connector(
 
     let (status, token) = match row {
         Ok(Ok(v)) => v,
-        _ => return (StatusCode::CONFLICT, Json(json!({ "error": "not_connected", "id": id, "message": "Connect this connector first, then execute." }))),
+        _ => {
+            return (
+                StatusCode::CONFLICT,
+                Json(
+                    json!({ "error": "not_connected", "id": id, "message": "Connect this connector first, then execute." }),
+                ),
+            )
+        }
     };
     let token = crate::token_crypto::open(&token);
     if status != "connected" || token.is_empty() {
-        return (StatusCode::CONFLICT, Json(json!({ "error": "not_connected", "id": id })));
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({ "error": "not_connected", "id": id })),
+        );
     }
 
     let client = reqwest::Client::new();
@@ -1070,13 +1336,35 @@ async fn execute_connector(
         match tool.as_str() {
             "github_search_repositories" => {
                 let q = input.get("query").and_then(|v| v.as_str()).unwrap_or("");
-                Some(("GET".to_string(), format!("{}/search/repositories?q={}&per_page=5", base_url, urlencoding(q)), None))
+                Some((
+                    "GET".to_string(),
+                    format!(
+                        "{}/search/repositories?q={}&per_page=5",
+                        base_url,
+                        urlencoding(q)
+                    ),
+                    None,
+                ))
             }
             "github_get_issue" => {
                 let owner = input.get("owner").and_then(|v| v.as_str()).unwrap_or("");
                 let repo = input.get("repo").and_then(|v| v.as_str()).unwrap_or("");
-                let number = input.get("issue_number").and_then(|v| v.as_i64()).map(|n| n.to_string()).or_else(|| input.get("issue_number").and_then(|v| v.as_str()).map(|s| s.to_string())).unwrap_or_default();
-                Some(("GET".to_string(), format!("{}/repos/{}/{}/issues/{}", base_url, owner, repo, number), None))
+                let number = input
+                    .get("issue_number")
+                    .and_then(|v| v.as_i64())
+                    .map(|n| n.to_string())
+                    .or_else(|| {
+                        input
+                            .get("issue_number")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string())
+                    })
+                    .unwrap_or_default();
+                Some((
+                    "GET".to_string(),
+                    format!("{}/repos/{}/{}/issues/{}", base_url, owner, repo, number),
+                    None,
+                ))
             }
             _ => generic_dispatch(&m, &tool, &input, &base_url),
         }
@@ -1084,14 +1372,25 @@ async fn execute_connector(
         generic_dispatch(&m, &tool, &input, &base_url)
     };
     let built = built.or_else(|| {
-        body.path
-            .clone()
-            .map(|p| (body.method.clone().unwrap_or_else(|| "GET".to_string()), format!("{}{}", base_url, p), None))
+        body.path.clone().map(|p| {
+            (
+                body.method.clone().unwrap_or_else(|| "GET".to_string()),
+                format!("{}{}", base_url, p),
+                None,
+            )
+        })
     });
 
     let (method, url, req_body) = match built {
         Some(u) => u,
-        None => return (StatusCode::BAD_REQUEST, Json(json!({ "error": "execute_needs_tool_or_path", "id": id, "message": "Provide a known 'tool' (hand-written or meta tools[]) or a generic 'path'." }))),
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(
+                    json!({ "error": "execute_needs_tool_or_path", "id": id, "message": "Provide a known 'tool' (hand-written or meta tools[]) or a generic 'path'." }),
+                ),
+            )
+        }
     };
 
     let mut req = match method.to_uppercase().as_str() {
@@ -1114,9 +1413,17 @@ async fn execute_connector(
         Ok(r) => {
             let code = StatusCode::from_u16(r.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
             let body_json: Value = r.json().await.unwrap_or_else(|_| json!({}));
-            (code, Json(json!({ "status": "ok", "connector": c.get("id"), "tool": tool, "provider_status": code.as_u16(), "result": body_json })))
+            (
+                code,
+                Json(
+                    json!({ "status": "ok", "connector": c.get("id"), "tool": tool, "provider_status": code.as_u16(), "result": body_json }),
+                ),
+            )
         }
-        Err(e) => (StatusCode::BAD_GATEWAY, Json(json!({ "error": "provider_request_failed", "id": id, "message": e.to_string() }))),
+        Err(e) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "provider_request_failed", "id": id, "message": e.to_string() })),
+        ),
     }
 }
 
@@ -1124,13 +1431,20 @@ async fn execute_connector(
 /// to a sidecar action id (`{service}.{name}`), then proxy `POST
 /// /v1/actions/:actionId` with the per-user alias. Response is normalized to
 /// the same `{status:"ok", result:...}` shape the curated path returns.
-async fn execute_sidecar(user_id: &str, id: &str, c: &Value, body: ExecuteBody) -> (StatusCode, Json<Value>) {
+async fn execute_sidecar(
+    user_id: &str,
+    id: &str,
+    c: &Value,
+    body: ExecuteBody,
+) -> (StatusCode, Json<Value>) {
     use crate::open_connector_proxy as sidecar;
     let tool = body.tool.clone().unwrap_or_default();
     if tool.is_empty() {
         return (
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "execute_needs_tool", "id": id, "message": "Sidecar-backed connectors execute by action id — pass a 'tool' from this connector's action list (GET /api/v1/connectors/:id)." })),
+            Json(
+                json!({ "error": "execute_needs_tool", "id": id, "message": "Sidecar-backed connectors execute by action id — pass a 'tool' from this connector's action list (GET /api/v1/connectors/:id)." }),
+            ),
         );
     }
     let provider = match sidecar::get_provider(id).await {
@@ -1138,13 +1452,17 @@ async fn execute_sidecar(user_id: &str, id: &str, c: &Value, body: ExecuteBody) 
         Err(e) if e.unreachable => {
             return (
                 StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." })),
+                Json(
+                    json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." }),
+                ),
             );
         }
         Err(e) => {
             return (
                 StatusCode::from_u16(e.status).unwrap_or(StatusCode::BAD_GATEWAY),
-                Json(json!({ "error": "sidecar_provider_unavailable", "id": id, "message": e.message })),
+                Json(
+                    json!({ "error": "sidecar_provider_unavailable", "id": id, "message": e.message }),
+                ),
             );
         }
     };
@@ -1160,16 +1478,22 @@ async fn execute_sidecar(user_id: &str, id: &str, c: &Value, body: ExecuteBody) 
             let result = data.get("result").cloned().unwrap_or(data);
             (
                 StatusCode::OK,
-                Json(json!({ "status": "ok", "connector": c.get("id"), "tool": tool, "provider_status": 200, "result": result, "backend": "open_connector" })),
+                Json(
+                    json!({ "status": "ok", "connector": c.get("id"), "tool": tool, "provider_status": 200, "result": result, "backend": "open_connector" }),
+                ),
             )
         }
         Err(e) if e.unreachable => (
             StatusCode::BAD_GATEWAY,
-            Json(json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." })),
+            Json(
+                json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — the open-connector process is down or still starting." }),
+            ),
         ),
         Err(e) => (
             StatusCode::from_u16(e.status).unwrap_or(StatusCode::BAD_GATEWAY),
-            Json(json!({ "error": "sidecar_action_failed", "id": id, "tool": tool, "message": e.message })),
+            Json(
+                json!({ "error": "sidecar_action_failed", "id": id, "tool": tool, "message": e.message }),
+            ),
         ),
     }
 }
@@ -1187,10 +1511,16 @@ fn resolve_action_id(
 ) -> Result<String, (StatusCode, Json<Value>)> {
     let actions = provider.get("actions").and_then(|v| v.as_array());
     if let Some(actions) = actions {
-        if actions.iter().any(|a| a.get("id").and_then(|v| v.as_str()) == Some(tool)) {
+        if actions
+            .iter()
+            .any(|a| a.get("id").and_then(|v| v.as_str()) == Some(tool))
+        {
             return Ok(tool.to_string());
         }
-        if let Some(a) = actions.iter().find(|a| a.get("name").and_then(|v| v.as_str()) == Some(tool)) {
+        if let Some(a) = actions
+            .iter()
+            .find(|a| a.get("name").and_then(|v| v.as_str()) == Some(tool))
+        {
             if let Some(aid) = a.get("id").and_then(|v| v.as_str()) {
                 return Ok(aid.to_string());
             }
@@ -1203,11 +1533,18 @@ fn resolve_action_id(
         }
     }
     let available: Vec<&str> = actions
-        .map(|a| a.iter().filter_map(|x| x.get("id").and_then(|v| v.as_str())).take(10).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.get("id").and_then(|v| v.as_str()))
+                .take(10)
+                .collect()
+        })
         .unwrap_or_default();
     Err((
         StatusCode::BAD_REQUEST,
-        Json(json!({ "error": "unknown_action", "id": allternit_id, "tool": tool, "message": "Unknown tool for this provider. Pass one of available_actions (or its short name).", "available_actions": available })),
+        Json(
+            json!({ "error": "unknown_action", "id": allternit_id, "tool": tool, "message": "Unknown tool for this provider. Pass one of available_actions (or its short name).", "available_actions": available }),
+        ),
     ))
 }
 
@@ -1226,7 +1563,9 @@ async fn disconnect_connector(
             if e.unreachable {
                 return (
                     StatusCode::BAD_GATEWAY,
-                    Json(json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — credential NOT removed. Retry when it is back." })),
+                    Json(
+                        json!({ "error": "sidecar_unavailable", "id": id, "message": "Connector sidecar unavailable — credential NOT removed. Retry when it is back." }),
+                    ),
                 );
             }
         }
@@ -1243,9 +1582,18 @@ async fn disconnect_connector(
     })
     .await;
     match res {
-        Ok(Ok(_)) => (StatusCode::OK, Json(json!({ "status": "disconnected", "connector": id }))),
-        Ok(Err(e)) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e.to_string() }))),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": format!("db task: {}", e) }))),
+        Ok(Ok(_)) => (
+            StatusCode::OK,
+            Json(json!({ "status": "disconnected", "connector": id })),
+        ),
+        Ok(Err(e)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": format!("db task: {}", e) })),
+        ),
     }
 }
 
@@ -1254,24 +1602,44 @@ async fn disconnect_connector(
 const CALLBACK_PATH: &str = "/api/v1/connectors/oauth/callback";
 
 fn public_base() -> String {
-    std::env::var("ALLTERNIT_PUBLIC_BASE_URL").unwrap_or_else(|_| "http://127.0.0.1:8013".to_string())
+    std::env::var("ALLTERNIT_PUBLIC_BASE_URL")
+        .unwrap_or_else(|_| "http://127.0.0.1:8013".to_string())
 }
 fn redirect_uri() -> String {
     format!("{}{}", public_base(), CALLBACK_PATH)
 }
 fn env_name(id: &str, suffix: &str) -> String {
-    format!("ALLTERNIT_{}_{}", id.to_uppercase().replace('-', "_"), suffix)
+    format!(
+        "ALLTERNIT_{}_{}",
+        id.to_uppercase().replace('-', "_"),
+        suffix
+    )
 }
 fn read_client(id: &str, m: &Value) -> (Option<String>, Option<String>) {
     let cid = std::env::var(env_name(id, "CLIENT_ID"))
         .ok()
         .filter(|s| !s.is_empty())
-        .or_else(|| m.get("oauth2").and_then(|o| o.get("client_id")).and_then(|v| v.as_str()).map(|s| s.to_string()))
-        .or_else(|| m.get("device").and_then(|o| o.get("client_id")).and_then(|v| v.as_str()).map(|s| s.to_string()));
+        .or_else(|| {
+            m.get("oauth2")
+                .and_then(|o| o.get("client_id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
+        .or_else(|| {
+            m.get("device")
+                .and_then(|o| o.get("client_id"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        });
     let sec = std::env::var(env_name(id, "CLIENT_SECRET"))
         .ok()
         .filter(|s| !s.is_empty())
-        .or_else(|| m.get("oauth2").and_then(|o| o.get("client_secret")).and_then(|v| v.as_str()).map(|s| s.to_string()));
+        .or_else(|| {
+            m.get("oauth2")
+                .and_then(|o| o.get("client_secret"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        });
     (cid, sec)
 }
 fn oauth_registration_required(id: &str) -> (StatusCode, Json<Value>) {
@@ -1292,7 +1660,11 @@ fn oauth_registration_required(id: &str) -> (StatusCode, Json<Value>) {
 fn scopes_of(m: &Value) -> Vec<String> {
     m.get("scopes")
         .and_then(|v| v.as_array())
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -1337,8 +1709,16 @@ async fn connect_oauth2(
         None => return oauth_registration_required(id),
     };
     let oa = m.get("oauth2").cloned().unwrap_or_else(|| json!({}));
-    let authorize = oa.get("authorize_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let token_url = oa.get("token_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let authorize = oa
+        .get("authorize_url")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let token_url = oa
+        .get("token_url")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     if authorize.is_empty() || token_url.is_empty() {
         // Client id is present, but Allternit has not mapped this provider's OAuth
         // endpoints yet. Honest status — never fabricate an authorize URL.
@@ -1356,7 +1736,10 @@ async fn connect_oauth2(
     let oauth_state = uuid::Uuid::new_v4().to_string();
     let meta_json = json!({ "state": oauth_state, "token_url": token_url, "redirect_uri": redirect, "client_id": client_id, "client_secret": client_secret }).to_string();
     if let Err(e) = persist_pending(&state.db, user_id, id, "oauth2", meta_json).await {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e })));
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e })),
+        );
     }
     let scopes = scopes_of(m);
     let mut url = format!(
@@ -1392,10 +1775,16 @@ struct CallbackQuery {
     error_description: Option<String>,
 }
 
-async fn oauth_callback(State(state): State<Arc<AppState>>, Query(q): Query<CallbackQuery>) -> Html<String> {
+async fn oauth_callback(
+    State(state): State<Arc<AppState>>,
+    Query(q): Query<CallbackQuery>,
+) -> Html<String> {
     if let Some(err) = q.error.clone() {
         let desc = q.error_description.clone().unwrap_or(err);
-        return Html(format!("<html><body><h2>Connector authorization failed</h2><p>{}</p></body></html>", desc));
+        return Html(format!(
+            "<html><body><h2>Connector authorization failed</h2><p>{}</p></body></html>",
+            desc
+        ));
     }
     let code = match q.code.clone() {
         Some(c) => c,
@@ -1424,13 +1813,32 @@ async fn oauth_callback(State(state): State<Arc<AppState>>, Query(q): Query<Call
 
     let (connector_id, _user_id, metadata_s) = match found {
         Ok(Ok(Some(r))) => r,
-        _ => return Html("<html><body>Pending authorization not found or expired.</body></html>".to_string()),
+        _ => {
+            return Html(
+                "<html><body>Pending authorization not found or expired.</body></html>".to_string(),
+            )
+        }
     };
     let md: Value = serde_json::from_str(&metadata_s).unwrap_or_else(|_| json!({}));
-    let token_url = md.get("token_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let redirect = md.get("redirect_uri").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let client_id = md.get("client_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let client_secret = md.get("client_secret").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let token_url = md
+        .get("token_url")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let redirect = md
+        .get("redirect_uri")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let client_id = md
+        .get("client_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let client_secret = md
+        .get("client_secret")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
 
     let client = reqwest::Client::new();
     let mut form: Vec<(&str, String)> = vec![
@@ -1442,18 +1850,33 @@ async fn oauth_callback(State(state): State<Arc<AppState>>, Query(q): Query<Call
     if let Some(ref sec) = client_secret {
         form.push(("client_secret", sec.clone()));
     }
-    let resp = client.post(&token_url).form(&form).header("Accept", "application/json").send().await;
+    let resp = client
+        .post(&token_url)
+        .form(&form)
+        .header("Accept", "application/json")
+        .send()
+        .await;
     match resp {
         Ok(r) if r.status().is_success() => {
             let tok: Value = r.json().await.unwrap_or_else(|_| json!({}));
-            let access = tok.get("access_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let refresh = tok.get("refresh_token").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let access = tok
+                .get("access_token")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let refresh = tok
+                .get("refresh_token")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let expires_at = tok
                 .get("expires_in")
                 .and_then(|v| v.as_i64())
                 .map(|s| (chrono::Utc::now() + chrono::Duration::seconds(s)).to_rfc3339());
             if access.is_empty() {
-                return Html(format!("<html><body>Token response missing access_token: {}</body></html>", tok));
+                return Html(format!(
+                    "<html><body>Token response missing access_token: {}</body></html>",
+                    tok
+                ));
             }
             let db2 = state.db.clone();
             let cid = connector_id.clone();
@@ -1473,9 +1896,15 @@ async fn oauth_callback(State(state): State<Arc<AppState>>, Query(q): Query<Call
         }
         Ok(r) => {
             let body = r.text().await.unwrap_or_default();
-            Html(format!("<html><body>Token exchange failed: {}</body></html>", body))
+            Html(format!(
+                "<html><body>Token exchange failed: {}</body></html>",
+                body
+            ))
         }
-        Err(e) => Html(format!("<html><body>Token request error: {}</body></html>", e)),
+        Err(e) => Html(format!(
+            "<html><body>Token request error: {}</body></html>",
+            e
+        )),
     }
 }
 
@@ -1495,14 +1924,26 @@ async fn connect_device(
         .get("device")
         .and_then(|d| d.get("device_url"))
         .and_then(|v| v.as_str())
-        .or_else(|| if id == "github" { Some("https://github.com/login/device/code") } else { None })
+        .or_else(|| {
+            if id == "github" {
+                Some("https://github.com/login/device/code")
+            } else {
+                None
+            }
+        })
         .unwrap_or("")
         .to_string();
     let token_url = m
         .get("device")
         .and_then(|d| d.get("token_url"))
         .and_then(|v| v.as_str())
-        .or_else(|| if id == "github" { Some("https://github.com/login/oauth/access_token") } else { None })
+        .or_else(|| {
+            if id == "github" {
+                Some("https://github.com/login/oauth/access_token")
+            } else {
+                None
+            }
+        })
         .unwrap_or("")
         .to_string();
     let scopes = scopes_of(m);
@@ -1521,17 +1962,36 @@ async fn connect_device(
     match resp {
         Ok(r) if r.status().is_success() => {
             let d: Value = r.json().await.unwrap_or_else(|_| json!({}));
-            let device_code = d.get("device_code").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let user_code = d.get("user_code").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let verification_uri = d.get("verification_uri").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let device_code = d
+                .get("device_code")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let user_code = d
+                .get("user_code")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let verification_uri = d
+                .get("verification_uri")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             let expires_in = d.get("expires_in").and_then(|v| v.as_i64()).unwrap_or(900);
             let interval = d.get("interval").and_then(|v| v.as_i64()).unwrap_or(5);
             if device_code.is_empty() {
-                return (StatusCode::BAD_GATEWAY, Json(json!({ "error": "device_flow_no_code", "provider": d })));
+                return (
+                    StatusCode::BAD_GATEWAY,
+                    Json(json!({ "error": "device_flow_no_code", "provider": d })),
+                );
             }
             let meta_json = json!({ "device_code": device_code, "token_url": token_url, "client_id": client_id, "interval": interval }).to_string();
-            if let Err(e) = persist_pending(&state.db, user_id, id, "device_flow", meta_json).await {
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": e })));
+            if let Err(e) = persist_pending(&state.db, user_id, id, "device_flow", meta_json).await
+            {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e })),
+                );
             }
             (
                 StatusCode::OK,
@@ -1564,7 +2024,10 @@ async fn connect_device(
                 })),
             )
         }
-        Err(e) => (StatusCode::BAD_GATEWAY, Json(json!({ "error": "device_request_failed", "message": e.to_string() }))),
+        Err(e) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "device_request_failed", "message": e.to_string() })),
+        ),
     }
 }
 
@@ -1592,18 +2055,38 @@ async fn poll_device(
 
     let metadata_s = match found {
         Ok(Ok(Some(s))) => s,
-        _ => return (StatusCode::CONFLICT, Json(json!({ "error": "no_pending_device_flow", "id": id }))),
+        _ => {
+            return (
+                StatusCode::CONFLICT,
+                Json(json!({ "error": "no_pending_device_flow", "id": id })),
+            )
+        }
     };
     let md: Value = serde_json::from_str(&metadata_s).unwrap_or_else(|_| json!({}));
-    let device_code = md.get("device_code").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let token_url = md.get("token_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let client_id = md.get("client_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let device_code = md
+        .get("device_code")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let token_url = md
+        .get("token_url")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let client_id = md
+        .get("client_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
 
     let client = reqwest::Client::new();
     let form: Vec<(&str, String)> = vec![
         ("client_id", client_id),
         ("device_code", device_code),
-        ("grant_type", "urn:ietf:params:oauth:grant-type:device_code".to_string()),
+        (
+            "grant_type",
+            "urn:ietf:params:oauth:grant-type:device_code".to_string(),
+        ),
     ];
     let resp = client
         .post(&token_url)
@@ -1616,12 +2099,26 @@ async fn poll_device(
         Ok(r) => {
             let d: Value = r.json().await.unwrap_or_else(|_| json!({}));
             if let Some(err) = d.get("error").and_then(|v| v.as_str()) {
-                let status = if err == "authorization_pending" || err == "slow_down" { "pending" } else { "error" };
-                return (StatusCode::OK, Json(json!({ "status": status, "provider_error": err, "id": id })));
+                let status = if err == "authorization_pending" || err == "slow_down" {
+                    "pending"
+                } else {
+                    "error"
+                };
+                return (
+                    StatusCode::OK,
+                    Json(json!({ "status": status, "provider_error": err, "id": id })),
+                );
             }
-            let access = d.get("access_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let access = d
+                .get("access_token")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             if access.is_empty() {
-                return (StatusCode::BAD_GATEWAY, Json(json!({ "error": "no_access_token", "provider": d })));
+                return (
+                    StatusCode::BAD_GATEWAY,
+                    Json(json!({ "error": "no_access_token", "provider": d })),
+                );
             }
             let db2 = state.db.clone();
             let cid = id.clone();
@@ -1635,9 +2132,17 @@ async fn poll_device(
                 Ok::<_, rusqlite::Error>(())
             })
             .await;
-            (StatusCode::OK, Json(json!({ "status": "connected", "connector": id, "auth_type": "device_flow", "owned": true })))
+            (
+                StatusCode::OK,
+                Json(
+                    json!({ "status": "connected", "connector": id, "auth_type": "device_flow", "owned": true }),
+                ),
+            )
         }
-        Err(e) => (StatusCode::BAD_GATEWAY, Json(json!({ "error": "device_poll_failed", "message": e.to_string() }))),
+        Err(e) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "device_poll_failed", "message": e.to_string() })),
+        ),
     }
 }
 
@@ -1646,7 +2151,9 @@ fn urlencoding(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
             b' ' => out.push('+'),
             _ => out.push_str(&format!("%{:02X}", b)),
         }

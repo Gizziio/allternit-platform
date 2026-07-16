@@ -109,32 +109,9 @@ export namespace Server {
             status: 500,
           })
         })
-        .use((c, next) => {
-          // Allow CORS preflight requests to succeed without auth.
-          // Browser clients sending Authorization headers will preflight with OPTIONS.
-          if (c.req.method === "OPTIONS") return next()
-          const password = Flag.GIZZI_SERVER_PASSWORD
-          if (!password) return next()
-          const username = Flag.GIZZI_SERVER_USERNAME ?? "gizzi"
-          return basicAuth({ username, password })(c, next)
-        })
-        .use(async (c, next) => {
-          const skipLogging = c.req.path === "/log"
-          if (!skipLogging) {
-            log.info("request", {
-              method: c.req.method,
-              path: c.req.path,
-            })
-          }
-          const timer = log.time("request", {
-            method: c.req.method,
-            path: c.req.path,
-          })
-          await next()
-          if (!skipLogging) {
-            timer.stop()
-          }
-        })
+        // CORS must run before auth so that auth failures (401) still carry
+        // Access-Control-Allow-Origin headers; otherwise browsers report the
+        // rejection as a CORS error instead of the real status.
         .use(
           cors({
             origin(input) {
@@ -161,6 +138,32 @@ export namespace Server {
             },
           }),
         )
+        .use((c, next) => {
+          // Allow CORS preflight requests to succeed without auth.
+          // Browser clients sending Authorization headers will preflight with OPTIONS.
+          if (c.req.method === "OPTIONS") return next()
+          const password = Flag.GIZZI_SERVER_PASSWORD
+          if (!password) return next()
+          const username = Flag.GIZZI_SERVER_USERNAME ?? "gizzi"
+          return basicAuth({ username, password })(c, next)
+        })
+        .use(async (c, next) => {
+          const skipLogging = c.req.path === "/log"
+          if (!skipLogging) {
+            log.info("request", {
+              method: c.req.method,
+              path: c.req.path,
+            })
+          }
+          const timer = log.time("request", {
+            method: c.req.method,
+            path: c.req.path,
+          })
+          await next()
+          if (!skipLogging) {
+            timer.stop()
+          }
+        })
         .get("/health", (c) => c.json({ status: "ok", service: "gizzi-code" }))
         .get("/golden-stream", (c) => {
           c.header("Content-Type", "application/x-ndjson; charset=utf-8")

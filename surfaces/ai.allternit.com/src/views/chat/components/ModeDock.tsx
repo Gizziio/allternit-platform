@@ -11,6 +11,7 @@ import {
   UsersThree,
   CaretDown,
   Check,
+  Code,
 } from '@phosphor-icons/react';
 import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
@@ -35,11 +36,12 @@ export const MODE_TABS = [
   { id: 'slides', label: 'Slides', color: 'var(--status-warning)', icon: PresentationChart },
   { id: 'image', label: 'Image', color: '#8b5cf6', icon: Image },
   { id: 'video', label: 'Video', color: '#ec4899', icon: VideoCamera },
+  { id: 'code', label: 'Code', color: 'var(--status-warning)', icon: Code },
 ] as const;
 
 const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
-  chat: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
-  cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
+  chat: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video', 'code'],
+  cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video', 'code'],
   code: ['swarms', 'website', 'docs'],
   browser: ['research', 'website', 'docs', 'data'],
   design: ['website', 'slides', 'image', 'video'],
@@ -56,7 +58,7 @@ export function ModeDock({
   const allowedModes = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map((m) => m.id);
   const visibleTabs = MODE_TABS.filter((tab) => allowedModes.includes(tab.id));
 
-  // Default invalid persisted legacy modes (Code, Flow, Computer) to the first
+  // Default invalid persisted legacy modes (Flow, Computer) to the first
   // retained mode so the selector and its page templates never land empty.
   useEffect(() => {
     if ((!selectedMode || !visibleTabs.some((mode) => mode.id === selectedMode)) && visibleTabs.length > 0) {

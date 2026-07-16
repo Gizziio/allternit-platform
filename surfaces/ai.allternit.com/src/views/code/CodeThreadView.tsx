@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from 'react';
-import { CaretLeft, CaretRight, TerminalWindow, FolderOpen, Globe, DotsThree, FileCode } from '@phosphor-icons/react';
 import { CodeCanvas } from './CodeCanvas';
 import { CodeSessionSidePane } from './CodeSessionSidePane';
+import { CodeSessionLauncher, type CodePaneTarget } from './CodeSessionLauncher';
 import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
+import { openCodeSessionWindow } from '@/lib/open-code-session-window';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { ChatIdProvider } from '@/providers/chat-id-provider';
 import { DataStreamProvider } from '@/providers/data-stream-provider';
@@ -18,7 +19,6 @@ import { useCodeModeStore } from './CodeModeStore';
 import { useCodeSessionStore } from './CodeSessionStore';
 import type { CodeWorkspaceRecord } from './CodeModeStore';
 
-const BASE_ROOT_INSET = 12;
 const PREVIEW_DEFAULT_WIDTH = 440;
 const PREVIEW_MIN_WIDTH = 260;
 const PREVIEW_MAX_WIDTH = 700;
@@ -31,9 +31,9 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
   const defaultSelection = useDefaultModelSelection();
   // Side pane (Files/Preview/Terminal/Git) is open by default during a
   // session — code mode should look like a coding session, not a bare chat.
-  const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
+  const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(true);
   const [previewWidth, setPreviewWidth] = useState(PREVIEW_DEFAULT_WIDTH);
-  const [activeSideTab, setActiveSideTab] = useState<'files' | 'preview' | 'terminal' | 'git' | 'diff'>('files');
+  const [activeSideTab, setActiveSideTab] = useState<CodePaneTarget>('terminal');
   const rootRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startX: number; startW: number } | null>(null);
   const codeAgentModeEnabled = useSurfaceAgentModeEnabled('code');
@@ -42,16 +42,45 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
   // store the send flow actually populates, otherwise the usage dashboard
   // overlay never dismisses and the preview toggle never appears.
   const activeCodeSessionId = useCodeSessionStore((s) => s.activeSessionId);
+  const activeCodeSession = useCodeSessionStore((s) => s.sessions.find((session) => session.id === s.activeSessionId));
   const hasSession = Boolean(activeCodeSessionId);
 
-  const togglePreview = useCallback(() => {
-    setIsPreviewCollapsed((prev) => !prev);
-  }, []);
-
-  const openSideTab = useCallback((tab: 'files' | 'preview' | 'terminal' | 'git' | 'diff') => {
+  const openSideTab = useCallback((tab: CodePaneTarget) => {
     setActiveSideTab(tab);
     setIsPreviewCollapsed(false);
   }, []);
+
+  const renameSession = useCallback(() => {
+    if (!activeCodeSessionId || !activeCodeSession) return;
+    const name = window.prompt('Rename session', activeCodeSession.name);
+    if (name?.trim()) void useCodeSessionStore.getState().updateSession(activeCodeSessionId, { name: name.trim() });
+  }, [activeCodeSession, activeCodeSessionId]);
+
+  const forkSession = useCallback(() => {
+    if (!activeCodeSession) return;
+    void useCodeSessionStore.getState().createSession({
+      name: `${activeCodeSession.name} (fork)`,
+      workspaceId: activeCodeSession.metadata.workspaceId,
+      sessionMode: activeCodeSession.metadata.sessionMode,
+      metadata: { ...activeCodeSession.metadata, forkedFrom: activeCodeSession.id },
+    });
+  }, [activeCodeSession]);
+
+  const openIn = useCallback((target: 'window' | 'vscode' | 'terminal') => {
+    if (target === 'window') {
+      if (!activeCodeSessionId) return;
+      openCodeSessionWindow({
+        sessionId: activeCodeSessionId,
+        workspaceId: workspace?.workspace_id,
+        title: activeCodeSession?.name,
+      });
+      return;
+    }
+    const path = workspace?.root_path;
+    if (!path) return;
+    if (target === 'vscode') window.location.href = `vscode://file/${encodeURI(path)}`;
+    else openSideTab('terminal');
+  }, [activeCodeSession?.name, activeCodeSessionId, openSideTab, workspace?.root_path, workspace?.workspace_id]);
 
   const onResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -100,177 +129,16 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         dataTestId="agent-mode-code-backdrop"
       />
 
-      {/* Integrated toolbar — only shown during an active session */}
-      {hasSession && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 3,
-            right: 18,
-            zIndex: 4,
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <button
-            type="button"
-            data-testid="code-toolbar-terminal"
-            onClick={() => openSideTab('terminal')}
-            title="Terminal"
-            style={{
-              pointerEvents: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: activeSideTab === 'terminal' && !isPreviewCollapsed
-                ? 'rgba(255, 255, 255, 0.10)'
-                : 'rgba(11, 14, 16, 0.54)',
-              color: activeSideTab === 'terminal' && !isPreviewCollapsed
-                ? 'var(--text-primary)'
-                : 'var(--text-secondary)',
-              cursor: 'pointer',
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
-            }}
-          >
-            <TerminalWindow size={16} />
-          </button>
-          <button
-            type="button"
-            data-testid="code-toolbar-files"
-            onClick={() => openSideTab('files')}
-            title="Files & diff"
-            style={{
-              pointerEvents: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: activeSideTab === 'files' && !isPreviewCollapsed
-                ? 'rgba(255, 255, 255, 0.10)'
-                : 'rgba(11, 14, 16, 0.54)',
-              color: activeSideTab === 'files' && !isPreviewCollapsed
-                ? 'var(--text-primary)'
-                : 'var(--text-secondary)',
-              cursor: 'pointer',
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
-            }}
-          >
-            <FolderOpen size={16} />
-          </button>
-          <button
-            type="button"
-            data-testid="code-toolbar-diff"
-            onClick={() => openSideTab('diff')}
-            title="Diff review"
-            style={{
-              pointerEvents: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: activeSideTab === 'diff' && !isPreviewCollapsed
-                ? 'rgba(255, 255, 255, 0.10)'
-                : 'rgba(11, 14, 16, 0.54)',
-              color: activeSideTab === 'diff' && !isPreviewCollapsed
-                ? 'var(--text-primary)'
-                : 'var(--text-secondary)',
-              cursor: 'pointer',
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
-            }}
-          >
-            <FileCode size={16} />
-          </button>
-          <button
-            type="button"
-            data-testid="code-toolbar-browser"
-            onClick={() => openSideTab('preview')}
-            title="Browser preview"
-            style={{
-              pointerEvents: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: activeSideTab === 'preview' && !isPreviewCollapsed
-                ? 'rgba(255, 255, 255, 0.10)'
-                : 'rgba(11, 14, 16, 0.54)',
-              color: activeSideTab === 'preview' && !isPreviewCollapsed
-                ? 'var(--text-primary)'
-                : 'var(--text-secondary)',
-              cursor: 'pointer',
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
-            }}
-          >
-            <Globe size={16} />
-          </button>
-          <button
-            type="button"
-            data-testid="code-toolbar-overflow"
-            title="More"
-            style={{
-              pointerEvents: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: 'rgba(11, 14, 16, 0.54)',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
-            }}
-          >
-            <DotsThree size={18} />
-          </button>
-          <button
-            type="button"
-            data-testid="code-preview-toggle"
-            onClick={togglePreview}
-            style={{
-              pointerEvents: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              height: 34,
-              padding: '0 10px',
-              borderRadius: 12,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: 'rgba(11, 14, 16, 0.54)',
-              color: 'var(--text-secondary)',
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              backdropFilter: 'blur(14px)',
-              WebkitBackdropFilter: 'blur(14px)',
-            }}
-          >
-            {isPreviewCollapsed ? <CaretLeft size={12} /> : <CaretRight size={12} />}
-            {isPreviewCollapsed ? 'Show Panel' : 'Hide Panel'}
-          </button>
-        </div>
-      )}
+      {hasSession && isPreviewCollapsed ? (
+        <CodeSessionLauncher
+          onOpenPane={openSideTab}
+          onRename={renameSession}
+          onFork={forkSession}
+          onArchive={() => activeCodeSessionId && void useCodeSessionStore.getState().updateSession(activeCodeSessionId, { isActive: false, metadata: { ...activeCodeSession?.metadata, archived: true } })}
+          onDelete={() => activeCodeSessionId && window.confirm('Delete this session?') && void useCodeSessionStore.getState().deleteSession(activeCodeSessionId)}
+          onOpenIn={openIn}
+        />
+      ) : null}
 
       {/* Main layout: canvas fills all space */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 0, overflow: 'hidden', position: 'relative' }}>
@@ -296,7 +164,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                   <PromptInputProvider>
                     <ChatModelsProvider>
                       <ModelSelectionProvider defaultSelection={defaultSelection}>
-                        <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} onOpenSideTab={openSideTab} />
+                        <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} />
                       </ModelSelectionProvider>
                     </ChatModelsProvider>
                   </PromptInputProvider>
@@ -348,7 +216,6 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                 flexShrink: 0,
                 alignSelf: 'stretch',
                 boxSizing: 'border-box',
-                paddingLeft: 6,
                 display: 'flex',
                 flexDirection: 'column',
                 minHeight: 0,
@@ -361,10 +228,8 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: 18,
-                  background: 'rgba(16, 19, 22, 0.08)',
-                  boxShadow: '0 14px 34px rgba(0, 0, 0, 0.12)',
+                  borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'var(--surface-canvas)',
                 }}
               >
                 <CodeSessionSidePane
@@ -377,6 +242,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                     branch: workspace?.repo_status?.branch,
                     shortSha: workspace?.repo_status?.last_commit?.slice(0, 7),
                   }}
+                  onClose={() => setIsPreviewCollapsed(true)}
                 />
               </div>
             </div>

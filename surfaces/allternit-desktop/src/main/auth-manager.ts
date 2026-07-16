@@ -1,17 +1,25 @@
-import { app, dialog, safeStorage, shell, BrowserWindow, ipcMain } from 'electron';
-import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
+import { app, BrowserWindow, ipcMain, safeStorage, shell } from 'electron';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  generateKeyPairSync,
+  randomBytes,
+  sign,
+} from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import log from 'electron-log';
+import WebSocket from 'ws';
 import { URLS } from './config.js';
 
-const DESKTOP_CLIENT_ID = 'allternit-desktop';
-const DESKTOP_CALLBACK_URI = 'allternit://auth/callback';
-const OAUTH_DEV_BASE_URL = URLS.DEV_UI;
-const OAUTH_PROD_BASE_URL = 'https://platform.allternit.com';
-const SESSION_REFRESH_SKEW_MS = 5 * 60 * 1000;
-const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
+const RUNTIME_CLIENT_ID = 'allternit-desktop-runtime';
+const PAIRING_TIMEOUT_MS = 10 * 60 * 1000;
+const ROTATION_SKEW_MS = 7 * 24 * 60 * 60 * 1000;
+const HEARTBEAT_INTERVAL_MS = 60 * 1000;
+const SAFE_STORAGE_HEADER = 'allternit-safe-storage-v1\n';
+const LOCAL_STORAGE_HEADER = 'allternit-local-aes-gcm-v1\n';
 
 export interface DesktopAuthSession {
   accessToken: string;
@@ -22,18 +30,47 @@ export interface DesktopAuthSession {
   userId: string;
   userEmail: string;
   clientId: string;
+  runtimeId: string;
+  organizationId?: string;
+  capabilities: string[];
 }
 
-interface PendingAuthState {
-  state: string;
-  verifier: string;
+interface PersistedRuntimeIdentity extends DesktopAuthSession {
+  privateKeyPem: string;
+  publicKey: string;
+  savedAt: string;
+}
+
+interface PairingStartResponse {
+  pairingId: string;
+  deviceCode: string;
+  userCode: string;
+  challenge: string;
+  verificationUrl: string;
+  expiresAt: string;
+  pollIntervalSeconds: number;
+}
+
+interface PairingExchangeResponse {
+  runtimeId: string;
+  userId: string;
+  userEmail: string;
+  organizationId?: string;
+  deviceToken: string;
+  tokenType: string;
+  expiresAt: string;
+  capabilities: string[];
+}
+
+interface PendingPairing {
+  pairing: PairingStartResponse;
+  privateKeyPem: string;
+  publicKey: string;
   resolve: (session: DesktopAuthSession) => void;
   reject: (error: Error) => void;
+  promise: Promise<DesktopAuthSession>;
   timeout: NodeJS.Timeout;
-}
-
-interface PersistedDesktopAuthSession extends DesktopAuthSession {
-  savedAt: string;
+  exchangeInFlight: boolean;
 }
 
 export interface DesktopBackendProfile {
@@ -51,126 +88,142 @@ export interface DesktopAccountRecord {
   backend?: DesktopBackendProfile;
 }
 
-type PersistedFileMode = 'encrypted' | 'local-hardware' | 'plaintext';
-
-function toBase64Url(input: Buffer | string): string {
-  return Buffer.from(input)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
+function cloudApiBaseUrl(): string {
+  return (process.env.ALLTERNIT_CLOUD_API_URL || URLS.CLOUD_API).replace(/\/$/, '');
 }
 
-function buildCodeChallenge(verifier: string): string {
-  return createHash('sha256').update(verifier).digest('base64url');
+function pairingSignatureMessage(pairingId: string, challenge: string): string {
+  return `allternit-runtime-pairing:${pairingId}:${challenge}`;
 }
 
-function resolveOAuthBaseUrl(): string {
-  if (process.env.ALLTERNIT_OAUTH_BASE_URL) {
-    return process.env.ALLTERNIT_OAUTH_BASE_URL;
-  }
-
-  if (process.env.NODE_ENV === 'development') {
-    return OAUTH_DEV_BASE_URL;
-  }
-
-  return OAUTH_PROD_BASE_URL;
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 export class DesktopAuthManager {
   private session: DesktopAuthSession | null = null;
-  private pendingAuth: PendingAuthState | null = null;
-  private deferredCallbackUrl: string | null = null;
-  private refreshTimer: NodeJS.Timeout | null = null;
+  private runtimeIdentity: PersistedRuntimeIdentity | null = null;
+  private pendingPairing: PendingPairing | null = null;
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+  private relaySocket: any = null;
+  private relayReconnectTimer: NodeJS.Timeout | null = null;
+  private relayReconnectDelayMs = 1_000;
+  private relayLocalSockets = new Map<string, WebSocket>();
   private refreshInFlight: Promise<void> | null = null;
-  private readonly sessionPath = path.join(app.getPath('userData'), 'auth', 'desktop-session.json');
+  private readonly identityPath = path.join(app.getPath('userData'), 'auth', 'runtime-identity.json');
+  private readonly platformKeyPath = path.join(app.getPath('userData'), 'auth', 'platform-encryption-key.bin');
+  private readonly legacySessionPath = path.join(app.getPath('userData'), 'auth', 'desktop-session.json');
   private readonly accountsPath = path.join(app.getPath('userData'), 'auth', 'desktop-accounts.json');
   private signInResolver: ((session: DesktopAuthSession) => void) | null = null;
   private signInRejecter: ((error: Error) => void) | null = null;
+  private startupGateResolver: ((session: DesktopAuthSession) => void) | null = null;
   private splashWindow: BrowserWindow | null = null;
 
   constructor() {
-    // Listen for login trigger from splash screen
-    ipcMain.on('auth:start-login', async () => {
-      // Lower splash window so browser can come to front
-      const splash = BrowserWindow.getAllWindows().find(w => w.isVisible() && !w.isDestroyed());
-      if (splash) {
-        splash.setAlwaysOnTop(false);
-      }
-      this.notifySplash('auth:login-started', 'Browser opened — complete sign in to continue');
-      try {
-        const session = await this.startInteractiveSignIn();
-        this.notifySplash('auth:login-success', 'Sign in complete — starting up...');
-        if (this.signInResolver) {
-          this.signInResolver(session);
-          this.signInResolver = null;
-          this.signInRejecter = null;
-        }
-      } catch (err) {
-        this.notifySplash('auth:login-failed', (err as Error).message);
-        if (this.signInRejecter) {
-          this.signInRejecter(err as Error);
-          this.signInResolver = null;
-          this.signInRejecter = null;
-        }
-      }
+    ipcMain.on('auth:start-login', () => {
+      void this.handleLoginRequest();
     });
-
-    ipcMain.on('app:quit', () => {
-      app.quit();
+    // Kept for older startup-window bundles. Human login method selection now
+    // belongs entirely to Clerk on the Allternit pairing page.
+    ipcMain.on('auth:start-google-login', () => {
+      void this.handleLoginRequest();
     });
-  }
-
-  private notifySplash(channel: string, message: string): void {
-    const win = this.splashWindow || BrowserWindow.getAllWindows().find(w => w.isVisible() && !w.isDestroyed());
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(channel, message);
-    }
+    ipcMain.on('app:quit', () => app.quit());
   }
 
   async initialize(): Promise<void> {
-    log.info('[Auth] Initializing DesktopAuthManager...');
-    log.info('[Auth] Session path:', this.sessionPath);
-    log.info('[Auth] Accounts path:', this.accountsPath);
-
-    this.session = await this.readSessionFromDisk();
-    if (this.session) {
-      await this.upsertAccountRecord(this.session);
-    } else {
-      log.info('[Auth] No persisted desktop session; skipping account registry read during startup');
+    log.info('[Auth] Initializing paired runtime identity');
+    this.quarantineLegacyOAuthSession();
+    this.runtimeIdentity = this.readIdentityFromDisk();
+    this.session = this.runtimeIdentity ? this.toSession(this.runtimeIdentity) : null;
+    if (!this.session) {
+      log.info('[Auth] This desktop has not been paired yet');
+      return;
     }
+
+    await this.upsertAccountRecord(this.session);
+    this.scheduleHeartbeat();
+    this.connectRuntimeRelay();
+    void this.refreshSessionIfNeeded()
+      .then(() => this.sendHeartbeat())
+      .catch((error) => {
+        // Network loss must not destroy an otherwise valid local runtime
+        // identity. A definitive 401/403 is handled by refresh/heartbeat.
+        log.warn('[Auth] Cloud runtime validation deferred:', error);
+      });
   }
 
-  getAccessToken(): string | null {
-    return this.session?.accessToken ?? null;
+  /**
+   * Compatibility shim for older startup code. Pairing always uses the fixed
+   * Allternit Cloud API and platform URL; it never follows the local/static UI.
+   */
+  setOAuthBaseUrl(_baseUrl: string): void {
+    this.notifySplash('auth:ready', 'Allternit account pairing is ready');
+  }
+
+  isOAuthReady(): boolean {
+    return true;
+  }
+
+  /**
+   * Connector encryption is owned by Electron main, not the frequently rebuilt
+   * Rust API. Packaged builds protect this key with the signed application's
+   * `safeStorage`; development uses the existing authenticated local envelope
+   * so rebuilds cannot trigger recurring Keychain ACL prompts.
+   */
+  getPlatformEncryptionEnvironment(): Record<string, string> {
+    let key: string | null = null;
+    if (fs.existsSync(this.platformKeyPath)) {
+      try {
+        key = this.decodeSecret(fs.readFileSync(this.platformKeyPath));
+        if (!/^[a-f0-9]{64}$/i.test(key)) throw new Error('Connector key has an invalid format');
+      } catch (error) {
+        log.warn('[Auth] Connector encryption key is unreadable; replacing it:', error);
+        this.quarantineCorruptFile(this.platformKeyPath);
+        key = null;
+      }
+    }
+    if (!key) {
+      key = randomBytes(32).toString('hex');
+      fs.mkdirSync(path.dirname(this.platformKeyPath), { recursive: true });
+      fs.writeFileSync(this.platformKeyPath, this.encodeSecret(key), { mode: 0o600 });
+    }
+    return { ALLTERNIT_ENCRYPTION_KEY: key };
+  }
+
+  /** Main-process-only snapshot for narrow request brokering. */
+  getSessionSnapshot(): DesktopAuthSession | null {
+    return this.session ? { ...this.session, capabilities: [...this.session.capabilities] } : null;
+  }
+
+  hasSession(): boolean {
+    return this.session !== null;
   }
 
   async getSession(): Promise<DesktopAuthSession | null> {
-    if (!this.session) {
-      return null;
-    }
-
+    if (!this.session) return null;
     await this.refreshSessionIfNeeded();
     return this.session;
   }
 
-  async ensureAuthenticated(window?: BrowserWindow): Promise<DesktopAuthSession> {
-    log.info('[Auth] Checking for existing session...');
+  async waitForStartupSignIn(window?: BrowserWindow): Promise<DesktopAuthSession> {
     const existing = await this.getSession();
-    if (existing) {
-      log.info('[Auth] Existing session found:', existing.userId);
-      return existing;
-    }
+    if (existing) return existing;
 
-    log.info('[Auth] No session found, requesting splash screen to show login prompt...');
-    
-    // Use the provided window or find it
-    this.splashWindow = window || BrowserWindow.getAllWindows().find(w => !w.isDestroyed()) || null;
-    if (this.splashWindow && !this.splashWindow.isDestroyed()) {
-      this.splashWindow.setAlwaysOnTop(false);
-      this.splashWindow.webContents.send('auth-required');
-    }
+    this.splashWindow = window || BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed()) || null;
+    this.notifySplash('auth:ready', 'Allternit account pairing is ready');
+    log.info('[Auth] Startup gate is waiting for runtime pairing');
+    return new Promise((resolve) => {
+      this.startupGateResolver = resolve;
+    });
+  }
 
+  async ensureAuthenticated(window?: BrowserWindow): Promise<DesktopAuthSession> {
+    const existing = await this.getSession();
+    if (existing) return existing;
+    this.splashWindow = window || BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed()) || null;
+    this.notifySplash('auth:ready', 'Allternit account pairing is ready');
+    this.notifySplash('auth-required', 'Pair this runtime with your Allternit account');
     return new Promise((resolve, reject) => {
       this.signInResolver = resolve;
       this.signInRejecter = reject;
@@ -179,183 +232,216 @@ export class DesktopAuthManager {
 
   async signOut(): Promise<void> {
     const current = this.session;
-    this.clearPendingAuth(new Error('Authentication interrupted by sign-out'));
-    await this.clearSession();
+    const token = current?.accessToken;
+    const runtimeId = current?.runtimeId;
+    this.clearPendingPairing(new Error('Pairing interrupted by sign-out'));
+
+    if (token && runtimeId) {
+      try {
+        await fetch(`${cloudApiBaseUrl()}/api/v1/runtime-devices/${encodeURIComponent(runtimeId)}/revoke-self`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (error) {
+        log.warn('[Auth] Could not notify cloud of runtime sign-out:', error);
+      }
+    }
+
+    this.clearSession();
     await this.clearCurrentAccountFlag();
-
-    if (!current) {
-      return;
-    }
-
-    try {
-      await fetch(`${resolveOAuthBaseUrl()}/api/oauth/revoke`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          token: current.refreshToken,
-          token_type_hint: 'refresh_token',
-          client_id: DESKTOP_CLIENT_ID,
-        }),
-      });
-    } catch (error) {
-      log.warn('[Auth] Refresh token revoke failed during sign-out:', error);
-    }
   }
 
+  /** Handles the optional deep link used to return browser focus to desktop. */
   async handleCallbackUrl(callbackUrl: string): Promise<boolean> {
-    log.info('[Auth] handleCallbackUrl entered with URL:', callbackUrl);
     const url = new URL(callbackUrl);
-    log.info('[Auth] Parsed URL components:', {
-      protocol: url.protocol,
-      hostname: url.hostname,
-      pathname: url.pathname,
-      params: Array.from(url.searchParams.keys())
-    });
-
-    if (url.protocol !== 'allternit:' || url.hostname !== 'auth' || url.pathname !== '/callback') {
-      log.warn('[Auth] Callback URL does not match expected pattern (allternit://auth/callback)');
+    if (url.protocol !== 'allternit:' || url.hostname !== 'pairing' || url.pathname !== '/complete') {
       return false;
     }
-
-    const error = url.searchParams.get('error');
-    if (error) {
-      log.error('[Auth] Callback returned error:', error);
-      this.clearPendingAuth(new Error(error));
-      return true;
+    const pairingId = url.searchParams.get('pairing_id');
+    if (pairingId && this.pendingPairing?.pairing.pairingId === pairingId) {
+      this.notifySplash('auth:login-started', 'Approved — securely pairing this runtime…');
+      void this.exchangePendingPairing(this.pendingPairing);
     }
-
-    const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
-    log.info('[Auth] Callback params - code:', code ? 'present' : 'missing', 'state:', state);
-
-    if (!code || !state) {
-      log.warn('[Auth] Missing code or state in callback');
-      return true;
-    }
-
-    if (!this.pendingAuth) {
-      this.deferredCallbackUrl = callbackUrl;
-      log.warn('[Auth] No pending auth state found yet — deferring callback until interactive sign-in is ready');
-      return true;
-    }
-
-    if (this.pendingAuth.state !== state) {
-      log.warn('[Auth] State mismatch in callback. Expected:', this.pendingAuth.state, 'Got:', state);
-      return true;
-    }
-
-    const pending = this.pendingAuth;
-    try {
-      log.info('[Auth] Exchanging code for session...');
-      const session = await this.exchangeCodeForSession(code, pending.verifier);
-      log.info('[Auth] Session established for user:', session.userId);
-      await this.persistSession(session);
-      this.clearPendingAuth();
-      pending.resolve(session);
-    } catch (exchangeError) {
-      log.error('[Auth] Token exchange failed:', exchangeError);
-      this.clearPendingAuth(exchangeError instanceof Error ? exchangeError : new Error('Desktop sign-in failed'));
-    }
-
     return true;
   }
 
-  private async startInteractiveSignIn(): Promise<DesktopAuthSession> {
-    log.info('[Auth] startInteractiveSignIn called');
-    if (this.pendingAuth) {
-      log.info('[Auth] Already has pending auth, waiting for it to complete...');
-      return new Promise<DesktopAuthSession>((resolve, reject) => {
-        const current = this.pendingAuth;
-        const timeout = setInterval(async () => {
-          if (!this.pendingAuth || this.pendingAuth !== current) {
-            clearInterval(timeout);
-            const session = await this.getSession();
-            if (session) {
-              resolve(session);
-            } else {
-              reject(new Error('Desktop sign-in did not complete'));
-            }
-          }
-        }, 250);
-      });
-    }
-
-    const verifier = toBase64Url(randomBytes(32));
-    const state = toBase64Url(randomBytes(24));
-    const challenge = buildCodeChallenge(verifier);
-
-    const oauthBaseUrl = resolveOAuthBaseUrl();
-    log.info('[Auth] OAuth Base URL resolved to:', oauthBaseUrl);
-    
-    const authorizeUrl = new URL('/oauth/authorize', oauthBaseUrl);
-    authorizeUrl.searchParams.set('client_id', DESKTOP_CLIENT_ID);
-    authorizeUrl.searchParams.set('redirect_uri', DESKTOP_CALLBACK_URI);
-    authorizeUrl.searchParams.set('response_type', 'code');
-    authorizeUrl.searchParams.set('code_challenge', challenge);
-    authorizeUrl.searchParams.set('code_challenge_method', 'S256');
-    authorizeUrl.searchParams.set('state', state);
-
-    const signInUrl = new URL('/sign-in', oauthBaseUrl);
-    signInUrl.searchParams.set(
-      'redirect_url',
-      `${authorizeUrl.pathname}${authorizeUrl.search}`,
-    );
-
-    log.info('[Auth] Generated Sign-In URL:', signInUrl.toString());
-
-    const sessionPromise = new Promise<DesktopAuthSession>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        log.error('[Auth] Interactive sign-in timed out');
-        this.clearPendingAuth(new Error('Desktop sign-in timed out'));
-      }, AUTH_TIMEOUT_MS);
-
-      this.pendingAuth = { state, verifier, resolve, reject, timeout };
+  async listAccounts(): Promise<DesktopAccountRecord[]> {
+    const accounts = this.readAccountsFromDisk();
+    return accounts.sort((left, right) => {
+      if (left.current !== right.current) return left.current ? -1 : 1;
+      return new Date(right.lastSeenAt).getTime() - new Date(left.lastSeenAt).getTime();
     });
-
-    if (this.deferredCallbackUrl) {
-      const deferredCallbackUrl = this.deferredCallbackUrl;
-      this.deferredCallbackUrl = null;
-      log.info('[Auth] Replaying deferred callback URL after pending auth state was created:', deferredCallbackUrl);
-      void this.handleCallbackUrl(deferredCallbackUrl);
-    }
-
-    log.info('[Auth] Opening external browser for sign-in...');
-    await shell.openExternal(signInUrl.toString());
-    return sessionPromise;
   }
 
-  private async exchangeCodeForSession(code: string, verifier: string): Promise<DesktopAuthSession> {
-    const tokenResponse = await fetch(`${resolveOAuthBaseUrl()}/api/oauth/token`, {
+  async forgetAccount(userId: string): Promise<void> {
+    if (this.session?.userId === userId) return;
+    this.writeAccountsToDisk(this.readAccountsFromDisk().filter((account) => account.userId !== userId));
+  }
+
+  async updateBackendProfile(profile: DesktopBackendProfile): Promise<void> {
+    if (!this.session) return;
+    const accounts = this.readAccountsFromDisk();
+    const next = accounts.map((account) => account.userId === this.session?.userId
+      ? {
+          ...account,
+          backend: profile.mode === 'remote'
+            ? { mode: profile.mode, remoteUrl: profile.remoteUrl }
+            : { mode: profile.mode },
+          lastSeenAt: new Date().toISOString(),
+        }
+      : account);
+    this.writeAccountsToDisk(next);
+  }
+
+  private async handleLoginRequest(): Promise<void> {
+    const visibleWindow = this.splashWindow
+      || BrowserWindow.getAllWindows().find((candidate) => candidate.isVisible() && !candidate.isDestroyed());
+    visibleWindow?.setAlwaysOnTop(false);
+    this.notifySplash('auth:login-started', 'Opening Allternit in your browser…');
+
+    try {
+      const session = await this.startPairing();
+      this.notifySplash('auth:login-success', 'Runtime paired — starting Allternit…');
+      this.signInResolver?.(session);
+      this.signInResolver = null;
+      this.signInRejecter = null;
+      this.startupGateResolver?.(session);
+      this.startupGateResolver = null;
+    } catch (error) {
+      const failure = error instanceof Error ? error : new Error('Runtime pairing failed');
+      this.notifySplash('auth:login-failed', failure.message);
+      this.signInRejecter?.(failure);
+      this.signInResolver = null;
+      this.signInRejecter = null;
+    }
+  }
+
+  private async startPairing(): Promise<DesktopAuthSession> {
+    if (this.pendingPairing) return this.pendingPairing.promise;
+
+    const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+    const publicKeyDer = publicKey.export({ format: 'der', type: 'spki' });
+    const publicKeyRaw = publicKeyDer.subarray(publicKeyDer.length - 32).toString('base64url');
+    const privateKeyPem = privateKey.export({ format: 'pem', type: 'pkcs8' }).toString();
+    const response = await fetch(`${cloudApiBaseUrl()}/api/v1/runtime-pairings`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        client_id: DESKTOP_CLIENT_ID,
-        code,
-        redirect_uri: DESKTOP_CALLBACK_URI,
-        code_verifier: verifier,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: `${os.hostname()} Desktop`,
+        runtimeType: 'desktop',
+        hostname: os.hostname(),
+        platform: `${process.platform}-${process.arch}`,
+        version: app.getVersion(),
+        publicKey: publicKeyRaw,
       }),
     });
-
-    if (!tokenResponse.ok) {
-      const details = await tokenResponse.text().catch(() => '');
-      throw new Error(`OAuth token exchange failed (${tokenResponse.status}): ${details || 'unknown error'}`);
+    if (!response.ok) {
+      throw new Error(`Allternit pairing is unavailable (${response.status})`);
     }
+    const pairing = await response.json() as PairingStartResponse;
 
-    const tokenPayload = await tokenResponse.json() as {
-      access_token: string;
-      refresh_token: string;
-      token_type: string;
-      expires_in: number;
-      scope: string;
+    let resolvePairing!: (session: DesktopAuthSession) => void;
+    let rejectPairing!: (error: Error) => void;
+    const promise = new Promise<DesktopAuthSession>((resolve, reject) => {
+      resolvePairing = resolve;
+      rejectPairing = reject;
+    });
+    const timeout = setTimeout(() => {
+      this.clearPendingPairing(new Error('Pairing expired. Choose Continue with Allternit to try again.'));
+    }, PAIRING_TIMEOUT_MS);
+    const pending: PendingPairing = {
+      pairing,
+      privateKeyPem,
+      publicKey: publicKeyRaw,
+      resolve: resolvePairing,
+      reject: rejectPairing,
+      promise,
+      timeout,
+      exchangeInFlight: false,
     };
+    this.pendingPairing = pending;
 
-    return this.buildSessionFromTokenPayload(tokenPayload);
+    this.notifySplash(
+      'auth:login-started',
+      `Approve ${pairing.userCode} in your browser. This window will continue automatically.`,
+    );
+    await shell.openExternal(pairing.verificationUrl);
+    void this.pollPairing(pending);
+    return promise;
+  }
+
+  private async pollPairing(pending: PendingPairing): Promise<void> {
+    const interval = Math.max(pending.pairing.pollIntervalSeconds || 2, 2) * 1000;
+    while (this.pendingPairing === pending) {
+      const completed = await this.exchangePendingPairing(pending);
+      if (completed || this.pendingPairing !== pending) return;
+      await sleep(interval);
+    }
+  }
+
+  private async exchangePendingPairing(pending: PendingPairing): Promise<boolean> {
+    if (pending.exchangeInFlight || this.pendingPairing !== pending) return false;
+    pending.exchangeInFlight = true;
+    try {
+      const message = pairingSignatureMessage(pending.pairing.pairingId, pending.pairing.challenge);
+      const signature = sign(null, Buffer.from(message, 'utf8'), pending.privateKeyPem).toString('base64url');
+      const response = await fetch(`${cloudApiBaseUrl()}/api/v1/runtime-pairings/exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pairingId: pending.pairing.pairingId,
+          deviceCode: pending.pairing.deviceCode,
+          signature,
+        }),
+      });
+      if (response.status === 428) return false;
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null) as { error?: string; message?: string } | null;
+        if (response.status >= 500) return false;
+        throw new Error(payload?.message || payload?.error || `Pairing failed (${response.status})`);
+      }
+
+      const exchange = await response.json() as PairingExchangeResponse;
+      const identity: PersistedRuntimeIdentity = {
+        accessToken: exchange.deviceToken,
+        refreshToken: '',
+        tokenType: exchange.tokenType || 'Bearer',
+        scope: exchange.capabilities.join(' '),
+        expiresAt: new Date(exchange.expiresAt).getTime(),
+        userId: exchange.userId,
+        userEmail: exchange.userEmail,
+        clientId: RUNTIME_CLIENT_ID,
+        runtimeId: exchange.runtimeId,
+        organizationId: exchange.organizationId,
+        capabilities: exchange.capabilities,
+        privateKeyPem: pending.privateKeyPem,
+        publicKey: pending.publicKey,
+        savedAt: new Date().toISOString(),
+      };
+      this.persistIdentity(identity);
+      await this.upsertAccountRecord(identity);
+      clearTimeout(pending.timeout);
+      this.pendingPairing = null;
+      pending.resolve(this.toSession(identity));
+      this.scheduleHeartbeat();
+      this.connectRuntimeRelay();
+      return true;
+    } catch (error) {
+      if (error instanceof TypeError) {
+        log.warn('[Auth] Pairing poll could not reach Allternit Cloud; retrying');
+        return false;
+      }
+      this.clearPendingPairing(error instanceof Error ? error : new Error('Pairing failed'));
+      return true;
+    } finally {
+      pending.exchangeInFlight = false;
+    }
   }
 
   private async refreshSessionIfNeeded(): Promise<void> {
+    if (!this.session || this.session.expiresAt - Date.now() > ROTATION_SKEW_MS) return;
     if (this.refreshInFlight) return this.refreshInFlight;
-    this.refreshInFlight = this.performRefreshIfNeeded();
+    this.refreshInFlight = this.rotateCredential();
     try {
       await this.refreshInFlight;
     } finally {
@@ -363,365 +449,445 @@ export class DesktopAuthManager {
     }
   }
 
-  private async performRefreshIfNeeded(): Promise<void> {
-    if (!this.session) {
-      return;
+  private async rotateCredential(): Promise<void> {
+    if (!this.session || !this.runtimeIdentity) return;
+    const response = await fetch(
+      `${cloudApiBaseUrl()}/api/v1/runtime-devices/${encodeURIComponent(this.session.runtimeId)}/rotate`,
+      { method: 'POST', headers: { Authorization: `Bearer ${this.session.accessToken}` } },
+    );
+    if (response.status === 401 || response.status === 403) {
+      this.clearSession();
+      await this.clearCurrentAccountFlag();
+      throw new Error('This runtime was revoked. Pair it with Allternit again.');
     }
-
-    if (Date.now() < this.session.expiresAt - SESSION_REFRESH_SKEW_MS) {
-      this.scheduleRefresh();
-      return;
-    }
-
-    let refreshed: DesktopAuthSession;
-    try {
-      refreshed = await this.refreshSession(this.session.refreshToken);
-    } catch (err) {
-      const message = (err as Error).message ?? '';
-      if (message.includes('invalid_grant') || message.includes('400') || message.includes('(501)')) {
-        log.warn('[Auth] Refresh token expired or revoked — clearing session for re-authentication');
-        await this.clearSession();
-        await this.clearCurrentAccountFlag();
-        return;
-      }
-      throw err;
-    }
-    await this.persistSession(refreshed);
-  }
-
-  private async refreshSession(refreshToken: string): Promise<DesktopAuthSession> {
-    const response = await fetch(`${resolveOAuthBaseUrl()}/api/oauth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        client_id: DESKTOP_CLIENT_ID,
-        refresh_token: refreshToken,
-      }),
+    if (!response.ok) throw new Error(`Runtime credential rotation failed (${response.status})`);
+    const rotated = await response.json() as { deviceToken: string; expiresAt: string };
+    this.persistIdentity({
+      ...this.runtimeIdentity,
+      accessToken: rotated.deviceToken,
+      expiresAt: new Date(rotated.expiresAt).getTime(),
+      savedAt: new Date().toISOString(),
     });
-
-    if (!response.ok) {
-      const details = await response.text().catch(() => '');
-      throw new Error(`OAuth refresh failed (${response.status}): ${details || 'unknown error'}`);
-    }
-
-    const tokenPayload = await response.json() as {
-      access_token: string;
-      refresh_token: string;
-      token_type: string;
-      expires_in: number;
-      scope: string;
-    };
-
-    return this.buildSessionFromTokenPayload(tokenPayload);
+    this.reconnectRuntimeRelay();
   }
 
-  private async buildSessionFromTokenPayload(tokenPayload: {
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
-    expires_in: number;
-    scope: string;
-  }): Promise<DesktopAuthSession> {
-    const userInfoResponse = await fetch(`${resolveOAuthBaseUrl()}/api/oauth/userinfo`, {
+  private scheduleHeartbeat(): void {
+    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    if (!this.session) return;
+    this.heartbeatTimer = setInterval(() => {
+      void this.sendHeartbeat().catch((error) => log.warn('[Auth] Runtime heartbeat deferred:', error));
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  private async sendHeartbeat(): Promise<void> {
+    if (!this.session) return;
+    const response = await fetch(
+      `${cloudApiBaseUrl()}/api/v1/runtime-devices/${encodeURIComponent(this.session.runtimeId)}/heartbeat`,
+      { method: 'POST', headers: { Authorization: `Bearer ${this.session.accessToken}` } },
+    );
+    if (response.status === 401 || response.status === 403) {
+      this.clearSession();
+      await this.clearCurrentAccountFlag();
+      this.notifySplash('auth:login-failed', 'This runtime was revoked. Pair it again to continue.');
+      return;
+    }
+    if (!response.ok) throw new Error(`Runtime heartbeat failed (${response.status})`);
+  }
+
+  private persistIdentity(identity: PersistedRuntimeIdentity): void {
+    this.runtimeIdentity = identity;
+    this.session = this.toSession(identity);
+    fs.mkdirSync(path.dirname(this.identityPath), { recursive: true });
+    fs.writeFileSync(this.identityPath, this.encodeSecret(JSON.stringify(identity)));
+  }
+
+  private readIdentityFromDisk(): PersistedRuntimeIdentity | null {
+    if (!fs.existsSync(this.identityPath)) return null;
+    try {
+      const parsed = JSON.parse(this.decodeSecret(fs.readFileSync(this.identityPath))) as PersistedRuntimeIdentity;
+      if (!parsed.runtimeId || !parsed.accessToken || !parsed.privateKeyPem || !parsed.userId) {
+        throw new Error('Runtime identity is incomplete');
+      }
+      return parsed;
+    } catch (error) {
+      log.warn('[Auth] Runtime identity is unreadable:', error);
+      this.quarantineCorruptFile(this.identityPath);
+      return null;
+    }
+  }
+
+  private toSession(identity: PersistedRuntimeIdentity): DesktopAuthSession {
+    const { privateKeyPem: _privateKeyPem, publicKey: _publicKey, savedAt: _savedAt, ...session } = identity;
+    return session;
+  }
+
+  private clearSession(): void {
+    this.session = null;
+    this.runtimeIdentity = null;
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    if (this.relayReconnectTimer) {
+      clearTimeout(this.relayReconnectTimer);
+      this.relayReconnectTimer = null;
+    }
+    if (this.relaySocket) {
+      this.relaySocket.close();
+      this.relaySocket = null;
+    }
+    fs.rmSync(this.identityPath, { force: true });
+  }
+
+  private connectRuntimeRelay(): void {
+    if (!this.session || this.relaySocket) return;
+    const runtimeId = this.session.runtimeId;
+    const relayUrl = new URL(`${cloudApiBaseUrl()}/api/v1/runtime-relay/connect/${encodeURIComponent(runtimeId)}`);
+    relayUrl.protocol = relayUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(relayUrl.toString());
+    this.relaySocket = socket;
+
+    socket.addEventListener('open', () => {
+      if (!this.session || this.session.runtimeId !== runtimeId) return socket.close();
+      socket.send(JSON.stringify({
+        type: 'authenticate',
+        runtime_id: runtimeId,
+        device_token: this.session.accessToken,
+      }));
+    });
+    socket.addEventListener('message', (event: { data: unknown }) => {
+      const text = typeof event.data === 'string' ? event.data : Buffer.from(event.data as ArrayBuffer).toString('utf8');
+      let message: any;
+      try { message = JSON.parse(text); } catch { return; }
+      if (message.type === 'authenticated') {
+        this.relayReconnectDelayMs = 1_000;
+        log.info('[Auth] Paired runtime relay connected');
+      } else if (message.type === 'request') {
+        void this.handleRelayRequest(socket, message);
+      } else if (message.type === 'socket_open') {
+        this.handleRelaySocketOpen(socket, message);
+      } else if (message.type === 'socket_data') {
+        this.handleRelaySocketData(message);
+      } else if (message.type === 'socket_close') {
+        this.handleRelaySocketClose(message);
+      } else if (message.type === 'ping') {
+        socket.send(JSON.stringify({ type: 'pong' }));
+      }
+    });
+    socket.addEventListener('close', () => {
+      if (this.relaySocket === socket) this.relaySocket = null;
+      for (const local of this.relayLocalSockets.values()) local.close(1012, 'Relay disconnected');
+      this.relayLocalSockets.clear();
+      if (this.session) this.scheduleRelayReconnect();
+    });
+    socket.addEventListener('error', (error: unknown) => {
+      log.warn('[Auth] Runtime relay connection error:', error);
+    });
+  }
+
+  private async handleRelayRequest(socket: any, message: any): Promise<void> {
+    const requestId = typeof message.request_id === 'string' ? message.request_id : '';
+    const method = typeof message.method === 'string' ? message.method.toUpperCase() : 'GET';
+    const requestPath = typeof message.path === 'string' ? message.path : '';
+    if (!requestId || !requestPath.startsWith('/') || requestPath.includes('..') || requestPath.includes('://')) return;
+    const allowedPrefixes = [
+      '/api/', '/viz', '/sandbox', '/vm-session', '/rails', '/stream',
+      '/terminal', '/mcp', '/platform', '/metrics', '/alabs', '/cowork',
+      '/webhooks', '/status', '/health',
+      '/ws', '/panes',
+    ];
+    if (!allowedPrefixes.some((prefix) => requestPath.startsWith(prefix))) return;
+
+    try {
+      const headers = new Headers(message.headers || {});
+      const session = this.session;
+      if (!session) throw new Error('Runtime is no longer paired');
+      headers.set('Authorization', `Bearer ${session.accessToken}`);
+      headers.set('X-Allternit-Desktop-Access-Token', session.accessToken);
+      headers.set('X-Allternit-User-Id', session.userId);
+      headers.set('X-Allternit-User-Email', session.userEmail);
+      if (session.organizationId) headers.set('X-Allternit-Tenant-Id', session.organizationId);
+      const body = method === 'GET' || method === 'HEAD' || !message.body
+        ? undefined
+        : message.body_encoding === 'base64'
+          ? Buffer.from(message.body, 'base64')
+          : Buffer.from(message.body, 'utf8');
+      const response = await fetch(`${URLS.API}${requestPath}`, { method, headers, body });
+      const responseHeaders: Record<string, string> = {};
+      for (const name of ['content-type', 'cache-control', 'content-disposition', 'etag', 'last-modified', 'x-request-id']) {
+        const value = response.headers.get(name);
+        if (value) responseHeaders[name] = value;
+      }
+      socket.send(JSON.stringify({
+        type: 'response_start',
+        request_id: requestId,
+        status: response.status,
+        headers: responseHeaders,
+      }));
+      if (response.body) {
+        const reader = response.body.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value?.byteLength) {
+            socket.send(JSON.stringify({
+              type: 'response_chunk',
+              request_id: requestId,
+              body: Buffer.from(value).toString('base64'),
+              body_encoding: 'base64',
+            }));
+          }
+        }
+      }
+      socket.send(JSON.stringify({ type: 'response_end', request_id: requestId }));
+    } catch (error) {
+      socket.send(JSON.stringify({
+        type: 'response_start',
+        request_id: requestId,
+        status: 502,
+        headers: { 'content-type': 'application/json' },
+      }));
+      socket.send(JSON.stringify({
+        type: 'response_chunk',
+        request_id: requestId,
+        body: Buffer.from(JSON.stringify({ error: 'runtime_proxy_error', message: String(error) })).toString('base64'),
+        body_encoding: 'base64',
+      }));
+      socket.send(JSON.stringify({ type: 'response_end', request_id: requestId }));
+    }
+  }
+
+  private handleRelaySocketOpen(relay: WebSocket, message: any): void {
+    const socketId = typeof message.socket_id === 'string' ? message.socket_id : '';
+    const requestPath = typeof message.path === 'string' ? message.path : '';
+    const allowedPrefixes = [
+      '/api/', '/viz', '/sandbox', '/vm-session', '/rails', '/stream',
+      '/terminal', '/mcp', '/platform', '/metrics', '/alabs', '/cowork',
+      '/webhooks', '/ws', '/panes', '/status', '/health',
+    ];
+    if (!socketId || !requestPath.startsWith('/') || requestPath.includes('..')
+      || requestPath.includes('://') || !allowedPrefixes.some((prefix) => requestPath.startsWith(prefix))) return;
+    this.relayLocalSockets.get(socketId)?.close();
+    const session = this.session;
+    if (!session) return;
+    const local = new WebSocket(`${URLS.API.replace(/^http/, 'ws')}${requestPath}`, {
       headers: {
-        Authorization: `Bearer ${tokenPayload.access_token}`,
+        Authorization: `Bearer ${session.accessToken}`,
+        'X-Allternit-Desktop-Access-Token': session.accessToken,
+        'X-Allternit-User-Id': session.userId,
+        'X-Allternit-User-Email': session.userEmail,
+        ...(session.organizationId ? { 'X-Allternit-Tenant-Id': session.organizationId } : {}),
       },
     });
-
-    if (!userInfoResponse.ok) {
-      throw new Error(`User info request failed (${userInfoResponse.status})`);
-    }
-
-    const userInfo = await userInfoResponse.json() as {
-      sub: string;
-      email: string;
-      client_id: string;
-    };
-
-    return {
-      accessToken: tokenPayload.access_token,
-      refreshToken: tokenPayload.refresh_token,
-      tokenType: tokenPayload.token_type,
-      scope: tokenPayload.scope,
-      expiresAt: Date.now() + tokenPayload.expires_in * 1000,
-      userId: userInfo.sub,
-      userEmail: userInfo.email,
-      clientId: userInfo.client_id,
-    };
+    this.relayLocalSockets.set(socketId, local);
+    local.on('open', () => {
+      if (relay.readyState === WebSocket.OPEN) relay.send(JSON.stringify({ type: 'socket_ready', socket_id: socketId }));
+    });
+    local.on('message', (data: any, isBinary: boolean) => {
+      if (relay.readyState !== WebSocket.OPEN) return;
+      relay.send(JSON.stringify({
+        type: 'socket_data',
+        socket_id: socketId,
+        body: isBinary ? Buffer.from(data).toString('base64') : data.toString(),
+        body_encoding: isBinary ? 'base64' : 'utf8',
+      }));
+    });
+    local.on('close', (code: number, reason: Buffer) => {
+      this.relayLocalSockets.delete(socketId);
+      if (relay.readyState === WebSocket.OPEN) {
+        relay.send(JSON.stringify({ type: 'socket_close', socket_id: socketId, code, reason: reason.toString() }));
+      }
+    });
+    local.on('error', (error: Error) => {
+      log.warn('[Auth] Local runtime socket error:', error.message);
+      local.close(1011, 'Local runtime socket failed');
+    });
   }
 
-  private getLocalHardwareKey(): Buffer {
-    // Generate a stable key based on machine-specific identifiers.
-    // We avoid app.getPath('userData') as it might change between dev/prod or versions.
-    const machineId = createHash('sha256')
+  private handleRelaySocketData(message: any): void {
+    const local = this.relayLocalSockets.get(message.socket_id);
+    if (!local || local.readyState !== WebSocket.OPEN) return;
+    local.send(message.body_encoding === 'base64'
+      ? Buffer.from(String(message.body || ''), 'base64')
+      : String(message.body || ''));
+  }
+
+  private handleRelaySocketClose(message: any): void {
+    const local = this.relayLocalSockets.get(message.socket_id);
+    if (!local) return;
+    this.relayLocalSockets.delete(message.socket_id);
+    const code = Number(message.code) >= 1000 && Number(message.code) <= 4999 ? Number(message.code) : 1000;
+    local.close(code, String(message.reason || ''));
+  }
+
+  private scheduleRelayReconnect(): void {
+    if (this.relayReconnectTimer || !this.session) return;
+    const delay = this.relayReconnectDelayMs;
+    this.relayReconnectDelayMs = Math.min(this.relayReconnectDelayMs * 2, 30_000);
+    this.relayReconnectTimer = setTimeout(() => {
+      this.relayReconnectTimer = null;
+      this.connectRuntimeRelay();
+    }, delay);
+  }
+
+  private reconnectRuntimeRelay(): void {
+    if (this.relaySocket) {
+      this.relaySocket.close();
+      this.relaySocket = null;
+    }
+    for (const socket of this.relayLocalSockets.values()) socket.close(1012, 'Relay reconnecting');
+    this.relayLocalSockets.clear();
+    this.scheduleRelayReconnect();
+  }
+
+  private clearPendingPairing(error?: Error): void {
+    const pending = this.pendingPairing;
+    if (!pending) return;
+    clearTimeout(pending.timeout);
+    this.pendingPairing = null;
+    if (error) pending.reject(error);
+  }
+
+  private async upsertAccountRecord(session: DesktopAuthSession): Promise<void> {
+    const accounts = this.readAccountsFromDisk();
+    const now = new Date().toISOString();
+    let found = false;
+    const next = accounts.map((account) => {
+      if (account.userId !== session.userId) return { ...account, current: false };
+      found = true;
+      return {
+        ...account,
+        userEmail: session.userEmail,
+        clientId: session.runtimeId,
+        current: true,
+        lastSeenAt: now,
+        lastSignedInAt: account.lastSignedInAt || now,
+      };
+    });
+    if (!found) {
+      next.push({
+        userId: session.userId,
+        userEmail: session.userEmail,
+        clientId: session.runtimeId,
+        lastSignedInAt: now,
+        lastSeenAt: now,
+        current: true,
+      });
+    }
+    this.writeAccountsToDisk(next);
+  }
+
+  private async clearCurrentAccountFlag(): Promise<void> {
+    this.writeAccountsToDisk(this.readAccountsFromDisk().map((account) => (
+      account.current ? { ...account, current: false } : account
+    )));
+  }
+
+  private readAccountsFromDisk(): DesktopAccountRecord[] {
+    if (!fs.existsSync(this.accountsPath)) return [];
+    try {
+      const raw = fs.readFileSync(this.accountsPath);
+      let json: string;
+      try {
+        json = raw.toString('utf8');
+        JSON.parse(json);
+      } catch {
+        json = this.decodeLegacyLocalEncryption(raw);
+      }
+      const parsed = JSON.parse(json);
+      return Array.isArray(parsed) ? parsed.filter((account) => (
+        account && typeof account.userId === 'string' && typeof account.userEmail === 'string'
+      )) : [];
+    } catch (error) {
+      log.warn('[Auth] Account registry is unreadable:', error);
+      this.quarantineCorruptFile(this.accountsPath);
+      return [];
+    }
+  }
+
+  private writeAccountsToDisk(accounts: DesktopAccountRecord[]): void {
+    fs.mkdirSync(path.dirname(this.accountsPath), { recursive: true });
+    fs.writeFileSync(this.accountsPath, JSON.stringify(accounts, null, 2), { mode: 0o600 });
+  }
+
+  private encodeSecret(value: string): Buffer {
+    // In production Electron's signed main process is the sole Keychain owner.
+    // Dev builds use authenticated local encryption so rebuilding the API or
+    // Electron does not cause repeated macOS Keychain prompts.
+    if (app.isPackaged && safeStorage.isEncryptionAvailable()) {
+      return Buffer.from(`${SAFE_STORAGE_HEADER}${safeStorage.encryptString(value).toString('base64')}`, 'utf8');
+    }
+    const key = this.localHardwareKey();
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const ciphertext = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
+    const payload = Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString('base64');
+    return Buffer.from(`${LOCAL_STORAGE_HEADER}${payload}`, 'utf8');
+  }
+
+  private decodeSecret(raw: Buffer): string {
+    const value = raw.toString('utf8');
+    if (value.startsWith(SAFE_STORAGE_HEADER)) {
+      if (!safeStorage.isEncryptionAvailable()) throw new Error('macOS credential storage is unavailable');
+      return safeStorage.decryptString(Buffer.from(value.slice(SAFE_STORAGE_HEADER.length), 'base64'));
+    }
+    if (value.startsWith(LOCAL_STORAGE_HEADER)) {
+      const payload = Buffer.from(value.slice(LOCAL_STORAGE_HEADER.length), 'base64');
+      const iv = payload.subarray(0, 12);
+      const tag = payload.subarray(12, 28);
+      const ciphertext = payload.subarray(28);
+      const decipher = createDecipheriv('aes-256-gcm', this.localHardwareKey(), iv);
+      decipher.setAuthTag(tag);
+      return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+    }
+    throw new Error('Unknown runtime identity format');
+  }
+
+  private localHardwareKey(): Buffer {
+    return createHash('sha256')
+      .update(os.hostname())
+      .update(os.userInfo().username)
+      .update(os.platform())
+      .update(os.arch())
+      .update('allternit-desktop-runtime-v2')
+      .digest();
+  }
+
+  private decodeLegacyLocalEncryption(raw: Buffer): string {
+    const key = createHash('sha256')
       .update(os.hostname())
       .update(os.userInfo().username)
       .update(os.platform())
       .update(os.arch())
       .update('allternit-desktop-salt-v1')
       .digest();
-    return machineId;
+    const decipher = createDecipheriv('aes-256-cbc', key, raw.subarray(0, 16));
+    return Buffer.concat([decipher.update(raw.subarray(16)), decipher.final()]).toString('utf8');
   }
 
-  private encryptLocal(data: string): Buffer {
-    const key = this.getLocalHardwareKey();
-    const iv = randomBytes(16);
-    const cipher = createCipheriv('aes-256-cbc', key, iv);
-    let encrypted = cipher.update(data, 'utf8');
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-    // Prepend IV for decryption
-    return Buffer.concat([iv, encrypted]);
-  }
-
-  private decryptLocal(encrypted: Buffer): string {
-    const key = this.getLocalHardwareKey();
-    const iv = encrypted.subarray(0, 16);
-    const authData = encrypted.subarray(16);
-    const decipher = createDecipheriv('aes-256-cbc', key, iv);
-    let decrypted = decipher.update(authData);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString('utf8');
-  }
-
-  private async persistSession(session: DesktopAuthSession): Promise<void> {
-    this.session = session;
-    this.scheduleRefresh();
-    await this.upsertAccountRecord(session);
-
-    const persisted: PersistedDesktopAuthSession = {
-      ...session,
-      savedAt: new Date().toISOString(),
-    };
-    const payload = Buffer.from(JSON.stringify(persisted), 'utf8');
-
-    fs.mkdirSync(path.dirname(this.sessionPath), { recursive: true });
-    
-    // Use local hardware-bound encryption exclusively to avoid OS Keychain prompts
-    log.info('[Auth] Writing session using local hardware-bound encryption');
-    fs.writeFileSync(this.sessionPath, this.encryptLocal(payload.toString('utf8')));
-  }
-
-  private async readSessionFromDisk(): Promise<DesktopAuthSession | null> {
-    if (!fs.existsSync(this.sessionPath)) {
-      return null;
-    }
-
+  private quarantineLegacyOAuthSession(): void {
+    if (!fs.existsSync(this.legacySessionPath)) return;
     try {
-      const raw = fs.readFileSync(this.sessionPath);
-      const json = this.decodePersistedPayload(raw, this.sessionPath);
-      const persisted = JSON.parse(json) as PersistedDesktopAuthSession;
-      return {
-        accessToken: persisted.accessToken,
-        refreshToken: persisted.refreshToken,
-        tokenType: persisted.tokenType,
-        scope: persisted.scope,
-        expiresAt: persisted.expiresAt,
-        userId: persisted.userId,
-        userEmail: persisted.userEmail,
-        clientId: persisted.clientId,
-      };
+      fs.renameSync(this.legacySessionPath, `${this.legacySessionPath}.legacy-oauth-${Date.now()}`);
+      log.info('[Auth] Retired legacy desktop OAuth session; runtime pairing is required once');
     } catch (error) {
-      log.warn('[Auth] Failed to read persisted desktop session:', error);
-      this.quarantineCorruptFile(this.sessionPath);
-      return null;
+      log.warn('[Auth] Could not retire legacy OAuth session:', error);
     }
-  }
-
-  private async clearSession(): Promise<void> {
-    this.session = null;
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
-      this.refreshTimer = null;
-    }
-    fs.rmSync(this.sessionPath, { force: true });
-  }
-
-  async listAccounts(): Promise<DesktopAccountRecord[]> {
-    const accounts = await this.readAccountsFromDisk();
-    return accounts.sort((a, b) => {
-      if (a.current !== b.current) {
-        return a.current ? -1 : 1;
-      }
-      return new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime();
-    });
-  }
-
-  async forgetAccount(userId: string): Promise<void> {
-    if (this.session?.userId === userId) {
-      return;
-    }
-    const accounts = await this.readAccountsFromDisk();
-    const nextAccounts = accounts.filter((account) => account.userId !== userId);
-    await this.writeAccountsToDisk(nextAccounts);
-  }
-
-  async updateBackendProfile(profile: DesktopBackendProfile): Promise<void> {
-    if (!this.session) {
-      return;
-    }
-
-    const accounts = await this.readAccountsFromDisk();
-    if (!accounts.some((account) => account.userId === this.session?.userId)) {
-      await this.upsertAccountRecord(this.session);
-      return this.updateBackendProfile(profile);
-    }
-    const nextAccounts = accounts.map((account) => (
-      account.userId === this.session?.userId
-        ? {
-            ...account,
-            backend: profile.mode === 'remote'
-              ? { mode: profile.mode, remoteUrl: profile.remoteUrl }
-              : { mode: profile.mode },
-            lastSeenAt: new Date().toISOString(),
-          }
-        : account
-    ));
-    await this.writeAccountsToDisk(nextAccounts);
-  }
-
-  private scheduleRefresh(): void {
-    if (!this.session) {
-      return;
-    }
-    if (this.refreshTimer) {
-      clearTimeout(this.refreshTimer);
-    }
-
-    const delay = Math.max(this.session.expiresAt - Date.now() - SESSION_REFRESH_SKEW_MS, 5_000);
-    this.refreshTimer = setTimeout(() => {
-      this.refreshSessionIfNeeded().catch((error) => {
-        log.warn('[Auth] Scheduled refresh failed:', error);
-      });
-    }, delay);
-  }
-
-  private clearPendingAuth(error?: Error): void {
-    if (!this.pendingAuth) {
-      return;
-    }
-
-    clearTimeout(this.pendingAuth.timeout);
-    const pending = this.pendingAuth;
-    this.pendingAuth = null;
-
-    if (error) {
-      pending.reject(error);
-    }
-  }
-
-  private async upsertAccountRecord(session: DesktopAuthSession): Promise<void> {
-    const accounts = await this.readAccountsFromDisk();
-    const now = new Date().toISOString();
-    let found = false;
-    const nextAccounts = accounts.map((account) => {
-      if (account.userId !== session.userId) {
-        return { ...account, current: false };
-      }
-
-      found = true;
-      return {
-        ...account,
-        userEmail: session.userEmail,
-        clientId: session.clientId,
-        current: true,
-        lastSeenAt: now,
-        lastSignedInAt: account.lastSignedInAt || now,
-      };
-    });
-
-    if (!found) {
-      nextAccounts.push({
-        userId: session.userId,
-        userEmail: session.userEmail,
-        clientId: session.clientId,
-        lastSignedInAt: now,
-        lastSeenAt: now,
-        current: true,
-      });
-    }
-
-    await this.writeAccountsToDisk(nextAccounts);
-  }
-
-  private async clearCurrentAccountFlag(): Promise<void> {
-    const accounts = await this.readAccountsFromDisk();
-    const nextAccounts = accounts.map((account) => (
-      account.current ? { ...account, current: false } : account
-    ));
-    await this.writeAccountsToDisk(nextAccounts);
-  }
-
-  private async readAccountsFromDisk(): Promise<DesktopAccountRecord[]> {
-    if (!fs.existsSync(this.accountsPath)) {
-      return [];
-    }
-
-    try {
-      const raw = fs.readFileSync(this.accountsPath);
-      const json = this.decodePersistedPayload(raw, this.accountsPath);
-      const parsed = JSON.parse(json);
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      return parsed.filter((account): account is DesktopAccountRecord => (
-        Boolean(account)
-        && typeof account.userId === 'string'
-        && typeof account.userEmail === 'string'
-        && typeof account.clientId === 'string'
-        && typeof account.lastSignedInAt === 'string'
-        && typeof account.lastSeenAt === 'string'
-        && typeof account.current === 'boolean'
-      ));
-    } catch (error) {
-      log.warn('[Auth] Failed to read desktop account registry:', error);
-      this.quarantineCorruptFile(this.accountsPath);
-      return [];
-    }
-  }
-
-  private async writeAccountsToDisk(accounts: DesktopAccountRecord[]): Promise<void> {
-    fs.mkdirSync(path.dirname(this.accountsPath), { recursive: true });
-    const payload = Buffer.from(JSON.stringify(accounts, null, 2), 'utf8');
-    
-    log.info('[Auth] Writing account registry using local hardware-bound encryption');
-    fs.writeFileSync(this.accountsPath, this.encryptLocal(payload.toString('utf8')));
-  }
-
-  private decodePersistedPayload(raw: Buffer, filePath: string): string {
-    // Only attempt local-hardware and plaintext.
-    // We EXPLICITLY do not call safeStorage.decryptString to avoid OS popups.
-    const attempts: PersistedFileMode[] = ['local-hardware', 'plaintext'];
-
-    let lastError: unknown = null;
-    for (const attempt of attempts) {
-      try {
-        if (attempt === 'local-hardware') {
-          return this.decryptLocal(raw);
-        } else {
-          return raw.toString('utf8');
-        }
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    throw lastError instanceof Error ? lastError : new Error(`Unable to decode ${filePath}`);
   }
 
   private quarantineCorruptFile(filePath: string): void {
-    if (!fs.existsSync(filePath)) {
-      return;
-    }
-
+    if (!fs.existsSync(filePath)) return;
     try {
-      const corruptPath = `${filePath}.corrupt-${Date.now()}`;
-      fs.renameSync(filePath, corruptPath);
-      log.warn('[Auth] Quarantined corrupt auth file:', corruptPath);
-    } catch (error) {
-      log.warn('[Auth] Failed to quarantine corrupt auth file, removing instead:', error);
+      fs.renameSync(filePath, `${filePath}.corrupt-${Date.now()}`);
+    } catch {
       fs.rmSync(filePath, { force: true });
     }
+  }
+
+  private notifySplash(channel: string, message: string): void {
+    const window = this.splashWindow
+      || BrowserWindow.getAllWindows().find((candidate) => candidate.isVisible() && !candidate.isDestroyed());
+    if (window && !window.isDestroyed()) window.webContents.send(channel, message);
   }
 }
 

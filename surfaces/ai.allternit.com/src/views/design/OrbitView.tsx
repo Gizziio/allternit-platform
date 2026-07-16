@@ -128,7 +128,9 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
   const [generating, setGenerating] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedDigest, setSelectedDigest] = useState<SavedDigest | null>(null);
-  const [showSetup, setShowSetup] = useState(!hasAnyToken);
+  // Keep Orbit navigable even before connectors are configured. The empty state
+  // explains what is missing and the Connections button opens setup explicitly.
+  const [showSetup, setShowSetup] = useState(false);
   const [schedule, setSchedule] = useState(() => loadSchedule());
   const pendingDigestId = useRef<string | null>(null);
   const lastMessageCount = useRef(messages.length);

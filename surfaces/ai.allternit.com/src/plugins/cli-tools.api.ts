@@ -64,6 +64,9 @@ export async function fetchCliToolsFromApi(): Promise<CliToolApiResponse[]> {
   });
 
   if (!response.ok) {
+    // The unified backend does not implement the CLI-tools API yet; treat
+    // "not supported" as an empty list so callers fall back to scanner data.
+    if (response.status === 501 || response.status === 404) return [];
     throw new Error(`Failed to fetch CLI tools: ${response.status} ${response.statusText}`);
   }
 
@@ -83,6 +86,8 @@ export async function fetchInstalledCliTools(): Promise<CliToolApiResponse[]> {
   });
 
   if (!response.ok) {
+    // Backend does not implement the CLI-tools API yet; treat as empty list.
+    if (response.status === 501 || response.status === 404) return [];
     throw new Error(`Failed to fetch installed CLI tools: ${response.status} ${response.statusText}`);
   }
 
@@ -238,6 +243,8 @@ export async function discoverCliTools(): Promise<CliToolApiResponse[]> {
   });
 
   if (!response.ok) {
+    // Backend does not implement the CLI-tools API yet; treat as empty list.
+    if (response.status === 501 || response.status === 404) return [];
     throw new Error(`Failed to discover CLI tools: ${response.status} ${response.statusText}`);
   }
 

@@ -1,4 +1,3 @@
-
 //! Task Audit Log API routes
 
 use axum::extract::Extension;
@@ -15,8 +14,8 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn audit_log_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -45,7 +44,6 @@ async fn list_audit_logs(
     _headers: HeaderMap,
     Query(query): Query<ListAuditLogsQuery>,
 ) -> impl axum::response::IntoResponse {
-
     let page = query.page.unwrap_or(1).max(1);
     let limit = query.limit.unwrap_or(50).min(100);
     let offset = (page - 1) * limit;
@@ -154,20 +152,27 @@ async fn list_audit_logs(
     match result {
         Ok(Ok((logs, total))) => {
             let pages = ((total as f64) / (limit as f64)).ceil() as i64;
-            (StatusCode::OK, Json(json!({
-                "logs": logs,
-                "pagination": {
-                    "page": page,
-                    "limit": limit,
-                    "total": total,
-                    "pages": pages,
-                }
-            })))
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "logs": logs,
+                    "pagination": {
+                        "page": page,
+                        "limit": limit,
+                        "total": total,
+                        "pages": pages,
+                    }
+                })),
+            )
         }
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"})))
-        }
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        ),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        ),
     }
 }
 
@@ -187,7 +192,6 @@ async fn create_audit_log(
     _headers: HeaderMap,
     Json(body): Json<CreateAuditLog>,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id = uuid::Uuid::new_v4().to_string();
     let id2 = id.clone();
@@ -209,17 +213,24 @@ async fn create_audit_log(
             ],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(())) => (StatusCode::CREATED, Json(json!({ "id": id }))),
         Ok(Err(e)) => {
             warn!("DB error creating audit log: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }

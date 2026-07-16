@@ -1,4 +1,3 @@
-
 //! Agent API routes — local SQLite persistence.
 //!
 //! Mirrors the Next.js `/api/v1/agents` layer.
@@ -20,12 +19,16 @@ use std::sync::Arc;
 use std::time::Duration;
 use tracing::warn;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
+use crate::AppState;
 
 fn unauthorized() -> axum::response::Response {
-    (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response()
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({"error": "Unauthorized"})),
+    )
+        .into_response()
 }
 
 pub fn agent_router() -> Router<Arc<AppState>> {
@@ -33,14 +36,29 @@ pub fn agent_router() -> Router<Arc<AppState>> {
         .route("/agents", get(list_agents).post(create_agent))
         .route("/agent-templates", get(list_templates))
         .route("/agents/from-template", post(instantiate_template))
-        .route("/agents/:id", get(get_agent).put(update_agent).delete(delete_agent))
+        .route(
+            "/agents/:id",
+            get(get_agent).put(update_agent).delete(delete_agent),
+        )
         .route("/agents/:id/runs", post(run_agent))
-        .route("/agents/:id/subagents", get(list_subagents).post(create_subagent))
+        .route(
+            "/agents/:id/subagents",
+            get(list_subagents).post(create_subagent),
+        )
         .route("/agents/companion/ensure", post(ensure_companion))
-        .route("/agents/:id/workspace/initialize", post(initialize_agent_workspace))
-        .route("/agents/identity", get(get_agent_identity).post(set_agent_identity))
+        .route(
+            "/agents/:id/workspace/initialize",
+            post(initialize_agent_workspace),
+        )
+        .route(
+            "/agents/identity",
+            get(get_agent_identity).post(set_agent_identity),
+        )
         .route("/agents/metrics", get(list_agent_metrics))
-        .route("/agents/suites", get(list_test_suites).post(create_test_suite))
+        .route(
+            "/agents/suites",
+            get(list_test_suites).post(create_test_suite),
+        )
         .route("/agents/test", post(run_agent_test))
 }
 
@@ -117,7 +135,7 @@ async fn list_agents(
                     enabled_modes, character_json, allowed_skills, allowed_tools, category, tags,
                     data_classification, write_scope, created_at, updated_at, last_run_at,
                     mode, is_primary, delegates
-             FROM agents WHERE user_id = ?1"
+             FROM agents WHERE user_id = ?1",
         );
         let mut params_vec: Vec<String> = vec![user_id];
 
@@ -136,46 +154,51 @@ async fn list_agents(
         sql.push_str(" ORDER BY updated_at DESC");
 
         let mut stmt = conn.prepare(&sql)?;
-        let params_ref: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
-        let rows = stmt.query_map(rusqlite::params_from_iter(params_ref), |row| {
-            Ok(AgentRow {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                name: row.get(2)?,
-                description: row.get(3)?,
-                agent_type: row.get(4)?,
-                parent_agent_id: row.get(5)?,
-                model: row.get(6)?,
-                provider: row.get(7)?,
-                capabilities: parse_json_column(row.get(8)?),
-                system_prompt: row.get(9)?,
-                tools: parse_json_column(row.get(10)?),
-                max_iterations: row.get(11)?,
-                temperature: row.get(12)?,
-                config: parse_json_column(row.get(13)?),
-                status: row.get(14)?,
-                workspace_id: row.get(15)?,
-                avatar: row.get(16)?,
-                identity_key: row.get(17)?,
-                trust_tier: row.get(18)?,
-                harness_config: parse_json_column(row.get(19)?),
-                enabled_modes: parse_json_column(row.get(20)?).unwrap_or(serde_json::Value::String("[\"chat\"]".to_string())),
-                character_json: parse_json_column(row.get(21)?),
-                allowed_skills: parse_json_column(row.get(22)?),
-                allowed_tools: parse_json_column(row.get(23)?),
-                category: row.get(24)?,
-                tags: parse_json_column(row.get(25)?),
-                data_classification: row.get(26)?,
-                write_scope: row.get(27)?,
-                created_at: row.get(28)?,
-                updated_at: row.get(29)?,
-                last_run_at: row.get(30)?,
-                mode: row.get(31)?,
-                is_primary: row.get::<_, i64>(32)? != 0,
-                delegates: parse_json_column(row.get(33)?),
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let params_ref: Vec<&dyn rusqlite::ToSql> = params_vec
+            .iter()
+            .map(|s| s as &dyn rusqlite::ToSql)
+            .collect();
+        let rows = stmt
+            .query_map(rusqlite::params_from_iter(params_ref), |row| {
+                Ok(AgentRow {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    description: row.get(3)?,
+                    agent_type: row.get(4)?,
+                    parent_agent_id: row.get(5)?,
+                    model: row.get(6)?,
+                    provider: row.get(7)?,
+                    capabilities: parse_json_column(row.get(8)?),
+                    system_prompt: row.get(9)?,
+                    tools: parse_json_column(row.get(10)?),
+                    max_iterations: row.get(11)?,
+                    temperature: row.get(12)?,
+                    config: parse_json_column(row.get(13)?),
+                    status: row.get(14)?,
+                    workspace_id: row.get(15)?,
+                    avatar: row.get(16)?,
+                    identity_key: row.get(17)?,
+                    trust_tier: row.get(18)?,
+                    harness_config: parse_json_column(row.get(19)?),
+                    enabled_modes: parse_json_column(row.get(20)?)
+                        .unwrap_or(serde_json::Value::String("[\"chat\"]".to_string())),
+                    character_json: parse_json_column(row.get(21)?),
+                    allowed_skills: parse_json_column(row.get(22)?),
+                    allowed_tools: parse_json_column(row.get(23)?),
+                    category: row.get(24)?,
+                    tags: parse_json_column(row.get(25)?),
+                    data_classification: row.get(26)?,
+                    write_scope: row.get(27)?,
+                    created_at: row.get(28)?,
+                    updated_at: row.get(29)?,
+                    last_run_at: row.get(30)?,
+                    mode: row.get(31)?,
+                    is_primary: row.get::<_, i64>(32)? != 0,
+                    delegates: parse_json_column(row.get(33)?),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok::<_, rusqlite::Error>(rows)
     })
@@ -185,11 +208,19 @@ async fn list_agents(
         Ok(Ok(agents)) => Json(json!({ "agents": agents })).into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing agents: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -440,11 +471,19 @@ async fn create_agent(
         }
         Ok(Err(e)) => {
             warn!("DB error creating agent: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -519,11 +558,19 @@ async fn ensure_companion(
         Ok(Ok(v)) => (StatusCode::OK, Json(v)).into_response(),
         Ok(Err(e)) => {
             warn!("DB error ensuring companion: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -584,11 +631,19 @@ async fn list_subagents(
         Ok(Ok(subagents)) => Json(json!({ "subagents": subagents })).into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing subagents: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -707,40 +762,51 @@ async fn list_templates(
     _headers: HeaderMap,
 ) -> impl IntoResponse {
     let db = state.db.clone();
-    let result = tokio::task::spawn_blocking(move || -> Result<Vec<serde_json::Value>, rusqlite::Error> {
-        let conn = db.connect()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, name, description, category, spec, is_builtin, created_at
+    let result =
+        tokio::task::spawn_blocking(move || -> Result<Vec<serde_json::Value>, rusqlite::Error> {
+            let conn = db.connect()?;
+            let mut stmt = conn.prepare(
+                "SELECT id, name, description, category, spec, is_builtin, created_at
              FROM agent_templates ORDER BY is_builtin DESC, name",
-        )?;
-        let rows = stmt.query_map([], |row| {
-            Ok(json!({
-                "id": row.get::<_, String>(0)?,
-                "name": row.get::<_, String>(1)?,
-                "description": row.get::<_, Option<String>>(2)?,
-                "category": row.get::<_, String>(3)?,
-                "spec": parse_json_column(row.get(4)?).unwrap_or_else(|| json!({})),
-                "is_builtin": row.get::<_, i64>(5)? != 0,
-                "created_at": row.get::<_, Option<String>>(6)?,
-            }))
-        })?;
-        let mut out = Vec::new();
-        for r in rows {
-            out.push(r?);
-        }
-        Ok(out)
-    })
-    .await;
+            )?;
+            let rows = stmt.query_map([], |row| {
+                Ok(json!({
+                    "id": row.get::<_, String>(0)?,
+                    "name": row.get::<_, String>(1)?,
+                    "description": row.get::<_, Option<String>>(2)?,
+                    "category": row.get::<_, String>(3)?,
+                    "spec": parse_json_column(row.get(4)?).unwrap_or_else(|| json!({})),
+                    "is_builtin": row.get::<_, i64>(5)? != 0,
+                    "created_at": row.get::<_, Option<String>>(6)?,
+                }))
+            })?;
+            let mut out = Vec::new();
+            for r in rows {
+                out.push(r?);
+            }
+            Ok(out)
+        })
+        .await;
 
     match result {
-        Ok(Ok(templates)) => (StatusCode::OK, Json(json!({ "templates": templates }))).into_response(),
+        Ok(Ok(templates)) => {
+            (StatusCode::OK, Json(json!({ "templates": templates }))).into_response()
+        }
         Ok(Err(e)) => {
             warn!("DB error listing templates: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -858,7 +924,11 @@ async fn instantiate_template(
         Ok(Err((code, err))) => (code, Json(err)).into_response(),
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -883,7 +953,7 @@ async fn get_agent(
                     enabled_modes, character_json, allowed_skills, allowed_tools, category, tags,
                     data_classification, write_scope, created_at, updated_at, last_run_at,
                     mode, is_primary, delegates
-             FROM agents WHERE id = ?1 AND user_id = ?2"
+             FROM agents WHERE id = ?1 AND user_id = ?2",
         )?;
         let row = stmt.query_row(params![id, user_id], |row| {
             Ok(AgentRow {
@@ -907,7 +977,8 @@ async fn get_agent(
                 identity_key: row.get(17)?,
                 trust_tier: row.get(18)?,
                 harness_config: parse_json_column(row.get(19)?),
-                enabled_modes: parse_json_column(row.get(20)?).unwrap_or(serde_json::Value::String("[\"chat\"]".to_string())),
+                enabled_modes: parse_json_column(row.get(20)?)
+                    .unwrap_or(serde_json::Value::String("[\"chat\"]".to_string())),
                 character_json: parse_json_column(row.get(21)?),
                 allowed_skills: parse_json_column(row.get(22)?),
                 allowed_tools: parse_json_column(row.get(23)?),
@@ -934,11 +1005,19 @@ async fn get_agent(
         }
         Ok(Err(e)) => {
             warn!("DB error getting agent: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -985,18 +1064,35 @@ async fn update_agent(
 ) -> impl IntoResponse {
     if let Some(ref name) = body.name {
         if name.trim().len() < 3 {
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": "Agent name must be at least 3 characters"}))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "Agent name must be at least 3 characters"})),
+            )
+                .into_response();
         }
     }
     if let Some(ref harness) = body.harness_config {
         let mode = harness.get("mode").and_then(|v| v.as_str());
-        if !matches!(mode, Some("byok") | Some("cloud") | Some("local") | Some("subprocess")) {
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": "Harness mode must be one of: byok, cloud, local, subprocess"}))).into_response();
+        if !matches!(
+            mode,
+            Some("byok") | Some("cloud") | Some("local") | Some("subprocess")
+        ) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(
+                    json!({"error": "Harness mode must be one of: byok, cloud, local, subprocess"}),
+                ),
+            )
+                .into_response();
         }
     }
     if let Some(ref modes) = body.enabled_modes {
         if modes.as_array().map(|a| a.is_empty()).unwrap_or(true) {
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": "At least one enabled surface is required"}))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "At least one enabled surface is required"})),
+            )
+                .into_response();
         }
     }
 
@@ -1074,11 +1170,19 @@ async fn update_agent(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error updating agent: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1108,11 +1212,19 @@ async fn delete_agent(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error deleting agent: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1162,10 +1274,18 @@ async fn initialize_agent_workspace(
 
     match authorized {
         Ok(Ok(false)) | Ok(Err(_)) => {
-            return (StatusCode::NOT_FOUND, Json(json!({"error": "Agent not found"}))).into_response();
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Agent not found"})),
+            )
+                .into_response();
         }
         Err(_) => {
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response();
         }
         _ => {}
     }
@@ -1197,14 +1317,23 @@ async fn initialize_agent_workspace(
             success: true,
             workspace_path: workspace_dir.to_string_lossy().to_string(),
             written_files: written,
-        }).into_response(),
+        })
+        .into_response(),
         Ok(Err(e)) => {
             warn!("Workspace initialization failed: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Workspace task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1222,7 +1351,6 @@ async fn get_agent_identity(
     _headers: HeaderMap,
     Query(params): Query<IdentityQuery>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let agent_id = params.agent_id;
@@ -1230,16 +1358,19 @@ async fn get_agent_identity(
     let row = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         if let Some(ref aid) = agent_id {
-            let key: Option<String> = conn.query_row(
-                "SELECT identity_key FROM agents WHERE id = ?1 AND user_id = ?2",
-                params![aid, user_id],
-                |row| row.get(0),
-            ).ok();
+            let key: Option<String> = conn
+                .query_row(
+                    "SELECT identity_key FROM agents WHERE id = ?1 AND user_id = ?2",
+                    params![aid, user_id],
+                    |row| row.get(0),
+                )
+                .ok();
             Ok::<_, rusqlite::Error>(key)
         } else {
             Ok(None)
         }
-    }).await;
+    })
+    .await;
 
     match row {
         Ok(Ok(Some(key))) => Json(json!({"has_identity": true, "public_key": key})).into_response(),
@@ -1284,14 +1415,19 @@ async fn set_agent_identity(
             params![pk, body.agent_id, user_id],
         )?;
         Ok::<_, rusqlite::Error>(rows)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(rows)) if rows > 0 => {
             Json(json!({"success": true, "public_key": body.public_key})).into_response()
         }
         Ok(Ok(_)) => (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to set identity"}))).into_response(),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "Failed to set identity"})),
+        )
+            .into_response(),
     }
 }
 
@@ -1322,7 +1458,6 @@ async fn list_agent_metrics(
     _headers: HeaderMap,
     Query(params): Query<MetricsQuery>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let agent_id = params.agent_id;
@@ -1335,20 +1470,28 @@ async fn list_agent_metrics(
             "SELECT id, agent_id, metric_type, value, labels, created_at
              FROM agent_metrics WHERE user_id = ?1 AND created_at >= datetime('now', ?2 || ' days')"
         );
-        if agent_id.is_some() { sql.push_str(" AND agent_id = ?3"); }
-        if metric_type.is_some() { sql.push_str(" AND metric_type = ?4"); }
+        if agent_id.is_some() {
+            sql.push_str(" AND agent_id = ?3");
+        }
+        if metric_type.is_some() {
+            sql.push_str(" AND metric_type = ?4");
+        }
         sql.push_str(" ORDER BY created_at DESC");
 
         let mut stmt = conn.prepare(&sql)?;
         let param_days = format!("-{}", days);
         let rows = match (&agent_id, &metric_type) {
-            (Some(a), Some(t)) => stmt.query_map(params![user_id, param_days, a, t], row_to_metric)?,
+            (Some(a), Some(t)) => {
+                stmt.query_map(params![user_id, param_days, a, t], row_to_metric)?
+            }
             (Some(a), None) => stmt.query_map(params![user_id, param_days, a], row_to_metric)?,
             (None, Some(t)) => stmt.query_map(params![user_id, param_days, t], row_to_metric)?,
             (None, None) => stmt.query_map(params![user_id, param_days], row_to_metric)?,
-        }.collect::<Result<Vec<_>, _>>()?;
+        }
+        .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
-    }).await;
+    })
+    .await;
 
     match rows {
         Ok(Ok(data)) => Json(json!({"metrics": data})).into_response(),
@@ -1392,7 +1535,6 @@ async fn list_test_suites(
     _headers: HeaderMap,
     Query(params): Query<SuitesQuery>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let agent_id = params.agent_id;
@@ -1404,18 +1546,23 @@ async fn list_test_suites(
         if let Some(ref aid) = agent_id {
             stmt = conn.prepare(
                 "SELECT id, user_id, agent_id, name, description, cases, created_at
-                 FROM test_suites WHERE user_id = ?1 AND agent_id = ?2 ORDER BY created_at DESC"
+                 FROM test_suites WHERE user_id = ?1 AND agent_id = ?2 ORDER BY created_at DESC",
             )?;
-            rows = stmt.query_map(params![user_id, aid], row_to_suite)?.collect::<Result<Vec<_>, _>>()?;
+            rows = stmt
+                .query_map(params![user_id, aid], row_to_suite)?
+                .collect::<Result<Vec<_>, _>>()?;
         } else {
             stmt = conn.prepare(
                 "SELECT id, user_id, agent_id, name, description, cases, created_at
-                 FROM test_suites WHERE user_id = ?1 ORDER BY created_at DESC"
+                 FROM test_suites WHERE user_id = ?1 ORDER BY created_at DESC",
             )?;
-            rows = stmt.query_map(params![user_id], row_to_suite)?.collect::<Result<Vec<_>, _>>()?;
+            rows = stmt
+                .query_map(params![user_id], row_to_suite)?
+                .collect::<Result<Vec<_>, _>>()?;
         }
         Ok::<_, rusqlite::Error>(rows)
-    }).await;
+    })
+    .await;
 
     match rows {
         Ok(Ok(data)) => Json(json!({"suites": data})).into_response(),
@@ -1450,7 +1597,6 @@ async fn create_test_suite(
     _headers: HeaderMap,
     Json(body): Json<CreateSuiteBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let id = uuid::Uuid::new_v4().to_string();
     let id2 = id.clone();
@@ -1472,17 +1618,30 @@ async fn create_test_suite(
             ],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"suite": {"id": id, "name": body.name}}))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({"suite": {"id": id, "name": body.name}})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating test suite: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1519,7 +1678,11 @@ async fn run_agent(
 ) -> impl IntoResponse {
     let input = body.input.trim().to_string();
     if input.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "input is required"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "input is required"})),
+        )
+            .into_response();
     }
 
     let db = state.db.clone();
@@ -1551,11 +1714,19 @@ async fn run_agent(
         }
         Ok(Err(e)) => {
             warn!("DB error loading agent for run: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response();
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response();
         }
     };
 
@@ -1570,7 +1741,11 @@ async fn run_agent(
     {
         Ok(c) => c,
         Err(e) => {
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response();
         }
     };
 
@@ -1588,16 +1763,28 @@ async fn run_agent(
         Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
             Ok(v) => v,
             Err(e) => {
-                return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi session decode: {}", e)}))).into_response();
+                return (
+                    StatusCode::BAD_GATEWAY,
+                    Json(json!({"error": format!("gizzi session decode: {}", e)})),
+                )
+                    .into_response();
             }
         },
         Ok(r) => {
             let s = r.status();
             let t = r.text().await.unwrap_or_default();
-            return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi session create failed: {} {}", s, t)}))).into_response();
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi session create failed: {} {}", s, t)})),
+            )
+                .into_response();
         }
         Err(e) => {
-            return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi unreachable: {}", e)}))).into_response();
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi unreachable: {}", e)})),
+            )
+                .into_response();
         }
     };
     let session_id = session
@@ -1606,7 +1793,11 @@ async fn run_agent(
         .unwrap_or("")
         .to_string();
     if session_id.is_empty() {
-        return (StatusCode::BAD_GATEWAY, Json(json!({"error": "gizzi returned no session id"}))).into_response();
+        return (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({"error": "gizzi returned no session id"})),
+        )
+            .into_response();
     }
 
     // Gizzi message parts only accept a fixed set of part types (no "system"),
@@ -1629,16 +1820,28 @@ async fn run_agent(
         Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
             Ok(v) => v,
             Err(e) => {
-                return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi message decode: {}", e)}))).into_response();
+                return (
+                    StatusCode::BAD_GATEWAY,
+                    Json(json!({"error": format!("gizzi message decode: {}", e)})),
+                )
+                    .into_response();
             }
         },
         Ok(r) => {
             let s = r.status();
             let t = r.text().await.unwrap_or_default();
-            return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi message failed: {} {}", s, t)}))).into_response();
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi message failed: {} {}", s, t)})),
+            )
+                .into_response();
         }
         Err(e) => {
-            return (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi unreachable: {}", e)}))).into_response();
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi unreachable: {}", e)})),
+            )
+                .into_response();
         }
     };
 
@@ -1731,29 +1934,52 @@ async fn gizzi_run_once(
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(180))
         .build()
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        })?;
 
-    let session_payload = json!({ "title": format!("Agent test: {}", agent.name), "surface": "chat" });
+    let session_payload =
+        json!({ "title": format!("Agent test: {}", agent.name), "surface": "chat" });
     let session = match client
         .post(format!("{}/v1/session", gizzi))
         .json(&session_payload)
         .send()
         .await
     {
-        Ok(r) if r.status().is_success() => r
-            .json::<serde_json::Value>()
-            .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi session decode: {}", e)}))))?,
+        Ok(r) if r.status().is_success() => r.json::<serde_json::Value>().await.map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi session decode: {}", e)})),
+            )
+        })?,
         Ok(r) => {
             let s = r.status();
             let t = r.text().await.unwrap_or_default();
-            return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi session create failed: {} {}", s, t)}))));
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi session create failed: {} {}", s, t)})),
+            ));
         }
-        Err(e) => return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi unreachable: {}", e)})))),
+        Err(e) => {
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi unreachable: {}", e)})),
+            ))
+        }
     };
-    let session_id = session.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let session_id = session
+        .get("id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
     if session_id.is_empty() {
-        return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": "gizzi returned no session id"}))));
+        return Err((
+            StatusCode::BAD_GATEWAY,
+            Json(json!({"error": "gizzi returned no session id"})),
+        ));
     }
 
     let full_prompt = match &agent.system_prompt {
@@ -1771,16 +1997,26 @@ async fn gizzi_run_once(
         .send()
         .await
     {
-        Ok(r) if r.status().is_success() => r
-            .json::<serde_json::Value>()
-            .await
-            .map_err(|e| (StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi message decode: {}", e)}))))?,
+        Ok(r) if r.status().is_success() => r.json::<serde_json::Value>().await.map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi message decode: {}", e)})),
+            )
+        })?,
         Ok(r) => {
             let s = r.status();
             let t = r.text().await.unwrap_or_default();
-            return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi message failed: {} {}", s, t)}))));
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi message failed: {} {}", s, t)})),
+            ));
         }
-        Err(e) => return Err((StatusCode::BAD_GATEWAY, Json(json!({"error": format!("gizzi unreachable: {}", e)})))),
+        Err(e) => {
+            return Err((
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("gizzi unreachable: {}", e)})),
+            ))
+        }
     };
 
     let brain_error = message
@@ -1812,7 +2048,13 @@ async fn gizzi_run_once(
         }
     }
 
-    Ok(GizziRunResult { output, tool_calls, tokens, error: brain_error, session_id })
+    Ok(GizziRunResult {
+        output,
+        tool_calls,
+        tokens,
+        error: brain_error,
+        session_id,
+    })
 }
 
 #[derive(Deserialize)]
@@ -1859,11 +2101,19 @@ async fn run_agent_test(
             return (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response();
         }
         Ok(Err(e)) => {
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response();
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response();
         }
     };
 
@@ -1872,7 +2122,11 @@ async fn run_agent_test(
     let input = body
         .messages
         .as_ref()
-        .and_then(|m| m.iter().rev().find(|x| x.get("role").and_then(|r| r.as_str()) == Some("user")))
+        .and_then(|m| {
+            m.iter()
+                .rev()
+                .find(|x| x.get("role").and_then(|r| r.as_str()) == Some("user"))
+        })
         .and_then(|x| x.get("content").and_then(|c| c.as_str()))
         .filter(|s| !s.trim().is_empty())
         .unwrap_or("Connectivity test: reply with a short acknowledgement.")
@@ -1893,7 +2147,8 @@ async fn run_agent_test(
             "tool_calls": result.tool_calls,
             "error": err,
             "session_id": result.session_id,
-        })).into_response();
+        }))
+        .into_response();
     }
 
     Json(json!({
@@ -1902,5 +2157,6 @@ async fn run_agent_test(
         "metrics": { "latency_ms": latency_ms, "tokens": result.tokens },
         "tool_calls": result.tool_calls,
         "session_id": result.session_id,
-    })).into_response()
+    }))
+    .into_response()
 }

@@ -36,6 +36,7 @@ export interface BackendLaunchConfig {
   gizziPassword?: string | null;
   gizziUsername?: string | null;
   gizziUrl?: string | null;
+  extraEnv?: Record<string, string>;
 }
 
 export class BackendManager {
@@ -54,7 +55,15 @@ export class BackendManager {
 
   /** Start the unified Rust API. Returns the base URL. */
   async ensureBackend(config: BackendLaunchConfig = {}): Promise<string> {
-    this.lastConfig = config;
+    this.lastConfig = {
+      ...(this.lastConfig ?? {}),
+      ...config,
+      extraEnv: {
+        ...(this.lastConfig?.extraEnv ?? {}),
+        ...(config.extraEnv ?? {}),
+      },
+    };
+    config = this.lastConfig;
     if (this.kernelProc) {
       return this.getUrl();
     }
@@ -112,6 +121,10 @@ export class BackendManager {
       ),
       ALLTERNIT_API_PORT: String(API_PORT),
       ALLTERNIT_API_HOST: '127.0.0.1',
+      // The desktop shell always runs a local, per-user backend without Clerk;
+      // self-hosted mode lets localhost-origin requests authenticate as the
+      // default local user instead of failing with 401.
+      ALLTERNIT_SELF_HOSTED: 'true',
       ALLTERNIT_OPERATOR_API_KEY: this.apiKey,
       ALLTERNIT_DATA_DIR: dataDir,
       ALLTERNIT_VM_DIR: fs.existsSync(vmDir) ? vmDir : '',
@@ -121,6 +134,7 @@ export class BackendManager {
       GIZZI_PASSWORD: config.gizziPassword ?? process.env.GIZZI_PASSWORD ?? '',
       RUST_LOG: 'info',
       NODE_ENV: 'production',
+      ...(config.extraEnv ?? {}),
     };
 
     log.info(`[BackendManager] Starting allternit-api on port ${API_PORT} from ${binaryPath}`);
@@ -377,13 +391,15 @@ export class BackendManager {
 
     const binaryName = process.platform === 'win32' ? 'allternit-api.exe' : 'allternit-api';
 
+    // __dirname is dist/main; go up four levels to reach the repo root.
+    const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
     const candidates = app.isPackaged
       ? [
           path.join(process.resourcesPath ?? '', 'bin', binaryName),
         ]
       : [
-          path.join(app.getAppPath(), '..', '..', '..', 'target', 'debug', binaryName),
-          path.join(app.getAppPath(), '..', '..', '..', 'target', 'release', binaryName),
+          path.join(repoRoot, 'target', 'debug', binaryName),
+          path.join(repoRoot, 'target', 'release', binaryName),
           path.join(process.resourcesPath ?? '', 'bin', binaryName),
           path.join(__dirname, '..', '..', 'resources', 'bin', binaryName),
         ];
@@ -404,17 +420,21 @@ export class BackendManager {
   }
 
   private resolvePlatformStaticPath(): string | null {
+    // __dirname is dist/main; go up four levels to reach the repo root.
+    const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
     const candidates = app.isPackaged
       ? [
           path.join(process.resourcesPath ?? '', 'platform'),
         ]
       : [
-          path.join(app.getAppPath(), '..', '..', '..', 'surfaces', 'ai.allternit.com', 'out'),
-          path.join(app.getAppPath(), '..', '..', '..', 'surfaces', 'platform', 'out'),
+          path.join(repoRoot, 'surfaces', 'ai.allternit.com', 'dist'),
+          path.join(repoRoot, 'surfaces', 'ai.allternit.com', 'out'),
+          path.join(repoRoot, 'surfaces', 'platform', 'dist'),
+          path.join(repoRoot, 'surfaces', 'platform', 'out'),
         ];
 
     for (const candidate of candidates) {
-      if (fs.existsSync(candidate)) {
+      if (fs.existsSync(path.join(candidate, 'index.html'))) {
         return candidate;
       }
     }

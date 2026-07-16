@@ -36,17 +36,17 @@ export function AgentHub() {
   if (!isClient) return null;
 
   return (
-    <div className="flex flex-col h-full w-full bg-[var(--shell-frame-bg)] text-[var(--shell-item-fg)] overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-5 border-b border-solid border-[var(--border-subtle)] shrink-0">
-        <h1 className="text-xl font-semibold tracking-tight">Agent Hub</h1>
+    <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+      <div className="shrink-0">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-8 pt-10">
+        <h1 className="text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Agent Hub</h1>
 
         <div className="flex items-center gap-2">
           {activeTab === 'studio' && (
             <button
               type="button"
               onClick={() => setIsCreating(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-semibold bg-[var(--text-primary)] text-[var(--bg-primary)] hover:opacity-90 transition-opacity"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
             >
               <Plus size={16} />
               Create Agent
@@ -57,7 +57,7 @@ export function AgentHub() {
             <button
               type="button"
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-transparent text-[13px] font-medium text-[var(--text-secondary)] hover:border-[var(--border-default)] transition-colors"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)]"
             >
               <activeTabInfo.icon size={14} className="text-[var(--accent-primary)]" />
               <span className="text-[var(--text-primary)]">{activeTabInfo.label}</span>
@@ -70,7 +70,7 @@ export function AgentHub() {
                   initial={{ opacity: 0, y: 8, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                  className="absolute top-full right-0 mt-2 w-56 bg-[var(--surface-panel)] border border-solid border-[var(--border-subtle)] rounded-xl shadow-2xl overflow-hidden p-1 z-50"
+                  className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1 shadow-2xl"
                 >
                   {TABS.map((tab) => (
                     <button
@@ -100,8 +100,8 @@ export function AgentHub() {
           </div>
         </div>
       </div>
+      </div>
 
-      {/* Main Content Area */}
       <AgentHubContent activeTab={activeTab} />
     </div>
   );

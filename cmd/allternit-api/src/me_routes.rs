@@ -1,4 +1,3 @@
-
 //! Current user profile routes.
 
 use axum::extract::Extension;
@@ -15,8 +14,8 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn me_router() -> Router<Arc<AppState>> {
     Router::new().route("/me", get(get_current_user))
@@ -39,7 +38,6 @@ async fn get_current_user(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id.clone();
     let user_email = user.email.clone();
@@ -50,7 +48,7 @@ async fn get_current_user(
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, clerk_id, email, name, avatar_url, role, status, created_at
-             FROM users WHERE id = ?1"
+             FROM users WHERE id = ?1",
         )?;
         let row = stmt.query_row(params![user_id2], |row| {
             Ok(UserProfile {
@@ -80,15 +78,24 @@ async fn get_current_user(
                     "role": "user",
                     "status": "active",
                 }
-            })).into_response()
+            }))
+            .into_response()
         }
         Ok(Err(e)) => {
             warn!("DB error getting user profile: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }

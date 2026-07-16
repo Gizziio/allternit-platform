@@ -98,7 +98,9 @@ export interface ApiResponse<T> {
 type DesktopSession = {
   userId: string;
   userEmail: string;
-  accessToken: string;
+  runtimeId: string;
+  organizationId?: string;
+  capabilities: string[];
   expiresAt: number;
 };
 
@@ -116,28 +118,22 @@ async function buildAuthHeaders(): Promise<Record<string, string>> {
 
   try {
     const session = await window.allternit?.auth?.getSession?.() as DesktopSession | null | undefined;
-    if (session?.accessToken && session?.userId) {
-      headers['X-Allternit-Desktop-Access-Token'] = session.accessToken;
+    if (session?.userId) {
       headers['X-Allternit-User-Id'] = session.userId;
       if (session.userEmail) {
         headers['X-Allternit-User-Email'] = session.userEmail;
+      }
+      if (session.organizationId) {
+        headers['X-Allternit-Tenant-Id'] = session.organizationId;
       }
     }
   } catch {
     // Ignore desktop auth lookup failures and fall back to any bearer token.
   }
 
-  const isElectronShell =
-    window.allternitSidecar !== undefined ||
-    (window as any).process?.versions?.electron !== undefined;
-
-  if (isElectronShell && !headers.Authorization && !headers['X-Allternit-Desktop-Access-Token']) {
-    headers['X-Allternit-Desktop-Access-Token'] = 'desktop-dev-bootstrap';
-    headers['X-Allternit-User-Id'] = 'desktop-dev-user';
-    headers['X-Allternit-User-Email'] = 'desktop@allternit.local';
-    headers['X-Allternit-User-Name'] = 'Desktop Dev User';
-  }
-
+  // Desktop runtime credentials live in Electron main and are injected only
+  // while brokering loopback requests. Renderer code must never synthesize a
+  // fallback identity, even during development.
   return headers;
 }
 

@@ -1236,8 +1236,8 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   const [keyError, setKeyError] = useState<Partial<Record<CloudProviderId, string>>>({});
   const [showKey, setShowKey] = useState<Partial<Record<CloudProviderId, boolean>>>({});
 
-  // Providers already authenticated on the backend (key in keychain / env / Gizzi
-  // config). These connect with one click — no key paste required.
+  // Providers already authenticated by Gizzi or the runtime environment. These
+  // connect with one click — no key paste required.
   const [configuredProviders, setConfiguredProviders] = useState<Set<CloudProviderId>>(new Set());
 
   // Subscription/OAuth connect state per provider id.
@@ -1367,7 +1367,9 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
         setKeyStatus((s) => ({ ...s, [provider]: 'valid' }));
         setKeyModels((s) => ({ ...s, [provider]: json.models ?? [] }));
         // Store the key + mark provider active
-        const keys = { ...(data.configuredKeys ?? {}), [provider]: key };
+        // Retain only a completion marker in wizard state. The plaintext key is
+        // handed directly to Gizzi below and must not remain in browser state.
+        const keys = { ...(data.configuredKeys ?? {}), [provider]: 'configured' };
         onUpdate({ configuredKeys: keys, apiKeysConfigured: true, defaultProvider: provider });
 
         // Persist provider metadata + secure key storage to backend.
@@ -1402,9 +1404,8 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
     }
   }
 
-  // One-click connect for a provider that already has a saved key on this machine.
-  // The backend preserves the existing keychain key when apiKey is omitted, so this
-  // only refreshes metadata and sets the provider as the active default.
+  // One-click connect for a provider Gizzi already authenticates on this runtime.
+  // Omitting apiKey refreshes metadata and selects it without moving the secret.
   async function useConfiguredProvider(provider: CloudProviderId) {
     setKeyStatus((s) => ({ ...s, [provider]: 'checking' }));
     setKeyError((s) => ({ ...s, [provider]: undefined }));
@@ -1533,7 +1534,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   }
 
   // Save an API key for a key-based subscription provider (e.g. Z.ai Coding Plan),
-  // then mark it active. The backend stores it in the OS keychain, never on disk.
+  // then mark it active. Gizzi stores it in its private runtime credential file.
   async function saveSubscriptionKey(p: { id: SubscriptionProviderId; name: string }) {
     const key = (subKeyDraft[p.id] ?? '').trim();
     if (key.length < 10) return;
@@ -2524,7 +2525,7 @@ export function OnboardingFlow() {
 
   const finish = async () => {
     // Persist final user preferences (default model, onboarding complete) to
-    // the backend. Provider keys are already stored in the OS keychain.
+    // the backend. Provider keys are already owned by Gizzi on the runtime.
     const defaultModel = data.defaultModelId
       ? `${data.defaultProvider}/${data.defaultModelId}`
       : data.defaultProvider;

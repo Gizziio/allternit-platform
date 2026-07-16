@@ -12,5 +12,7 @@ pub mod mirror_ws;
 pub mod providers;
 pub mod regions;
 pub mod runs;
+pub mod runtime_pairing;
+pub mod runtime_relay;
 pub mod schedules;
 pub mod tasks;

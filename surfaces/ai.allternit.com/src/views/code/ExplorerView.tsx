@@ -162,10 +162,11 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
 };
 
 interface ExplorerViewProps {
+  rootPath?: string;
   onOpenFile?: (path: string) => void;
 }
 
-export const ExplorerView: React.FC<ExplorerViewProps> = ({ onOpenFile }) => {
+export const ExplorerView: React.FC<ExplorerViewProps> = ({ rootPath, onOpenFile }) => {
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -174,7 +175,7 @@ export const ExplorerView: React.FC<ExplorerViewProps> = ({ onOpenFile }) => {
 
   useEffect(() => {
     let isMounted = true;
-    filesApi.listDirectory({ path: '.' })
+    filesApi.listDirectory({ path: rootPath || '.', recursive: true })
       .then((res) => {
         if (!isMounted) return;
         const items = res.entries ?? [];
@@ -189,13 +190,27 @@ export const ExplorerView: React.FC<ExplorerViewProps> = ({ onOpenFile }) => {
             : entry.name.match(/\.md$/) ? 'md'
             : undefined,
         });
-        setFileTree(items.map(toNode));
+        const nodes = items.map(toNode);
+        const byPath = new Map(nodes.map((node) => [node.path.replace(/\/$/, ''), node]));
+        const roots: FileNode[] = [];
+        for (const node of nodes) {
+          const normalized = node.path.replace(/\/$/, '');
+          const parentPath = normalized.slice(0, normalized.lastIndexOf('/'));
+          const parent = byPath.get(parentPath);
+          if (parent?.type === 'folder') {
+            parent.children ??= [];
+            parent.children.push(node);
+          } else {
+            roots.push(node);
+          }
+        }
+        setFileTree(roots);
       })
       .catch(() => {});
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [rootPath]);
 
   const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
     const newFiles: DroppedFile[] = files.map(({ file, dataUrl, extractedText }) => {

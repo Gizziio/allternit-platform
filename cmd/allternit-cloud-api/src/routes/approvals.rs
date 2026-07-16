@@ -14,12 +14,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{
-    auth::middleware::AuthContext,
-    db::cowork_models::*,
-    error::ApiError,
-    ApiState,
-};
+use crate::{auth::middleware::AuthContext, db::cowork_models::*, error::ApiError, ApiState};
 
 // ============================================================================
 // Request/Response Types
@@ -39,7 +34,10 @@ pub struct ListApprovalsQuery {
 
 pub fn router() -> Router<Arc<ApiState>> {
     Router::new()
-        .route("/api/v1/approvals", get(list_approvals).post(create_approval))
+        .route(
+            "/api/v1/approvals",
+            get(list_approvals).post(create_approval),
+        )
         .route("/api/v1/approvals/:id", get(get_approval))
         .route("/api/v1/approvals/:id/approve", post(approve_request))
         .route("/api/v1/approvals/:id/deny", post(deny_request))
@@ -56,7 +54,7 @@ pub async fn list_approvals(
     Query(query): Query<ListApprovalsQuery>,
 ) -> Result<impl IntoResponse, ApiError> {
     let limit = query.limit.unwrap_or(50).min(100);
-    
+
     let approvals = if let Some(run_id) = query.run_id {
         if let Some(status) = query.status {
             sqlx::query_as::<_, ApprovalRequestSummary>(
@@ -73,7 +71,7 @@ pub async fn list_approvals(
                     END,
                     created_at DESC
                 LIMIT ?
-                "#
+                "#,
             )
             .bind(&run_id)
             .bind(status)
@@ -96,7 +94,7 @@ pub async fn list_approvals(
                     END,
                     created_at DESC
                 LIMIT ?
-                "#
+                "#,
             )
             .bind(&run_id)
             .bind(limit)
@@ -119,7 +117,7 @@ pub async fn list_approvals(
                 END,
                 created_at DESC
             LIMIT ?
-            "#
+            "#,
         )
         .bind(status)
         .bind(limit)
@@ -140,14 +138,14 @@ pub async fn list_approvals(
                 END,
                 created_at DESC
             LIMIT ?
-            "#
+            "#,
         )
         .bind(limit)
         .fetch_all(&state.db)
         .await
         .map_err(ApiError::DatabaseError)?
     };
-    
+
     Ok((StatusCode::OK, Json(approvals)))
 }
 
@@ -165,14 +163,14 @@ pub async fn get_approval(
             timeout_seconds, created_at, responded_at
         FROM approval_requests
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_optional(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?
     .ok_or_else(|| ApiError::NotFound(format!("Approval request '{}' not found", id)))?;
-    
+
     Ok((StatusCode::OK, Json(approval)))
 }
 
@@ -186,20 +184,21 @@ pub async fn create_approval(
     let now = Utc::now();
     let priority = request.priority.unwrap_or_default();
     let requested_by = auth_context.user.user_id;
-    
+
     // Verify the run exists
-    let run_exists: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM runs WHERE id = ?)"
-    )
-    .bind(&request.run_id)
-    .fetch_one(&state.db)
-    .await
-    .map_err(ApiError::DatabaseError)?;
-    
+    let run_exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM runs WHERE id = ?)")
+        .bind(&request.run_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(ApiError::DatabaseError)?;
+
     if !run_exists {
-        return Err(ApiError::NotFound(format!("Run '{}' not found", request.run_id)));
+        return Err(ApiError::NotFound(format!(
+            "Run '{}' not found",
+            request.run_id
+        )));
     }
-    
+
     // Insert the approval request
     sqlx::query(
         r#"
@@ -208,7 +207,7 @@ pub async fn create_approval(
             title, description, action_type, action_params,
             reasoning, requested_by, timeout_seconds, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#
+        "#,
     )
     .bind(&id)
     .bind(&request.run_id)
@@ -218,7 +217,12 @@ pub async fn create_approval(
     .bind(&request.title)
     .bind(&request.description)
     .bind(&request.action_type)
-    .bind(request.action_params.as_ref().map(|p| sqlx::types::Json(p.clone())))
+    .bind(
+        request
+            .action_params
+            .as_ref()
+            .map(|p| sqlx::types::Json(p.clone())),
+    )
     .bind(&request.reasoning)
     .bind(Some(requested_by))
     .bind(request.timeout_seconds)
@@ -226,7 +230,7 @@ pub async fn create_approval(
     .execute(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?;
-    
+
     // Return the created approval
     let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
@@ -237,36 +241,45 @@ pub async fn create_approval(
             timeout_seconds, created_at, responded_at
         FROM approval_requests
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?;
-    
+
     // Emit approval needed event using shared event store
-    let _ = state.event_store.append(
-        &request.run_id,
-        EventType::ApprovalNeeded,
-        serde_json::json!({
-            "approval_id": id,
-            "title": request.title,
-            "priority": priority,
-            "action_type": request.action_type,
-        })
-    ).await;
-    
+    let _ = state
+        .event_store
+        .append(
+            &request.run_id,
+            EventType::ApprovalNeeded,
+            serde_json::json!({
+                "approval_id": id,
+                "title": request.title,
+                "priority": priority,
+                "action_type": request.action_type,
+            }),
+        )
+        .await;
+
     // Notify connected clients via session manager
-    let _ = state.session_manager.notify_approval_needed(
-        &request.run_id,
-        &id,
-        &request.action_type.as_deref().unwrap_or("action"),
-        &request.action_params.as_ref().unwrap_or(&serde_json::json!({})),
-        request.reasoning.as_deref(),
-        priority,
-        request.timeout_seconds.map(|t| t as u32),
-    ).await;
-    
+    let _ = state
+        .session_manager
+        .notify_approval_needed(
+            &request.run_id,
+            &id,
+            &request.action_type.as_deref().unwrap_or("action"),
+            &request
+                .action_params
+                .as_ref()
+                .unwrap_or(&serde_json::json!({})),
+            request.reasoning.as_deref(),
+            priority,
+            request.timeout_seconds.map(|t| t as u32),
+        )
+        .await;
+
     Ok((StatusCode::CREATED, Json(approval)))
 }
 
@@ -279,7 +292,7 @@ pub async fn approve_request(
 ) -> Result<impl IntoResponse, ApiError> {
     let user_id = &auth_context.user.user_id;
     let now = Utc::now();
-    
+
     // Get the approval request
     let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
@@ -290,14 +303,14 @@ pub async fn approve_request(
             timeout_seconds, created_at, responded_at
         FROM approval_requests
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_optional(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?
     .ok_or_else(|| ApiError::NotFound(format!("Approval request '{}' not found", id)))?;
-    
+
     // Verify it's still pending
     if approval.status != ApprovalStatus::Pending {
         return Err(ApiError::BadRequest(format!(
@@ -305,14 +318,14 @@ pub async fn approve_request(
             approval.status
         )));
     }
-    
+
     // Update the approval
     sqlx::query(
         r#"
         UPDATE approval_requests
         SET status = ?, responded_by = ?, response_message = ?, responded_at = ?
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(ApprovalStatus::Approved)
     .bind(Some(user_id.as_str()))
@@ -322,7 +335,7 @@ pub async fn approve_request(
     .execute(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?;
-    
+
     // Return the updated approval
     let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
@@ -333,33 +346,39 @@ pub async fn approve_request(
             timeout_seconds, created_at, responded_at
         FROM approval_requests
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?;
-    
+
     // Emit approval given event
-    let _ = state.event_store.append(
-        &approval.run_id,
-        EventType::ApprovalGiven,
-        serde_json::json!({
-            "approval_id": id,
-            "message": response.message,
-            "modified_params": response.modified_params,
-        })
-    ).await;
-    
+    let _ = state
+        .event_store
+        .append(
+            &approval.run_id,
+            EventType::ApprovalGiven,
+            serde_json::json!({
+                "approval_id": id,
+                "message": response.message,
+                "modified_params": response.modified_params,
+            }),
+        )
+        .await;
+
     // Notify connected clients
-    let _ = state.session_manager.notify_approval_resolved(
-        &approval.run_id, 
-        &id, 
-        true,  // approved
-        user_id,
-        response.message.as_deref()
-    ).await;
-    
+    let _ = state
+        .session_manager
+        .notify_approval_resolved(
+            &approval.run_id,
+            &id,
+            true, // approved
+            user_id,
+            response.message.as_deref(),
+        )
+        .await;
+
     Ok((StatusCode::OK, Json(approval)))
 }
 
@@ -372,7 +391,7 @@ pub async fn deny_request(
 ) -> Result<impl IntoResponse, ApiError> {
     let user_id = &auth_context.user.user_id;
     let now = Utc::now();
-    
+
     // Get the approval request
     let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
@@ -383,14 +402,14 @@ pub async fn deny_request(
             timeout_seconds, created_at, responded_at
         FROM approval_requests
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_optional(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?
     .ok_or_else(|| ApiError::NotFound(format!("Approval request '{}' not found", id)))?;
-    
+
     // Verify it's still pending
     if approval.status != ApprovalStatus::Pending {
         return Err(ApiError::BadRequest(format!(
@@ -398,14 +417,14 @@ pub async fn deny_request(
             approval.status
         )));
     }
-    
+
     // Update the approval
     sqlx::query(
         r#"
         UPDATE approval_requests
         SET status = ?, responded_by = ?, response_message = ?, responded_at = ?
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(ApprovalStatus::Denied)
     .bind(user_id.as_str())
@@ -415,7 +434,7 @@ pub async fn deny_request(
     .execute(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?;
-    
+
     // Return the updated approval
     let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
@@ -426,32 +445,38 @@ pub async fn deny_request(
             timeout_seconds, created_at, responded_at
         FROM approval_requests
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?;
-    
+
     // Emit approval denied event
-    let _ = state.event_store.append(
-        &approval.run_id,
-        EventType::ApprovalDenied,
-        serde_json::json!({
-            "approval_id": id,
-            "message": response.message,
-        })
-    ).await;
-    
+    let _ = state
+        .event_store
+        .append(
+            &approval.run_id,
+            EventType::ApprovalDenied,
+            serde_json::json!({
+                "approval_id": id,
+                "message": response.message,
+            }),
+        )
+        .await;
+
     // Notify connected clients
-    let _ = state.session_manager.notify_approval_resolved(
-        &approval.run_id, 
-        &id, 
-        false,  // denied
-        user_id,
-        response.message.as_deref()
-    ).await;
-    
+    let _ = state
+        .session_manager
+        .notify_approval_resolved(
+            &approval.run_id,
+            &id,
+            false, // denied
+            user_id,
+            response.message.as_deref(),
+        )
+        .await;
+
     Ok((StatusCode::OK, Json(approval)))
 }
 
@@ -461,7 +486,7 @@ pub async fn cancel_request(
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, ApiError> {
     let now = Utc::now();
-    
+
     // Get the approval request
     let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
@@ -472,14 +497,14 @@ pub async fn cancel_request(
             timeout_seconds, created_at, responded_at
         FROM approval_requests
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_optional(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?
     .ok_or_else(|| ApiError::NotFound(format!("Approval request '{}' not found", id)))?;
-    
+
     // Verify it's still pending
     if approval.status != ApprovalStatus::Pending {
         return Err(ApiError::BadRequest(format!(
@@ -487,14 +512,14 @@ pub async fn cancel_request(
             approval.status
         )));
     }
-    
+
     // Update the approval
     sqlx::query(
         r#"
         UPDATE approval_requests
         SET status = ?, responded_at = ?
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(ApprovalStatus::Cancelled)
     .bind(now)
@@ -502,7 +527,7 @@ pub async fn cancel_request(
     .execute(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?;
-    
+
     // Return the updated approval
     let approval = sqlx::query_as::<_, ApprovalRequest>(
         r#"
@@ -513,12 +538,12 @@ pub async fn cancel_request(
             timeout_seconds, created_at, responded_at
         FROM approval_requests
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_one(&state.db)
     .await
     .map_err(ApiError::DatabaseError)?;
-    
+
     Ok((StatusCode::OK, Json(approval)))
 }

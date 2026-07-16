@@ -9,13 +9,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn inbox_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/inbox", get(list_inbox).patch(update_inbox).post(create_inbox))
+    Router::new().route(
+        "/inbox",
+        get(list_inbox).patch(update_inbox).post(create_inbox),
+    )
 }
 
 #[derive(Deserialize)]
@@ -49,11 +51,21 @@ async fn list_inbox(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"items": [], "unreadCount": 0}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"items": [], "unreadCount": 0})),
+            )
+        }
     };
 
     let limit = params.limit.unwrap_or(50);
@@ -76,7 +88,12 @@ async fn list_inbox(
 
     let mut stmt = match conn.prepare(&sql) {
         Ok(s) => s,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"items": [], "unreadCount": 0}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"items": [], "unreadCount": 0})),
+            )
+        }
     };
 
     let items: Vec<InboxItem> = match stmt.query_map(rusqlite::params_from_iter(args_refs), |row| {
@@ -101,10 +118,17 @@ async fn list_inbox(
 
     let user_id = user.user_id.clone();
     let unread_count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM inbox_items WHERE user_id = ?1 AND status = 'unread'", [&user_id], |row| row.get(0))
+        .query_row(
+            "SELECT COUNT(*) FROM inbox_items WHERE user_id = ?1 AND status = 'unread'",
+            [&user_id],
+            |row| row.get(0),
+        )
         .unwrap_or(0);
 
-    (StatusCode::OK, Json(json!({"items": items, "unreadCount": unread_count})))
+    (
+        StatusCode::OK,
+        Json(json!({"items": items, "unreadCount": unread_count})),
+    )
 }
 
 #[derive(Deserialize)]
@@ -121,11 +145,21 @@ async fn update_inbox(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
     // Verify ownership
@@ -138,7 +172,10 @@ async fn update_inbox(
         .unwrap_or(false);
 
     if !owned {
-        return (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"})));
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        );
     }
 
     match conn.execute(
@@ -170,11 +207,21 @@ async fn create_inbox(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
     let id = uuid::Uuid::new_v4().to_string();

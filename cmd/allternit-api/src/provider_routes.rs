@@ -1,4 +1,3 @@
-
 //! Provider API routes — LLM provider discovery and management.
 
 use axum::extract::Extension;
@@ -11,17 +10,20 @@ use axum::{
 };
 use serde::Serialize;
 use serde_json::json;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 use tracing::warn;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
 use crate::config::gizzi_user_config_path;
-use crate::secrets;
+use crate::AppState;
 
 fn unauthorized() -> axum::response::Response {
-    (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response()
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({"error": "Unauthorized"})),
+    )
+        .into_response()
 }
 
 fn db_error(e: impl std::fmt::Display) -> axum::response::Response {
@@ -39,18 +41,41 @@ pub fn provider_router() -> Router<Arc<AppState>> {
         .route("/providers/:id/auth/status", get(get_provider_auth_status))
         .route("/providers/:id/models", get(discover_provider_models))
         .route("/providers/:id/connect", post(connect_provider))
-        .route("/providers/:id/connect/status", get(connect_provider_status))
-        .route("/providers/:id/connect/confirm", post(confirm_provider_connect))
+        .route(
+            "/providers/:id/connect/status",
+            get(connect_provider_status),
+        )
+        .route(
+            "/providers/:id/connect/confirm",
+            post(confirm_provider_connect),
+        )
         .route("/providers/auth/status", get(list_provider_auth_status))
+        .route("/providers/video/generate", post(generate_video))
         .route("/provider/ollama/status", get(ollama_live_status))
         .route("/provider/ollama/models", get(list_ollama_models))
 }
 
+async fn generate_video(headers: HeaderMap, Json(payload): Json<serde_json::Value>) -> Response {
+    let _user = match get_user(&headers) {
+        Some(user) => user,
+        None => return unauthorized(),
+    };
+    match crate::gizzi_provider_auth::generate_video(payload).await {
+        Ok((status, payload)) => (
+            StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY),
+            Json(payload),
+        )
+            .into_response(),
+        Err(error) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "gizzi_provider_error", "message": error })),
+        )
+            .into_response(),
+    }
+}
+
 /// Probe Ollama live on the blocking thread pool and return the live status.
-async fn ollama_live_status(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Response {
+async fn ollama_live_status(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     let _user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
@@ -76,7 +101,11 @@ async fn ollama_live_status(
                     .and_then(|b| b.get("models").and_then(|m| m.as_array()).cloned())
                     .map(|arr| {
                         arr.iter()
-                            .filter_map(|m| m.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                            .filter_map(|m| {
+                                m.get("name")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                            })
                             .collect()
                     })
                     .unwrap_or_default();
@@ -117,7 +146,11 @@ async fn probe_local_brain(url: &str) -> (bool, Vec<String>) {
                     .and_then(|b| b.get("models").and_then(|m| m.as_array()).cloned())
                     .map(|arr| {
                         arr.iter()
-                            .filter_map(|m| m.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                            .filter_map(|m| {
+                                m.get("name")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                            })
                             .collect()
                     })
                     .unwrap_or_default();
@@ -180,7 +213,7 @@ pub(crate) fn command_on_path(cmd: &str) -> Option<std::path::PathBuf> {
 /// Read providers that the user has configured through the Gizzi runtime config
 /// (the same file the chat harness reads). This keeps the UI in sync with
 /// whatever brain the runtime will actually use.
-fn read_gizzi_providers() -> Vec<ProviderRow> {
+fn read_gizzi_providers(connected: &HashSet<String>) -> Vec<ProviderRow> {
     let path = gizzi_user_config_path();
     let text = match std::fs::read_to_string(&path) {
         Ok(t) => t,
@@ -207,16 +240,20 @@ fn read_gizzi_providers() -> Vec<ProviderRow> {
                 .get("auth_type")
                 .and_then(|v| v.as_str())
                 .unwrap_or("api_key");
-            let provider_type = if config.get("subprocess_cmd").is_some() || auth_type == "subprocess" {
-                "subprocess"
-            } else if config.get("options").and_then(|o| o.get("baseURL")).is_some()
-                || auth_type == "local"
-            {
-                "local"
-            } else {
-                "api"
-            }
-            .to_string();
+            let provider_type =
+                if config.get("subprocess_cmd").is_some() || auth_type == "subprocess" {
+                    "subprocess"
+                } else if config
+                    .get("options")
+                    .and_then(|o| o.get("baseURL"))
+                    .is_some()
+                    || auth_type == "local"
+                {
+                    "local"
+                } else {
+                    "api"
+                }
+                .to_string();
 
             let base_url = config
                 .get("options")
@@ -230,25 +267,18 @@ fn read_gizzi_providers() -> Vec<ProviderRow> {
                 .map(|m| m.keys().map(|k| k.to_string()).collect())
                 .unwrap_or_default();
 
-            let api_key_set = if provider_type == "subprocess" {
-                // Subprocess brains authenticate via a key stored in the keychain.
-                secrets::get_secret(&secrets::provider_account(id))
-                    .map(|k| !k.is_empty())
-                    .unwrap_or(false)
-            } else {
-                // BYOK / API providers typically use an env var or keychain secret.
-                let env_var = format!("{}_API_KEY", id.to_uppercase().replace('-', "_"));
-                std::env::var(&env_var).is_ok()
-                    || secrets::get_secret(&secrets::provider_account(id))
-                        .map(|k| !k.is_empty())
-                        .unwrap_or(false)
-            };
+            let env_var = format!("{}_API_KEY", id.to_uppercase().replace('-', "_"));
+            let api_key_set = connected.contains(id) || std::env::var(&env_var).is_ok();
 
             let status = if provider_type == "subprocess" {
                 if let Some(cmd) = config.get("subprocess_cmd").and_then(|v| v.as_str()) {
                     let program = cmd.split_whitespace().next().unwrap_or(cmd);
                     if command_on_path(program).is_some() {
-                        if api_key_set { "active".to_string() } else { "missing_key".to_string() }
+                        if api_key_set {
+                            "active".to_string()
+                        } else {
+                            "missing_key".to_string()
+                        }
                     } else {
                         "offline".to_string()
                     }
@@ -281,18 +311,53 @@ fn read_gizzi_providers() -> Vec<ProviderRow> {
 /// it route through the Gizzi harness without touching a database.
 fn env_provider_rows() -> Vec<ProviderRow> {
     const ENV_PROVIDERS: &[(&str, &str, &str, &[&str])] = &[
-        ("openai", "OpenAI", "OPENAI_API_KEY", &["gpt-5-mini", "gpt-5-nano", "gpt-4o", "dall-e-3"]),
-        ("anthropic", "Anthropic", "ANTHROPIC_API_KEY", &["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-6"]),
-        ("google", "Google AI", "GOOGLE_GENERATIVE_AI_API_KEY", &["gemini-2.5-flash-lite", "gemini-2.5-pro"]),
+        (
+            "openai",
+            "OpenAI",
+            "OPENAI_API_KEY",
+            &["gpt-5-mini", "gpt-5-nano", "gpt-4o", "dall-e-3"],
+        ),
+        (
+            "anthropic",
+            "Anthropic",
+            "ANTHROPIC_API_KEY",
+            &["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-6"],
+        ),
+        (
+            "google",
+            "Google AI",
+            "GOOGLE_GENERATIVE_AI_API_KEY",
+            &["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+        ),
         ("alibaba", "Alibaba", "ALIBABA_API_KEY", &["qwen-3"]),
-        ("amazon-bedrock", "Amazon Bedrock", "AWS_SECRET_ACCESS_KEY", &["nova-pro"]),
+        (
+            "amazon-bedrock",
+            "Amazon Bedrock",
+            "AWS_SECRET_ACCESS_KEY",
+            &["nova-pro"],
+        ),
         ("groq", "Groq", "GROQ_API_KEY", &["llama-3-70b"]),
         ("mistral", "Mistral", "MISTRAL_API_KEY", &["mistral-large"]),
         ("cohere", "Cohere", "COHERE_API_KEY", &["command-r-plus"]),
-        ("deepseek", "DeepSeek", "DEEPSEEK_API_KEY", &["deepseek-chat"]),
+        (
+            "deepseek",
+            "DeepSeek",
+            "DEEPSEEK_API_KEY",
+            &["deepseek-chat"],
+        ),
         ("xai", "xAI", "XAI_API_KEY", &["grok-3"]),
-        ("togetherai", "Together AI", "TOGETHER_API_KEY", &["llama-3-70b"]),
-        ("perplexity", "Perplexity", "PERPLEXITY_API_KEY", &["sonar-pro"]),
+        (
+            "togetherai",
+            "Together AI",
+            "TOGETHER_API_KEY",
+            &["llama-3-70b"],
+        ),
+        (
+            "perplexity",
+            "Perplexity",
+            "PERPLEXITY_API_KEY",
+            &["sonar-pro"],
+        ),
     ];
 
     ENV_PROVIDERS
@@ -306,7 +371,11 @@ fn env_provider_rows() -> Vec<ProviderRow> {
                 base_url: None,
                 api_key_set: key_set,
                 models: models.iter().map(|m| m.to_string()).collect(),
-                status: if key_set { "active".to_string() } else { "unconfigured".to_string() },
+                status: if key_set {
+                    "active".to_string()
+                } else {
+                    "unconfigured".to_string()
+                },
             }
         })
         .collect()
@@ -328,8 +397,8 @@ fn ollama_provider_row(ollama_url: String) -> ProviderRow {
 }
 
 /// Virtual providers for common CLI subprocess brains. Status reflects whether
-/// the binary is present on PATH; key state is checked from the keychain.
-fn subprocess_provider_rows() -> Vec<ProviderRow> {
+/// the binary and its provider-owned authentication are available.
+fn subprocess_provider_rows(connected: &HashSet<String>) -> Vec<ProviderRow> {
     let mut rows = Vec::new();
 
     // CLI/subprocess brains authenticated via subscription OAuth (the CLI holds
@@ -348,10 +417,8 @@ fn subprocess_provider_rows() -> Vec<ProviderRow> {
     ];
     for (id, name, binary, model) in cli {
         let available = command_on_path(binary).is_some();
-        let authed = subscription_auth_check(id, binary)
-            || secrets::get_secret(&secrets::provider_account(id))
-                .map(|k| !k.is_empty())
-                .unwrap_or(false)
+        let authed = connected.contains(id)
+            || subscription_auth_check(id, binary)
             || (id == "codex-cli" && std::env::var("OPENAI_API_KEY").is_ok());
         rows.push(ProviderRow {
             id: id.to_string(),
@@ -361,7 +428,11 @@ fn subprocess_provider_rows() -> Vec<ProviderRow> {
             api_key_set: authed,
             models: vec![model.to_string()],
             status: if available {
-                if authed { "active" } else { "missing_key" }
+                if authed {
+                    "active"
+                } else {
+                    "missing_key"
+                }
             } else {
                 "offline"
             }
@@ -370,7 +441,7 @@ fn subprocess_provider_rows() -> Vec<ProviderRow> {
     }
 
     // Z.ai (GLM Coding Plan) is API-key based — no public OAuth yet.
-    let zai_authed = subscription_auth_check("zai", "zai");
+    let zai_authed = connected.contains("zai") || subscription_auth_check("zai", "zai");
     rows.push(ProviderRow {
         id: "zai".to_string(),
         name: "Z.ai".to_string(),
@@ -396,7 +467,9 @@ fn row_to_provider(row: &rusqlite::Row) -> Result<ProviderRow, rusqlite::Error> 
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
 
-    let api_key_set = api_key_env_var.as_deref().map_or(false, |var| std::env::var(var).is_ok());
+    let api_key_set = api_key_env_var
+        .as_deref()
+        .map_or(false, |var| std::env::var(var).is_ok());
     let status = compute_provider_status(&provider_type, api_key_env_var.as_deref());
 
     Ok(ProviderRow {
@@ -443,10 +516,7 @@ fn merge_provider_sources(sources: Vec<Vec<ProviderRow>>) -> Vec<ProviderRow> {
 
 // ─── List providers ───────────────────────────────────────────────────────────
 
-async fn list_providers(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Response {
+async fn list_providers(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     let _user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
@@ -474,13 +544,14 @@ async fn list_providers(
         }
     };
 
+    let connected = crate::gizzi_provider_auth::connected_provider_ids().await;
     let ollama_row = ollama_provider_row(state.config.ollama_url());
 
     let mut providers = merge_provider_sources(vec![
         db_providers,
         env_provider_rows(),
-        read_gizzi_providers(),
-        subprocess_provider_rows(),
+        read_gizzi_providers(&connected),
+        subprocess_provider_rows(&connected),
         vec![ollama_row],
     ]);
 
@@ -490,7 +561,11 @@ async fn list_providers(
         if p.provider_type == "local" {
             if let Some(url) = p.base_url.clone() {
                 let (running, models) = probe_local_brain(&url).await;
-                p.status = if running { "active".to_string() } else { "offline".to_string() };
+                p.status = if running {
+                    "active".to_string()
+                } else {
+                    "offline".to_string()
+                };
                 if running && p.models.is_empty() {
                     p.models = models;
                 }
@@ -513,6 +588,7 @@ async fn get_provider(
         Some(u) => u,
         None => return unauthorized(),
     };
+    let connected = crate::gizzi_provider_auth::connected_provider_ids().await;
 
     // Try DB first, then fall back to merged virtual providers.
     let conn = match state.db.connect() {
@@ -536,13 +612,15 @@ async fn get_provider(
         let ollama_row = ollama_provider_row(state.config.ollama_url());
         let all = merge_provider_sources(vec![
             env_provider_rows(),
-            read_gizzi_providers(),
-            subprocess_provider_rows(),
+            read_gizzi_providers(&connected),
+            subprocess_provider_rows(&connected),
             vec![ollama_row],
         ]);
         match all.into_iter().find(|p| p.id == id) {
             Some(p) => p,
-            None => return (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response(),
+            None => {
+                return (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response()
+            }
         }
     };
 
@@ -592,16 +670,24 @@ async fn list_ollama_models(
                                 Some(OllamaModel {
                                     name: m.get("name")?.as_str()?.to_string(),
                                     size: m.get("size").and_then(|v| v.as_u64()),
-                                    parameter_size: m.get("details")
+                                    parameter_size: m
+                                        .get("details")
                                         .and_then(|d| d.get("parameter_size"))
                                         .and_then(|v| v.as_str())
                                         .map(|s| s.to_string()),
-                                    quantization_level: m.get("details")
+                                    quantization_level: m
+                                        .get("details")
                                         .and_then(|d| d.get("quantization_level"))
                                         .and_then(|v| v.as_str())
                                         .map(|s| s.to_string()),
-                                    digest: m.get("digest").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                                    modified_at: m.get("modified_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                                    digest: m
+                                        .get("digest")
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.to_string()),
+                                    modified_at: m
+                                        .get("modified_at")
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.to_string()),
                                 })
                             })
                             .collect()
@@ -609,7 +695,8 @@ async fn list_ollama_models(
                     .unwrap_or_default();
                 Json(json!({ "models": models })).into_response()
             } else {
-                Json(json!({"models": [], "note": "Failed to parse Ollama response"})).into_response()
+                Json(json!({"models": [], "note": "Failed to parse Ollama response"}))
+                    .into_response()
             }
         }
         Err(e) => {
@@ -631,7 +718,8 @@ async fn list_ollama_models(
 // is what the platform UI consumes via /api/v1/providers/* so the frontend and
 // any future fallback logic read from one place instead of scattered constants.
 fn provider_capabilities(id: &str) -> serde_json::Value {
-    let (tool_call, vision, context, output, default_model): (bool, bool, u64, u64, &str) = match id {
+    let (tool_call, vision, context, output, default_model): (bool, bool, u64, u64, &str) = match id
+    {
         "anthropic" => (true, true, 200_000, 32_000, "claude-sonnet-4-5"),
         "openai" => (true, true, 128_000, 16_384, "gpt-4o"),
         "google" => (true, true, 1_000_000, 65_536, "gemini-2.5-pro"),
@@ -699,6 +787,7 @@ async fn list_provider_auth_status(
         Some(u) => u,
         None => return unauthorized(),
     };
+    let connected = crate::gizzi_provider_auth::connected_provider_ids().await;
 
     let conn = match state.db.connect() {
         Ok(c) => c,
@@ -725,8 +814,8 @@ async fn list_provider_auth_status(
     let all = merge_provider_sources(vec![
         db_providers,
         env_provider_rows(),
-        read_gizzi_providers(),
-        subprocess_provider_rows(),
+        read_gizzi_providers(&connected),
+        subprocess_provider_rows(&connected),
         vec![ollama_provider_row(state.config.ollama_url())],
     ]);
 
@@ -745,6 +834,7 @@ async fn get_provider_auth_status(
         Some(u) => u,
         None => return unauthorized(),
     };
+    let connected = crate::gizzi_provider_auth::connected_provider_ids().await;
 
     let conn = match state.db.connect() {
         Ok(c) => c,
@@ -767,13 +857,15 @@ async fn get_provider_auth_status(
         let ollama_row = ollama_provider_row(state.config.ollama_url());
         let all = merge_provider_sources(vec![
             env_provider_rows(),
-            read_gizzi_providers(),
-            subprocess_provider_rows(),
+            read_gizzi_providers(&connected),
+            subprocess_provider_rows(&connected),
             vec![ollama_row],
         ]);
         match all.into_iter().find(|p| p.id == id) {
             Some(p) => p,
-            None => return (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response(),
+            None => {
+                return (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response()
+            }
         }
     };
 
@@ -794,8 +886,12 @@ async fn discover_provider_models(
     };
 
     if id == "ollama" {
-        return list_ollama_models(State(state), Extension(_user), headers).await.into_response();
+        return list_ollama_models(State(state), Extension(_user), headers)
+            .await
+            .into_response();
     }
+
+    let connected = crate::gizzi_provider_auth::connected_provider_ids().await;
 
     // For env-driven API providers, return the static model list.
     let env = env_provider_rows();
@@ -810,7 +906,7 @@ async fn discover_provider_models(
     }
 
     // For Gizzi-configured providers, return the configured models.
-    let gizzi = read_gizzi_providers();
+    let gizzi = read_gizzi_providers(&connected);
     if let Some(row) = gizzi.into_iter().find(|p| p.id == id) {
         return Json(json!({
             "supported": true,
@@ -822,7 +918,7 @@ async fn discover_provider_models(
     }
 
     // For subprocess providers, the runtime owns model discovery.
-    let subprocess = subprocess_provider_rows();
+    let subprocess = subprocess_provider_rows(&connected);
     if let Some(row) = subprocess.into_iter().find(|p| p.id == id) {
         return Json(json!({
             "supported": false,
@@ -940,8 +1036,7 @@ fn subscription_provider(id: &str) -> Option<(&'static str, SubscriptionProvider
 }
 
 fn home_file(parts: &[&str]) -> std::path::PathBuf {
-    let mut p =
-        std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()));
+    let mut p = std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()));
     for part in parts {
         p.push(part);
     }
@@ -1007,11 +1102,7 @@ fn subscription_auth_check(id: &str, binary: &str) -> bool {
                     || home_file(&[".config", "antigravity", "auth.json"]).exists())
         }
         "zai" | "z.ai" | "glm" => {
-            std::env::var("ZAI_API_KEY").is_ok()
-                || std::env::var("ZHIPU_API_KEY").is_ok()
-                || secrets::get_secret(&secrets::provider_account("zai"))
-                    .map(|k| !k.is_empty())
-                    .unwrap_or(false)
+            std::env::var("ZAI_API_KEY").is_ok() || std::env::var("ZHIPU_API_KEY").is_ok()
         }
         _ => false,
     }
@@ -1029,7 +1120,10 @@ async fn connect_provider(
     let (binary, meta) = match subscription_provider(&id) {
         Some(v) => v,
         None => {
-            return (StatusCode::NOT_FOUND, Json(json!({"error": "unknown_provider"})))
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "unknown_provider"})),
+            )
                 .into_response()
         }
     };
@@ -1039,13 +1133,45 @@ async fn connect_provider(
         // provider (gizzi handles providerID "zai" in adapters/transform.ts). If a
         // key is already available, persist a real routing entry + make it the
         // default; otherwise return an actionable setup hint (not a dead stub).
+        let gizzi_connected = crate::gizzi_provider_auth::connected_provider_ids().await;
         let key = std::env::var("ZAI_API_KEY")
             .ok()
             .filter(|s| !s.is_empty())
-            .or_else(|| std::env::var("ZHIPU_API_KEY").ok().filter(|s| !s.is_empty()))
-            .or_else(|| secrets::get_secret(&secrets::provider_account("zai")).filter(|s| !s.is_empty()));
+            .or_else(|| {
+                std::env::var("ZHIPU_API_KEY")
+                    .ok()
+                    .filter(|s| !s.is_empty())
+            });
+        if gizzi_connected.contains(meta.id) {
+            crate::onboarding_routes::persist_apikey_default(
+                &state,
+                meta.id,
+                meta.label,
+                meta.model,
+                "@ai-sdk/openai-compatible",
+                "https://api.z.ai/api/paas/v4",
+                "GLM-4.6",
+                200_000,
+                131_072,
+                true,
+            );
+            return Json(json!({
+                "status": "already_connected",
+                "provider": id,
+                "label": meta.label,
+                "routable": true,
+            }))
+            .into_response();
+        }
         match key {
             Some(k) => {
+                if let Err(error) = crate::gizzi_provider_auth::store_api_key(meta.id, &k).await {
+                    return (
+                        StatusCode::BAD_GATEWAY,
+                        Json(json!({ "error": "provider_credential_store_failed", "message": error })),
+                    )
+                        .into_response();
+                }
                 crate::onboarding_routes::persist_apikey_default(
                     &state,
                     meta.id,
@@ -1053,7 +1179,6 @@ async fn connect_provider(
                     meta.model,
                     "@ai-sdk/openai-compatible",
                     "https://api.z.ai/api/paas/v4",
-                    &k,
                     "GLM-4.6",
                     200_000,
                     131_072,
@@ -1076,8 +1201,7 @@ async fn connect_provider(
                     "routable": false,
                     "key_setup": {
                         "env": "ZAI_API_KEY",
-                        "keychain_account": secrets::provider_account("zai"),
-                        "hint": "Create a GLM API key at z.ai, then set ZAI_API_KEY (or store it in the OS keychain at the shown account) and reconnect.",
+                        "hint": "Create a GLM API key at z.ai, then connect it in Allternit. The selected Gizzi runtime stores it locally.",
                     },
                 }))
                 .into_response();
@@ -1088,7 +1212,9 @@ async fn connect_provider(
     if subscription_auth_check(&id, binary) {
         // Already authenticated: make it the default brain immediately so a click
         // in Settings is enough to route agents through it.
-        crate::onboarding_routes::persist_cli_default(&state, meta.id, meta.label, binary, meta.model);
+        crate::onboarding_routes::persist_cli_default(
+            &state, meta.id, meta.label, binary, meta.model,
+        );
         return Json(json!({
             "status": "already_connected",
             "provider": id,
@@ -1143,14 +1269,19 @@ async fn connect_provider_status(
     let (binary, meta) = match subscription_provider(&id) {
         Some(v) => v,
         None => {
-            return (StatusCode::NOT_FOUND, Json(json!({"error": "unknown_provider"})))
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "unknown_provider"})),
+            )
                 .into_response()
         }
     };
     let connected = subscription_auth_check(&id, binary);
     if connected {
         // Auto-detected completion of an interactive sign-in: promote to default.
-        crate::onboarding_routes::persist_cli_default(&state, meta.id, meta.label, binary, meta.model);
+        crate::onboarding_routes::persist_cli_default(
+            &state, meta.id, meta.label, binary, meta.model,
+        );
     }
     Json(json!({
         "status": if connected { "success" } else { "pending" },
@@ -1170,7 +1301,13 @@ async fn confirm_provider_connect(
     }
     let (binary, meta) = match subscription_provider(&id) {
         Some(v) => v,
-        None => return (StatusCode::NOT_FOUND, Json(json!({"error": "unknown_provider"}))).into_response(),
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "unknown_provider"})),
+            )
+                .into_response()
+        }
     };
     // User-attested completion of an interactive sign-in we could not auto-detect.
     // Promote to default so the one-click flow actually routes agents to it.

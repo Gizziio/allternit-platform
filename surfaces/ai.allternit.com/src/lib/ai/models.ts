@@ -10,6 +10,7 @@
 import type { ModelData } from "./types";
 import { models as generatedModels } from "./models.generated";
 import { config } from "@/lib/config";
+import { getLocalModelManifest } from "@/lib/local-models/catalog";
 
 // SVG Logos (embedded as data URIs for reliability)
 const LOGOS = {
@@ -205,7 +206,9 @@ const OPENCLAW_CLI_MODELS: ModelData[] = [
 
 // The default model downloaded during "Add Local Brain" onboarding
 const LOCAL_BRAIN_MODEL_ID = "local-brain";
-const LOCAL_BRAIN_OLLAMA_ID = "llama3.2:3b";
+const LOCAL_BRAIN_MANIFEST = getLocalModelManifest("local-brain-llama-3.2-3b");
+const LOCAL_BRAIN_OLLAMA_ID =
+  LOCAL_BRAIN_MANIFEST?.runtimes.find((runtime) => runtime.engine === "ollama")?.model ?? "llama3.2:3b";
 
 // Local Models (Ollama)
 const LOCAL_MODELS: ModelData[] = [
@@ -215,7 +218,7 @@ const LOCAL_MODELS: ModelData[] = [
     provider: "ollama",
     modelId: LOCAL_BRAIN_OLLAMA_ID,
     runtimeType: "local",
-    description: "Offline · private · works on any machine",
+    description: LOCAL_BRAIN_MANIFEST?.description ?? "Offline · private · runs on your device",
     logo: LOGOS.ollama,
     features: { vision: false, fileUpload: false, webSearch: false, reasoning: false, codeExecution: false },
   },

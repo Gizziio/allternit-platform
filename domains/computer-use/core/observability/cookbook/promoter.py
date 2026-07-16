@@ -16,8 +16,8 @@ try:
     from ..analyzer.analyzer import AnalysisResult
 except ImportError:
     # Allow direct import for tests
-    from recorder.frame import RunTimeline, ActionFrame, FrameStatus
-    from analyzer.analyzer import AnalysisResult
+    from observability.recorder.frame import RunTimeline, ActionFrame, FrameStatus
+    from observability.analyzer.analyzer import AnalysisResult
 
 
 @dataclass

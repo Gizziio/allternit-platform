@@ -16,7 +16,7 @@ try:
     from ..recorder.frame import RunTimeline, ActionFrame, FrameStatus, ActionType
 except ImportError:
     # Allow direct import for tests
-    from recorder.frame import RunTimeline, ActionFrame, FrameStatus, ActionType
+    from observability.recorder.frame import RunTimeline, ActionFrame, FrameStatus, ActionType
 
 
 @dataclass

@@ -18,6 +18,7 @@ import { useAdvancedAgentStore } from "@/lib/agents/agent-advanced.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
 import { useThreadAgentSessionsStore } from "@/stores/thread-agent-sessions.store";
+import { NativeAgentApiError } from "@/lib/agents/native-agent-api";
 import {
   getAgentSessionDescriptor,
   getAgentSessionStatusLabel,
@@ -43,6 +44,7 @@ import { ChatEmptyState } from "./chat/main/ChatEmptyState";
 import { ChatActiveContent } from "./chat/main/ChatActiveContent";
 import { ChatBottomBar } from "./chat/main/ChatBottomBar";
 import { OllamaWarning } from "./chat/main/OllamaWarning";
+import { SendErrorBanner } from "./chat/main/SendErrorBanner";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -59,7 +61,7 @@ export function ChatView({
   mode?: 'chat' | 'cowork' | 'code',
   initialMessage?: string,
   onInitialMessageSent?: () => void,
-  onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code', execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
 }) {
   const { id: chatId } = useChatId();
   const { renameThread } = useChatStore();
@@ -294,6 +296,7 @@ export function ChatView({
   const [greeting, setGreeting] = useState(() => peekLaunchGreeting() ?? DEFAULT_LAUNCH_GREETING);
   const [launchMascotEmotion, setLaunchMascotEmotion] = useState<GizziEmotion>('steady');
   const [mentionAgentId, setMentionAgentId] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [launchMascotAttention, setLaunchMascotAttention] = useState<GizziAttention | null>(null);
   const mascotResetTimeoutRef = useRef<number | null>(null);
   
@@ -399,6 +402,7 @@ export function ChatView({
     let sessionId = embeddedAgentSession.sessionId || chatId;
     const hasLiveSession = Boolean(sessionId && sessionId.startsWith('ses_'));
 
+    setSendError(null);
     try {
       if (!hasLiveSession) {
         sessionId = await useChatSessionStore.getState().createSession({
@@ -413,6 +417,12 @@ export function ChatView({
       }
     } catch (error) {
       logger.error({ err: error }, 'Failed to send chat message');
+      const isAuthError = error instanceof NativeAgentApiError && error.isAuthError();
+      setSendError(
+        isAuthError
+          ? "No AI provider is connected yet. Connect one in Settings to start chatting."
+          : "Couldn't send that message. Please try again."
+      );
     }
   }, [mentionAgentId, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream]);
 
@@ -529,6 +539,8 @@ export function ChatView({
         ollamaRunning={ollamaRunning}
         startSelection={startSelection}
       />
+
+      <SendErrorBanner message={sendError} onDismiss={() => setSendError(null)} />
 
       <ChatBottomBar
         mode={mode}

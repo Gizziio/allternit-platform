@@ -194,10 +194,7 @@ pub trait CostService: Send + Sync {
     async fn get_user_cost_summary(&self, user_id: &str) -> Result<UserCostSummary, ApiError>;
 
     /// Get cost breakdown by provider/region for a user
-    async fn get_user_cost_breakdown(
-        &self,
-        user_id: &str,
-    ) -> Result<Vec<CostBreakdown>, ApiError>;
+    async fn get_user_cost_breakdown(&self, user_id: &str) -> Result<Vec<CostBreakdown>, ApiError>;
 
     /// Check and send budget alerts for a user
     async fn check_budget_alerts(&self, user_id: &str) -> Result<Vec<CostAlert>, ApiError>;
@@ -236,9 +233,7 @@ impl CostServiceImpl {
 
     /// Create from an existing pool reference
     pub fn from_arc(db: Arc<SqlitePool>) -> Self {
-        Self {
-            db: (*db).clone(),
-        }
+        Self { db: (*db).clone() }
     }
 
     /// Calculate instance cost based on duration and rate
@@ -288,13 +283,11 @@ impl CostService for CostServiceImpl {
         let now = Utc::now();
 
         // Check if cost record already exists for this run
-        let existing: Option<RunCost> = sqlx::query_as(
-            "SELECT * FROM run_costs WHERE run_id = ?"
-        )
-        .bind(run_id)
-        .fetch_optional(&self.db)
-        .await
-        .map_err(ApiError::DatabaseError)?;
+        let existing: Option<RunCost> = sqlx::query_as("SELECT * FROM run_costs WHERE run_id = ?")
+            .bind(run_id)
+            .fetch_optional(&self.db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
 
         if let Some(cost) = existing {
             // Update existing record
@@ -304,7 +297,7 @@ impl CostService for CostServiceImpl {
                 SET provider = ?, region = ?, instance_type = ?, started_at = ?, updated_at = ?
                 WHERE id = ?
                 RETURNING *
-                "#
+                "#,
             )
             .bind(provider)
             .bind(region)
@@ -328,7 +321,7 @@ impl CostService for CostServiceImpl {
                 storage_gb, transfer_gb, created_at, updated_at
             ) VALUES (?, ?, 0, 0, 0, 0, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?)
             RETURNING *
-            "#
+            "#,
         )
         .bind(&cost_id)
         .bind(run_id)
@@ -364,12 +357,17 @@ impl CostService for CostServiceImpl {
             .fetch_optional(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?
-            .ok_or_else(|| ApiError::NotFound(format!("Cost record not found for run: {}", run_id)))?;
+            .ok_or_else(|| {
+                ApiError::NotFound(format!("Cost record not found for run: {}", run_id))
+            })?;
 
         // Get cost rate
-        let rate_result = if let (Some(provider), Some(region), Some(instance_type)) = 
-            (&cost.provider, &cost.region, &cost.instance_type) {
-            self.get_cost_rate(provider, region, instance_type).await.ok()
+        let rate_result = if let (Some(provider), Some(region), Some(instance_type)) =
+            (&cost.provider, &cost.region, &cost.instance_type)
+        {
+            self.get_cost_rate(provider, region, instance_type)
+                .await
+                .ok()
         } else {
             None
         };
@@ -407,7 +405,7 @@ impl CostService for CostServiceImpl {
                 ended_at = ?, duration_seconds = ?, storage_gb = ?, transfer_gb = ?, updated_at = ?
             WHERE run_id = ?
             RETURNING *
-            "#
+            "#,
         )
         .bind(instance_cost)
         .bind(storage_cost)
@@ -443,7 +441,9 @@ impl CostService for CostServiceImpl {
             .fetch_optional(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?
-            .ok_or_else(|| ApiError::NotFound(format!("Cost record not found for run: {}", run_id)))?;
+            .ok_or_else(|| {
+                ApiError::NotFound(format!("Cost record not found for run: {}", run_id))
+            })?;
 
         // Only update if started and not ended
         if cost.started_at.is_none() || cost.ended_at.is_some() {
@@ -451,9 +451,12 @@ impl CostService for CostServiceImpl {
         }
 
         // Get cost rate
-        let rate_result = if let (Some(provider), Some(region), Some(instance_type)) = 
-            (&cost.provider, &cost.region, &cost.instance_type) {
-            self.get_cost_rate(provider, region, instance_type).await.ok()
+        let rate_result = if let (Some(provider), Some(region), Some(instance_type)) =
+            (&cost.provider, &cost.region, &cost.instance_type)
+        {
+            self.get_cost_rate(provider, region, instance_type)
+                .await
+                .ok()
         } else {
             None
         };
@@ -469,7 +472,8 @@ impl CostService for CostServiceImpl {
             cost.instance_cost
         };
 
-        let storage_cost = if let (Some(storage), Some(ref rate)) = (cost.storage_gb, &rate_result) {
+        let storage_cost = if let (Some(storage), Some(ref rate)) = (cost.storage_gb, &rate_result)
+        {
             self.calculate_storage_cost(storage, duration_seconds, rate.storage_cost_per_gb_month)
         } else {
             cost.storage_cost
@@ -511,7 +515,7 @@ impl CostService for CostServiceImpl {
 
     async fn get_or_init_user_budget(&self, user_id: &str) -> Result<UserCostBudget, ApiError> {
         // Try to get existing budget
-        let budget: Option<UserCostBudget> = 
+        let budget: Option<UserCostBudget> =
             sqlx::query_as("SELECT * FROM user_cost_budgets WHERE user_id = ?")
                 .bind(user_id)
                 .fetch_optional(&self.db)
@@ -531,7 +535,7 @@ impl CostService for CostServiceImpl {
                 last_alert_at, alert_enabled, currency, created_at, updated_at
             ) VALUES (?, 100.0, 0.0, 80.0, NULL, 1, 'USD', ?, ?)
             RETURNING *
-            "#
+            "#,
         )
         .bind(user_id)
         .bind(now)
@@ -554,7 +558,7 @@ impl CostService for CostServiceImpl {
 
         // Build update query dynamically
         let mut updates = Vec::new();
-        
+
         if let Some(budget) = request.monthly_budget {
             updates.push(format!("monthly_budget = {}", budget));
         }
@@ -596,7 +600,13 @@ impl CostService for CostServiceImpl {
 
         // Get current month start
         let now = Utc::now();
-        let month_start = now.with_day(1).unwrap_or(now).with_hour(0).unwrap_or(now).with_minute(0).unwrap_or(now);
+        let month_start = now
+            .with_day(1)
+            .unwrap_or(now)
+            .with_hour(0)
+            .unwrap_or(now)
+            .with_minute(0)
+            .unwrap_or(now);
 
         // Aggregate costs for this user
         let result: Option<(f64, i64, i64)> = sqlx::query_as(
@@ -609,7 +619,7 @@ impl CostService for CostServiceImpl {
             JOIN runs r ON rc.run_id = r.id
             WHERE r.owner_id = ? 
             AND rc.started_at >= ?
-            "#
+            "#,
         )
         .bind(user_id)
         .bind(month_start)
@@ -620,14 +630,12 @@ impl CostService for CostServiceImpl {
         let (current_cost, run_count, total_duration) = result.unwrap_or((0.0, 0, 0));
 
         // Update current_month_cost in budget
-        sqlx::query(
-            "UPDATE user_cost_budgets SET current_month_cost = ? WHERE user_id = ?"
-        )
-        .bind(current_cost)
-        .bind(user_id)
-        .execute(&self.db)
-        .await
-        .map_err(ApiError::DatabaseError)?;
+        sqlx::query("UPDATE user_cost_budgets SET current_month_cost = ? WHERE user_id = ?")
+            .bind(current_cost)
+            .bind(user_id)
+            .execute(&self.db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
 
         let utilization = if budget.monthly_budget > 0.0 {
             (current_cost / budget.monthly_budget) * 100.0
@@ -646,12 +654,15 @@ impl CostService for CostServiceImpl {
         })
     }
 
-    async fn get_user_cost_breakdown(
-        &self,
-        user_id: &str,
-    ) -> Result<Vec<CostBreakdown>, ApiError> {
+    async fn get_user_cost_breakdown(&self, user_id: &str) -> Result<Vec<CostBreakdown>, ApiError> {
         let now = Utc::now();
-        let month_start = now.with_day(1).unwrap_or(now).with_hour(0).unwrap_or(now).with_minute(0).unwrap_or(now);
+        let month_start = now
+            .with_day(1)
+            .unwrap_or(now)
+            .with_hour(0)
+            .unwrap_or(now)
+            .with_minute(0)
+            .unwrap_or(now);
 
         let breakdown: Vec<CostBreakdown> = sqlx::query_as(
             r#"
@@ -668,7 +679,7 @@ impl CostService for CostServiceImpl {
             AND rc.started_at >= ?
             GROUP BY rc.provider, rc.region, rc.instance_type
             ORDER BY total_cost DESC
-            "#
+            "#,
         )
         .bind(user_id)
         .bind(month_start)
@@ -741,14 +752,12 @@ impl CostService for CostServiceImpl {
                 .map_err(ApiError::DatabaseError)?;
 
                 // Update last_alert_at
-                sqlx::query(
-                    "UPDATE user_cost_budgets SET last_alert_at = ? WHERE user_id = ?"
-                )
-                .bind(Utc::now())
-                .bind(user_id)
-                .execute(&self.db)
-                .await
-                .map_err(ApiError::DatabaseError)?;
+                sqlx::query("UPDATE user_cost_budgets SET last_alert_at = ? WHERE user_id = ?")
+                    .bind(Utc::now())
+                    .bind(user_id)
+                    .execute(&self.db)
+                    .await
+                    .map_err(ApiError::DatabaseError)?;
 
                 // Send the alert
                 self.send_alert(&alert).await?;
@@ -767,7 +776,7 @@ impl CostService for CostServiceImpl {
         instance_type: &str,
     ) -> Result<CostRate, ApiError> {
         let rate: Option<CostRate> = sqlx::query_as(
-            "SELECT * FROM cost_rates WHERE provider = ? AND region = ? AND instance_type = ?"
+            "SELECT * FROM cost_rates WHERE provider = ? AND region = ? AND instance_type = ?",
         )
         .bind(provider)
         .bind(region)
@@ -800,7 +809,7 @@ impl CostService for CostServiceImpl {
                 currency = excluded.currency,
                 updated_at = excluded.updated_at
             RETURNING *
-            "#
+            "#,
         )
         .bind(&request.provider)
         .bind(&request.region)
@@ -825,26 +834,30 @@ impl CostService for CostServiceImpl {
     }
 
     async fn list_cost_rates(&self) -> Result<Vec<CostRate>, ApiError> {
-        let rates: Vec<CostRate> = sqlx::query_as(
-            "SELECT * FROM cost_rates ORDER BY provider, region, instance_type"
-        )
-        .fetch_all(&self.db)
-        .await
-        .map_err(ApiError::DatabaseError)?;
+        let rates: Vec<CostRate> =
+            sqlx::query_as("SELECT * FROM cost_rates ORDER BY provider, region, instance_type")
+                .fetch_all(&self.db)
+                .await
+                .map_err(ApiError::DatabaseError)?;
 
         Ok(rates)
     }
 
     async fn recalculate_monthly_costs(&self) -> Result<(), ApiError> {
         let now = Utc::now();
-        let month_start = now.with_day(1).unwrap_or(now).with_hour(0).unwrap_or(now).with_minute(0).unwrap_or(now);
+        let month_start = now
+            .with_day(1)
+            .unwrap_or(now)
+            .with_hour(0)
+            .unwrap_or(now)
+            .with_minute(0)
+            .unwrap_or(now);
 
         // Get all users with budgets
-        let budgets: Vec<UserCostBudget> = 
-            sqlx::query_as("SELECT * FROM user_cost_budgets")
-                .fetch_all(&self.db)
-                .await
-                .map_err(ApiError::DatabaseError)?;
+        let budgets: Vec<UserCostBudget> = sqlx::query_as("SELECT * FROM user_cost_budgets")
+            .fetch_all(&self.db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
 
         for budget in budgets {
             let result: Option<(f64,)> = sqlx::query_as(
@@ -854,7 +867,7 @@ impl CostService for CostServiceImpl {
                 JOIN runs r ON rc.run_id = r.id
                 WHERE r.owner_id = ? 
                 AND rc.started_at >= ?
-                "#
+                "#,
             )
             .bind(&budget.user_id)
             .bind(month_start)
@@ -864,7 +877,7 @@ impl CostService for CostServiceImpl {
 
             if let Some((total_cost,)) = result {
                 sqlx::query(
-                    "UPDATE user_cost_budgets SET current_month_cost = ? WHERE user_id = ?"
+                    "UPDATE user_cost_budgets SET current_month_cost = ? WHERE user_id = ?",
                 )
                 .bind(total_cost)
                 .bind(&budget.user_id)
@@ -889,7 +902,7 @@ impl CostService for CostServiceImpl {
 }
 
 /// Start the background cost tracking task
-/// 
+///
 /// This task periodically:
 /// 1. Updates costs for running instances
 /// 2. Checks budget thresholds and sends alerts
@@ -924,7 +937,7 @@ async fn update_running_costs(service: &CostServiceImpl) -> Result<(), ApiError>
         FROM run_costs rc
         JOIN runs r ON rc.run_id = r.id
         WHERE r.status = 'running' AND rc.ended_at IS NULL
-        "#
+        "#,
     )
     .fetch_all(&service.db)
     .await
@@ -942,7 +955,7 @@ async fn update_running_costs(service: &CostServiceImpl) -> Result<(), ApiError>
 /// Check budget alerts for all users
 async fn check_all_budget_alerts(service: &CostServiceImpl) -> Result<(), ApiError> {
     // Get all users with budgets
-    let budgets: Vec<UserCostBudget> = 
+    let budgets: Vec<UserCostBudget> =
         sqlx::query_as("SELECT * FROM user_cost_budgets WHERE alert_enabled = 1")
             .fetch_all(&service.db)
             .await
@@ -950,7 +963,10 @@ async fn check_all_budget_alerts(service: &CostServiceImpl) -> Result<(), ApiErr
 
     for budget in budgets {
         if let Err(e) = service.check_budget_alerts(&budget.user_id).await {
-            warn!("Failed to check budget alerts for user {}: {}", budget.user_id, e);
+            warn!(
+                "Failed to check budget alerts for user {}: {}",
+                budget.user_id, e
+            );
         }
     }
 
@@ -966,7 +982,9 @@ pub async fn init_run_cost_tracking(
     instance_type: &str,
 ) -> Result<(), ApiError> {
     let service = CostServiceImpl::new(db.clone());
-    service.init_run_cost(run_id, provider, region, instance_type).await?;
+    service
+        .init_run_cost(run_id, provider, region, instance_type)
+        .await?;
     Ok(())
 }
 
@@ -978,7 +996,9 @@ pub async fn finalize_run_cost_tracking(
     transfer_gb: Option<f64>,
 ) -> Result<(), ApiError> {
     let service = CostServiceImpl::new(db.clone());
-    service.finalize_run_cost(run_id, storage_gb, transfer_gb).await?;
+    service
+        .finalize_run_cost(run_id, storage_gb, transfer_gb)
+        .await?;
     Ok(())
 }
 
@@ -988,9 +1008,7 @@ mod tests {
 
     #[test]
     fn test_calculate_instance_cost() {
-        let service = CostServiceImpl::new(
-            SqlitePool::connect_lazy(":memory:").unwrap()
-        );
+        let service = CostServiceImpl::new(SqlitePool::connect_lazy(":memory:").unwrap());
 
         // Test 1 hour at $0.01/hour
         assert_eq!(service.calculate_instance_cost(3600, 0.01), 0.01);
@@ -1004,9 +1022,7 @@ mod tests {
 
     #[test]
     fn test_calculate_storage_cost() {
-        let service = CostServiceImpl::new(
-            SqlitePool::connect_lazy(":memory:").unwrap()
-        );
+        let service = CostServiceImpl::new(SqlitePool::connect_lazy(":memory:").unwrap());
 
         // Test 100GB for 15 days at $0.10/GB/month
         let cost = service.calculate_storage_cost(100.0, 15 * 24 * 3600, 0.10);
@@ -1016,9 +1032,7 @@ mod tests {
 
     #[test]
     fn test_calculate_transfer_cost() {
-        let service = CostServiceImpl::new(
-            SqlitePool::connect_lazy(":memory:").unwrap()
-        );
+        let service = CostServiceImpl::new(SqlitePool::connect_lazy(":memory:").unwrap());
 
         // Test 10GB at $0.09/GB
         assert_eq!(service.calculate_transfer_cost(10.0, 0.09), 0.9);

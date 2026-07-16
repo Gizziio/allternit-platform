@@ -6,7 +6,7 @@
 use crate::db::cowork_models::*;
 use crate::error::ApiError;
 use crate::runtime::{ApprovalHook, ApprovalOptions, ApprovalResult};
-use crate::services::{EventStore};
+use crate::services::EventStore;
 use async_trait::async_trait;
 use chrono::Utc;
 use sqlx::SqlitePool;
@@ -19,50 +19,66 @@ use uuid::Uuid;
 pub trait RunService: Send + Sync + ApprovalHook {
     /// Create a new run
     async fn create(&self, request: CreateRunRequest) -> Result<Run, ApiError>;
-    
+
     /// Get a run by ID
     async fn get(&self, run_id: &str) -> Result<Run, ApiError>;
-    
+
     /// List runs with optional filtering
     async fn list(&self, filter: RunListFilter) -> Result<Vec<RunSummary>, ApiError>;
-    
+
     /// Update run metadata
     async fn update(&self, run_id: &str, request: UpdateRunRequest) -> Result<Run, ApiError>;
-    
+
     /// Delete a run
     async fn delete(&self, run_id: &str) -> Result<(), ApiError>;
-    
+
     /// Transition run to a new status
     async fn transition(&self, run_id: &str, new_status: RunStatus) -> Result<Run, ApiError>;
-    
+
     /// Start a run (transition from Pending/Planning to Queued/Running)
     async fn start(&self, run_id: &str) -> Result<Run, ApiError>;
-    
+
     /// Pause a run
     async fn pause(&self, run_id: &str) -> Result<Run, ApiError>;
-    
+
     /// Resume a paused run
     async fn resume(&self, run_id: &str) -> Result<Run, ApiError>;
-    
+
     /// Cancel a run
     async fn cancel(&self, run_id: &str, reason: Option<&str>) -> Result<Run, ApiError>;
-    
+
     /// Complete a run successfully
     async fn complete(&self, run_id: &str) -> Result<Run, ApiError>;
-    
+
     /// Mark a run as failed
-    async fn fail(&self, run_id: &str, error: &str, details: Option<serde_json::Value>) -> Result<Run, ApiError>;
-    
+    async fn fail(
+        &self,
+        run_id: &str,
+        error: &str,
+        details: Option<serde_json::Value>,
+    ) -> Result<Run, ApiError>;
+
     /// Update step progress
-    async fn update_progress(&self, run_id: &str, cursor: &str, completed: i32, total: Option<i32>) -> Result<Run, ApiError>;
-    
+    async fn update_progress(
+        &self,
+        run_id: &str,
+        cursor: &str,
+        completed: i32,
+        total: Option<i32>,
+    ) -> Result<Run, ApiError>;
+
     /// Associate a runtime with a run
-    async fn assign_runtime(&self, run_id: &str, runtime_id: &str, runtime_type: &str) -> Result<Run, ApiError>;
-    
+    async fn assign_runtime(
+        &self,
+        run_id: &str,
+        runtime_id: &str,
+        runtime_type: &str,
+    ) -> Result<Run, ApiError>;
+
     // ============================================================================
     // Approval Integration Methods
     // ============================================================================
-    
+
     /// Request approval for a run action
     ///
     /// Creates an approval request record, emits an event, and optionally
@@ -74,13 +90,17 @@ pub trait RunService: Send + Sync + ApprovalHook {
         action_params: serde_json::Value,
         reasoning: Option<String>,
     ) -> Result<ApprovalResult, ApiError>;
-    
+
     /// Get an approval request by ID
     async fn get_approval(&self, approval_id: &str) -> Result<ApprovalRequest, ApiError>;
-    
+
     /// List approval requests for a run
-    async fn list_approvals(&self, run_id: &str, status: Option<ApprovalStatus>) -> Result<Vec<ApprovalRequestSummary>, ApiError>;
-    
+    async fn list_approvals(
+        &self,
+        run_id: &str,
+        status: Option<ApprovalStatus>,
+    ) -> Result<Vec<ApprovalRequestSummary>, ApiError>;
+
     /// Respond to an approval request (approve or deny)
     async fn respond_to_approval(
         &self,
@@ -89,31 +109,27 @@ pub trait RunService: Send + Sync + ApprovalHook {
         message: Option<String>,
         responded_by: &str,
     ) -> Result<ApprovalRequest, ApiError>;
-    
+
     // ============================================================================
     // Checkpoint Methods
     // ============================================================================
-    
+
     /// Create a checkpoint for a run
     async fn create_checkpoint(
         &self,
         run_id: &str,
         request: CreateCheckpointRequest,
     ) -> Result<Checkpoint, ApiError>;
-    
+
     /// List checkpoints for a run
     async fn list_checkpoints(&self, run_id: &str) -> Result<Vec<CheckpointSummary>, ApiError>;
-    
+
     /// Get checkpoint by ID
     async fn get_checkpoint(&self, checkpoint_id: &str) -> Result<Checkpoint, ApiError>;
-    
+
     /// Restore a run from a checkpoint
-    async fn restore_checkpoint(
-        &self,
-        run_id: &str,
-        checkpoint_id: &str,
-    ) -> Result<Run, ApiError>;
-    
+    async fn restore_checkpoint(&self, run_id: &str, checkpoint_id: &str) -> Result<Run, ApiError>;
+
     /// Delete a checkpoint
     async fn delete_checkpoint(&self, checkpoint_id: &str) -> Result<(), ApiError>;
 }
@@ -142,34 +158,34 @@ pub struct RunServiceImpl {
 impl RunServiceImpl {
     /// Create a new RunServiceImpl
     pub fn new(db: SqlitePool) -> Self {
-        Self { 
+        Self {
             db,
             event_store: None,
         }
     }
-    
+
     /// Create from an existing pool reference
     pub fn from_arc(db: Arc<SqlitePool>) -> Self {
         // This is a bit of a workaround - ideally we'd use Arc<SqlitePool> everywhere
         // For now, we clone the pool (which is cheap for sqlx)
-        Self { 
+        Self {
             db: (*db).clone(),
             event_store: None,
         }
     }
-    
+
     /// Create with an event store for event emission
     pub fn with_event_store(mut self, event_store: Arc<dyn EventStore>) -> Self {
         self.event_store = Some(event_store);
         self
     }
-    
+
     /// Initialize cost tracking for a run
     async fn init_cost_tracking(&self, run_id: &str) -> Result<(), ApiError> {
         use crate::services::{CostService, CostServiceImpl};
-        
+
         let cost_service = CostServiceImpl::new(self.db.clone());
-        
+
         // Try to get instance info from associated cloud instance
         let instance_info: Option<(String, String, String)> = sqlx::query_as(
             r#"
@@ -177,56 +193,73 @@ impl RunServiceImpl {
             FROM cloud_instances ci
             JOIN runs r ON ci.run_id = r.id
             WHERE r.id = ?
-            "#
+            "#,
         )
         .bind(run_id)
         .fetch_optional(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         // Default to local if no cloud instance found
-        let (provider, region, instance_type) = instance_info
-            .unwrap_or_else(|| ("local".to_string(), "default".to_string(), "standard".to_string()));
-        
-        if let Err(e) = cost_service.init_run_cost(run_id, &provider, &region, &instance_type).await {
-            tracing::warn!("Failed to initialize cost tracking for run {}: {}", run_id, e);
+        let (provider, region, instance_type) = instance_info.unwrap_or_else(|| {
+            (
+                "local".to_string(),
+                "default".to_string(),
+                "standard".to_string(),
+            )
+        });
+
+        if let Err(e) = cost_service
+            .init_run_cost(run_id, &provider, &region, &instance_type)
+            .await
+        {
+            tracing::warn!(
+                "Failed to initialize cost tracking for run {}: {}",
+                run_id,
+                e
+            );
             // Don't fail the run if cost tracking fails
         } else {
-            tracing::info!("Initialized cost tracking for run {} with {}/{} in {}", 
-                run_id, provider, instance_type, region);
+            tracing::info!(
+                "Initialized cost tracking for run {} with {}/{} in {}",
+                run_id,
+                provider,
+                instance_type,
+                region
+            );
         }
-        
+
         Ok(())
     }
-    
+
     /// Finalize cost tracking for a run
     async fn finalize_cost_tracking(&self, run_id: &str) -> Result<(), ApiError> {
         use crate::services::{CostService, CostServiceImpl};
-        
+
         let cost_service = CostServiceImpl::new(self.db.clone());
-        
+
         // Get storage and transfer usage from run config (if available)
         let run = self.get(run_id).await?;
         let config = run.config.0;
-        
+
         // Extract resource usage from config
         let storage_gb = config
             .resource_limits
             .as_ref()
             .and_then(|r| r.disk_gb)
             .map(|d| d as f64);
-        
-        let transfer_gb = config
-            .extra
-            .get("transfer_gb")
-            .and_then(|t| t.as_f64());
-        
-        if let Err(e) = cost_service.finalize_run_cost(run_id, storage_gb, transfer_gb).await {
+
+        let transfer_gb = config.extra.get("transfer_gb").and_then(|t| t.as_f64());
+
+        if let Err(e) = cost_service
+            .finalize_run_cost(run_id, storage_gb, transfer_gb)
+            .await
+        {
             tracing::warn!("Failed to finalize cost tracking for run {}: {}", run_id, e);
             // Don't fail the run if cost tracking fails
         } else {
             tracing::info!("Finalized cost tracking for run {}", run_id);
-            
+
             // Check budget alerts for the run owner
             if let Some(owner_id) = &run.owner_id {
                 if let Err(e) = cost_service.check_budget_alerts(owner_id).await {
@@ -234,10 +267,10 @@ impl RunServiceImpl {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Emit a run event if event store is configured
     async fn emit_event(
         &self,
@@ -250,7 +283,7 @@ impl RunServiceImpl {
         }
         Ok(())
     }
-    
+
     /// Wait for an approval response with timeout
     async fn wait_for_approval_response(
         &self,
@@ -259,16 +292,16 @@ impl RunServiceImpl {
     ) -> Result<ApprovalResult, ApiError> {
         let poll_interval = Duration::from_millis(500);
         let max_wait = timeout_seconds.map(|s| Duration::from_secs(s as u64));
-        
+
         let start = std::time::Instant::now();
-        
+
         loop {
             // Check if we've exceeded timeout
             if let Some(max) = max_wait {
                 if start.elapsed() >= max {
                     // Update approval status to timed out
                     sqlx::query(
-                        "UPDATE approval_requests SET status = ? WHERE id = ? AND status = ?"
+                        "UPDATE approval_requests SET status = ? WHERE id = ? AND status = ?",
                     )
                     .bind(ApprovalStatus::TimedOut)
                     .bind(approval_id)
@@ -276,23 +309,25 @@ impl RunServiceImpl {
                     .execute(&self.db)
                     .await
                     .map_err(ApiError::DatabaseError)?;
-                    
+
                     // Emit timeout event
                     if let Some(ref store) = self.event_store {
-                        let _ = store.append(
-                            "", // Will be updated below
-                            EventType::ApprovalTimeout,
-                            serde_json::json!({
-                                "approval_id": approval_id,
-                                "timed_out_at": Utc::now().to_rfc3339(),
-                            })
-                        ).await;
+                        let _ = store
+                            .append(
+                                "", // Will be updated below
+                                EventType::ApprovalTimeout,
+                                serde_json::json!({
+                                    "approval_id": approval_id,
+                                    "timed_out_at": Utc::now().to_rfc3339(),
+                                }),
+                            )
+                            .await;
                     }
-                    
+
                     return Ok(ApprovalResult::TimedOut);
                 }
             }
-            
+
             // Check approval status
             let status: Option<(ApprovalStatus, Option<String>, Option<sqlx::types::Json<serde_json::Value>>)> = sqlx::query_as(
                 "SELECT status, response_message, action_params FROM approval_requests WHERE id = ?"
@@ -301,7 +336,7 @@ impl RunServiceImpl {
             .fetch_optional(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?;
-            
+
             if let Some((status, message, action_params)) = status {
                 match status {
                     ApprovalStatus::Approved => {
@@ -323,9 +358,12 @@ impl RunServiceImpl {
                     }
                 }
             } else {
-                return Err(ApiError::NotFound(format!("Approval request not found: {}", approval_id)));
+                return Err(ApiError::NotFound(format!(
+                    "Approval request not found: {}",
+                    approval_id
+                )));
             }
-            
+
             // Wait before polling again
             tokio::time::sleep(poll_interval).await;
         }
@@ -337,10 +375,10 @@ impl RunService for RunServiceImpl {
     async fn create(&self, request: CreateRunRequest) -> Result<Run, ApiError> {
         let run_id = Uuid::new_v4().to_string();
         let now = Utc::now();
-        
+
         let _config_json = serde_json::to_value(&request.config)
             .map_err(|e| ApiError::Internal(format!("Failed to serialize config: {}", e)))?;
-        
+
         let run = sqlx::query_as::<_, Run>(
             r#"
             INSERT INTO runs (
@@ -349,7 +387,7 @@ impl RunService for RunServiceImpl {
                 created_at, updated_at, started_at, completed_at, error_message, error_details
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING *
-            "#
+            "#,
         )
         .bind(&run_id)
         .bind(&request.name)
@@ -375,29 +413,28 @@ impl RunService for RunServiceImpl {
         .fetch_one(&self.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         // Emit run created event
         self.emit_event(
             &run_id,
             EventType::RunCreated,
-            crate::services::event_store::event_utils::run_created(&request.name, request.mode)
-        ).await?;
-        
+            crate::services::event_store::event_utils::run_created(&request.name, request.mode),
+        )
+        .await?;
+
         Ok(run)
     }
-    
+
     async fn get(&self, run_id: &str) -> Result<Run, ApiError> {
-        let run = sqlx::query_as::<_, Run>(
-            "SELECT * FROM runs WHERE id = ?"
-        )
-        .bind(run_id)
-        .fetch_optional(&self.db)
-        .await
-        .map_err(|e| ApiError::DatabaseError(e))?;
-        
+        let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = ?")
+            .bind(run_id)
+            .fetch_optional(&self.db)
+            .await
+            .map_err(|e| ApiError::DatabaseError(e))?;
+
         run.ok_or_else(|| ApiError::NotFound(format!("Run not found: {}", run_id)))
     }
-    
+
     async fn list(&self, filter: RunListFilter) -> Result<Vec<RunSummary>, ApiError> {
         let mut query = String::from(
             "SELECT id, name, mode, status, completed_steps, total_steps, created_at, updated_at FROM runs"
@@ -406,7 +443,8 @@ impl RunService for RunServiceImpl {
 
         if let Some(statuses) = &filter.status {
             if !statuses.is_empty() {
-                let placeholders: Vec<String> = (0..statuses.len()).map(|_| "?".to_string()).collect();
+                let placeholders: Vec<String> =
+                    (0..statuses.len()).map(|_| "?".to_string()).collect();
                 conditions.push(format!("status IN ({})", placeholders.join(", ")));
             }
         }
@@ -497,20 +535,20 @@ impl RunService for RunServiceImpl {
             .map_err(|e| ApiError::DatabaseError(e))?;
 
         Ok(runs)
-    }    
+    }
     async fn update(&self, run_id: &str, request: UpdateRunRequest) -> Result<Run, ApiError> {
         let run = self.get(run_id).await?;
-        
+
         let name = request.name.unwrap_or_else(|| run.name.clone());
         let description = request.description.or(run.description.clone());
-        
+
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
             SET name = ?, description = ?, updated_at = ?
             WHERE id = ?
             RETURNING *
-            "#
+            "#,
         )
         .bind(&name)
         .bind(&description)
@@ -519,27 +557,27 @@ impl RunService for RunServiceImpl {
         .fetch_one(&self.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         Ok(updated)
     }
-    
+
     async fn delete(&self, run_id: &str) -> Result<(), ApiError> {
         let result = sqlx::query("DELETE FROM runs WHERE id = ?")
             .bind(run_id)
             .execute(&self.db)
             .await
             .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         if result.rows_affected() == 0 {
             return Err(ApiError::NotFound(format!("Run not found: {}", run_id)));
         }
-        
+
         Ok(())
     }
-    
+
     async fn transition(&self, run_id: &str, new_status: RunStatus) -> Result<Run, ApiError> {
         let run = self.get(run_id).await?;
-        
+
         // Validate state transition
         if !run.status.can_transition_to(new_status) {
             return Err(ApiError::BadRequest(format!(
@@ -547,29 +585,29 @@ impl RunService for RunServiceImpl {
                 run.status, new_status
             )));
         }
-        
+
         let now = Utc::now();
-        
+
         // Handle special transitions
         let started_at = if matches!(new_status, RunStatus::Running) && run.started_at.is_none() {
             Some(now)
         } else {
             run.started_at
         };
-        
+
         let completed_at = if new_status.is_terminal() {
             Some(now)
         } else {
             None
         };
-        
+
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
             SET status = ?, updated_at = ?, started_at = ?, completed_at = ?
             WHERE id = ?
             RETURNING *
-            "#
+            "#,
         )
         .bind(new_status)
         .bind(now)
@@ -579,17 +617,21 @@ impl RunService for RunServiceImpl {
         .fetch_one(&self.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         // Emit status change event
         let event_payload = match new_status {
-            RunStatus::Running => crate::services::event_store::event_utils::run_started(run.runtime_id.as_deref()),
+            RunStatus::Running => {
+                crate::services::event_store::event_utils::run_started(run.runtime_id.as_deref())
+            }
             RunStatus::Completed => {
-                let duration = started_at.map(|s| Utc::now().signed_duration_since(s).num_milliseconds()).unwrap_or(0);
+                let duration = started_at
+                    .map(|s| Utc::now().signed_duration_since(s).num_milliseconds())
+                    .unwrap_or(0);
                 crate::services::event_store::event_utils::run_completed(duration)
-            },
+            }
             RunStatus::Failed => crate::services::event_store::event_utils::run_failed(
                 run.error_message.as_deref().unwrap_or("Unknown error"),
-                run.error_details.as_ref().map(|d| d.0.clone())
+                run.error_details.as_ref().map(|d| d.0.clone()),
             ),
             RunStatus::Cancelled => serde_json::json!({
                 "reason": run.error_message.as_deref().unwrap_or("Cancelled"),
@@ -604,82 +646,91 @@ impl RunService for RunServiceImpl {
                 "transitioned_at": now.to_rfc3339(),
             }),
         };
-        
+
         let event_type = match new_status {
             RunStatus::Running => EventType::RunStarted,
             RunStatus::Completed => EventType::RunCompleted,
             RunStatus::Failed => EventType::RunFailed,
             RunStatus::Cancelled => EventType::RunCancelled,
             RunStatus::Paused => EventType::RunPaused,
-            _ => EventType::Heartbeat, 
+            _ => EventType::Heartbeat,
         };
-        
+
         self.emit_event(run_id, event_type, event_payload).await?;
-        
+
         // Initialize cost tracking when run starts
         if new_status == RunStatus::Running && run.started_at.is_none() {
             if let Err(e) = self.init_cost_tracking(run_id).await {
-                tracing::warn!("Failed to initialize cost tracking for run {}: {}", run_id, e);
+                tracing::warn!(
+                    "Failed to initialize cost tracking for run {}: {}",
+                    run_id,
+                    e
+                );
             }
         }
-        
+
         // Finalize cost tracking when run ends
         if new_status.is_terminal() {
             if let Err(e) = self.finalize_cost_tracking(run_id).await {
                 tracing::warn!("Failed to finalize cost tracking for run {}: {}", run_id, e);
             }
         }
-        
+
         Ok(updated)
     }
-    
+
     async fn start(&self, run_id: &str) -> Result<Run, ApiError> {
         let run = self.get(run_id).await?;
-        
+
         // Determine target state based on current state
         let target = match run.status {
             RunStatus::Pending | RunStatus::Planning => RunStatus::Queued,
             RunStatus::Paused => RunStatus::Running,
-            _ => return Err(ApiError::BadRequest(format!(
-                "Cannot start run in {:?} state", run.status
-            ))),
+            _ => {
+                return Err(ApiError::BadRequest(format!(
+                    "Cannot start run in {:?} state",
+                    run.status
+                )))
+            }
         };
-        
+
         self.transition(run_id, target).await
     }
-    
+
     async fn pause(&self, run_id: &str) -> Result<Run, ApiError> {
         self.transition(run_id, RunStatus::Paused).await
     }
-    
+
     async fn resume(&self, run_id: &str) -> Result<Run, ApiError> {
         let run = self.get(run_id).await?;
-        
+
         if run.status != RunStatus::Paused {
             return Err(ApiError::BadRequest(format!(
-                "Cannot resume run in {:?} state", run.status
+                "Cannot resume run in {:?} state",
+                run.status
             )));
         }
-        
+
         self.transition(run_id, RunStatus::Running).await
     }
-    
+
     async fn cancel(&self, run_id: &str, reason: Option<&str>) -> Result<Run, ApiError> {
         let run = self.get(run_id).await?;
-        
+
         if run.status.is_terminal() {
             return Err(ApiError::BadRequest(format!(
-                "Cannot cancel run in {:?} state", run.status
+                "Cannot cancel run in {:?} state",
+                run.status
             )));
         }
-        
+
         // Cancel any pending approvals for this run
         sqlx::query(
             r#"
             UPDATE approval_requests 
             SET status = ?, responded_at = ?
             WHERE run_id = ? AND status = ?
-            "#
+            "#,
         )
         .bind(ApprovalStatus::Cancelled)
         .bind(Utc::now())
@@ -688,17 +739,17 @@ impl RunService for RunServiceImpl {
         .execute(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         let now = Utc::now();
         let error_msg = reason.unwrap_or("Cancelled by user");
-        
+
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
             SET status = ?, updated_at = ?, completed_at = ?, error_message = ?
             WHERE id = ?
             RETURNING *
-            "#
+            "#,
         )
         .bind(RunStatus::Cancelled)
         .bind(now)
@@ -708,38 +759,44 @@ impl RunService for RunServiceImpl {
         .fetch_one(&self.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         // Finalize cost tracking
         if let Err(e) = self.finalize_cost_tracking(run_id).await {
             tracing::warn!("Failed to finalize cost tracking for run {}: {}", run_id, e);
         }
-        
+
         Ok(updated)
     }
-    
+
     async fn complete(&self, run_id: &str) -> Result<Run, ApiError> {
         self.transition(run_id, RunStatus::Completed).await
     }
-    
-    async fn fail(&self, run_id: &str, error: &str, details: Option<serde_json::Value>) -> Result<Run, ApiError> {
+
+    async fn fail(
+        &self,
+        run_id: &str,
+        error: &str,
+        details: Option<serde_json::Value>,
+    ) -> Result<Run, ApiError> {
         let run = self.get(run_id).await?;
-        
+
         if run.status.is_terminal() {
             return Err(ApiError::BadRequest(format!(
-                "Cannot fail run in {:?} state", run.status
+                "Cannot fail run in {:?} state",
+                run.status
             )));
         }
-        
+
         let now = Utc::now();
         let error_details = details.as_ref().map(|d| sqlx::types::Json(d.clone()));
-        
+
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
             SET status = ?, updated_at = ?, completed_at = ?, error_message = ?, error_details = ?
             WHERE id = ?
             RETURNING *
-            "#
+            "#,
         )
         .bind(RunStatus::Failed)
         .bind(now)
@@ -750,23 +807,29 @@ impl RunService for RunServiceImpl {
         .fetch_one(&self.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         // Finalize cost tracking
         if let Err(e) = self.finalize_cost_tracking(run_id).await {
             tracing::warn!("Failed to finalize cost tracking for run {}: {}", run_id, e);
         }
-        
+
         Ok(updated)
     }
-    
-    async fn update_progress(&self, run_id: &str, cursor: &str, completed: i32, total: Option<i32>) -> Result<Run, ApiError> {
+
+    async fn update_progress(
+        &self,
+        run_id: &str,
+        cursor: &str,
+        completed: i32,
+        total: Option<i32>,
+    ) -> Result<Run, ApiError> {
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
             SET step_cursor = ?, completed_steps = ?, total_steps = ?, updated_at = ?
             WHERE id = ?
             RETURNING *
-            "#
+            "#,
         )
         .bind(cursor)
         .bind(completed)
@@ -776,18 +839,23 @@ impl RunService for RunServiceImpl {
         .fetch_one(&self.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         Ok(updated)
     }
-    
-    async fn assign_runtime(&self, run_id: &str, runtime_id: &str, runtime_type: &str) -> Result<Run, ApiError> {
+
+    async fn assign_runtime(
+        &self,
+        run_id: &str,
+        runtime_id: &str,
+        runtime_type: &str,
+    ) -> Result<Run, ApiError> {
         let updated = sqlx::query_as::<_, Run>(
             r#"
             UPDATE runs 
             SET runtime_id = ?, runtime_type = ?, updated_at = ?
             WHERE id = ?
             RETURNING *
-            "#
+            "#,
         )
         .bind(runtime_id)
         .bind(runtime_type)
@@ -796,14 +864,14 @@ impl RunService for RunServiceImpl {
         .fetch_one(&self.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         Ok(updated)
     }
-    
+
     // ============================================================================
     // Approval Integration Implementation
     // ============================================================================
-    
+
     async fn request_approval(
         &self,
         run_id: &str,
@@ -813,9 +881,10 @@ impl RunService for RunServiceImpl {
     ) -> Result<ApprovalResult, ApiError> {
         // Use default options
         let options = ApprovalOptions::default();
-        self.request_approval_with_options(run_id, action_type, action_params, reasoning, options).await
+        self.request_approval_with_options(run_id, action_type, action_params, reasoning, options)
+            .await
     }
-    
+
     async fn get_approval(&self, approval_id: &str) -> Result<ApprovalRequest, ApiError> {
         let approval = sqlx::query_as::<_, ApprovalRequest>(
             r#"
@@ -826,18 +895,24 @@ impl RunService for RunServiceImpl {
                 timeout_seconds, created_at, responded_at
             FROM approval_requests
             WHERE id = ?
-            "#
+            "#,
         )
         .bind(approval_id)
         .fetch_optional(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?
-        .ok_or_else(|| ApiError::NotFound(format!("Approval request '{}' not found", approval_id)))?;
-        
+        .ok_or_else(|| {
+            ApiError::NotFound(format!("Approval request '{}' not found", approval_id))
+        })?;
+
         Ok(approval)
     }
-    
-    async fn list_approvals(&self, run_id: &str, status: Option<ApprovalStatus>) -> Result<Vec<ApprovalRequestSummary>, ApiError> {
+
+    async fn list_approvals(
+        &self,
+        run_id: &str,
+        status: Option<ApprovalStatus>,
+    ) -> Result<Vec<ApprovalRequestSummary>, ApiError> {
         let approvals = if let Some(status_filter) = status {
             sqlx::query_as::<_, ApprovalRequestSummary>(
                 r#"
@@ -852,7 +927,7 @@ impl RunService for RunServiceImpl {
                         WHEN 'low' THEN 4
                     END,
                     created_at DESC
-                "#
+                "#,
             )
             .bind(run_id)
             .bind(status_filter)
@@ -873,17 +948,17 @@ impl RunService for RunServiceImpl {
                         WHEN 'low' THEN 4
                     END,
                     created_at DESC
-                "#
+                "#,
             )
             .bind(run_id)
             .fetch_all(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?
         };
-        
+
         Ok(approvals)
     }
-    
+
     async fn respond_to_approval(
         &self,
         approval_id: &str,
@@ -892,15 +967,19 @@ impl RunService for RunServiceImpl {
         responded_by: &str,
     ) -> Result<ApprovalRequest, ApiError> {
         let now = Utc::now();
-        let new_status = if approved { ApprovalStatus::Approved } else { ApprovalStatus::Denied };
-        
+        let new_status = if approved {
+            ApprovalStatus::Approved
+        } else {
+            ApprovalStatus::Denied
+        };
+
         // Update the approval
         sqlx::query(
             r#"
             UPDATE approval_requests
             SET status = ?, responded_by = ?, response_message = ?, responded_at = ?
             WHERE id = ? AND status = ?
-            "#
+            "#,
         )
         .bind(new_status)
         .bind(responded_by)
@@ -911,17 +990,17 @@ impl RunService for RunServiceImpl {
         .execute(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         // Fetch the updated approval
         let approval = self.get_approval(approval_id).await?;
-        
+
         // Emit appropriate event
         let event_type = if approved {
             EventType::ApprovalGiven
         } else {
             EventType::ApprovalDenied
         };
-        
+
         self.emit_event(
             &approval.run_id,
             event_type,
@@ -931,16 +1010,17 @@ impl RunService for RunServiceImpl {
                 "responded_by": responded_by,
                 "message": message,
                 "responded_at": now.to_rfc3339(),
-            })
-        ).await?;
-        
+            }),
+        )
+        .await?;
+
         Ok(approval)
     }
-    
+
     // ============================================================================
     // Checkpoint Methods
     // ============================================================================
-    
+
     async fn create_checkpoint(
         &self,
         run_id: &str,
@@ -952,21 +1032,21 @@ impl RunService for RunServiceImpl {
             .fetch_optional(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?;
-        
+
         if run.is_none() {
             return Err(ApiError::NotFound(format!("Run not found: {}", run_id)));
         }
-        
+
         let checkpoint_id = Uuid::new_v4().to_string();
         let now = Utc::now();
-        
+
         sqlx::query(
             r#"
             INSERT INTO checkpoints (
                 id, run_id, name, description, step_cursor,
                 workspace_state, approval_state, context, resumable, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(&checkpoint_id)
         .bind(run_id)
@@ -981,29 +1061,31 @@ impl RunService for RunServiceImpl {
         .execute(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         // Fetch and return the created checkpoint
         let checkpoint: Checkpoint = sqlx::query_as("SELECT * FROM checkpoints WHERE id = ?")
             .bind(&checkpoint_id)
             .fetch_one(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?;
-        
+
         // Emit checkpoint created event
-        let _ = self.emit_event(
-            run_id,
-            EventType::CheckpointCreated,
-            serde_json::json!({
-                "checkpoint_id": checkpoint_id,
-                "name": request.name,
-                "step_cursor": request.step_cursor,
-                "created_at": now,
-            })
-        ).await;
-        
+        let _ = self
+            .emit_event(
+                run_id,
+                EventType::CheckpointCreated,
+                serde_json::json!({
+                    "checkpoint_id": checkpoint_id,
+                    "name": request.name,
+                    "step_cursor": request.step_cursor,
+                    "created_at": now,
+                }),
+            )
+            .await;
+
         Ok(checkpoint)
     }
-    
+
     async fn list_checkpoints(&self, run_id: &str) -> Result<Vec<CheckpointSummary>, ApiError> {
         let checkpoints = sqlx::query_as::<_, CheckpointSummary>(
             r#"
@@ -1011,48 +1093,52 @@ impl RunService for RunServiceImpl {
             FROM checkpoints
             WHERE run_id = ?
             ORDER BY created_at DESC
-            "#
+            "#,
         )
         .bind(run_id)
         .fetch_all(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         Ok(checkpoints)
     }
-    
+
     async fn get_checkpoint(&self, checkpoint_id: &str) -> Result<Checkpoint, ApiError> {
-        let checkpoint: Option<Checkpoint> = sqlx::query_as("SELECT * FROM checkpoints WHERE id = ?")
-            .bind(checkpoint_id)
-            .fetch_optional(&self.db)
-            .await
-            .map_err(ApiError::DatabaseError)?;
-        
-        checkpoint.ok_or_else(|| ApiError::NotFound(format!("Checkpoint not found: {}", checkpoint_id)))
+        let checkpoint: Option<Checkpoint> =
+            sqlx::query_as("SELECT * FROM checkpoints WHERE id = ?")
+                .bind(checkpoint_id)
+                .fetch_optional(&self.db)
+                .await
+                .map_err(ApiError::DatabaseError)?;
+
+        checkpoint
+            .ok_or_else(|| ApiError::NotFound(format!("Checkpoint not found: {}", checkpoint_id)))
     }
-    
-    async fn restore_checkpoint(
-        &self,
-        run_id: &str,
-        checkpoint_id: &str,
-    ) -> Result<Run, ApiError> {
+
+    async fn restore_checkpoint(&self, run_id: &str, checkpoint_id: &str) -> Result<Run, ApiError> {
         // Get checkpoint
         let checkpoint: Checkpoint = sqlx::query_as("SELECT * FROM checkpoints WHERE id = ?")
             .bind(checkpoint_id)
             .fetch_optional(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?
-            .ok_or_else(|| ApiError::NotFound(format!("Checkpoint not found: {}", checkpoint_id)))?;
-        
+            .ok_or_else(|| {
+                ApiError::NotFound(format!("Checkpoint not found: {}", checkpoint_id))
+            })?;
+
         // Verify checkpoint belongs to this run
         if checkpoint.run_id != run_id {
-            return Err(ApiError::BadRequest("Checkpoint does not belong to this run".to_string()));
+            return Err(ApiError::BadRequest(
+                "Checkpoint does not belong to this run".to_string(),
+            ));
         }
-        
+
         if !checkpoint.resumable {
-            return Err(ApiError::BadRequest("Checkpoint is not resumable".to_string()));
+            return Err(ApiError::BadRequest(
+                "Checkpoint is not resumable".to_string(),
+            ));
         }
-        
+
         // Update run to restore state
         let now = Utc::now();
         let run: Run = sqlx::query_as(
@@ -1061,7 +1147,7 @@ impl RunService for RunServiceImpl {
             SET status = ?, step_cursor = ?, updated_at = ?
             WHERE id = ?
             RETURNING *
-            "#
+            "#,
         )
         .bind(RunStatus::Pending)
         .bind(&checkpoint.step_cursor)
@@ -1070,7 +1156,7 @@ impl RunService for RunServiceImpl {
         .fetch_one(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         // Update checkpoint restored_at
         sqlx::query("UPDATE checkpoints SET restored_at = ? WHERE id = ?")
             .bind(now)
@@ -1078,32 +1164,37 @@ impl RunService for RunServiceImpl {
             .execute(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?;
-        
+
         // Emit checkpoint restored event
-        let _ = self.emit_event(
-            run_id,
-            EventType::CheckpointRestored,
-            serde_json::json!({
-                "checkpoint_id": checkpoint_id,
-                "step_cursor": checkpoint.step_cursor,
-                "restored_at": now,
-            })
-        ).await;
-        
+        let _ = self
+            .emit_event(
+                run_id,
+                EventType::CheckpointRestored,
+                serde_json::json!({
+                    "checkpoint_id": checkpoint_id,
+                    "step_cursor": checkpoint.step_cursor,
+                    "restored_at": now,
+                }),
+            )
+            .await;
+
         Ok(run)
     }
-    
+
     async fn delete_checkpoint(&self, checkpoint_id: &str) -> Result<(), ApiError> {
         let result = sqlx::query("DELETE FROM checkpoints WHERE id = ?")
             .bind(checkpoint_id)
             .execute(&self.db)
             .await
             .map_err(ApiError::DatabaseError)?;
-        
+
         if result.rows_affected() == 0 {
-            return Err(ApiError::NotFound(format!("Checkpoint not found: {}", checkpoint_id)));
+            return Err(ApiError::NotFound(format!(
+                "Checkpoint not found: {}",
+                checkpoint_id
+            )));
         }
-        
+
         Ok(())
     }
 }
@@ -1119,9 +1210,10 @@ impl ApprovalHook for RunServiceImpl {
         reasoning: Option<String>,
     ) -> Result<ApprovalResult, ApiError> {
         let options = ApprovalOptions::default();
-        self.request_approval_with_options(run_id, action_type, action_params, reasoning, options).await
+        self.request_approval_with_options(run_id, action_type, action_params, reasoning, options)
+            .await
     }
-    
+
     async fn request_approval_with_options(
         &self,
         run_id: &str,
@@ -1132,19 +1224,17 @@ impl ApprovalHook for RunServiceImpl {
     ) -> Result<ApprovalResult, ApiError> {
         // Verify the run exists
         let run = self.get(run_id).await?;
-        
+
         // Generate approval ID
         let approval_id = Uuid::new_v4().to_string();
         let now = Utc::now();
-        
+
         // Build title and description
-        let title = options.title.unwrap_or_else(|| {
-            format!("Approval required: {}", action_type)
-        });
-        let description = options.description.or_else(|| {
-            reasoning.clone()
-        });
-        
+        let title = options
+            .title
+            .unwrap_or_else(|| format!("Approval required: {}", action_type));
+        let description = options.description.or_else(|| reasoning.clone());
+
         // Insert approval request
         sqlx::query(
             r#"
@@ -1153,7 +1243,7 @@ impl ApprovalHook for RunServiceImpl {
                 title, description, action_type, action_params,
                 reasoning, requested_by, timeout_seconds, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(&approval_id)
         .bind(run_id)
@@ -1171,7 +1261,7 @@ impl ApprovalHook for RunServiceImpl {
         .execute(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         // Emit ApprovalNeeded event
         self.emit_event(
             run_id,
@@ -1184,38 +1274,45 @@ impl ApprovalHook for RunServiceImpl {
                 "priority": options.priority,
                 "timeout_seconds": options.timeout_seconds,
                 "requested_at": now.to_rfc3339(),
-            })
-        ).await?;
-        
+            }),
+        )
+        .await?;
+
         // Optionally pause the run while waiting for approval
         if run.status == RunStatus::Running {
             let _ = self.pause(run_id).await;
         }
-        
+
         // Wait for response
-        let result = self.wait_for_approval_response(&approval_id, options.timeout_seconds).await?;
-        
+        let result = self
+            .wait_for_approval_response(&approval_id, options.timeout_seconds)
+            .await?;
+
         // Resume the run if it was paused for approval
         let run = self.get(run_id).await?;
         if run.status == RunStatus::Paused {
             let _ = self.resume(run_id).await;
         }
-        
+
         Ok(result)
     }
-    
+
     async fn check_approval_status(
         &self,
         approval_id: &str,
     ) -> Result<Option<ApprovalResult>, ApiError> {
-        let status: Option<(ApprovalStatus, Option<String>, Option<sqlx::types::Json<serde_json::Value>>)> = sqlx::query_as(
-            "SELECT status, response_message, action_params FROM approval_requests WHERE id = ?"
+        let status: Option<(
+            ApprovalStatus,
+            Option<String>,
+            Option<sqlx::types::Json<serde_json::Value>>,
+        )> = sqlx::query_as(
+            "SELECT status, response_message, action_params FROM approval_requests WHERE id = ?",
         )
         .bind(approval_id)
         .fetch_optional(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         match status {
             Some((ApprovalStatus::Approved, _, action_params)) => {
                 Ok(Some(ApprovalResult::Approved {
@@ -1225,29 +1322,25 @@ impl ApprovalHook for RunServiceImpl {
             Some((ApprovalStatus::Denied, message, _)) => {
                 Ok(Some(ApprovalResult::Denied { reason: message }))
             }
-            Some((ApprovalStatus::Cancelled, _, _)) => {
-                Ok(Some(ApprovalResult::Cancelled))
-            }
-            Some((ApprovalStatus::TimedOut, _, _)) => {
-                Ok(Some(ApprovalResult::TimedOut))
-            }
+            Some((ApprovalStatus::Cancelled, _, _)) => Ok(Some(ApprovalResult::Cancelled)),
+            Some((ApprovalStatus::TimedOut, _, _)) => Ok(Some(ApprovalResult::TimedOut)),
             Some((ApprovalStatus::Pending, _, _)) => {
                 Ok(None) // Still pending
             }
-            None => Err(ApiError::NotFound(format!("Approval request not found: {}", approval_id))),
+            None => Err(ApiError::NotFound(format!(
+                "Approval request not found: {}",
+                approval_id
+            ))),
         }
     }
-    
-    async fn cancel_approval(
-        &self,
-        approval_id: &str,
-    ) -> Result<(), ApiError> {
+
+    async fn cancel_approval(&self, approval_id: &str) -> Result<(), ApiError> {
         let result = sqlx::query(
             r#"
             UPDATE approval_requests
             SET status = ?, responded_at = ?
             WHERE id = ? AND status = ?
-            "#
+            "#,
         )
         .bind(ApprovalStatus::Cancelled)
         .bind(Utc::now())
@@ -1256,22 +1349,24 @@ impl ApprovalHook for RunServiceImpl {
         .execute(&self.db)
         .await
         .map_err(ApiError::DatabaseError)?;
-        
+
         if result.rows_affected() == 0 {
             // Check if it exists but was already resolved
-            let exists: bool = sqlx::query_scalar(
-                "SELECT EXISTS(SELECT 1 FROM approval_requests WHERE id = ?)"
-            )
-            .bind(approval_id)
-            .fetch_one(&self.db)
-            .await
-            .map_err(ApiError::DatabaseError)?;
-            
+            let exists: bool =
+                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM approval_requests WHERE id = ?)")
+                    .bind(approval_id)
+                    .fetch_one(&self.db)
+                    .await
+                    .map_err(ApiError::DatabaseError)?;
+
             if !exists {
-                return Err(ApiError::NotFound(format!("Approval request not found: {}", approval_id)));
+                return Err(ApiError::NotFound(format!(
+                    "Approval request not found: {}",
+                    approval_id
+                )));
             }
         }
-        
+
         Ok(())
     }
 }
@@ -1279,7 +1374,7 @@ impl ApprovalHook for RunServiceImpl {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_run_status_transitions() {
         // Valid transitions
@@ -1289,19 +1384,19 @@ mod tests {
         assert!(RunStatus::Running.can_transition_to(RunStatus::Failed));
         assert!(RunStatus::Running.can_transition_to(RunStatus::Paused));
         assert!(RunStatus::Paused.can_transition_to(RunStatus::Running));
-        
+
         // Invalid transitions
         assert!(!RunStatus::Completed.can_transition_to(RunStatus::Running));
         assert!(!RunStatus::Failed.can_transition_to(RunStatus::Running));
         assert!(!RunStatus::Running.can_transition_to(RunStatus::Pending));
     }
-    
+
     #[test]
     fn test_run_status_terminal() {
         assert!(RunStatus::Completed.is_terminal());
         assert!(RunStatus::Failed.is_terminal());
         assert!(RunStatus::Cancelled.is_terminal());
-        
+
         assert!(!RunStatus::Pending.is_terminal());
         assert!(!RunStatus::Running.is_terminal());
         assert!(!RunStatus::Paused.is_terminal());

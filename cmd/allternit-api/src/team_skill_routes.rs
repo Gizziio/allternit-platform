@@ -1,4 +1,3 @@
-
 //! Team Skill API routes
 
 use axum::extract::Extension;
@@ -14,13 +13,19 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn team_skill_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/team-skills", get(list_team_skills).post(create_team_skill))
-        .route("/team-skills/:id", get(get_team_skill).delete(delete_team_skill))
+        .route(
+            "/team-skills",
+            get(list_team_skills).post(create_team_skill),
+        )
+        .route(
+            "/team-skills/:id",
+            get(get_team_skill).delete(delete_team_skill),
+        )
 }
 
 #[derive(Deserialize)]
@@ -34,7 +39,6 @@ async fn list_team_skills(
     _headers: HeaderMap,
     Query(query): Query<ListTeamSkillsQuery>,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let ws_id = query.workspace_id;
     let user_id = user.user_id;
@@ -110,10 +114,14 @@ async fn list_team_skills(
 
     match rows {
         Ok(Ok(data)) => (StatusCode::OK, Json(json!({"skills": data}))),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"})))
-        }
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        ),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        ),
     }
 }
 
@@ -135,10 +143,12 @@ async fn create_team_skill(
     _headers: HeaderMap,
     Json(body): Json<CreateTeamSkill>,
 ) -> impl axum::response::IntoResponse {
-
     let name = body.name.trim().to_string();
     if name.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "name is required"})));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "name is required"})),
+        );
     }
 
     let db = state.db.clone();
@@ -185,17 +195,27 @@ async fn create_team_skill(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"skill": { "id": id, "name": name }}))),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Workspace not found or access denied"})))
-        }
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({"skill": { "id": id, "name": name }})),
+        ),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Workspace not found or access denied"})),
+        ),
         Ok(Err(e)) => {
             warn!("DB error creating team skill: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -206,7 +226,6 @@ async fn get_team_skill(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -249,9 +268,10 @@ async fn get_team_skill(
 
     match row {
         Ok(Ok(data)) => (StatusCode::OK, Json(json!({"skill": data}))),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"})))
-        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        ),
         _ => (StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))),
     }
 }
@@ -262,7 +282,6 @@ async fn delete_team_skill(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -299,16 +318,23 @@ async fn delete_team_skill(
 
     match result {
         Ok(Ok(())) => (StatusCode::OK, Json(json!({"success": true}))),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"})))
-        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        ),
         Ok(Err(e)) => {
             warn!("DB error deleting team skill: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }

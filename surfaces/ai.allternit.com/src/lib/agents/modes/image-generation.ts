@@ -1,20 +1,125 @@
 /**
  * Image Generation Mode Service
  * 
- * FREE DEFAULT: Pollinations.ai (no API key, no signup)
- * PAID OPTIONS: DALL-E 3, Stability AI, Midjourney (user choice)
- * 
- * Strategy: Zero setup for non-technical users
+ * LOCAL DEFAULT: the licensed Bonsai companion on loopback.
+ * Hosted providers are explicit opt-in choices and are never silent fallbacks.
  */
 
+import { bonsaiWebGpuProvider } from '@/lib/local-models/providers/bonsai-webgpu';
+
 export interface ImageGenerationConfig {
-  provider: 'pollinations' | 'openai' | 'stability' | 'midjourney';
+  provider: 'bonsai-local' | 'bonsai-webgpu' | 'pollinations' | 'openai' | 'stability' | 'midjourney';
   model?: string;
   size?: '1024x1024' | '1024x1792' | '1792x1024' | string;
   quality?: 'standard' | 'hd';
   style?: 'vivid' | 'natural' | 'photographic' | 'artistic';
   n?: number; // Number of images (1-4)
   seed?: number; // For reproducibility
+}
+
+const BONSAI_LOCAL_URL = 'http://127.0.0.1:8000';
+
+export async function checkBonsaiLocal(signal?: AbortSignal): Promise<boolean> {
+  try {
+    const response = await fetch(`${BONSAI_LOCAL_URL}/backends`, { signal });
+    if (!response.ok) return false;
+    const status = await response.json() as { healthy?: boolean };
+    return status.healthy === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function generateImagesBonsaiLocal(
+  prompt: string,
+  options: { width?: number; height?: number; seed?: number; n?: number; signal?: AbortSignal } = {},
+): Promise<ImageGenerationResult> {
+  const { width = 1024, height = 1024, seed = 42, n = 1, signal } = options;
+  const images: GeneratedImage[] = [];
+
+  for (let index = 0; index < n; index += 1) {
+    let response: Response;
+    try {
+      response = await fetch(`${BONSAI_LOCAL_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          seed: seed + index,
+          steps: 4,
+          guidance: 1,
+          backend: 'bonsai-ternary-mlx',
+          width,
+          height,
+        }),
+        signal,
+      });
+    } catch (error) {
+      throw new Error(
+        `The local Bonsai service is unavailable at ${BONSAI_LOCAL_URL}. Start the packaged Allternit Bonsai companion and install its model before using Image mode.`,
+        { cause: error },
+      );
+    }
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`Local Bonsai generation failed (${response.status})${detail ? `: ${detail}` : ''}`);
+    }
+    const blob = await response.blob();
+    if (blob.type && blob.type !== 'image/png') {
+      throw new Error(`Local Bonsai returned ${blob.type}; expected image/png.`);
+    }
+    images.push({
+      id: `bonsai_local_${seed + index}`,
+      url: URL.createObjectURL(blob),
+      prompt,
+      metadata: {
+        provider: 'bonsai-local',
+        model: 'prism-ml/bonsai-image-ternary-4B-mlx-2bit',
+        size: `${width}x${height}`,
+        quality: 'local',
+        seed: seed + index,
+        createdAt: new Date().toISOString(),
+      },
+    });
+  }
+
+  return {
+    images,
+    prompt,
+    config: { provider: 'bonsai-local', size: `${width}x${height}`, seed, n },
+    usage: { cost: 0, credits: 0 },
+  };
+}
+
+export async function generateImagesBonsaiWebGPU(
+  prompt: string,
+  options: { width?: number; height?: number; seed?: number; n?: number; signal?: AbortSignal } = {},
+): Promise<ImageGenerationResult> {
+  const { width = 1024, height = 1024, seed = 42, n = 1, signal } = options;
+  const images: GeneratedImage[] = [];
+  for (let index = 0; index < n; index += 1) {
+    const imageSeed = seed + index;
+    const { blob } = await bonsaiWebGpuProvider.generateImage(prompt, { width, height, seed: imageSeed, signal });
+    images.push({
+      id: `bonsai_webgpu_${imageSeed}`,
+      url: URL.createObjectURL(blob),
+      prompt,
+      metadata: {
+        provider: 'bonsai-webgpu',
+        model: 'prism-ml/bonsai-image-ternary-4B-mlx-2bit',
+        size: `${width}x${height}`,
+        quality: 'local-webgpu',
+        seed: imageSeed,
+        createdAt: new Date().toISOString(),
+      },
+    });
+  }
+  return {
+    images,
+    prompt,
+    config: { provider: 'bonsai-webgpu', size: `${width}x${height}`, seed, n },
+    usage: { cost: 0, credits: 0 },
+  };
 }
 
 interface GeneratedImage {
@@ -218,14 +323,14 @@ export async function generateImagesOpenAI(
  * 
  * Priority:
  * 1. Use user's preferred provider if configured
- * 2. Fall back to Pollinations (FREE) if no preference
- * 3. Show setup UI if paid provider selected but no API key
+ * 2. Default to the local Bonsai companion
+ * 3. Never send a prompt to a hosted provider without explicit selection
  */
 export async function generateImages(
   prompt: string,
   config: Partial<ImageGenerationConfig> = {},
   userSettings?: {
-    preferredProvider?: 'pollinations' | 'openai' | 'stability' | 'midjourney';
+    preferredProvider?: ImageGenerationConfig['provider'];
     apiKeys?: {
       openai?: string;
       stability?: string;
@@ -233,25 +338,41 @@ export async function generateImages(
   }
 ): Promise<ImageGenerationResult> {
   // Determine which provider to use
-  const provider = userSettings?.preferredProvider || config.provider || 'pollinations';
+  const provider = userSettings?.preferredProvider || config.provider || 'bonsai-local';
 
   switch (provider) {
+    case 'bonsai-local': {
+      const { width, height } = parseSize(config.size || '1024x1024');
+      return generateImagesBonsaiLocal(prompt, { width, height, n: config.n || 1, seed: config.seed });
+    }
+    case 'bonsai-webgpu': {
+      const { width, height } = parseSize(config.size || '1024x1024');
+      return generateImagesBonsaiWebGPU(prompt, { width, height, n: config.n || 1, seed: config.seed });
+    }
     case 'openai':
       if (!userSettings?.apiKeys?.openai) {
-        throw new Error('OpenAI API key not configured. Please add your API key in settings or use Pollinations (free).');
+        throw new Error('OpenAI was selected but no API key is configured. Select Local Bonsai or add an API key.');
       }
       return generateImagesOpenAI(prompt, userSettings.apiKeys.openai, config as any);
 
     case 'stability':
-      throw new Error('Stability AI is not yet integrated. Use Pollinations (free) or add an OpenAI API key in settings.');
+      throw new Error('Stability AI is not integrated. Select Local Bonsai or configure another explicit provider.');
 
     case 'midjourney':
-      throw new Error('Midjourney integration requires Discord setup. Use Pollinations or OpenAI instead.');
+      throw new Error('Midjourney integration requires Discord setup. Select Local Bonsai or OpenAI instead.');
 
     case 'pollinations':
-    default:
-      // FREE - works immediately, no setup
+      // Explicit opt-in: FREE hosted provider, no setup
       return generateImagesPollinations(prompt, {
+        width: parseSize(config.size || '1024x1024').width,
+        height: parseSize(config.size || '1024x1024').height,
+        n: config.n || 1,
+        seed: config.seed,
+      });
+
+    default:
+      // Unknown provider values resolve to the local default, never to a hosted one.
+      return generateImagesBonsaiLocal(prompt, {
         width: parseSize(config.size || '1024x1024').width,
         height: parseSize(config.size || '1024x1024').height,
         n: config.n || 1,
@@ -262,19 +383,36 @@ export async function generateImages(
 
 /**
  * Generate variations of an image
+ *
+ * LOCAL DEFAULT: variations run on the Bonsai companion. Pollinations is used
+ * only when it was explicitly selected, or when the base image itself came
+ * from an explicit Pollinations generation.
  */
 export async function generateVariations(
   imageId: string,
   prompt: string,
   n: number = 4,
-  userSettings?: any
+  userSettings?: {
+    preferredProvider?: ImageGenerationConfig['provider'];
+  }
 ): Promise<ImageGenerationResult> {
-  // For Pollinations, just generate new images with different seeds
-  if (imageId.startsWith('pollinations_') || !userSettings?.preferredProvider) {
+  const provider = userSettings?.preferredProvider || 'bonsai-local';
+
+  if (provider === 'pollinations' || imageId.startsWith('pollinations_')) {
     return generateVariationsPollinations(imageId, prompt, n);
   }
 
-  return generateVariationsPollinations(imageId, prompt, n);
+  if (provider !== 'bonsai-local') {
+    throw new Error(
+      `Variations are not supported for provider "${provider}". Select Local Bonsai or explicitly choose Pollinations.`,
+    );
+  }
+
+  // Local variations: same prompt, fresh random base seed so each run differs.
+  return generateImagesBonsaiLocal(prompt, {
+    n,
+    seed: Math.floor(Math.random() * 1000000),
+  });
 }
 
 // ==========================================
@@ -292,12 +430,28 @@ function parseSize(size: string): { width: number; height: number } {
 function getImageProviders(userSettings?: any) {
   return [
     {
+      id: 'bonsai-local',
+      name: 'Bonsai Image 4B (Local)',
+      description: 'Runs on this device through the Allternit loopback companion',
+      type: 'local',
+      isAvailable: true,
+      isDefault: !userSettings?.preferredProvider || userSettings.preferredProvider === 'bonsai-local',
+    },
+    {
+      id: 'bonsai-webgpu',
+      name: 'Bonsai Image 4B (WebGPU)',
+      description: 'Fast local GPU mode; downloads a pinned unaudited runtime after explicit consent',
+      type: 'local-unverified',
+      isAvailable: typeof navigator !== 'undefined' && 'gpu' in navigator,
+      isDefault: userSettings?.preferredProvider === 'bonsai-webgpu',
+    },
+    {
       id: 'pollinations',
       name: 'Pollinations.ai',
       description: 'Free, no signup required',
       type: 'free',
       isAvailable: true,
-      isDefault: !userSettings?.preferredProvider,
+      isDefault: userSettings?.preferredProvider === 'pollinations',
     },
     {
       id: 'openai',
@@ -310,7 +464,7 @@ function getImageProviders(userSettings?: any) {
     {
       id: 'stability',
       name: 'Stability AI',
-      description: 'Not yet integrated — use Pollinations or OpenAI',
+      description: 'Not yet integrated — use Local Bonsai or OpenAI',
       type: 'api_key',
       isAvailable: false,
       isDefault: false,

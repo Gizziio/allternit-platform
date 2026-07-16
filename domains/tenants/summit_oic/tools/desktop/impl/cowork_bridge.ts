@@ -1,21 +1,28 @@
-/**
- * Cowork Bridge for Allternit
- * Routes desktop automation tasks to the ACU gateway (port 8760).
- */
+/** Cowork desktop compatibility bridge through the shared platform SDK. */
+import { AllternitComputerUseClient } from '@allternit/sdk/computer-use';
+
 const ACU_URL = process.env.ACU_GATEWAY_URL ?? 'http://127.0.0.1:8760';
+const computerUse = new AllternitComputerUseClient({ baseUrl: ACU_URL });
 
 function makeRunId(): string {
   return `cb-${Math.random().toString(36).slice(2, 14)}`;
 }
 
 async function acuPost(session_id: string, action: string, extra: Record<string, unknown> = {}) {
-  const res = await fetch(`${ACU_URL}/v1/computer`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, session_id, run_id: makeRunId(), parameters: {}, ...extra }),
+  return computerUse.executeCompatibilityAction({
+    action,
+    session_id,
+    run_id: makeRunId(),
+    parameters: {},
+    ...extra,
   });
-  if (!res.ok) throw new Error(`ACU ${res.status}: ${await res.text().catch(() => res.statusText)}`);
-  return res.json();
+}
+
+function screenshotDataUrl(data: Record<string, unknown>): string {
+  const content = data.extracted_content;
+  if (!content || typeof content !== 'object') return '';
+  const value = (content as Record<string, unknown>).data_url;
+  return typeof value === 'string' ? value : '';
 }
 
 export const desktop_tools = {
@@ -23,7 +30,7 @@ export const desktop_tools = {
     const data = await acuPost(args.session_id, 'screenshot', {
       parameters: { full_page: args.scope === 'full' },
     });
-    const dataUrl: string = data.extracted_content?.data_url ?? '';
+    const dataUrl = screenshotDataUrl(data);
     return { artifact_path: dataUrl, timestamp: new Date().toISOString() };
   },
 

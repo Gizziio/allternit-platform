@@ -433,7 +433,10 @@ fn build_gizzi_schedule(schedule_type: &str, schedule_expression: &str) -> serde
     }
 }
 
-async fn resolve_agent_harness(db: &crate::db::DbHandle, agent_id: &str) -> Option<serde_json::Value> {
+async fn resolve_agent_harness(
+    db: &crate::db::DbHandle,
+    agent_id: &str,
+) -> Option<serde_json::Value> {
     let db = db.clone();
     let agent_id = agent_id.to_string();
     tokio::task::spawn_blocking(move || {
@@ -475,7 +478,11 @@ fn build_daemon_job_from_routine(
     })
 }
 
-fn build_daemon_job_from_loop(loop_item: &Loop, job_type: &str, harness_config: Option<serde_json::Value>) -> serde_json::Value {
+fn build_daemon_job_from_loop(
+    loop_item: &Loop,
+    job_type: &str,
+    harness_config: Option<serde_json::Value>,
+) -> serde_json::Value {
     json!({
         "name": loop_item.name,
         "description": loop_item.description,
@@ -527,7 +534,9 @@ async fn list_goals(
                 priority: row.get(7)?,
                 target_date: row.get(8)?,
                 progress: row.get(9)?,
-                metadata: row.get::<_, Option<String>>(10)?.map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
+                metadata: row
+                    .get::<_, Option<String>>(10)?
+                    .map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
                 created_at: row.get(11)?,
                 updated_at: row.get(12)?,
             })
@@ -786,9 +795,15 @@ fn row_to_routine(row: &rusqlite::Row) -> Result<Routine, rusqlite::Error> {
         schedule_expression: row.get(10)?,
         timezone: row.get(11)?,
         execution_domain: row.get(12)?,
-        config: row.get::<_, String>(13).map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null))?,
-        tags: row.get::<_, Option<String>>(14)?.map(|s| serde_json::from_str(&s).unwrap_or_default()),
-        metadata: row.get::<_, Option<String>>(15)?.map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
+        config: row
+            .get::<_, String>(13)
+            .map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null))?,
+        tags: row
+            .get::<_, Option<String>>(14)?
+            .map(|s| serde_json::from_str(&s).unwrap_or_default()),
+        metadata: row
+            .get::<_, Option<String>>(15)?
+            .map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
         max_runs: row.get(16)?,
         timeout_seconds: row.get(17)?,
         max_retries: row.get(18)?,
@@ -865,7 +880,9 @@ async fn create_routine(
         updated_at: now.clone(),
     };
 
-    let daemon_job_id = if uses_cloud_scheduler(&routine.execution_domain) && is_recurring_schedule(&routine.schedule_type) {
+    let daemon_job_id = if uses_cloud_scheduler(&routine.execution_domain)
+        && is_recurring_schedule(&routine.schedule_type)
+    {
         let harness_config = if let Some(ref agent_id) = routine.agent_id {
             resolve_agent_harness(&state.db, agent_id).await
         } else {
@@ -989,7 +1006,10 @@ async fn update_routine(
         .unwrap_or("agent")
         .to_string();
 
-    let new_execution_domain = req.execution_domain.as_ref().map(|d| normalize_execution_domain(Some(d.clone())));
+    let new_execution_domain = req
+        .execution_domain
+        .as_ref()
+        .map(|d| normalize_execution_domain(Some(d.clone())));
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1019,7 +1039,9 @@ async fn update_routine(
             req.timezone.as_ref(),
             new_execution_domain.as_ref(),
             Some(config.to_string()),
-            req.tags.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
+            req.tags
+                .as_ref()
+                .map(|t| serde_json::to_string(t).unwrap_or_default()),
             req.metadata.as_ref().map(|m| m.to_string()),
             req.max_runs,
             req.timeout_seconds,
@@ -1034,7 +1056,9 @@ async fn update_routine(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let updated_routine = get_routine(State(state.clone()), headers.clone(), Path(id.clone())).await?.0;
+    let updated_routine = get_routine(State(state.clone()), headers.clone(), Path(id.clone()))
+        .await?
+        .0;
     let old_uses_cloud = uses_cloud_scheduler(&existing.2);
     let new_uses_cloud = uses_cloud_scheduler(&updated_routine.execution_domain);
 
@@ -1045,7 +1069,8 @@ async fn update_routine(
             } else {
                 None
             };
-            let gizzi_job = build_daemon_job_from_routine(&updated_routine, &job_type, harness_config);
+            let gizzi_job =
+                build_daemon_job_from_routine(&updated_routine, &job_type, harness_config);
             let client = reqwest::Client::new();
             if let Err(e) = cron_daemon_update_job(&client, gizzi_job_id, gizzi_job).await {
                 warn!("failed to update daemon routine job: {}", e);
@@ -1055,7 +1080,10 @@ async fn update_routine(
         if let Some(ref gizzi_job_id) = existing.1 {
             let client = reqwest::Client::new();
             if let Err(e) = cron_daemon_delete_job(&client, gizzi_job_id).await {
-                warn!("failed to delete daemon routine job on domain change: {}", e);
+                warn!(
+                    "failed to delete daemon routine job on domain change: {}",
+                    e
+                );
             }
         }
         conn.execute(
@@ -1077,7 +1105,10 @@ async fn update_routine(
         let daemon_job_id = match cron_daemon_create_job(&client, daemon_job).await {
             Ok(res) => extract_daemon_job_id(&res),
             Err(e) => {
-                warn!("failed to create daemon routine job on domain change: {}", e);
+                warn!(
+                    "failed to create daemon routine job on domain change: {}",
+                    e
+                );
                 None
             }
         };
@@ -1211,7 +1242,9 @@ async fn list_routine_runs(
                 error: row.get(9)?,
                 attempt: row.get(10)?,
                 triggered_by: row.get(11)?,
-                metadata: row.get::<_, Option<String>>(12)?.map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
+                metadata: row
+                    .get::<_, Option<String>>(12)?
+                    .map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
             })
         })
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
@@ -1298,9 +1331,15 @@ fn row_to_loop(row: &rusqlite::Row) -> Result<Loop, rusqlite::Error> {
         schedule_type: row.get(10)?,
         schedule_expression: row.get(11)?,
         execution_domain: row.get(12)?,
-        config: row.get::<_, String>(13).map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null))?,
-        tags: row.get::<_, Option<String>>(14)?.map(|s| serde_json::from_str(&s).unwrap_or_default()),
-        metadata: row.get::<_, Option<String>>(15)?.map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
+        config: row
+            .get::<_, String>(13)
+            .map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null))?,
+        tags: row
+            .get::<_, Option<String>>(14)?
+            .map(|s| serde_json::from_str(&s).unwrap_or_default()),
+        metadata: row
+            .get::<_, Option<String>>(15)?
+            .map(|s| serde_json::from_str(&s).unwrap_or(serde_json::Value::Null)),
         expires_at: row.get(16)?,
         created_at: row.get(17)?,
         updated_at: row.get(18)?,
@@ -1373,7 +1412,9 @@ async fn create_loop(
         updated_at: now.clone(),
     };
 
-    let daemon_job_id = if uses_cloud_scheduler(&loop_item.execution_domain) && is_recurring_schedule(&loop_item.schedule_type) {
+    let daemon_job_id = if uses_cloud_scheduler(&loop_item.execution_domain)
+        && is_recurring_schedule(&loop_item.schedule_type)
+    {
         let harness_config = if let Some(ref agent_id) = loop_item.agent_id {
             resolve_agent_harness(&state.db, agent_id).await
         } else {
@@ -1495,7 +1536,10 @@ async fn update_loop(
         .unwrap_or("agent")
         .to_string();
 
-    let new_execution_domain = req.execution_domain.as_ref().map(|d| normalize_execution_domain(Some(d.clone())));
+    let new_execution_domain = req
+        .execution_domain
+        .as_ref()
+        .map(|d| normalize_execution_domain(Some(d.clone())));
 
     let now = chrono::Utc::now().to_rfc3339();
 
@@ -1521,7 +1565,9 @@ async fn update_loop(
             req.schedule_expression.as_ref(),
             new_execution_domain.as_ref(),
             Some(config.to_string()),
-            req.tags.as_ref().map(|t| serde_json::to_string(t).unwrap_or_default()),
+            req.tags
+                .as_ref()
+                .map(|t| serde_json::to_string(t).unwrap_or_default()),
             req.metadata.as_ref().map(|m| m.to_string()),
             req.expires_at.as_ref(),
             &now,
@@ -1534,7 +1580,9 @@ async fn update_loop(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    let updated_loop = get_loop(State(state.clone()), headers.clone(), Path(id.clone())).await?.0;
+    let updated_loop = get_loop(State(state.clone()), headers.clone(), Path(id.clone()))
+        .await?
+        .0;
     let old_uses_cloud = uses_cloud_scheduler(&existing.2);
     let new_uses_cloud = uses_cloud_scheduler(&updated_loop.execution_domain);
 
@@ -1730,7 +1778,10 @@ pub fn automation_router() -> Router<Arc<AppState>> {
         )
         .route("/automation/goals/:id/children", get(list_goal_children))
         // Routines
-        .route("/automation/routines", get(list_routines).post(create_routine))
+        .route(
+            "/automation/routines",
+            get(list_routines).post(create_routine),
+        )
         .route(
             "/automation/routines/:id",
             get(get_routine).put(update_routine).delete(delete_routine),
@@ -1777,7 +1828,14 @@ mod tests {
         ).unwrap();
     }
 
-    fn insert_test_run(conn: &rusqlite::Connection, id: &str, routine_id: &str, status: &str, duration_ms: i32, scheduled_at: &str) {
+    fn insert_test_run(
+        conn: &rusqlite::Connection,
+        id: &str,
+        routine_id: &str,
+        status: &str,
+        duration_ms: i32,
+        scheduled_at: &str,
+    ) {
         conn.execute(
             "INSERT INTO routine_runs (id, routine_id, status, scheduled_at, duration_ms, attempt, triggered_by)
              VALUES (?1, ?2, ?3, ?4, ?5, 1, 'schedule')",
@@ -1793,9 +1851,30 @@ mod tests {
         let user_id = "user-1";
 
         insert_test_routine(&conn, routine_id, user_id);
-        insert_test_run(&conn, "run-1", routine_id, "completed", 100, "2024-01-01T10:00:00Z");
-        insert_test_run(&conn, "run-2", routine_id, "completed", 200, "2024-01-01T11:00:00Z");
-        insert_test_run(&conn, "run-3", routine_id, "failed", 0, "2024-01-01T12:00:00Z");
+        insert_test_run(
+            &conn,
+            "run-1",
+            routine_id,
+            "completed",
+            100,
+            "2024-01-01T10:00:00Z",
+        );
+        insert_test_run(
+            &conn,
+            "run-2",
+            routine_id,
+            "completed",
+            200,
+            "2024-01-01T11:00:00Z",
+        );
+        insert_test_run(
+            &conn,
+            "run-3",
+            routine_id,
+            "failed",
+            0,
+            "2024-01-01T12:00:00Z",
+        );
 
         let metrics: RoutineMetrics = conn
             .query_row(
@@ -1884,10 +1963,22 @@ mod tests {
 
     #[test]
     fn test_execution_domain_normalization() {
-        assert_eq!(normalize_execution_domain(Some("local".to_string())), "local");
-        assert_eq!(normalize_execution_domain(Some("cloud".to_string())), "cloud");
-        assert_eq!(normalize_execution_domain(Some("hybrid".to_string())), "cloud");
-        assert_eq!(normalize_execution_domain(Some("invalid".to_string())), "local");
+        assert_eq!(
+            normalize_execution_domain(Some("local".to_string())),
+            "local"
+        );
+        assert_eq!(
+            normalize_execution_domain(Some("cloud".to_string())),
+            "cloud"
+        );
+        assert_eq!(
+            normalize_execution_domain(Some("hybrid".to_string())),
+            "cloud"
+        );
+        assert_eq!(
+            normalize_execution_domain(Some("invalid".to_string())),
+            "local"
+        );
         assert_eq!(normalize_execution_domain(None), "local");
 
         assert!(uses_cloud_scheduler("cloud"));

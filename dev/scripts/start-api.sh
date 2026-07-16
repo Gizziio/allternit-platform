@@ -24,6 +24,7 @@ echo "[start-api] Starting allternit-api on :8013 (dev mode, auth bypass enabled
 echo "[start-api] Log: $LOG_FILE"
 
 ALLTERNIT_LOCAL_DEV_BYPASS=1 \
+    ALLTERNIT_SELF_HOSTED=1 \
     "$BINARY" > "$LOG_FILE" 2>&1 &
 
 PID=$!

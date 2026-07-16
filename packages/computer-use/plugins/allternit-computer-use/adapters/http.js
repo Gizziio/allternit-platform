@@ -93,6 +93,10 @@ class ComputerUseHttpAdapter {
     return this._post(`/v1/computer-use/runs/${runId}/cancel`, {});
   }
 
+  async record(params) {
+    return this._post("/v1/computer-use/record", params);
+  }
+
   // ── Sessions ───────────────────────────────────────────────────────────────
 
   async listSessions() {
@@ -153,7 +157,7 @@ class ComputerUseHttpAdapter {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       const data = await res.json().catch(() => ({}));
-      return res.ok ? { ok: true, data } : { ok: false, error: data?.detail ?? `HTTP ${res.status}` };
+      return res.ok ? { ok: true, data } : { ok: false, error: this._httpError(res.status, data) };
     } catch (err) {
       return { ok: false, error: err.message };
     }
@@ -168,7 +172,7 @@ class ComputerUseHttpAdapter {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       const data = await res.json().catch(() => ({}));
-      return res.ok ? { ok: true, data } : { ok: false, error: data?.detail ?? `HTTP ${res.status}` };
+      return res.ok ? { ok: true, data } : { ok: false, error: this._httpError(res.status, data) };
     } catch (err) {
       return { ok: false, error: err.message };
     }
@@ -181,10 +185,15 @@ class ComputerUseHttpAdapter {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       const data = await res.json().catch(() => ({}));
-      return res.ok ? { ok: true, data } : { ok: false, error: data?.detail ?? `HTTP ${res.status}` };
+      return res.ok ? { ok: true, data } : { ok: false, error: this._httpError(res.status, data) };
     } catch (err) {
       return { ok: false, error: err.message };
     }
+  }
+
+  _httpError(status, data) {
+    const detail = data && typeof data.detail === "string" ? data.detail : "request failed";
+    return `HTTP ${status}: ${detail}`;
   }
 }
 

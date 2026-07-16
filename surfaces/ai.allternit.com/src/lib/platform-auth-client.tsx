@@ -26,13 +26,15 @@ const SIGN_IN_URL = env("NEXT_PUBLIC_CLERK_SIGN_IN_URL") ?? "/sign-in"
 const SIGN_UP_URL = env("NEXT_PUBLIC_CLERK_SIGN_UP_URL") ?? "/sign-up"
 const desktopAuthEnabled = isDesktopAuthEnabled()
 const clerkDisabledByEnv = isClerkDisabledByEnv()
-const DESKTOP_BROWSER_AUTH_PATH_PREFIXES = ["/sign-in", "/sign-up", "/oauth", "/terminal/clerk", "/clerk_"]
+const DESKTOP_BROWSER_AUTH_PATH_PREFIXES = ["/sign-in", "/sign-up", "/pair", "/oauth", "/terminal/clerk", "/clerk_"]
 
 type DesktopSession = {
   userId: string
   userEmail: string
-  accessToken: string
   expiresAt: number
+  runtimeId: string
+  organizationId?: string
+  capabilities: string[]
 }
 
 export interface PlatformUser {
@@ -54,7 +56,7 @@ function useDesktopSession() {
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
-    if (!desktopAuthEnabled) {
+    if (!desktopAuthEnabled || !isDesktopShell()) {
       setIsLoaded(true)
       return
     }
@@ -82,23 +84,28 @@ function useDesktopSession() {
 
 function useDesktopBrowserAuthSurface() {
   const location = useLocation()
-  return desktopAuthEnabled &&
+  return desktopAuthEnabled && isDesktopShell() &&
     DESKTOP_BROWSER_AUTH_PATH_PREFIXES.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`))
 }
 
 export function isPlatformAuthDisabled() {
-  return clerkDisabledByEnv || (!desktopAuthEnabled && !ENV_PUBLISHABLE_KEY)
+  // When no Clerk key is baked in and desktop runtime pairing is not enabled,
+  // the PlatformAuthProvider falls back to buildDisabledAuthValue(). The auth
+  // gate must match that decision regardless of shell, otherwise a local-dev
+  // Electron build with no cloud credentials redirects to /sign-in and cannot
+  // proceed.
+  return clerkDisabledByEnv || !ENV_PUBLISHABLE_KEY
 }
 
 const clerkAppearance = {
   variables: {
-    colorBackground: "#17120E",
-    colorPrimary: "#D97757",
-    colorText: "#F5EDE3",
-    colorTextSecondary: "#A98A75",
-    colorInputBackground: "#110D0A",
-    colorInputText: "#F5EDE3",
-    colorNeutral: "#A98A75",
+    colorBackground: "#FFFEFC",
+    colorPrimary: "#1A1916",
+    colorText: "#0D0C0A",
+    colorTextSecondary: "#74716B",
+    colorInputBackground: "#FFFFFF",
+    colorInputText: "#0D0C0A",
+    colorNeutral: "#74716B",
     colorDanger: "#f87171",
     borderRadius: "16px",
     fontFamily: "inherit",
@@ -126,49 +133,49 @@ const clerkAppearance = {
       padding: "0",
     },
     headerTitle: {
-      color: "#F5EDE3",
+      color: "#0D0C0A",
       fontSize: "28px",
       fontWeight: "700",
       letterSpacing: "-0.03em",
     },
     headerSubtitle: {
-      color: "#A98A75",
+      color: "#74716B",
     },
     socialButtonsBlockButton: {
-      background: "#110D0A",
-      border: "1px solid var(--ui-border-muted)",
-      color: "#F5EDE3",
+      background: "#FFFFFF",
+      border: "1px solid #E1E0DC",
+      color: "#1A1916",
       boxShadow: "none",
     },
     socialButtonsBlockButtonText: {
-      color: "#F5EDE3",
+      color: "#1A1916",
     },
     dividerLine: {
-      background: "var(--ui-border-muted)",
+      background: "#E1E0DC",
     },
     dividerText: {
-      color: "#7E6556",
+      color: "#989590",
     },
     formFieldLabel: {
-      color: "#D6C2B1",
+      color: "#403E39",
     },
     formFieldInput: {
-      background: "#110D0A",
-      border: "1px solid var(--ui-border-muted)",
-      color: "#F5EDE3",
+      background: "#FFFFFF",
+      border: "1px solid #D7D5D0",
+      color: "#0D0C0A",
       boxShadow: "none",
     },
     formFieldInputShowPasswordButton: {
-      color: "#A98A75",
+      color: "#74716B",
     },
     formFieldInputShowPasswordButtonIcon: {
-      color: "#A98A75",
+      color: "#74716B",
     },
     footerActionText: {
-      color: "#A98A75",
+      color: "#74716B",
     },
     footerActionLink: {
-      color: "#D97757",
+      color: "#9A7658",
     },
     footer: {
       background: "transparent",
@@ -182,24 +189,24 @@ const clerkAppearance = {
       gap: "18px",
     },
     formButtonPrimary: {
-      background: "#D97757",
-      color: "#140F0B",
+      background: "#1A1916",
+      color: "#FAF9F7",
       boxShadow: "none",
       fontWeight: "700",
     },
     identityPreviewText: {
-      color: "#F5EDE3",
+      color: "#0D0C0A",
     },
     formResendCodeLink: {
-      color: "#D97757",
+      color: "#9A7658",
     },
     otpCodeFieldInput: {
-      background: "#110D0A",
-      border: "1px solid var(--ui-border-muted)",
-      color: "#F5EDE3",
+      background: "#FFFFFF",
+      border: "1px solid #D7D5D0",
+      color: "#0D0C0A",
     },
     alertText: {
-      color: "#F5EDE3",
+      color: "#0D0C0A",
     },
     alertClerkError: {
       background: "rgba(248,113,113,0.12)",
@@ -228,7 +235,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
   const selfHosted = companyConfig?.selfHosted ?? false
   const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
-  if (desktopAuthEnabled && !browserAuthSurface) {
+  if (desktopAuthEnabled && isDesktopShell() && !browserAuthSurface) {
     const value = buildDesktopAuthValue(session, desktopIsLoaded)
     return <PlatformAuthContext.Provider value={value}>{children}</PlatformAuthContext.Provider>
   }
@@ -332,10 +339,12 @@ function buildDesktopAuthValue(session: DesktopSession | null, isLoaded: boolean
       isLoaded,
       isSignedIn: Boolean(session),
       userId: session?.userId ?? null,
-      sessionId: null as string | null,
-      orgId: null as string | null,
+      sessionId: session?.runtimeId ?? null,
+      orgId: session?.organizationId ?? null,
       actor: null as unknown,
-      getToken: async () => session?.accessToken ?? null,
+      // Runtime credentials remain in Electron main. Requests to the local API
+      // are authorized by the desktop broker, never by renderer JavaScript.
+      getToken: async () => null,
     },
     signOut: async (_options?: unknown) => {
       await window.allternit?.auth?.signOut()
@@ -497,7 +506,7 @@ export function PlatformSignIn(props: {
           onClick={() => void handleDesktopSignIn()}
           disabled={starting}
           className={cn(
-            "w-full p-3 px-4 rounded-[10px] border-none bg-[#D97757] text-[#140F0B] text-[14px] font-bold transition-all",
+            "w-full p-3 px-4 rounded-[10px] border-none bg-[#1A1916] text-[#FAF9F7] text-[14px] font-bold transition-all",
             starting ? "cursor-not-allowed opacity-70" : "cursor-pointer"
           )}
         >

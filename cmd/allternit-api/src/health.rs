@@ -6,13 +6,7 @@
 //! - `GET /health/ready` — readiness probe (checks DB + JWKS + Gizzi runtime)
 
 use async_trait::async_trait;
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Json, Router};
 use serde::Serialize;
 use std::sync::Arc;
 use std::time::Duration;
@@ -52,7 +46,9 @@ impl HealthState for Arc<crate::AppState> {
             Err(_) => return false,
         };
         match client.get(format!("{}/v1/global/health", url)).send().await {
-            Ok(res) => res.status().is_success() || res.status() == reqwest::StatusCode::UNAUTHORIZED,
+            Ok(res) => {
+                res.status().is_success() || res.status() == reqwest::StatusCode::UNAUTHORIZED
+            }
             Err(_) => false,
         }
     }

@@ -83,13 +83,6 @@ printpdf = "0.6"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
-keyring = { version = "3", features = ["apple-native"] }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-keyring = { version = "3", features = ["linux-native-sync-persistent"] }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-keyring = { version = "3", features = ["windows-native"] }
 
 # Testing
 [dev-dependencies]

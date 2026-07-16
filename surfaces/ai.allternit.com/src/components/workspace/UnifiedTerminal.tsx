@@ -1,42 +1,52 @@
 /**
  * Unified Terminal Component
- * 
- * Combines single terminal and multi-pane grid modes.
- * Uses workspace-service for both modes (port 3021).
+ *
+ * Multi-tab terminal pane backed by the real platform PTY service
+ * (`/api/terminal/*`). Each tab is an independent shell session that streams
+ * output over Server-Sent Events and accepts stdin via HTTP POST.
+ *
+ * The chrome is styled as a liquid-glass surface so it matches the rest of
+ * Code Mode instead of the previous heavy solid-grey panels.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { workspaceClient, Pane } from '../../services/workspace/client';
-import { GlassCard } from '../../design/glass/GlassCard';
-import { SquaresFour, Square, Plus, X } from '@phosphor-icons/react';
+import {
+  SquaresFour,
+  Square,
+  Plus,
+  X,
+  Terminal as TerminalIcon,
+  Warning,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('UnifiedTerminal');
 
-// Dynamically import xterm only on client side
+// Dynamically import xterm only on the client side.
 let Terminal: typeof import('xterm').Terminal | null = null;
 let FitAddon: typeof import('xterm-addon-fit').FitAddon | null = null;
 
 async function loadXterm() {
   if (typeof window === 'undefined') return false;
   if (Terminal && FitAddon) return true;
-  
+
   const [xterm, xtermAddon] = await Promise.all([
     import('xterm'),
-    import('xterm-addon-fit')
+    import('xterm-addon-fit'),
   ]);
-  
+
   Terminal = xterm.Terminal;
   FitAddon = xtermAddon.FitAddon;
-  
-  // Import CSS only on client
+
   await import('xterm/css/xterm.css');
-  
   return true;
 }
 
 type TerminalMode = 'single' | 'grid';
+
+type TerminalTabStatus = 'connecting' | 'connected' | 'error';
 
 interface TerminalContext {
   repoName?: string;
@@ -45,56 +55,124 @@ interface TerminalContext {
 }
 
 interface UnifiedTerminalProps {
+  /** Code session id used to namespace terminal sessions. */
   sessionId?: string;
+  /** Working directory the shell should start in. */
   workingDir?: string;
   terminalContext?: TerminalContext;
 }
 
-// Single terminal component
-function TerminalInstance({ pane, isActive }: { 
-  pane: Pane; 
+interface TerminalSession {
+  id: string;
+  name: string;
+  remoteSessionId: string | null;
+  status: TerminalTabStatus;
+  errorMsg: string;
+}
+
+interface CreateTerminalResponse {
+  sessionId: string;
+}
+
+interface TerminalStreamMessage {
+  type: string;
+  data?: string;
+}
+
+function generateTabId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PTY service API
+// ─────────────────────────────────────────────────────────────────────────────
+
+function createTerminalSession(options: {
+  cwd?: string;
+  shell?: string;
+  cols?: number;
+  rows?: number;
+}): Promise<string> {
+  const response = await fetch('/api/terminal/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      shell: options.shell ?? '/bin/zsh',
+      cols: options.cols ?? 80,
+      rows: options.rows ?? 24,
+      cwd: options.cwd,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.details || `Failed to create terminal: ${response.status}`);
+  }
+
+  const { sessionId } = (await response.json()) as CreateTerminalResponse;
+  return sessionId;
+}
+
+async function sendTerminalInput(remoteSessionId: string, data: string): Promise<void> {
+  await fetch(`/api/terminal/${remoteSessionId}/input`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
+  });
+}
+
+async function closeTerminalSession(remoteSessionId: string): Promise<void> {
+  await fetch(`/api/terminal/${remoteSessionId}/close`, { method: 'POST' }).catch(() => {});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Single terminal surface
+// ─────────────────────────────────────────────────────────────────────────────
+
+function TerminalSurface({
+  remoteSessionId,
+  isActive,
+  onStatusChange,
+}: {
+  remoteSessionId: string;
   isActive: boolean;
+  onStatusChange: (status: TerminalTabStatus, errorMsg?: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<import('xterm').Terminal | null>(null);
   const fitAddonRef = useRef<import('xterm-addon-fit').FitAddon | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
+  const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current || !pane.id) return;
-
-    // Check if already initialized
-    if (termRef.current) return;
+    if (!containerRef.current) return;
 
     let mounted = true;
-    let fitTimeout: any;
 
     loadXterm().then((loaded) => {
       if (!loaded || !mounted || !containerRef.current) return;
 
-      console.debug('Initializing terminal for pane:', pane.id);
-
       const term = new Terminal!({
         cursorBlink: true,
         theme: {
-          background: '#1f2937',
-          foreground: '#f3f4f6',
-          cursor: '#f3f4f6',
+          background: 'rgba(10, 12, 14, 0.35)',
+          foreground: 'var(--text-primary, #f3f4f6)',
+          cursor: 'var(--text-primary, #f3f4f6)',
           black: '#111827',
-          red: '#ef4444',
-          green: '#10b981',
+          red: 'var(--status-error, #ef4444)',
+          green: 'var(--status-success, #10b981)',
           yellow: '#f59e0b',
-          blue: '#3b82f6',
+          blue: 'var(--status-info, #3b82f6)',
           magenta: '#8b5cf6',
-          cyan: 'var(--status-info)',
-          white: '#f3f4f6',
-          brightBlack: '#6b7280',
+          cyan: '#22d3ee',
+          white: 'var(--text-primary, #f3f4f6)',
+          brightBlack: 'var(--text-tertiary, #6b7280)',
           brightRed: '#f87171',
           brightGreen: '#34d399',
           brightYellow: '#fbbf24',
           brightBlue: '#60a5fa',
           brightMagenta: '#c084fc',
-          brightCyan: '#22d3ee',
+          brightCyan: '#67e8f9',
           brightWhite: '#f9fafb',
         },
         fontSize: 13,
@@ -104,370 +182,557 @@ function TerminalInstance({ pane, isActive }: {
         allowProposedApi: true,
       });
 
-      term.open(containerRef.current!);
+      term.open(containerRef.current);
 
       const fitAddon = new FitAddon!();
       term.loadAddon(fitAddon);
 
-      // Store refs
       termRef.current = term;
       fitAddonRef.current = fitAddon;
 
-      // Connect to workspace service
-      const wsUrl = workspaceClient.baseUrl.replace(/^http/, 'ws');
-      const encodedPaneId = encodeURIComponent(pane.id);
-      const socketUrl = `${wsUrl}/panes/${encodedPaneId}/logs`;
-      
-      console.debug('Connecting WebSocket:', socketUrl);
-      
-      const socket = new WebSocket(socketUrl);
-      socketRef.current = socket;
+      term.onData((data) => {
+        void sendTerminalInput(remoteSessionId, data);
+      });
 
-      socket.onopen = () => {
-        console.debug('WebSocket connected for pane:', pane.id);
-        term.writeln(`\x1b[1;32mConnected to ${pane.title || pane.id}\x1b[0m`);
+      const es = new EventSource(`/api/terminal/${remoteSessionId}/stream`);
+      esRef.current = es;
+
+      es.onopen = () => {
+        if (!mounted) return;
+        onStatusChange('connected');
       };
 
-      socket.onmessage = (event) => {
-        if (typeof event.data === 'string') {
+      es.onmessage = (event) => {
+        if (!mounted) return;
+        try {
+          const msg = JSON.parse(event.data) as TerminalStreamMessage;
+          if (msg.type === 'data' && msg.data) {
+            term.write(msg.data);
+          }
+        } catch {
+          // Raw data fallback.
           term.write(event.data);
         }
       };
 
-      socket.onclose = (e) => {
-        console.debug('WebSocket closed:', pane.id, 'code:', e.code);
-        term.writeln(`\r\n\x1b[1;31mDisconnected\x1b[0m`);
+      es.onerror = () => {
+        if (!mounted) return;
+        onStatusChange('error', 'Terminal stream disconnected');
       };
 
-      socket.onerror = (e) => {
-        console.error('WebSocket error:', pane.id, e);
-        term.writeln('\r\n\x1b[1;31mConnection error\x1b[0m');
-      };
-
-      term.onData((data) => {
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.send(data);
-        }
-      });
-
-      // Fit terminal after mount
-      fitTimeout = setTimeout(() => {
+      // Fit after mount.
+      requestAnimationFrame(() => {
         try {
           fitAddon.fit();
-          console.debug('Terminal fitted for pane:', pane.id);
-        } catch (e) {
-          logger.warn({ err: e }, 'Fit failed:');
+        } catch (err) {
+          logger.warn({ err }, 'Initial fit failed');
         }
-      }, 100);
+      });
     });
 
     return () => {
       mounted = false;
-      if (fitTimeout) clearTimeout(fitTimeout);
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-      if (termRef.current) {
-        termRef.current.dispose();
-        termRef.current = null;
-      }
+      esRef.current?.close();
+      esRef.current = null;
+      termRef.current?.dispose();
+      termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [pane.id, pane.title]);
+  }, [remoteSessionId, onStatusChange]);
 
-  // Handle resize
+  // Refit when the pane becomes active or its container resizes.
   useEffect(() => {
     if (!isActive || !fitAddonRef.current) return;
-    
     const timeout = setTimeout(() => {
       try {
         fitAddonRef.current?.fit();
-      } catch (e) {
-        // Ignore fit errors
+      } catch {
+        // Ignore fit errors.
       }
     }, 100);
-    
     return () => clearTimeout(timeout);
   }, [isActive]);
 
   return (
-    <div 
-      ref={containerRef} 
-      style={{ 
-        width: '100%', 
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%',
         height: '100%',
-        minHeight: 100,
-        background: '#1f2937',
-      }} 
+        minHeight: 80,
+        padding: 8,
+      }}
     />
   );
 }
 
-export function UnifiedTerminal({ sessionId = 'allternit-session', workingDir, terminalContext }: UnifiedTerminalProps) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Chrome helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const glassButton: React.CSSProperties = {
+  width: 26,
+  height: 26,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: '1px solid transparent',
+  borderRadius: 999,
+  background: 'transparent',
+  color: 'var(--text-tertiary)',
+  cursor: 'pointer',
+  transition: 'all 0.15s ease',
+};
+
+const glassButtonHover = {
+  background: 'rgba(255,255,255,0.06)',
+  color: 'var(--text-primary)',
+};
+
+function StatusDot({ status }: { status: TerminalTabStatus }) {
+  const color =
+    status === 'connected'
+      ? 'var(--status-success)'
+      : status === 'connecting'
+        ? 'var(--status-warning)'
+        : 'var(--status-error)';
+  return (
+    <span
+      style={{
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: color,
+        boxShadow: `0 0 6px ${color}`,
+      }}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function UnifiedTerminal({
+  sessionId = 'allternit-session',
+  workingDir,
+  terminalContext,
+}: UnifiedTerminalProps) {
   const [mode, setMode] = useState<TerminalMode>('single');
-  const [panes, setPanes] = useState<Pane[]>([]);
-  const [activePaneId, setActivePaneId] = useState<string | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [tabs, setTabs] = useState<TerminalSession[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const lastPaneCountRef = useRef(0);
+  const [serviceError, setServiceError] = useState<string | null>(null);
+  const tabsRef = useRef<TerminalSession[]>([]);
+  tabsRef.current = tabs;
 
-  // Ensure session exists
-  const ensureSession = useCallback(async () => {
-    if (!sessionId) return false;
-    try {
-      const sessions = await workspaceClient.listSessions();
-      const exists = sessions.some(s => s.name === sessionId || s.id === sessionId);
-      
-      if (!exists) {
-        console.debug('Creating session:', sessionId);
-        await workspaceClient.createSession({ name: sessionId, working_dir: workingDir });
-      }
-      return true;
-    } catch (err) {
-      logger.error({ err: err }, 'Failed to ensure session:');
-      setError('Failed to create session');
-      return false;
-    }
-  }, [sessionId]);
-
-  // Load panes - only log when count changes
-  const loadPanes = useCallback(async () => {
-    if (!sessionId) return;
-    try {
-      setError(null);
-      const paneList = await workspaceClient.listPanes(sessionId);
-      
-      // Only update state and log if pane count changed
-      if (paneList.length !== lastPaneCountRef.current) {
-        console.debug('Panes changed:', paneList.length, 'panes');
-        lastPaneCountRef.current = paneList.length;
-        setPanes(paneList);
-        if (paneList.length > 0 && !activePaneId) {
-          setActivePaneId(paneList[0].id);
-        }
-      }
-    } catch (err) {
-      logger.error({ err: err }, 'Failed to load panes:');
-      setError('Failed to load terminals');
-    }
-  }, [sessionId, activePaneId]);
-
-  // Initial load only - no polling
+  // Create the first terminal tab on mount.
   useEffect(() => {
-    workspaceClient.healthCheck().then((healthy) => {
-      setIsConnected(healthy);
-      if (healthy) {
-        ensureSession().then(() => loadPanes());
-      }
-    });
-  }, [ensureSession, loadPanes]);
+    let cancelled = false;
 
-  // Create new pane
-  const handleCreatePane = async () => {
-    if (!sessionId) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const sessionReady = await ensureSession();
-      if (!sessionReady) throw new Error('Session could not be created');
-      
-      const newPane = await workspaceClient.createPane(sessionId, {
-        name: `Terminal ${panes.length + 1}`,
+    const init = async () => {
+      try {
+        const remoteSessionId = await createTerminalSession({ cwd: workingDir });
+        if (cancelled) {
+          void closeTerminalSession(remoteSessionId);
+          return;
+        }
+        const id = generateTabId();
+        setTabs([{ id, name: 'Terminal 1', remoteSessionId, status: 'connecting', errorMsg: '' }]);
+        setActiveTabId(id);
+      } catch (err) {
+        if (cancelled) return;
+        setServiceError(err instanceof Error ? err.message : 'Terminal service unavailable');
+      }
+    };
+
+    void init();
+
+    return () => {
+      cancelled = true;
+      tabsRef.current.forEach((tab) => {
+        if (tab.remoteSessionId) void closeTerminalSession(tab.remoteSessionId);
       });
-      
-      // Wait for pane to be ready
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Refresh panes list
-      const updatedPanes = await workspaceClient.listPanes(sessionId);
-      setPanes(updatedPanes);
-      lastPaneCountRef.current = updatedPanes.length;
-      
-      setActivePaneId(newPane.id);
+    };
+  }, [sessionId, workingDir]);
+
+  const handleCreateTab = useCallback(async () => {
+    setIsLoading(true);
+    setServiceError(null);
+    try {
+      const remoteSessionId = await createTerminalSession({ cwd: workingDir });
+      const id = generateTabId();
+      const next: TerminalSession = {
+        id,
+        name: `Terminal ${tabs.length + 1}`,
+        remoteSessionId,
+        status: 'connecting',
+        errorMsg: '',
+      };
+      setTabs((prev) => [...prev, next]);
+      setActiveTabId(id);
     } catch (err) {
-      logger.error({ err: err }, 'Failed to create pane:');
-      setError('Failed to create terminal: ' + (err as Error).message);
+      setServiceError(err instanceof Error ? err.message : 'Failed to create terminal');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tabs.length, workingDir]);
 
-  // Close pane
-  const handleClosePane = async (paneId: string) => {
-    try {
-      await workspaceClient.deletePane(paneId);
-      const remaining = panes.filter(p => p.id !== paneId);
-      setPanes(remaining);
-      lastPaneCountRef.current = remaining.length;
-      if (activePaneId === paneId) {
-        setActivePaneId(remaining.length > 0 ? remaining[0].id : null);
+  const handleCloseTab = useCallback((tabId: string) => {
+    setTabs((prev) => {
+      const target = prev.find((t) => t.id === tabId);
+      if (target?.remoteSessionId) void closeTerminalSession(target.remoteSessionId);
+      const remaining = prev.filter((t) => t.id !== tabId);
+      if (activeTabId === tabId) {
+        setActiveTabId(remaining.length > 0 ? remaining[0].id : null);
       }
-    } catch (err) {
-      logger.error({ err: err }, 'Failed to close pane:');
-    }
-  };
+      return remaining;
+    });
+  }, [activeTabId]);
 
-  const activePane = panes.find(p => p.id === activePaneId) || panes[0];
+  const handleStatusChange = useCallback((tabId: string, status: TerminalTabStatus, errorMsg?: string) => {
+    setTabs((prev) =>
+      prev.map((t) => (t.id === tabId ? { ...t, status, errorMsg: errorMsg || '' } : t))
+    );
+  }, []);
+
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+  const anyConnecting = tabs.some((t) => t.status === 'connecting');
+  const allConnected = tabs.length > 0 && tabs.every((t) => t.status === 'connected');
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Toolbar */}
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--surface-canvas)',
+      }}
+    >
+      {/* Liquid-glass toolbar */}
       <div
         style={{
-          padding: '8px 12px',
+          padding: '8px 10px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderBottom: '1px solid #374151',
-          background: '#111827',
+          gap: 12,
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--glass-bg-thick)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
           flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#f3f4f6' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <TerminalIcon size={15} weight="duotone" style={{ color: 'var(--accent-code)' }} />
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 650,
+              color: 'var(--text-primary)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
             {terminalContext?.repoName ?? sessionId}
           </span>
+
           {terminalContext?.branch && (
             <span
               style={{
-                fontSize: 12,
-                color: '#9ca3af',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
+                fontSize: 11,
+                color: 'var(--text-secondary)',
                 padding: '2px 8px',
-                borderRadius: 4,
-                background: '#1f2937',
+                borderRadius: 999,
+                border: '1px solid var(--border-subtle)',
+                background: 'rgba(255,255,255,0.03)',
+                whiteSpace: 'nowrap',
               }}
             >
               {terminalContext.branch}
             </span>
           )}
+
           {terminalContext?.shortSha && (
             <span
               style={{
-                fontSize: 12,
+                fontSize: 11,
                 fontFamily: 'var(--font-mono)',
-                color: '#9ca3af',
+                color: 'var(--text-tertiary)',
                 padding: '2px 8px',
-                borderRadius: 4,
-                background: '#1f2937',
+                borderRadius: 999,
+                border: '1px solid var(--border-subtle)',
+                background: 'rgba(255,255,255,0.03)',
+                whiteSpace: 'nowrap',
               }}
             >
               {terminalContext.shortSha}
             </span>
           )}
+
           <span
             style={{
-              fontSize: 12,
-              color: isConnected ? '#10b981' : '#ef4444',
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 6,
+              fontSize: 11,
+              color: allConnected
+                ? 'var(--status-success)'
+                : anyConnecting
+                  ? 'var(--status-warning)'
+                  : 'var(--status-error)',
+              whiteSpace: 'nowrap',
             }}
           >
-            ● {isConnected ? 'Connected' : 'Disconnected'}
+            <StatusDot status={allConnected ? 'connected' : anyConnecting ? 'connecting' : 'error'} />
+            {allConnected ? 'Connected' : anyConnecting ? 'Connecting…' : 'Disconnected'}
           </span>
-          
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {/* Mode toggle */}
-          <div style={{ display: 'flex', gap: 4, marginLeft: 16 }}>
-            <button type="button"
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              padding: 2,
+              borderRadius: 999,
+              border: '1px solid var(--border-subtle)',
+              background: 'rgba(255,255,255,0.03)',
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Single terminal"
               onClick={() => setMode('single')}
               style={{
-                padding: '4px 8px',
-                background: mode === 'single' ? '#2563eb' : '#374151',
-                border: 'none',
-                borderRadius: 4,
-                color: '#f3f4f6',
-                fontSize: 12,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
+                ...glassButton,
+                width: 24,
+                height: 24,
+                ...(mode === 'single' ? { background: 'rgba(255,255,255,0.10)', color: 'var(--text-primary)' } : {}),
+              }}
+              onMouseEnter={(e) => {
+                if (mode !== 'single') Object.assign(e.currentTarget.style, glassButtonHover);
+              }}
+              onMouseLeave={(e) => {
+                if (mode !== 'single') {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-tertiary)';
+                }
               }}
             >
               <Square size={12} weight={mode === 'single' ? 'fill' : 'regular'} />
-              Single
             </button>
-            <button type="button"
+            <button
+              type="button"
+              aria-label="Terminal grid"
               onClick={() => setMode('grid')}
               style={{
-                padding: '4px 8px',
-                background: mode === 'grid' ? '#2563eb' : '#374151',
-                border: 'none',
-                borderRadius: 4,
-                color: '#f3f4f6',
-                fontSize: 12,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
+                ...glassButton,
+                width: 24,
+                height: 24,
+                ...(mode === 'grid' ? { background: 'rgba(255,255,255,0.10)', color: 'var(--text-primary)' } : {}),
+              }}
+              onMouseEnter={(e) => {
+                if (mode !== 'grid') Object.assign(e.currentTarget.style, glassButtonHover);
+              }}
+              onMouseLeave={(e) => {
+                if (mode !== 'grid') {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-tertiary)';
+                }
               }}
             >
               <SquaresFour size={12} weight={mode === 'grid' ? 'fill' : 'regular'} />
-              Grid ({panes.length})
             </button>
           </div>
-        </div>
 
-        <button type="button"
-          onClick={handleCreatePane}
-          disabled={isLoading}
-          style={{
-            padding: '6px 12px',
-            background: isLoading ? '#4b5563' : '#2563eb',
-            color: 'var(--ui-text-primary)',
-            border: 'none',
-            borderRadius: 6,
-            fontSize: 12,
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          <Plus size={14} />
-          {isLoading ? 'Creating...' : 'New Terminal'}
-        </button>
+          <button
+            type="button"
+            onClick={handleCreateTab}
+            disabled={isLoading}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '5px 10px',
+              borderRadius: 999,
+              border: '1px solid var(--border-subtle)',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--text-secondary)',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.7 : 1,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.10)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+          >
+            <Plus size={13} />
+            {isLoading ? '…' : 'New'}
+          </button>
+        </div>
       </div>
 
-      {/* Error message */}
-      {error && (
-        <div style={{
-          padding: '8px 12px',
-          background: '#ef444420',
-          borderBottom: '1px solid #ef4444',
-          color: 'var(--status-error)',
-          fontSize: 12,
-        }}>
-          {error}
+      {/* Service-level error */}
+      {serviceError && (
+        <div
+          style={{
+            padding: '8px 12px',
+            background: 'rgba(239,68,68,0.08)',
+            borderBottom: '1px solid rgba(239,68,68,0.25)',
+            color: 'var(--status-error)',
+            fontSize: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Warning size={14} />
+            {serviceError}
+          </span>
+          <button
+            type="button"
+            onClick={handleCreateTab}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 999,
+              border: '1px solid var(--border-subtle)',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'var(--text-secondary)',
+              fontSize: 11,
+              cursor: 'pointer',
+            }}
+          >
+            <ArrowsClockwise size={12} />
+            Retry
+          </button>
         </div>
       )}
 
-      {/* Content based on mode */}
-      <div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-        {panes.length === 0 ? (
-          <div style={{
-            height: '100%',
+      {/* Tabs */}
+      {tabs.length > 1 && mode === 'single' && (
+        <div
+          style={{
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#6b7280',
-            gap: 16,
-          }}>
-            <span>No terminals yet</span>
-            <button type="button"
-              onClick={handleCreatePane}
+            gap: 4,
+            padding: '6px 10px 0',
+            borderBottom: '1px solid var(--border-subtle)',
+            background: 'var(--surface-canvas)',
+            overflowX: 'auto',
+            flexShrink: 0,
+          }}
+        >
+          {tabs.map((tab) => (
+            <div
+              role="button"
+              tabIndex={0}
+              key={tab.id}
+              onClick={() => setActiveTabId(tab.id)}
               style={{
-                padding: '8px 16px',
-                background: '#2563eb',
-                color: 'var(--ui-text-primary)',
-                border: 'none',
-                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '5px 10px',
+                borderTopLeftRadius: 8,
+                borderTopRightRadius: 8,
+                border: '1px solid var(--border-subtle)',
+                borderBottom: 'none',
+                background: tab.id === activeTabId ? 'var(--surface-floating)' : 'rgba(255,255,255,0.02)',
+                color: tab.id === activeTabId ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <StatusDot status={tab.status} />
+              <span>{tab.name}</span>
+              {tabs.length > 1 && (
+                <button
+                  type="button"
+                  aria-label={`Close ${tab.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCloseTab(tab.id);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 16,
+                    height: 16,
+                    border: 'none',
+                    borderRadius: 999,
+                    background: 'transparent',
+                    color: 'var(--text-tertiary)',
+                    cursor: 'pointer',
+                    padding: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
+                    e.currentTarget.style.color = 'var(--status-error)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-tertiary)';
+                  }}
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Content */}
+      <div style={{ flex: 1, overflow: 'hidden', minHeight: 0, position: 'relative' }}>
+        {tabs.length === 0 ? (
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-tertiary)',
+              gap: 14,
+              padding: 24,
+              textAlign: 'center',
+            }}
+          >
+            <TerminalIcon size={28} weight="duotone" />
+            <span style={{ fontSize: 13 }}>No terminals yet</span>
+            <button
+              type="button"
+              onClick={handleCreateTab}
+              style={{
+                padding: '7px 14px',
+                borderRadius: 999,
+                border: '1px solid var(--border-subtle)',
+                background: 'rgba(255,255,255,0.06)',
+                color: 'var(--text-secondary)',
                 fontSize: 12,
+                fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
@@ -475,146 +740,139 @@ export function UnifiedTerminal({ sessionId = 'allternit-session', workingDir, t
             </button>
           </div>
         ) : mode === 'single' ? (
-          /* Single Mode */
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Pane tabs */}
-            {panes.length > 1 && (
-              <div style={{
-                display: 'flex',
-                gap: 2,
-                padding: '8px 12px 0',
-                background: '#111827',
-                borderBottom: '1px solid #374151',
-                overflowX: 'auto',
-                flexShrink: 0,
-              }}>
-                {panes.map(pane => (
-                  <div role="button" tabIndex={0}
-                    key={pane.id}
-                    onClick={() => setActivePaneId(pane.id)}
-                    style={{
-                      padding: '6px 12px',
-                      background: pane.id === activePaneId ? '#1f2937' : '#374151',
-                      borderTopLeftRadius: 6,
-                      borderTopRightRadius: 6,
-                      color: pane.id === activePaneId ? '#f3f4f6' : '#9ca3af',
-                      fontSize: 12,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      borderBottom: pane.id === activePaneId ? '2px solid #3b82f6' : 'none',
-                    }}
-                  >
-                    <span>{pane.title || `Terminal ${pane.pane_index}`}</span>
-                    {panes.length > 1 && (
-                      <button type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleClosePane(pane.id);
-                        }}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#9ca3af',
-                          cursor: 'pointer',
-                          padding: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Single terminal view - wrapped in border container */}
-            <div style={{ flex: 1, padding: 12, minHeight: 0 }}>
-              <div style={{
-                width: '100%',
-                height: '100%',
-                border: '2px solid #3b82f6',
-                borderRadius: 4,
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 8,
+              boxSizing: 'border-box',
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                borderRadius: 12,
+                border: '1px solid var(--border-subtle)',
+                background: 'rgba(8, 10, 12, 0.45)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
                 overflow: 'hidden',
-              }}>
-                {activePane && (
-                  <TerminalInstance 
-                    key={activePane.id}
-                    pane={activePane} 
-                    isActive={true}
-                  />
-                )}
-              </div>
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+              }}
+            >
+              {activeTab?.remoteSessionId && (
+                <TerminalSurface
+                  key={activeTab.remoteSessionId}
+                  remoteSessionId={activeTab.remoteSessionId}
+                  isActive
+                  onStatusChange={(status, errorMsg) =>
+                    handleStatusChange(activeTab.id, status, errorMsg)
+                  }
+                />
+              )}
             </div>
           </div>
         ) : (
-          /* Grid Mode */
-          <div style={{ 
-            height: '100%',
-            display: 'grid',
-            gridTemplateColumns: panes.length === 1 ? '1fr' : 'repeat(2, 1fr)',
-            gridTemplateRows: panes.length <= 2 ? '1fr' : 'repeat(2, 1fr)',
-            gap: 12,
-            padding: 12,
-            overflow: 'auto',
-          }}>
-            {panes.map((pane) => (
-              <GlassCard
-                key={pane.id}
+          <div
+            style={{
+              height: '100%',
+              display: 'grid',
+              gridTemplateColumns: tabs.length === 1 ? '1fr' : 'repeat(2, 1fr)',
+              gridTemplateRows: tabs.length <= 2 ? '1fr' : 'repeat(2, 1fr)',
+              gap: 8,
+              padding: 8,
+              overflow: 'auto',
+              boxSizing: 'border-box',
+            }}
+          >
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
                 style={{
-                  background: '#1f2937',
-                  border: pane.id === activePaneId ? '2px solid #3b82f6' : '1px solid #374151',
+                  borderRadius: 12,
+                  border: `1px solid ${tab.id === activeTabId ? 'var(--accent-code)' : 'var(--border-subtle)'}`,
+                  background: 'rgba(8, 10, 12, 0.45)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
                   display: 'flex',
                   flexDirection: 'column',
                   overflow: 'hidden',
-                  minHeight: 150,
+                  minHeight: 120,
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
                 }}
               >
-                {/* Header */}
                 <div
                   style={{
-                    padding: '6px 12px',
-                    background: pane.id === activePaneId ? '#2563eb' : '#161b22',
+                    padding: '5px 8px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    background: 'rgba(255,255,255,0.03)',
                     flexShrink: 0,
                   }}
                 >
-                  <span style={{ fontSize: 12, color: '#f3f4f6', fontWeight: 500 }}>
-                    {pane.title || `Terminal ${pane.pane_index}`}
-                  </span>
-                  <button type="button"
-                    onClick={() => handleClosePane(pane.id)}
+                  <span
                     style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#9ca3af',
-                      cursor: 'pointer',
-                      padding: '2px',
+                      fontSize: 11,
+                      color: 'var(--text-secondary)',
+                      fontWeight: 600,
                       display: 'flex',
                       alignItems: 'center',
+                      gap: 6,
                     }}
                   >
-                    <X size={14} />
+                    <StatusDot status={tab.status} />
+                    {tab.name}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Close ${tab.name}`}
+                    onClick={() => handleCloseTab(tab.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 20,
+                      height: 20,
+                      border: 'none',
+                      borderRadius: 999,
+                      background: 'transparent',
+                      color: 'var(--text-tertiary)',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
+                      e.currentTarget.style.color = 'var(--status-error)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'var(--text-tertiary)';
+                    }}
+                  >
+                    <X size={12} />
                   </button>
                 </div>
-
-                {/* Terminal */}
-                <div role="button" tabIndex={0} 
-                  style={{ flex: 1, minHeight: 0, padding: 4 }}
-                  onClick={() => setActivePaneId(pane.id)}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  style={{ flex: 1, minHeight: 0 }}
+                  onClick={() => setActiveTabId(tab.id)}
                 >
-                  <TerminalInstance 
-                    key={pane.id}
-                    pane={pane} 
-                    isActive={pane.id === activePaneId}
-                  />
+                  {tab.remoteSessionId && (
+                    <TerminalSurface
+                      key={tab.remoteSessionId}
+                      remoteSessionId={tab.remoteSessionId}
+                      isActive={tab.id === activeTabId}
+                      onStatusChange={(status, errorMsg) =>
+                        handleStatusChange(tab.id, status, errorMsg)
+                      }
+                    />
+                  )}
                 </div>
-              </GlassCard>
+              </div>
             ))}
           </div>
         )}
@@ -622,3 +880,5 @@ export function UnifiedTerminal({ sessionId = 'allternit-session', workingDir, t
     </div>
   );
 }
+
+export default UnifiedTerminal;

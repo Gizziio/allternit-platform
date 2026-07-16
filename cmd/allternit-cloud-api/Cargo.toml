@@ -52,6 +52,13 @@ tokio-stream = { workspace = true, features = ["sync"] }
 futures = { workspace = true }
 rand = { workspace = true }
 md5 = "0.7"
+base64 = { workspace = true }
+bytes = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+ed25519-dalek = { workspace = true }
+jsonwebtoken = "10"
+reqwest = { workspace = true, features = ["json"] }
 cron = "0.12"
 tempfile = { workspace = true }
 regex = { workspace = true }

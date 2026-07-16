@@ -63,7 +63,10 @@ impl Default for RunStatus {
 impl RunStatus {
     /// Check if the run is in a terminal state
     pub fn is_terminal(&self) -> bool {
-        matches!(self, RunStatus::Completed | RunStatus::Failed | RunStatus::Cancelled)
+        matches!(
+            self,
+            RunStatus::Completed | RunStatus::Failed | RunStatus::Cancelled
+        )
     }
 
     /// Check if the run is active (can be paused/cancelled)
@@ -79,34 +82,34 @@ impl RunStatus {
             (Pending, Planning) => true,
             (Pending, Queued) => true,
             (Pending, Cancelled) => true,
-            
+
             // From Planning
             (Planning, Queued) => true,
             (Planning, Running) => true,
             (Planning, Failed) => true,
             (Planning, Cancelled) => true,
-            
+
             // From Queued
             (Queued, Running) => true,
             (Queued, Failed) => true,
             (Queued, Cancelled) => true,
-            
+
             // From Running
             (Running, Paused) => true,
             (Running, Completed) => true,
             (Running, Failed) => true,
             (Running, Cancelled) => true,
-            
+
             // From Paused
             (Paused, Running) => true,
             (Paused, Failed) => true,
             (Paused, Cancelled) => true,
-            
+
             // Terminal states - no transitions
             (Completed, _) => false,
             (Failed, _) => false,
             (Cancelled, _) => false,
-            
+
             _ => false,
         }
     }
@@ -274,7 +277,9 @@ impl QueuedJob {
 impl Ord for QueuedJob {
     fn cmp(&self, other: &Self) -> Ordering {
         // Higher priority comes first
-        other.priority.cmp(&self.priority)
+        other
+            .priority
+            .cmp(&self.priority)
             // Then earlier creation time
             .then_with(|| self.created_at.cmp(&other.created_at))
     }
@@ -366,39 +371,39 @@ pub enum EventType {
     RunCancelled,
     RunPaused,
     RunResumed,
-    
+
     // Step events
     StepStarted,
     StepCompleted,
     StepFailed,
     StepSkipped,
-    
+
     // Output events
     Stdout,
     Stderr,
     Output,
-    
+
     // Tool events
     ToolCall,
     ToolResult,
-    
+
     // Approval events
     ApprovalNeeded,
     ApprovalGiven,
     ApprovalDenied,
     ApprovalTimeout,
-    
+
     // Checkpoint events
     CheckpointCreated,
     CheckpointRestored,
-    
+
     // Job events
     JobQueued,
     JobStarted,
     JobCompleted,
     JobFailed,
     JobCancelled,
-    
+
     // System events
     Heartbeat,
     Warning,
@@ -674,7 +679,8 @@ pub struct ApprovalRequest {
     /// When the approval was created
     pub created_at: DateTime<Utc>,
     /// When the approval was responded to
-    pub responded_at: Option<DateTime<Utc>>,}
+    pub responded_at: Option<DateTime<Utc>>,
+}
 
 /// Summary of approval request for list views
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
@@ -977,7 +983,8 @@ impl From<Task> for TaskResponse {
             priority: task.priority,
             estimated_minutes: task.estimated_minutes,
             deadline: task.deadline.map(|d| d.to_rfc3339()),
-            assignee_type: task.assignee_type
+            assignee_type: task
+                .assignee_type
                 .and_then(|a| serde_json::to_value(&a).ok())
                 .and_then(|v| v.as_str().map(|s| s.to_string())),
             assignee_id: task.assignee_id,
@@ -985,7 +992,8 @@ impl From<Task> for TaskResponse {
             assignee_avatar: task.assignee_avatar,
             dependencies: task.dependencies.map(|d| d.0).unwrap_or_default(),
             optimize_rank: task.optimize_rank,
-            risk: task.risk
+            risk: task
+                .risk
                 .and_then(|r| serde_json::to_value(&r).ok())
                 .and_then(|v| v.as_str().map(|s| s.to_string())),
             created_at: task.created_at.to_rfc3339(),

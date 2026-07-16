@@ -5,15 +5,18 @@
  * what the active policy is (write paths, network access).
  *
  * State is in-memory — it dies with the server process. That's intentional:
- * sandbox opt-in is a session-level decision, not a persistent config.
+ * this is a runtime decision, not a persistent config.
  *
- * The `/sandbox` slash command toggles this per session.
- * The GIZZI_SANDBOX env var enables it globally for all sessions.
+ * Sandboxing is on by default (see bash.ts); this module tracks explicit
+ * per-session overrides plus the `/sandbox` command's process-wide default
+ * (keyed by DEFAULT_SESSION_KEY — see getEffective). GIZZI_SANDBOX_DISABLE is
+ * the intentional opt-out.
  */
 import type { SandboxPolicy } from "@/runtime/integrations/shell/sandbox"
 import { Sandbox } from "@/runtime/integrations/shell/sandbox"
 import { Log } from "@/shared/util/log"
 import { Instance } from "@/runtime/context/project/instance"
+import { Flag } from "@/runtime/context/flag/flag.ts"
 
 const log = Log.create({ service: "session-sandbox" })
 
@@ -25,10 +28,19 @@ export interface SandboxState {
 
 const states = new Map<string, SandboxState>()
 
+/**
+ * Key for the process-wide toggle driven by the `/sandbox` TUI command, which
+ * has no per-session context of its own. Per-session state (set via the API/
+ * flag path) always takes precedence over this default when both exist.
+ */
+export const DEFAULT_SESSION_KEY = "__default__"
+
 function defaultPolicy(): SandboxPolicy {
   return {
     allowWritePaths: [Instance.directory],
-    allowNetwork: true,  // agents need npm/pip/cargo — network on by default
+    // Deny by default — matches Claude Code. Agents that need npm/pip/cargo
+    // must opt in via GIZZI_SANDBOX_ALLOW_NETWORK or an explicit policy override.
+    allowNetwork: false,
   }
 }
 
@@ -36,6 +48,34 @@ export namespace SessionSandbox {
   /** Get the current sandbox state for a session. Returns null if not configured. */
   export function get(sessionID: string): SandboxState | null {
     return states.get(sessionID) ?? null
+  }
+
+  /**
+   * Get the state that actually applies to a session: an explicit per-session
+   * override if one was set, otherwise the process-wide default (the `/sandbox`
+   * command's toggle). This is what enforcement call sites (e.g. the Bash tool)
+   * should read, instead of `get`, so the visible `/sandbox` command actually
+   * changes what gets enforced.
+   */
+  export function getEffective(sessionID: string): SandboxState | null {
+    return states.get(sessionID) ?? states.get(DEFAULT_SESSION_KEY) ?? null
+  }
+
+  /**
+   * Get the effective state, auto-enabling it with defaults on first use if
+   * nothing is configured yet and the caller hasn't opted out
+   * (GIZZI_SANDBOX_DISABLE / --dangerously-skip-sandbox). Every enforcement
+   * call site (Bash, file writes) should call this rather than re-implementing
+   * "sandboxed unless explicitly turned off" independently.
+   */
+  export function ensureDefault(sessionID: string, extraWritePaths: string[] = []): SandboxState | null {
+    const existing = getEffective(sessionID)
+    if (existing) return existing
+    if (Flag.GIZZI_SANDBOX_DISABLE) return null
+    return enable(sessionID, {
+      allowWritePaths: extraWritePaths,
+      allowNetwork: Flag.GIZZI_SANDBOX_ALLOW_NETWORK,
+    })
   }
 
   /**
@@ -58,12 +98,22 @@ export namespace SessionSandbox {
     return state
   }
 
-  /** Disable sandbox for a session. Cleans up any profile files. */
+  /**
+   * Disable sandbox for a session. Cleans up any profile files.
+   *
+   * Always records an explicit `{ enabled: false }` entry, even if nothing
+   * was enabled yet -- sandboxing is on by default (see ensureDefault), so a
+   * no-op early return here would mean "disable" silently failed to override
+   * that default the first time it's called for a session.
+   */
   export async function disable(sessionID: string): Promise<void> {
     const state = states.get(sessionID)
-    if (!state) return
-    state.enabled = false
-    states.set(sessionID, state)
+    if (state) {
+      state.enabled = false
+      states.set(sessionID, state)
+    } else {
+      states.set(sessionID, { enabled: false, policy: defaultPolicy(), driver: Sandbox.detect() })
+    }
     // Clean up macOS profile file if one was written
     await Sandbox.cleanupProfile(sessionID)
     log.info("sandbox disabled", { sessionID })

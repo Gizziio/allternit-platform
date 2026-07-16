@@ -28,27 +28,28 @@ User calls createWorkspace()
 ### Step 1: Check Electron Sidecar (Desktop)
 
 ```typescript
-// Running in Electron?
+// Running in the signed Electron shell?
 if (window.allternitSidecar) {
-  // Ask Electron main process: "Is TUI running?"
-  const status = await window.allternitSidecar.getStatus();
+  // Electron main returns a brokered URL. The internal Gizzi credential is
+  // injected by the main process; renderer code never sees it.
+  const apiUrl = await window.allternitSidecar.getApiUrl();
   
-  if (status === 'running') {
-    // ✅ Found TUI! Use HTTP backend
-    return createHttpWorkspace(path, apiUrl, auth);
+  if (apiUrl) {
+    // ✅ Found a local runtime! Use HTTP backend through the broker
+    return createHttpWorkspace(path, apiUrl);
   }
 }
 ```
 
 **When this triggers:**
 - ✅ Electron Shell app
-- ✅ TUI spawned successfully
-- ✅ Result: **Uses HTTP (TUI)**
+- ✅ Local Gizzi/runtime spawned successfully
+- ✅ Result: **Uses HTTP (TUI) via the credential broker**
 
-### Step 2: Check Common Ports (Fallback)
+### Step 2: Check Common Ports (Browser Fallback)
 
 ```typescript
-// Try common ports: 3010, 8080, 3000, etc.
+// Browser development only: try common ports 3010, 8080, 3000, etc.
 for (const port of [3010, 8080, 3000, ...]) {
   const isHealthy = await checkHealth(`http://localhost:${port}`);
   if (isHealthy) {
@@ -59,30 +60,15 @@ for (const port of [3010, 8080, 3000, ...]) {
 ```
 
 **When this triggers:**
+- ✅ Running in a browser during local development
 - ✅ TUI running manually (user started it)
 - ✅ TUI on non-standard port
 - ✅ Result: **Uses HTTP (TUI)**
 
-### Step 3: Check Persisted Config
+> Note: persisted sidecar config and Basic-auth credentials are no longer exposed
+> to renderer code. Provider secrets are owned by the Gizzi runtime.
 
-```typescript
-// Check if we had a working server before
-const config = await window.allternitSidecar?.getPersistedConfig();
-if (config) {
-  const isHealthy = await checkHealth(config.apiUrl);
-  if (isHealthy) {
-    // ✅ Previous server still running! Use HTTP
-    return createHttpWorkspace(path, config.apiUrl);
-  }
-}
-```
-
-**When this triggers:**
-- ✅ Reopening app after restart
-- ✅ TUI still running from before
-- ✅ Result: **Uses HTTP (TUI)**
-
-### Step 4: Fall Back to WASM (Last Resort)
+### Step 3: Fall Back to WASM (Last Resort)
 
 ```typescript
 // No TUI found anywhere

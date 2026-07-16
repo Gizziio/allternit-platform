@@ -31,12 +31,26 @@ dependencies = [
     "numpy>=1.24.0",
 ]
 
+[project.scripts]
+allternit-computer = "gateway.daemon:main"
+allternit-computer-mcp = "canonical_mcp.server:main"
+
 [project.optional-dependencies]
 # Browser automation dependencies
 browser = [
     "playwright>=1.40.0",
     "websocket-client>=1.6.0",
     "requests>=2.31.0",
+]
+
+gateway = [
+    "fastapi>=0.110.0",
+    "pydantic>=2.0.0",
+    "uvicorn[standard]>=0.27.0",
+]
+
+mcp = [
+    "mcp>=1.0.0",
 ]
 
 # Desktop automation dependencies
@@ -111,10 +125,17 @@ Repository = "https://github.com/allternit/computer-use"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["adapters*", "core*"]
+include = ["adapters*", "canonical_mcp*", "contracts*", "core*", "gateway*", "observability*", "providers*", "sandbox*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "*.yaml", "*.yml"]
+
+[tool.setuptools.data-files]
+"share/allternit-computer/launchd" = ["packaging/launchd/*.plist"]
+"share/allternit-computer/systemd" = ["packaging/systemd/*.service"]
+"share/allternit-computer/windows" = ["packaging/windows/*.xml"]
+"share/allternit-computer" = ["packaging/README.md"]
+"share/allternit-computer/evaluation" = ["evaluation/datasets/*.json"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

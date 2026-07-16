@@ -4,18 +4,18 @@
 //! Supports development mode bypass via environment variable.
 
 use axum::{
+    body::Body,
     extract::{Request, State},
     http::{header, StatusCode},
     middleware::Next,
     response::Response,
-    body::Body,
 };
+use std::env;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use tower::{Layer, Service};
-use std::future::Future;
-use std::pin::Pin;
-use std::env;
 
 use crate::auth::models::AuthenticatedUser;
 use crate::ApiState;
@@ -49,11 +49,11 @@ impl AuthLayer {
         let development_mode = env::var("Allternit_API_DEVELOPMENT_MODE")
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
-        
+
         if development_mode {
             tracing::warn!("API running in DEVELOPMENT MODE - authentication disabled");
         }
-        
+
         Self { development_mode }
     }
 
@@ -91,11 +91,11 @@ impl<S> AuthMiddleware<S> {
     /// Extract Bearer token from Authorization header
     fn extract_token(headers: &axum::http::HeaderMap) -> Option<String> {
         let auth_header = headers.get(header::AUTHORIZATION)?.to_str().ok()?;
-        
+
         if !auth_header.starts_with("Bearer ") {
             return None;
         }
-        
+
         Some(auth_header[7..].to_string())
     }
 
@@ -106,13 +106,13 @@ impl<S> AuthMiddleware<S> {
         if token == "dev-api-token" {
             return Some(AuthenticatedUser::development_user());
         }
-        
+
         // Check if token starts with "allternit_" (our token format)
         if token.starts_with("allternit_") && token.len() >= 32 {
             // Placeholder: In production, hash the token and look it up in the database
             // let token_hash = sha256::digest(token);
             // let db_token = sqlx::query_as::<_, ApiToken>(...)
-            
+
             // For now, return a mock user with limited permissions
             return Some(AuthenticatedUser {
                 user_id: format!("user_{}", &token[4..12]),
@@ -125,7 +125,7 @@ impl<S> AuthMiddleware<S> {
                 ],
             });
         }
-        
+
         None
     }
 }
@@ -147,7 +147,7 @@ where
     fn call(&mut self, mut req: Request<B>) -> Self::Future {
         let development_mode = self.development_mode;
         let mut inner = self.inner.clone();
-        
+
         Box::pin(async move {
             // Development mode: bypass authentication
             if development_mode {
@@ -155,10 +155,10 @@ where
                 req.extensions_mut().insert(auth_context);
                 return inner.call(req).await;
             }
-            
+
             // Extract and validate token
             let token = Self::extract_token(req.headers());
-            
+
             match token {
                 Some(token) => {
                     // Create a simple auth middleware instance for validation
@@ -166,7 +166,7 @@ where
                         inner: inner.clone(),
                         development_mode,
                     };
-                    
+
                     match this.validate_token(&token).await {
                         Some(user) => {
                             let auth_context = AuthContext {
@@ -209,13 +209,13 @@ pub async fn auth_middleware(
     let development_mode = env::var("Allternit_API_DEVELOPMENT_MODE")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
-    
+
     if development_mode {
         let mut request = request;
         request.extensions_mut().insert(AuthContext::development());
         return next.run(request).await;
     }
-    
+
     // Extract token
     let token = request
         .headers()
@@ -228,7 +228,7 @@ pub async fn auth_middleware(
                 None
             }
         });
-    
+
     match token {
         Some(token) => {
             // Validate against database
@@ -241,18 +241,16 @@ pub async fn auth_middleware(
                     });
                     next.run(request).await
                 }
-                Ok(None) => {
-                    unauthorized_response("Invalid or expired token")
-                }
+                Ok(None) => unauthorized_response("Invalid or expired token"),
                 Err(e) => {
                     tracing::error!("Token validation error: {}", e);
                     unauthorized_response("Token validation failed")
                 }
             }
         }
-        None => {
-            unauthorized_response_with_www_authenticate("Authorization header with Bearer token required")
-        }
+        None => unauthorized_response_with_www_authenticate(
+            "Authorization header with Bearer token required",
+        ),
     }
 }
 
@@ -261,10 +259,10 @@ async fn validate_token_against_db(
     token: &str,
 ) -> Result<Option<AuthenticatedUser>, sqlx::Error> {
     use crate::auth::models::ApiToken;
-    
+
     // Simple hash for lookup (in production, use proper hashing)
     let token_hash = format!("{:x}", md5::compute(token.as_bytes()));
-    
+
     let db_token: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
         r#"
         SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
@@ -275,21 +273,19 @@ async fn validate_token_against_db(
     .bind(&token_hash)
     .fetch_optional(db)
     .await?;
-    
+
     if let Some(token_record) = db_token {
         // Check expiration
         if token_record.is_expired() {
             return Ok(None);
         }
-        
+
         // Update last_used_at
-        let _ = sqlx::query(
-            "UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?"
-        )
-        .bind(&token_record.id)
-        .execute(db)
-        .await;
-        
+        let _ = sqlx::query("UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?")
+            .bind(&token_record.id)
+            .execute(db)
+            .await;
+
         let permissions = token_record.permissions();
         return Ok(Some(AuthenticatedUser {
             user_id: token_record.user_id,
@@ -297,12 +293,12 @@ async fn validate_token_against_db(
             permissions,
         }));
     }
-    
+
     // Fallback: check for dev token
     if token == "dev-api-token" {
         return Ok(Some(AuthenticatedUser::development_user()));
     }
-    
+
     Ok(None)
 }
 

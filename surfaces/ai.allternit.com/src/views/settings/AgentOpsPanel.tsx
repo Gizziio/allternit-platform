@@ -29,6 +29,7 @@ import {
   X,
   ChartBar,
   Code,
+  Robot,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/logger';
@@ -37,12 +38,14 @@ import { PanelHeader } from '@/components/settings/PanelHeader';
 import { Toggle } from '@/components/settings/Toggle';
 import { SettingsCard } from '@/components/settings/SettingsCard';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from '@/components/settings/buttonStyles';
+import { AgentView } from '../AgentView';
+import { useAgentStore } from '@/lib/agents/agent.store';
 
 const logger = createModuleLogger('AgentOpsPanel');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AgentOpsTab = 'evaluation' | 'factory' | 'gc';
+type AgentOpsTab = 'setup' | 'evaluation' | 'factory' | 'gc';
 
 interface GcIssue {
   id: string;
@@ -264,7 +267,8 @@ const ToastContainer = ({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: 
 // ─── Panel ────────────────────────────────────────────────────────────────────
 
 export function AgentOpsPanel() {
-  const [agentOpsTab, setAgentOpsTab] = useState<AgentOpsTab>('evaluation');
+  const [agentOpsTab, setAgentOpsTab] = useState<AgentOpsTab>('setup');
+  const { setIsCreating: setIsCreatingAgent } = useAgentStore();
 
   // Evaluation state
   const [evaluations, setEvaluations] = useState<any[]>([]);
@@ -408,6 +412,7 @@ export function AgentOpsPanel() {
       const results = await api.getEvaluationResults(evalId);
       setEvalResults(results);
       fetchEvaluations();
+      fetchBenchmarkHistory();
     } catch {
       setEvalResults(null);
     }
@@ -992,6 +997,7 @@ export function AgentOpsPanel() {
     <div>
       <div className="flex gap-1 p-1 bg-[var(--bg-secondary)] rounded-xl border border-solid border-[var(--border-subtle)] mb-6">
         {[
+          { id: 'setup', label: 'My Agents', icon: <Robot size={16} /> },
           { id: 'evaluation', label: 'Evaluation Harness', icon: <ChartBar size={16} /> },
           { id: 'factory', label: 'Code Factory', icon: <Code size={16} /> },
           { id: 'gc', label: 'GC Agents', icon: <Recycle size={16} /> },
@@ -1010,6 +1016,16 @@ export function AgentOpsPanel() {
           </button>
         ))}
       </div>
+      {agentOpsTab === 'setup' && (
+        <div className="flex flex-col gap-4 min-h-[520px]">
+          <PanelHeader title="My Agents">
+            <button type="button" onClick={() => setIsCreatingAgent(true)} className={QUIET_BUTTON_CLASS}>
+              <Plus size={14} /> Create Agent
+            </button>
+          </PanelHeader>
+          <AgentView title="Agents" hideHeader showLandingOnEntry={false} compactGrid />
+        </div>
+      )}
       {agentOpsTab === 'evaluation' && renderEvaluationTab()}
       {agentOpsTab === 'factory' && renderFactoryTab()}
       {agentOpsTab === 'gc' && renderGCTab()}

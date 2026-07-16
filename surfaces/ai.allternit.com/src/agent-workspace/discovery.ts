@@ -60,7 +60,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
   }
 
   const sidecar = window.allternitSidecar;
-  if (!hasSidecarMethods(sidecar, ['getStatus', 'getApiUrl', 'getBasicAuth'])) {
+  if (!hasSidecarMethods(sidecar, ['getStatus', 'getApiUrl'])) {
     logger.debug('Electron sidecar API unavailable in this shell');
     return null;
   }
@@ -73,11 +73,9 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
       return null;
     }
 
-    // Get API URL and credentials
-    const [apiUrl, basicAuth] = await Promise.all([
-      sidecar.getApiUrl!(),
-      sidecar.getBasicAuth!(),
-    ]);
+    // Electron returns a custom URL whose requests are credential-brokered in
+    // the signed main process.
+    const apiUrl = await sidecar.getApiUrl!();
 
     if (!apiUrl) {
       logger.debug('Electron sidecar has no API URL');
@@ -85,7 +83,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
     }
 
     // Verify health
-    const isHealthy = await healthCheck(apiUrl, basicAuth?.header);
+    const isHealthy = await healthCheck(apiUrl);
     if (!isHealthy) {
       logger.debug('Electron sidecar unhealthy');
       return null;
@@ -95,50 +93,9 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
     return {
       url: apiUrl,
       source: 'electron',
-      username: basicAuth?.username,
-      password: basicAuth?.password,
     };
   } catch (error) {
     logger.error({ err: error }, 'Electron discovery failed');
-    return null;
-  }
-}
-
-/**
- * Discover server from persisted configuration
- */
-async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
-  if (!isElectron()) {
-    return null;
-  }
-
-  const sidecar = window.allternitSidecar;
-  if (!hasSidecarMethods(sidecar, ['getPersistedConfig'])) {
-    logger.debug('Persisted sidecar config API unavailable in this shell');
-    return null;
-  }
-
-  try {
-    const config = await sidecar.getPersistedConfig!();
-    if (!config) {
-      return null;
-    }
-
-    // Verify the persisted server is still running
-    const isHealthy = await healthCheck(config.apiUrl);
-    if (!isHealthy) {
-      logger.debug('Persisted server no longer available');
-      return null;
-    }
-
-    console.debug('[Discovery] Found server via persisted config:', config.apiUrl);
-    return {
-      url: config.apiUrl,
-      source: 'persisted',
-      password: config.password,
-    };
-  } catch (error) {
-    logger.error({ err: error }, 'Persisted config discovery failed');
     return null;
   }
 }
@@ -199,15 +156,7 @@ export async function discoverServer(
     }
   }
 
-  // Strategy 2: Persisted configuration
-  if (isElectron()) {
-    const persistedServer = await discoverFromPersisted();
-    if (persistedServer) {
-      return persistedServer;
-    }
-  }
-
-  // Strategy 3: Port scan
+  // Strategy 2: Port scan (browser development only)
   if (allowPortScan) {
     const scannedServer = await discoverFromPortScan();
     if (scannedServer) {
@@ -230,24 +179,12 @@ export async function isServerAvailable(
   return healthCheck(url, authHeader, timeout);
 }
 
-/**
- * Get the WebSocket URL for a given HTTP URL
- */
-function getWebSocketUrl(httpUrl: string): string {
-  const url = new URL(httpUrl);
-  const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${url.host}/ws`;
-}
-
 // Extend Window interface for TypeScript
 declare global {
   interface Window {
     allternitSidecar?: {
       getStatus?: () => Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'>;
       getApiUrl?: () => Promise<string | undefined>;
-      getBasicAuth?: () => Promise<{ username: string; password: string; header: string } | undefined>;
-      getPersistedConfig?: () => Promise<{ apiUrl: string; password: string; port: number } | null>;
-      clearPersistedConfig?: () => Promise<boolean>;
     };
     process?: {
       versions?: {

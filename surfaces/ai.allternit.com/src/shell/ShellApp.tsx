@@ -32,6 +32,7 @@ import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
+import { useCodeModeStore } from '../views/code/CodeModeStore';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
@@ -85,6 +86,10 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
 
 // Inner app component that uses mode context
 function ShellAppInner(): React.ReactNode {
+  const detachedParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const detachedSessionId = detachedParams.get('detachedSessionId');
+  const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
+  const isDetachedCodeSession = detachedParams.get('detachedSurface') === 'code' && Boolean(detachedSessionId);
   const [nav, dispatch] = useReducer(navReducer, undefined, createInitialNavState);
   const active = selectActiveView(nav)!;
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
@@ -116,6 +121,14 @@ function ShellAppInner(): React.ReactNode {
   // (e.g. opening Dispatch while in browser mode). When true, the mode-to-view
   // sync effect should not override the view that just opened.
   const modeChangeSourceRef = useRef<'initial' | 'user' | 'sync'>('initial');
+
+  useEffect(() => {
+    if (!isDetachedCodeSession || !detachedSessionId) return;
+    setActiveMode('code');
+    useCodeSessionStore.getState().setActiveSession(detachedSessionId);
+    if (detachedWorkspaceId) useCodeModeStore.getState().setActiveWorkspace(detachedWorkspaceId);
+    dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+  }, [detachedSessionId, detachedWorkspaceId, isDetachedCodeSession, setActiveMode]);
 
   const {
     isOpen: sidecarOpen,
@@ -323,12 +336,18 @@ function ShellAppInner(): React.ReactNode {
       return;
     }
 
+    // "Code" isn't just an artifact type like Website/Docs — it has its own
+    // dedicated IDE-like surface. Picking Code mode from Chat/Cowork must
+    // mount the session there, not create it in-place in the composer's
+    // current surface (which is always 'chat' for the launch composer).
+    const targetSurface: AppMode = modeId === 'code' ? 'code' : surface;
+
     try {
-      const store = surface === 'code'
+      const store = targetSurface === 'code'
         ? useCodeSessionStore
-        : surface === 'cowork'
+        : targetSurface === 'cowork'
           ? useCoworkSessionStore
-          : surface === 'design'
+          : targetSurface === 'design'
             ? useDesignSessionStore
             : useChatSessionStore;
       const sessionId = await store.getState().createSession({
@@ -356,10 +375,10 @@ function ShellAppInner(): React.ReactNode {
         design: 'design',
         browser: 'browser',
       };
-      if (surface === 'design') {
+      if (targetSurface === 'design') {
         openDesignWindow();
       } else {
-        dispatch({ type: 'OPEN_VIEW', viewType: viewTypeMap[surface] });
+        dispatch({ type: 'OPEN_VIEW', viewType: viewTypeMap[targetSurface] });
       }
       void store.getState().sendMessageStream(sessionId, { text });
     } catch (err) {
@@ -554,6 +573,7 @@ function ShellAppInner(): React.ReactNode {
                 setPluginManagerTab(tab);
                 setPluginManagerOpen(true);
               }}
+              sessionOnlyId={isDetachedCodeSession ? detachedSessionId ?? undefined : undefined}
             />
           }
           canvas={
@@ -569,7 +589,7 @@ function ShellAppInner(): React.ReactNode {
           dock={null}
         />
         
-                {active.viewType !== 'settings' && <RailControls
+                {!isDetachedCodeSession && active.viewType !== 'settings' && <RailControls
                   mode={activeMode}
                   onModeChange={handleModeChange}
                   onToggleRail={() => setIsRailCollapsed(!isRailCollapsed)}

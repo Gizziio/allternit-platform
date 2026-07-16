@@ -10,6 +10,26 @@ import { Check } from 'lucide-react';
 import { OAUTH_APPS } from '@/config/oauth-apps';
 import { OAuthAppIcons, DefaultAppIcon } from '@/config/oauth-app-icons';
 
+// ─── Light-mode Allternit brand palette (matches allternit.com) ──────────────
+
+const COLORS = {
+  bg: '#faf9f7',
+  panel: '#fffefc',
+  border: '#e1e5eb',
+  borderStrong: '#c9d0da',
+  text: '#1a1916',
+  textStrong: '#0d0c0a',
+  muted: '#74716b',
+  soft: '#989590',
+  faint: '#b3b0a8',
+  accent: '#B08D6E',
+  accentStrong: '#9A7658',
+  accentSoft: '#F5EDE3',
+  error: '#9c2a25',
+  errorBg: '#fdecea',
+  white: '#fffefc',
+};
+
 // ─── Build client-side app map from shared config ────────────────────────────
 
 type OAuthApp = { name: string; icon: React.ReactNode; scopes: string[] };
@@ -36,8 +56,8 @@ function ConnectionBridge() {
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
-          style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(217,119,87,0.6)' }}
-          animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.2, 0.8] }}
+          style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(176,141,110,0.5)' }}
+          animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
           transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.22, ease: 'easeInOut' }}
         />
       ))}
@@ -76,7 +96,7 @@ function AuthorizeContent() {
     if (!isLoaded || isSignedIn) return;
     const returnTo = `/oauth/authorize?${searchParams.toString()}`;
     navigate(`/sign-in?redirect_url=${encodeURIComponent(returnTo)}`, { replace: true });
-  }, [isLoaded, isSignedIn, router, searchParams]);
+  }, [isLoaded, isSignedIn, navigate, searchParams]);
 
   async function handleAuthorize() {
     if (!userId) return;
@@ -97,14 +117,14 @@ function AuthorizeContent() {
         throw new Error(data.error ?? `Server error ${res.status}`);
       }
       const { code, state } = await res.json() as { code: string; redirectUri: string; state: string };
-      
+
       // Append code and state to the redirectUri for the final protocol redirect
       const finalRedirectUri = new URL(redirectUri);
       finalRedirectUri.searchParams.set('code', code);
       finalRedirectUri.searchParams.set('state', state);
-      
+
       const dest = `/oauth/success?app=${encodeURIComponent(app.name)}&redirect_uri=${encodeURIComponent(finalRedirectUri.toString())}`;
-      router.push(dest);
+      navigate(dest);
     } catch (err) {
       setLoading(false);
       setError(err instanceof Error ? err.message : 'Authorization failed');
@@ -113,7 +133,7 @@ function AuthorizeContent() {
 
   function handleDecline() {
     setDeclined(true);
-    setTimeout(() => router.push('/shell'), 1200);
+    setTimeout(() => navigate('/shell'), 1200);
   }
 
   // Don't flash anything until Clerk confirms the session
@@ -121,14 +141,14 @@ function AuthorizeContent() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: 'var(--surface-canvas)',
+      minHeight: '100vh', background: COLORS.bg,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       fontFamily: 'inherit', padding: '24px 16px',
     }}>
       <div style={{
         position: 'fixed', top: '20%', left: '50%', transform: 'translateX(-50%)',
         width: 600, height: 400,
-        background: 'radial-gradient(ellipse, rgba(217,119,87,0.04) 0%, transparent 70%)',
+        background: 'radial-gradient(ellipse, rgba(176,141,110,0.08) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
@@ -140,9 +160,9 @@ function AuthorizeContent() {
             exit={{ opacity: 0, y: -16, scale: 0.97 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              width: '100%', maxWidth: 480, background: 'var(--surface-panel)', borderRadius: 20,
-              border: '1px solid var(--ui-border-muted)',
-              boxShadow: '0 32px 80px var(--shell-overlay-backdrop), 0 0 0 1px var(--surface-hover)',
+              width: '100%', maxWidth: 480, background: COLORS.panel, borderRadius: 20,
+              border: `1px solid ${COLORS.border}`,
+              boxShadow: '0 32px 80px rgba(28,27,26,0.10), 0 0 0 1px rgba(0,0,0,0.02)',
               overflow: 'hidden',
             }}
           >
@@ -162,17 +182,19 @@ function AuthorizeContent() {
 
               <motion.h1
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.4 }}
-                style={{ fontSize: 17, fontWeight: 400, color: 'rgba(255,255,255,0.9)', textAlign: 'center', lineHeight: 1.5, marginBottom: 24, letterSpacing: '-0.01em' }}
+                style={{
+                  fontSize: 17, fontWeight: 400, color: COLORS.text, textAlign: 'center', lineHeight: 1.5, marginBottom: 24, letterSpacing: '-0.01em'
+                }}
               >
                 <strong style={{ fontWeight: 700 }}>{app.name}</strong>{' '}would like to connect to your{' '}
                 <strong style={{ fontWeight: 700 }}>Allternit account</strong>
               </motion.h1>
 
-              <div style={{ height: 1, background: 'var(--ui-border-muted)', marginBottom: 20 }} />
+              <div style={{ height: 1, background: COLORS.border, marginBottom: 20 }} />
 
               {/* Scopes */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45, duration: 0.4 }}>
-                <p style={{ fontSize: 12.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: 14 }}>
+                <p style={{ fontSize: 12.5, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: COLORS.soft, marginBottom: 14 }}>
                   Your account will be used to:
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
@@ -180,19 +202,19 @@ function AuthorizeContent() {
                     <motion.div key={scope} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + i * 0.055, duration: 0.3 }}
                       style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                       <div style={{ flexShrink: 0, marginTop: 1, width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Check size={13} strokeWidth={2.5} color="#D97757" />
+                        <Check size={13} strokeWidth={2.5} color={COLORS.accent} />
                       </div>
-                      <span style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.75)', lineHeight: 1.45 }}>{scope}</span>
+                      <span style={{ fontSize: 13.5, color: COLORS.muted, lineHeight: 1.45 }}>{scope}</span>
                     </motion.div>
                   ))}
                 </div>
               </motion.div>
 
-              <div style={{ height: 1, background: 'var(--ui-border-muted)', margin: '24px 0 20px' }} />
+              <div style={{ height: 1, background: COLORS.border, margin: '24px 0 20px' }} />
 
               {/* Error */}
               {error && (
-                <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'var(--status-error-bg)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12.5, color: 'rgba(239,68,68,0.9)' }}>
+                <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: COLORS.errorBg, border: `1px solid rgba(156,42,37,0.15)`, fontSize: 12.5, color: COLORS.error }}>
                   {error}
                 </div>
               )}
@@ -205,22 +227,22 @@ function AuthorizeContent() {
                   disabled={loading || declined}
                   style={{
                     width: '100%', padding: '13px 20px', borderRadius: 12, border: 'none',
-                    background: loading ? 'rgba(217,119,87,0.6)' : 'linear-gradient(135deg, #E8886A 0%, #D97757 100%)',
-                    color: 'var(--ui-text-inverse)', fontSize: 14, fontWeight: 700,
+                    background: loading ? 'rgba(26,25,22,0.7)' : COLORS.text,
+                    color: COLORS.white, fontSize: 14, fontWeight: 700,
                     cursor: loading || declined ? 'not-allowed' : 'pointer',
                     letterSpacing: '-0.01em',
-                    boxShadow: loading ? 'none' : '0 4px 20px rgba(217,119,87,0.3)',
+                    boxShadow: loading ? 'none' : '0 4px 20px rgba(28,27,26,0.12)',
                     transition: 'all 0.2s',
                   }}
-                  onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; }}
+                  onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
                 >
                   {loading ? (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                       <motion.span
                         animate={{ rotate: 360 }}
                         transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-                        style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'var(--ui-text-inverse)', borderRadius: '50%' }}
+                        style={{ display: 'inline-block', width: 14, height: 14, border: `2px solid rgba(255,255,255,0.3)`, borderTopColor: COLORS.white, borderRadius: '50%' }}
                       />
                       Authorizing…
                     </span>
@@ -233,13 +255,13 @@ function AuthorizeContent() {
                   style={{
                     width: '100%', padding: '11px 20px', borderRadius: 12, border: 'none',
                     background: 'transparent',
-                    color: declined ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.45)',
+                    color: declined ? COLORS.faint : COLORS.soft,
                     fontSize: 14, fontWeight: 500,
                     cursor: declined ? 'not-allowed' : 'pointer',
                     transition: 'color 0.2s',
                   }}
-                  onMouseEnter={e => { if (!declined && !loading) (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.8)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)'; }}
+                  onMouseEnter={e => { if (!declined && !loading) (e.currentTarget as HTMLButtonElement).style.color = COLORS.text; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = declined ? COLORS.faint : COLORS.soft; }}
                 >
                   {declined ? 'Redirecting…' : 'Decline'}
                 </button>
@@ -249,16 +271,16 @@ function AuthorizeContent() {
             {/* Footer */}
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 0.35 }}
-              style={{ borderTop: '1px solid var(--surface-hover)', background: 'var(--surface-canvas)', padding: '14px 36px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}
+              style={{ borderTop: `1px solid ${COLORS.border}`, background: COLORS.bg, padding: '14px 36px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}
             >
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', margin: 0 }}>
-                Logged in as <span style={{ color: 'rgba(255,255,255,0.55)' }}>{userEmail || 'your account'}</span>
+              <p style={{ fontSize: 12, color: COLORS.soft, margin: 0 }}>
+                Logged in as <span style={{ color: COLORS.muted }}>{userEmail || 'your account'}</span>
               </p>
               <a
                 href={`/oauth/select-account?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${oauthState}`}
-                style={{ fontSize: 12, color: 'var(--accent-primary)', textDecoration: 'none', opacity: 0.8 }}
+                style={{ fontSize: 12, color: COLORS.accent, textDecoration: 'none', opacity: 0.9 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.8'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.9'; }}
               >
                 Switch account
               </a>

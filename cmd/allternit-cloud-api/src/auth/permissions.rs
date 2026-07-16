@@ -171,9 +171,9 @@ impl PermissionChecker {
     /// Check if the given permissions list includes the required permission
     pub fn has_permission(have: &[String], need: Permission) -> bool {
         let need_str = need.as_str();
-        have.contains(&"*".to_string()) ||
-        have.contains(&"admin".to_string()) ||
-        have.contains(&need_str.to_string())
+        have.contains(&"*".to_string())
+            || have.contains(&"admin".to_string())
+            || have.contains(&need_str.to_string())
     }
 
     /// Check if the given permissions list includes any of the required permissions
@@ -199,7 +199,7 @@ impl PermissionChecker {
 }
 
 /// Macro to require a specific permission in a route handler
-/// 
+///
 /// Usage:
 /// ```rust
 /// async fn handler(
@@ -213,9 +213,10 @@ impl PermissionChecker {
 macro_rules! require_permission {
     ($auth:expr, $perm:expr) => {
         if !$auth.user.has_permission($perm.as_str()) {
-            return Err($crate::ApiError::Forbidden(
-                format!("Missing required permission: {}", $perm)
-            ));
+            return Err($crate::ApiError::Forbidden(format!(
+                "Missing required permission: {}",
+                $perm
+            )));
         }
     };
 }

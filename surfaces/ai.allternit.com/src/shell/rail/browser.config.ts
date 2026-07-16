@@ -2,14 +2,12 @@
  * Browser Mode Rail Configuration
  *
  * - New Session (top action)
- * - Agent Hub (shared)
  * - Add-ins & Extensions (Office, Chrome, open-source alternatives)
  * - Sessions (dynamic)
  */
 
 import {
   Plus,
-  Robot,
   PuzzlePiece,
   ChatTeardropText,
   AppWindow,
@@ -30,23 +28,6 @@ export const BROWSER_RAIL_CONFIG: RailConfigSection[] = [
         icon: Plus,
         payload: 'browser',
         isAction: true,
-      },
-    ],
-  },
-
-  // Agent Hub — Shared section
-  {
-    id: 'agent-hub',
-    title: 'Agent',
-    icon: Robot,
-    collapsible: false,
-    defaultExpanded: true,
-    items: [
-      {
-        id: 'br-agent-hub',
-        label: 'Agent Hub',
-        icon: Robot,
-        payload: 'agent-hub',
       },
     ],
   },

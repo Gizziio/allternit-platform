@@ -45,8 +45,6 @@ const backendAPI = {
     getStatus: (): Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'> =>
       ipcRenderer.invoke('sidecar:get-status'),
     getApiUrl: (): Promise<string | undefined> => ipcRenderer.invoke('sidecar:get-api-url'),
-    getAuthPassword: (): Promise<string | undefined> =>
-      ipcRenderer.invoke('sidecar:get-auth-password'),
     onStatusChanged: (handler: (status: string) => void): (() => void) => {
       const listener = (_: IpcRendererEvent, s: string) => handler(s);
       ipcRenderer.on('sidecar:status-changed', listener);
@@ -57,6 +55,32 @@ const backendAPI = {
     const listener = (_: IpcRendererEvent, p: { stage: string; percent: number }) => handler(p);
     ipcRenderer.on('backend:download-progress', listener);
     return () => ipcRenderer.removeListener('backend:download-progress', listener);
+  },
+};
+
+// ─── Bonsai local image companion ─────────────────────────────────────────────
+
+export interface BonsaiStatus {
+  installed: boolean;
+  running: boolean;
+  installing: boolean;
+  url: string;
+  revisions?: { source?: string; model?: string; mlxWheel?: string };
+  installDir: string;
+  error?: string;
+}
+
+const bonsaiAPI = {
+  getStatus: (): Promise<BonsaiStatus> => ipcRenderer.invoke('bonsai:get-status'),
+  install: (): Promise<void> => ipcRenderer.invoke('bonsai:install'),
+  cancelInstall: (): Promise<boolean> => ipcRenderer.invoke('bonsai:cancel-install'),
+  start: (): Promise<void> => ipcRenderer.invoke('bonsai:start'),
+  stop: (): Promise<boolean> => ipcRenderer.invoke('bonsai:stop'),
+  remove: (): Promise<void> => ipcRenderer.invoke('bonsai:remove'),
+  onProgress: (handler: (progress: { stage: string; message: string }) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, p: { stage: string; message: string }) => handler(p);
+    ipcRenderer.on('bonsai:progress', listener);
+    return () => ipcRenderer.removeListener('bonsai:progress', listener);
   },
 };
 
@@ -166,8 +190,10 @@ const authAPI = {
   getSession: (): Promise<null | {
     userId: string;
     userEmail: string;
-    accessToken: string;
     expiresAt: number;
+    runtimeId: string;
+    organizationId?: string;
+    capabilities: string[];
   }> => ipcRenderer.invoke('auth:get-session'),
   listAccounts: (): Promise<Array<{
     userId: string;
@@ -192,6 +218,8 @@ const authAPI = {
 const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   openDesign: (): Promise<void> => ipcRenderer.invoke('shell:open-design'),
+  openSession: (options: { sessionId: string; workspaceId?: string; title?: string }): Promise<void> =>
+    ipcRenderer.invoke('shell:open-session', options),
   getOfficeHostStatus: (): Promise<Record<'word' | 'excel' | 'powerpoint', {
     installed: boolean;
     running: boolean;
@@ -289,6 +317,9 @@ const permissionGuideAPI = {
     ipcRenderer.invoke('permission-guide:dismiss'),
   getStatus: (): Promise<{ active: boolean }> =>
     ipcRenderer.invoke('permission-guide:get-status'),
+  getDriverStatus: (): Promise<{
+    available: boolean; running: boolean; embedded: boolean; executable?: string; socket?: string; error?: string;
+  }> => ipcRenderer.invoke('computer-use-driver:get-status'),
   onStatusChanged: (handler: (status: PermissionStatus) => void): (() => void) => {
     const listener = (_: IpcRendererEvent, status: PermissionStatus) => handler(status);
     ipcRenderer.on('permission-guide:status', listener);
@@ -404,6 +435,13 @@ const mcpAPI = {
 type MiniAppInstallProgress = { id: string; line: string; type: 'stdout' | 'stderr' | 'info' };
 type MiniAppInstallResult  = { success: boolean; error?: string };
 type MiniAppStatus         = { managed: boolean; running: boolean; port: number | null };
+type MiniAppRuntimeRegistration = { id: string; name: string; version?: string; installCommand?: string; startCommand?: string; stopCommand?: string; healthUrl?: string; permissions?: { network?: string[]; filesystem?: string[]; secrets?: string[]; processes?: boolean }; oauth?: Record<string, unknown> };
+type MiniAppReleaseInstallOptions = { registryUrl: string; id: string; version?: string };
+type MiniAppReleaseInstallResult = { success: boolean; error?: string; id: string; version?: string; previousVersion?: string; rolledBack?: boolean };
+type MiniAppReleaseInstallInfo = { id: string; currentVersion?: string; previousVersion?: string; healthy: boolean; releases: Record<string, { installedAt: string; sha256: string; signature: string; publisherKey: string; healthy: boolean }> };
+type MiniAppOAuthProvider = { authorizationUrl: string; tokenUrl: string; revocationUrl?: string; clientId: string; scopes: string[]; additionalAuthParams?: Record<string, string> };
+type MiniAppOAuthAccountMetadata = { appId: string; providerId: string; accountId: string; scopes: string[]; expiresAt?: string; createdAt: string; lastRefreshedAt?: string; needsReauth: boolean };
+type MiniAppOAuthFlowResult = { flowId: string; success: boolean; error?: string; scopes?: string[]; expiresAt?: string; appId: string; providerId: string; accountId: string };
 
 const miniAppsAPI = {
   install: (id: string): Promise<MiniAppInstallResult> =>
@@ -416,6 +454,37 @@ const miniAppsAPI = {
     ipcRenderer.invoke('miniApps:getStatus', id),
   launchDesktop: (id: string): Promise<MiniAppInstallResult> =>
     ipcRenderer.invoke('miniApps:launchDesktop', id),
+  getApproval: (id: string, registration?: MiniAppRuntimeRegistration): Promise<{ approved: boolean; fingerprint?: string; approvedAt?: string }> =>
+    ipcRenderer.invoke('miniApps:getApproval', id, registration),
+  reviewAndApprove: (registration: MiniAppRuntimeRegistration): Promise<{ success: boolean; approved: boolean; fingerprint?: string; error?: string }> =>
+    ipcRenderer.invoke('miniApps:reviewAndApprove', registration),
+  revokeApproval: (id: string): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('miniApps:revokeApproval', id),
+  setSecret: (id: string, name: string, value: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('miniApps:setSecret', id, name, value),
+  listSecrets: (id: string): Promise<string[]> => ipcRenderer.invoke('miniApps:listSecrets', id),
+  deleteSecret: (id: string, name: string): Promise<{ success: boolean }> => ipcRenderer.invoke('miniApps:deleteSecret', id, name),
+  removeRuntime: (id: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('miniApps:removeRuntime', id),
+  rollbackRuntime: (id: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('miniApps:rollbackRuntime', id),
+  installRelease: (options: MiniAppReleaseInstallOptions): Promise<MiniAppReleaseInstallResult> =>
+    ipcRenderer.invoke('miniApps:installRelease', options),
+  rollbackRelease: (id: string, registryUrl?: string): Promise<{ success: boolean; error?: string; currentVersion?: string }> =>
+    ipcRenderer.invoke('miniApps:rollbackRelease', id, registryUrl),
+  removeRelease: (id: string, registryUrl?: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('miniApps:removeRelease', id, registryUrl),
+  listReleaseInstalls: (): Promise<MiniAppReleaseInstallInfo[]> => ipcRenderer.invoke('miniApps:listReleaseInstalls'),
+  getReleaseInstall: (id: string): Promise<MiniAppReleaseInstallInfo | null> => ipcRenderer.invoke('miniApps:getReleaseInstall', id),
+  oauthStart: (appId: string, providerId: string, provider: MiniAppOAuthProvider, accountId: string): Promise<{ flowId?: string; error?: string }> =>
+    ipcRenderer.invoke('miniApps:oauthStart', appId, providerId, provider, accountId),
+  oauthCancel: (flowId: string): Promise<{ success: boolean }> => ipcRenderer.invoke('miniApps:oauthCancel', flowId),
+  oauthAccounts: (appId: string): Promise<MiniAppOAuthAccountMetadata[]> => ipcRenderer.invoke('miniApps:oauthAccounts', appId),
+  oauthDisconnect: (appId: string, providerId: string, accountId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('miniApps:oauthDisconnect', appId, providerId, accountId),
+  onOAuthComplete: (handler: (result: MiniAppOAuthFlowResult) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, result: MiniAppOAuthFlowResult) => handler(result);
+    ipcRenderer.on('miniApps:oauth-complete', listener);
+    return () => ipcRenderer.removeListener('miniApps:oauth-complete', listener);
+  },
   onProgress: (handler: (p: MiniAppInstallProgress) => void): (() => void) => {
     const listener = (_: IpcRendererEvent, p: MiniAppInstallProgress) => handler(p);
     ipcRenderer.on('miniApps:install-progress', listener);
@@ -454,6 +523,7 @@ const allternitDesktopAPI = {
   sdk: sdkAPI,
   connection: connectionAPI,
   backend: backendAPI,
+  bonsai: bonsaiAPI,
   vm: vmAPI,
   window: windowAPI,
   store: storeAPI,
@@ -482,19 +552,13 @@ contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);
 
 // ─── allternitSidecar bridge ──────────────────────────────────────────────────
 // The platform renderer calls window.allternitSidecar to detect Electron and
-// discover the gizzi-code AI runtime URL + credentials. This is the well-known
+// discover the credential-brokering gizzi-code URL. This is the well-known
 // interface defined in surfaces/ai.allternit.com/src/lib/globals.d.ts.
 contextBridge.exposeInMainWorld('allternitSidecar', {
   getStatus: (): Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'> =>
     ipcRenderer.invoke('sidecar:get-status'),
   getApiUrl: (): Promise<string | undefined> =>
     ipcRenderer.invoke('sidecar:get-api-url'),
-  getBasicAuth: (): Promise<{ username: string; password: string; header: string } | undefined> =>
-    ipcRenderer.invoke('sidecar:get-basic-auth'),
-  getPersistedConfig: (): Promise<{ apiUrl: string; password: string; port: number } | null> =>
-    ipcRenderer.invoke('sidecar:get-persisted-config'),
-  clearPersistedConfig: (): Promise<boolean> =>
-    ipcRenderer.invoke('sidecar:clear-persisted-config'),
 });
 
 declare global {
@@ -503,9 +567,6 @@ declare global {
     allternitSidecar: {
       getStatus: () => Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'>;
       getApiUrl: () => Promise<string | undefined>;
-      getBasicAuth: () => Promise<{ username: string; password: string; header: string } | undefined>;
-      getPersistedConfig: () => Promise<{ apiUrl: string; password: string; port: number } | null>;
-      clearPersistedConfig: () => Promise<boolean>;
     };
   }
 }

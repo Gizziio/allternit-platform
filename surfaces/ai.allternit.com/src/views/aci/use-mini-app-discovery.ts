@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import type { InstalledMiniApp, MiniAppManifest } from './mini-app.types';
-import { getPinnedMiniApps, manifestToMiniApp, updateMiniAppStatus } from './mini-app-registry';
+import { getInstalledMiniApps, manifestToMiniApp, updateMiniAppStatus } from './mini-app-registry';
 
 /** Ports the platform silently probes for /.well-known/allternit-app.json */
 const KNOWN_PORTS = [18789];
@@ -62,7 +62,7 @@ async function checkReachable(port: number): Promise<boolean> {
 
 export function useMiniAppDiscovery() {
   const [discovered, setDiscovered] = useState<InstalledMiniApp[]>([]);
-  const [pinned, setPinned] = useState<InstalledMiniApp[]>(getPinnedMiniApps);
+  const [installed, setInstalled] = useState<InstalledMiniApp[]>(getInstalledMiniApps);
   const [probing, setProbing] = useState(false);
 
   const probe = useCallback(async () => {
@@ -87,7 +87,7 @@ export function useMiniAppDiscovery() {
     });
 
     // Update status of pinned apps that we can now see are online/offline
-    const pinnedNow = getPinnedMiniApps();
+    const pinnedNow = getInstalledMiniApps();
     for (const app of pinnedNow) {
       const desktopStatus = window.allternit?.miniApps
         ? await window.allternit.miniApps.getStatus(app.id).catch(() => null)
@@ -103,7 +103,7 @@ export function useMiniAppDiscovery() {
 
   // Re-sync pinned list when registry changes
   const syncPinned = useCallback(() => {
-    setPinned(getPinnedMiniApps());
+    setInstalled(getInstalledMiniApps());
   }, []);
 
   useEffect(() => {
@@ -114,9 +114,9 @@ export function useMiniAppDiscovery() {
 
   // All mini-apps: pinned first, then discovered-but-not-yet-pinned
   const all = [
-    ...pinned,
-    ...discovered.filter((d) => !pinned.some((p) => p.id === d.id)),
+    ...installed,
+    ...discovered.filter((d) => !installed.some((p) => p.id === d.id)),
   ];
 
-  return { all, discovered, pinned, probing, reprobe: probe };
+  return { all, discovered, installed, pinned: installed, probing, reprobe: probe };
 }

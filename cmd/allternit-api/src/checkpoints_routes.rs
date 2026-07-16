@@ -13,7 +13,10 @@ use crate::AppState;
 
 pub fn checkpoints_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/checkpoints", get(list_checkpoints).post(create_checkpoint))
+        .route(
+            "/checkpoints",
+            get(list_checkpoints).post(create_checkpoint),
+        )
         .route("/checkpoints/commit", post(commit_checkpoint))
         .route("/checkpoints/tag", post(tag_checkpoint))
 }

@@ -11,17 +11,25 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn workflow_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/workflows", get(list_workflows).post(create_workflow))
-        .route("/workflows/:id", get(get_workflow).put(update_workflow).delete(delete_workflow))
+        .route(
+            "/workflows/:id",
+            get(get_workflow)
+                .put(update_workflow)
+                .delete(delete_workflow),
+        )
         .route("/workflows/:id/execute", post(execute_workflow))
         .route("/workflows/:id/executions", get(list_executions))
         .route("/workflows/:id/executions/:exec_id", get(get_execution))
-        .route("/workflows/:id/executions/:exec_id/cancel", post(cancel_execution))
+        .route(
+            "/workflows/:id/executions/:exec_id/cancel",
+            post(cancel_execution),
+        )
 }
 
 // ─── List workflows ─────────────────────────────────────────────────────────────
@@ -63,7 +71,10 @@ async fn list_workflows(
         Err(_) => vec![],
     };
 
-    (StatusCode::OK, Json(json!({"workflows": workflows, "total": workflows.len()})))
+    (
+        StatusCode::OK,
+        Json(json!({"workflows": workflows, "total": workflows.len()})),
+    )
 }
 
 // ─── Create workflow ────────────────────────────────────────────────────────────
@@ -85,13 +96,23 @@ async fn create_workflow(
 ) -> impl axum::response::IntoResponse {
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
     let id = uuid::Uuid::new_v4().to_string();
-    let title = body.name.or(body.title).unwrap_or_else(|| "Untitled Workflow".to_string());
-    let nodes = serde_json::to_string(&body.nodes.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string());
-    let edges = serde_json::to_string(&body.edges.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string());
+    let title = body
+        .name
+        .or(body.title)
+        .unwrap_or_else(|| "Untitled Workflow".to_string());
+    let nodes =
+        serde_json::to_string(&body.nodes.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string());
+    let edges =
+        serde_json::to_string(&body.edges.unwrap_or_default()).unwrap_or_else(|_| "[]".to_string());
 
     match conn.execute(
         "INSERT INTO workflows (id, user_id, title, description, nodes, edges) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
@@ -117,7 +138,6 @@ async fn get_workflow(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -126,13 +146,15 @@ async fn get_workflow(
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, title, description, nodes, edges, created_at, updated_at
-             FROM workflows WHERE id = ?1 AND user_id = ?2"
+             FROM workflows WHERE id = ?1 AND user_id = ?2",
         )?;
         let row = stmt.query_row(params![id2, user_id], |row| {
             let nodes_str: String = row.get(3)?;
             let edges_str: String = row.get(4)?;
-            let nodes: Vec<serde_json::Value> = serde_json::from_str(&nodes_str).unwrap_or_default();
-            let edges: Vec<serde_json::Value> = serde_json::from_str(&edges_str).unwrap_or_default();
+            let nodes: Vec<serde_json::Value> =
+                serde_json::from_str(&nodes_str).unwrap_or_default();
+            let edges: Vec<serde_json::Value> =
+                serde_json::from_str(&edges_str).unwrap_or_default();
             Ok(json!({
                 "id": row.get::<_, String>(0)?,
                 "name": row.get::<_, String>(1)?,
@@ -147,14 +169,18 @@ async fn get_workflow(
             }))
         })?;
         Ok::<_, rusqlite::Error>(row)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(data)) => (StatusCode::OK, Json(json!({"workflow": data}))),
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
             (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"})))
         }
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        ),
     }
 }
 
@@ -176,14 +202,17 @@ async fn update_workflow(
     _headers: HeaderMap,
     Json(body): Json<UpdateWorkflow>,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
     let title = body.name.or(body.title);
     let description = body.description;
-    let nodes = body.nodes.map(|n| serde_json::to_string(&n).unwrap_or_else(|_| "[]".to_string()));
-    let edges = body.edges.map(|e| serde_json::to_string(&e).unwrap_or_else(|_| "[]".to_string()));
+    let nodes = body
+        .nodes
+        .map(|n| serde_json::to_string(&n).unwrap_or_else(|_| "[]".to_string()));
+    let edges = body
+        .edges
+        .map(|e| serde_json::to_string(&e).unwrap_or_else(|_| "[]".to_string()));
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -211,27 +240,38 @@ async fn update_workflow(
             return Ok::<_, rusqlite::Error>(());
         }
 
-        let sql = format!("UPDATE workflows SET {} WHERE id = ?{} AND user_id = ?{}",
+        let sql = format!(
+            "UPDATE workflows SET {} WHERE id = ?{} AND user_id = ?{}",
             sets.join(", "),
             sets.len() + 1,
             sets.len() + 2
         );
-        let mut all_params: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
+        let mut all_params: Vec<&dyn rusqlite::ToSql> = params_vec
+            .iter()
+            .map(|s| s as &dyn rusqlite::ToSql)
+            .collect();
         all_params.push(&id2);
         all_params.push(&user_id);
         conn.execute(&sql, all_params.as_slice())?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(())) => (StatusCode::OK, Json(json!({"success": true}))),
         Ok(Err(e)) => {
             warn!("DB error updating workflow: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -244,7 +284,6 @@ async fn delete_workflow(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -260,17 +299,24 @@ async fn delete_workflow(
             params![id2, user_id],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(())) => (StatusCode::OK, Json(json!({"success": true}))),
         Ok(Err(e)) => {
             warn!("DB error deleting workflow: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -283,7 +329,6 @@ async fn execute_workflow(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let workflow_id = id.clone();
     let user_id = user.user_id;
@@ -293,11 +338,13 @@ async fn execute_workflow(
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         // Verify workflow exists and belongs to user
-        let _: String = conn.query_row(
-            "SELECT id FROM workflows WHERE id = ?1 AND user_id = ?2",
-            params![workflow_id, user_id],
-            |row| row.get(0),
-        ).map_err(|_| rusqlite::Error::QueryReturnedNoRows)?;
+        let _: String = conn
+            .query_row(
+                "SELECT id FROM workflows WHERE id = ?1 AND user_id = ?2",
+                params![workflow_id, user_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| rusqlite::Error::QueryReturnedNoRows)?;
 
         conn.execute(
             "INSERT INTO workflow_executions (id, workflow_id, status, started_at)
@@ -305,23 +352,34 @@ async fn execute_workflow(
             params![execution_id2, workflow_id],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::OK, Json(json!({
-            "execution_id": execution_id,
-            "status": "pending",
-        }))),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::NOT_FOUND, Json(json!({"error": "Workflow not found"})))
-        }
+        Ok(Ok(())) => (
+            StatusCode::OK,
+            Json(json!({
+                "execution_id": execution_id,
+                "status": "pending",
+            })),
+        ),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Workflow not found"})),
+        ),
         Ok(Err(e)) => {
             warn!("DB error executing workflow: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -334,7 +392,6 @@ async fn list_executions(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let workflow_id = id.clone();
     let user_id = user.user_id;
@@ -342,38 +399,46 @@ async fn list_executions(
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         // Verify workflow ownership
-        let _: String = conn.query_row(
-            "SELECT id FROM workflows WHERE id = ?1 AND user_id = ?2",
-            params![workflow_id, user_id],
-            |row| row.get(0),
-        ).map_err(|_| rusqlite::Error::QueryReturnedNoRows)?;
+        let _: String = conn
+            .query_row(
+                "SELECT id FROM workflows WHERE id = ?1 AND user_id = ?2",
+                params![workflow_id, user_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| rusqlite::Error::QueryReturnedNoRows)?;
 
         let mut stmt = conn.prepare(
             "SELECT id, workflow_id, status, started_at, completed_at, result, error, created_at
-             FROM workflow_executions WHERE workflow_id = ?1 ORDER BY created_at DESC"
+             FROM workflow_executions WHERE workflow_id = ?1 ORDER BY created_at DESC",
         )?;
-        let rows = stmt.query_map(params![workflow_id], |row| {
-            Ok(json!({
-                "id": row.get::<_, String>(0)?,
-                "workflow_id": row.get::<_, String>(1)?,
-                "status": row.get::<_, String>(2)?,
-                "started_at": row.get::<_, Option<String>>(3)?,
-                "completed_at": row.get::<_, Option<String>>(4)?,
-                "result": row.get::<_, Option<String>>(5)?,
-                "error": row.get::<_, Option<String>>(6)?,
-                "created_at": row.get::<_, String>(7)?,
-            }))
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![workflow_id], |row| {
+                Ok(json!({
+                    "id": row.get::<_, String>(0)?,
+                    "workflow_id": row.get::<_, String>(1)?,
+                    "status": row.get::<_, String>(2)?,
+                    "started_at": row.get::<_, Option<String>>(3)?,
+                    "completed_at": row.get::<_, Option<String>>(4)?,
+                    "result": row.get::<_, Option<String>>(5)?,
+                    "error": row.get::<_, Option<String>>(6)?,
+                    "created_at": row.get::<_, String>(7)?,
+                }))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
-    }).await;
+    })
+    .await;
 
     match rows {
         Ok(Ok(data)) => (StatusCode::OK, Json(json!({"executions": data}))),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"})))
-        }
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        ),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        ),
     }
 }
 
@@ -385,7 +450,6 @@ async fn get_execution(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let wf_id = workflow_id.clone();
     let eid = exec_id.clone();
@@ -394,11 +458,13 @@ async fn get_execution(
     let row = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         // Verify workflow ownership
-        let _: String = conn.query_row(
-            "SELECT id FROM workflows WHERE id = ?1 AND user_id = ?2",
-            params![wf_id, user_id],
-            |row| row.get(0),
-        ).map_err(|_| rusqlite::Error::QueryReturnedNoRows)?;
+        let _: String = conn
+            .query_row(
+                "SELECT id FROM workflows WHERE id = ?1 AND user_id = ?2",
+                params![wf_id, user_id],
+                |row| row.get(0),
+            )
+            .map_err(|_| rusqlite::Error::QueryReturnedNoRows)?;
 
         let row = conn.query_row(
             "SELECT id, workflow_id, status, started_at, completed_at, result, error, created_at
@@ -416,14 +482,19 @@ async fn get_execution(
             },
         )?;
         Ok::<_, rusqlite::Error>(row)
-    }).await;
+    })
+    .await;
 
     match row {
         Ok(Ok(data)) => (StatusCode::OK, Json(data)),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::NOT_FOUND, Json(json!({"error": "Execution not found"})))
-        }
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Execution not found"})),
+        ),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        ),
     }
 }
 
@@ -435,7 +506,6 @@ async fn cancel_execution(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let wf_id = workflow_id.clone();
     let eid = exec_id.clone();
@@ -471,19 +541,31 @@ async fn cancel_execution(
     match result {
         Ok(Ok((status, already_done))) => {
             if already_done {
-                (StatusCode::CONFLICT, Json(json!({"error": format!("Cannot cancel execution with status \"{}\"", status)})))
+                (
+                    StatusCode::CONFLICT,
+                    Json(
+                        json!({"error": format!("Cannot cancel execution with status \"{}\"", status)}),
+                    ),
+                )
             } else {
-                (StatusCode::OK, Json(json!({
-                    "execution_id": exec_id,
-                    "workflow_id": workflow_id,
-                    "status": "cancelled",
-                    "completed_at": chrono::Utc::now().to_rfc3339(),
-                })))
+                (
+                    StatusCode::OK,
+                    Json(json!({
+                        "execution_id": exec_id,
+                        "workflow_id": workflow_id,
+                        "status": "cancelled",
+                        "completed_at": chrono::Utc::now().to_rfc3339(),
+                    })),
+                )
             }
         }
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::NOT_FOUND, Json(json!({"error": "Execution not found"})))
-        }
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Execution not found"})),
+        ),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        ),
     }
 }

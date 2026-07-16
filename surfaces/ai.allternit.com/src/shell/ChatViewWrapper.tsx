@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useOnboardingStore } from '../stores/onboarding-store';
 import { useChatStore } from '../views/chat/ChatStore';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
@@ -26,7 +26,13 @@ const lazy = <T extends React.ComponentType<any>>(
     : factory as () => Promise<{ default: T }>
 );
 
-const ChatView = lazy(() => import('../views/ChatView'), 'ChatView');
+type ChatViewProps = {
+  onOpenAgentSession?: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+};
+const ChatView = React.lazy(async () => {
+  const module = await import('../views/ChatView');
+  return { default: module.ChatView as React.ComponentType<ChatViewProps> };
+});
 const ProjectView = lazy(() => import('../views/ProjectView'), 'ProjectView');
 
 export const ChatViewWrapper = React.memo(function ChatViewWrapper({
@@ -56,10 +62,18 @@ export const ChatViewWrapper = React.memo(function ChatViewWrapper({
     return backendDefaultSelection;
   }, [onboardingProvider, backendDefaultSelection]);
 
-  const effectiveChatId = useMemo(() => 
-    embeddedChatSessionId || activeThreadId || `temp-${Date.now()}`, 
-    [activeThreadId, embeddedChatSessionId]
-  );
+  // Lazily-generated once and cached in a ref (not useMemo) so this fallback
+  // ID survives re-renders where activeThreadId/embeddedChatSessionId flip
+  // between null and undefined (different by reference, same "no session
+  // yet" meaning) — that flip was invalidating the useMemo cache and
+  // generating a fresh temp-<timestamp> id on almost every render, which
+  // remounted the entire ChatView (it's keyed on this id) and wiped all of
+  // its local state, including in-flight error banners.
+  const fallbackChatIdRef = useRef<string | null>(null);
+  if (fallbackChatIdRef.current === null) {
+    fallbackChatIdRef.current = `temp-${Date.now()}`;
+  }
+  const effectiveChatId = embeddedChatSessionId || activeThreadId || fallbackChatIdRef.current;
   
   if (activeProjectId && !embeddedChatSessionId) {
     return <ProjectView />;

@@ -90,14 +90,24 @@ export function getAgentSessionDescriptor(
   }
 
   return {
-    originSurface: readSurface(metadata[METADATA_KEYS.originSurface]),
-    sessionMode: readMode(metadata[METADATA_KEYS.sessionMode]),
-    agentId: readString(metadata[METADATA_KEYS.agentId]),
-    agentName: readString(metadata[METADATA_KEYS.agentName]),
-    projectId: readString(metadata[METADATA_KEYS.projectId]),
-    workspaceScope: readString(metadata[METADATA_KEYS.workspaceScope]),
-    runtimeModel: readString(metadata[METADATA_KEYS.runtimeModel]),
-    agentFeatures: readFeatures(metadata[METADATA_KEYS.agentFeatures]),
+    originSurface: readSurface(
+      metadata[METADATA_KEYS.originSurface] ?? metadata.originSurface ?? metadata.origin_surface,
+    ),
+    sessionMode: readMode(
+      metadata[METADATA_KEYS.sessionMode] ?? metadata.sessionMode ?? metadata.session_mode,
+    ),
+    agentId: readString(metadata[METADATA_KEYS.agentId] ?? metadata.agentId ?? metadata.agent_id),
+    agentName: readString(metadata[METADATA_KEYS.agentName] ?? metadata.agentName ?? metadata.agent_name),
+    projectId: readString(metadata[METADATA_KEYS.projectId] ?? metadata.projectId ?? metadata.project_id),
+    workspaceScope: readString(
+      metadata[METADATA_KEYS.workspaceScope] ?? metadata.workspaceScope ?? metadata.workspace_scope,
+    ),
+    runtimeModel: readString(
+      metadata[METADATA_KEYS.runtimeModel] ?? metadata.runtimeModel ?? metadata.runtime_model,
+    ),
+    agentFeatures: readFeatures(
+      metadata[METADATA_KEYS.agentFeatures] ?? metadata.agentFeatures ?? metadata.agent_features,
+    ),
   };
 }
 

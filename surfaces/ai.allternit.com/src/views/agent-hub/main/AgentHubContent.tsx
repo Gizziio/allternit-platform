@@ -24,8 +24,10 @@ export const AgentHubContent: React.FC<AgentHubContentProps> = ({ activeTab }) =
       );
     case 'analytics':
       return (
-        <div className="flex-1 overflow-auto p-8">
-          <PerformanceAnalyticsView />
+        <div className="flex-1 overflow-auto">
+          <div className="mx-auto w-full max-w-6xl px-8 pb-12 pt-8">
+            <PerformanceAnalyticsView />
+          </div>
         </div>
       );
     default:

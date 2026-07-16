@@ -39,6 +39,7 @@ const AgentHub             = lazy(() => import('../views/AgentHub').then(m => ({
 const NativeAgentView      = lazy(() => import('../views/NativeAgentView').then(m => ({ default: m.NativeAgentView })));
 const BrowserCapsuleEnhanced = lazy(() => import('../capsules/browser/BrowserCapsuleEnhanced').then(m => ({ default: m.BrowserCapsuleEnhanced })));
 const AciMiniAppsView = lazy(() => import('../views/aci/AciMiniAppsView').then(m => ({ default: m.AciMiniAppsView })));
+const MiniAppReviewConsoleView = lazy(() => import('../views/aci/MiniAppReviewConsoleView').then(m => ({ default: m.MiniAppReviewConsoleView })));
 const AciMiniAppFrameView = lazy(() => import('../views/aci/AciMiniAppFrameView').then(m => ({ default: m.AciMiniAppFrameView })));
 const AciAddinView = lazy(() => import('../views/aci/AciAddinView').then(m => ({ default: m.AciAddinView })));
 const ProjectView          = lazy(() => import('../views/ProjectView').then(m => ({ default: m.ProjectView })));
@@ -157,14 +158,14 @@ export function getShellViewRegistry(handlers: {
       </BrowserPaneWrapper>
     ),
     'mini-apps-store': () => (
-      <BrowserSurfaceFrame
-        title="Mini-apps"
-        subtitle="Discovered runtimes and connectors that can open inside the browser surface."
-      >
-        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Mini-apps" />}>
-          <AciMiniAppsView />
-        </ErrorBoundary>
-      </BrowserSurfaceFrame>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Mini-apps" />}>
+        <AciMiniAppsView />
+      </ErrorBoundary>
+    ),
+    'mini-app-review': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Mini-app review" />}>
+        <MiniAppReviewConsoleView />
+      </ErrorBoundary>
     ),
     'mini-app': ({ context }: { context?: ViewContext }) => {
       const miniAppContext = context?.context as { name?: string } | undefined;
@@ -226,9 +227,9 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'browser-extensions': () => (
-      <BrowserSurfaceFrame title="Office & Extensions" subtitle="Discover Microsoft add-ins and browser-side integrations from one Allternit surface.">
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Office & Extensions" />}>
         <BrowserExtensionsView />
-      </BrowserSurfaceFrame>
+      </ErrorBoundary>
     ),
     terminal: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Terminal" />}>

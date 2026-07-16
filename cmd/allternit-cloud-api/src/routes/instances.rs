@@ -8,9 +8,9 @@ use axum::{
     http::StatusCode,
     Json,
 };
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
 use crate::{ApiError, ApiState};
@@ -104,7 +104,7 @@ pub async fn list_instances(
             created_at, updated_at
         FROM cloud_instances
         ORDER BY created_at DESC
-        "#
+        "#,
     )
     .fetch_all(&state.db)
     .await
@@ -115,10 +115,8 @@ pub async fn list_instances(
 
     debug!("Found {} cloud instances", instances.len());
 
-    let responses: Vec<InstanceResponse> = instances
-        .into_iter()
-        .map(InstanceResponse::from)
-        .collect();
+    let responses: Vec<InstanceResponse> =
+        instances.into_iter().map(InstanceResponse::from).collect();
 
     Ok(Json(responses))
 }
@@ -140,7 +138,7 @@ pub async fn get_instance(
             created_at, updated_at
         FROM cloud_instances
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -152,7 +150,10 @@ pub async fn get_instance(
 
     match instance {
         Some(instance) => {
-            debug!("Found cloud instance: {} (provider: {:?})", instance.id, instance.provider);
+            debug!(
+                "Found cloud instance: {} (provider: {:?})",
+                instance.id, instance.provider
+            );
             Ok(Json(InstanceResponse::from(instance)))
         }
         None => {
@@ -181,7 +182,7 @@ pub async fn restart_instance(
             created_at, updated_at
         FROM cloud_instances
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -223,7 +224,7 @@ pub async fn restart_instance(
             // AWS restart implementation would go here
             warn!("AWS restart not yet implemented for instance {}", id);
             return Err(ApiError::Internal(
-                "AWS instance restart not yet implemented".to_string()
+                "AWS instance restart not yet implemented".to_string(),
             ));
         }
     }
@@ -234,13 +235,16 @@ pub async fn restart_instance(
         UPDATE cloud_instances 
         SET status = 'running', updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .execute(&state.db)
     .await
     .map_err(|e| {
-        error!("Database error updating instance {} status after restart: {}", id, e);
+        error!(
+            "Database error updating instance {} status after restart: {}",
+            id, e
+        );
         ApiError::DatabaseError(e)
     })?;
 
@@ -255,7 +259,7 @@ pub async fn restart_instance(
             created_at, updated_at
         FROM cloud_instances
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_one(&state.db)
@@ -277,10 +281,7 @@ async fn restart_hetzner_instance(instance: &CloudInstance) -> Result<(), ApiErr
 
     // Parse server ID as i64 (Hetzner uses numeric IDs)
     let server_id: i64 = instance.server_id.parse().map_err(|_| {
-        ApiError::Internal(format!(
-            "Invalid Hetzner server ID: {}",
-            instance.server_id
-        ))
+        ApiError::Internal(format!("Invalid Hetzner server ID: {}", instance.server_id))
     })?;
 
     // Note: In a production environment, you would:
@@ -324,7 +325,7 @@ pub async fn destroy_instance(
             created_at, updated_at
         FROM cloud_instances
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .fetch_optional(&state.db)
@@ -346,7 +347,7 @@ pub async fn destroy_instance(
     if instance.status == InstanceStatus::Destroying {
         warn!("Instance {} is already being destroyed", id);
         return Err(ApiError::BadRequest(
-            "Instance is already being destroyed".to_string()
+            "Instance is already being destroyed".to_string(),
         ));
     }
 
@@ -356,25 +357,26 @@ pub async fn destroy_instance(
         UPDATE cloud_instances 
         SET status = 'destroying', updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-        "#
+        "#,
     )
     .bind(&id)
     .execute(&state.db)
     .await
     .map_err(|e| {
-        error!("Database error updating instance {} status to destroying: {}", id, e);
+        error!(
+            "Database error updating instance {} status to destroying: {}",
+            id, e
+        );
         ApiError::DatabaseError(e)
     })?;
 
     // Call provider-specific destroy
     let destroy_result = match instance.provider {
-        CloudProvider::Hetzner => {
-            destroy_hetzner_instance(&instance).await
-        }
+        CloudProvider::Hetzner => destroy_hetzner_instance(&instance).await,
         CloudProvider::Aws => {
             warn!("AWS destroy not yet implemented for instance {}", id);
             Err(ApiError::Internal(
-                "AWS instance destroy not yet implemented".to_string()
+                "AWS instance destroy not yet implemented".to_string(),
             ))
         }
     };
@@ -402,13 +404,16 @@ pub async fn destroy_instance(
                 UPDATE cloud_instances 
                 SET status = 'error', updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
-                "#
+                "#,
             )
             .bind(&id)
             .execute(&state.db)
             .await
             .map_err(|db_err| {
-                error!("Database error updating instance {} status to error: {}", id, db_err);
+                error!(
+                    "Database error updating instance {} status to error: {}",
+                    id, db_err
+                );
                 ApiError::DatabaseError(db_err)
             })?;
 
@@ -427,10 +432,7 @@ async fn destroy_hetzner_instance(instance: &CloudInstance) -> Result<(), ApiErr
 
     // Parse server ID as i64 (Hetzner uses numeric IDs)
     let server_id: i64 = instance.server_id.parse().map_err(|_| {
-        ApiError::Internal(format!(
-            "Invalid Hetzner server ID: {}",
-            instance.server_id
-        ))
+        ApiError::Internal(format!("Invalid Hetzner server ID: {}", instance.server_id))
     })?;
 
     // Note: In a production environment, you would:
@@ -457,11 +459,13 @@ async fn destroy_hetzner_instance(instance: &CloudInstance) -> Result<(), ApiErr
 
 /// Helper function to get Hetzner client (for production use)
 #[allow(dead_code)]
-async fn get_hetzner_client(_provider_id: &str) -> Result<allternit_cloud_hetzner::HetznerClient, ApiError> {
+async fn get_hetzner_client(
+    _provider_id: &str,
+) -> Result<allternit_cloud_hetzner::HetznerClient, ApiError> {
     // In production, fetch credentials from database and create client
     // This is a placeholder for the actual implementation
     Err(ApiError::Internal(
-        "Hetzner client initialization not implemented".to_string()
+        "Hetzner client initialization not implemented".to_string(),
     ))
 }
 

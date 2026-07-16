@@ -1,0 +1,742 @@
+//! Outbound paired-runtime relay.
+//!
+//! Runtimes connect outward over WebSocket. A Clerk-authenticated browser may
+//! relay a scoped request only to a runtime owned by the same user. Gizzi and
+//! the operator API remain private on the runtime's loopback interface.
+
+use axum::{
+    body::Body,
+    extract::{
+        ws::{Message, WebSocket},
+        Path, Query, State, WebSocketUpgrade,
+    },
+    http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
+    routing::{get, post},
+    Json, Router,
+};
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+use bytes::Bytes;
+use futures_util::{SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    convert::Infallible,
+    sync::{Arc, OnceLock},
+    time::{Duration, Instant},
+};
+use tokio::sync::{mpsc, oneshot, Mutex, RwLock};
+use tokio_stream::wrappers::ReceiverStream;
+use uuid::Uuid;
+
+use super::runtime_pairing::authenticate_runtime_token;
+use crate::{auth::clerk, ApiError, ApiState};
+
+const RELAY_TIMEOUT: Duration = Duration::from_secs(90);
+const MAX_RELAY_BODY_BYTES: usize = 5 * 1024 * 1024;
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum RuntimeMessage {
+    Authenticate {
+        runtime_id: String,
+        device_token: String,
+    },
+    Response {
+        request_id: String,
+        status: u16,
+        #[serde(default)]
+        headers: HashMap<String, String>,
+        #[serde(default)]
+        body: String,
+        #[serde(default)]
+        body_encoding: String,
+    },
+    ResponseStart {
+        request_id: String,
+        status: u16,
+        #[serde(default)]
+        headers: HashMap<String, String>,
+    },
+    ResponseChunk {
+        request_id: String,
+        #[serde(default)]
+        body: String,
+        #[serde(default)]
+        body_encoding: String,
+    },
+    ResponseEnd {
+        request_id: String,
+    },
+    SocketReady {
+        socket_id: String,
+    },
+    SocketData {
+        socket_id: String,
+        #[serde(default)]
+        body: String,
+        #[serde(default)]
+        body_encoding: String,
+    },
+    SocketClose {
+        socket_id: String,
+        #[serde(default)]
+        code: u16,
+        #[serde(default)]
+        reason: String,
+    },
+    Pong,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum CloudMessage {
+    Authenticated {
+        runtime_id: String,
+    },
+    Request {
+        request_id: String,
+        method: String,
+        path: String,
+        headers: HashMap<String, String>,
+        body: String,
+        body_encoding: String,
+    },
+    SocketOpen {
+        socket_id: String,
+        path: String,
+        headers: HashMap<String, String>,
+    },
+    SocketData {
+        socket_id: String,
+        body: String,
+        body_encoding: String,
+    },
+    SocketClose {
+        socket_id: String,
+        code: u16,
+        reason: String,
+    },
+    Ping,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BrowserProxyRequest {
+    method: String,
+    path: String,
+    #[serde(default)]
+    headers: HashMap<String, String>,
+    #[serde(default)]
+    body: String,
+    #[serde(default)]
+    body_encoding: String,
+}
+
+struct RelayHead {
+    status: u16,
+    headers: HashMap<String, String>,
+}
+
+struct PendingRelay {
+    head: Option<oneshot::Sender<RelayHead>>,
+    chunks: mpsc::Sender<Result<Bytes, Infallible>>,
+}
+
+struct RuntimeConnection {
+    sender: mpsc::UnboundedSender<CloudMessage>,
+    pending: Mutex<HashMap<String, PendingRelay>>,
+    sockets: Mutex<HashMap<String, mpsc::UnboundedSender<RuntimeSocketFrame>>>,
+}
+
+enum RuntimeSocketFrame {
+    Ready,
+    Data(Bytes, bool),
+    Close(u16, String),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateSocketTicketRequest {
+    path: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct SocketTicketQuery {
+    ticket: String,
+}
+
+struct SocketTicket {
+    runtime_id: String,
+    path: String,
+    expires_at: Instant,
+}
+
+type RelayHub = RwLock<HashMap<String, Arc<RuntimeConnection>>>;
+
+fn relay_hub() -> &'static RelayHub {
+    static HUB: OnceLock<RelayHub> = OnceLock::new();
+    HUB.get_or_init(|| RwLock::new(HashMap::new()))
+}
+
+fn socket_tickets() -> &'static Mutex<HashMap<String, SocketTicket>> {
+    static TICKETS: OnceLock<Mutex<HashMap<String, SocketTicket>>> = OnceLock::new();
+    TICKETS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+pub fn routes() -> Router<Arc<ApiState>> {
+    Router::new()
+        .route("/api/v1/runtime-relay/connect/:id", get(connect_runtime))
+        .route("/api/v1/runtime-devices/:id/proxy", post(proxy_to_runtime))
+        .route(
+            "/api/v1/runtime-devices/:id/socket-ticket",
+            post(create_socket_ticket),
+        )
+        .route(
+            "/api/v1/runtime-devices/:id/socket",
+            get(connect_browser_socket),
+        )
+}
+
+async fn connect_runtime(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<ApiState>>,
+    Path(runtime_id): Path<String>,
+) -> Response {
+    ws.on_upgrade(move |socket| runtime_socket(socket, state, runtime_id))
+}
+
+async fn create_socket_ticket(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    Path(runtime_id): Path<String>,
+    Json(request): Json<CreateSocketTicketRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let user = clerk::user_from_headers(&headers).await?;
+    let capabilities = runtime_capabilities(&state, &runtime_id, &user.id).await?;
+    if !capabilities
+        .iter()
+        .any(|capability| capability == "runtime:connect")
+    {
+        return Err(ApiError::Forbidden(
+            "Runtime is not allowed to accept relayed sockets".to_string(),
+        ));
+    }
+    let validation = BrowserProxyRequest {
+        method: "GET".to_string(),
+        path: request.path.clone(),
+        headers: HashMap::new(),
+        body: String::new(),
+        body_encoding: "utf8".to_string(),
+    };
+    validate_proxy_request(&validation)?;
+    let required = required_capability(&request.path, "GET");
+    if !capabilities.iter().any(|capability| capability == required) {
+        return Err(ApiError::Forbidden(format!(
+            "Runtime pairing does not grant {required}"
+        )));
+    }
+    if relay_hub().read().await.get(&runtime_id).is_none() {
+        return Err(ApiError::ServiceUnavailable(
+            "The selected runtime is offline".to_string(),
+        ));
+    }
+
+    let ticket = Uuid::new_v4().to_string();
+    let expires_at = Instant::now() + Duration::from_secs(30);
+    let mut tickets = socket_tickets().lock().await;
+    tickets.retain(|_, value| value.expires_at > Instant::now());
+    tickets.insert(
+        ticket.clone(),
+        SocketTicket {
+            runtime_id,
+            path: request.path,
+            expires_at,
+        },
+    );
+    Ok(Json(serde_json::json!({
+        "ticket": ticket,
+        "expiresInSeconds": 30,
+    })))
+}
+
+async fn connect_browser_socket(
+    ws: WebSocketUpgrade,
+    Path(runtime_id): Path<String>,
+    Query(query): Query<SocketTicketQuery>,
+) -> Result<Response, ApiError> {
+    let ticket = socket_tickets().lock().await.remove(&query.ticket);
+    let ticket = ticket
+        .filter(|value| value.runtime_id == runtime_id && value.expires_at > Instant::now())
+        .ok_or_else(|| {
+            ApiError::Unauthorized("Invalid or expired runtime socket ticket".to_string())
+        })?;
+    Ok(ws.on_upgrade(move |socket| browser_socket(socket, runtime_id, ticket.path)))
+}
+
+async fn browser_socket(socket: WebSocket, runtime_id: String, path: String) {
+    let connection = relay_hub().read().await.get(&runtime_id).cloned();
+    let Some(connection) = connection else {
+        return;
+    };
+    let socket_id = Uuid::new_v4().to_string();
+    let (runtime_sender, mut runtime_events) = mpsc::unbounded_channel();
+    connection
+        .sockets
+        .lock()
+        .await
+        .insert(socket_id.clone(), runtime_sender);
+    if connection
+        .sender
+        .send(CloudMessage::SocketOpen {
+            socket_id: socket_id.clone(),
+            path,
+            headers: HashMap::new(),
+        })
+        .is_err()
+    {
+        connection.sockets.lock().await.remove(&socket_id);
+        return;
+    }
+
+    let (mut sink, mut stream) = socket.split();
+    loop {
+        tokio::select! {
+            browser = stream.next() => {
+                match browser {
+                    Some(Ok(Message::Text(body))) => {
+                        let _ = connection.sender.send(CloudMessage::SocketData {
+                            socket_id: socket_id.clone(), body, body_encoding: "utf8".to_string(),
+                        });
+                    }
+                    Some(Ok(Message::Binary(body))) => {
+                        let _ = connection.sender.send(CloudMessage::SocketData {
+                            socket_id: socket_id.clone(), body: STANDARD.encode(body), body_encoding: "base64".to_string(),
+                        });
+                    }
+                    Some(Ok(Message::Ping(body))) => {
+                        if sink.send(Message::Pong(body)).await.is_err() { break; }
+                    }
+                    Some(Ok(Message::Close(_))) | Some(Err(_)) | None => break,
+                    _ => {}
+                }
+            }
+            runtime = runtime_events.recv() => {
+                match runtime {
+                    Some(RuntimeSocketFrame::Ready) => {
+                        if sink.send(Message::Text("{\"type\":\"allternit_socket_ready\"}".to_string())).await.is_err() { break; }
+                    }
+                    Some(RuntimeSocketFrame::Data(body, true)) => {
+                        if sink.send(Message::Binary(body.to_vec())).await.is_err() { break; }
+                    }
+                    Some(RuntimeSocketFrame::Data(body, false)) => {
+                        let text = String::from_utf8_lossy(&body).into_owned();
+                        if sink.send(Message::Text(text)).await.is_err() { break; }
+                    }
+                    Some(RuntimeSocketFrame::Close(_, _)) | None => {
+                        let _ = sink.send(Message::Close(None)).await;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    connection.sockets.lock().await.remove(&socket_id);
+    let _ = connection.sender.send(CloudMessage::SocketClose {
+        socket_id,
+        code: 1000,
+        reason: "Browser disconnected".to_string(),
+    });
+}
+
+async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: String) {
+    let (mut sink, mut stream) = socket.split();
+    let auth_message = match tokio::time::timeout(Duration::from_secs(10), stream.next()).await {
+        Ok(Some(Ok(Message::Text(text)))) => serde_json::from_str::<RuntimeMessage>(&text).ok(),
+        _ => None,
+    };
+    let (runtime_id, device_token) = match auth_message {
+        Some(RuntimeMessage::Authenticate {
+            runtime_id,
+            device_token,
+        }) if runtime_id == expected_id => (runtime_id, device_token),
+        _ => {
+            let _ = sink.send(Message::Close(None)).await;
+            return;
+        }
+    };
+    if authenticate_runtime_token(&state, &device_token, &runtime_id)
+        .await
+        .is_err()
+    {
+        let _ = sink.send(Message::Close(None)).await;
+        return;
+    }
+
+    let (sender, mut outgoing) = mpsc::unbounded_channel();
+    let connection = Arc::new(RuntimeConnection {
+        sender,
+        pending: Mutex::new(HashMap::new()),
+        sockets: Mutex::new(HashMap::new()),
+    });
+    relay_hub()
+        .write()
+        .await
+        .insert(runtime_id.clone(), connection.clone());
+    let authenticated = CloudMessage::Authenticated {
+        runtime_id: runtime_id.clone(),
+    };
+    if sink
+        .send(Message::Text(
+            serde_json::to_string(&authenticated).unwrap(),
+        ))
+        .await
+        .is_err()
+    {
+        relay_hub().write().await.remove(&runtime_id);
+        return;
+    }
+
+    let mut ping = tokio::time::interval(Duration::from_secs(25));
+    loop {
+        tokio::select! {
+            outbound = outgoing.recv() => {
+                let Some(outbound) = outbound else { break; };
+                let Ok(text) = serde_json::to_string(&outbound) else { continue; };
+                if sink.send(Message::Text(text)).await.is_err() { break; }
+            }
+            inbound = stream.next() => {
+                match inbound {
+                    Some(Ok(Message::Text(text))) => {
+                        match serde_json::from_str::<RuntimeMessage>(&text) {
+                            Ok(RuntimeMessage::ResponseStart { request_id, status, headers }) => {
+                                if let Some(pending) = connection.pending.lock().await.get_mut(&request_id) {
+                                    if let Some(waiter) = pending.head.take() {
+                                        let _ = waiter.send(RelayHead { status, headers });
+                                    }
+                                }
+                            }
+                            Ok(RuntimeMessage::ResponseChunk { request_id, body, body_encoding }) => {
+                                let chunks = connection
+                                    .pending
+                                    .lock()
+                                    .await
+                                    .get(&request_id)
+                                    .map(|pending| pending.chunks.clone());
+                                if let Some(chunks) = chunks {
+                                    let bytes = decode_relay_body(&body, &body_encoding);
+                                    let _ = chunks.send(Ok(bytes)).await;
+                                }
+                            }
+                            Ok(RuntimeMessage::ResponseEnd { request_id }) => {
+                                connection.pending.lock().await.remove(&request_id);
+                            }
+                            // Backward compatibility for a runtime that reconnects
+                            // during a rolling deployment with the buffered protocol.
+                            Ok(RuntimeMessage::Response { request_id, status, headers, body, body_encoding }) => {
+                                if let Some(mut pending) = connection.pending.lock().await.remove(&request_id) {
+                                    if let Some(waiter) = pending.head.take() {
+                                        let _ = waiter.send(RelayHead { status, headers });
+                                    }
+                                    let _ = pending.chunks.send(Ok(decode_relay_body(&body, &body_encoding))).await;
+                                }
+                            }
+                            Ok(RuntimeMessage::SocketReady { socket_id }) => {
+                                let sender = connection.sockets.lock().await.get(&socket_id).cloned();
+                                if let Some(sender) = sender {
+                                    let _ = sender.send(RuntimeSocketFrame::Ready);
+                                }
+                            }
+                            Ok(RuntimeMessage::SocketData { socket_id, body, body_encoding }) => {
+                                let sender = connection.sockets.lock().await.get(&socket_id).cloned();
+                                if let Some(sender) = sender {
+                                    let is_binary = body_encoding == "base64";
+                                    let _ = sender.send(RuntimeSocketFrame::Data(
+                                        decode_relay_body(&body, &body_encoding),
+                                        is_binary,
+                                    ));
+                                }
+                            }
+                            Ok(RuntimeMessage::SocketClose { socket_id, code, reason }) => {
+                                let sender = connection.sockets.lock().await.remove(&socket_id);
+                                if let Some(sender) = sender {
+                                    let _ = sender.send(RuntimeSocketFrame::Close(code, reason));
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    Some(Ok(Message::Close(_))) | None | Some(Err(_)) => break,
+                    _ => {}
+                }
+            }
+            _ = ping.tick() => {
+                let Ok(text) = serde_json::to_string(&CloudMessage::Ping) else { continue; };
+                if sink.send(Message::Text(text)).await.is_err() { break; }
+            }
+        }
+    }
+
+    let mut hub = relay_hub().write().await;
+    if hub
+        .get(&runtime_id)
+        .map(|current| Arc::ptr_eq(current, &connection))
+        .unwrap_or(false)
+    {
+        hub.remove(&runtime_id);
+    }
+    drop(hub);
+    connection.pending.lock().await.clear();
+    let sockets = std::mem::take(&mut *connection.sockets.lock().await);
+    for (_, sender) in sockets {
+        let _ = sender.send(RuntimeSocketFrame::Close(
+            1012,
+            "Runtime disconnected".to_string(),
+        ));
+    }
+}
+
+async fn proxy_to_runtime(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+    Path(runtime_id): Path<String>,
+    Json(request): Json<BrowserProxyRequest>,
+) -> Result<Response, ApiError> {
+    let user = clerk::user_from_headers(&headers).await?;
+    let capabilities = runtime_capabilities(&state, &runtime_id, &user.id).await?;
+    if !capabilities
+        .iter()
+        .any(|capability| capability == "runtime:connect")
+    {
+        return Err(ApiError::Forbidden(
+            "Runtime is not allowed to accept relayed requests".to_string(),
+        ));
+    }
+    validate_proxy_request(&request)?;
+    let required_capability = required_capability(&request.path, &request.method);
+    if !capabilities
+        .iter()
+        .any(|capability| capability == required_capability)
+    {
+        return Err(ApiError::Forbidden(format!(
+            "Runtime pairing does not grant {required_capability}"
+        )));
+    }
+
+    let connection = relay_hub().read().await.get(&runtime_id).cloned();
+    let Some(connection) = connection else {
+        return Ok((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({ "error": "runtime_offline", "message": "The selected runtime is offline" })),
+        ).into_response());
+    };
+    let request_id = Uuid::new_v4().to_string();
+    let response_timeout = if request.path.starts_with("/api/v1/providers/video/generate") {
+        Duration::from_secs(340)
+    } else {
+        RELAY_TIMEOUT
+    };
+    let (head_sender, head_receiver) = oneshot::channel();
+    let (chunk_sender, chunk_receiver) = mpsc::channel(32);
+    connection.pending.lock().await.insert(
+        request_id.clone(),
+        PendingRelay {
+            head: Some(head_sender),
+            chunks: chunk_sender,
+        },
+    );
+    let message = CloudMessage::Request {
+        request_id: request_id.clone(),
+        method: request.method.to_ascii_uppercase(),
+        path: request.path,
+        headers: filtered_headers(request.headers),
+        body: request.body,
+        body_encoding: request.body_encoding,
+    };
+    if connection.sender.send(message).is_err() {
+        connection.pending.lock().await.remove(&request_id);
+        return Ok((
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({ "error": "runtime_offline" })),
+        )
+            .into_response());
+    }
+
+    match tokio::time::timeout(response_timeout, head_receiver).await {
+        Ok(Ok(head)) => {
+            let status = StatusCode::from_u16(head.status).unwrap_or(StatusCode::BAD_GATEWAY);
+            let mut response = axum::http::Response::builder().status(status);
+            if let Some(headers) = response.headers_mut() {
+                for (name, value) in filtered_response_headers(head.headers) {
+                    if let (Ok(name), Ok(value)) =
+                        (HeaderName::try_from(name), HeaderValue::try_from(value))
+                    {
+                        headers.insert(name, value);
+                    }
+                }
+            }
+            Ok(response
+                .body(Body::from_stream(ReceiverStream::new(chunk_receiver)))
+                .unwrap_or_else(|_| {
+                    (StatusCode::BAD_GATEWAY, "Invalid runtime response").into_response()
+                }))
+        }
+        _ => {
+            connection.pending.lock().await.remove(&request_id);
+            Ok((
+                StatusCode::GATEWAY_TIMEOUT,
+                Json(serde_json::json!({ "error": "runtime_timeout" })),
+            )
+                .into_response())
+        }
+    }
+}
+
+async fn runtime_capabilities(
+    state: &ApiState,
+    runtime_id: &str,
+    user_id: &str,
+) -> Result<Vec<String>, ApiError> {
+    let capabilities = sqlx::query_scalar::<_, String>(
+        "SELECT capabilities FROM runtime_devices WHERE id = ? AND user_id = ? AND revoked_at IS NULL AND credential_expires_at > CURRENT_TIMESTAMP",
+    )
+    .bind(runtime_id)
+    .bind(user_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| ApiError::NotFound("Runtime not found".to_string()))?;
+    Ok(serde_json::from_str(&capabilities).unwrap_or_default())
+}
+
+fn decode_relay_body(body: &str, encoding: &str) -> Bytes {
+    if encoding == "base64" {
+        Bytes::from(STANDARD.decode(body).unwrap_or_default())
+    } else {
+        Bytes::copy_from_slice(body.as_bytes())
+    }
+}
+
+fn filtered_response_headers(headers: HashMap<String, String>) -> HashMap<String, String> {
+    headers
+        .into_iter()
+        .filter(|(name, _)| {
+            matches!(
+                name.to_ascii_lowercase().as_str(),
+                "content-type"
+                    | "cache-control"
+                    | "content-disposition"
+                    | "etag"
+                    | "last-modified"
+                    | "x-request-id"
+            )
+        })
+        .collect()
+}
+
+fn validate_proxy_request(request: &BrowserProxyRequest) -> Result<(), ApiError> {
+    let method = request.method.to_ascii_uppercase();
+    if !matches!(method.as_str(), "GET" | "POST" | "PUT" | "PATCH" | "DELETE") {
+        return Err(ApiError::BadRequest("Unsupported relay method".to_string()));
+    }
+    if !request.path.starts_with('/')
+        || request.path.starts_with("//")
+        || request.path.contains("..")
+        || request.path.contains("://")
+    {
+        return Err(ApiError::BadRequest("Invalid runtime path".to_string()));
+    }
+    if !is_allowed_runtime_path(&request.path) {
+        return Err(ApiError::Forbidden(
+            "Runtime path is outside the allowed gateway surface".to_string(),
+        ));
+    }
+    let estimated_size = if request.body_encoding == "base64" {
+        request.body.len() * 3 / 4
+    } else {
+        request.body.len()
+    };
+    if estimated_size > MAX_RELAY_BODY_BYTES {
+        return Err(ApiError::BadRequest("Relay body is too large".to_string()));
+    }
+    Ok(())
+}
+
+fn is_allowed_runtime_path(path: &str) -> bool {
+    const PREFIXES: &[&str] = &[
+        "/api",
+        "/viz",
+        "/sandbox",
+        "/vm-session",
+        "/rails",
+        "/stream",
+        "/terminal",
+        "/mcp",
+        "/platform",
+        "/metrics",
+        "/alabs",
+        "/cowork",
+        "/webhooks",
+        "/ws",
+        "/panes",
+        "/status",
+        "/health",
+    ];
+    PREFIXES.iter().any(|prefix| {
+        path == *prefix
+            || path
+                .strip_prefix(prefix)
+                .map(|suffix| suffix.starts_with('/') || suffix.starts_with('?'))
+                .unwrap_or(false)
+    })
+}
+
+fn required_capability(path: &str, method: &str) -> &'static str {
+    let normalized = path.to_ascii_lowercase();
+    if normalized == "/health"
+        || normalized.starts_with("/health?")
+        || normalized == "/status"
+        || normalized.starts_with("/status?")
+        || normalized == "/metrics"
+        || normalized.starts_with("/metrics?")
+    {
+        return "runtime:connect";
+    }
+    if normalized.contains("provider") || normalized.contains("/onboarding/provider") {
+        return if method.eq_ignore_ascii_case("GET") {
+            "providers:use"
+        } else {
+            "providers:connect"
+        };
+    }
+    if normalized.contains("terminal")
+        || normalized.contains("/pty")
+        || normalized.starts_with("/panes")
+    {
+        return "runtime:terminal";
+    }
+    if normalized.contains("/files")
+        || normalized.contains("/file/")
+        || normalized.contains("workspace")
+    {
+        return "runtime:files";
+    }
+    "runtime:execute"
+}
+
+fn filtered_headers(headers: HashMap<String, String>) -> HashMap<String, String> {
+    headers
+        .into_iter()
+        .filter(|(name, _)| {
+            matches!(
+                name.to_ascii_lowercase().as_str(),
+                "accept"
+                    | "content-type"
+                    | "if-none-match"
+                    | "if-modified-since"
+                    | "last-event-id"
+                    | "x-request-id"
+            )
+        })
+        .collect()
+}

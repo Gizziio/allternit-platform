@@ -6,13 +6,10 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
-use std::sync::Arc;
 use serde::Deserialize;
+use std::sync::Arc;
 
-use crate::{
-    ApiError, ApiState,
-    db::cowork_models::*,
-};
+use crate::{db::cowork_models::*, ApiError, ApiState};
 
 /// Query parameters for listing jobs
 #[derive(Debug, Deserialize, Default)]
@@ -51,14 +48,14 @@ pub async fn list_jobs(
         .fetch_optional(&state.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     if run.is_none() {
         return Err(ApiError::NotFound(format!("Run not found: {}", run_id)));
     }
-    
+
     let limit = query.limit.unwrap_or(100);
     let offset = query.offset.unwrap_or(0);
-    
+
     let jobs = if let Some(status_str) = query.status {
         sqlx::query_as::<_, Job>(
             "SELECT * FROM jobs WHERE run_id = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
@@ -72,7 +69,7 @@ pub async fn list_jobs(
         .map_err(|e| ApiError::DatabaseError(e))?
     } else {
         sqlx::query_as::<_, Job>(
-            "SELECT * FROM jobs WHERE run_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
+            "SELECT * FROM jobs WHERE run_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
         )
         .bind(&run_id)
         .bind(limit)
@@ -81,7 +78,7 @@ pub async fn list_jobs(
         .await
         .map_err(|e| ApiError::DatabaseError(e))?
     };
-    
+
     Ok(Json(jobs))
 }
 
@@ -92,22 +89,22 @@ pub async fn create_job(
     Json(request): Json<CreateJobRequest>,
 ) -> Result<Json<Job>, ApiError> {
     tracing::info!("Creating job '{}' for run: {}", request.name, run_id);
-    
+
     // Verify run exists
     let run = sqlx::query_as::<_, Run>("SELECT * FROM runs WHERE id = ?")
         .bind(&run_id)
         .fetch_optional(&state.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     if run.is_none() {
         return Err(ApiError::NotFound(format!("Run not found: {}", run_id)));
     }
-    
+
     let job_id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
     let priority = request.priority.unwrap_or(0);
-    
+
     let job = sqlx::query_as::<_, Job>(
         r#"
         INSERT INTO jobs (
@@ -116,7 +113,7 @@ pub async fn create_job(
             error_message, retry_count, max_retries, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
-        "#
+        "#,
     )
     .bind(&job_id)
     .bind(&run_id)
@@ -139,19 +136,22 @@ pub async fn create_job(
     .fetch_one(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     // Emit job created event
-    let _ = state.event_store.append(
-        &run_id,
-        EventType::JobQueued,
-        serde_json::json!({
-            "job_id": job_id,
-            "job_name": request.name,
-            "priority": priority,
-            "config": request.config,
-        })
-    ).await;
-    
+    let _ = state
+        .event_store
+        .append(
+            &run_id,
+            EventType::JobQueued,
+            serde_json::json!({
+                "job_id": job_id,
+                "job_name": request.name,
+                "priority": priority,
+                "config": request.config,
+            }),
+        )
+        .await;
+
     tracing::info!("Job created: {} for run: {}", job_id, run_id);
     Ok(Json(job))
 }
@@ -161,15 +161,13 @@ pub async fn get_job(
     State(state): State<Arc<ApiState>>,
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<Json<Job>, ApiError> {
-    let job = sqlx::query_as::<_, Job>(
-        "SELECT * FROM jobs WHERE id = ? AND run_id = ?"
-    )
-    .bind(&job_id)
-    .bind(&run_id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
-    
+    let job = sqlx::query_as::<_, Job>("SELECT * FROM jobs WHERE id = ? AND run_id = ?")
+        .bind(&job_id)
+        .bind(&run_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| ApiError::DatabaseError(e))?;
+
     job.ok_or_else(|| ApiError::NotFound(format!("Job not found: {}", job_id)))
         .map(Json)
 }
@@ -181,28 +179,26 @@ pub async fn update_job(
     Json(request): Json<UpdateJobRequest>,
 ) -> Result<Json<Job>, ApiError> {
     // Get existing job
-    let job = sqlx::query_as::<_, Job>(
-        "SELECT * FROM jobs WHERE id = ? AND run_id = ?"
-    )
-    .bind(&job_id)
-    .bind(&run_id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
-    
+    let job = sqlx::query_as::<_, Job>("SELECT * FROM jobs WHERE id = ? AND run_id = ?")
+        .bind(&job_id)
+        .bind(&run_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| ApiError::DatabaseError(e))?;
+
     let job = job.ok_or_else(|| ApiError::NotFound(format!("Job not found: {}", job_id)))?;
-    
+
     let name = request.name.unwrap_or_else(|| job.name.clone());
     let description = request.description.or(job.description.clone());
     let status = request.status.unwrap_or(job.status);
-    
+
     let updated = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
         SET name = ?, description = ?, status = ?, updated_at = ?
         WHERE id = ? AND run_id = ?
         RETURNING *
-        "#
+        "#,
     )
     .bind(&name)
     .bind(&description)
@@ -213,7 +209,7 @@ pub async fn update_job(
     .fetch_one(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     Ok(Json(updated))
 }
 
@@ -222,19 +218,17 @@ pub async fn delete_job(
     State(state): State<Arc<ApiState>>,
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<(), ApiError> {
-    let result = sqlx::query(
-        "DELETE FROM jobs WHERE id = ? AND run_id = ?"
-    )
-    .bind(&job_id)
-    .bind(&run_id)
-    .execute(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
-    
+    let result = sqlx::query("DELETE FROM jobs WHERE id = ? AND run_id = ?")
+        .bind(&job_id)
+        .bind(&run_id)
+        .execute(&state.db)
+        .await
+        .map_err(|e| ApiError::DatabaseError(e))?;
+
     if result.rows_affected() == 0 {
         return Err(ApiError::NotFound(format!("Job not found: {}", job_id)));
     }
-    
+
     Ok(())
 }
 
@@ -244,14 +238,14 @@ pub async fn start_job(
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<Json<Job>, ApiError> {
     let now = chrono::Utc::now();
-    
+
     let job = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
         SET status = ?, started_at = ?, updated_at = ?
         WHERE id = ? AND run_id = ? AND status IN (?, ?)
         RETURNING *
-        "#
+        "#,
     )
     .bind(JobStatus::Running)
     .bind(now)
@@ -263,20 +257,25 @@ pub async fn start_job(
     .fetch_optional(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
-    let job = job.ok_or_else(|| ApiError::NotFound(format!("Job not found or cannot be started: {}", job_id)))?;
-    
+
+    let job = job.ok_or_else(|| {
+        ApiError::NotFound(format!("Job not found or cannot be started: {}", job_id))
+    })?;
+
     // Emit job started event
-    let _ = state.event_store.append(
-        &run_id,
-        EventType::JobStarted,
-        serde_json::json!({
-            "job_id": job_id,
-            "job_name": job.name,
-            "started_at": now,
-        })
-    ).await;
-    
+    let _ = state
+        .event_store
+        .append(
+            &run_id,
+            EventType::JobStarted,
+            serde_json::json!({
+                "job_id": job_id,
+                "job_name": job.name,
+                "started_at": now,
+            }),
+        )
+        .await;
+
     Ok(Json(job))
 }
 
@@ -288,14 +287,14 @@ pub async fn complete_job(
 ) -> Result<Json<Job>, ApiError> {
     let now = chrono::Utc::now();
     let result_clone = result.clone();
-    
+
     let job = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
         SET status = ?, completed_at = ?, exit_code = ?, result = ?, updated_at = ?
         WHERE id = ? AND run_id = ? AND status = ?
         RETURNING *
-        "#
+        "#,
     )
     .bind(JobStatus::Completed)
     .bind(now)
@@ -308,22 +307,26 @@ pub async fn complete_job(
     .fetch_optional(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
-    let job = job.ok_or_else(|| ApiError::NotFound(format!("Job not found or not running: {}", job_id)))?;
-    
+
+    let job =
+        job.ok_or_else(|| ApiError::NotFound(format!("Job not found or not running: {}", job_id)))?;
+
     // Emit job completed event
-    let _ = state.event_store.append(
-        &run_id,
-        EventType::JobCompleted,
-        serde_json::json!({
-            "job_id": job_id,
-            "job_name": job.name,
-            "exit_code": 0,
-            "result": result_clone,
-            "completed_at": now,
-        })
-    ).await;
-    
+    let _ = state
+        .event_store
+        .append(
+            &run_id,
+            EventType::JobCompleted,
+            serde_json::json!({
+                "job_id": job_id,
+                "job_name": job.name,
+                "exit_code": 0,
+                "result": result_clone,
+                "completed_at": now,
+            }),
+        )
+        .await;
+
     Ok(Json(job))
 }
 
@@ -334,14 +337,14 @@ pub async fn fail_job(
     Json(request): Json<FailJobRequest>,
 ) -> Result<Json<Job>, ApiError> {
     let now = chrono::Utc::now();
-    
+
     let job = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
         SET status = ?, completed_at = ?, exit_code = ?, error_message = ?, updated_at = ?
         WHERE id = ? AND run_id = ? AND status = ?
         RETURNING *
-        "#
+        "#,
     )
     .bind(JobStatus::Failed)
     .bind(now)
@@ -354,22 +357,26 @@ pub async fn fail_job(
     .fetch_optional(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
-    let job = job.ok_or_else(|| ApiError::NotFound(format!("Job not found or not running: {}", job_id)))?;
-    
+
+    let job =
+        job.ok_or_else(|| ApiError::NotFound(format!("Job not found or not running: {}", job_id)))?;
+
     // Emit job failed event
-    let _ = state.event_store.append(
-        &run_id,
-        EventType::JobFailed,
-        serde_json::json!({
-            "job_id": job_id,
-            "job_name": job.name,
-            "exit_code": request.exit_code.unwrap_or(1),
-            "error_message": request.error_message,
-            "failed_at": now,
-        })
-    ).await;
-    
+    let _ = state
+        .event_store
+        .append(
+            &run_id,
+            EventType::JobFailed,
+            serde_json::json!({
+                "job_id": job_id,
+                "job_name": job.name,
+                "exit_code": request.exit_code.unwrap_or(1),
+                "error_message": request.error_message,
+                "failed_at": now,
+            }),
+        )
+        .await;
+
     Ok(Json(job))
 }
 
@@ -386,14 +393,14 @@ pub async fn cancel_job(
     Path((run_id, job_id)): Path<(String, String)>,
 ) -> Result<Json<Job>, ApiError> {
     let now = chrono::Utc::now();
-    
+
     let job = sqlx::query_as::<_, Job>(
         r#"
         UPDATE jobs 
         SET status = ?, completed_at = ?, error_message = ?, updated_at = ?
         WHERE id = ? AND run_id = ? AND status IN (?, ?, ?)
         RETURNING *
-        "#
+        "#,
     )
     .bind(JobStatus::Cancelled)
     .bind(now)
@@ -407,19 +414,24 @@ pub async fn cancel_job(
     .fetch_optional(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
-    let job = job.ok_or_else(|| ApiError::NotFound(format!("Job not found or already completed: {}", job_id)))?;
-    
+
+    let job = job.ok_or_else(|| {
+        ApiError::NotFound(format!("Job not found or already completed: {}", job_id))
+    })?;
+
     // Emit job cancelled event
-    let _ = state.event_store.append(
-        &run_id,
-        EventType::JobCancelled,
-        serde_json::json!({
-            "job_id": job_id,
-            "job_name": job.name,
-            "cancelled_at": now,
-        })
-    ).await;
-    
+    let _ = state
+        .event_store
+        .append(
+            &run_id,
+            EventType::JobCancelled,
+            serde_json::json!({
+                "job_id": job_id,
+                "job_name": job.name,
+                "cancelled_at": now,
+            }),
+        )
+        .await;
+
     Ok(Json(job))
 }

@@ -31,7 +31,7 @@ pub async fn create_task(
             created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
-        "#
+        "#,
     )
     .bind(&task_id)
     .bind(&req.workspace_id)
@@ -77,7 +77,7 @@ pub async fn create_task(
             r#"
             INSERT INTO task_queue (id, task_id, status, max_retries, created_at)
             VALUES (?, ?, 'pending', 3, ?)
-            "#
+            "#,
         )
         .bind(&queue_id)
         .bind(&task_id)
@@ -167,14 +167,12 @@ pub async fn get_task(
     id: &str,
     tenant_id: Option<&str>,
 ) -> Result<Task, ApiError> {
-    let task = sqlx::query_as::<_, Task>(
-        "SELECT * FROM tasks WHERE id = ? AND tenant_id = ?"
-    )
-    .bind(id)
-    .bind(tenant_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(ApiError::DatabaseError)?;
+    let task = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE id = ? AND tenant_id = ?")
+        .bind(id)
+        .bind(tenant_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(ApiError::DatabaseError)?;
 
     task.ok_or_else(|| ApiError::NotFound(format!("Task not found: {}", id)))
 }
@@ -199,7 +197,10 @@ pub async fn update_task(
     let assignee_id = req.assignee_id.or(task.assignee_id.clone());
     let assignee_name = req.assignee_name.or(task.assignee_name.clone());
     let assignee_avatar = req.assignee_avatar.or(task.assignee_avatar.clone());
-    let dependencies = req.dependencies.map(sqlx::types::Json).or(task.dependencies.clone());
+    let dependencies = req
+        .dependencies
+        .map(sqlx::types::Json)
+        .or(task.dependencies.clone());
     let risk = req.risk.or(task.risk);
     let now = Utc::now();
 
@@ -211,7 +212,7 @@ pub async fn update_task(
             assignee_name = ?, assignee_avatar = ?, dependencies = ?, risk = ?, updated_at = ?
         WHERE id = ? AND tenant_id = ?
         RETURNING *
-        "#
+        "#,
     )
     .bind(&title)
     .bind(&description)
@@ -255,14 +256,12 @@ pub async fn delete_task(
     id: &str,
     tenant_id: Option<&str>,
 ) -> Result<(), ApiError> {
-    let result = sqlx::query(
-        "DELETE FROM tasks WHERE id = ? AND tenant_id = ?"
-    )
-    .bind(id)
-    .bind(tenant_id)
-    .execute(pool)
-    .await
-    .map_err(ApiError::DatabaseError)?;
+    let result = sqlx::query("DELETE FROM tasks WHERE id = ? AND tenant_id = ?")
+        .bind(id)
+        .bind(tenant_id)
+        .execute(pool)
+        .await
+        .map_err(ApiError::DatabaseError)?;
 
     if result.rows_affected() == 0 {
         return Err(ApiError::NotFound(format!("Task not found: {}", id)));
@@ -311,7 +310,7 @@ pub async fn assign_task(
         INSERT INTO task_assignments (
             id, task_id, assignee_type, assignee_id, assignee_name, assigned_by, assigned_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        "#
+        "#,
     )
     .bind(&assignment_id)
     .bind(task_id)
@@ -352,7 +351,7 @@ pub async fn list_comments(
     let _ = get_task(pool, task_id, tenant_id).await?;
 
     let comments = sqlx::query_as::<_, TaskComment>(
-        "SELECT * FROM task_comments WHERE task_id = ? ORDER BY created_at ASC"
+        "SELECT * FROM task_comments WHERE task_id = ? ORDER BY created_at ASC",
     )
     .bind(task_id)
     .fetch_all(pool)
@@ -380,7 +379,7 @@ pub async fn add_comment(
         INSERT INTO task_comments (id, task_id, author, author_avatar, body, created_at)
         VALUES (?, ?, ?, ?, ?, ?)
         RETURNING *
-        "#
+        "#,
     )
     .bind(&comment_id)
     .bind(task_id)
@@ -420,7 +419,11 @@ pub async fn optimize_tasks(
     let filter = TaskListFilter {
         tenant_id: tenant_id.map(|s| s.to_string()),
         workspace_id: Some(workspace_id.to_string()),
-        status: Some(vec![TaskStatus::Backlog, TaskStatus::Todo, TaskStatus::InProgress]),
+        status: Some(vec![
+            TaskStatus::Backlog,
+            TaskStatus::Todo,
+            TaskStatus::InProgress,
+        ]),
         ..Default::default()
     };
 
@@ -441,7 +444,7 @@ pub async fn optimize_tasks(
         let rank_i32 = rank as i32 + 1;
         if let Some(tid) = tenant_id {
             sqlx::query(
-                "UPDATE tasks SET optimize_rank = ?, updated_at = ? WHERE id = ? AND tenant_id = ?"
+                "UPDATE tasks SET optimize_rank = ?, updated_at = ? WHERE id = ? AND tenant_id = ?",
             )
             .bind(rank_i32)
             .bind(now)
@@ -484,7 +487,7 @@ async fn record_task_event(
         r#"
         INSERT INTO task_events (task_id, event_type, payload, source_client, created_at)
         VALUES (?, ?, ?, ?, ?)
-        "#
+        "#,
     )
     .bind(task_id)
     .bind(event_type)
@@ -520,7 +523,7 @@ pub async fn claim_queue_item(
             LIMIT 1
         )
         RETURNING *
-        "#
+        "#,
     )
     .bind(agent_id)
     .bind(agent_role)
@@ -544,7 +547,7 @@ pub async fn start_queue_item(
         SET status = 'running', started_at = ?
         WHERE id = ? AND status = 'claimed'
         RETURNING *
-        "#
+        "#,
     )
     .bind(Utc::now())
     .bind(queue_id)
@@ -569,7 +572,7 @@ pub async fn list_queue_items(
                 JOIN tasks t ON q.task_id = t.id
                 WHERE t.workspace_id = ? AND q.status = ?
                 ORDER BY q.created_at ASC
-                "#
+                "#,
             )
             .bind(ws)
             .bind(st)
@@ -582,7 +585,7 @@ pub async fn list_queue_items(
                 JOIN tasks t ON q.task_id = t.id
                 WHERE t.workspace_id = ?
                 ORDER BY q.created_at ASC
-                "#
+                "#,
             )
             .bind(ws)
             .fetch_all(pool)
@@ -590,17 +593,15 @@ pub async fn list_queue_items(
         }
     } else if let Some(st) = status {
         sqlx::query_as::<_, TaskQueueEntry>(
-            "SELECT * FROM task_queue WHERE status = ? ORDER BY created_at ASC"
+            "SELECT * FROM task_queue WHERE status = ? ORDER BY created_at ASC",
         )
         .bind(st)
         .fetch_all(pool)
         .await
     } else {
-        sqlx::query_as::<_, TaskQueueEntry>(
-            "SELECT * FROM task_queue ORDER BY created_at ASC"
-        )
-        .fetch_all(pool)
-        .await
+        sqlx::query_as::<_, TaskQueueEntry>("SELECT * FROM task_queue ORDER BY created_at ASC")
+            .fetch_all(pool)
+            .await
     }
     .map_err(ApiError::DatabaseError)?;
 
@@ -616,7 +617,11 @@ pub async fn complete_queue_item(
     error: Option<String>,
 ) -> Result<TaskQueueEntry, ApiError> {
     let result_json: Option<serde_json::Value> = result.and_then(|r| serde_json::from_str(&r).ok());
-    let status = if error.is_some() { "failed" } else { "completed" };
+    let status = if error.is_some() {
+        "failed"
+    } else {
+        "completed"
+    };
 
     let updated = sqlx::query_as::<_, TaskQueueEntry>(
         r#"
@@ -624,7 +629,7 @@ pub async fn complete_queue_item(
         SET status = ?, completed_at = ?, result = ?, error = ?
         WHERE id = ?
         RETURNING *
-        "#
+        "#,
     )
     .bind(status)
     .bind(Utc::now())
@@ -677,14 +682,12 @@ impl TaskService {
         id: &str,
         tenant_id: Option<String>,
     ) -> Result<Option<Task>, ApiError> {
-        let task = sqlx::query_as::<_, Task>(
-            "SELECT * FROM tasks WHERE id = ? AND tenant_id = ?"
-        )
-        .bind(id)
-        .bind(tenant_id)
-        .fetch_optional(&self.db)
-        .await
-        .map_err(ApiError::DatabaseError)?;
+        let task = sqlx::query_as::<_, Task>("SELECT * FROM tasks WHERE id = ? AND tenant_id = ?")
+            .bind(id)
+            .bind(tenant_id)
+            .fetch_optional(&self.db)
+            .await
+            .map_err(ApiError::DatabaseError)?;
 
         Ok(task)
     }
@@ -712,7 +715,14 @@ impl TaskService {
         tenant_id: Option<String>,
         assigned_by: Option<String>,
     ) -> Result<Task, ApiError> {
-        assign_task(&self.db, id, req, tenant_id.as_deref(), assigned_by.as_deref()).await
+        assign_task(
+            &self.db,
+            id,
+            req,
+            tenant_id.as_deref(),
+            assigned_by.as_deref(),
+        )
+        .await
     }
 
     /// List comments for a task with tenant isolation
@@ -750,14 +760,17 @@ impl TaskService {
         agent_role: Option<String>,
         workspace_id: Option<String>,
     ) -> Result<Option<TaskQueueEntry>, ApiError> {
-        claim_queue_item(&self.db, agent_id, agent_role.as_deref(), workspace_id.as_deref()).await
+        claim_queue_item(
+            &self.db,
+            agent_id,
+            agent_role.as_deref(),
+            workspace_id.as_deref(),
+        )
+        .await
     }
 
     /// Start a claimed queue item (transition to running)
-    pub async fn start_queue_item(
-        &self,
-        queue_id: &str,
-    ) -> Result<TaskQueueEntry, ApiError> {
+    pub async fn start_queue_item(&self, queue_id: &str) -> Result<TaskQueueEntry, ApiError> {
         start_queue_item(&self.db, queue_id).await
     }
 
@@ -779,13 +792,14 @@ impl TaskService {
         payload: Option<String>,
         source_client: Option<String>,
     ) -> Result<(), ApiError> {
-        let payload_json: Option<serde_json::Value> = payload.and_then(|p| serde_json::from_str(&p).ok());
+        let payload_json: Option<serde_json::Value> =
+            payload.and_then(|p| serde_json::from_str(&p).ok());
 
         sqlx::query(
             r#"
             INSERT INTO task_events (task_id, event_type, payload, source_client, created_at)
             VALUES (?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(task_id)
         .bind(event_type)

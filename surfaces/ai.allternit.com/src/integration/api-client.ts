@@ -784,7 +784,7 @@ class AllternitApiClient {
   }
 
   async updateAgent(agentId: string, updates: Partial<Agent>): Promise<Agent> {
-    return this.patch<Agent>(`/api/v1/agents/${agentId}`, updates);
+    return this.put<Agent>(`/api/v1/agents/${agentId}`, updates);
   }
 
   async deleteAgent(agentId: string): Promise<void> {

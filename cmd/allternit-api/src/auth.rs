@@ -250,10 +250,7 @@ impl JwksManager {
             .map_err(|e| AuthError::JwksFetch(e.to_string()))?;
 
         if !resp.status().is_success() {
-            return Err(AuthError::JwksFetch(format!(
-                "HTTP {}",
-                resp.status()
-            )));
+            return Err(AuthError::JwksFetch(format!("HTTP {}", resp.status())));
         }
 
         let jwks: JwksResponse = resp
@@ -310,16 +307,23 @@ impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         let (status, message) = match self {
             AuthError::MissingToken => (StatusCode::UNAUTHORIZED, "Missing authorization token"),
-            AuthError::InvalidTokenFormat => {
-                (StatusCode::UNAUTHORIZED, "Invalid authorization header format")
-            }
+            AuthError::InvalidTokenFormat => (
+                StatusCode::UNAUTHORIZED,
+                "Invalid authorization header format",
+            ),
             AuthError::JwksFetch(msg) => {
                 error!("JWKS fetch error: {}", msg);
-                (StatusCode::SERVICE_UNAVAILABLE, "Authentication service unavailable")
+                (
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Authentication service unavailable",
+                )
             }
             AuthError::JwksParse(msg) => {
                 error!("JWKS parse error: {}", msg);
-                (StatusCode::SERVICE_UNAVAILABLE, "Authentication service unavailable")
+                (
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Authentication service unavailable",
+                )
             }
             AuthError::KeyNotFound(kid) => {
                 warn!("JWKS key not found: {}", kid);
@@ -353,12 +357,11 @@ pub async fn verify_token(
     config: &AuthConfig,
 ) -> Result<AuthUser, AuthError> {
     // Decode header to get key ID
-    let header = decode_header(token)
-        .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+    let header = decode_header(token).map_err(|e| AuthError::TokenDecode(e.to_string()))?;
 
-    let kid = header.kid.ok_or_else(|| {
-        AuthError::TokenDecode("Token missing 'kid' header".to_string())
-    })?;
+    let kid = header
+        .kid
+        .ok_or_else(|| AuthError::TokenDecode("Token missing 'kid' header".to_string()))?;
 
     // Fetch the signing key
     let jwk = jwks
@@ -367,12 +370,14 @@ pub async fn verify_token(
         .ok_or_else(|| AuthError::KeyNotFound(kid))?;
 
     // Build decoding key from RSA components
-    let n = jwk.n.as_ref().ok_or_else(|| {
-        AuthError::KeyNotFound("JWK missing 'n'".to_string())
-    })?;
-    let e = jwk.e.as_ref().ok_or_else(|| {
-        AuthError::KeyNotFound("JWK missing 'e'".to_string())
-    })?;
+    let n = jwk
+        .n
+        .as_ref()
+        .ok_or_else(|| AuthError::KeyNotFound("JWK missing 'n'".to_string()))?;
+    let e = jwk
+        .e
+        .as_ref()
+        .ok_or_else(|| AuthError::KeyNotFound("JWK missing 'e'".to_string()))?;
 
     let decoding_key = DecodingKey::from_rsa_components(n, e)
         .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
@@ -383,8 +388,8 @@ pub async fn verify_token(
     // Accept tokens with or without audience
     validation.validate_aud = false;
 
-    let token_data: TokenData<ClerkClaims> = decode(token, &decoding_key, &validation)
-        .map_err(|e| match e.kind() {
+    let token_data: TokenData<ClerkClaims> =
+        decode(token, &decoding_key, &validation).map_err(|e| match e.kind() {
             jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthError::Expired,
             _ => AuthError::TokenDecode(e.to_string()),
         })?;
@@ -402,7 +407,9 @@ pub async fn verify_token(
 
 /// Ensure a user exists in the local SQLite DB, creating if necessary
 pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<(), AuthError> {
-    let conn = db.connect().map_err(|e| AuthError::DbError(e.to_string()))?;
+    let conn = db
+        .connect()
+        .map_err(|e| AuthError::DbError(e.to_string()))?;
 
     let exists: bool = conn
         .query_row(
@@ -490,7 +497,6 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
-
     if let Some(user) = extract_desktop_bootstrap_user(request.headers()) {
         if let Err(e) = ensure_user_in_db(&state.db, &user) {
             return e.into_response();
@@ -525,9 +531,7 @@ pub async fn auth_middleware(
                 // running in local dev mode from localhost, fall back to the
                 // default local user instead of hard-failing. This handles
                 // stale localStorage tokens during development.
-                if state.config.local_dev_bypass()
-                    && is_localhost_origin(request.headers())
-                {
+                if state.config.local_dev_bypass() && is_localhost_origin(request.headers()) {
                     warn!(error = %e, "JWT verification failed; falling back to local dev user");
                 } else {
                     return e.into_response();
@@ -597,19 +601,22 @@ pub async fn optional_auth_middleware(
 // ─── Header-based auth extraction (works around multiple axum versions) ─────
 
 /// Extract AuthUser from request headers set by auth_middleware.
-/// 
+///
 /// **Deprecated**: Now that the axum version conflict is resolved, handlers should
 /// use `Extension<AuthUser>` instead. This function is kept for backward
 /// compatibility with any code that hasn't been migrated yet.
 pub fn get_user(headers: &HeaderMap) -> Option<AuthUser> {
     let user_id = headers.get("x-allternit-user-id")?.to_str().ok()?;
-    let email = headers.get("x-allternit-user-email")
+    let email = headers
+        .get("x-allternit-user-email")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
-    let name = headers.get("x-allternit-user-name")
+    let name = headers
+        .get("x-allternit-user-name")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
-    let tenant_id = headers.get("x-allternit-tenant-id")
+    let tenant_id = headers
+        .get("x-allternit-tenant-id")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
     Some(AuthUser {

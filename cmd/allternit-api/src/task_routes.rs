@@ -1,4 +1,3 @@
-
 //! Task Management Routes
 //!
 //! CRUD operations for tasks — supports personal and workspace-scoped tasks.
@@ -16,9 +15,9 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::error;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
+use crate::AppState;
 
 // ─── Request/Response Types ─────────────────────────────────────────────────
 
@@ -112,7 +111,10 @@ pub fn task_router() -> Router<Arc<AppState>> {
         .route("/tasks/:id", put(update_task))
         .route("/tasks/:id", delete(delete_task))
         .route("/tasks/:id/assign", post(assign_task))
-        .route("/tasks/:id/comments", get(list_task_comments).post(add_task_comment))
+        .route(
+            "/tasks/:id/comments",
+            get(list_task_comments).post(add_task_comment),
+        )
         .route("/tasks/:id/audit-logs", get(get_task_audit_logs))
 }
 
@@ -196,7 +198,10 @@ async fn list_tasks(
         }
     };
 
-    (StatusCode::OK, Json(json!({ "tasks": tasks, "count": tasks.len() })))
+    (
+        StatusCode::OK,
+        Json(json!({ "tasks": tasks, "count": tasks.len() })),
+    )
 }
 
 async fn create_task(
@@ -257,7 +262,14 @@ async fn create_task(
 
     match result {
         Ok(_) => {
-            let _ = write_audit_log(&conn, &id, "create", "human", &user.user_id, Some(&serde_json::to_string(&body).unwrap_or_default()));
+            let _ = write_audit_log(
+                &conn,
+                &id,
+                "create",
+                "human",
+                &user.user_id,
+                Some(&serde_json::to_string(&body).unwrap_or_default()),
+            );
             match get_task_by_id(&conn, &id) {
                 Ok(Some(task)) => (StatusCode::CREATED, Json(json!({ "task": task }))),
                 _ => (StatusCode::CREATED, Json(json!({ "id": id }))),
@@ -437,7 +449,11 @@ async fn update_task(
         );
     }
 
-    let sql = format!("UPDATE tasks SET {}, updated_at = CURRENT_TIMESTAMP WHERE id = ?{}", updates.join(", "), param_count + 1);
+    let sql = format!(
+        "UPDATE tasks SET {}, updated_at = CURRENT_TIMESTAMP WHERE id = ?{}",
+        updates.join(", "),
+        param_count + 1
+    );
     params.push(Box::new(id.clone()));
 
     match conn.execute(&sql, rusqlite::params_from_iter(params)) {
@@ -446,7 +462,14 @@ async fn update_task(
             Json(json!({"error": "Task not found"})),
         ),
         Ok(_) => {
-            let _ = write_audit_log(&conn, &id, "update", "human", &user.user_id, Some(&serde_json::to_string(&body).unwrap_or_default()));
+            let _ = write_audit_log(
+                &conn,
+                &id,
+                "update",
+                "human",
+                &user.user_id,
+                Some(&serde_json::to_string(&body).unwrap_or_default()),
+            );
             match get_task_by_id(&conn, &id) {
                 Ok(Some(task)) => (StatusCode::OK, Json(json!({ "task": task }))),
                 _ => (StatusCode::OK, Json(json!({ "updated": true }))),
@@ -532,7 +555,7 @@ fn get_task_by_id(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result<Opt
         "SELECT id, user_id, workspace_id, title, description, status, priority,
                 assignee_id, due_date, tags, metadata, created_at, updated_at,
                 assignee_type, assignee_name
-         FROM tasks WHERE id = ?1"
+         FROM tasks WHERE id = ?1",
     )?;
 
     let mut rows = stmt.query_map([id], row_to_task)?;
@@ -574,12 +597,24 @@ async fn assign_task(
 ) -> impl IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
+                .into_response()
+        }
     };
 
     let result = conn.execute(
@@ -597,7 +632,14 @@ async fn assign_task(
 
     match result {
         Ok(_) => {
-            let _ = write_audit_log(&conn, &id, "assign", "human", &user.user_id, Some(&serde_json::to_string(&body).unwrap_or_default()));
+            let _ = write_audit_log(
+                &conn,
+                &id,
+                "assign",
+                "human",
+                &user.user_id,
+                Some(&serde_json::to_string(&body).unwrap_or_default()),
+            );
             match get_task_by_id(&conn, &id) {
                 Ok(Some(task)) => (StatusCode::OK, Json(task)).into_response(),
                 _ => (StatusCode::OK, Json(json!({"id": id}))).into_response(),
@@ -605,7 +647,11 @@ async fn assign_task(
         }
         Err(e) => {
             error!("Assign error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to assign task"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to assign task"})),
+            )
+                .into_response()
         }
     }
 }
@@ -617,20 +663,38 @@ async fn list_task_comments(
 ) -> impl IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
+                .into_response()
+        }
     };
 
     let mut stmt = match conn.prepare(
         "SELECT id, task_id, body, author_id, author_name, created_at 
-         FROM task_comments WHERE task_id = ?1 ORDER BY created_at ASC"
+         FROM task_comments WHERE task_id = ?1 ORDER BY created_at ASC",
     ) {
         Ok(s) => s,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": _e.to_string()}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": _e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     let comments: Vec<serde_json::Value> = match stmt.query_map([&id], |row| {
@@ -644,7 +708,13 @@ async fn list_task_comments(
         }))
     }) {
         Ok(iter) => iter.filter_map(|r| r.ok()).collect(),
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": _e.to_string()}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": _e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     (StatusCode::OK, Json(comments)).into_response()
@@ -663,12 +733,24 @@ async fn add_task_comment(
 ) -> impl IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
+                .into_response()
+        }
     };
 
     let comment_id = uuid::Uuid::new_v4().to_string();
@@ -677,29 +759,29 @@ async fn add_task_comment(
     let result = conn.execute(
         "INSERT INTO task_comments (id, task_id, body, author_id, author_name) 
          VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![
-            &comment_id,
-            &id,
-            &body.body,
-            &user.user_id,
-            &author_name,
-        ],
+        rusqlite::params![&comment_id, &id, &body.body, &user.user_id, &author_name,],
     );
 
     match result {
-        Ok(_) => {
-            (StatusCode::CREATED, Json(json!({
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(json!({
                 "id": comment_id,
                 "task_id": id,
                 "body": body.body,
                 "author_id": user.user_id,
                 "author_name": author_name,
                 "created_at": chrono::Utc::now().to_rfc3339(),
-            }))).into_response()
-        }
+            })),
+        )
+            .into_response(),
         Err(e) => {
             error!("Comment error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to add comment"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to add comment"})),
+            )
+                .into_response()
         }
     }
 }
@@ -711,20 +793,38 @@ async fn get_task_audit_logs(
 ) -> impl IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
+                .into_response()
+        }
     };
 
     let mut stmt = match conn.prepare(
         "SELECT id, task_id, action, actor_type, actor_id, payload, created_at 
-         FROM task_audit_logs WHERE task_id = ?1 ORDER BY created_at DESC"
+         FROM task_audit_logs WHERE task_id = ?1 ORDER BY created_at DESC",
     ) {
         Ok(s) => s,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     let logs: Vec<serde_json::Value> = match stmt.query_map([&id], |row| {
@@ -739,7 +839,13 @@ async fn get_task_audit_logs(
         }))
     }) {
         Ok(iter) => iter.filter_map(|r| r.ok()).collect(),
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     (StatusCode::OK, Json(logs)).into_response()

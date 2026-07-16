@@ -80,10 +80,7 @@ async fn list_library(
     Extension(user): Extension<AuthUser>,
     Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
-    let limit = q
-        .limit
-        .unwrap_or(DEFAULT_LIMIT)
-        .clamp(1, MAX_LIMIT);
+    let limit = q.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
     let offset = q
         .cursor
         .as_deref()
@@ -97,94 +94,95 @@ async fn list_library(
     let user_id = user.user_id.clone();
     let fs_user_id = user.user_id.clone();
 
-    let result = tokio::task::spawn_blocking(move || -> Result<Vec<LibraryItem>, rusqlite::Error> {
-        let conn = db.connect()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, session_id, title, components, created_at
+    let result =
+        tokio::task::spawn_blocking(move || -> Result<Vec<LibraryItem>, rusqlite::Error> {
+            let conn = db.connect()?;
+            let mut stmt = conn.prepare(
+                "SELECT id, session_id, title, components, created_at
              FROM agent_canvases
              WHERE user_id = ?1
              ORDER BY updated_at DESC",
-        )?;
+            )?;
 
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, Option<String>>(2)?,
-                row.get::<_, String>(3)?,
-                row.get::<_, String>(4)?,
-            ))
-        })?;
+            let rows = stmt.query_map(params![user_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                ))
+            })?;
 
-        let mut items: Vec<LibraryItem> = Vec::new();
-        for row in rows.flatten() {
-            let (canvas_id, session_id, canvas_title, components_raw, created_at) = row;
-            let components: Vec<serde_json::Value> =
-                serde_json::from_str(&components_raw).unwrap_or_default();
+            let mut items: Vec<LibraryItem> = Vec::new();
+            for row in rows.flatten() {
+                let (canvas_id, session_id, canvas_title, components_raw, created_at) = row;
+                let components: Vec<serde_json::Value> =
+                    serde_json::from_str(&components_raw).unwrap_or_default();
 
-            for (index, component) in components.iter().enumerate() {
-                let raw_kind = component
-                    .get("kind")
-                    .and_then(|v| v.as_str())
-                    .or_else(|| component.get("type").and_then(|v| v.as_str()))
-                    .unwrap_or("artifact");
-                let url = component
-                    .get("url")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .filter(|s| !s.is_empty());
-                let content = component
-                    .get("content")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .filter(|s| !s.is_empty());
-                let artifact_id = component
-                    .get("artifactId")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .filter(|s| !s.is_empty());
-                let title = component
-                    .get("title")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .or_else(|| canvas_title.clone())
-                    .or_else(|| {
-                        content.as_deref().and_then(|c| {
-                            let first = c.trim().lines().next().unwrap_or("").trim();
-                            if first.is_empty() {
-                                return None;
-                            }
-                            const MAX: usize = 60;
-                            if first.chars().count() > MAX {
-                                let t: String = first.chars().take(MAX).collect();
-                                Some(format!("{t}…"))
-                            } else {
-                                Some(first.to_string())
-                            }
+                for (index, component) in components.iter().enumerate() {
+                    let raw_kind = component
+                        .get("kind")
+                        .and_then(|v| v.as_str())
+                        .or_else(|| component.get("type").and_then(|v| v.as_str()))
+                        .unwrap_or("artifact");
+                    let url = component
+                        .get("url")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .filter(|s| !s.is_empty());
+                    let content = component
+                        .get("content")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .filter(|s| !s.is_empty());
+                    let artifact_id = component
+                        .get("artifactId")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .filter(|s| !s.is_empty());
+                    let title = component
+                        .get("title")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .or_else(|| canvas_title.clone())
+                        .or_else(|| {
+                            content.as_deref().and_then(|c| {
+                                let first = c.trim().lines().next().unwrap_or("").trim();
+                                if first.is_empty() {
+                                    return None;
+                                }
+                                const MAX: usize = 60;
+                                if first.chars().count() > MAX {
+                                    let t: String = first.chars().take(MAX).collect();
+                                    Some(format!("{t}…"))
+                                } else {
+                                    Some(first.to_string())
+                                }
+                            })
                         })
-                    })
-                    .unwrap_or_else(|| "Untitled".to_string());
+                        .unwrap_or_else(|| "Untitled".to_string());
 
-                let bucket = classify(raw_kind, url.as_deref(), content.as_deref()).to_string();
+                    let bucket = classify(raw_kind, url.as_deref(), content.as_deref()).to_string();
 
-                items.push(LibraryItem {
-                    id: format!("{canvas_id}:{index}"),
-                    artifact_id,
-                    kind: bucket,
-                    title,
-                    url,
-                    content,
-                    session_id: session_id.clone(),
-                    canvas_id: canvas_id.clone(),
-                    origin: "generated",
-                    created_at: created_at.clone(),
-                });
+                    items.push(LibraryItem {
+                        id: format!("{canvas_id}:{index}"),
+                        artifact_id,
+                        kind: bucket,
+                        title,
+                        url,
+                        content,
+                        session_id: session_id.clone(),
+                        canvas_id: canvas_id.clone(),
+                        origin: "generated",
+                        created_at: created_at.clone(),
+                    });
+                }
             }
-        }
 
-        Ok(items)
-    })
-    .await;
+            Ok(items)
+        })
+        .await;
 
     let mut items = match result {
         Ok(Ok(items)) => items,
@@ -260,72 +258,73 @@ async fn library_stats(
     // Build the same canvas-derived items as `list_library` (real ids, artifact
     // ids and created_at) so the per-kind counts come from the exact same
     // deduped set the list renders.
-    let result = tokio::task::spawn_blocking(move || -> Result<Vec<LibraryItem>, rusqlite::Error> {
-        let conn = db.connect()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, session_id, title, components, created_at
+    let result =
+        tokio::task::spawn_blocking(move || -> Result<Vec<LibraryItem>, rusqlite::Error> {
+            let conn = db.connect()?;
+            let mut stmt = conn.prepare(
+                "SELECT id, session_id, title, components, created_at
              FROM agent_canvases
              WHERE user_id = ?1
              ORDER BY updated_at DESC",
-        )?;
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, Option<String>>(2)?,
-                row.get::<_, String>(3)?,
-                row.get::<_, String>(4)?,
-            ))
-        })?;
+            )?;
+            let rows = stmt.query_map(params![user_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, String>(3)?,
+                    row.get::<_, String>(4)?,
+                ))
+            })?;
 
-        let mut items: Vec<LibraryItem> = Vec::new();
-        for row in rows.flatten() {
-            let (canvas_id, canvas_title, components_raw, created_at) = row;
-            let components: Vec<serde_json::Value> =
-                serde_json::from_str(&components_raw).unwrap_or_default();
-            for (index, component) in components.iter().enumerate() {
-                let raw_kind = component
-                    .get("kind")
-                    .and_then(|v| v.as_str())
-                    .or_else(|| component.get("type").and_then(|v| v.as_str()))
-                    .unwrap_or("artifact");
-                let title = component
-                    .get("title")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .or_else(|| canvas_title.clone())
-                    .unwrap_or_else(|| "Untitled".to_string());
-                let url = component
-                    .get("url")
-                    .and_then(|v| v.as_str())
-                    .filter(|s| !s.is_empty());
-                let content = component
-                    .get("content")
-                    .and_then(|v| v.as_str())
-                    .filter(|s| !s.is_empty());
-                let artifact_id = component
-                    .get("artifactId")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-                    .filter(|s| !s.is_empty());
+            let mut items: Vec<LibraryItem> = Vec::new();
+            for row in rows.flatten() {
+                let (canvas_id, canvas_title, components_raw, created_at) = row;
+                let components: Vec<serde_json::Value> =
+                    serde_json::from_str(&components_raw).unwrap_or_default();
+                for (index, component) in components.iter().enumerate() {
+                    let raw_kind = component
+                        .get("kind")
+                        .and_then(|v| v.as_str())
+                        .or_else(|| component.get("type").and_then(|v| v.as_str()))
+                        .unwrap_or("artifact");
+                    let title = component
+                        .get("title")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .or_else(|| canvas_title.clone())
+                        .unwrap_or_else(|| "Untitled".to_string());
+                    let url = component
+                        .get("url")
+                        .and_then(|v| v.as_str())
+                        .filter(|s| !s.is_empty());
+                    let content = component
+                        .get("content")
+                        .and_then(|v| v.as_str())
+                        .filter(|s| !s.is_empty());
+                    let artifact_id = component
+                        .get("artifactId")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .filter(|s| !s.is_empty());
 
-                items.push(LibraryItem {
-                    id: format!("{canvas_id}:{index}"),
-                    artifact_id,
-                    kind: classify(raw_kind, url, content).to_string(),
-                    title,
-                    url: url.map(|s| s.to_string()),
-                    content: content.map(|s| s.to_string()),
-                    session_id: String::new(),
-                    canvas_id: canvas_id.clone(),
-                    origin: "generated",
-                    created_at: created_at.clone(),
-                });
+                    items.push(LibraryItem {
+                        id: format!("{canvas_id}:{index}"),
+                        artifact_id,
+                        kind: classify(raw_kind, url, content).to_string(),
+                        title,
+                        url: url.map(|s| s.to_string()),
+                        content: content.map(|s| s.to_string()),
+                        session_id: String::new(),
+                        canvas_id: canvas_id.clone(),
+                        origin: "generated",
+                        created_at: created_at.clone(),
+                    });
+                }
             }
-        }
 
-        Ok(items)
-    })
-    .await;
+            Ok(items)
+        })
+        .await;
 
     let mut items = match result {
         Ok(Ok(items)) => items,
@@ -387,7 +386,10 @@ fn classify(raw_kind: &str, url: Option<&str>, content: Option<&str>) -> &'stati
     let c = content.unwrap_or("").to_lowercase();
 
     if k.contains("image")
-        || matches!(k.as_str(), "png" | "jpg" | "jpeg" | "webp" | "gif" | "svg" | "bmp")
+        || matches!(
+            k.as_str(),
+            "png" | "jpg" | "jpeg" | "webp" | "gif" | "svg" | "bmp"
+        )
         || u.starts_with("data:image/")
         || c.starts_with("data:image/")
         || ext_kind(&u) == Some("image")
@@ -397,7 +399,10 @@ fn classify(raw_kind: &str, url: Option<&str>, content: Option<&str>) -> &'stati
 
     if k.contains("document")
         || k.contains("pdf")
-        || matches!(k.as_str(), "text" | "markdown" | "md" | "doc" | "docx" | "txt")
+        || matches!(
+            k.as_str(),
+            "text" | "markdown" | "md" | "doc" | "docx" | "txt"
+        )
         || u.starts_with("data:application/pdf")
         || u.starts_with("data:text/")
         || c.starts_with("data:text/")
@@ -407,7 +412,10 @@ fn classify(raw_kind: &str, url: Option<&str>, content: Option<&str>) -> &'stati
     }
 
     if k.contains("code")
-        || matches!(k.as_str(), "html" | "jsx" | "javascript" | "typescript" | "mermaid")
+        || matches!(
+            k.as_str(),
+            "html" | "jsx" | "javascript" | "typescript" | "mermaid"
+        )
         || u.starts_with("data:text/html")
         || ext_kind(&u) == Some("code")
     {

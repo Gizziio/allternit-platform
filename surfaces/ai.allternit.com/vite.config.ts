@@ -2,8 +2,12 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import os from 'os'
+import { createRequire } from 'node:module'
 import { visualizer } from 'rollup-plugin-visualizer'
 import pkg from './package.json'
+
+const require = createRequire(import.meta.url)
+const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
 
 /**
  * Development-only dispatch handoff endpoints.
@@ -96,10 +100,18 @@ export default defineConfig({
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
-  envPrefix: 'VITE_',
+  // This surface was migrated from Next.js and intentionally keeps its
+  // NEXT_PUBLIC_* deployment contract. Expose only public prefixes; never
+  // broaden this to arbitrary process environment variables.
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // @blocksuite/data-view@0.19.5 imports a misspelled icon name that was
+      // removed from @blocksuite/icons. Keep the workaround in source so a
+      // clean frozen-lockfile CI install behaves exactly like local builds.
+      '@blocksuite/icons/lit': path.resolve(__dirname, './src/shims/blocksuite-icons-lit.ts'),
+      'virtual:allternit-blocksuite-icons-lit-original': blocksuiteIconsLit,
     },
   },
   build: {

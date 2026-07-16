@@ -7,12 +7,13 @@
  * - Version-locked: Desktop 1.2.3 = Backend 1.2.3
  */
 
-import { app, BrowserWindow, ipcMain, nativeTheme, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, safeStorage, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import * as fs from 'node:fs';
 import * as net from 'node:net';
 import * as http from 'node:http';
+import * as https from 'node:https';
 import * as os from 'node:os';
 import { execFile } from 'node:child_process';
 import Store from 'electron-store';
@@ -20,14 +21,19 @@ import log from 'electron-log';
 import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
+import { bonsaiCompanion } from './bonsai-companion-manager.js';
 import { gizziManager } from './gizzi-manager.js';
 import { gizziDaemonManager } from './gizzi-daemon-manager.js';
 import { PORTS, URLS, devUiUrl, apiUrl, notebookUrl, staticUiUrl } from './config.js';
-import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus, launchMiniAppDesktop } from './mini-apps-manager.js';
+import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus, launchMiniAppDesktop, getMiniAppApproval, reviewAndApproveMiniApp, revokeMiniAppApproval, removeMiniAppRuntime, rollbackMiniAppRuntime, setMiniAppOAuthTokenResolver } from './mini-apps-manager.js';
+import { installReleaseFromRegistry, rollbackReleaseInstall, removeReleaseInstall, listReleaseInstalls, getReleaseInstallState } from './mini-app-release-installer.js';
+import { createMiniAppOAuthBroker, type MiniAppOAuthBroker, type MiniAppOAuthProvider } from './mini-app-oauth-broker.js';
+import { setMiniAppSecret, listMiniAppSecrets, deleteMiniAppSecret } from './mini-app-secrets.js';
 import { OfficeAddinManager, type OfficeProductId } from './office-addin-manager.js';
 
 import { tunnelManager } from './tunnel-manager.js';
 import { authManager } from './auth-manager.js';
+import { createStartupWindow } from './startup-window.js';
 import { notebookManager } from './notebook-manager.js';
 import { voiceManager } from './voice-manager.js';
 import { PLATFORM_MANIFEST, shouldUpdateBackend } from './manifest.js';
@@ -44,6 +50,7 @@ import { persistedState } from './persisted-state.js';
 import { workerBus } from './workers/worker-bus.js';
 import { mcpHostManager } from './mcp-host-manager.js';
 import { isLimaInstalled, installLima, startVM, stopVM, getVMStatus } from './lima.js';
+import { computerUseDriverManager } from './computer-use-driver-manager.js';
 
 // Fix PATH for macOS
 fixPath();
@@ -55,7 +62,7 @@ fixPath();
 function isUrlReachable(url: string, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
     const parsed = new URL(url);
-    const client = parsed.protocol === 'https:' ? require('node:https') : require('node:http');
+    const client = parsed.protocol === 'https:' ? https : http;
     const req = client.get(url, { timeout: timeoutMs }, (res: any) => {
       resolve(res.statusCode >= 200 && res.statusCode < 500);
       res.destroy();
@@ -64,6 +71,26 @@ function isUrlReachable(url: string, timeoutMs: number): Promise<boolean> {
     req.on('timeout', () => { req.destroy(); resolve(false); });
     req.setTimeout(timeoutMs);
   });
+}
+
+/** Locate a locally-built platform static export to use in bundled mode. */
+function resolveLocalPlatformStaticPath(): string | null {
+  // __dirname is dist/main; go up four levels to reach the repo root.
+  const repoRoot = resolve(__dirname, '..', '..', '..', '..');
+  const candidates = app.isPackaged
+    ? [join(process.resourcesPath ?? '', 'platform')]
+    : [
+        join(repoRoot, 'surfaces', 'ai.allternit.com', 'dist'),
+        join(repoRoot, 'surfaces', 'ai.allternit.com', 'out'),
+        join(repoRoot, 'surfaces', 'platform', 'dist'),
+        join(repoRoot, 'surfaces', 'platform', 'out'),
+      ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(join(candidate, 'index.html'))) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 // Configure logging
@@ -122,10 +149,54 @@ function sendToExtension(message: unknown): boolean {
 function updateSidecarConfig(gizziUrl: string) {
   const config = {
     apiUrl: gizziUrl,
-    password: gizziManager.getPassword()!,
     port: new URL(gizziUrl).port ? Number(new URL(gizziUrl).port) : PORTS.GIZZI,
   };
   persistedState.set('sidecar', config);
+}
+
+async function startGizziRuntime(): Promise<string> {
+  const daemonStatus = await gizziDaemonManager.getStatus();
+  let existingPassword = daemonStatus.installed && daemonStatus.running
+    ? await gizziDaemonManager.getConnectionPassword()
+    : null;
+  // In development, allow adopting an existing password-protected runtime
+  // launched outside the desktop shell (e.g. a stale binary with a known dev
+  // password). The password never leaves the main process.
+  if (!existingPassword && process.env.GIZZI_SERVER_PASSWORD) {
+    existingPassword = process.env.GIZZI_SERVER_PASSWORD;
+  }
+  if (existingPassword) {
+    // One-time migration from the former persistent local Basic credential.
+    // If the service cannot be rewritten, adopt it for this launch so existing
+    // users are not stranded; the password never reaches renderer code.
+    try {
+      log.info('[GizziManager] Migrating legacy daemon to loopback runtime identity');
+      await gizziDaemonManager.install(null, activeBackendUrl);
+      existingPassword = null;
+    } catch (error) {
+      log.warn('[GizziManager] Legacy daemon migration deferred:', error);
+    }
+  }
+  return gizziManager.start({ existingPassword });
+}
+
+async function installAlwaysOnGizziRuntime(): Promise<void> {
+  // Hand port 4096 from the per-session child to launchd before installing.
+  // The daemon remains loopback-only and uses the same credential-free local
+  // boundary as the managed runtime.
+  gizziManager.stop();
+  try {
+    await gizziDaemonManager.install(null, activeBackendUrl);
+    const url = await startGizziRuntime();
+    updateSidecarConfig(url);
+  } catch (error) {
+    // Best-effort recovery: restore a usable runtime if daemon installation
+    // failed after the per-session process was stopped.
+    await startGizziRuntime().catch((restartError) => {
+      log.error('[GizziManager] Failed to restore runtime after daemon install error:', restartError);
+    });
+    throw error;
+  }
 }
 /** If set, the permission onboarding flow should start when the renderer signals readiness. */
 let permissionOnboardingResolver: (() => void) | null = null;
@@ -241,6 +312,8 @@ interface StoreSchema {
     lastLocalVersion?: string;
   };
   onboardingComplete: boolean;
+  /** Whether the startup onboarding wizard (welcome → sign-in) has been completed or skipped */
+  startupWizardCompleted: boolean;
   permissions: {
     /** Whether the user has been shown the permission guide during onboarding */
     promptedDuringOnboarding: boolean;
@@ -261,438 +334,12 @@ const store = new Store<StoreSchema>({
       mode: 'bundled',
     },
     onboardingComplete: false,
+    startupWizardCompleted: false,
     permissions: {
       promptedDuringOnboarding: false,
     },
   },
 });
-
-// ============================================================================
-// Splash Window (First-run / Loading)
-// ============================================================================
-
-function createSplashWindow(): BrowserWindow {
-  const window = new BrowserWindow({
-    width: 480,
-    height: 420,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    alwaysOnTop: true,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  });
-
-  // Log splash window console messages
-  window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
-    log.info(`[Splash] ${message} (${sourceId}:${line})`);
-  });
-
-  // Inline splash HTML - Allternit branded
-  const splashHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #0a0a0f 0%, #1a1512 50%, #12121a 100%);
-      color: #D4B08C;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 60px 40px 40px 40px;
-      border-radius: 12px;
-      border: 1px solid rgba(212, 176, 140, 0.2);
-    }
-    .mascot {
-      font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-      font-size: 12px;
-      line-height: 1.2;
-      white-space: pre;
-      color: #D4B08C;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    .brand {
-      width: 100%;
-      max-width: 392px;
-      font-size: clamp(26px, 6.4vw, 31px);
-      font-weight: 700;
-      color: #D4B08C;
-      font-family: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
-      margin-bottom: 8px;
-      letter-spacing: 1.4px;
-      line-height: 1;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-    .tagline {
-      font-size: 13px;
-      color: #9B9B9B;
-      margin-bottom: 40px;
-      text-transform: uppercase;
-      letter-spacing: 3px;
-    }
-    .status {
-      font-size: 14px;
-      margin-bottom: 20px;
-      text-align: center;
-      min-height: 22px;
-      color: #a0a0b0;
-    }
-    .progress-container {
-      width: 100%; height: 3px;
-      background: rgba(212, 176, 140, 0.15);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-bottom: 12px;
-    }
-    .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #D4B08C, #E8997A);
-      border-radius: 2px;
-      transition: width 0.3s ease;
-      width: 0%;
-    }
-    .progress-text {
-      font-size: 11px;
-      color: #8f6f56;
-    }
-    .stack-status {
-      width: 100%;
-      display: grid;
-      gap: 8px;
-      margin: 18px 0 22px 0;
-      max-height: 240px;
-      overflow: hidden;
-      transition: opacity 220ms ease, transform 220ms ease, max-height 220ms ease, margin 220ms ease;
-    }
-    .stack-status.hidden {
-      opacity: 0;
-      transform: translateY(-6px);
-      max-height: 0;
-      margin: 0;
-    }
-    .stack-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
-      font-size: 12px;
-    }
-    .stack-name {
-      color: #c7b19a;
-    }
-    .stack-value {
-      color: #8f6f56;
-      text-align: right;
-      word-break: break-word;
-    }
-    .stack-value.up {
-      color: #7ec699;
-    }
-    .stack-value.down {
-      color: #e8886a;
-    }
-    .version {
-      position: absolute;
-      bottom: 16px;
-      right: 20px;
-      font-size: 11px;
-      color: #6B6B6B;
-    }
-    .spinner {
-      width: 28px;
-      height: 28px;
-      border: 2px solid rgba(212, 176, 140, 0.2);
-      border-top-color: #D4B08C;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 20px;
-    }
-    .auth-container {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-    }
-    #waiting {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      width: 100%;
-    }
-    .btn-login {
-      background: linear-gradient(135deg, #E8886A 0%, #D97757 100%);
-      color: #fff;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      box-shadow: 0 4px 20px rgba(217, 119, 87, 0.3);
-      transition: all 0.2s;
-      width: 100%;
-      margin-bottom: 12px;
-    }
-    .btn-login:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 24px rgba(217, 119, 87, 0.4);
-    }
-    .btn-login:active { transform: translateY(0); }
-    .btn-quit {
-      background: transparent;
-      color: rgba(255, 255, 255, 0.4);
-      border: none;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .logo-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-bottom: 20px;
-      height: 60px;
-    }
-    .matrix-a {
-      position: relative;
-      width: 60px;
-      height: 50px;
-      transform-style: preserve-3d;
-      perspective: 600px;
-    }
-    .block {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      background: #D4B08C;
-      left: calc(50% + var(--x) * 10px - 4px);
-      top: calc(50% + var(--y) * 10px - 4px);
-      transform: translateZ(calc(var(--z) * 0.5px));
-      opacity: 0.9;
-      animation: pulse 2s ease-in-out infinite;
-      animation-delay: calc(var(--z) * 0.05s);
-    }
-    .block.center {
-      background: #E8997A;
-      box-shadow: 0 0 10px #D4B08C;
-    }
-    .block.crossbar {
-      opacity: 0.7;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.7; transform: translateZ(calc(var(--z) * 0.5px)) scale(1); }
-      50% { opacity: 1; transform: translateZ(calc(var(--z) * 0.8px)) scale(1.1); }
-    }
-  </style>
-</head>
-<body>
-  <div class="logo-container">
-    <div class="matrix-a">
-      <div class="block" style="--x:-2;--y:2;--z:20"></div>
-      <div class="block" style="--x:-2;--y:1;--z:10"></div>
-      <div class="block" style="--x:-2;--y:0;--z:0"></div>
-      <div class="block" style="--x:-1;--y:-1;--z:15"></div>
-      <div class="block center" style="--x:0;--y:-2;--z:30"></div>
-      <div class="block" style="--x:1;--y:-1;--z:15"></div>
-      <div class="block" style="--x:2;--y:0;--z:0"></div>
-      <div class="block" style="--x:2;--y:1;--z:10"></div>
-      <div class="block" style="--x:2;--y:2;--z:20"></div>
-      <div class="block crossbar" style="--x:-1;--y:0;--z:5"></div>
-      <div class="block crossbar" style="--x:1;--y:0;--z:5"></div>
-    </div>
-  </div>
-  <div class="brand">ALLTERNIT DESKTOP</div>
-  <div class="tagline">Starting…</div>
-
-  <div class="stack-status">
-    <div class="stack-row">
-      <div class="stack-name">Allternit API</div>
-      <div class="stack-value" id="svc-api">Starting…</div>
-    </div>
-    <div class="stack-row">
-      <div class="stack-name">Gateway</div>
-      <div class="stack-value" id="svc-gateway">Starting…</div>
-    </div>
-    <div class="stack-row">
-      <div class="stack-name">Gizzi Runtime</div>
-      <div class="stack-value" id="svc-gizzi">Starting…</div>
-    </div>
-    <div class="stack-row">
-      <div class="stack-name">Platform</div>
-      <div class="stack-value" id="svc-platform">ai.allternit.com</div>
-    </div>
-  </div>
-  
-  <div id="loading">
-    <div class="spinner"></div>
-    <div class="status" id="status">Starting...</div>
-    <div class="progress-container">
-      <div class="progress-bar" id="progress-bar"></div>
-    </div>
-    <div class="progress-text" id="progress-text"></div>
-  </div>
-
-  <div id="auth" class="auth-container">
-    <div id="auth-copy" style="font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 24px; text-align: center; line-height: 1.5;">
-      Waiting for the local backend stack to come online.
-    </div>
-    <div id="auth-error" style="display:none; font-size: 12px; color: #e8886a; margin-bottom: 12px; text-align: center;"></div>
-    <button class="btn-login" id="btn-login" onclick="login()" disabled style="opacity:0.5;cursor:not-allowed;">Sign In</button>
-    <button class="btn-quit" onclick="quit()">Quit</button>
-  </div>
-
-  <div id="waiting" style="display:none; flex-direction: column; align-items: center; width: 100%;">
-    <div class="spinner"></div>
-    <div id="waiting-status" style="font-size: 14px; color: #a0a0b0; text-align: center; margin-top: 12px;">Waiting for browser login...</div>
-  </div>
-  
-  <div class="version">v${PLATFORM_MANIFEST.version}</div>
-  
-  <script>
-    window.splashStartTime = Date.now();
-    const { ipcRenderer } = require('electron');
-    
-    function login() {
-      const btn = document.getElementById('btn-login');
-      if (btn && btn.disabled) return;
-      ipcRenderer.send('auth:start-login');
-    }
-
-    function quit() {
-      ipcRenderer.send('app:quit');
-    }
-
-    function setStackStatusVisible(visible) {
-      const stack = document.querySelector('.stack-status');
-      if (!stack) return;
-      if (visible) {
-        stack.classList.remove('hidden');
-      } else {
-        stack.classList.add('hidden');
-      }
-    }
-
-    ipcRenderer.on('status', (_, message) => {
-      document.getElementById('status').textContent = message;
-    });
-
-    ipcRenderer.on('services', (_, services) => {
-      const entries = [
-        ['api', 'svc-api'],
-        ['gateway', 'svc-gateway'],
-        ['gizzi', 'svc-gizzi'],
-        ['platform', 'svc-platform'],
-      ];
-
-      let allHealthy = true;
-      for (const [key, nodeId] of entries) {
-        const node = document.getElementById(nodeId);
-        const state = services?.[key];
-        if (!node || !state) {
-          allHealthy = false;
-          continue;
-        }
-
-        node.textContent = state.detail || state.status;
-        node.className = 'stack-value ' + (state.status === 'up' ? 'up' : state.status === 'down' ? 'down' : '');
-        
-        // Critical services that MUST be up for the app to function
-        const isCritical = key === 'api' || key === 'gateway' || key === 'platform';
-        if (isCritical && state.status !== 'up') {
-          allHealthy = false;
-        }
-      }
-
-      const authCopy = document.getElementById('auth-copy');
-      const loginButton = document.getElementById('btn-login');
-      if (authCopy) {
-        authCopy.textContent = allHealthy
-          ? 'Local backend connected. Continue with desktop sign-in.'
-          : 'Waiting for the local backend stack to come online.';
-      }
-      if (loginButton) {
-        loginButton.disabled = !allHealthy;
-        loginButton.style.opacity = allHealthy ? '1' : '0.5';
-        loginButton.style.cursor = allHealthy ? 'pointer' : 'not-allowed';
-      }
-
-      setStackStatusVisible(!allHealthy);
-    });
-
-    ipcRenderer.on('auth-required', () => {
-      // Show 'Authenticating...' briefly so the user sees startup progress
-      // before the login prompt appears
-      const showAuth = () => {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('waiting').style.display = 'none';
-        document.getElementById('auth').style.display = 'flex';
-        setStackStatusVisible(false);
-      };
-      const elapsed = Date.now() - window.splashStartTime;
-      const minDelay = 1200;
-      if (elapsed >= minDelay) {
-        showAuth();
-      } else {
-        setTimeout(showAuth, minDelay - elapsed);
-      }
-    });
-
-    ipcRenderer.on('auth:login-started', (_, message) => {
-      document.getElementById('auth').style.display = 'none';
-      const waiting = document.getElementById('waiting');
-      waiting.style.display = 'flex';
-      document.getElementById('waiting-status').textContent = message;
-      setStackStatusVisible(false);
-    });
-
-    ipcRenderer.on('auth:login-success', (_, message) => {
-      const waiting = document.getElementById('waiting');
-      waiting.innerHTML = '<div style="font-size:14px;color:#7ec699;text-align:center;">' + message + '</div>';
-    });
-
-    ipcRenderer.on('auth:login-failed', (_, message) => {
-      const waiting = document.getElementById('waiting');
-      waiting.style.display = 'none';
-      document.getElementById('auth').style.display = 'flex';
-      document.getElementById('auth-error').textContent = message;
-      document.getElementById('auth-error').style.display = 'block';
-      setStackStatusVisible(false);
-    });
-    
-    ipcRenderer.on('progress', (_, percent) => {
-      document.getElementById('progress-bar').style.width = percent + '%';
-      document.getElementById('progress-text').textContent = percent > 0 ? percent + '%' : '';
-    });
-    
-    ipcRenderer.on('complete', () => {
-      document.getElementById('loading').innerHTML = 
-        '<div style="font-size: 24px; margin-bottom: 8px; color: #D4B08C;">✓</div><div style="color: #D4B08C;">Local backend connected</div>';
-    });
-    
-    ipcRenderer.on('error', (_, message) => {
-      document.getElementById('status').textContent = 'Error: ' + message;
-      document.getElementById('status').style.color = '#E57373';
-    });
-  </script>
-</body>
-</html>`;
-
-  window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml)}`);
-  return window;
-}
 
 // ============================================================================
 // Main Window
@@ -750,16 +397,27 @@ function createMainWindow(): BrowserWindow {
   });
 
   window.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
-    const accessToken = authManager.getAccessToken();
-    if (
-      accessToken &&
-      /^http:\/\/(?:127\.0\.0\.1|localhost):\d+\//.test(details.url)
-    ) {
-      details.requestHeaders.Authorization = `Bearer ${accessToken}`;
-      details.requestHeaders['X-Allternit-Desktop-Access-Token'] = accessToken;
+    const session = authManager.getSessionSnapshot();
+    let isOperatorApi = false;
+    try {
+      const target = new URL(details.url);
+      isOperatorApi = target.origin === URLS.API;
+    } catch {
+      isOperatorApi = false;
+    }
+    if (session && isOperatorApi) {
+      details.requestHeaders.Authorization = `Bearer ${session.accessToken}`;
+      details.requestHeaders['X-Allternit-Desktop-Access-Token'] = session.accessToken;
+      details.requestHeaders['X-Allternit-User-Id'] = session.userId;
+      details.requestHeaders['X-Allternit-User-Email'] = session.userEmail;
+      if (session.organizationId) {
+        details.requestHeaders['X-Allternit-Tenant-Id'] = session.organizationId;
+      }
     }
     callback({ requestHeaders: details.requestHeaders });
   });
+
+
 
   const saveBounds = () => {
     if (window && !window.isDestroyed()) {
@@ -806,7 +464,12 @@ function createMainWindow(): BrowserWindow {
       const requestedUrl = new URL(url);
       const appUrl = new URL(window.webContents.getURL());
 
-      if (requestedUrl.origin === appUrl.origin && requestedUrl.pathname === '/design') {
+      if (requestedUrl.origin !== appUrl.origin) {
+        shell.openExternal(url);
+        return { action: 'deny' };
+      }
+
+      if (requestedUrl.pathname === '/design') {
         return {
           action: 'allow',
           overrideBrowserWindowOptions: {
@@ -817,6 +480,21 @@ function createMainWindow(): BrowserWindow {
             backgroundColor: '#0F0C0A',
             autoHideMenuBar: true,
             title: 'Allternit Design',
+          },
+        };
+      }
+
+      if (requestedUrl.pathname === '/platform' && requestedUrl.searchParams.get('detachedSurface')) {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1180,
+            height: 820,
+            minWidth: 760,
+            minHeight: 560,
+            backgroundColor: '#0F0C0A',
+            autoHideMenuBar: true,
+            title: 'Allternit Session',
           },
         };
       }
@@ -885,9 +563,13 @@ async function initializeApp(): Promise<void> {
 
   // Voice is an optional local capability: start it automatically, but never
   // prevent the rest of the desktop from opening if model initialization fails.
-  void voiceManager.start().catch((error) => {
-    log.warn('[Main] Voice service unavailable; continuing without Voice Mode:', error);
-  });
+  if (!process.env.ALLTERNIT_DISABLE_VOICE) {
+    void voiceManager.start().catch((error) => {
+      log.warn('[Main] Voice service unavailable; continuing without Voice Mode:', error);
+    });
+  } else {
+    log.info('[Main] Voice service disabled via ALLTERNIT_DISABLE_VOICE');
+  }
   
   const backendConfig = store.get('backend');
   
@@ -907,8 +589,16 @@ async function initializeApp(): Promise<void> {
 async function initializeBundledMode(): Promise<void> {
   log.info('[Main] Bundled mode - managing local backend');
   
-  // Show splash
-  splashWindow = createSplashWindow();
+  // Show startup window: full onboarding wizard on first launch / when signed
+  // out, plain loading screen for returning signed-in users.
+  const showStartupWizard = !store.get('startupWizardCompleted') || !authManager.hasSession();
+  log.info(`[Main] Startup window: ${showStartupWizard ? 'onboarding wizard' : 'loading only'}`);
+  splashWindow = createStartupWindow({ initialStep: showStartupWizard ? 'welcome' : 'loading' });
+  // Device pairing is independent of local service readiness. Start waiting
+  // immediately so the user can approve in parallel while the runtime boots.
+  const startupSignIn = showStartupWizard
+    ? authManager.waitForStartupSignIn(splashWindow)
+    : Promise.resolve(null);
   const updateSplash = (status: string, progress?: number) => {
     splashWindow?.webContents.send('status', status);
     if (progress !== undefined) {
@@ -935,7 +625,7 @@ async function initializeBundledMode(): Promise<void> {
     updateSplash('Starting AI runtime…', 10);
     let gizziUrl: string | null = null;
     try {
-      gizziUrl = await gizziManager.start();
+      gizziUrl = await startGizziRuntime();
       activeBackendUrl = gizziUrl;
       updateSidecarConfig(gizziUrl);
       log.info('[Main] Gizzi-code started successfully');
@@ -959,35 +649,59 @@ async function initializeBundledMode(): Promise<void> {
       updateSplash('Starting operator backend…', 30);
     }
 
+    // Spawn the embedded driver from the GUI app itself so macOS attributes
+    // both privacy grants to Allternit, then give the backend only its socket.
+    const computerUseDriver = await computerUseDriverManager.start();
+    if (!computerUseDriver.running) {
+      log.warn('[Main] Embedded computer-use driver unavailable:', computerUseDriver.error);
+    }
     const apiUrl = await backendManager.ensureBackend({
       gizziUrl,
       gizziPassword: gizziManager.getPassword(),
       gizziUsername: 'gizzi',
+      extraEnv: {
+        ...computerUseDriverManager.getLaunchEnvironment(),
+        ...authManager.getPlatformEncryptionEnvironment(),
+      },
     });
     serviceState.api = { status: 'up', detail: `Connected on ${URLS.API}` };
     serviceState.gateway = { status: 'up', detail: `Connected on ${URLS.API}` };
     pushServiceState();
     store.set('backend.lastLocalVersion', PLATFORM_MANIFEST.backend.version);
 
+    // Bonsai companion follows the app lifecycle: auto-start when installed.
+    bonsaiCompanion.getStatus()
+      .then((status) => (status.installed && !status.running ? bonsaiCompanion.start() : undefined))
+      .catch((err) => log.warn('[Bonsai] auto-start skipped:', err));
+
     updateSplash('Connecting to platform…', 60);
 
     // Step 3 — Platform URL
     // Dev:        local Next.js dev server on port ${PORTS.DEV_UI}
-    // Production: ai.allternit.com hosted on Cloudflare Pages (remote)
-    //              We always load the remote URL (Claude Desktop model).
-    //              API calls are redirected to localhost via injected config.
+    // Bundled:    Prefer the local static UI build so the desktop app always
+    //              ships with the matching platform version and is not at the
+    //              mercy of a stale ai.allternit.com deployment. Fall back to
+    //              the remote URL only when no local build is present.
     // Offline:    If remote URL is unreachable, fall back to local static files
     //              served by the Rust API at the local API URL.
     let platformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
 
     if (!isDev) {
-      const remoteReachable = await isUrlReachable(platformUrl, 5000);
-      if (!remoteReachable) {
-        log.warn(`[Main] Remote platform ${platformUrl} is unreachable — falling back to local static UI`);
+      const localStaticPath = resolveLocalPlatformStaticPath();
+      if (localStaticPath) {
+        log.info(`[Main] Using local platform static UI from ${localStaticPath}`);
         platformUrl = staticUiUrl();
-        serviceState.platform = { status: 'up', detail: 'Offline mode (local static)' };
+        serviceState.platform = { status: 'up', detail: 'Local static UI' };
       } else {
-        serviceState.platform = { status: 'up', detail: 'ai.allternit.com' };
+        const remoteReachable = await isUrlReachable(platformUrl, 5000);
+        if (!remoteReachable) {
+          log.warn(`[Main] Remote platform ${platformUrl} is unreachable — falling back to local static UI`);
+          platformUrl = staticUiUrl();
+          serviceState.platform = { status: 'up', detail: 'Offline mode (local static)' };
+        } else {
+          log.warn(`[Main] No local platform static UI found; using remote ${platformUrl}`);
+          serviceState.platform = { status: 'up', detail: 'ai.allternit.com' };
+        }
       }
       pushServiceState();
     }
@@ -1009,15 +723,20 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     // Preserve offline/static detail if we fell back; otherwise set the normal label.
-    if (serviceState.platform.detail !== 'Offline mode (local static)') {
+    if (!['Offline mode (local static)', 'Local static UI'].includes(serviceState.platform.detail)) {
       serviceState.platform = { status: 'up', detail: isDev ? `Dev on port ${PORTS.DEV_UI}` : 'ai.allternit.com' };
       pushServiceState();
     }
 
     activePlatformUrl = platformUrl;
-    process.env.ALLTERNIT_OAUTH_BASE_URL = platformUrl;
     log.info(`[Main] Platform URL: ${platformUrl}`);
-    // Auth is handled by the web app's Clerk integration at ai.allternit.com
+    // Clerk authenticates the human in the browser. The desktop waits for the
+    // separately scoped runtime pairing that was started alongside boot.
+    if (showStartupWizard) {
+      updateSplash('Waiting for sign-in…');
+      await startupSignIn;
+      store.set('startupWizardCompleted', true);
+    }
 
     // Complete
     splashWindow?.webContents.send('complete');
@@ -1126,12 +845,7 @@ async function initializeBundledMode(): Promise<void> {
           });
 
           if (response === 0) {
-            const password = gizziManager.getPassword();
-            if (!password) {
-              log.warn('[Main] Cannot install daemon: no gizzi password available');
-              return;
-            }
-            await gizziDaemonManager.install(password, activeBackendUrl);
+            await installAlwaysOnGizziRuntime();
             mainWindow?.webContents.send('gizzi-daemon:status', await gizziDaemonManager.getStatus());
           }
         } catch (err) {
@@ -1238,6 +952,18 @@ async function initializeRemoteMode(remoteUrl: string): Promise<void> {
 async function initializeDevelopmentMode(): Promise<void> {
   log.info('[Main] Development mode');
   activeBackendUrl = URLS.DEV_UI;
+
+  // Adopt or start the local Gizzi runtime so the sidecar can broker
+  // credential-injected requests via the allternit-gizzi custom protocol.
+  // In dev this is best-effort: if no runtime is available the rest of the
+  // app still loads.
+  try {
+    const gizziUrl = await startGizziRuntime();
+    updateSidecarConfig(gizziUrl);
+    log.info('[Main] Gizzi runtime ready in development mode:', gizziUrl);
+  } catch (error) {
+    log.warn('[Main] No adoptable Gizzi runtime in development mode; continuing without brokered AI runtime:', error);
+  }
 
   mainWindow = createMainWindow();
   mainWindow.loadURL(URLS.DEV_UI);
@@ -1626,6 +1352,15 @@ protocol.registerSchemesAsPrivileged([
       standard: true,
     },
   },
+  {
+    scheme: 'allternit-gizzi',
+    privileges: {
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      standard: true,
+    },
+  },
 ]);
 
 // On macOS, open-url fires during will-finish-launching (before ready).
@@ -1686,10 +1421,29 @@ app.whenReady().then(async () => {
     }
 
     const headers = new Headers(request.headers);
-    const accessToken = authManager.getAccessToken();
-    if (accessToken) {
-      headers.set('Authorization', `Bearer ${accessToken}`);
-      headers.set('X-Allternit-Desktop-Access-Token', accessToken);
+    const desktopSession = await authManager.getSession().catch((error) => {
+      log.warn('[Protocol] Paired runtime identity is temporarily unavailable:', error);
+      return null;
+    });
+    if (desktopSession) {
+      // The renderer never receives this credential. Electron main brokers the
+      // scoped identity plus user metadata to the loopback-only API.
+      headers.set('Authorization', `Bearer ${desktopSession.accessToken}`);
+      headers.set('X-Allternit-Desktop-Access-Token', desktopSession.accessToken);
+      headers.set('X-Allternit-User-Id', desktopSession.userId);
+      headers.set('X-Allternit-User-Email', desktopSession.userEmail);
+      headers.set('X-Allternit-User-Name', desktopSession.userEmail);
+      if (desktopSession.organizationId) {
+        headers.set('X-Allternit-Tenant-Id', desktopSession.organizationId);
+      }
+    } else if (isDev && !headers.has('X-Allternit-Desktop-Access-Token')) {
+      // Chromium strips the renderer's custom identity headers when
+      // onBeforeRequest redirects /api/* across origins to this protocol.
+      // Development-only bootstrap; packaged apps must have a paired runtime.
+      headers.set('X-Allternit-Desktop-Access-Token', 'desktop-dev-bootstrap');
+      headers.set('X-Allternit-User-Id', 'desktop-dev-user');
+      headers.set('X-Allternit-User-Email', 'desktop@allternit.local');
+      headers.set('X-Allternit-User-Name', 'Desktop Dev User');
     }
 
     try {
@@ -1717,6 +1471,46 @@ app.whenReady().then(async () => {
     } catch (error) {
       log.error('[Protocol] Proxy error:', error);
       return new Response(JSON.stringify({ error: 'proxy_error', message: String(error) }), {
+        status: 502,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+  });
+
+  // Gizzi remains loopback-only and keeps its internal process credential.
+  // Renderer code receives only this broker URL; Electron main injects the
+  // credential and streams the response without exposing the secret.
+  protocol.handle('allternit-gizzi', async (request) => {
+    const url = new URL(request.url);
+    const targetUrl = `${gizziManager.getUrl()}${url.pathname}${url.search}`;
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers': '*',
+        },
+      });
+    }
+    const headers = new Headers(request.headers);
+    const authHeader = gizziManager.getAuthHeader();
+    if (authHeader) headers.set('Authorization', authHeader);
+    try {
+      const body = request.method === 'GET' || request.method === 'HEAD'
+        ? undefined
+        : await request.arrayBuffer();
+      const response = await fetch(targetUrl, { method: request.method, headers, body });
+      const responseHeaders = new Headers(response.headers);
+      responseHeaders.set('Access-Control-Allow-Origin', '*');
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+      });
+    } catch (error) {
+      log.error('[GizziBroker] Request failed:', error);
+      return new Response(JSON.stringify({ error: 'gizzi_unavailable' }), {
         status: 502,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
@@ -1821,6 +1615,8 @@ app.on('before-quit', async () => {
   gizziManager.stop();
   notebookManager.stop();
   voiceManager.stop();
+  bonsaiCompanion.stop();
+  computerUseDriverManager.stop();
   stopVM().catch(() => {}); // best-effort Lima VM shutdown
   // Remove dev session credentials file so stale credentials don't persist across restarts
   if (isDev) {
@@ -1843,8 +1639,24 @@ ipcMain.handle('backend:get-status', () => backendManager.getStatus());
 ipcMain.handle('backend:restart', async () => {
   await backendManager.stopBackend();
 
-  return backendManager.ensureBackend();
+  await computerUseDriverManager.start();
+  return backendManager.ensureBackend({
+    extraEnv: {
+      ...computerUseDriverManager.getLaunchEnvironment(),
+      ...authManager.getPlatformEncryptionEnvironment(),
+    },
+  });
 });
+
+ipcMain.handle('computer-use-driver:get-status', () => computerUseDriverManager.getStatus());
+
+// Bonsai local image companion (install / lifecycle / removal)
+ipcMain.handle('bonsai:get-status', () => bonsaiCompanion.getStatus());
+ipcMain.handle('bonsai:install', () => bonsaiCompanion.install());
+ipcMain.handle('bonsai:cancel-install', () => bonsaiCompanion.cancelInstall());
+ipcMain.handle('bonsai:start', () => bonsaiCompanion.start());
+ipcMain.handle('bonsai:stop', () => { bonsaiCompanion.stop(); return true; });
+ipcMain.handle('bonsai:remove', () => bonsaiCompanion.remove());
 
 // Research backend (notebook engine) — lazy start
 ipcMain.handle('research:get-status', () => notebookManager.getStatus());
@@ -1914,6 +1726,37 @@ ipcMain.handle('shell:open-design', () => {
   designWindow.on('closed', () => { designWindow = null; });
   void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
 });
+ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; workspaceId?: string; title?: string }) => {
+  if (!options?.sessionId) throw new Error('A session ID is required');
+  const sessionWindow = new BrowserWindow({
+    width: 1180,
+    height: 820,
+    minWidth: 760,
+    minHeight: 560,
+    title: options.title || 'Allternit Code Session',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webviewTag: true,
+    },
+  });
+  const url = new URL('/platform', activePlatformUrl);
+  url.searchParams.set('detachedSurface', 'code');
+  url.searchParams.set('detachedSessionId', options.sessionId);
+  if (options.workspaceId) url.searchParams.set('detachedWorkspaceId', options.workspaceId);
+  sessionWindow.once('ready-to-show', () => sessionWindow.show());
+  sessionWindow.webContents.setWindowOpenHandler(({ url: target }) => {
+    void shell.openExternal(target);
+    return { action: 'deny' };
+  });
+  void sessionWindow.loadURL(url.toString());
+});
 ipcMain.handle('shell:get-office-host-status', async () => detectOfficeHostStatus());
 ipcMain.handle('office-addins:get-status', async () => {
   const manager = await getOfficeAddinManager();
@@ -1933,8 +1776,10 @@ ipcMain.handle('auth:get-session', async () => {
   return {
     userId: session.userId,
     userEmail: session.userEmail,
-    accessToken: session.accessToken,
     expiresAt: session.expiresAt,
+    runtimeId: session.runtimeId,
+    organizationId: session.organizationId,
+    capabilities: session.capabilities,
   };
 });
 ipcMain.handle('auth:list-accounts', async () => authManager.listAccounts());
@@ -2061,26 +1906,13 @@ ipcMain.handle('sidecar:get-status', async (): Promise<'running' | 'stopped' | '
   }
 });
 
-ipcMain.handle('sidecar:get-api-url', () => gizziManager.getUrl());
-
-ipcMain.handle('sidecar:get-auth-password', () => gizziManager.getPassword());
-
-ipcMain.handle('sidecar:get-basic-auth', () => {
-  const password = gizziManager.getPassword();
-  if (!password) return undefined;
-  const encoded = Buffer.from(`gizzi:${password}`).toString('base64');
-  return { username: 'gizzi', password, header: `Basic ${encoded}` };
-});
-
-ipcMain.handle('sidecar:get-persisted-config', () => persistedState.get('sidecar'));
-ipcMain.handle('sidecar:clear-persisted-config', () => {
-  persistedState.set('sidecar', null);
-  return true;
-});
+ipcMain.handle('sidecar:get-api-url', () => (
+  gizziManager.isRunning() ? 'allternit-gizzi://runtime' : undefined
+));
 
 ipcMain.handle('sidecar:start', async () => {
   try {
-    const url = await gizziManager.start();
+    const url = await startGizziRuntime();
     updateSidecarConfig(url);
     return true;
   } catch {
@@ -2093,7 +1925,7 @@ ipcMain.handle('sidecar:stop', () => { gizziManager.stop(); return true; });
 ipcMain.handle('sidecar:restart', async () => {
   try {
     gizziManager.stop();
-    const url = await gizziManager.start();
+    const url = await startGizziRuntime();
     updateSidecarConfig(url);
     return true;
   } catch {
@@ -2108,12 +1940,8 @@ ipcMain.handle('sidecar:restart', async () => {
 ipcMain.handle('gizzi-daemon:status', async () => gizziDaemonManager.getStatus());
 
 ipcMain.handle('gizzi-daemon:install', async () => {
-  const password = gizziManager.getPassword();
-  if (!password) {
-    return { success: false, error: 'No gizzi password available' };
-  }
   try {
-    await gizziDaemonManager.install(password, activeBackendUrl);
+    await installAlwaysOnGizziRuntime();
     return { success: true, status: await gizziDaemonManager.getStatus() };
   } catch (err) {
     log.error('[IPC] gizzi-daemon:install failed:', err);
@@ -2672,3 +2500,68 @@ ipcMain.handle('miniApps:stop', (_event, id: string) => {
 
 ipcMain.handle('miniApps:getStatus', (_event, id: string) => getMiniAppStatus(id));
 ipcMain.handle('miniApps:launchDesktop', (_event, id: string) => launchMiniAppDesktop(id));
+ipcMain.handle('miniApps:getApproval', (_event, id: string, registration) => getMiniAppApproval(id, registration));
+ipcMain.handle('miniApps:reviewAndApprove', (_event, registration) => reviewAndApproveMiniApp(registration));
+ipcMain.handle('miniApps:revokeApproval', (_event, id: string) => {
+  revokeMiniAppApproval(id);
+  return { success: true };
+});
+ipcMain.handle('miniApps:setSecret', (_event, id: string, name: string, value: string) => setMiniAppSecret(id, name, value));
+ipcMain.handle('miniApps:listSecrets', (_event, id: string) => listMiniAppSecrets(id));
+ipcMain.handle('miniApps:deleteSecret', (_event, id: string, name: string) => deleteMiniAppSecret(id, name));
+ipcMain.handle('miniApps:removeRuntime', (_event, id: string) => removeMiniAppRuntime(id));
+ipcMain.handle('miniApps:rollbackRuntime', (_event, id: string) => rollbackMiniAppRuntime(id));
+
+// Versioned marketplace releases (atomic install / rollback / uninstall)
+ipcMain.handle('miniApps:installRelease', async (event, options: { registryUrl: string; id: string; version?: string }) => {
+  return installReleaseFromRegistry(options, (progress) => {
+    event.sender.send('miniApps:install-progress', progress);
+  });
+});
+ipcMain.handle('miniApps:rollbackRelease', (_event, id: string, registryUrl?: string) => rollbackReleaseInstall(id, registryUrl));
+ipcMain.handle('miniApps:removeRelease', (_event, id: string, registryUrl?: string) => {
+  stopMiniApp(id);
+  return removeReleaseInstall(id, registryUrl);
+});
+ipcMain.handle('miniApps:listReleaseInstalls', () => listReleaseInstalls());
+ipcMain.handle('miniApps:getReleaseInstall', (_event, id: string) => getReleaseInstallState(id));
+
+// ─── OAuth broker (main-process token vault; tokens never cross IPC) ────────
+
+let miniAppOAuthBroker: MiniAppOAuthBroker | null = null;
+function oauthBroker(): MiniAppOAuthBroker {
+  if (miniAppOAuthBroker) return miniAppOAuthBroker;
+  const broker = createMiniAppOAuthBroker({
+    encrypt: (value) => {
+      if (!safeStorage.isEncryptionAvailable()) throw new Error('Operating-system encryption is unavailable');
+      return safeStorage.encryptString(value).toString('base64');
+    },
+    decrypt: (value) => safeStorage.decryptString(Buffer.from(value, 'base64')),
+    openExternal: (url) => shell.openExternal(url),
+    storagePath: () => join(app.getPath('userData'), 'mini-app-oauth-tokens.json'),
+    logger: (message) => log.info(message),
+  });
+  broker.onFlowComplete((result) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (!window.isDestroyed()) window.webContents.send('miniApps:oauth-complete', result);
+    }
+  });
+  miniAppOAuthBroker = broker;
+  return broker;
+}
+
+// Sandboxed runtimes receive fresh OAuth tokens as environment variables at
+// start time. Resolution happens entirely in the main process: the broker
+// refreshes when needed, and a missing/unauthorized account simply means the
+// variable is absent — tokens never cross IPC.
+setMiniAppOAuthTokenResolver(async (appId, providerId) => {
+  const result = await oauthBroker().getValidAccessToken(appId, providerId, 'default');
+  return result.token ?? null;
+});
+
+ipcMain.handle('miniApps:oauthStart', (_event, appId: string, providerId: string, provider: MiniAppOAuthProvider, accountId: string) =>
+  oauthBroker().startFlow(appId, providerId, provider, accountId));
+ipcMain.handle('miniApps:oauthCancel', (_event, flowId: string) => oauthBroker().cancelFlow(flowId));
+ipcMain.handle('miniApps:oauthAccounts', (_event, appId: string) => oauthBroker().listAccounts(appId));
+ipcMain.handle('miniApps:oauthDisconnect', (_event, appId: string, providerId: string, accountId: string) =>
+  oauthBroker().disconnect(appId, providerId, accountId));

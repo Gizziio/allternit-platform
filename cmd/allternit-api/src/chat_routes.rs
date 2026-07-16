@@ -14,8 +14,8 @@ use serde::Deserialize;
 use std::sync::Arc;
 use tracing::info;
 
-use crate::AppState;
 use crate::gizzi_chat_stream::stream_chat_through_gizzi;
+use crate::AppState;
 
 /// Chat request from frontend
 #[derive(Debug, Deserialize)]
@@ -54,7 +54,8 @@ async fn handle_agent_chat(
 ) -> Response {
     info!(chat_id = %request.chat_id, "Received chat request, forwarding to Gizzi runtime");
 
-    let system_prompt = request.context
+    let system_prompt = request
+        .context
         .get("systemPrompt")
         .and_then(|value| value.as_str())
         .filter(|value| !value.trim().is_empty());
@@ -79,7 +80,6 @@ async fn handle_agent_chat(
     )
     .await
 }
-
 
 /// Handle chat action requests (e.g. regenerate, stop, etc.)
 async fn handle_chat_action(

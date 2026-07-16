@@ -49,7 +49,9 @@ impl DesignSkillCache {
         // Return cached result if fresh (< 5s) to avoid filesystem churn.
         let is_fresh = {
             let guard = self.inner.read().await;
-            guard.refreshed_at.map_or(false, |t| t.elapsed() < Duration::from_secs(5))
+            guard
+                .refreshed_at
+                .map_or(false, |t| t.elapsed() < Duration::from_secs(5))
         };
 
         if !is_fresh {
@@ -67,7 +69,10 @@ impl DesignSkillCache {
     pub async fn refresh(&self, cwd: Option<&str>) {
         let paths = discover_skills_paths(cwd);
         let mut skills = Vec::new();
-        let scanned: Vec<String> = paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
+        let scanned: Vec<String> = paths
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
 
         for path in &paths {
             let source = if path.starts_with(dirs::home_dir().unwrap_or_default().join(".claude")) {
@@ -90,7 +95,10 @@ impl DesignSkillCache {
 
 pub fn design_connector_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/design/composio/connections", get(list_composio_connections))
+        .route(
+            "/design/composio/connections",
+            get(list_composio_connections),
+        )
         .route("/design/composio/connect", post(connect_composio))
         .route("/design/connectors/slack", post(slack_connector))
         .route("/design/connectors/notion", post(notion_connector))
@@ -128,27 +136,40 @@ fn find_connector(id: &str) -> Option<serde_json::Value> {
     connector_catalog()
         .get("connectors")
         .and_then(|c| c.as_array())
-        .and_then(|arr| arr.iter().find(|c| c.get("id").and_then(|i| i.as_str()) == Some(id)).cloned())
+        .and_then(|arr| {
+            arr.iter()
+                .find(|c| c.get("id").and_then(|i| i.as_str()) == Some(id))
+                .cloned()
+        })
 }
 
 async fn list_composio_connections(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
-    let connectors = connector_catalog().get("connectors").cloned().unwrap_or_else(|| json!([]));
+    let connectors = connector_catalog()
+        .get("connectors")
+        .cloned()
+        .unwrap_or_else(|| json!([]));
     let total = connectors.as_array().map(|a| a.len()).unwrap_or(0);
     Json(json!({ "connectors": connectors, "total": total, "source": "allternit-in-process" }))
 }
 
 fn connect_response(id: &str) -> (StatusCode, Json<serde_json::Value>) {
     match find_connector(id) {
-        Some(c) => (StatusCode::OK, Json(json!({
-            "status": "use_owned_connect",
-            "connector": id,
-            "owned": true,
-            "owned_endpoint": format!("/api/v1/connectors/{}/connect", id),
-            "owned_execute": format!("/api/v1/connectors/{}/execute", id),
-            "catalog": c,
-            "message": "Allternit owns this connector in-process. Use POST /api/v1/connectors/:id/connect (local_cli instant, owned OAuth one-click) and POST /api/v1/connectors/:id/execute. No Composio, no third-party key."
-        }))),
-        None => (StatusCode::NOT_FOUND, Json(json!({"error": "unknown_connector", "connector": id}))),
+        Some(c) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "use_owned_connect",
+                "connector": id,
+                "owned": true,
+                "owned_endpoint": format!("/api/v1/connectors/{}/connect", id),
+                "owned_execute": format!("/api/v1/connectors/{}/execute", id),
+                "catalog": c,
+                "message": "Allternit owns this connector in-process. Use POST /api/v1/connectors/:id/connect (local_cli instant, owned OAuth one-click) and POST /api/v1/connectors/:id/execute. No Composio, no third-party key."
+            })),
+        ),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "unknown_connector", "connector": id})),
+        ),
     }
 }
 
@@ -163,7 +184,10 @@ async fn connect_composio(
         .map(|s| s.to_string());
     match id {
         Some(id) => connect_response(&id),
-        None => (StatusCode::BAD_REQUEST, Json(json!({"error": "connector id is required (pass {\"connector\":\"slack\"})"}))),
+        None => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "connector id is required (pass {\"connector\":\"slack\"})"})),
+        ),
     }
 }
 
@@ -438,7 +462,10 @@ async fn detect_adapters(
         available.push("claude-desktop".to_string());
         env.insert(
             "CLAUDE_CONFIG_PATH".to_string(),
-            home.join(".claude").join("claude_desktop_config.json").to_string_lossy().to_string(),
+            home.join(".claude")
+                .join("claude_desktop_config.json")
+                .to_string_lossy()
+                .to_string(),
         );
     } else {
         missing.push("claude-desktop".to_string());
@@ -507,9 +534,11 @@ async fn spawn_adapter(
         }));
     };
 
-    let cwd = req.cwd.as_deref().map(PathBuf::from).unwrap_or_else(|| {
-        std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-    });
+    let cwd = req
+        .cwd
+        .as_deref()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
 
     let mut env_vars: HashMap<String, String> = std::env::vars().collect();
     if let Some(extra) = req.env {
@@ -517,7 +546,10 @@ async fn spawn_adapter(
     }
 
     let (program, args) = match kind.id.as_str() {
-        "claude-desktop" => ("open".to_string(), vec!["-a".to_string(), "Claude Desktop".to_string()]),
+        "claude-desktop" => (
+            "open".to_string(),
+            vec!["-a".to_string(), "Claude Desktop".to_string()],
+        ),
         "codex-cli" => ("codex".to_string(), vec![]),
         "cursor-agent" => ("cursor-agent".to_string(), vec![]),
         "kimi-cli" => ("kimi".to_string(), vec![]),
@@ -593,14 +625,27 @@ fn normalize_plugin_id(id: &str) -> String {
         .to_lowercase()
 }
 
-fn plugin_install_dir(plugin: &serde_json::Value, target: &str, workspace_path: Option<&str>) -> Option<PathBuf> {
+fn plugin_install_dir(
+    plugin: &serde_json::Value,
+    target: &str,
+    workspace_path: Option<&str>,
+) -> Option<PathBuf> {
     let base = normalize_plugin_id(plugin.get("id")?.as_str()?);
     let dir = match target {
         "claude-desktop" => dirs::home_dir()?.join(".claude").join("skills").join(&base),
-        "codex-cli" => PathBuf::from(workspace_path.unwrap_or(".")).join("skills").join(&base),
-        "allternit-local" => PathBuf::from(workspace_path.unwrap_or(".")).join(".allternit").join("plugins").join(&base),
-        "generic-mcp" => PathBuf::from(workspace_path.unwrap_or(".")).join("mcp-plugins").join(&base),
-        _ => PathBuf::from(workspace_path.unwrap_or(".")).join("skills").join(&base),
+        "codex-cli" => PathBuf::from(workspace_path.unwrap_or("."))
+            .join("skills")
+            .join(&base),
+        "allternit-local" => PathBuf::from(workspace_path.unwrap_or("."))
+            .join(".allternit")
+            .join("plugins")
+            .join(&base),
+        "generic-mcp" => PathBuf::from(workspace_path.unwrap_or("."))
+            .join("mcp-plugins")
+            .join(&base),
+        _ => PathBuf::from(workspace_path.unwrap_or("."))
+            .join("skills")
+            .join(&base),
     };
     Some(dir)
 }
@@ -646,7 +691,11 @@ async fn install_plugin(
     }
 
     // Write a lightweight SKILL.md stub so the directory is recognized by skill scanners.
-    let name = req.plugin.get("name").and_then(|v| v.as_str()).unwrap_or("Plugin");
+    let name = req
+        .plugin
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("Plugin");
     let skill_md = format!(
         "# {}\n\nAuto-installed Open Design plugin for agent {}.\n",
         name,

@@ -4,11 +4,11 @@
 
 import React from 'react';
 import { useAgentStore } from '@/lib/agents/agent.store';
-import type { Agent, CharacterStats } from '@/lib/agents/agent.types';
+import type { Agent } from '@/lib/agents/agent.types';
 import { Badge } from '@/components/ui/badge';
 import { RunListItem } from './RunListItem'; // This will be created later
 
-import { Play, CheckSquare, EnvelopeSimple, UserCircle, Clock, Lightning } from '@phosphor-icons/react';
+import { Play, CheckSquare, EnvelopeSimple, UserCircle, Clock, Lightning, Percent } from '@phosphor-icons/react';
 
 function Section({
   title,
@@ -36,7 +36,7 @@ function StatBox({
   icon: Icon,
 }: {
   label: string;
-  value: number;
+  value: React.ReactNode;
   icon: React.ComponentType<{ size?: number; className?: string }>;
 }) {
   return (
@@ -58,7 +58,7 @@ function EmptyMessage({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const OverviewTab = ({ agent, stats }: { agent: Agent; stats?: CharacterStats }) => {
+export const OverviewTab = ({ agent }: { agent: Agent }) => {
   const { runs, tasks, mail } = useAgentStore();
   const agentRuns = runs[agent.id] || [];
   const agentTasks = tasks[agent.id] || [];
@@ -67,6 +67,10 @@ export const OverviewTab = ({ agent, stats }: { agent: Agent; stats?: CharacterS
   const recentRuns = agentRuns.slice(0, 3);
   const pendingTasks = agentTasks.filter(t => t.status === 'pending');
   const unreadMessages = agentMail.filter(m => m.status === 'unread').length;
+  const finishedRuns = agentRuns.filter(r => r.status === 'completed' || r.status === 'failed');
+  const successRate = finishedRuns.length > 0
+    ? Math.round((finishedRuns.filter(r => r.status === 'completed').length / finishedRuns.length) * 100)
+    : null;
 
   return (
     <div className="h-full p-5">
@@ -75,7 +79,7 @@ export const OverviewTab = ({ agent, stats }: { agent: Agent; stats?: CharacterS
           <StatBox label="Total Runs" value={agentRuns.length} icon={Play} />
           <StatBox label="Pending Tasks" value={pendingTasks.length} icon={CheckSquare} />
           <StatBox label="Unread Messages" value={unreadMessages} icon={EnvelopeSimple} />
-          <StatBox label="Level" value={stats?.level || 1} icon={UserCircle} />
+          <StatBox label="Success Rate" value={successRate != null ? `${successRate}%` : '—'} icon={Percent} />
         </div>
 
         <Section title="Recent Runs" icon={Clock}>

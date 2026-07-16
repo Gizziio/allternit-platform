@@ -296,14 +296,14 @@ export function AuthPreview() {
             </span>
             <div className="flex-1 h-px" style={{ background: `color-mix(in srgb, ${slide.accent} 20%, transparent)` }} />
           </div>
-          <p className="text-[13px] text-[#664E3A] leading-relaxed m-0">
+          <p className="text-[13px] text-[#74716B] leading-relaxed m-0">
             {slide.desc}
           </p>
         </motion.div>
       </AnimatePresence>
 
       {/* Preview card */}
-      <div className="h-80 bg-[#F5EDE3] rounded-[20px] border border-solid border-black/5 shadow-[0_40px_100px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.04)] overflow-hidden relative">
+      <div className="h-80 bg-[#F5EDE3] rounded-[20px] border border-solid border-black/5 shadow-[0_24px_70px_rgba(30,25,20,0.14)] overflow-hidden relative">
         {/* Grid */}
         <div 
           className="absolute inset-0 pointer-events-none" 
@@ -321,7 +321,7 @@ export function AuthPreview() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: direction * -40, opacity: 0 }}
             transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-            className="absolute inset-0 w-full h-full flex items-center justify-center bg-black"
+            className="absolute inset-0 w-full h-full flex items-center justify-center bg-[#F4EFE8]"
           >
             {slide.videoUrl ? (
               <video
@@ -347,7 +347,7 @@ export function AuthPreview() {
             onClick={() => { setDirection(i > active ? 1 : -1); setActive(i); }}
             className={cn(
               "h-1.5 rounded-full border-none cursor-pointer p-0 transition-all duration-300",
-              i === active ? "w-6" : "w-1.5 bg-white/15"
+              i === active ? "w-6" : "w-1.5 bg-black/15"
             )}
             style={i === active ? { background: slide.accent } : undefined}
           />
@@ -361,39 +361,39 @@ export function AuthPreview() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -12 }}
           transition={{ duration: 0.35 }}
-          className="rounded-[20px] p-[28px_28px_24px] shadow-[0_28px_80px_rgba(0,0,0,0.34)] border border-solid"
+          className="rounded-[20px] p-[28px_28px_24px] shadow-[0_20px_60px_rgba(30,25,20,0.09)] border border-solid"
           style={{
-            background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 5%, #17120e), #100c09 72%)`,
-            borderColor: `color-mix(in srgb, ${slide.accent} 16%, rgba(255,255,255,0.08))`,
+            background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 4%, #fffefc), #f7f4ef 72%)`,
+            borderColor: `color-mix(in srgb, ${slide.accent} 16%, #e1e0dc)`,
           }}
         >
           <div className="flex items-center gap-3 mb-4.5">
             <div className="w-11 h-px" style={{ background: `linear-gradient(90deg, ${slide.accent}, transparent)` }} />
-            <span className="text-[12px] tracking-[0.14em] uppercase text-[#A78672] font-bold">
+            <span className="text-[12px] tracking-[0.14em] uppercase text-[#74716B] font-bold">
               {slide.promoKicker}
             </span>
           </div>
 
           <div className="grid gap-4.5">
             <div className="max-w-[500px]">
-              <div className="text-[34px] leading-[1.02] tracking-tight text-[#F4E9DE] font-bold">
+              <div className="text-[34px] leading-[1.02] tracking-tight text-[#0D0C0A] font-bold">
                 {slide.promoTitle}
               </div>
-              <p className="mt-3.5 text-[14px] leading-relaxed text-[#A88974] m-0">
+              <p className="mt-3.5 text-[14px] leading-relaxed text-[#74716B] m-0">
                 {slide.promoCopy}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-[1.2fr_0.8fr] gap-4.5 items-stretch">
-              <div className="rounded-2xl p-[18px_18px_16px] bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)]">
-                <div className="text-[12px] tracking-[0.12em] uppercase text-[#7F6656] mb-3.5 font-bold">
+              <div className="rounded-2xl p-[18px_18px_16px] bg-white/70 border border-solid border-[#E1E0DC]">
+                <div className="text-[12px] tracking-[0.12em] uppercase text-[#74716B] mb-3.5 font-bold">
                   Why teams choose it
                 </div>
                 <div className="grid gap-3.5">
                   {slide.promoStats.map((item) => (
                     <div key={item.value} className="grid gap-1">
-                      <div className="text-[#F0E2D5] text-[15px] font-bold tracking-tight">{item.value}</div>
-                      <div className="text-[#8E7361] text-[12.5px] leading-relaxed">{item.label}</div>
+                      <div className="text-[#1A1916] text-[15px] font-bold tracking-tight">{item.value}</div>
+                      <div className="text-[#74716B] text-[12.5px] leading-relaxed">{item.label}</div>
                     </div>
                   ))}
                 </div>
@@ -402,22 +402,22 @@ export function AuthPreview() {
               <div 
                 className="rounded-2xl p-[18px_18px_16px] border border-solid flex flex-col justify-between min-h-[216px]"
                 style={{
-                  background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 8%, rgba(255,255,255,0.02)), rgba(255,255,255,0.02))`,
-                  borderColor: `color-mix(in srgb, ${slide.accent} 16%, rgba(255,255,255,0.06))`,
+                  background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 7%, #fff), rgba(255,255,255,0.75))`,
+                  borderColor: `color-mix(in srgb, ${slide.accent} 16%, #e1e0dc)`,
                 }}
               >
                 <div>
-                  <div className="text-[12px] tracking-[0.12em] uppercase text-[#7F6656] mb-3 font-bold">
+                  <div className="text-[12px] tracking-[0.12em] uppercase text-[#74716B] mb-3 font-bold">
                     Branded experience
                   </div>
-                  <p className="m-0 text-[13px] leading-relaxed text-[#CDB9AA]">
+                  <p className="m-0 text-[13px] leading-relaxed text-[#403E39]">
                     {slide.promoNote}
                   </p>
                 </div>
 
-                <div className="mt-4.5 pt-4 border-t border-solid border-[var(--ui-border-muted)] grid gap-2">
-                  <div className="text-[#F2E4D6] text-[12px] font-bold leading-snug">Gizzi keeps the product feeling guided, not generic.</div>
-                  <div className="text-[#876D5D] text-[12.5px] leading-relaxed">
+                <div className="mt-4.5 pt-4 border-t border-solid border-[#E1E0DC] grid gap-2">
+                  <div className="text-[#1A1916] text-[12px] font-bold leading-snug">Gizzi keeps the product feeling guided, not generic.</div>
+                  <div className="text-[#74716B] text-[12.5px] leading-relaxed">
                     A clearer voice, a stronger brand surface, and a workflow that reads like a finished product.
                   </div>
                 </div>

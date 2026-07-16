@@ -4,10 +4,10 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use std::sync::Arc;
 use chrono::Utc;
+use std::sync::Arc;
+use tracing::{error, info};
 use uuid::Uuid;
-use tracing::{info, error};
 
 use crate::{ApiError, ApiState, Deployment, DeploymentEvent};
 
@@ -16,9 +16,7 @@ use crate::{ApiError, ApiState, Deployment, DeploymentEvent};
 #[serde(rename_all = "snake_case")]
 pub enum DeploymentMode {
     /// We create VPS via provider API
-    Automated {
-        api_token: String,
-    },
+    Automated { api_token: String },
     /// User already has VPS, we install via SSH
     Manual {
         ssh_host: String,
@@ -102,9 +100,9 @@ pub async fn create_deployment(
     Json(request): Json<CreateDeploymentRequest>,
 ) -> Result<Json<DeploymentResponse>, ApiError> {
     tracing::info!("Creating deployment for provider: {}", request.provider_id);
-    
+
     let deployment_id = Uuid::new_v4().to_string();
-    
+
     // Create deployment record
     let deployment = sqlx::query_as::<_, Deployment>(
         r#"
@@ -127,7 +125,7 @@ pub async fn create_deployment(
     .bind(Utc::now())
     .fetch_one(&state.db)
     .await?;
-    
+
     // Broadcast deployment started event
     let event = DeploymentEvent {
         deployment_id: Uuid::parse_str(&deployment_id).unwrap_or_default(),
@@ -138,7 +136,7 @@ pub async fn create_deployment(
         data: None,
     };
     let _ = state.event_tx.send(event);
-    
+
     // Start deployment in background
     let state_for_spawn = state.clone();
     let deployment_id_clone = deployment_id.clone();
@@ -146,7 +144,7 @@ pub async fn create_deployment(
         if let Err(e) = run_deployment(state_for_spawn, &deployment_id_clone, request).await {
             tracing::error!("Deployment failed: {}", e);
             let _ = sqlx::query(
-                "UPDATE deployments SET status = ?, error_message = ?, updated_at = ? WHERE id = ?"
+                "UPDATE deployments SET status = ?, error_message = ?, updated_at = ? WHERE id = ?",
             )
             .bind("failed")
             .bind(&e.to_string())
@@ -156,7 +154,7 @@ pub async fn create_deployment(
             .await;
         }
     });
-    
+
     Ok(Json(DeploymentResponse::from(deployment)))
 }
 
@@ -165,11 +163,11 @@ pub async fn list_deployments(
     State(state): State<Arc<ApiState>>,
 ) -> Result<Json<Vec<DeploymentResponse>>, ApiError> {
     let deployments = sqlx::query_as::<_, Deployment>(
-        "SELECT * FROM deployments ORDER BY created_at DESC LIMIT 100"
+        "SELECT * FROM deployments ORDER BY created_at DESC LIMIT 100",
     )
     .fetch_all(&state.db)
     .await?;
-    
+
     Ok(Json(deployments.into_iter().map(Into::into).collect()))
 }
 
@@ -178,14 +176,12 @@ pub async fn get_deployment(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> Result<Json<DeploymentResponse>, ApiError> {
-    let deployment = sqlx::query_as::<_, Deployment>(
-        "SELECT * FROM deployments WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or_else(|| ApiError::DeploymentNotFound(id))?;
-    
+    let deployment = sqlx::query_as::<_, Deployment>("SELECT * FROM deployments WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or_else(|| ApiError::DeploymentNotFound(id))?;
+
     Ok(Json(DeploymentResponse::from(deployment)))
 }
 
@@ -205,11 +201,11 @@ pub async fn cancel_deployment(
     .bind("provisioning")
     .execute(&state.db)
     .await?;
-    
+
     if result.rows_affected() == 0 {
         return Err(ApiError::DeploymentNotFound(id));
     }
-    
+
     // Broadcast cancellation event
     let event = DeploymentEvent {
         deployment_id: Uuid::parse_str(&id).unwrap_or_default(),
@@ -220,14 +216,12 @@ pub async fn cancel_deployment(
         data: None,
     };
     let _ = state.event_tx.send(event);
-    
-    let deployment = sqlx::query_as::<_, Deployment>(
-        "SELECT * FROM deployments WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_one(&state.db)
-    .await?;
-    
+
+    let deployment = sqlx::query_as::<_, Deployment>("SELECT * FROM deployments WHERE id = ?")
+        .bind(&id)
+        .fetch_one(&state.db)
+        .await?;
+
     Ok(Json(DeploymentResponse::from(deployment)))
 }
 
@@ -238,15 +232,34 @@ async fn run_deployment(
     request: CreateDeploymentRequest,
 ) -> Result<(), ApiError> {
     // Update to provisioning status
-    update_deployment_status(&state, deployment_id, "provisioning", 10, "Creating VM instance")
-        .await?;
+    update_deployment_status(
+        &state,
+        deployment_id,
+        "provisioning",
+        10,
+        "Creating VM instance",
+    )
+    .await?;
 
     match request.mode {
         DeploymentMode::Automated { ref api_token } => {
             run_automated_deployment(&state, deployment_id, &request, api_token).await
         }
-        DeploymentMode::Manual { ref ssh_host, ssh_port, ref ssh_username, ref ssh_private_key } => {
-            run_manual_deployment(&state, deployment_id, ssh_host, ssh_port, ssh_username, ssh_private_key).await
+        DeploymentMode::Manual {
+            ref ssh_host,
+            ssh_port,
+            ref ssh_username,
+            ref ssh_private_key,
+        } => {
+            run_manual_deployment(
+                &state,
+                deployment_id,
+                ssh_host,
+                ssh_port,
+                ssh_username,
+                ssh_private_key,
+            )
+            .await
         }
     }
 }
@@ -259,9 +272,17 @@ async fn run_automated_deployment(
     api_token: &str,
 ) -> Result<(), ApiError> {
     if api_token.is_empty() {
-        update_deployment_status(state, deployment_id, "failed", 0, "API token required for automated deployment")
-            .await?;
-        return Err(ApiError::InvalidCredentials("API token is empty".to_string()));
+        update_deployment_status(
+            state,
+            deployment_id,
+            "failed",
+            0,
+            "API token required for automated deployment",
+        )
+        .await?;
+        return Err(ApiError::InvalidCredentials(
+            "API token is empty".to_string(),
+        ));
     }
 
     // Create Hetzner provider
@@ -271,14 +292,31 @@ async fn run_automated_deployment(
     match provider.validate_credentials().await {
         Ok(true) => info!("Hetzner credentials validated"),
         Ok(false) => {
-            update_deployment_status(state, deployment_id, "failed", 0, "Invalid Hetzner credentials")
-                .await?;
-            return Err(ApiError::InvalidCredentials("Hetzner API token invalid".to_string()));
+            update_deployment_status(
+                state,
+                deployment_id,
+                "failed",
+                0,
+                "Invalid Hetzner credentials",
+            )
+            .await?;
+            return Err(ApiError::InvalidCredentials(
+                "Hetzner API token invalid".to_string(),
+            ));
         }
         Err(e) => {
-            update_deployment_status(state, deployment_id, "failed", 0, &format!("Credential validation failed: {}", e))
-                .await?;
-            return Err(ApiError::Internal(format!("Credential validation failed: {}", e)));
+            update_deployment_status(
+                state,
+                deployment_id,
+                "failed",
+                0,
+                &format!("Credential validation failed: {}", e),
+            )
+            .await?;
+            return Err(ApiError::Internal(format!(
+                "Credential validation failed: {}",
+                e
+            )));
         }
     }
 
@@ -294,16 +332,31 @@ async fn run_automated_deployment(
     };
 
     // Deploy to Hetzner
-    update_deployment_status(state, deployment_id, "provisioning", 30, "Provisioning VM on Hetzner Cloud")
-        .await?;
+    update_deployment_status(
+        state,
+        deployment_id,
+        "provisioning",
+        30,
+        "Provisioning VM on Hetzner Cloud",
+    )
+    .await?;
 
     match provider.deploy(&deploy_config).await {
         Ok(result) => {
-            info!("Deployment successful: {} ({})", result.server_name, result.instance_ip);
-            
-            update_deployment_status(state, deployment_id, "installing", 60, "Allternit runtime installed")
-                .await?;
-            
+            info!(
+                "Deployment successful: {} ({})",
+                result.server_name, result.instance_ip
+            );
+
+            update_deployment_status(
+                state,
+                deployment_id,
+                "installing",
+                60,
+                "Allternit runtime installed",
+            )
+            .await?;
+
             update_deployment_status(state, deployment_id, "complete", 100, "Deployment complete")
                 .await?;
 
@@ -311,8 +364,14 @@ async fn run_automated_deployment(
         }
         Err(e) => {
             error!("Deployment failed: {}", e);
-            update_deployment_status(state, deployment_id, "failed", 0, &format!("Deployment failed: {}", e))
-                .await?;
+            update_deployment_status(
+                state,
+                deployment_id,
+                "failed",
+                0,
+                &format!("Deployment failed: {}", e),
+            )
+            .await?;
             return Err(ApiError::DeploymentFailed(e.to_string()));
         }
     }
@@ -333,50 +392,85 @@ async fn run_manual_deployment(
 
     // Test SSH connection first
     let ssh_executor = allternit_cloud_ssh::SshExecutor::new();
-    
-    update_deployment_status(state, deployment_id, "provisioning", 20, "Testing SSH connection")
-        .await?;
 
-    match ssh_executor.test_connection(ssh_host, ssh_port, ssh_username, ssh_private_key).await {
+    update_deployment_status(
+        state,
+        deployment_id,
+        "provisioning",
+        20,
+        "Testing SSH connection",
+    )
+    .await?;
+
+    match ssh_executor
+        .test_connection(ssh_host, ssh_port, ssh_username, ssh_private_key)
+        .await
+    {
         Ok(true) => info!("SSH connection successful"),
         Ok(false) => {
             update_deployment_status(state, deployment_id, "failed", 0, "SSH connection failed")
                 .await?;
-            return Err(ApiError::InvalidCredentials("SSH connection test failed".to_string()));
+            return Err(ApiError::InvalidCredentials(
+                "SSH connection test failed".to_string(),
+            ));
         }
         Err(e) => {
-            update_deployment_status(state, deployment_id, "failed", 0, &format!("SSH connection error: {}", e))
-                .await?;
-            return Err(ApiError::DeploymentFailed(format!("SSH connection error: {}", e)));
+            update_deployment_status(
+                state,
+                deployment_id,
+                "failed",
+                0,
+                &format!("SSH connection error: {}", e),
+            )
+            .await?;
+            return Err(ApiError::DeploymentFailed(format!(
+                "SSH connection error: {}",
+                e
+            )));
         }
     }
 
     // Install Allternit runtime
-    update_deployment_status(state, deployment_id, "installing", 50, "Installing Allternit runtime")
-        .await?;
+    update_deployment_status(
+        state,
+        deployment_id,
+        "installing",
+        50,
+        "Installing Allternit runtime",
+    )
+    .await?;
 
     let control_plane_url = std::env::var("CONTROL_PLANE_URL")
         .unwrap_or_else(|_| "wss://console.allternit.sh".to_string());
 
-    match ssh_executor.install_allternit_runtime(
-        ssh_host,
-        ssh_port,
-        ssh_username,
-        ssh_private_key,
-        &control_plane_url,
-        deployment_id,
-    ).await {
+    match ssh_executor
+        .install_allternit_runtime(
+            ssh_host,
+            ssh_port,
+            ssh_username,
+            ssh_private_key,
+            &control_plane_url,
+            deployment_id,
+        )
+        .await
+    {
         Ok(output) => {
             info!("Allternit runtime installed successfully");
             info!("Installation output: {}", output.stdout);
-            
+
             update_deployment_status(state, deployment_id, "complete", 100, "Deployment complete")
                 .await?;
         }
         Err(e) => {
             error!("Allternit installation failed: {}", e);
-            update_deployment_status(state, deployment_id, "failed", 0, &format!("Installation failed: {}", e))
-                .await?;
+            update_deployment_status(
+                state,
+                deployment_id,
+                "failed",
+                0,
+                &format!("Installation failed: {}", e),
+            )
+            .await?;
             return Err(ApiError::DeploymentFailed(e.to_string()));
         }
     }
@@ -393,7 +487,7 @@ async fn update_deployment_status(
     message: &str,
 ) -> Result<(), ApiError> {
     sqlx::query(
-        "UPDATE deployments SET status = ?, progress = ?, message = ?, updated_at = ? WHERE id = ?"
+        "UPDATE deployments SET status = ?, progress = ?, message = ?, updated_at = ? WHERE id = ?",
     )
     .bind(status)
     .bind(progress)
@@ -402,7 +496,7 @@ async fn update_deployment_status(
     .bind(deployment_id)
     .execute(&state.db)
     .await?;
-    
+
     // Broadcast event
     let event = DeploymentEvent {
         deployment_id: Uuid::parse_str(deployment_id).unwrap_or_default(),
@@ -415,6 +509,6 @@ async fn update_deployment_status(
         })),
     };
     let _ = state.event_tx.send(event);
-    
+
     Ok(())
 }

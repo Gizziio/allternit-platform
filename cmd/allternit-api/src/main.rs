@@ -10,8 +10,8 @@
 //! - Event streaming (WebSocket)
 //! - SSH, Swarm, Workflows, Boards
 
+use axum::http::{header, HeaderName, Method};
 use axum::Router;
-use axum::http::{HeaderName, Method, header};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -22,13 +22,9 @@ use tracing::info;
 use tracing::warn;
 
 // Import from library
-use allternit_api::AppState;
-use allternit_api::auth::auth_middleware;
-use allternit_api::db::DbHandle;
-use allternit_api::health::health_router;
 use allternit_api::aci_routes::aci_router;
+use allternit_api::agent_operations_routes;
 use allternit_api::agent_routes::agent_router;
-use allternit_api::automation_routes::automation_router;
 use allternit_api::agent_runtime_routes::agent_runtime_router;
 use allternit_api::agent_session_routes::agent_session_router;
 use allternit_api::agents_v1_routes::agents_v1_router;
@@ -36,29 +32,31 @@ use allternit_api::alabs_routes::alabs_router;
 use allternit_api::analytics_routes::analytics_router;
 use allternit_api::artifact_routes::artifact_router;
 use allternit_api::audit_log_routes::audit_log_router;
+use allternit_api::auth::auth_middleware;
+use allternit_api::automation_routes::automation_router;
 use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
 use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
-use allternit_api::design_connector_routes::{design_connector_router, DesignSkillCache};
 use allternit_api::cowork::background_service::CoworkBackgroundService;
 use allternit_api::cowork::routes::{background_router, CoworkBgState};
 use allternit_api::cowork_routes::cowork_router;
-use allternit_api::rails_client_impl::create_local_rails_client;
-use allternit_cowork_runtime::{JobId, Run as CoworkRun, RunId, RunManager, RunManagerConfig, RunMode, RunState};
 use allternit_api::cowork_team_routes::cowork_team_router;
+use allternit_api::db::DbHandle;
+use allternit_api::design_connector_routes::{design_connector_router, DesignSkillCache};
 use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
+use allternit_api::health::health_router;
 use allternit_api::inbox_routes::inbox_router;
-use allternit_api::local_brain_routes::local_brain_router;
 use allternit_api::library_routes::library_router;
+use allternit_api::local_brain_routes::local_brain_router;
+use allternit_api::mcp_routes::mcp_router;
 use allternit_api::me_routes::me_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
-use allternit_api::mcp_routes::mcp_router;
 use allternit_api::oauth_routes::oauth_router;
 use allternit_api::office_routes::office_router;
 use allternit_api::onboarding_routes::onboarding_router;
@@ -67,6 +65,7 @@ use allternit_api::platform_static::platform_service;
 use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::rails_client_impl::create_local_rails_client;
 use allternit_api::runtime_backend_routes::runtime_backend_router;
 use allternit_api::runtime_discover_routes::runtime_discover_router;
 use allternit_api::sandbox_routes::sandbox_router;
@@ -76,30 +75,29 @@ use allternit_api::status_routes::status_router;
 use allternit_api::stream::stream_router;
 use allternit_api::swarm_routes::swarm_router;
 use allternit_api::task_routes;
-use allternit_api::agent_operations_routes;
 use allternit_api::team_skill_routes::team_skill_router;
 use allternit_api::terminal_routes::terminal_router;
 use allternit_api::tool_routes;
 use allternit_api::v1_routes::{agent_chat_router, v1_router};
 use allternit_api::viz_routes::viz_router;
 use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
-use allternit_api::webhook_routes::webhook_router;
 use allternit_api::web_proxy_routes::web_proxy_router;
+use allternit_api::webhook_routes::webhook_router;
 use allternit_api::workflow_routes::workflow_router;
 use allternit_api::workspace_routes::workspace_router;
-use allternit_cowork_scheduler::{Scheduler, api::ApiState as SchedulerApiState};
+use allternit_api::AppState;
+use allternit_cowork_runtime::{
+    JobId, Run as CoworkRun, RunId, RunManager, RunManagerConfig, RunMode, RunState,
+};
+use allternit_cowork_scheduler::{api::ApiState as SchedulerApiState, Scheduler};
 use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
     // Initialize tracing with filter to suppress noisy cron-scheduler errors
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| {
-            tracing_subscriber::EnvFilter::new("info,tokio_cron_scheduler=off")
-        });
-    tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .init();
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,tokio_cron_scheduler=off"));
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     info!("Allternit API Server starting...");
     info!("Version: 0.1.0");
@@ -109,28 +107,34 @@ async fn main() {
     info!("Configuration loaded");
 
     // Data directory for local state
-    let data_dir = dirs::data_dir()
-        .map(|d| d.join("allternit"))
+    let data_dir = std::env::var("ALLTERNIT_DATA_DIR")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| dirs::data_dir().map(|d| d.join("allternit")))
         .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"));
     std::fs::create_dir_all(&data_dir).ok();
 
-    // Encryption-key status (read-only, never touches the keychain on the boot
-    // path, so startup can never hang on a keychain prompt). Precedence: env
-    // override (ALLTERNIT_ENCRYPTION_KEY / ENCRYPTION_KEY) → zero-touch keychain
-    // key written by the first-run wizard. The lazy read happens at token
-    // seal/open time; generation happens interactively in onboarding (E2).
-    if std::env::var("ALLTERNIT_ENCRYPTION_KEY").ok().filter(|s| !s.is_empty()).is_some()
-        || std::env::var("ENCRYPTION_KEY").ok().filter(|s| !s.is_empty()).is_some()
+    // Encryption-key status. Desktop injects the key from Electron's signed
+    // credential broker; VPS/headless installs use a private local runtime key.
+    // allternit-api never accesses OS Keychain.
+    if std::env::var("ALLTERNIT_ENCRYPTION_KEY")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .is_some()
+        || std::env::var("ENCRYPTION_KEY")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .is_some()
     {
         info!("Connector token encryption: key configured via env");
     } else {
-        info!("Connector token encryption: will use zero-touch keychain key (first-run wizard) or plain: until then");
+        info!("Connector token encryption: headless runtime key will be created on first use");
     }
 
     // Initialize SQLite database
     let db_path = data_dir.join("allternit.db");
-    let db = DbHandle::new(db_path.clone())
-        .expect("Failed to initialize SQLite database");
+    let db = DbHandle::new(db_path.clone()).expect("Failed to initialize SQLite database");
     info!("Database ready at {}", db_path.display());
 
     // Initialize unified auth configuration and JWKS manager for Clerk JWT verification
@@ -151,22 +155,23 @@ async fn main() {
 
     // Initialize cowork scheduler (optional — no-op if DB path is unset)
     let cowork_scheduler = initialize_cowork_scheduler(&data_dir, app_config.api_port()).await;
-    let scheduler_state = cowork_scheduler.clone().map(|s| {
-        Arc::new(SchedulerApiState { scheduler: s })
-    });
+    let scheduler_state = cowork_scheduler
+        .clone()
+        .map(|s| Arc::new(SchedulerApiState { scheduler: s }));
 
     // Initialize cowork background service
     let (cowork_background, bg_state) = initialize_cowork_background(&data_dir).await;
 
     // Initialize cowork runtime run manager (Rails-backed DAG/WIH lifecycle)
-    let cowork_run_manager = initialize_cowork_run_manager(&data_dir, rails.clone(), &app_config).await;
+    let cowork_run_manager =
+        initialize_cowork_run_manager(&data_dir, rails.clone(), &app_config).await;
     if let Some(ref manager) = cowork_run_manager {
         load_persisted_cowork_runs(&db, manager).await;
     }
 
     // Initialize office runtime state (load from disk or start empty)
     let office_runtime = Arc::new(tokio::sync::RwLock::new(
-        allternit_api::office_routes::load_runtime_file()
+        allternit_api::office_routes::load_runtime_file(),
     ));
 
     // Open Design skill cache — daemon-side discovery with hot-reload.
@@ -300,7 +305,10 @@ async fn main() {
 
     // Mount cowork scheduler routes if scheduler is active
     if let Some(sstate) = scheduler_state {
-        app = app.nest("/cowork/scheduler", allternit_cowork_scheduler::api::api_router(sstate));
+        app = app.nest(
+            "/cowork/scheduler",
+            allternit_cowork_scheduler::api::api_router(sstate),
+        );
     }
 
     // Mount cowork background service routes if service is active
@@ -340,7 +348,9 @@ async fn main() {
 
     // Start server — port from config (env override supported), default 8013
     let port = app_config.api_port();
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
+        .await
+        .unwrap();
     info!("Server listening on {}", listener.local_addr().unwrap());
     info!("API Documentation:");
     info!("  - Health:         GET /health");
@@ -389,8 +399,13 @@ async fn initialize_cowork_background(
             let handle = svc.handle();
             let shared = Arc::new(svc);
             CoworkBackgroundService::start(shared);
-            info!("Cowork background service started (db: {})", db_path.display());
-            let bg_state = CoworkBgState { handle: handle.clone() };
+            info!(
+                "Cowork background service started (db: {})",
+                db_path.display()
+            );
+            let bg_state = CoworkBgState {
+                handle: handle.clone(),
+            };
             (Some(handle), Some(bg_state))
         }
         Err(e) => {
@@ -483,7 +498,23 @@ async fn load_persisted_cowork_runs(db: &allternit_api::db::DbHandle, manager: &
         }
     };
 
-    for (id, tenant_id, workspace_id, initiator, mode_str, state_str, entrypoint, dag_id, current_job_id, current_checkpoint_id, policy_profile, created_at, updated_at, completed_at) in rows {
+    for (
+        id,
+        tenant_id,
+        workspace_id,
+        initiator,
+        mode_str,
+        state_str,
+        entrypoint,
+        dag_id,
+        current_job_id,
+        current_checkpoint_id,
+        policy_profile,
+        created_at,
+        updated_at,
+        completed_at,
+    ) in rows
+    {
         let run_id = match uuid::Uuid::parse_str(&id) {
             Ok(u) => RunId(u),
             Err(_) => continue,
@@ -497,7 +528,11 @@ async fn load_persisted_cowork_runs(db: &allternit_api::db::DbHandle, manager: &
         let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at)
             .map(|dt| dt.with_timezone(&chrono::Utc))
             .unwrap_or_else(|_| chrono::Utc::now());
-        let completed_at = completed_at.and_then(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|dt| dt.with_timezone(&chrono::Utc)).ok());
+        let completed_at = completed_at.and_then(|s| {
+            chrono::DateTime::parse_from_rfc3339(&s)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .ok()
+        });
 
         let run = CoworkRun {
             id: run_id,
@@ -565,7 +600,7 @@ async fn initialize_vm_driver(
         use allternit_firecracker_driver::{FirecrackerConfig, FirecrackerDriver};
 
         let mut config = FirecrackerConfig::default();
-        
+
         // Use packaged VM directory if available
         if let Some(dir) = vm_dir {
             config.images_dir = std::path::PathBuf::from(dir);
@@ -589,7 +624,7 @@ async fn initialize_vm_driver(
         use allternit_apple_vf_driver::{AppleVFConfig, AppleVFDriver};
 
         let mut config = AppleVFConfig::default();
-        
+
         // Use packaged VM directory if available
         if let Some(dir) = vm_dir {
             config.vm_storage_dir = std::path::PathBuf::from(&dir).join("vms");

@@ -64,7 +64,7 @@ Every step is recorded to JSONL. Every session produces an annotated GIF.
 │    ├── VisionProvider (core/vision_providers.py)                 │
 │    │     Anthropic · OpenAI · Gemini · UITARS · Mock · +5 more  │
 │    ├── Adapter (adapters/)                                       │
-│    │     browser.playwright  (via GatewayProxyAdapter)           │
+│    │     browser.playwright  (direct physical adapter)           │
 │    │     browser.dom_mcp     (DomMcpAdapter)                     │
 │    │     desktop.pyautogui   (PyAutoGUIAdapter)                  │
 │    │     desktop.accessibility (AccessibilityAdapter)            │
@@ -262,7 +262,7 @@ Hit the Playwright session directly without the planning loop.
 
 | Value | Adapter selected |
 |-------|-----------------|
-| `browser` | `browser.playwright` (GatewayProxyAdapter) |
+| `browser` | `browser.playwright` |
 | `desktop` | `desktop.pyautogui` if available, else `desktop.accessibility` |
 | `hybrid` | `browser.playwright` |
 | `auto` | `browser.playwright` |
@@ -502,11 +502,10 @@ VisionProviderFactory.register_provider("my-provider", MyProvider)
 
 Adapters are the bridge between the planning loop and the actual browser or desktop. All are duck-typed.
 
-#### `GatewayProxyAdapter` (`browser.playwright`)
+#### Browser Playwright adapter (`browser.playwright`)
 
-**File:** `adapters/browser/gateway_proxy_adapter.py`
-
-Default browser adapter. Delegates actions to the gateway's own `/v1/execute` endpoint over HTTP. Creates a self-loop: `PlanningLoop → GatewayProxyAdapter → /v1/execute → Playwright session`.
+The former gateway self-proxy was removed. Canonical Playwright uses the
+in-process gateway session manager and state-bound transaction service instead.
 
 Action type mapping (VisionAction → gateway action):
 
@@ -777,7 +776,7 @@ pip install Pillow imageio
 | `SHOWUI_MODEL_PATH` | `showlab/ShowUI-2B` | |
 | `ACU_GATEWAY_PORT` | `8760` | Gateway listen port |
 | `ACU_MCP_PORT` | `8765` | MCP server listen port |
-| `ACU_GATEWAY_URL` | `http://localhost:8760` | Used by MCP server and GatewayProxyAdapter |
+| `ACU_GATEWAY_URL` | `http://localhost:8760` | Used by MCP and SDK compatibility clients |
 | `ACU_SKILLS_URL` | `http://localhost:8770` | UI-TARS skills API base |
 | `ACU_RECORDINGS_DIR` | `~/.allternit/recordings` | JSONL output directory |
 | `ACU_GIF_OUTPUT_DIR` | `/tmp/allternit-recordings` | GIF output directory |
@@ -970,7 +969,6 @@ domains/computer-use/core/
 │   └── perceptual_layer.py        Legacy perceptual API
 ├── adapters/
 │   ├── browser/
-│   │   ├── gateway_proxy_adapter.py   Proxies to /v1/execute
 │   │   ├── dom_mcp_adapter.py         DOM-first with a11y tree
 │   │   ├── playwright_adapter.py      Direct Playwright
 │   │   └── skyvern_adapter.py         Skyvern integration

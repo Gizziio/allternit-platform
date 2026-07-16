@@ -31,11 +31,7 @@ pub fn webhook_router() -> Router<Arc<AppState>> {
 
 /// Verify Svix webhook signature.
 /// Format: `v1,<base64_hmac>` where HMAC is computed over `${timestamp}.${body}`.
-fn verify_svix_signature(
-    secret: &str,
-    headers: &HeaderMap,
-    body: &[u8],
-) -> Result<(), String> {
+fn verify_svix_signature(secret: &str, headers: &HeaderMap, body: &[u8]) -> Result<(), String> {
     let svix_id = headers
         .get("svix-id")
         .and_then(|v| v.to_str().ok())
@@ -54,15 +50,17 @@ fn verify_svix_signature(
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| format!("system time error: {e}"))?
         .as_secs() as i64;
-    let ts: i64 = svix_timestamp.parse().map_err(|_| "invalid svix-timestamp")?;
+    let ts: i64 = svix_timestamp
+        .parse()
+        .map_err(|_| "invalid svix-timestamp")?;
     if (now - ts).abs() > 300 {
         return Err("svix-timestamp outside tolerance (±5 min)".into());
     }
 
     // Compute HMAC-SHA256 over `${timestamp}.${body}`
     let signed_payload = format!("{svix_timestamp}.{}", String::from_utf8_lossy(body));
-    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-        .map_err(|_| "invalid secret length")?;
+    let mut mac =
+        HmacSha256::new_from_slice(secret.as_bytes()).map_err(|_| "invalid secret length")?;
     mac.update(signed_payload.as_bytes());
     let expected_sig = hex::encode(mac.finalize().into_bytes());
 
@@ -117,17 +115,25 @@ async fn handle_user_created(
     if let Some(ref secret) = state.webhook_secret {
         if let Err(e) = verify_svix_signature(secret, &headers, &body) {
             warn!("Clerk webhook signature verification failed: {e}");
-            return (StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid_signature"})));
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "invalid_signature"})),
+            );
         }
     } else {
-        warn!("Clerk webhook received without signature verification (CLERK_WEBHOOK_SECRET not set)");
+        warn!(
+            "Clerk webhook received without signature verification (CLERK_WEBHOOK_SECRET not set)"
+        );
     }
 
     let event: ClerkWebhookEvent = match serde_json::from_slice(&body) {
         Ok(e) => e,
         Err(e) => {
             warn!("Clerk webhook JSON parse error: {e}");
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid_json"})));
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "invalid_json"})),
+            );
         }
     };
 
@@ -175,11 +181,17 @@ async fn handle_user_created(
         }
         Ok(Err(e)) => {
             warn!("Clerk webhook DB error: {e}");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("Clerk webhook task panicked: {e}");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -215,17 +227,25 @@ async fn handle_user_deleted(
     if let Some(ref secret) = state.webhook_secret {
         if let Err(e) = verify_svix_signature(secret, &headers, &body) {
             warn!("Clerk webhook signature verification failed: {e}");
-            return (StatusCode::UNAUTHORIZED, Json(json!({"error": "invalid_signature"})));
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "invalid_signature"})),
+            );
         }
     } else {
-        warn!("Clerk webhook received without signature verification (CLERK_WEBHOOK_SECRET not set)");
+        warn!(
+            "Clerk webhook received without signature verification (CLERK_WEBHOOK_SECRET not set)"
+        );
     }
 
     let event: ClerkDeleteEvent = match serde_json::from_slice(&body) {
         Ok(e) => e,
         Err(e) => {
             warn!("Clerk webhook JSON parse error: {e}");
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": "invalid_json"})));
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "invalid_json"})),
+            );
         }
     };
 
@@ -249,11 +269,17 @@ async fn handle_user_deleted(
         }
         Ok(Err(e)) => {
             warn!("Clerk webhook DB error: {e}");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("Clerk webhook task panicked: {e}");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }

@@ -5,8 +5,6 @@
  * Tests tool registration against a mocked MCP server.
  */
 
-const { jest } = require("@jest/globals");
-
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 

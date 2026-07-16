@@ -6,13 +6,10 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
-use std::sync::Arc;
 use serde::Deserialize;
+use std::sync::Arc;
 
-use crate::{
-    ApiError, ApiState,
-    db::cowork_models::*,
-};
+use crate::{db::cowork_models::*, ApiError, ApiState};
 
 /// Query parameters for listing schedules
 #[derive(Debug, Deserialize, Default)]
@@ -55,8 +52,8 @@ pub struct UpdateScheduleRequest {
 /// Supports 5-field cron (minute hour day month weekday) by prepending a seconds
 /// field, and 6/7-field cron as-is.
 fn calculate_next_run(cron_expr: &str, timezone: &str) -> Option<chrono::DateTime<chrono::Utc>> {
-    use std::str::FromStr;
     use chrono_tz::Tz;
+    use std::str::FromStr;
 
     let trimmed = cron_expr.trim();
     let field_count = trimmed.split_whitespace().count();
@@ -75,7 +72,10 @@ fn calculate_next_run(cron_expr: &str, timezone: &str) -> Option<chrono::DateTim
     let tz: Tz = timezone.parse().unwrap_or(chrono_tz::UTC);
 
     // Get next occurrence in target timezone
-    schedule.upcoming(tz).next().map(|dt| dt.with_timezone(&chrono::Utc))
+    schedule
+        .upcoming(tz)
+        .next()
+        .map(|dt| dt.with_timezone(&chrono::Utc))
 }
 
 /// List all schedules
@@ -85,14 +85,14 @@ pub async fn list_schedules(
 ) -> Result<Json<Vec<ScheduleSummary>>, ApiError> {
     let limit = query.limit.unwrap_or(100);
     let offset = query.offset.unwrap_or(0);
-    
+
     let schedules = if let Some(enabled) = query.enabled {
         sqlx::query_as::<_, ScheduleSummary>(
             "SELECT id, name, enabled, cron_expr, natural_lang, next_run_at, run_count 
              FROM schedules 
              WHERE enabled = ? 
              ORDER BY created_at DESC 
-             LIMIT ? OFFSET ?"
+             LIMIT ? OFFSET ?",
         )
         .bind(enabled)
         .bind(limit)
@@ -105,7 +105,7 @@ pub async fn list_schedules(
             "SELECT id, name, enabled, cron_expr, natural_lang, next_run_at, run_count 
              FROM schedules 
              ORDER BY created_at DESC 
-             LIMIT ? OFFSET ?"
+             LIMIT ? OFFSET ?",
         )
         .bind(limit)
         .bind(offset)
@@ -113,7 +113,7 @@ pub async fn list_schedules(
         .await
         .map_err(|e| ApiError::DatabaseError(e))?
     };
-    
+
     Ok(Json(schedules))
 }
 
@@ -123,38 +123,41 @@ pub async fn create_schedule(
     Json(request): Json<CreateScheduleRequest>,
 ) -> Result<Json<Schedule>, ApiError> {
     tracing::info!("Creating schedule: {}", request.name);
-    
+
     // Validate cron expression (basic check)
     if request.cron_expr.trim().is_empty() {
-        return Err(ApiError::BadRequest("Cron expression cannot be empty".to_string()));
+        return Err(ApiError::BadRequest(
+            "Cron expression cannot be empty".to_string(),
+        ));
     }
-    
+
     // Validate region if specified
     if let Some(ref region_id) = request.region_id {
         let region_exists: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM regions WHERE id = ? AND active = TRUE)"
+            "SELECT EXISTS(SELECT 1 FROM regions WHERE id = ? AND active = TRUE)",
         )
         .bind(region_id)
         .fetch_one(&state.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-        
+
         if !region_exists {
             return Err(ApiError::BadRequest(format!(
-                "Region '{}' not found or inactive", region_id
+                "Region '{}' not found or inactive",
+                region_id
             )));
         }
     }
-    
+
     let schedule_id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
     let timezone = request.timezone.unwrap_or_else(|| "UTC".to_string());
     let enabled = request.enabled.unwrap_or(true);
     let misfire_policy = request.misfire_policy.unwrap_or_default();
-    
+
     // Calculate next run time
     let next_run_at = calculate_next_run(&request.cron_expr, &timezone);
-    
+
     let schedule = sqlx::query_as::<_, Schedule>(
         r#"
         INSERT INTO schedules (
@@ -163,7 +166,7 @@ pub async fn create_schedule(
             run_count, misfire_count, owner_id, tenant_id, region_id, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
-        "#
+        "#,
     )
     .bind(&schedule_id)
     .bind(&request.name)
@@ -186,7 +189,7 @@ pub async fn create_schedule(
     .fetch_one(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     tracing::info!("Schedule created: {}", schedule_id);
     Ok(Json(schedule))
 }
@@ -196,15 +199,14 @@ pub async fn get_schedule(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> Result<Json<Schedule>, ApiError> {
-    let schedule = sqlx::query_as::<_, Schedule>(
-        "SELECT * FROM schedules WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
-    
-    schedule.ok_or_else(|| ApiError::NotFound(format!("Schedule not found: {}", id)))
+    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| ApiError::DatabaseError(e))?;
+
+    schedule
+        .ok_or_else(|| ApiError::NotFound(format!("Schedule not found: {}", id)))
         .map(Json)
 }
 
@@ -215,32 +217,39 @@ pub async fn update_schedule(
     Json(request): Json<UpdateScheduleRequest>,
 ) -> Result<Json<Schedule>, ApiError> {
     // Get existing schedule
-    let schedule = sqlx::query_as::<_, Schedule>(
-        "SELECT * FROM schedules WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
-    
-    let schedule = schedule.ok_or_else(|| ApiError::NotFound(format!("Schedule not found: {}", id)))?;
-    
+    let schedule = sqlx::query_as::<_, Schedule>("SELECT * FROM schedules WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| ApiError::DatabaseError(e))?;
+
+    let schedule =
+        schedule.ok_or_else(|| ApiError::NotFound(format!("Schedule not found: {}", id)))?;
+
     let name = request.name.unwrap_or_else(|| schedule.name.clone());
     let description = request.description.or(schedule.description.clone());
-    let cron_expr = request.cron_expr.clone().unwrap_or_else(|| schedule.cron_expr.clone());
+    let cron_expr = request
+        .cron_expr
+        .clone()
+        .unwrap_or_else(|| schedule.cron_expr.clone());
     let natural_lang = request.natural_lang.or(schedule.natural_lang.clone());
-    let timezone = request.timezone.unwrap_or_else(|| schedule.timezone.clone());
-    let job_template = request.job_template.map(sqlx::types::Json).unwrap_or(schedule.job_template.clone());
+    let timezone = request
+        .timezone
+        .unwrap_or_else(|| schedule.timezone.clone());
+    let job_template = request
+        .job_template
+        .map(sqlx::types::Json)
+        .unwrap_or(schedule.job_template.clone());
     let enabled = request.enabled.unwrap_or(schedule.enabled);
     let misfire_policy = request.misfire_policy.unwrap_or(schedule.misfire_policy);
-    
+
     // Recalculate next run if cron changed
     let next_run_at = if request.cron_expr.is_some() {
         calculate_next_run(&cron_expr, &timezone)
     } else {
         schedule.next_run_at
     };
-    
+
     let updated = sqlx::query_as::<_, Schedule>(
         r#"
         UPDATE schedules 
@@ -248,7 +257,7 @@ pub async fn update_schedule(
             job_template = ?, enabled = ?, misfire_policy = ?, next_run_at = ?, updated_at = ?
         WHERE id = ?
         RETURNING *
-        "#
+        "#,
     )
     .bind(&name)
     .bind(&description)
@@ -264,7 +273,7 @@ pub async fn update_schedule(
     .fetch_one(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     Ok(Json(updated))
 }
 
@@ -278,11 +287,11 @@ pub async fn delete_schedule(
         .execute(&state.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     if result.rows_affected() == 0 {
         return Err(ApiError::NotFound(format!("Schedule not found: {}", id)));
     }
-    
+
     Ok(())
 }
 
@@ -298,16 +307,16 @@ pub async fn enable_schedule(
         .await
         .map_err(|e| ApiError::DatabaseError(e))?
         .ok_or_else(|| ApiError::NotFound(format!("Schedule not found: {}", id)))?;
-    
+
     let next_run_at = calculate_next_run(&schedule.cron_expr, &schedule.timezone);
-    
+
     let updated = sqlx::query_as::<_, Schedule>(
         r#"
         UPDATE schedules 
         SET enabled = ?, next_run_at = ?, updated_at = ?
         WHERE id = ?
         RETURNING *
-        "#
+        "#,
     )
     .bind(true)
     .bind(next_run_at)
@@ -316,7 +325,7 @@ pub async fn enable_schedule(
     .fetch_one(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     Ok(Json(updated))
 }
 
@@ -331,7 +340,7 @@ pub async fn disable_schedule(
         SET enabled = ?, next_run_at = ?, updated_at = ?
         WHERE id = ?
         RETURNING *
-        "#
+        "#,
     )
     .bind(false)
     .bind(None::<chrono::DateTime<chrono::Utc>>)
@@ -340,7 +349,7 @@ pub async fn disable_schedule(
     .fetch_one(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     Ok(Json(updated))
 }
 
@@ -356,11 +365,11 @@ pub async fn trigger_schedule(
         .await
         .map_err(|e| ApiError::DatabaseError(e))?
         .ok_or_else(|| ApiError::NotFound(format!("Schedule not found: {}", id)))?;
-    
+
     // Create a run from this schedule
     let run_id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
-    
+
     let run = sqlx::query_as::<_, Run>(
         r#"
         INSERT INTO runs (
@@ -369,7 +378,7 @@ pub async fn trigger_schedule(
             created_at, updated_at, started_at, completed_at, error_message, error_details
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING *
-        "#
+        "#,
     )
     .bind(&run_id)
     .bind(format!("Scheduled: {}", schedule.name))
@@ -403,16 +412,15 @@ pub async fn trigger_schedule(
     .fetch_one(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     // Update schedule run count
-    let _ = sqlx::query(
-        "UPDATE schedules SET run_count = run_count + 1, last_run_at = ? WHERE id = ?"
-    )
-    .bind(now)
-    .bind(&id)
-    .execute(&state.db)
-    .await;
-    
+    let _ =
+        sqlx::query("UPDATE schedules SET run_count = run_count + 1, last_run_at = ? WHERE id = ?")
+            .bind(now)
+            .bind(&id)
+            .execute(&state.db)
+            .await;
+
     Ok(Json(serde_json::json!({
         "message": "Schedule triggered",
         "schedule_id": id,

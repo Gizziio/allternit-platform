@@ -13,8 +13,8 @@ use axum::{
     Json, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
-use serde_json::json;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
@@ -30,7 +30,10 @@ pub fn stream_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/", get(stream_status))
         .route("/ws/ledger", get(ledger_stream_handler))
-        .route("/ws/workspace/:workspace_id/ledger", get(workspace_ledger_stream))
+        .route(
+            "/ws/workspace/:workspace_id/ledger",
+            get(workspace_ledger_stream),
+        )
         .route("/ws/dag/:dag_id/events", get(dag_event_stream))
 }
 
@@ -67,25 +70,25 @@ struct StreamQueryParams {
 enum ServerMessage {
     #[serde(rename = "connected")]
     Connected { client_id: String, cursor: String },
-    
+
     #[serde(rename = "event")]
-    Event { 
+    Event {
         event_id: String,
         event_type: String,
         timestamp: String,
         payload: serde_json::Value,
         scope: Option<EventScopeResponse>,
     },
-    
+
     #[serde(rename = "replay_complete")]
-    ReplayComplete { 
+    ReplayComplete {
         events_replayed: usize,
         cursor: String,
     },
-    
+
     #[serde(rename = "error")]
     Error { message: String },
-    
+
     #[serde(rename = "heartbeat")]
     Heartbeat { timestamp: i64 },
 }
@@ -102,13 +105,13 @@ struct EventScopeResponse {
 enum ClientMessage {
     #[serde(rename = "subscribe")]
     Subscribe { dag_id: Option<String> },
-    
+
     #[serde(rename = "unsubscribe")]
     Unsubscribe,
-    
+
     #[serde(rename = "seek")]
     Seek { cursor: String },
-    
+
     #[serde(rename = "ping")]
     Ping,
 }
@@ -134,7 +137,11 @@ async fn workspace_ledger_stream(
     Query(params): Query<StreamQueryParams>,
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    info!(workspace_id, ?params, "New workspace ledger stream connection");
+    info!(
+        workspace_id,
+        ?params,
+        "New workspace ledger stream connection"
+    );
     ws.on_upgrade(move |socket| handle_ledger_socket(socket, state, params, Some(workspace_id)))
 }
 
@@ -159,22 +166,24 @@ async fn handle_ledger_socket(
     params: StreamQueryParams,
     _workspace_filter: Option<String>,
 ) {
-    let client_id = params.client_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let client_id = params
+        .client_id
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let (mut sender, mut receiver) = socket.split();
-    
+
     // Channel for sending messages to the client
     let (tx, mut rx) = mpsc::channel::<Message>(100);
-    
+
     // Send connected message
     let connected_msg = ServerMessage::Connected {
         client_id: client_id.clone(),
         cursor: params.cursor.clone().unwrap_or_else(|| "0".to_string()),
     };
-    
+
     if let Ok(json) = serde_json::to_string(&connected_msg) {
         let _ = tx.send(Message::Text(json)).await;
     }
-    
+
     // Spawn heartbeat task
     let heartbeat_tx = tx.clone();
     let heartbeat_handle = tokio::spawn(async move {
@@ -191,18 +200,18 @@ async fn handle_ledger_socket(
             }
         }
     });
-    
+
     // Handle replay if requested
     if let Some(replay_count) = params.replay {
         if let Some(ref cursor) = params.cursor {
             debug!(
-                client_id, 
-                replay_count, 
-                cursor, 
+                client_id,
+                replay_count,
+                cursor,
                 event_types = ?params.event_types,
                 "Replaying events"
             );
-            
+
             // Query ledger for events since cursor
             let query = allternit_agent_system_rails::LedgerQuery {
                 r#type: None,
@@ -212,11 +221,11 @@ async fn handle_ledger_socket(
                 until: None,
                 limit: Some(replay_count),
             };
-            
+
             match state.rails.ledger.query(query).await {
                 Ok(events) => {
                     let events_replayed = events.len();
-                    
+
                     for event in &events {
                         let msg = ServerMessage::Event {
                             event_id: event.event_id.clone(),
@@ -229,24 +238,25 @@ async fn handle_ledger_socket(
                                 run_id: s.run_id.clone(),
                             }),
                         };
-                        
+
                         if let Ok(json) = serde_json::to_string(&msg) {
                             if tx.send(Message::Text(json)).await.is_err() {
                                 break;
                             }
                         }
                     }
-                    
+
                     // Send replay complete
-                    let last_cursor = events.last()
+                    let last_cursor = events
+                        .last()
                         .map(|e| e.event_id.clone())
                         .unwrap_or_else(|| cursor.clone());
-                    
+
                     let complete_msg = ServerMessage::ReplayComplete {
                         events_replayed,
                         cursor: last_cursor,
                     };
-                    
+
                     if let Ok(json) = serde_json::to_string(&complete_msg) {
                         let _ = tx.send(Message::Text(json)).await;
                     }
@@ -263,7 +273,7 @@ async fn handle_ledger_socket(
             }
         }
     }
-    
+
     // Spawn task to forward messages from channel to WebSocket
     let forward_handle = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
@@ -272,7 +282,7 @@ async fn handle_ledger_socket(
             }
         }
     });
-    
+
     // Active DAG filter set by Subscribe messages (None = all events)
     let mut dag_filter: Option<String> = None;
 
@@ -292,7 +302,11 @@ async fn handle_ledger_socket(
                                 }
                             }
                             ClientMessage::Seek { cursor } => {
-                                debug!(client_id, cursor, "Client seeking to cursor — replaying from new position");
+                                debug!(
+                                    client_id,
+                                    cursor,
+                                    "Client seeking to cursor — replaying from new position"
+                                );
                                 let query = LedgerQuery {
                                     r#type: None,
                                     types: None,
@@ -307,7 +321,9 @@ async fn handle_ledger_socket(
                                         for event in &events {
                                             // Honour active DAG filter during replay
                                             if let Some(ref filter_dag) = dag_filter {
-                                                if event.scope.as_ref()
+                                                if event
+                                                    .scope
+                                                    .as_ref()
                                                     .and_then(|s| s.dag_id.as_ref())
                                                     .map(|id| id != filter_dag)
                                                     .unwrap_or(true)
@@ -320,10 +336,12 @@ async fn handle_ledger_socket(
                                                 event_type: event.r#type.clone(),
                                                 timestamp: event.ts.clone(),
                                                 payload: event.payload.clone(),
-                                                scope: event.scope.as_ref().map(|s| EventScopeResponse {
-                                                    dag_id: s.dag_id.clone(),
-                                                    wih_id: s.wih_id.clone(),
-                                                    run_id: s.run_id.clone(),
+                                                scope: event.scope.as_ref().map(|s| {
+                                                    EventScopeResponse {
+                                                        dag_id: s.dag_id.clone(),
+                                                        wih_id: s.wih_id.clone(),
+                                                        run_id: s.run_id.clone(),
+                                                    }
                                                 }),
                                             };
                                             if let Ok(json) = serde_json::to_string(&msg) {
@@ -332,7 +350,8 @@ async fn handle_ledger_socket(
                                                 }
                                             }
                                         }
-                                        let last_cursor = events.last()
+                                        let last_cursor = events
+                                            .last()
                                             .map(|e| e.event_id.clone())
                                             .unwrap_or(cursor);
                                         let complete_msg = ServerMessage::ReplayComplete {
@@ -382,11 +401,11 @@ async fn handle_ledger_socket(
             _ => {}
         }
     }
-    
+
     // Cleanup
     heartbeat_handle.abort();
     forward_handle.abort();
-    
+
     info!(client_id, "Stream connection closed");
 }
 
@@ -396,28 +415,32 @@ async fn handle_dag_socket(
     dag_id: String,
     params: StreamQueryParams,
 ) {
-    let client_id = params.client_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let client_id = params
+        .client_id
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let (mut sender, mut receiver) = socket.split();
-    
+
     // Channel for sending messages
     let (tx, mut rx) = mpsc::channel::<Message>(100);
-    
+
     // Send connected message
     let connected_msg = ServerMessage::Connected {
         client_id: client_id.clone(),
         cursor: params.cursor.clone().unwrap_or_else(|| "0".to_string()),
     };
-    
+
     if let Ok(json) = serde_json::to_string(&connected_msg) {
         let _ = tx.send(Message::Text(json)).await;
     }
-    
+
     // Query current DAG state
     match state.rails.ledger.query(LedgerQuery::default()).await {
         Ok(events) => {
             let dag = project_dag(&events, &dag_id);
-            
-            let status = dag.nodes.values()
+
+            let status = dag
+                .nodes
+                .values()
                 .find(|n| n.parent_node_id.is_none())
                 .map(|n| n.status.clone())
                 .unwrap_or_else(|| "UNKNOWN".to_string());
@@ -438,7 +461,7 @@ async fn handle_dag_socket(
                     run_id: None,
                 }),
             };
-            
+
             if let Ok(json) = serde_json::to_string(&state_msg) {
                 let _ = tx.send(Message::Text(json)).await;
             }
@@ -447,7 +470,7 @@ async fn handle_dag_socket(
             error!(dag_id, error = %e, "Failed to get events for DAG stream");
         }
     }
-    
+
     // Spawn heartbeat
     let heartbeat_tx = tx.clone();
     let heartbeat_handle = tokio::spawn(async move {
@@ -464,7 +487,7 @@ async fn handle_dag_socket(
             }
         }
     });
-    
+
     // Forward task
     let forward_handle = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
@@ -473,7 +496,7 @@ async fn handle_dag_socket(
             }
         }
     });
-    
+
     // Handle incoming messages
     while let Some(Ok(msg)) = receiver.next().await {
         match msg {
@@ -499,10 +522,10 @@ async fn handle_dag_socket(
             _ => {}
         }
     }
-    
+
     // Cleanup
     heartbeat_handle.abort();
     forward_handle.abort();
-    
+
     info!(client_id, dag_id, "DAG stream connection closed");
 }

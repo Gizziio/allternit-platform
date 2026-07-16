@@ -370,7 +370,8 @@ function ToolInputDisplay({ input }: { input: unknown }) {
             ? val
             : typeof val === "number" || typeof val === "boolean"
             ? String(val)
-            : JSON.stringify(val).slice(0, 200);
+            // JSON.stringify returns undefined for undefined/functions/symbols — never slice it.
+            : (JSON.stringify(val) ?? String(val)).slice(0, 200);
         return (
           <div key={`arg-${k}`} className="flex gap-1.5 text-[12px] leading-relaxed">
             <span className="shrink-0 font-mono text-[#d4b08c]/55 font-bold">

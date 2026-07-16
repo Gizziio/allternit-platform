@@ -11,7 +11,15 @@
 
 import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
-import { getPlatformComputerUseBaseUrl } from '@/integration/computer-use-engine';
+import {
+  getPlatformComputerUseBaseUrl,
+  getPlatformComputerUseClient,
+  type CanonicalComputerCapabilityManifest,
+  type CanonicalProviderDiagnostic,
+  type CanonicalComputerObservation,
+  type CanonicalComputerOutcome,
+  type CanonicalComputerTransaction,
+} from '@/integration/computer-use-engine';
 import { useDrawerStore } from '@/drawers/drawer.store';
 import {
   BrowserAgentStatus,
@@ -26,11 +34,7 @@ import {
   getReceiptGenerator,
 } from './receiptService';
 import type { PageAgentBridgeConfig } from '@/lib/page-agent/config';
-import {
-  getPageAgentRunEndpoint,
-  getPageAgentStopEndpoint,
-  getPageAgentStreamEndpoint,
-} from '@/lib/page-agent/runtime-client';
+import { runGizziBrainTask, stopGizziBrainTask } from './gizzi-brain-client';
 
 export type PageAgentStatus = 'idle' | 'running' | 'completed' | 'error';
 
@@ -156,13 +160,6 @@ export interface PageAgentSessionRecord {
 
 const PAGE_AGENT_SESSION_LIMIT = 20;
 
-function mapRemotePageAgentStatus(status: string): PageAgentStatus {
-  if (status === 'running') return 'running';
-  if (status === 'completed') return 'completed';
-  if (status === 'error') return 'error';
-  return 'idle';
-}
-
 function createPageAgentSessionId() {
   return globalThis.crypto?.randomUUID?.() ?? `page-agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -239,6 +236,26 @@ export interface BrowserAgentState {
   // Receipts
   receipts: string[];  // Receipt IDs
 
+  // Canonical state-bound computer-use runtime
+  canonicalProviders: CanonicalComputerCapabilityManifest[];
+  canonicalProviderDiagnostics: Record<string, CanonicalProviderDiagnostic>;
+  canonicalObservation: CanonicalComputerObservation | null;
+  canonicalOutcome: CanonicalComputerOutcome | null;
+  canonicalTrajectory: { sha256?: string; event_count?: number; events?: Array<Record<string, unknown>> } | null;
+  canonicalError: string | null;
+  canonicalLoading: boolean;
+  discoverCanonicalProviders: () => Promise<void>;
+  observeCanonical: (options?: {
+    providerId?: string;
+    environmentId?: string;
+    resourceId?: string;
+  }) => Promise<CanonicalComputerObservation | null>;
+  executeCanonical: (
+    transaction: CanonicalComputerTransaction,
+    providerId?: string,
+  ) => Promise<CanonicalComputerOutcome | null>;
+  loadCanonicalTrajectory: () => Promise<void>;
+
   // Connected endpoints
   connectedEndpoints: BrowserEndpoint[];
 
@@ -259,6 +276,17 @@ export interface BrowserAgentState {
 
   // Live screenshot from the ACI SSE stream (base64 PNG, no data: prefix)
   screenshot: string | null;
+
+  // Code-mode ACI runtime preferences. These are included with every new run,
+  // rather than being decorative menu state owned by one pane.
+  allowedSites: string[];
+  openLinksInBrowser: boolean;
+  autoVerify: boolean;
+  sessionPersistence: 'dont-keep' | 'shared' | 'separate';
+  setAllowedSites: (sites: string[]) => void;
+  setOpenLinksInBrowser: (enabled: boolean) => void;
+  setAutoVerify: (enabled: boolean) => void;
+  setSessionPersistence: (mode: 'dont-keep' | 'shared' | 'separate') => void;
 
   // Page-agent session (extension path via thin-client)
   pageAgentSessionId: string | null;
@@ -303,7 +331,7 @@ export interface BrowserAgentState {
   handOff: () => void;
   approveAction: () => void;
   denyAction: () => void;
-  captureScreenshot: () => void;
+  captureScreenshot: () => Promise<string | null>;
   openDrawer: () => void;
 
   // Mode
@@ -383,6 +411,76 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     approvalActionSummary: undefined,
     approvalRiskTier: undefined,
     receipts: [],
+    canonicalProviders: [],
+    canonicalProviderDiagnostics: {},
+    canonicalObservation: null,
+    canonicalOutcome: null,
+    canonicalTrajectory: null,
+    canonicalError: null,
+    canonicalLoading: false,
+    discoverCanonicalProviders: async () => {
+      set({ canonicalLoading: true, canonicalError: null });
+      try {
+        const catalog = await getPlatformComputerUseClient().getCanonicalProviderCatalog();
+        set({ canonicalProviders: catalog.providers, canonicalProviderDiagnostics: catalog.diagnostics, canonicalLoading: false });
+      } catch (error) {
+        set({ canonicalError: String(error), canonicalLoading: false });
+      }
+    },
+    observeCanonical: async (options = {}) => {
+      const sessionId = get().aciSessionId ?? `sess-${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+      set({ canonicalLoading: true, canonicalError: null, aciSessionId: sessionId });
+      try {
+        const observation = await getPlatformComputerUseClient().observeCanonical({
+          provider_id: options.providerId,
+          session_id: sessionId,
+          environment_id: options.environmentId,
+          resource_id: options.resourceId,
+        });
+        set({
+          canonicalObservation: observation,
+          canonicalLoading: false,
+          currentAdapterId: observation.provider_id,
+          lastEventMessage: `Observed ${observation.resource_id} at epoch ${observation.epoch}`,
+        });
+        return observation;
+      } catch (error) {
+        set({ canonicalError: String(error), canonicalLoading: false });
+        return null;
+      }
+    },
+    executeCanonical: async (transaction, providerId) => {
+      set({ canonicalLoading: true, canonicalError: null });
+      try {
+        const outcome = await getPlatformComputerUseClient().executeCanonicalTransaction(transaction, providerId);
+        set({
+          canonicalOutcome: outcome,
+          canonicalLoading: false,
+          lastEventMessage: `Canonical outcome: ${outcome.status}`,
+          receipts: outcome.receipt_id
+            ? [...get().receipts, outcome.receipt_id]
+            : get().receipts,
+        });
+        return outcome;
+      } catch (error) {
+        set({ canonicalError: String(error), canonicalLoading: false });
+        return null;
+      }
+    },
+    loadCanonicalTrajectory: async () => {
+      const sessionId = get().aciSessionId;
+      if (!sessionId) return;
+      set({ canonicalLoading: true, canonicalError: null });
+      try {
+        const trajectory = await getPlatformComputerUseClient().getCanonicalTrajectory(sessionId);
+        set({
+          canonicalTrajectory: trajectory as BrowserAgentState['canonicalTrajectory'],
+          canonicalLoading: false,
+        });
+      } catch (error) {
+        set({ canonicalError: String(error), canonicalLoading: false });
+      }
+    },
     connectedEndpoints: [],
     runSummary: null,
     engineBaseUrl: '',
@@ -406,6 +504,14 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     },
     aciSessionId: null,
     screenshot: null,
+    allowedSites: [],
+    openLinksInBrowser: false,
+    autoVerify: true,
+    sessionPersistence: 'dont-keep',
+    setAllowedSites: (sites) => set({ allowedSites: sites }),
+    setOpenLinksInBrowser: (enabled) => set({ openLinksInBrowser: enabled }),
+    setAutoVerify: (enabled) => set({ autoVerify: enabled }),
+    setSessionPersistence: (mode) => set({ sessionPersistence: mode }),
     pageAgentSessionId: null,
     pageAgentStatus: 'idle',
     pageAgentActivity: null,
@@ -454,7 +560,14 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       fetch('/api/aci/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goal, model: get().aciModel }),
+        body: JSON.stringify({
+          goal,
+          model: get().aciModel,
+          allowedSites: get().allowedSites,
+          openLinksInBrowser: get().openLinksInBrowser,
+          autoVerify: get().autoVerify,
+          sessionPersistence: get().sessionPersistence,
+        }),
       })
         .then((res) => res.json())
         .then(({ sessionId, adapterId }: { sessionId: string; adapterId: string }) => {
@@ -546,7 +659,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
         });
     },
     
-    // Run goal via browser extension (page-agent path)
+    // Run goal via the gizzi brain (page-agent path)
     runPageAgentGoal: (goal, config) => {
       set({
         goal,
@@ -567,111 +680,46 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
         pageAgentHistory: [],
       });
 
-      fetch(getPageAgentRunEndpoint(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task: goal, config }),
-      })
-        .then((res) => res.json())
-        .then(({ sessionId, error }: { sessionId?: string; error?: string }) => {
-          if (error || !sessionId) {
-            set({
+      let currentSessionId: string | null = null;
+
+      void runGizziBrainTask({
+        goal,
+        config,
+        callbacks: {
+          onSession: (sessionId) => {
+            currentSessionId = sessionId;
+            set({ pageAgentSessionId: sessionId });
+          },
+          onActivity: (activity) => {
+            set({ pageAgentActivity: activity });
+          },
+          onHistoryEvent: (event) => {
+            set((s) => ({ pageAgentHistory: [...s.pageAgentHistory, event].slice(-100) }));
+          },
+          onDone: ({ success, data }) => {
+            set((s) => ({
               status: 'Idle',
-              pageAgentStatus: 'error',
-              pageAgentActivity: { type: 'error', message: error ?? 'Failed to start' },
+              pageAgentStatus: success ? 'completed' : 'error',
+              pageAgentActivity: null,
               pageAgentTargetTabId: null,
-            });
-            return;
-          }
-
-          set({ pageAgentSessionId: sessionId });
-
-          const es = new EventSource(getPageAgentStreamEndpoint(sessionId));
-
-          es.onmessage = (e) => {
-            try {
-              const msg = JSON.parse(e.data) as {
-                type: string;
-                payload?: unknown;
-                timestamp: number;
-              };
-
-              if (msg.type === 'status') {
-                const { status } = msg.payload as { status: string };
-                const nextStatus = mapRemotePageAgentStatus(status);
-                set({
-                  pageAgentStatus: nextStatus,
-                  pageAgentActivity: nextStatus === 'running' ? get().pageAgentActivity : null,
-                });
-              } else if (msg.type === 'activity') {
-                const activity = msg.payload as PageAgentActivity;
-                set({ pageAgentActivity: activity });
-              } else if (msg.type === 'history') {
-                const payload = msg.payload as { events?: PageAgentHistoricalEvent[] };
-                set({ pageAgentHistory: payload.events ?? [] });
-              } else if (msg.type === 'done') {
-                const { success, data } = msg.payload as { success: boolean; data?: string };
-                set((s) => ({
-                  status: 'Idle',
-                  pageAgentStatus: success ? 'completed' : 'error',
-                  pageAgentActivity: null,
-                  pageAgentTargetTabId: null,
-                  pageAgentHistory: ensurePageAgentHistory(s.pageAgentHistory, { success, data }),
-                  pageAgentSessions: appendPageAgentSession(s.pageAgentSessions, {
-                    id: createPageAgentSessionId(),
-                    sessionId,
-                    task: goal,
-                    status: success ? 'completed' : 'error',
-                    history: ensurePageAgentHistory(s.pageAgentHistory, { success, data }),
-                    createdAt: Date.now(),
-                  }),
-                }));
-                es.close();
-              } else if (msg.type === 'error') {
-                const { message } = msg.payload as { message: string };
-                set((s) => ({
-                  status: 'Idle',
-                  pageAgentStatus: 'error',
-                  pageAgentActivity: null,
-                  pageAgentHistory: ensurePageAgentHistory(s.pageAgentHistory, { message }),
-                  pageAgentSessions: appendPageAgentSession(s.pageAgentSessions, {
-                    id: createPageAgentSessionId(),
-                    sessionId,
-                    task: goal,
-                    status: 'error',
-                    history: ensurePageAgentHistory(s.pageAgentHistory, { message }),
-                    createdAt: Date.now(),
-                  }),
-                }));
-                es.close();
-              }
-            } catch {
-              // ignore malformed events
-            }
-          };
-
-          es.onerror = () => {
-            es.close();
-            if (get().pageAgentStatus === 'running') {
-              set({
-                status: 'Idle',
-                pageAgentStatus: 'error',
-                pageAgentActivity: { type: 'error', message: 'Connection to the extension bridge was interrupted.' },
-              });
-            }
-          };
-        })
-        .catch(() => {
-          set({
-            status: 'Idle',
-            pageAgentStatus: 'error',
-            pageAgentActivity: { type: 'error', message: 'Could not reach desktop app.' },
-          });
-        });
+              pageAgentHistory: ensurePageAgentHistory(s.pageAgentHistory, { success, data }),
+              pageAgentSessions: appendPageAgentSession(s.pageAgentSessions, {
+                id: createPageAgentSessionId(),
+                sessionId: currentSessionId,
+                task: goal,
+                status: success ? 'completed' : 'error',
+                history: ensurePageAgentHistory(s.pageAgentHistory, { success, data }),
+                createdAt: Date.now(),
+              }),
+            }));
+          },
+        },
+      });
     },
 
     // ── ACU planning-loop path ────────────────────────────────────────────
-    // Routes directly to /v1/computer-use/execute on the ACU gateway.
+    // Routes through the shared SDK façade; SSE remains the legacy goal-runner
+    // transport until its capability cells promote to canonical-default.
     // Events streamed via SSE feed screenshot + action state into the sidecar.
     runAcuTask: (task, options = {}) => {
       const runId = `cu-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
@@ -687,22 +735,17 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
         aciSessionId: sessionId,
       });
 
-      const baseUrl = getPlatformComputerUseBaseUrl();
-      const body = JSON.stringify({
+      const request = {
         task,
         run_id: runId,
         session_id: sessionId,
-        target_scope: options.targetScope ?? 'browser',
-        mode: 'intent',
+        target_scope: (options.targetScope ?? 'browser') as 'browser' | 'desktop' | 'hybrid' | 'auto',
+        mode: 'intent' as const,
         options: { max_steps: options.maxSteps ?? 20 },
-      });
+      };
 
       // Use streaming path so we get live events without polling
-      fetch(`${baseUrl}/v1/computer-use/execute?stream=true`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      })
+      getPlatformComputerUseClient().executeStream(request)
         .then(async (res) => {
           if (!res.body) throw new Error('No SSE body');
           const reader = res.body.getReader();
@@ -821,8 +864,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       const { currentRunId } = get();
       set({ status: 'Done', currentAction: null, requiresApproval: false });
       if (currentRunId) {
-        const baseUrl = getPlatformComputerUseBaseUrl();
-        fetch(`${baseUrl}/v1/computer-use/runs/${currentRunId}/cancel`, { method: 'POST' }).catch(() => {});
+        void getPlatformComputerUseClient().cancelRun(currentRunId).catch(() => {});
       }
     },
 
@@ -830,12 +872,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       const { currentRunId } = get();
       set({ requiresApproval: false });
       if (currentRunId) {
-        const baseUrl = getPlatformComputerUseBaseUrl();
-        fetch(`${baseUrl}/v1/computer-use/runs/${currentRunId}/approve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ decision: 'approve' }),
-        }).catch(() => {});
+        void getPlatformComputerUseClient().approveRun(currentRunId).catch(() => {});
       }
     },
 
@@ -843,12 +880,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       const { currentRunId } = get();
       set({ requiresApproval: false, status: 'Blocked' });
       if (currentRunId) {
-        const baseUrl = getPlatformComputerUseBaseUrl();
-        fetch(`${baseUrl}/v1/computer-use/runs/${currentRunId}/approve`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ decision: 'deny' }),
-        }).catch(() => {});
+        void getPlatformComputerUseClient().denyRun(currentRunId).catch(() => {});
       }
     },
 
@@ -857,7 +889,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       const { pageAgentSessionId } = get();
       set({ status: 'Idle', pageAgentStatus: 'idle', pageAgentActivity: null, currentAction: null, pageAgentTargetTabId: null });
       if (pageAgentSessionId) {
-        fetch(getPageAgentStopEndpoint(pageAgentSessionId), { method: 'POST' }).catch(() => {});
+        void stopGizziBrainTask(pageAgentSessionId);
       }
     },
 
@@ -918,16 +950,16 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       }
     },
     
-    captureScreenshot: () => {
+    captureScreenshot: async () => {
       const { currentRunId } = get();
-      if (!currentRunId) return;
-      const baseUrl = getPlatformComputerUseBaseUrl();
-      fetch(`${baseUrl}/v1/computer-use/runs/${currentRunId}/screenshot`, { method: 'POST' })
-        .then((r) => r.json())
-        .then((data: { screenshot_b64?: string }) => {
-          if (data.screenshot_b64) set({ screenshot: data.screenshot_b64 });
-        })
-        .catch(() => {});
+      if (!currentRunId) return get().screenshot;
+      try {
+        const data = await getPlatformComputerUseClient().captureRunScreenshot(currentRunId) as { screenshot_b64?: string };
+        if (data.screenshot_b64) set({ screenshot: data.screenshot_b64 });
+        return data.screenshot_b64 ?? get().screenshot;
+      } catch {
+        return null;
+      }
     },
 
     openDrawer: () => {

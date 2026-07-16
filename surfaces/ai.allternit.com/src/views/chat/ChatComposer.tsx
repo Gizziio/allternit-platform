@@ -80,7 +80,7 @@ import { TaskBar } from './components/TaskBar';
 import { ModeDock } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { BottomDock } from './components/BottomDock';
-import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
+import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
 import { PromptModelSelector } from '@/components/prompt-kit/prompt-model-selector';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
@@ -102,12 +102,25 @@ function getProviderDiscoveryUrl(): string {
   return '/api/v1/providers';
 }
 
+async function fetchRegisteredProviders(signal: AbortSignal): Promise<Response> {
+  const sidecar = typeof window !== 'undefined' ? window.allternitSidecar : undefined;
+  if (sidecar && typeof sidecar.getApiUrl === 'function') {
+    const apiUrl = await sidecar.getApiUrl();
+    if (apiUrl) {
+      return fetch(`${apiUrl.replace(/\/$/, '')}/provider`, {
+        signal,
+      });
+    }
+  }
+  return fetch(getProviderDiscoveryUrl(), { signal });
+}
+
 // Provider discovery is slow (~2-5s) and the composer remounts whenever the
 // code-mode canvas swaps sessions, which left the model pill stuck on
 // "Loading..." after every session switch. Cache the discovery payload in
 // memory + localStorage (10 min TTL) so remounts render models instantly and
 // refresh silently in the background.
-const PROVIDER_DISCOVERY_CACHE_KEY = 'allternit-provider-discovery-cache';
+const PROVIDER_DISCOVERY_CACHE_KEY = 'allternit-provider-discovery-cache-v2';
 const PROVIDER_DISCOVERY_TTL_MS = 10 * 60 * 1000;
 let providerDiscoveryMemoryCache: any[] | null = null;
 
@@ -548,6 +561,9 @@ export function ChatComposer({
   const stopGifRecording = useRecordingStore((s) => s.stopRecording);
 
   const isBrowserSurface = agentModeSurface === 'browser';
+  // Glass composer look applies to Chat, Cowork, and Code — the Browser and
+  // Design surfaces keep the solid composer background.
+  const useGlassComposer = agentModeSurface !== 'browser' && agentModeSurface !== 'design';
 
   const selectedSurfaceAgentId = useAgentSurfaceModeStore((state) =>
     agentModeSurface ? state.selectedAgentIdBySurface[agentModeSurface] : null,
@@ -706,17 +722,29 @@ export function ChatComposer({
     let cancelled = false;
     async function fetchTerminalModels() {
       try {
-        const response = await fetch(getProviderDiscoveryUrl(), { signal: AbortSignal.timeout(5000) });
+        const response = await fetchRegisteredProviders(AbortSignal.timeout(5000));
         if (!response.ok || cancelled) return;
         const data = await response.json();
         const allModels: any[] = [];
         if (data.all && Array.isArray(data.all)) {
-          data.all.forEach((provider: any) => {
+          // Normalize two backend shapes:
+          // - Gizzi runtime: { all: [...], connected: ['id', ...] }
+          // - allternit-api: { all: [...] } with per-provider status field
+          const connected = Array.isArray(data.connected) ? new Set<string>(data.connected) : null;
+          const registeredProviders = data.all.filter((provider: any) => {
+            if (provider.id === 'echo') return false;
+            if (connected?.size) return connected.has(provider.id);
+            return provider.status === 'active';
+          });
+          registeredProviders.forEach((provider: any) => {
             if (!provider.models) return;
-            Object.entries(provider.models).forEach(([modelId, modelData]: [string, any]) => {
+            const entries = Array.isArray(provider.models)
+              ? provider.models.map((m: string) => [m, { name: m }] as const)
+              : Object.entries(provider.models);
+            entries.forEach(([modelId, modelData]: [string, any]) => {
               allModels.push({
                 id: `${provider.id}/${modelId}`,
-                name: modelData.name || modelId,
+                name: modelData?.name || modelId,
                 providerId: provider.id,
                 providerName: provider.name || provider.id,
               });
@@ -784,7 +812,10 @@ export function ChatComposer({
   }
 
   useEffect(() => {
-    if (!agentModeSurface || !agentModeEnabled) {
+    // Canonical built-in modes execute without binding an OpenClaw workspace.
+    // Discovery here previously retriggered after every failed request and
+    // flooded the gateway with hundreds of 501 responses.
+    if (!agentModeSurface || !agentModeEnabled || isCanonicalAgentMode(selectedModeId)) {
       return;
     }
 
@@ -841,6 +872,7 @@ export function ChatComposer({
   }, [
     agentModeEnabled,
     agentModeSurface,
+    selectedModeId,
     selectedSurfaceAgentId,
     agents,
     isLoadingOpenClawCandidates,
@@ -1002,7 +1034,9 @@ export function ChatComposer({
     }
   }, [input]);
 
-  const requiresAgentSelection = Boolean(agentModeSurface && agentModeEnabled);
+  const requiresAgentSelection = Boolean(
+    agentModeSurface && agentModeEnabled && !isCanonicalAgentMode(selectedModeId),
+  );
   const canSubmit = Boolean(input.trim()) && !isLoading && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
 
   const enterVoiceMode = useCallback(async () => {
@@ -1042,7 +1076,7 @@ export function ChatComposer({
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
     }
-    if (agentModeEnabled && onAgentSend && agentModeSurface) {
+    if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
       onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
     } else {
       onSend(enrichedInput);
@@ -1173,12 +1207,12 @@ export function ChatComposer({
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
     }
 
-    if (agentModeEnabled && onAgentSend && agentModeSurface) {
+    if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
       onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
     } else {
       onSend(enrichedInput);
     }
-    
+
     setInput('');
     setActiveCategory(null);
     setShowAgentMenu(false);
@@ -1638,7 +1672,10 @@ export function ChatComposer({
         {agentModeSurface === 'cowork' && <CoworkTopDeck />}
         <div
           className={cn(
-            'w-full bg-input-bg rounded-2xl border border-input-border flex flex-col overflow-visible transition-shadow z-10 relative',
+            'w-full rounded-2xl flex flex-col overflow-visible transition-shadow z-10 relative',
+            useGlassComposer
+              ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
+              : 'bg-input-bg border border-input-border',
             agentModeEnabled && 'border-glow shadow-glow',
             composerFocused && !agentModeEnabled && 'shadow-glow-accent'
           )}
@@ -1901,6 +1938,7 @@ export function ChatComposer({
                       onBrowseAllModels={handleBrowseAllModels}
                       onOpenProviderConnect={() => setShowProviderConnect(true)}
                       isTerminalModels={terminalModels.length > 0}
+                      triggerless
                     />
                   )}
 
@@ -2393,6 +2431,7 @@ export function ChatComposer({
                   onBrowseAllModels={handleBrowseAllModels}
                   onOpenProviderConnect={() => setShowProviderConnect(true)}
                   isTerminalModels={terminalModels.length > 0}
+                  triggerless
                 />
               )}
 

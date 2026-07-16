@@ -11,6 +11,11 @@ export interface Extension {
   isInstalled: boolean;
   isEnabled: boolean;
   permissions: string[];
+  permissionDetails?: Record<string, string>;
   owned?: boolean;
   surfaceViewType?: string;
+  officeHost?: 'word' | 'excel' | 'powerpoint';
+  launchUrl?: string;
+  storeUrl?: string;
+  installStatus?: 'not-installed' | 'pending' | 'installed' | 'error';
 }

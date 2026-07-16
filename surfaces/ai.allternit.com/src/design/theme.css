@@ -204,6 +204,8 @@
   --shell-mode-code-strong: color-mix(in srgb, var(--accent-code) 56%, var(--surface-panel-muted));
   --shell-mode-browser-strong: color-mix(in srgb, var(--accent-browser) 56%, var(--surface-panel-muted));
   --chat-composer-bg: color-mix(in srgb, var(--surface-floating) 94%, var(--surface-panel) 6%);
+  --chat-composer-glass-bg: rgba(255, 255, 255, 0.5);
+  --chat-composer-glass-border: rgba(255, 255, 255, 0.4);
   --chat-composer-border: var(--ui-border-default);
   --chat-composer-hover: var(--shell-item-hover);
   --chat-composer-menu-bg: var(--shell-menu-bg);
@@ -381,6 +383,8 @@
   --shell-mode-code-strong: color-mix(in srgb, var(--accent-code) 50%, var(--surface-panel-muted));
   --shell-mode-browser-strong: color-mix(in srgb, var(--accent-browser) 50%, var(--surface-panel-muted));
   --chat-composer-bg: color-mix(in srgb, var(--surface-floating) 96%, var(--surface-panel) 4%);
+  --chat-composer-glass-bg: rgba(30, 26, 22, 0.45);
+  --chat-composer-glass-border: rgba(255, 255, 255, 0.1);
   --chat-composer-border: var(--ui-border-default);
   --chat-composer-hover: var(--shell-item-hover);
   --chat-composer-menu-bg: var(--shell-menu-bg);

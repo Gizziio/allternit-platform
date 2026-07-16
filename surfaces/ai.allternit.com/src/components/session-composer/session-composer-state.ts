@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { createAllternitClient } from "@/lib/sdk";
+import { sessionApi } from "@/lib/agents/native-agent-api";
 
 export interface PermissionRequest {
   id: string;
@@ -135,38 +136,54 @@ export function useSessionComposerState(
       esRef.current = null;
     }
 
-    const es = new EventSource(`${serverUrl}/v1/global/event`);
+    // Browser EventSource cannot attach Gizzi's Basic Authorization header.
+    // Stream through the authenticated platform gateway, which owns the Gizzi
+    // credential, instead of connecting cross-origin to port 4096.
+    const es = sessionApi.createSyncSource();
     esRef.current = es;
 
     es.onmessage = (e: MessageEvent<string>) => {
       retryCountRef.current = 0;
-      let parsed: { type: string; properties: Record<string, unknown> };
+      let parsed: { type: string; properties?: Record<string, unknown>; session_id?: string; request_id?: string };
       try {
         parsed = JSON.parse(e.data);
       } catch {
         return;
       }
 
-      const { type, properties: props } = parsed;
-      if (!props || props["sessionID"] !== sessionID) return;
+      const type = parsed.type;
+      const props = parsed.properties ?? (parsed as unknown as Record<string, unknown>);
+      const eventSessionId = props["sessionID"] ?? props["session_id"];
+      if (eventSessionId !== sessionID) return;
 
       switch (type) {
         case "permission.asked":
+        case "permission_asked":
           dispatch({
             type: "permission_asked",
-            payload: props as unknown as PermissionRequest,
+            payload: {
+              ...(props as unknown as PermissionRequest),
+              id: (props["id"] ?? props["request_id"]) as string,
+              sessionID: eventSessionId as string,
+            },
           });
           break;
         case "permission.replied":
+        case "permission_replied":
           dispatch({
             type: "permission_replied",
-            payload: { requestID: props["requestID"] as string },
+            payload: { requestID: (props["requestID"] ?? props["request_id"]) as string },
           });
           break;
         case "question.asked":
+        case "question_asked":
           dispatch({
             type: "question_asked",
-            payload: props as unknown as QuestionRequest,
+            payload: {
+              ...(props as unknown as QuestionRequest),
+              id: (props["id"] ?? props["request_id"]) as string,
+              sessionID: eventSessionId as string,
+            },
           });
           break;
         case "question.replied":
@@ -193,7 +210,7 @@ export function useSessionComposerState(
       retryCountRef.current++;
       retryTimeoutRef.current = setTimeout(connect, delay);
     };
-  }, [serverUrl, sessionID]);
+  }, [sessionID]);
 
   useEffect(() => {
     destroyedRef.current = false;

@@ -5,8 +5,6 @@
  * All HTTP calls are mocked — no real gateway required.
  */
 
-const { jest } = require("@jest/globals");
-
 // Mock global fetch before requiring the module
 const mockFetch = jest.fn();
 global.fetch = mockFetch;

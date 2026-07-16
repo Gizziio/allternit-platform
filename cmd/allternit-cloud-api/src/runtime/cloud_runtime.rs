@@ -54,39 +54,39 @@ impl CloudRuntime {
         instances: Arc<RwLock<HashMap<String, CloudInstance>>>,
     ) {
         // Establish SSH connection to cloud instance for event streaming
-        let ssh_conn = match allternit_cloud_ssh::SshConnection::connect(
-            &instance_ip,
-            22,
-            "root",
-            &ssh_key,
-        ).await {
-            Ok(conn) => Arc::new(tokio::sync::Mutex::new(conn)),
-            Err(e) => {
-                tracing::error!("Failed to connect to cloud instance {}: {}", runtime_id, e);
-                return;
-            }
-        };
+        let ssh_conn =
+            match allternit_cloud_ssh::SshConnection::connect(&instance_ip, 22, "root", &ssh_key)
+                .await
+            {
+                Ok(conn) => Arc::new(tokio::sync::Mutex::new(conn)),
+                Err(e) => {
+                    tracing::error!("Failed to connect to cloud instance {}: {}", runtime_id, e);
+                    return;
+                }
+            };
 
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(2));
-        
+
         loop {
             interval.tick().await;
-            
+
             // Check if instance still exists
             let instance_exists = {
                 let insts = instances.read().await;
                 insts.contains_key(&runtime_id)
             };
-            
+
             if !instance_exists {
                 break;
             }
-            
+
             // Get status from cloud instance
             let ssh = ssh_conn.lock().await;
-            let result = ssh.execute("systemctl is-active allternit-agent 2>/dev/null || echo 'inactive'").await;
+            let result = ssh
+                .execute("systemctl is-active allternit-agent 2>/dev/null || echo 'inactive'")
+                .await;
             drop(ssh);
-            
+
             match result {
                 Ok(output) => {
                     let status = if output.stdout.trim() == "active" {
@@ -94,7 +94,7 @@ impl CloudRuntime {
                     } else {
                         RuntimeState::Stopped
                     };
-                    
+
                     let event = RuntimeEvent {
                         event_type: RuntimeEventType::Heartbeat,
                         payload: serde_json::json!({
@@ -104,7 +104,7 @@ impl CloudRuntime {
                         }),
                         timestamp: chrono::Utc::now(),
                     };
-                    
+
                     if tx.send(event).await.is_err() {
                         break;
                     }
@@ -119,7 +119,7 @@ impl CloudRuntime {
                         }),
                         timestamp: chrono::Utc::now(),
                     };
-                    
+
                     if tx.send(event).await.is_err() {
                         break;
                     }
@@ -135,28 +135,31 @@ impl Runtime for CloudRuntime {
         let runtime_id = self.generate_runtime_id();
 
         // Extract cloud configuration from config.extra
-        let instance_type = config.extra
+        let instance_type = config
+            .extra
             .get("instance_type")
             .and_then(|v| v.as_str())
             .unwrap_or("cx11");
 
-        let region = config.extra
+        let region = config
+            .extra
             .get("region")
             .and_then(|v| v.as_str())
             .unwrap_or("nbg1");
 
         let control_plane_url = std::env::var("CONTROL_PLANE_URL")
             .unwrap_or_else(|_| "http://localhost:3001".to_string());
-        
-        let deployment_token = std::env::var("DEPLOYMENT_TOKEN")
-            .unwrap_or_else(|_| "dev-token".to_string());
+
+        let deployment_token =
+            std::env::var("DEPLOYMENT_TOKEN").unwrap_or_else(|_| "dev-token".to_string());
 
         // Deploy to Hetzner Cloud
         let deploy_config = allternit_cloud_hetzner::DeploymentConfig {
             instance_name: format!("allternit-run-{}", &runtime_id[..8]),
             instance_type_id: instance_type.to_string(),
             region_id: region.to_string(),
-            storage_gb: config.extra
+            storage_gb: config
+                .extra
                 .get("storage_gb")
                 .and_then(|v| v.as_i64())
                 .unwrap_or(20) as i32,
@@ -166,22 +169,30 @@ impl Runtime for CloudRuntime {
 
         tracing::info!(
             "Deploying cloud instance for run {}: type={}, region={}",
-            run_id, instance_type, region
+            run_id,
+            instance_type,
+            region
         );
 
         // Actually deploy to Hetzner
-        let result = self.hetzner.deploy(&deploy_config)
+        let result = self
+            .hetzner
+            .deploy(&deploy_config)
             .await
             .map_err(|e| ApiError::Internal(format!("Hetzner deployment failed: {}", e)))?;
 
         tracing::info!(
             "Cloud instance deployed: id={}, ip={}, name={}",
-            result.instance_id, result.instance_ip, result.server_name
+            result.instance_id,
+            result.instance_ip,
+            result.server_name
         );
 
         // Create instance record
         let instance = CloudInstance {
-            server_id: result.instance_id.parse::<i64>()
+            server_id: result
+                .instance_id
+                .parse::<i64>()
                 .map_err(|e| ApiError::Internal(format!("Invalid server ID: {}", e)))?,
             status: RuntimeState::Running,
             public_ip: result.instance_ip.clone(),
@@ -199,8 +210,11 @@ impl Runtime for CloudRuntime {
             22,
             "root",
             &result.ssh_key,
-        ).await
-        .map_err(|e| ApiError::Internal(format!("SSH connection to cloud instance failed: {}", e)))?;
+        )
+        .await
+        .map_err(|e| {
+            ApiError::Internal(format!("SSH connection to cloud instance failed: {}", e))
+        })?;
 
         // Execute the run command
         let cmd = if let Some(command) = &config.command {
@@ -213,18 +227,23 @@ impl Runtime for CloudRuntime {
             format!("echo 'Run {} started on cloud instance'", run_id)
         };
 
-        let output = ssh_conn.execute(&cmd)
-            .await
-            .map_err(|e| ApiError::Internal(format!("Failed to execute on cloud instance: {}", e)))?;
+        let output = ssh_conn.execute(&cmd).await.map_err(|e| {
+            ApiError::Internal(format!("Failed to execute on cloud instance: {}", e))
+        })?;
 
         if output.exit_code != 0 {
-            return Err(ApiError::Internal(
-                format!("Cloud command failed: {}", output.stderr)
-            ));
+            return Err(ApiError::Internal(format!(
+                "Cloud command failed: {}",
+                output.stderr
+            )));
         }
 
-        tracing::info!("Run {} started on cloud instance {} (output: {})", 
-            run_id, runtime_id, output.stdout.trim());
+        tracing::info!(
+            "Run {} started on cloud instance {} (output: {})",
+            run_id,
+            runtime_id,
+            output.stdout.trim()
+        );
 
         Ok(RuntimeHandle {
             runtime_id: runtime_id.clone(),
@@ -243,14 +262,22 @@ impl Runtime for CloudRuntime {
 
         if let Some(instance) = instances.get(runtime_id) {
             // Actually delete the Hetzner server
-            self.hetzner.delete_server(instance.server_id)
+            self.hetzner
+                .delete_server(instance.server_id)
                 .await
                 .map_err(|e| ApiError::Internal(format!("Failed to delete server: {}", e)))?;
 
-            tracing::info!("Deleted cloud instance {} (server_id: {})", runtime_id, instance.server_id);
+            tracing::info!(
+                "Deleted cloud instance {} (server_id: {})",
+                runtime_id,
+                instance.server_id
+            );
             Ok(())
         } else {
-            Err(ApiError::NotFound(format!("Instance {} not found", runtime_id)))
+            Err(ApiError::NotFound(format!(
+                "Instance {} not found",
+                runtime_id
+            )))
         }
     }
 
@@ -264,7 +291,8 @@ impl Runtime for CloudRuntime {
                 22,
                 "root",
                 &instance.ssh_key,
-            ).await;
+            )
+            .await;
 
             let state = if ssh_result.is_ok() {
                 instance.status.clone()
@@ -279,23 +307,27 @@ impl Runtime for CloudRuntime {
                 resource_usage: None,
             })
         } else {
-            Err(ApiError::NotFound(format!("Instance {} not found", runtime_id)))
+            Err(ApiError::NotFound(format!(
+                "Instance {} not found",
+                runtime_id
+            )))
         }
     }
 
     async fn attach(&self, runtime_id: &str, client: ClientInfo) -> Result<EventStream, ApiError> {
         let instances = self.instances.read().await;
 
-        let instance = instances.get(runtime_id)
+        let instance = instances
+            .get(runtime_id)
             .ok_or_else(|| ApiError::NotFound(format!("Instance {} not found", runtime_id)))?;
-        
+
         let public_ip = instance.public_ip.clone();
         let ssh_key = instance.ssh_key.clone();
-        
+
         drop(instances);
 
         let (tx, rx) = mpsc::channel(100);
-        
+
         // Store the sender
         {
             let mut streams = self.streams.write().await;
@@ -306,13 +338,7 @@ impl Runtime for CloudRuntime {
         let runtime_id_clone = runtime_id.to_string();
         let instances = self.instances.clone();
         tokio::spawn(async move {
-            CloudRuntime::stream_events(
-                runtime_id_clone,
-                public_ip,
-                ssh_key,
-                tx,
-                instances,
-            ).await;
+            CloudRuntime::stream_events(runtime_id_clone, public_ip, ssh_key, tx, instances).await;
         });
 
         tracing::info!(
@@ -329,7 +355,7 @@ impl Runtime for CloudRuntime {
             let mut streams = self.streams.write().await;
             streams.remove(runtime_id);
         }
-        
+
         tracing::info!(
             "Client {} detached from cloud instance {}",
             client_id,
@@ -338,7 +364,12 @@ impl Runtime for CloudRuntime {
         Ok(())
     }
 
-    async fn exec(&self, runtime_id: &str, command: &str, args: &[&str]) -> Result<ExecResult, ApiError> {
+    async fn exec(
+        &self,
+        runtime_id: &str,
+        command: &str,
+        args: &[&str],
+    ) -> Result<ExecResult, ApiError> {
         let instances = self.instances.read().await;
 
         let instance = instances
@@ -361,16 +392,20 @@ impl Runtime for CloudRuntime {
             22,
             "root",
             &instance.ssh_key,
-        ).await
+        )
+        .await
         .map_err(|e| ApiError::Internal(format!("SSH connection failed: {}", e)))?;
 
-        let output = ssh_conn.execute(&full_command)
+        let output = ssh_conn
+            .execute(&full_command)
             .await
             .map_err(|e| ApiError::Internal(format!("Command execution failed: {}", e)))?;
 
         tracing::info!(
             "Executed on cloud instance {}: {} (exit_code: {})",
-            runtime_id, full_command, output.exit_code
+            runtime_id,
+            full_command,
+            output.exit_code
         );
 
         Ok(ExecResult {
@@ -390,16 +425,20 @@ impl Runtime for CloudRuntime {
                 22,
                 "root",
                 &instance.ssh_key,
-            ).await
+            )
+            .await
             .map_err(|e| ApiError::Internal(format!("SSH connection failed: {}", e)))?;
 
             let _ = ssh_conn.execute("systemctl stop allternit-agent").await;
-            
+
             instance.status = RuntimeState::Paused;
             tracing::info!("Paused cloud instance {}", runtime_id);
             Ok(())
         } else {
-            Err(ApiError::NotFound(format!("Instance {} not found", runtime_id)))
+            Err(ApiError::NotFound(format!(
+                "Instance {} not found",
+                runtime_id
+            )))
         }
     }
 
@@ -413,16 +452,20 @@ impl Runtime for CloudRuntime {
                 22,
                 "root",
                 &instance.ssh_key,
-            ).await
+            )
+            .await
             .map_err(|e| ApiError::Internal(format!("SSH connection failed: {}", e)))?;
 
             let _ = ssh_conn.execute("systemctl start allternit-agent").await;
-            
+
             instance.status = RuntimeState::Running;
             tracing::info!("Resumed cloud instance {}", runtime_id);
             Ok(())
         } else {
-            Err(ApiError::NotFound(format!("Instance {} not found", runtime_id)))
+            Err(ApiError::NotFound(format!(
+                "Instance {} not found",
+                runtime_id
+            )))
         }
     }
 }

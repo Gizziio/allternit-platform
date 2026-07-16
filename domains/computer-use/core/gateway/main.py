@@ -117,6 +117,7 @@ class ExecuteRequest(BaseModel):
     run_id: str
     target: str | None = None
     goal: str | None = None
+    text: str | None = None
     parameters: dict[str, Any] = Field(default_factory=dict)
     adapter_preference: AdapterPreference | None = None
 
@@ -211,6 +212,8 @@ def infer_mode(req: ExecuteRequest) -> ModeType:
 
 def validate_request(req: ExecuteRequest) -> None:
     """Validate request parameters."""
+    if req.text is not None and "text" not in req.parameters:
+        req.parameters["text"] = req.text
     if req.action == "goto" and not req.target:
         raise HTTPException(status_code=400, detail="target is required for goto")
     if req.action == "click" and not req.target and not (req.parameters.get("x") is not None and req.parameters.get("y") is not None):
@@ -786,18 +789,22 @@ async def handle_inspect(req: ExecuteRequest) -> ExecuteResponse:
                 extracted = {"found": False, "selector": f"text={description}"}
 
         elif strategy == "accessibility" and description:
-            snapshot = await page.accessibility.snapshot()
-            def _find_node(node, label):
-                if not node:
-                    return None
-                if label.lower() in str(node.get("name", "")).lower():
-                    return node
-                for child in node.get("children", []):
-                    found = _find_node(child, label)
-                    if found:
-                        return found
-                return None
-            node = _find_node(snapshot, description) if snapshot else None
+            node = await page.evaluate("""label => {
+                const wanted = label.toLowerCase();
+                const roleFor = el => el.getAttribute('role') || ({
+                    A: 'link', BUTTON: 'button', INPUT: 'textbox',
+                    SELECT: 'combobox', TEXTAREA: 'textbox', IMG: 'img'
+                }[el.tagName] || el.tagName.toLowerCase());
+                for (const el of document.querySelectorAll('body *')) {
+                    const name = (el.getAttribute('aria-label') || el.innerText ||
+                        el.getAttribute('alt') || el.getAttribute('title') ||
+                        el.getAttribute('placeholder') || el.value || '').trim();
+                    if (name.toLowerCase().includes(wanted)) {
+                        return {name: name.slice(0, 500), role: roleFor(el)};
+                    }
+                }
+                return null;
+            }""", description)
             extracted = {"found": node is not None, "selector": description, "text": node.get("name") if node else None, "role": node.get("role") if node else None}
 
         else:
@@ -2132,14 +2139,6 @@ async def _register_startup_adapters() -> None:
         except Exception:
             pass  # Chrome not running — skip; waterfall falls to playwright
 
-        # --- Playwright proxy adapter (browser.playwright) — always available ---
-        try:
-            from adapters.browser.gateway_proxy_adapter import GatewayProxyAdapter
-            if "browser.playwright" not in executor.registered_adapters():
-                executor.register("browser.playwright", GatewayProxyAdapter())
-        except Exception as exc:
-            _logger.warning("[startup] Playwright adapter registration failed: %s", exc)
-
         # --- PyAutoGUI desktop adapter (desktop.pyautogui) ---
         try:
             from adapters.desktop.pyautogui.pyautogui_adapter import PyAutoGUIAdapter
@@ -2163,11 +2162,18 @@ async def _register_startup_adapters() -> None:
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown."""
+    try:
+        from canonical_router import shutdown_canonical_service
+        await shutdown_canonical_service()
+    except Exception as exc:
+        logger.warning("Canonical computer service shutdown failed: %s", exc)
     await session_manager.shutdown()
 
 
 from computer_use_router import router as computer_use_router
 app.include_router(computer_use_router)
+from canonical_router import router as canonical_computer_router
+app.include_router(canonical_computer_router)
 
 # ---------------------------------------------------------------------------
 # /v1/computer — Claude native computer tool endpoint
@@ -2241,14 +2247,6 @@ async def computer_tool(req: ComputerToolRequest) -> dict[str, Any]:
     )
 
     executor = get_executor()
-    if not executor.registered_adapters():
-        # Bootstrap: register Playwright adapter from session_manager as default fallback
-        try:
-            from adapters.browser.gateway_proxy_adapter import GatewayProxyAdapter
-            executor.register("browser.playwright", GatewayProxyAdapter())
-        except ImportError:
-            pass
-
     result = await executor.execute(
         action,
         session_id=req.session_id,

@@ -7,8 +7,8 @@
 //!   - save user preferences (default model, gateway URLs)
 //!   - discover local providers (Ollama, LM Studio, Claude CLI, Codex CLI)
 //!   - validate a provider API key against the provider's model endpoint
-//!   - store the key in the OS keychain and write the provider metadata to the
-//!     Gizzi runtime config so every agent/session routes through Gizzi.
+//!   - hand provider credentials directly to Gizzi and write only provider
+//!     metadata to its runtime config.
 
 use axum::{
     extract::State,
@@ -23,9 +23,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{info, warn};
 
-use crate::AppState;
 use crate::config::{save_user_config, AppConfig, SaveUserConfigPayload, UserConfig};
-use crate::secrets;
+use crate::AppState;
 
 pub fn onboarding_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -87,29 +86,32 @@ async fn get_config(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
 }
 
 async fn save_config(
-    State(state): State<Arc<AppState>>,
+    State(_state): State<Arc<AppState>>,
     Json(payload): Json<SaveUserConfigPayload>,
 ) -> impl IntoResponse {
     let mut user: UserConfig = payload.into();
 
-    // Preserve existing provider API keys if the payload did not send them.
-    if user.provider_api_keys.is_none() {
-        user.provider_api_keys = state.config.user.provider_api_keys.clone();
-    }
+    // Provider credentials are accepted only by the dedicated provider route
+    // and are handed directly to Gizzi. Never persist them in user config.
+    user.provider_api_keys = None;
 
     match save_user_config(&user) {
         Ok(()) => {
             info!(default_model = ?user.default_model, "Saved user config from wizard");
-            // Zero-touch encryption: completing the wizard guarantees a persistent
-            // key exists (env override or auto-generated in the OS keychain), so
-            // connector tokens are sealed from first run with no user action.
+            // The signed desktop injects this key; headless/VPS installs use a
+            // mode-0600 local runtime key. The API never touches OS Keychain.
             let enc_ok = crate::token_crypto::ensure_platform_key();
             if enc_ok {
                 info!("Connector token encryption enabled after onboarding");
             } else {
-                warn!("Connector token encryption could not be enabled (no env key; keychain write failed)");
+                warn!("Connector token encryption could not be enabled");
             }
-            (StatusCode::OK, Json(json!({ "success": true, "encryption_enabled": crate::token_crypto::encryption_enabled() })))
+            (
+                StatusCode::OK,
+                Json(
+                    json!({ "success": true, "encryption_enabled": crate::token_crypto::encryption_enabled() }),
+                ),
+            )
         }
         Err(err) => {
             warn!(error = %err, "Failed to save user config");
@@ -138,7 +140,7 @@ struct SaveProviderPayload {
     /// Default model for this provider, e.g. "anthropic/claude-sonnet-4-6".
     #[serde(rename = "defaultModel", default)]
     default_model: Option<String>,
-    /// Provider API key. Stored in the OS keychain, never written to disk.
+    /// Provider API key. Handed directly to Gizzi's private credential store.
     #[serde(rename = "apiKey", default)]
     api_key: Option<String>,
     /// Base URL for the provider API.
@@ -171,10 +173,11 @@ async fn save_provider(
         );
     }
 
-    // 1. Store the API key in the OS keychain if provided.
+    // 1. Hand the credential directly to Gizzi. allternit-api never stores or
+    // reads provider credentials itself.
     if let Some(key) = payload.api_key.as_ref().filter(|k| !k.is_empty()) {
-        if let Err(err) = secrets::set_secret(&secrets::provider_account(&provider_id), key) {
-            warn!(provider = %provider_id, error = %err, "Failed to store provider key");
+        if let Err(err) = crate::gizzi_provider_auth::store_api_key(&provider_id, key).await {
+            warn!(provider = %provider_id, error = %err, "Gizzi failed to store provider credential");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": err })),
@@ -244,7 +247,10 @@ async fn save_provider(
         }
     }
 
-    (StatusCode::OK, Json(json!({ "success": true, "provider": provider_id })))
+    (
+        StatusCode::OK,
+        Json(json!({ "success": true, "provider": provider_id })),
+    )
 }
 
 fn build_provider_entry(payload: &SaveProviderPayload) -> serde_json::Value {
@@ -287,8 +293,8 @@ fn build_provider_entry(payload: &SaveProviderPayload) -> serde_json::Value {
     if let Some(base_url) = payload.base_url.as_ref().filter(|u| !u.is_empty()) {
         options.insert("baseURL".to_string(), json!(base_url));
     }
-    // NOTE: The API key is intentionally NOT written here. It lives in the OS
-    // keychain. The API injects it into Gizzi session harnesses at runtime.
+    // NOTE: The API key is intentionally NOT written here. Gizzi owns it and
+    // resolves it when the provider is used.
     if !options.is_empty() {
         entry.insert("options".to_string(), json!(options));
     }
@@ -317,10 +323,7 @@ fn read_gizzi_config(path: &PathBuf) -> serde_json::Map<String, serde_json::Valu
         }
     }
     let mut default = serde_json::Map::new();
-    default.insert(
-        "$schema".to_string(),
-        json!("https://gizzi.io/config.json"),
-    );
+    default.insert("$schema".to_string(), json!("https://gizzi.io/config.json"));
     default
 }
 
@@ -415,8 +418,8 @@ pub fn persist_cli_default(
 /// Register an API-key (OpenAI-compatible) brain in the Gizzi config and make it
 /// the platform default. Mirrors gizzi's config-provider shape (see the live
 /// `ollama` entry and `runtime/providers/provider.ts:595`, which forwards
-/// `provider.key` into `options.apiKey`). Used by key-based providers like Z.ai
-/// (GLM) so a one-click connect actually routes — no dead `needs_api_key` stub.
+/// provider metadata. Used by key-based providers like Z.ai (GLM); credentials
+/// are stored separately through Gizzi's `/auth/:providerID` boundary.
 #[allow(clippy::too_many_arguments)]
 pub fn persist_apikey_default(
     state: &AppState,
@@ -425,7 +428,6 @@ pub fn persist_apikey_default(
     model: &str,
     npm: &str,
     base_url: &str,
-    api_key: &str,
     model_name: &str,
     context: u32,
     output: u32,
@@ -455,7 +457,7 @@ pub fn persist_apikey_default(
             json!({
                 "name": name,
                 "npm": npm,
-                "key": api_key,
+                "auth_type": "api_key",
                 "options": { "baseURL": base_url },
                 "models": models,
             }),
@@ -650,9 +652,7 @@ struct ValidateKeyBody {
     key: String,
 }
 
-async fn onboarding_validate_key(
-    Json(body): Json<ValidateKeyBody>,
-) -> impl IntoResponse {
+async fn onboarding_validate_key(Json(body): Json<ValidateKeyBody>) -> impl IntoResponse {
     let provider = body.provider.to_lowercase();
     let key = body.key;
 
@@ -666,20 +666,29 @@ async fn onboarding_validate_key(
         _ => Ok(ValidationResult {
             valid: true,
             models: None,
-            error: Some(format!("Unknown provider '{}', accepting key without validation", provider)),
+            error: Some(format!(
+                "Unknown provider '{}', accepting key without validation",
+                provider
+            )),
         }),
     };
 
     match result {
-        Ok(r) => (StatusCode::OK, Json(json!({
-            "valid": r.valid,
-            "models": r.models,
-            "error": r.error,
-        }))),
-        Err(e) => (StatusCode::OK, Json(json!({
-            "valid": false,
-            "error": e,
-        }))),
+        Ok(r) => (
+            StatusCode::OK,
+            Json(json!({
+                "valid": r.valid,
+                "models": r.models,
+                "error": r.error,
+            })),
+        ),
+        Err(e) => (
+            StatusCode::OK,
+            Json(json!({
+                "valid": false,
+                "error": e,
+            })),
+        ),
     }
 }
 

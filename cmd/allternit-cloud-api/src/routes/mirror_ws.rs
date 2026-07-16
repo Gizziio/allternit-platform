@@ -7,15 +7,15 @@
 //! - Approval workflows (mobile → desktop)
 //! - Connection management
 
+use axum::extract::ws::{Message, WebSocket};
 use axum::{
     extract::{Path, Query, State, WebSocketUpgrade},
     response::IntoResponse,
 };
-use axum::extract::ws::{Message, WebSocket};
+use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use futures_util::{SinkExt, StreamExt};
-use tracing::{info, error};
+use tracing::{error, info};
 
 use crate::ApiState;
 
@@ -126,11 +126,7 @@ async fn validate_session_token(
 }
 
 /// Handle WebSocket connection
-async fn handle_socket(
-    socket: WebSocket,
-    state: Arc<ApiState>,
-    session_id: String,
-) {
+async fn handle_socket(socket: WebSocket, state: Arc<ApiState>, session_id: String) {
     let (mut sender, mut receiver) = socket.split();
 
     // Subscribe to session broadcast channel
@@ -164,7 +160,10 @@ async fn handle_socket(
                     }
                 }
                 Ok(Message::Close(_)) => {
-                    info!("WebSocket client disconnected from session: {}", session_id_clone);
+                    info!(
+                        "WebSocket client disconnected from session: {}",
+                        session_id_clone
+                    );
                     break;
                 }
                 Err(e) => {
@@ -204,11 +203,7 @@ async fn handle_socket(
 }
 
 /// Handle message from client
-async fn handle_client_message(
-    state: &Arc<ApiState>,
-    session_id: &str,
-    msg: WsClientMessage,
-) {
+async fn handle_client_message(state: &Arc<ApiState>, session_id: &str, msg: WsClientMessage) {
     match msg {
         WsClientMessage::Subscribe { session_id: sid } => {
             info!("Client subscribed to session: {}", sid);
@@ -216,7 +211,7 @@ async fn handle_client_message(
         WsClientMessage::Command { content } => {
             // TODO: Forward command to Cowork Controller
             info!("Received command for session {}: {}", session_id, content);
-            
+
             // For now, send back a placeholder response
             let response = WsServerMessage::CommandResult {
                 success: true,
@@ -225,13 +220,21 @@ async fn handle_client_message(
             broadcast_to_session(state, session_id, response).await;
         }
         WsClientMessage::Approval { diff_id, approved } => {
-            info!("Approval for {} in session {}: {}", diff_id, session_id, if approved { "approved" } else { "rejected" });
-            
+            info!(
+                "Approval for {} in session {}: {}",
+                diff_id,
+                session_id,
+                if approved { "approved" } else { "rejected" }
+            );
+
             // TODO: Forward approval to Cowork Controller
-            
+
             let response = WsServerMessage::CommandResult {
                 success: true,
-                output: format!("Approval recorded: {}", if approved { "approved" } else { "rejected" }),
+                output: format!(
+                    "Approval recorded: {}",
+                    if approved { "approved" } else { "rejected" }
+                ),
             };
             broadcast_to_session(state, session_id, response).await;
         }
@@ -248,18 +251,21 @@ fn event_to_ws_message(
 ) -> Option<WsServerMessage> {
     // Map deployment events to WebSocket messages
     match event.event_type.as_str() {
-        "terminal_output" => {
-            Some(WsServerMessage::Output {
-                content: event.message.clone(),
-                timestamp: event.timestamp.timestamp(),
-            })
-        }
+        "terminal_output" => Some(WsServerMessage::Output {
+            content: event.message.clone(),
+            timestamp: event.timestamp.timestamp(),
+        }),
         "file_diff" => {
             // Parse diff from event data payload
-            let changes = event.data.as_ref().and_then(|d| {
-                d.get("changes").and_then(|c| serde_json::from_value(c.clone()).ok())
-            }).unwrap_or_else(|| vec![]);
-            
+            let changes = event
+                .data
+                .as_ref()
+                .and_then(|d| {
+                    d.get("changes")
+                        .and_then(|c| serde_json::from_value(c.clone()).ok())
+                })
+                .unwrap_or_else(|| vec![]);
+
             Some(WsServerMessage::Diff {
                 diff_id: event.deployment_id.to_string(),
                 file_path: event.message.clone(),
@@ -267,22 +273,16 @@ fn event_to_ws_message(
                 timestamp: event.timestamp.timestamp(),
             })
         }
-        "status_update" => {
-            Some(WsServerMessage::Status {
-                status: event.message.clone(),
-                client_count: event.progress as i64,
-            })
-        }
+        "status_update" => Some(WsServerMessage::Status {
+            status: event.message.clone(),
+            client_count: event.progress as i64,
+        }),
         _ => None,
     }
 }
 
 /// Broadcast message to specific session
-async fn broadcast_to_session(
-    state: &Arc<ApiState>,
-    session_id: &str,
-    msg: WsServerMessage,
-) {
+async fn broadcast_to_session(state: &Arc<ApiState>, session_id: &str, msg: WsServerMessage) {
     // Create deployment event for this message
     let event = crate::websocket::DeploymentEvent {
         deployment_id: uuid::Uuid::new_v4(),

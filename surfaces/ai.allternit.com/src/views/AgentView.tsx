@@ -5,18 +5,14 @@ import { useAgentStore } from "@/lib/agents/agent.store";
 import type { CreateAgentInput } from "@/lib/agents/agent.types";
 import { AgentDetailView } from "./agent-view/components/AgentDetailView";
 import { CreateAgentForm } from "./agent-view/components/CreateAgentForm";
-import { AgentLeaderboard } from "@/components/agents";
 import { EmptyAgentState } from "./agent-view/components/EmptyAgentState";
 import { EditAgentForm } from "./agent-view/components/EditAgentForm";
 import { AgentGalleryGrid } from "./agent-view/main/AgentGalleryGrid";
 import { CreateAgentLanding } from "./agent-view/components/CreateAgentLanding";
-import { AgentMascotHero, type VoiceStyle, type ToneStyle } from "./agent-view/components/AgentMascotHero";
 
 // UI Components
-import { CircleNotch, Plus, Sparkle, Warning } from '@phosphor-icons/react';
-import { motion } from "framer-motion";
+import { CircleNotch, Plus, Warning } from '@phosphor-icons/react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { STUDIO_THEME } from "./agent-view/AgentView.constants";
 
 interface AgentViewProps {
   context?: unknown;
@@ -24,9 +20,12 @@ interface AgentViewProps {
   forceListMode?: boolean;
   title?: string;
   hideHeader?: boolean;
+  showLandingOnEntry?: boolean;
+  /** Cap the agent gallery at 2 columns — for narrow embeds like the Settings modal. */
+  compactGrid?: boolean;
 }
 
-export function AgentView({ hideCreateButton = false, forceListMode = false, title = 'Agent Studio', hideHeader = false }: AgentViewProps) {
+export function AgentView({ hideCreateButton = false, forceListMode = false, title = 'Agent Studio', hideHeader = false, showLandingOnEntry = true, compactGrid = false }: AgentViewProps) {
   const {
     agents,
     selectedAgentId,
@@ -62,7 +61,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
   }, [forceListMode, viewMode, setViewMode]);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [showLanding, setShowLanding] = useState(!forceListMode);
+  const [showLanding, setShowLanding] = useState(showLandingOnEntry && !forceListMode);
 
   // Render based on view mode
   if (viewMode === 'create' && !forceListMode) {
@@ -141,6 +140,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
       )}
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 relative">
+        <div className="mx-auto w-full max-w-6xl px-8 pb-12 pt-6">
         {error && error !== 'API_OFFLINE' && (
           <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-500/50">
             <Warning className="size-4  text-red-400" />
@@ -149,7 +149,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
         )}
 
         {isLoadingAgents ? (
-          <div className="flex items-center justify-center h-64">
+          <div className="flex h-64 items-center justify-center">
             <CircleNotch className="size-8  animate-spin text-amber-400" />
           </div>
         ) : agents.length === 0 ? (
@@ -161,117 +161,18 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
             }}
           />
         ) : (
-          <>
-            <RegistryHero
-              agentCount={agents.length}
-              onCreate={() => setIsCreating(true)}
-              hideCreateButton={hideCreateButton}
-            />
-            <div className="px-2 mb-2">
-              <AgentLeaderboard
-                agents={agents}
-                onSelectAgent={(agent) => selectAgent(agent.id)}
-              />
-            </div>
-            <AgentGalleryGrid
+          <AgentGalleryGrid
               agents={agents}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               onSelectAgent={selectAgent}
               forceListMode={forceListMode}
+              compact={compactGrid}
             />
-          </>
         )}
+        </div>
       </div>
     </div>
-  );
-}
-
-function RegistryHero({
-  agentCount,
-  onCreate,
-  hideCreateButton,
-}: {
-  agentCount: number;
-  onCreate: () => void;
-  hideCreateButton?: boolean;
-}) {
-  const [previewVoice, setPreviewVoice] = useState<VoiceStyle>("warm");
-  const [previewTone, setPreviewTone] = useState<ToneStyle>("friendly");
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="relative rounded-2xl border m-4 p-6 sm:p-8"
-      style={{
-        background: `linear-gradient(135deg, color-mix(in srgb, var(--surface-panel) 70%, transparent), color-mix(in srgb, var(--surface-hover) 60%, transparent))`,
-        borderColor: STUDIO_THEME.borderSubtle,
-      }}
-    >
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full blur-3xl"
-        style={{ background: STUDIO_THEME.accent14 }}
-      />
-      <div className="relative grid grid-cols-1 items-center gap-6 lg:grid-cols-2">
-        <div>
-          <div
-            className="mb-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider"
-            style={{
-              background: STUDIO_THEME.accent10,
-              color: STUDIO_THEME.accent,
-            }}
-          >
-            <Sparkle size={12} weight="duotone" />
-            Agent Registry
-          </div>
-          <h2
-            className="text-2xl font-bold tracking-tight sm:text-3xl"
-            style={{ color: STUDIO_THEME.textPrimary }}
-          >
-            Your{" "}
-            <span
-              className="bg-clip-text text-transparent"
-              style={{
-                backgroundImage: `linear-gradient(135deg, ${STUDIO_THEME.accent}, var(--accent-secondary))`,
-              }}
-            >
-              agent fleet
-            </span>
-          </h2>
-          <p className="mt-1 text-[13px] sm:text-sm" style={{ color: STUDIO_THEME.textSecondary }}>
-            {agentCount} agent{agentCount === 1 ? "" : "s"} ready across chat, code, cowork, and design.
-          </p>
-          {!hideCreateButton && (
-            <motion.button
-              type="button"
-              onClick={onCreate}
-              whileHover={{ scale: 1.04, y: -1 }}
-              whileTap={{ scale: 0.98 }}
-              className="mt-4 flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold shadow-lg transition-shadow hover:shadow-xl"
-              style={{
-                background: `linear-gradient(135deg, ${STUDIO_THEME.accent}, var(--accent-secondary))`,
-                color: "var(--ui-text-inverse)",
-                boxShadow: `0 10px 28px -10px ${STUDIO_THEME.accent30}`,
-              }}
-            >
-              <Plus size={18} weight="bold" />
-              Create Agent
-            </motion.button>
-          )}
-        </div>
-
-        <div className="flex justify-center lg:justify-end">
-          <AgentMascotHero
-            voice={previewVoice}
-            tone={previewTone}
-            onVoiceChange={setPreviewVoice}
-            onToneChange={setPreviewTone}
-          />
-        </div>
-      </div>
-    </motion.div>
   );
 }
 

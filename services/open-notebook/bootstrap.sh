@@ -65,6 +65,15 @@ fi
 
 echo "[bootstrap] Installing Python dependencies from pyproject.toml..."
 "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-"$VENV_DIR/bin/pip" install --quiet "$DATA_DIR"
+# No [build-system] is declared (this project runs directly via uvicorn, it's
+# never `pip install`ed as a package), so pull the dependency list out of
+# pyproject.toml with tomllib instead of `pip install <dir>`.
+DEPS=$(python3 -c "
+import tomllib
+with open('$DATA_DIR/pyproject.toml', 'rb') as f:
+    data = tomllib.load(f)
+print(' '.join(f'\"{d}\"' for d in data['project']['dependencies']))
+")
+eval "\"$VENV_DIR/bin/pip\" install --quiet $DEPS"
 
 echo "[bootstrap] Done. Run ./start.sh to launch the service."

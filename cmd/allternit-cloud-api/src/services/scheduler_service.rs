@@ -271,7 +271,8 @@ impl SchedulerService {
                 error!("Failed to trigger run for schedule {}: {}", schedule.id, e);
 
                 // Still update next_run_at to prevent infinite retries
-                self.update_schedule_next_run(state, schedule, next_run).await?;
+                self.update_schedule_next_run(state, schedule, next_run)
+                    .await?;
             }
         }
 
@@ -287,7 +288,7 @@ impl SchedulerService {
         // If schedule has explicit region preference, use it (if active)
         if let Some(ref region_id) = schedule.region_id {
             let is_active: bool = sqlx::query_scalar(
-                "SELECT EXISTS(SELECT 1 FROM regions WHERE id = ? AND active = TRUE)"
+                "SELECT EXISTS(SELECT 1 FROM regions WHERE id = ? AND active = TRUE)",
             )
             .bind(region_id)
             .fetch_one(&state.db)
@@ -308,10 +309,7 @@ impl SchedulerService {
     }
 
     /// Select the best region based on capacity, proximity, and cost
-    async fn select_best_region(
-        &self,
-        state: &Arc<ApiState>,
-    ) -> anyhow::Result<Option<String>> {
+    async fn select_best_region(&self, state: &Arc<ApiState>) -> anyhow::Result<Option<String>> {
         // Get all active regions with capacity info
         let regions = sqlx::query_as::<_, Region>(
             r#"
@@ -321,7 +319,7 @@ impl SchedulerService {
                 r.created_at, r.updated_at
             FROM regions r
             WHERE r.active = TRUE
-            "#
+            "#,
         )
         .fetch_all(&state.db)
         .await?;
@@ -379,7 +377,7 @@ impl SchedulerService {
                 })
                 .min_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal))
                 .map(|(r, _, _)| r.id);
-            
+
             closest.or_else(|| {
                 // Fallback to capacity if no location data
                 candidates
@@ -403,18 +401,21 @@ impl SchedulerService {
         &self,
         schedule: &Schedule,
     ) -> anyhow::Result<Option<chrono::DateTime<Utc>>> {
-        use std::str::FromStr;
         use chrono_tz::Tz;
+        use std::str::FromStr;
 
         // Parse the cron expression
-        let cron = cron::Schedule::from_str(&schedule.cron_expr)
-            .map_err(|e| anyhow::anyhow!("Invalid cron expression '{}': {}", schedule.cron_expr, e))?;
+        let cron = cron::Schedule::from_str(&schedule.cron_expr).map_err(|e| {
+            anyhow::anyhow!("Invalid cron expression '{}': {}", schedule.cron_expr, e)
+        })?;
 
         // Parse timezone, fallback to UTC if invalid
         let tz: Tz = schedule.timezone.parse().unwrap_or(chrono_tz::UTC);
 
         // Get next occurrence in target timezone after now
-        let next = cron.upcoming(tz).next()
+        let next = cron
+            .upcoming(tz)
+            .next()
             .map(|dt| dt.with_timezone(&chrono::Utc))
             .ok_or_else(|| anyhow::anyhow!("Failed to calculate next occurrence"))?;
 
@@ -438,7 +439,7 @@ impl SchedulerService {
                 config, owner_id, tenant_id, runtime_id, runtime_type, schedule_id, region_id,
                 created_at, updated_at, started_at, completed_at, error_message, error_details
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#
+            "#,
         )
         .bind(&run_id)
         .bind(format!("Scheduled: {}", schedule.name))
@@ -465,20 +466,21 @@ impl SchedulerService {
         .await?;
 
         // Initialize cost tracking for the run
-        // Use defaults - in a full implementation these would come from 
+        // Use defaults - in a full implementation these would come from
         // schedule configuration or target pool settings
         let provider = "hetzner";
         let region = region_id.as_deref().unwrap_or("fsn1");
         let instance_type = "cx11";
-        
+
         let _ = crate::services::init_run_cost_tracking(
             &state.db,
             &run_id,
             provider,
             region,
             instance_type,
-        ).await;
-        
+        )
+        .await;
+
         // Emit run created event
         let _ = crate::services::EventStore::append(
             state.event_store.as_ref(),
@@ -528,14 +530,12 @@ impl SchedulerService {
         schedule: &Schedule,
         next_run: Option<chrono::DateTime<Utc>>,
     ) -> anyhow::Result<()> {
-        sqlx::query(
-            "UPDATE schedules SET next_run_at = ?, updated_at = ? WHERE id = ?",
-        )
-        .bind(next_run)
-        .bind(Utc::now())
-        .bind(&schedule.id)
-        .execute(&state.db)
-        .await?;
+        sqlx::query("UPDATE schedules SET next_run_at = ?, updated_at = ? WHERE id = ?")
+            .bind(next_run)
+            .bind(Utc::now())
+            .bind(&schedule.id)
+            .execute(&state.db)
+            .await?;
 
         Ok(())
     }
@@ -571,7 +571,9 @@ impl SchedulerService {
                 MisfireAction::Ignore => {
                     // Just update next_run_at
                     if let Ok(next_run) = self.calculate_next_run(&schedule).await {
-                        let _ = self.update_schedule_next_run(state, &schedule, next_run).await;
+                        let _ = self
+                            .update_schedule_next_run(state, &schedule, next_run)
+                            .await;
                     }
                 }
                 MisfireAction::FireOnce => {

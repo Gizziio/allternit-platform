@@ -11,7 +11,7 @@ try:
     from ..recorder.frame import ActionFrame, ActionType
 except ImportError:
     # Allow direct import for tests
-    from recorder.frame import ActionFrame, ActionType
+    from observability.recorder.frame import ActionFrame, ActionType
 
 
 @dataclass

@@ -284,15 +284,43 @@ async fn office_bootstrap(
         binding.fingerprint = payload.document.fingerprint.clone();
         binding.project_id = payload.project_id.clone();
         binding.workspace_id = payload.workspace_id.clone();
-        binding.taskpane_origin = payload.platform.as_ref().and_then(|platform| platform.taskpane_origin.clone());
-        binding.taskpane_url = payload.platform.as_ref().and_then(|platform| platform.taskpane_url.clone());
-        binding.manifest_url = payload.platform.as_ref().and_then(|platform| platform.manifest_url.clone());
-        binding.platform_origin = payload.platform.as_ref().and_then(|platform| platform.platform_origin.clone());
-        binding.last_runtime_status = payload.runtime_state.as_ref().and_then(|state| state.status.clone());
-        binding.last_page_label = payload.runtime_state.as_ref().and_then(|state| state.page_label.clone());
-        binding.last_current_task = payload.runtime_state.as_ref().and_then(|state| state.current_task.clone());
-        binding.last_history_count = payload.runtime_state.as_ref().and_then(|state| state.history_count);
-        binding.connected = payload.runtime_state.as_ref().and_then(|state| state.connected).unwrap_or(true);
+        binding.taskpane_origin = payload
+            .platform
+            .as_ref()
+            .and_then(|platform| platform.taskpane_origin.clone());
+        binding.taskpane_url = payload
+            .platform
+            .as_ref()
+            .and_then(|platform| platform.taskpane_url.clone());
+        binding.manifest_url = payload
+            .platform
+            .as_ref()
+            .and_then(|platform| platform.manifest_url.clone());
+        binding.platform_origin = payload
+            .platform
+            .as_ref()
+            .and_then(|platform| platform.platform_origin.clone());
+        binding.last_runtime_status = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.status.clone());
+        binding.last_page_label = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.page_label.clone());
+        binding.last_current_task = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.current_task.clone());
+        binding.last_history_count = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.history_count);
+        binding.connected = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.connected)
+            .unwrap_or(true);
         binding.updated_at = now.clone();
         binding.last_seen_at = now.clone();
     } else {
@@ -308,40 +336,108 @@ async fn office_bootstrap(
             fingerprint: payload.document.fingerprint.clone(),
             project_id: payload.project_id.clone(),
             workspace_id: payload.workspace_id.clone(),
-            taskpane_origin: payload.platform.as_ref().and_then(|platform| platform.taskpane_origin.clone()),
-            taskpane_url: payload.platform.as_ref().and_then(|platform| platform.taskpane_url.clone()),
-            manifest_url: payload.platform.as_ref().and_then(|platform| platform.manifest_url.clone()),
-            platform_origin: payload.platform.as_ref().and_then(|platform| platform.platform_origin.clone()),
-            last_runtime_status: payload.runtime_state.as_ref().and_then(|state| state.status.clone()),
-            last_page_label: payload.runtime_state.as_ref().and_then(|state| state.page_label.clone()),
-            last_current_task: payload.runtime_state.as_ref().and_then(|state| state.current_task.clone()),
-            last_history_count: payload.runtime_state.as_ref().and_then(|state| state.history_count),
-            connected: payload.runtime_state.as_ref().and_then(|state| state.connected).unwrap_or(true),
+            taskpane_origin: payload
+                .platform
+                .as_ref()
+                .and_then(|platform| platform.taskpane_origin.clone()),
+            taskpane_url: payload
+                .platform
+                .as_ref()
+                .and_then(|platform| platform.taskpane_url.clone()),
+            manifest_url: payload
+                .platform
+                .as_ref()
+                .and_then(|platform| platform.manifest_url.clone()),
+            platform_origin: payload
+                .platform
+                .as_ref()
+                .and_then(|platform| platform.platform_origin.clone()),
+            last_runtime_status: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.status.clone()),
+            last_page_label: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.page_label.clone()),
+            last_current_task: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.current_task.clone()),
+            last_history_count: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.history_count),
+            connected: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.connected)
+                .unwrap_or(true),
             created_at: now.clone(),
             updated_at: now.clone(),
             last_seen_at: now.clone(),
         });
     }
 
-    let session_id = payload.session_id.unwrap_or_else(|| Uuid::new_v4().to_string());
-    if let Some(session) = data.sessions.iter_mut().find(|session| session.id == session_id) {
+    let session_id = payload
+        .session_id
+        .unwrap_or_else(|| Uuid::new_v4().to_string());
+    if let Some(session) = data
+        .sessions
+        .iter_mut()
+        .find(|session| session.id == session_id)
+    {
         session.binding_id = binding_id.clone();
-        session.status = payload.runtime_state.as_ref().and_then(|state| state.status.clone());
-        session.page_label = payload.runtime_state.as_ref().and_then(|state| state.page_label.clone());
-        session.current_task = payload.runtime_state.as_ref().and_then(|state| state.current_task.clone());
-        session.history_count = payload.runtime_state.as_ref().and_then(|state| state.history_count).unwrap_or(0);
-        session.connected = payload.runtime_state.as_ref().and_then(|state| state.connected).unwrap_or(true);
+        session.status = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.status.clone());
+        session.page_label = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.page_label.clone());
+        session.current_task = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.current_task.clone());
+        session.history_count = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.history_count)
+            .unwrap_or(0);
+        session.connected = payload
+            .runtime_state
+            .as_ref()
+            .and_then(|state| state.connected)
+            .unwrap_or(true);
         session.updated_at = now.clone();
         session.last_seen_at = now.clone();
     } else {
         data.sessions.push(OfficeRuntimeSession {
             id: session_id.clone(),
             binding_id: binding_id.clone(),
-            status: payload.runtime_state.as_ref().and_then(|state| state.status.clone()),
-            page_label: payload.runtime_state.as_ref().and_then(|state| state.page_label.clone()),
-            current_task: payload.runtime_state.as_ref().and_then(|state| state.current_task.clone()),
-            history_count: payload.runtime_state.as_ref().and_then(|state| state.history_count).unwrap_or(0),
-            connected: payload.runtime_state.as_ref().and_then(|state| state.connected).unwrap_or(true),
+            status: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.status.clone()),
+            page_label: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.page_label.clone()),
+            current_task: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.current_task.clone()),
+            history_count: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.history_count)
+                .unwrap_or(0),
+            connected: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.connected)
+                .unwrap_or(true),
             created_at: now.clone(),
             updated_at: now.clone(),
             last_seen_at: now.clone(),
@@ -383,7 +479,11 @@ async fn office_runtime_state(
     cleanup_stale_data(&mut data);
     let now = now_iso();
 
-    let Some(binding) = data.bindings.iter_mut().find(|binding| binding.id == payload.binding_id) else {
+    let Some(binding) = data
+        .bindings
+        .iter_mut()
+        .find(|binding| binding.id == payload.binding_id)
+    else {
         return Err((
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({ "error": "Office binding not found" })),
@@ -421,7 +521,11 @@ async fn office_runtime_state(
     binding.updated_at = now.clone();
     binding.last_seen_at = now.clone();
 
-    if let Some(session) = data.sessions.iter_mut().find(|session| session.id == payload.session_id) {
+    if let Some(session) = data
+        .sessions
+        .iter_mut()
+        .find(|session| session.id == payload.session_id)
+    {
         session.binding_id = payload.binding_id.clone();
         if let Some(runtime_state) = payload.runtime_state.as_ref() {
             session.status = runtime_state.status.clone();
@@ -436,11 +540,28 @@ async fn office_runtime_state(
         data.sessions.push(OfficeRuntimeSession {
             id: payload.session_id.clone(),
             binding_id: payload.binding_id.clone(),
-            status: payload.runtime_state.as_ref().and_then(|state| state.status.clone()),
-            page_label: payload.runtime_state.as_ref().and_then(|state| state.page_label.clone()),
-            current_task: payload.runtime_state.as_ref().and_then(|state| state.current_task.clone()),
-            history_count: payload.runtime_state.as_ref().and_then(|state| state.history_count).unwrap_or(0),
-            connected: payload.runtime_state.as_ref().and_then(|state| state.connected).unwrap_or(true),
+            status: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.status.clone()),
+            page_label: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.page_label.clone()),
+            current_task: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.current_task.clone()),
+            history_count: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.history_count)
+                .unwrap_or(0),
+            connected: payload
+                .runtime_state
+                .as_ref()
+                .and_then(|state| state.connected)
+                .unwrap_or(true),
             created_at: now.clone(),
             updated_at: now.clone(),
             last_seen_at: now.clone(),
@@ -499,7 +620,11 @@ async fn get_office_binding(
     Path(binding_id): Path<String>,
 ) -> Result<Json<OfficeBindingSingleResponse>, (StatusCode, Json<serde_json::Value>)> {
     let data = state.office_runtime.read().await;
-    let Some(binding) = data.bindings.iter().find(|binding| binding.id == binding_id) else {
+    let Some(binding) = data
+        .bindings
+        .iter()
+        .find(|binding| binding.id == binding_id)
+    else {
         return Err((
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({ "error": "Office binding not found" })),

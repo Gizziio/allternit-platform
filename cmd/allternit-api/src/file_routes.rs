@@ -54,20 +54,27 @@ struct FileEntry {
     modified_at: Option<String>,
 }
 
-async fn list_files(
-    headers: HeaderMap,
-    Query(params): Query<PathQuery>,
-) -> impl IntoResponse {
+async fn list_files(headers: HeaderMap, Query(params): Query<PathQuery>) -> impl IntoResponse {
     let resolved = resolve_path(&params.path, &caller_id(&headers));
     let _meta = match tokio::fs::metadata(&resolved).await {
         Ok(m) if m.is_dir() => m,
-        _ => return (StatusCode::NOT_FOUND, Json(json!({"error": "Cannot list directory"}))),
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Cannot list directory"})),
+            )
+        }
     };
 
     let mut entries = vec![];
     let mut read_dir = match tokio::fs::read_dir(&resolved).await {
         Ok(d) => d,
-        Err(_) => return (StatusCode::NOT_FOUND, Json(json!({"error": "Cannot list directory"}))),
+        Err(_) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Cannot list directory"})),
+            )
+        }
     };
 
     while let Ok(Some(entry)) = read_dir.next_entry().await {
@@ -81,33 +88,39 @@ async fn list_files(
         let (size, modified_at) = match tokio::fs::metadata(&entry.path()).await {
             Ok(m) => (
                 Some(m.len()),
-                m.modified().ok().map(|t| {
-                    chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()
-                }),
+                m.modified()
+                    .ok()
+                    .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()),
             ),
             Err(_) => (None, None),
         };
-        entries.push(FileEntry { name, path, entry_type: entry_type.to_string(), size, modified_at });
+        entries.push(FileEntry {
+            name,
+            path,
+            entry_type: entry_type.to_string(),
+            size,
+            modified_at,
+        });
     }
 
-    (StatusCode::OK, Json(json!({"path": resolved.to_string_lossy().to_string(), "entries": entries})))
+    (
+        StatusCode::OK,
+        Json(json!({"path": resolved.to_string_lossy().to_string(), "entries": entries})),
+    )
 }
 
-async fn read_file(
-    headers: HeaderMap,
-    Query(params): Query<PathQuery>,
-) -> impl IntoResponse {
+async fn read_file(headers: HeaderMap, Query(params): Query<PathQuery>) -> impl IntoResponse {
     let resolved = resolve_path(&params.path, &caller_id(&headers));
     match tokio::fs::read_to_string(&resolved).await {
         Ok(content) => (StatusCode::OK, Json(json!({"content": content}))),
-        Err(_) => (StatusCode::NOT_FOUND, Json(json!({"error": "Cannot read file"}))),
+        Err(_) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Cannot read file"})),
+        ),
     }
 }
 
-async fn raw_file(
-    headers: HeaderMap,
-    Query(params): Query<PathQuery>,
-) -> Response {
+async fn raw_file(headers: HeaderMap, Query(params): Query<PathQuery>) -> Response {
     let resolved = resolve_path(&params.path, &caller_id(&headers));
     let is_file = tokio::fs::metadata(&resolved)
         .await
@@ -125,10 +138,7 @@ async fn raw_file(
     }
 }
 
-async fn file_exists(
-    headers: HeaderMap,
-    Query(params): Query<PathQuery>,
-) -> Response {
+async fn file_exists(headers: HeaderMap, Query(params): Query<PathQuery>) -> Response {
     let resolved = resolve_path(&params.path, &caller_id(&headers));
     if resolved.exists() {
         StatusCode::OK.into_response()
@@ -137,35 +147,34 @@ async fn file_exists(
     }
 }
 
-async fn mkdir(
-    headers: HeaderMap,
-    Query(params): Query<PathQuery>,
-) -> impl IntoResponse {
+async fn mkdir(headers: HeaderMap, Query(params): Query<PathQuery>) -> impl IntoResponse {
     let resolved = resolve_path(&params.path, &caller_id(&headers));
     match tokio::fs::create_dir_all(&resolved).await {
         Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Cannot create directory"}))),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "Cannot create directory"})),
+        ),
     }
 }
 
-async fn delete_file(
-    headers: HeaderMap,
-    Query(params): Query<PathQuery>,
-) -> impl IntoResponse {
+async fn delete_file(headers: HeaderMap, Query(params): Query<PathQuery>) -> impl IntoResponse {
     let resolved = resolve_path(&params.path, &caller_id(&headers));
     match tokio::fs::metadata(&resolved).await {
-        Ok(m) if m.is_dir() => {
-            match tokio::fs::remove_dir_all(&resolved).await {
-                Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
-                Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Cannot delete"}))),
-            }
-        }
-        Ok(_) => {
-            match tokio::fs::remove_file(&resolved).await {
-                Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
-                Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Cannot delete"}))),
-            }
-        }
+        Ok(m) if m.is_dir() => match tokio::fs::remove_dir_all(&resolved).await {
+            Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Cannot delete"})),
+            ),
+        },
+        Ok(_) => match tokio::fs::remove_file(&resolved).await {
+            Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Cannot delete"})),
+            ),
+        },
         Err(_) => (StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))),
     }
 }
@@ -190,7 +199,10 @@ async fn write_file(
 
     match tokio::fs::write(&resolved, body.content).await {
         Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Cannot write file"}))),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "Cannot write file"})),
+        ),
     }
 }
 

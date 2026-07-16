@@ -316,6 +316,15 @@ function parseLineArray(value: string[]): string[] {
   return value.map((v) => v.trim()).filter(Boolean);
 }
 
+// `a || b` treats [] as truthy, so an explicitly-empty seed array (e.g. the
+// canonical buildCharacterLayer() factory always sets relevantStats: [],
+// roleCard.escalation: [], etc.) permanently wins over the setup's real
+// defaults instead of falling back to them. Fall back whenever the seed has
+// no actual entries.
+function preferNonEmpty(value: string[] | undefined, fallback: string[]): string[] {
+  return value && value.length > 0 ? value : fallback;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -1461,11 +1470,11 @@ function normalizeCharacterLayer(
       ...setupFallback.roleCard,
       ...(config.roleCard || {}),
       agentId,
-      inputs: parseLineArray(config.roleCard?.inputs || setupFallback.roleCard.inputs),
-      outputs: parseLineArray(config.roleCard?.outputs || setupFallback.roleCard.outputs),
-      definitionOfDone: parseLineArray(config.roleCard?.definitionOfDone || setupFallback.roleCard.definitionOfDone),
-      escalation: parseLineArray(config.roleCard?.escalation || setupFallback.roleCard.escalation),
-      metrics: parseLineArray(config.roleCard?.metrics || setupFallback.roleCard.metrics),
+      inputs: parseLineArray(preferNonEmpty(config.roleCard?.inputs, setupFallback.roleCard.inputs)),
+      outputs: parseLineArray(preferNonEmpty(config.roleCard?.outputs, setupFallback.roleCard.outputs)),
+      definitionOfDone: parseLineArray(preferNonEmpty(config.roleCard?.definitionOfDone, setupFallback.roleCard.definitionOfDone)),
+      escalation: parseLineArray(preferNonEmpty(config.roleCard?.escalation, setupFallback.roleCard.escalation)),
+      metrics: parseLineArray(preferNonEmpty(config.roleCard?.metrics, setupFallback.roleCard.metrics)),
       hardBans: (config.roleCard?.hardBans || setupFallback.roleCard.hardBans).map((ban, idx) => ({
         ...ban,
         id: ban.id || `ban-${idx + 1}`,
@@ -1475,11 +1484,11 @@ function normalizeCharacterLayer(
     voice: {
       ...setupFallback.voice,
       ...(config.voice || {}),
-      rules: parseLineArray(config.voice?.rules || setupFallback.voice.rules),
-      microBans: parseLineArray(config.voice?.microBans || setupFallback.voice.microBans),
+      rules: parseLineArray(preferNonEmpty(config.voice?.rules, setupFallback.voice.rules)),
+      microBans: parseLineArray(preferNonEmpty(config.voice?.microBans, setupFallback.voice.microBans)),
       conflictBias: {
         prefersChallengeWith: parseLineArray(
-          config.voice?.conflictBias?.prefersChallengeWith || setupFallback.voice.conflictBias.prefersChallengeWith,
+          preferNonEmpty(config.voice?.conflictBias?.prefersChallengeWith, setupFallback.voice.conflictBias.prefersChallengeWith),
         ),
       },
     },
@@ -1500,7 +1509,7 @@ function normalizeCharacterLayer(
         ...setupFallback.progression.stats,
         ...(config.progression?.stats || {}),
       },
-      relevantStats: parseLineArray(config.progression?.relevantStats || setupFallback.progression.relevantStats),
+      relevantStats: parseLineArray(preferNonEmpty(config.progression?.relevantStats, setupFallback.progression.relevantStats)),
       level: {
         maxLevel: Number(config.progression?.level?.maxLevel ?? setupFallback.progression.level.maxLevel),
         xpFormula: config.progression?.level?.xpFormula || setupFallback.progression.level.xpFormula,

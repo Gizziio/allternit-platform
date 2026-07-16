@@ -8,7 +8,8 @@ export type CanonicalAgentModeId =
   | 'data'
   | 'slides'
   | 'image'
-  | 'video';
+  | 'video'
+  | 'code';
 
 export type AgentArtifactKind =
   | 'swarm-run'
@@ -18,7 +19,8 @@ export type AgentArtifactKind =
   | 'spreadsheet'
   | 'presentation'
   | 'image'
-  | 'video';
+  | 'video'
+  | 'code';
 
 export interface AgentModeContract {
   id: CanonicalAgentModeId;
@@ -96,6 +98,12 @@ export const AGENT_MODE_CONTRACTS: Record<CanonicalAgentModeId, AgentModeContrac
     requiredCapabilities: ['video_generation'],
     requiredEvidence: ['artifact', 'tool-call'],
     systemPrompt: `You are executing Video mode. Call a validated video-generation provider and return a playable video artifact with the requested duration and format. A storyboard, EDL, or prose description alone is not completion.${COMPLETION_LAW}`,
+  },
+  code: {
+    id: 'code', label: 'Code', artifactKind: 'code',
+    requiredCapabilities: ['file_write', 'code_execution'],
+    requiredEvidence: ['artifact', 'tool-call'],
+    systemPrompt: `You are executing Code mode. Make real, runnable changes to the workspace—edit or create files, run builds or tests as needed, and report the concrete files touched with a diff summary. A prose description of code is not completion.${COMPLETION_LAW}`,
   },
 };
 

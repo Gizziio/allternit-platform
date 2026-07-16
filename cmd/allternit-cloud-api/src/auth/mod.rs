@@ -3,10 +3,11 @@
 //! Provides middleware for token validation, permission checking,
 //! and development mode bypass capabilities.
 
+pub mod clerk;
 pub mod middleware;
-pub mod permissions;
 pub mod models;
+pub mod permissions;
 
-pub use middleware::{AuthLayer, AuthMiddleware, AuthContext};
+pub use middleware::{AuthContext, AuthLayer, AuthMiddleware};
+pub use models::{ApiToken, AuthenticatedUser, TokenInfo};
 pub use permissions::{Permission, PermissionChecker};
-pub use models::{ApiToken, TokenInfo, AuthenticatedUser};

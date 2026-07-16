@@ -49,7 +49,12 @@ async fn web_proxy(Query(query): Query<WebProxyQuery>) -> Response {
         .build()
     {
         Ok(client) => client,
-        Err(_) => return json_error(StatusCode::INTERNAL_SERVER_ERROR, "Failed to build proxy client"),
+        Err(_) => {
+            return json_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to build proxy client",
+            )
+        }
     };
 
     let upstream = match client
@@ -99,7 +104,11 @@ async fn web_proxy(Query(query): Query<WebProxyQuery>) -> Response {
             Err(_) => return json_error(StatusCode::BAD_GATEWAY, "Failed to read response body"),
         };
 
-        return (StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::BAD_GATEWAY), headers, body)
+        return (
+            StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::BAD_GATEWAY),
+            headers,
+            body,
+        )
             .into_response();
     }
 
@@ -121,7 +130,10 @@ async fn web_proxy(Query(query): Query<WebProxyQuery>) -> Response {
     {
         body_text = body_text.replace("sso_reload=True", "");
         body_text = body_text.replace("\"reloadOnFailure\":true", "\"reloadOnFailure\":false");
-        body_text = body_text.replace("\"enabled\":true,\"type\":\"chrome\",\"reason\":\"Pull is needed\"", "\"enabled\":false,\"type\":\"chrome\",\"reason\":\"Disabled by embedded proxy\"");
+        body_text = body_text.replace(
+            "\"enabled\":true,\"type\":\"chrome\",\"reason\":\"Pull is needed\"",
+            "\"enabled\":false,\"type\":\"chrome\",\"reason\":\"Disabled by embedded proxy\"",
+        );
     }
 
     for pattern in [
@@ -188,7 +200,10 @@ async fn web_proxy(Query(query): Query<WebProxyQuery>) -> Response {
     if let Some(idx) = body_text.find("<head>") {
         body_text.insert_str(idx + "<head>".len(), &injected_head);
     } else if let Some(idx) = body_text.find("<html>") {
-        body_text.insert_str(idx + "<html>".len(), &format!("<head>{}</head>", injected_head));
+        body_text.insert_str(
+            idx + "<html>".len(),
+            &format!("<head>{}</head>", injected_head),
+        );
     } else {
         body_text = format!("<head>{}</head>{}", injected_head, body_text);
     }

@@ -20,9 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   getActiveWorkspace,
-  getActiveSession,
   type CodeWorkspaceRecord,
-  type CodeSessionRecord,
   type CodeSessionMode,
 } from './CodeModeStore';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -37,7 +35,7 @@ export const CODE_SESSION_MODE_LABELS: Record<CodeSessionMode, string> = {
 
 interface CodeWorkspaceBarProps {
   activeWorkspace: ReturnType<typeof getActiveWorkspace>;
-  activeSession: ReturnType<typeof getActiveSession>;
+  worktreeEnabled: boolean;
   activeWorkspaceId: string;
   workspaces: CodeWorkspaceRecord[];
   workspaceReady: boolean;
@@ -57,7 +55,7 @@ const TEXT_PRIMARY = 'var(--text-primary)';
 
 export function CodeWorkspaceBar({
   activeWorkspace,
-  activeSession,
+  worktreeEnabled,
   activeWorkspaceId,
   workspaces,
   workspaceReady,
@@ -70,7 +68,6 @@ export function CodeWorkspaceBar({
 }: CodeWorkspaceBarProps): React.ReactNode {
   const branch = activeWorkspace?.repo_status?.branch ?? 'main';
   const displayName = activeWorkspace?.display_name ?? 'Workspace';
-  const worktreeEnabled = activeSession?.isolation === 'worktree';
   const branchList = branches && branches.length > 0 ? branches : [branch];
 
   return (

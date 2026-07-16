@@ -10,13 +10,16 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{info, warn};
 
+use crate::auth::{get_user, AuthUser};
 use crate::AppState;
-use crate::auth::{AuthUser, get_user};
 
 pub fn mcp_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/oauth/callback", get(mcp_oauth_callback))
-        .route("/connectors", get(list_mcp_connectors).post(create_mcp_connector))
+        .route(
+            "/connectors",
+            get(list_mcp_connectors).post(create_mcp_connector),
+        )
         .route("/test", post(test_mcp_connection))
 }
 
@@ -301,7 +304,6 @@ fn render_html(title: &str, message: &str, close_window: bool) -> Html<String> {
     ))
 }
 
-
 #[derive(Serialize)]
 struct McpConnectorRow {
     id: String,
@@ -325,7 +327,12 @@ async fn list_mcp_connectors(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "Unauthorized"})),
+            )
+        }
     };
 
     let db = state.db.clone();
@@ -335,34 +342,45 @@ async fn list_mcp_connectors(
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, name, name_id, url, type, oauth_client_id, enabled, created_at, updated_at
-             FROM mcp_connectors WHERE user_id = ?1 ORDER BY created_at DESC"
+             FROM mcp_connectors WHERE user_id = ?1 ORDER BY created_at DESC",
         )?;
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok(McpConnectorRow {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                name_id: row.get(2)?,
-                url: row.get(3)?,
-                connector_type: row.get(4)?,
-                oauth_client_id: row.get(5)?,
-                enabled: row.get::<_, i64>(6)? != 0,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![user_id], |row| {
+                Ok(McpConnectorRow {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    name_id: row.get(2)?,
+                    url: row.get(3)?,
+                    connector_type: row.get(4)?,
+                    oauth_client_id: row.get(5)?,
+                    enabled: row.get::<_, i64>(6)? != 0,
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
-    }).await;
+    })
+    .await;
 
     match rows {
-        Ok(Ok(data)) => (StatusCode::OK, Json(serde_json::json!({"connectors": data, "total": data.len()}))),
+        Ok(Ok(data)) => (
+            StatusCode::OK,
+            Json(serde_json::json!({"connectors": data, "total": data.len()})),
+        ),
         Ok(Err(e)) => {
             warn!("DB error listing MCP connectors: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -388,7 +406,12 @@ async fn create_mcp_connector(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "Unauthorized"})),
+            )
+        }
     };
 
     let db = state.db.clone();
@@ -416,14 +439,23 @@ async fn create_mcp_connector(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(serde_json::json!({"id": id, "status": "created"}))),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(serde_json::json!({"id": id, "status": "created"})),
+        ),
         Ok(Err(e)) => {
             warn!("DB error creating MCP connector: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -463,17 +495,13 @@ async fn test_mcp_connection(
                 }))
             }
         }
-        Ok(res) => {
-            Json(serde_json::json!({
-                "success": false,
-                "message": format!("MCP server returned status {}", res.status()),
-            }))
-        }
-        Err(e) => {
-            Json(serde_json::json!({
-                "success": false,
-                "message": format!("Connection failed: {}", e),
-            }))
-        }
+        Ok(res) => Json(serde_json::json!({
+            "success": false,
+            "message": format!("MCP server returned status {}", res.status()),
+        })),
+        Err(e) => Json(serde_json::json!({
+            "success": false,
+            "message": format!("Connection failed: {}", e),
+        })),
     }
 }

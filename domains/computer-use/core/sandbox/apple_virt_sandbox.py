@@ -24,8 +24,8 @@ class AppleVirtSandbox(BaseSandbox):
     """
     Sandbox using Apple Virtualization.framework.
 
-    Communicates with a compiled Swift helper via JSON stdio. If the helper
-    binary is absent or unavailable, falls back transparently to ProcessSandbox.
+    Communicates with a compiled Swift helper via JSON stdio. Process fallback
+    is disabled by default and must be explicitly opted into by legacy callers.
 
     JSON protocol:
       stdin  → {"action": "start"|"run"|"stop", ...args}
@@ -44,6 +44,15 @@ class AppleVirtSandbox(BaseSandbox):
 
     def _use_fallback(self) -> bool:
         return self._fallback is not None
+
+    def _allow_fallback(self) -> bool:
+        return bool(self.config.extra.get("allow_process_fallback", False))
+
+    async def _fallback_or_raise(self, reason: str) -> str:
+        if not self._allow_fallback():
+            raise RuntimeError(f"Apple virtualization unavailable and process fallback is disabled: {reason}")
+        self._fallback = ProcessSandbox(self.config)
+        return await self._fallback.start()
 
     async def _send(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Send a JSON request to the Swift helper and read one JSON response."""
@@ -85,8 +94,7 @@ class AppleVirtSandbox(BaseSandbox):
 
     async def start(self) -> str:
         if not APPLE_VIRT_AVAILABLE or not _HELPER_PATH.exists():
-            self._fallback = ProcessSandbox(self.config)
-            return await self._fallback.start()
+            return await self._fallback_or_raise("virtualization helper unavailable")
 
         await self._start_helper()
 
@@ -101,8 +109,7 @@ class AppleVirtSandbox(BaseSandbox):
         if response.get("status") != "running":
             # Helper reported an error — fall back gracefully.
             await self._stop_helper()
-            self._fallback = ProcessSandbox(self.config)
-            return await self._fallback.start()
+            return await self._fallback_or_raise(str(response.get("error", "helper failed to start")))
 
         self._sandbox_id = response.get("sandbox_id", str(uuid.uuid4())[:8])
         return self._sandbox_id

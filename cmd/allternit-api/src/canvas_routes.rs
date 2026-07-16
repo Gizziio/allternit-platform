@@ -16,8 +16,8 @@ use std::sync::Arc;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 #[derive(Debug, Deserialize)]
 struct CreateCanvasPayload {
@@ -51,8 +51,14 @@ struct CanvasResponse {
 
 pub fn canvas_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/agent-sessions/:session_id/canvases", get(list_canvases).post(create_canvas))
-        .route("/canvases/:canvas_id", get(get_canvas).patch(update_canvas).delete(delete_canvas))
+        .route(
+            "/agent-sessions/:session_id/canvases",
+            get(list_canvases).post(create_canvas),
+        )
+        .route(
+            "/canvases/:canvas_id",
+            get(get_canvas).patch(update_canvas).delete(delete_canvas),
+        )
 }
 
 async fn list_canvases(
@@ -63,7 +69,10 @@ async fn list_canvases(
         Ok(c) => c,
         Err(e) => {
             warn!(error = %e, "Failed to connect to database");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })));
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            );
         }
     };
 
@@ -83,9 +92,15 @@ async fn list_canvases(
             id: row.get(0)?,
             session_id: row.get(1)?,
             title: row.get(3)?,
-            components: parse_json_column(row.get::<_, String>(4).unwrap_or_else(|_| "[]".to_string())),
-            layout: row.get::<_, Option<String>>(5)?.map(parse_json_column_optional),
-            metadata: row.get::<_, Option<String>>(6)?.map(parse_json_column_optional),
+            components: parse_json_column(
+                row.get::<_, String>(4).unwrap_or_else(|_| "[]".to_string()),
+            ),
+            layout: row
+                .get::<_, Option<String>>(5)?
+                .map(parse_json_column_optional),
+            metadata: row
+                .get::<_, Option<String>>(6)?
+                .map(parse_json_column_optional),
             created_at: row.get(7)?,
             updated_at: row.get(8)?,
         })
@@ -98,7 +113,10 @@ async fn list_canvases(
         }
         Err(e) => {
             warn!(error = %e, "Failed to list canvases");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            )
         }
     }
 }
@@ -121,7 +139,10 @@ async fn create_canvas(
         Ok(c) => c,
         Err(e) => {
             warn!(error = %e, "Failed to connect to database");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })));
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            );
         }
     };
 
@@ -159,7 +180,10 @@ async fn get_canvas(
         Ok(c) => c,
         Err(e) => {
             warn!(error = %e, "Failed to connect to database");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })));
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            );
         }
     };
 
@@ -183,12 +207,16 @@ async fn get_canvas(
 
     match result {
         Ok(canvas) => (StatusCode::OK, Json(json!(canvas))),
-        Err(rusqlite::Error::QueryReturnedNoRows) => {
-            (StatusCode::NOT_FOUND, Json(json!({"error": "Canvas not found" })))
-        }
+        Err(rusqlite::Error::QueryReturnedNoRows) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Canvas not found" })),
+        ),
         Err(e) => {
             warn!(error = %e, "Failed to get canvas");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            )
         }
     }
 }
@@ -202,7 +230,10 @@ async fn update_canvas(
         Ok(c) => c,
         Err(e) => {
             warn!(error = %e, "Failed to connect to database");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })));
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            );
         }
     };
 
@@ -222,18 +253,30 @@ async fn update_canvas(
     let (existing_title, existing_components, existing_layout, existing_metadata) = match existing {
         Ok(v) => v,
         Err(rusqlite::Error::QueryReturnedNoRows) => {
-            return (StatusCode::NOT_FOUND, Json(json!({"error": "Canvas not found" })));
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Canvas not found" })),
+            );
         }
         Err(e) => {
             warn!(error = %e, "Failed to fetch canvas for update");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })));
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            );
         }
     };
 
     let title = payload.title.or(existing_title);
-    let components = payload.components.map(|v| v.to_string()).unwrap_or(existing_components);
+    let components = payload
+        .components
+        .map(|v| v.to_string())
+        .unwrap_or(existing_components);
     let layout = payload.layout.map(|v| v.to_string()).or(existing_layout);
-    let metadata = payload.metadata.map(|v| v.to_string()).or(existing_metadata);
+    let metadata = payload
+        .metadata
+        .map(|v| v.to_string())
+        .or(existing_metadata);
     let now = chrono::Utc::now().to_rfc3339();
 
     match conn.execute(
@@ -256,16 +299,25 @@ async fn delete_canvas(
         Ok(c) => c,
         Err(e) => {
             warn!(error = %e, "Failed to connect to database");
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })));
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            );
         }
     };
 
     match conn.execute("DELETE FROM agent_canvases WHERE id = ?1", [&canvas_id]) {
-        Ok(0) => (StatusCode::NOT_FOUND, Json(json!({"error": "Canvas not found" }))),
+        Ok(0) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Canvas not found" })),
+        ),
         Ok(_) => (StatusCode::NO_CONTENT, Json(json!({}))),
         Err(e) => {
             warn!(error = %e, "Failed to delete canvas");
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error" })))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error" })),
+            )
         }
     }
 }

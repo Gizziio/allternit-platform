@@ -2,12 +2,15 @@
  * Gizzi Code Always-On Daemon Manager
  *
  * Detects, installs, and controls the background `gizzi-code serve` service
- * used for cloud-domain routines and loops. This is separate from the
- * per-session AI runtime started by GizziManager.
+ * used for cloud-domain routines and loops. Because it owns the canonical
+ * Gizzi port, the desktop runtime adopts this process when it is installed
+ * instead of starting a competing per-session server.
  */
 
 import { spawn, execFile, ChildProcess } from 'child_process';
 import * as fs from 'fs';
+import * as http from 'http';
+import * as https from 'https';
 import * as path from 'path';
 import * as os from 'os';
 import log from 'electron-log';
@@ -51,7 +54,7 @@ function execFilePromise(file: string, args: string[]): Promise<{ stdout: string
 function isUrlReachable(url: string, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
     const parsed = new URL(url);
-    const client = parsed.protocol === 'https:' ? require('node:https') : require('node:http');
+    const client = parsed.protocol === 'https:' ? https : http;
     const req = client.get(url, { timeout: timeoutMs }, (res: any) => {
       resolve(res.statusCode >= 200 && res.statusCode < 500);
       res.destroy();
@@ -145,10 +148,62 @@ export class GizziDaemonManager {
   }
 
   /**
+   * Read the Basic-auth password persisted by the service installer without
+   * logging or exposing it through renderer IPC. An empty value means the
+   * loopback daemon is intentionally unsecured.
+   */
+  async getConnectionPassword(): Promise<string | null> {
+    const platform = getPlatform();
+
+    if (platform === 'macos') {
+      const plistPath = path.join(os.homedir(), 'Library/LaunchAgents/com.allternit.gizzi.plist');
+      if (!fs.existsSync(plistPath)) return null;
+
+      // Prefer the credential held by the currently loaded LaunchAgent. This
+      // also covers the brief migration window where the plist was rewritten
+      // but launchd is still running the previous configuration.
+      try {
+        const uid = typeof process.getuid === 'function' ? process.getuid() : os.userInfo().uid;
+        const { stdout } = await execFilePromise('/bin/launchctl', [
+          'print',
+          `gui/${uid}/com.allternit.gizzi`,
+        ]);
+        const loaded = stdout.match(/^\s*GIZZI_SERVER_PASSWORD =>\s*(.*)$/m);
+        if (loaded) return loaded[1].trim() || null;
+      } catch {
+        // The service may be installed but not loaded; fall back to its plist.
+      }
+
+      try {
+        const { stdout } = await execFilePromise('/usr/libexec/PlistBuddy', [
+          '-c',
+          'Print :EnvironmentVariables:GIZZI_SERVER_PASSWORD',
+          plistPath,
+        ]);
+        return stdout.trim() || null;
+      } catch {
+        return null;
+      }
+    }
+
+    if (platform === 'linux') {
+      try {
+        const service = fs.readFileSync('/etc/systemd/system/allternit-gizzi.service', 'utf8');
+        const match = service.match(/^Environment="GIZZI_SERVER_PASSWORD=(.*)"$/m);
+        return match?.[1] || null;
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Install and start the daemon using the bundled wizard.
    * In unattended mode (e.g. from settings), call with explicit env.
    */
-  async install(password: string, apiUrl: string = URLS.API): Promise<void> {
+  async install(password: string | null = null, apiUrl: string = URLS.API): Promise<void> {
     const platform = getPlatform();
     if (platform === 'windows') {
       throw new Error('Windows daemon install is not yet implemented.');
@@ -173,7 +228,7 @@ export class GizziDaemonManager {
         ...process.env,
         GIZZI_DAEMON_UNATTENDED: 'true',
         GIZZI_BINARY: binary,
-        GIZZI_SERVER_PASSWORD: password,
+        GIZZI_SERVER_PASSWORD: password ?? '',
         ALLTERNIT_API_URL: apiUrl,
       };
 

@@ -4,8 +4,8 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 use crate::{ApiError, ApiState};
 
@@ -41,7 +41,7 @@ pub async fn list_providers(
             automated: false,
         },
     ];
-    
+
     Ok(Json(providers))
 }
 
@@ -53,9 +53,9 @@ pub async fn validate_credentials(
 ) -> Result<Json<ValidateCredentialsResponse>, ApiError> {
     // In production, actually validate with provider API
     // For now, just check if credentials are non-empty
-    
+
     let valid = !request.api_key.is_empty() && !request.api_secret.is_empty();
-    
+
     Ok(Json(ValidateCredentialsResponse {
         provider_id,
         valid,

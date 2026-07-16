@@ -3,7 +3,7 @@
 "use client";
 
 import React from 'react';
-import type { Agent, CharacterStats } from '@/lib/agents/agent.types';
+import type { Agent } from '@/lib/agents/agent.types';
 import { OverviewTab } from './tabs/OverviewTab';
 import { RunsTab } from './tabs/RunsTab';
 import { TasksTab } from './tabs/TasksTab';
@@ -22,13 +22,12 @@ type TabId = 'overview' | 'runs' | 'tasks' | 'checkpoints' | 'tools' | 'comms' |
 interface TabContentProps {
   tabId: TabId;
   agent: Agent;
-  stats?: CharacterStats;
 }
 
-export const TabContent = ({ tabId, agent, stats }: TabContentProps) => {
+export const TabContent = ({ tabId, agent }: TabContentProps) => {
   switch (tabId) {
     case 'overview':
-      return <OverviewTab agent={agent} stats={stats} />;
+      return <OverviewTab agent={agent} />;
     case 'runs':
       return <RunsTab agent={agent} />;
     case 'tasks':

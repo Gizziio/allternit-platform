@@ -100,7 +100,12 @@ vi.mock('@/components/ai-elements/shimmer', () => ({
 }));
 
 vi.mock('./CodeUsageDashboard', () => ({
-  CodeUsageDashboard: () => <div data-testid="code-usage-dashboard">Usage Dashboard</div>,
+  CodeUsageDashboard: ({ onClose }: { onClose?: () => void }) => (
+    <div data-testid="code-usage-dashboard">
+      Usage Dashboard
+      <button type="button" onClick={onClose}>Close usage</button>
+    </div>
+  ),
 }));
 
 import { createCodeModeFixtureState, useCodeModeStore, type CodeWorkspaceRecord } from './CodeModeStore';
@@ -224,6 +229,17 @@ describe('CodeCanvas', () => {
   it('renders usage stats on the landing page', async () => {
     renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
 
+    expect(await screen.findByTestId('code-usage-dashboard')).toBeInTheDocument();
+    expect(screen.queryByTestId('code-launchpad-actions')).not.toBeInTheDocument();
+  });
+
+  it('replaces closed usage stats with a control that restores them', async () => {
+    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Close usage' }));
+    expect(screen.queryByTestId('code-usage-dashboard')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('code-show-usage'));
     expect(await screen.findByTestId('code-usage-dashboard')).toBeInTheDocument();
   });
 });

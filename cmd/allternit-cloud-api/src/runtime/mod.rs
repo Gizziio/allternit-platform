@@ -2,11 +2,11 @@
 //!
 //! Provides a unified interface for local VM and remote VPS execution.
 
+pub mod cloud_runtime;
 pub mod local_runtime;
 pub mod remote_runtime;
-pub mod cloud_runtime;
-pub mod vm_bridge;
 pub mod session_manager;
+pub mod vm_bridge;
 
 use crate::db::cowork_models::*;
 use crate::error::ApiError;
@@ -41,25 +41,30 @@ pub struct ConnectionInfo {
 pub trait Runtime: Send + Sync {
     /// Start a run on this runtime
     async fn start(&self, run_id: &str, config: &RunConfig) -> Result<RuntimeHandle, ApiError>;
-    
+
     /// Stop a run
     async fn stop(&self, runtime_id: &str) -> Result<(), ApiError>;
-    
+
     /// Get status of a run
     async fn status(&self, runtime_id: &str) -> Result<RuntimeStatus, ApiError>;
-    
+
     /// Attach to a running run (returns event stream)
     async fn attach(&self, runtime_id: &str, client: ClientInfo) -> Result<EventStream, ApiError>;
-    
+
     /// Detach a client
     async fn detach(&self, runtime_id: &str, client_id: &str) -> Result<(), ApiError>;
-    
+
     /// Execute a command on the runtime
-    async fn exec(&self, runtime_id: &str, command: &str, args: &[&str]) -> Result<ExecResult, ApiError>;
-    
+    async fn exec(
+        &self,
+        runtime_id: &str,
+        command: &str,
+        args: &[&str],
+    ) -> Result<ExecResult, ApiError>;
+
     /// Pause execution
     async fn pause(&self, runtime_id: &str) -> Result<(), ApiError>;
-    
+
     /// Resume execution
     async fn resume(&self, runtime_id: &str) -> Result<(), ApiError>;
 }
@@ -157,7 +162,7 @@ impl RuntimeFactory {
                     Ok(Box::new(runtime))
                 } else {
                     Err(ApiError::Internal(
-                        "Cloud runtime requires HETZNER_API_TOKEN environment variable".to_string()
+                        "Cloud runtime requires HETZNER_API_TOKEN environment variable".to_string(),
                     ))
                 }
             }
@@ -173,7 +178,9 @@ impl RuntimeFactory {
 #[derive(Debug, Clone)]
 pub enum ApprovalResult {
     /// Action was approved, may include modified parameters
-    Approved { modified_params: Option<serde_json::Value> },
+    Approved {
+        modified_params: Option<serde_json::Value>,
+    },
     /// Action was denied
     Denied { reason: Option<String> },
     /// Approval request timed out
@@ -237,10 +244,7 @@ pub trait ApprovalHook: Send + Sync {
     /// Cancel a pending approval request
     ///
     /// Called when a run is stopped or the action is no longer needed.
-    async fn cancel_approval(
-        &self,
-        approval_id: &str,
-    ) -> Result<(), ApiError>;
+    async fn cancel_approval(&self, approval_id: &str) -> Result<(), ApiError>;
 }
 
 /// Options for approval requests
@@ -313,7 +317,7 @@ impl ApprovalAwareRuntime {
     ) -> Result<ExecResult, ApiError> {
         // Determine if this command requires approval
         let action_type = Self::classify_command(command, args);
-        
+
         // Build action params
         let action_params = serde_json::json!({
             "command": command,
@@ -322,7 +326,8 @@ impl ApprovalAwareRuntime {
 
         // Request approval for sensitive commands
         if Self::requires_approval(&action_type) {
-            let result = self.approval_hook
+            let result = self
+                .approval_hook
                 .request_approval(
                     &self.run_id,
                     &action_type,
@@ -335,35 +340,43 @@ impl ApprovalAwareRuntime {
                 ApprovalResult::Approved { modified_params } => {
                     // Use modified params if provided
                     let (cmd, args) = if let Some(params) = modified_params {
-                        let cmd = params.get("command").and_then(|c| c.as_str()).map(|s| s.to_string()).unwrap_or_else(|| command.to_string());
-                        let args: Vec<String> = params.get("args")
+                        let cmd = params
+                            .get("command")
+                            .and_then(|c| c.as_str())
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| command.to_string());
+                        let args: Vec<String> = params
+                            .get("args")
                             .and_then(|a| a.as_array())
-                            .map(|arr| arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect())
+                            .map(|arr| {
+                                arr.iter()
+                                    .filter_map(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                                    .collect()
+                            })
                             .unwrap_or_else(|| args.iter().map(|&s| s.to_string()).collect());
                         (cmd, args)
                     } else {
-                        (command.to_string(), args.iter().map(|&s| s.to_string()).collect())
+                        (
+                            command.to_string(),
+                            args.iter().map(|&s| s.to_string()).collect(),
+                        )
                     };
-                    
+
                     // Execute with the (possibly modified) command
                     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
                     self.runtime.exec(&self.run_id, &cmd, &args_refs).await
                 }
-                ApprovalResult::Denied { reason } => {
-                    Err(ApiError::BadRequest(
-                        format!("Command denied: {}", reason.unwrap_or_default())
-                    ))
-                }
-                ApprovalResult::TimedOut => {
-                    Err(ApiError::BadRequest(
-                        "Approval request timed out".to_string()
-                    ))
-                }
-                ApprovalResult::Cancelled => {
-                    Err(ApiError::BadRequest(
-                        "Approval request was cancelled".to_string()
-                    ))
-                }
+                ApprovalResult::Denied { reason } => Err(ApiError::BadRequest(format!(
+                    "Command denied: {}",
+                    reason.unwrap_or_default()
+                ))),
+                ApprovalResult::TimedOut => Err(ApiError::BadRequest(
+                    "Approval request timed out".to_string(),
+                )),
+                ApprovalResult::Cancelled => Err(ApiError::BadRequest(
+                    "Approval request was cancelled".to_string(),
+                )),
             }
         } else {
             // No approval needed, execute directly
@@ -374,50 +387,51 @@ impl ApprovalAwareRuntime {
     /// Classify a command into an action type
     fn classify_command(command: &str, args: &[&str]) -> String {
         let cmd_lower = command.to_lowercase();
-        
+
         // Check for file operations
-        if cmd_lower.contains("rm") || 
-           (cmd_lower.contains("del") && args.iter().any(|a| !a.starts_with("/"))) {
+        if cmd_lower.contains("rm")
+            || (cmd_lower.contains("del") && args.iter().any(|a| !a.starts_with("/")))
+        {
             return "file_delete".to_string();
         }
-        
+
         if cmd_lower.contains("mv") || cmd_lower.contains("move") {
             return "file_move".to_string();
         }
-        
+
         if cmd_lower.contains("cp") || cmd_lower.contains("copy") {
             return "file_copy".to_string();
         }
-        
+
         // Check for write operations
-        if cmd_lower.contains(">") || 
-           cmd_lower.contains("tee") ||
-           cmd_lower.contains("write") {
+        if cmd_lower.contains(">") || cmd_lower.contains("tee") || cmd_lower.contains("write") {
             return "file_write".to_string();
         }
-        
+
         // Check for network operations
-        if cmd_lower.contains("curl") || 
-           cmd_lower.contains("wget") ||
-           cmd_lower.contains("http") {
+        if cmd_lower.contains("curl") || cmd_lower.contains("wget") || cmd_lower.contains("http") {
             return "network_request".to_string();
         }
-        
+
         // Check for package management
-        if cmd_lower.contains("npm") || 
-           cmd_lower.contains("pip") ||
-           cmd_lower.contains("cargo") ||
-           cmd_lower.contains("apt") ||
-           cmd_lower.contains("yum") {
+        if cmd_lower.contains("npm")
+            || cmd_lower.contains("pip")
+            || cmd_lower.contains("cargo")
+            || cmd_lower.contains("apt")
+            || cmd_lower.contains("yum")
+        {
             return "package_install".to_string();
         }
-        
+
         // Check for git operations
-        if cmd_lower.contains("git") && 
-           (args.iter().any(|a| *a == "push" || *a == "force" || *a == "reset")) {
+        if cmd_lower.contains("git")
+            && (args
+                .iter()
+                .any(|a| *a == "push" || *a == "force" || *a == "reset"))
+        {
             return "git_destructive".to_string();
         }
-        
+
         // Default to shell for general commands
         "shell".to_string()
     }
@@ -426,8 +440,11 @@ impl ApprovalAwareRuntime {
     fn requires_approval(action_type: &str) -> bool {
         matches!(
             action_type,
-            "file_delete" | "file_write" | "git_destructive" | 
-            "package_install" | "network_request"
+            "file_delete"
+                | "file_write"
+                | "git_destructive"
+                | "package_install"
+                | "network_request"
         )
     }
 }
@@ -454,7 +471,12 @@ impl Runtime for ApprovalAwareRuntime {
         self.runtime.detach(runtime_id, client_id).await
     }
 
-    async fn exec(&self, _runtime_id: &str, command: &str, args: &[&str]) -> Result<ExecResult, ApiError> {
+    async fn exec(
+        &self,
+        _runtime_id: &str,
+        command: &str,
+        args: &[&str],
+    ) -> Result<ExecResult, ApiError> {
         self.exec_with_approval(command, args).await
     }
 

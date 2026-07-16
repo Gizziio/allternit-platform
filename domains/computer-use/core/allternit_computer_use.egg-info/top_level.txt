@@ -1,2 +1,8 @@
 adapters
+canonical_mcp
+contracts
 core
+gateway
+observability
+providers
+sandbox

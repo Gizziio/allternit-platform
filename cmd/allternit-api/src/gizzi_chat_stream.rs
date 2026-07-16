@@ -6,8 +6,9 @@
 //! event bus, and translates Gizzi events into the SSE format the frontend
 //! expects.
 
-use axum::{
-    response::{IntoResponse, Response, sse::{Event, KeepAlive, Sse}},
+use axum::response::{
+    sse::{Event, KeepAlive, Sse},
+    IntoResponse, Response,
 };
 use futures::StreamExt;
 use reqwest::Client;
@@ -377,7 +378,11 @@ pub async fn stream_chat_through_gizzi(
     configure_harness_on_gizzi(&client, base, harness, &model).await;
 
     // Ensure the Gizzi session exists before we subscribe/send.
-    let init_url = format!("{}/session/{}/initialize", base, urlencoding::encode(session_id));
+    let init_url = format!(
+        "{}/session/{}/initialize",
+        base,
+        urlencoding::encode(session_id)
+    );
     match client.post(&init_url).json(&json!({})).send().await {
         Ok(res) if res.status().is_success() || res.status().as_u16() == 409 => {
             info!(session_id = %session_id, "Gizzi session initialized");
@@ -423,8 +428,17 @@ pub async fn stream_chat_through_gizzi(
         "model": model,
     });
 
-    let message_url = format!("{}/session/{}/message", base, urlencoding::encode(session_id));
-    match client.post(&message_url).json(&message_payload).send().await {
+    let message_url = format!(
+        "{}/session/{}/message",
+        base,
+        urlencoding::encode(session_id)
+    );
+    match client
+        .post(&message_url)
+        .json(&message_payload)
+        .send()
+        .await
+    {
         Ok(res) if res.status().is_success() => {
             info!(session_id = %session_id, "Forwarded chat message to Gizzi");
         }
@@ -451,7 +465,13 @@ pub async fn stream_chat_through_gizzi(
     }
 
     let assistant_message_id = format!("msg_{}", uuid::Uuid::new_v4().simple());
-    chat_event_stream(event_resp, session_id.to_string(), assistant_message_id, model_id).into_response()
+    chat_event_stream(
+        event_resp,
+        session_id.to_string(),
+        assistant_message_id,
+        model_id,
+    )
+    .into_response()
 }
 
 fn stream_error(

@@ -6,6 +6,23 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 
+// Light-mode Allternit brand palette (matches allternit.com)
+const COLORS = {
+  bg: '#faf9f7',
+  panel: '#fffefc',
+  border: '#e1e5eb',
+  text: '#1a1916',
+  textStrong: '#0d0c0a',
+  muted: '#74716b',
+  soft: '#989590',
+  faint: '#b3b0a8',
+  accent: '#B08D6E',
+  accentStrong: '#9A7658',
+  success: '#1f7a3a',
+  successSoft: '#e8f7ee',
+  white: '#fffefc',
+};
+
 function SuccessContent() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -16,14 +33,18 @@ function SuccessContent() {
 
   const appName = searchParams.get('app') ?? 'The application';
   const redirectUri = searchParams.get('redirect_uri');
-  const isLocalRedirect = 
-    redirectUri?.startsWith('/') || 
+  const isLocalRedirect =
+    redirectUri?.startsWith('/') ||
     redirectUri?.startsWith('http://localhost') ||
     redirectUri?.startsWith('allternit://') ||
     redirectUri?.startsWith('gizzi://');
   const isProtocolRedirect =
     redirectUri?.startsWith('allternit://') ||
     redirectUri?.startsWith('gizzi://');
+
+  // For protocol/deep-link redirects we hand control back to the desktop app
+  // immediately instead of making the user wait in the browser.
+  const initialCountdown = isProtocolRedirect ? 0 : 5;
 
   function launchRedirect(target: string) {
     if (target.startsWith('allternit://') || target.startsWith('gizzi://')) {
@@ -41,6 +62,10 @@ function SuccessContent() {
     return () => clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    setCountdown(initialCountdown);
+  }, [initialCountdown]);
+
   // Auto-redirect countdown for local/desktop app redirects
   useEffect(() => {
     if (!isLocalRedirect || !redirectUri) return;
@@ -50,12 +75,12 @@ function SuccessContent() {
     }
     const interval = setInterval(() => setCountdown(c => c - 1), 1000);
     return () => clearInterval(interval);
-  }, [countdown, isLocalRedirect, redirectUri, router]);
+  }, [countdown, isLocalRedirect, redirectUri, navigate]);
 
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'var(--surface-canvas)',
+      background: COLORS.bg,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -63,11 +88,11 @@ function SuccessContent() {
       fontFamily: 'inherit',
       padding: '24px 16px',
     }}>
-      {/* Ambient glow — green tint on success */}
+      {/* Ambient glow — accent tint on success */}
       <div style={{
         position: 'fixed', top: '20%', left: '50%', transform: 'translateX(-50%)',
         width: 500, height: 400,
-        background: 'radial-gradient(ellipse, rgba(16,185,129,0.05) 0%, transparent 70%)',
+        background: 'radial-gradient(ellipse, rgba(176,141,110,0.08) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
@@ -79,10 +104,10 @@ function SuccessContent() {
           style={{
             width: '100%',
             maxWidth: 420,
-            background: 'var(--surface-panel)',
+            background: COLORS.panel,
             borderRadius: 20,
-            border: '1px solid var(--ui-border-muted)',
-            boxShadow: '0 32px 80px var(--shell-overlay-backdrop), 0 0 0 1px var(--surface-hover)',
+            border: `1px solid ${COLORS.border}`,
+            boxShadow: '0 32px 80px rgba(28,27,26,0.10), 0 0 0 1px rgba(0,0,0,0.02)',
             overflow: 'hidden',
             textAlign: 'center',
           }}
@@ -99,7 +124,7 @@ function SuccessContent() {
                 style={{
                   position: 'absolute', inset: -14,
                   borderRadius: '50%',
-                  border: '1.5px solid rgba(16,185,129,0.25)',
+                  border: `1.5px solid rgba(31,122,58,0.25)`,
                 }}
               />
               <motion.div
@@ -108,7 +133,7 @@ function SuccessContent() {
                 style={{
                   position: 'absolute', inset: -22,
                   borderRadius: '50%',
-                  border: '1px solid rgba(16,185,129,0.12)',
+                  border: `1px solid rgba(31,122,58,0.12)`,
                 }}
               />
               <MatrixLogo state="idle" size={52} />
@@ -142,7 +167,7 @@ function SuccessContent() {
               style={{
                 fontSize: 22,
                 fontWeight: 700,
-                color: 'var(--ui-text-primary)',
+                color: COLORS.textStrong,
                 letterSpacing: '-0.03em',
                 marginBottom: 10,
               }}
@@ -156,14 +181,14 @@ function SuccessContent() {
               transition={{ delay: 0.44, duration: 0.4 }}
               style={{
                 fontSize: 14,
-                color: 'rgba(255,255,255,0.4)',
+                color: COLORS.muted,
                 lineHeight: 1.6,
                 marginBottom: 0,
                 maxWidth: 300,
                 margin: '0 auto',
               }}
             >
-              <strong style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{appName}</strong>
+              <strong style={{ color: COLORS.text, fontWeight: 600 }}>{appName}</strong>
               {' '}now has access to your Allternit account.
             </motion.p>
 
@@ -175,18 +200,20 @@ function SuccessContent() {
                 transition={{ delay: 0.55, duration: 0.4 }}
                 style={{
                   fontSize: 13,
-                  color: 'rgba(255,255,255,0.25)',
+                  color: COLORS.soft,
                   marginTop: 20,
                 }}
               >
                 {isProtocolRedirect && launchAttempted
                   ? 'If Allternit did not open automatically, use the button below.'
-                  : `Redirecting in ${countdown}s…`}
+                  : isProtocolRedirect
+                    ? 'Opening Allternit…'
+                    : `Redirecting in ${countdown}s…`}
               </motion.p>
             )}
 
             {/* Divider */}
-            <div style={{ height: 1, background: 'var(--ui-border-muted)', margin: '28px 0 24px' }} />
+            <div style={{ height: 1, background: COLORS.border, margin: '28px 0 24px' }} />
 
             {/* Actions */}
             <motion.div
@@ -203,13 +230,13 @@ function SuccessContent() {
                     display: 'block',
                     padding: '13px 20px',
                     borderRadius: 12,
-                    background: 'linear-gradient(135deg, #E8886A 0%, #D97757 100%)',
-                    color: 'var(--ui-text-inverse)',
+                    background: COLORS.text,
+                    color: COLORS.white,
                     fontSize: 14,
                     fontWeight: 700,
                     textDecoration: 'none',
                     letterSpacing: '-0.01em',
-                    boxShadow: '0 4px 20px rgba(217,119,87,0.3)',
+                    boxShadow: '0 4px 20px rgba(28,27,26,0.12)',
                     transition: 'transform 0.2s',
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'; }}
@@ -230,13 +257,13 @@ function SuccessContent() {
                         display: 'block',
                         padding: '13px 20px',
                         borderRadius: 12,
-                        background: 'linear-gradient(135deg, #E8886A 0%, #D97757 100%)',
-                        color: 'var(--ui-text-inverse)',
+                        background: COLORS.text,
+                        color: COLORS.white,
                         fontSize: 14,
                         fontWeight: 700,
                         textDecoration: 'none',
                         letterSpacing: '-0.01em',
-                        boxShadow: '0 4px 20px rgba(217,119,87,0.3)',
+                        boxShadow: '0 4px 20px rgba(28,27,26,0.12)',
                         transition: 'transform 0.2s',
                       }}
                       onClick={() => setLaunchAttempted(true)}
@@ -250,10 +277,10 @@ function SuccessContent() {
                   <div style={{
                     padding: '13px 20px',
                     borderRadius: 12,
-                    background: 'rgba(16,185,129,0.08)',
-                    border: '1px solid rgba(16,185,129,0.15)',
+                    background: COLORS.successSoft,
+                    border: `1px solid rgba(31,122,58,0.15)`,
                     fontSize: 13,
-                    color: 'rgba(16,185,129,0.8)',
+                    color: COLORS.success,
                     lineHeight: 1.5,
                   }}>
                     Return to {appName} after the desktop app opens and completes sign-in.
@@ -269,12 +296,12 @@ function SuccessContent() {
                   borderRadius: 12,
                   fontSize: 13.5,
                   fontWeight: 500,
-                  color: 'rgba(255,255,255,0.35)',
+                  color: COLORS.soft,
                   textDecoration: 'none',
                   transition: 'color 0.2s',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.35)'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = COLORS.text; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = COLORS.soft; }}
               >
                 Go to Allternit platform
               </a>
@@ -283,14 +310,14 @@ function SuccessContent() {
 
           {/* Footer */}
           <div style={{
-            borderTop: '1px solid var(--surface-hover)',
-            background: 'var(--surface-canvas)',
+            borderTop: `1px solid ${COLORS.border}`,
+            background: COLORS.bg,
             padding: '14px 36px',
             textAlign: 'center',
           }}>
-            <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.2)', margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12.5, color: COLORS.soft, margin: 0, lineHeight: 1.6 }}>
               You can revoke access any time from{' '}
-              <a href="/shell/settings/connections" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
+              <a href="/shell/settings/connections" style={{ color: COLORS.accent, textDecoration: 'underline' }}>
                 Settings → Connections
               </a>
             </p>

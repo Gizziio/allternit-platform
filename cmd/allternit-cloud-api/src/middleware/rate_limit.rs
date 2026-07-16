@@ -64,10 +64,12 @@ impl RateLimiter {
         let now = Instant::now();
         let mut clients = self.clients.write().await;
 
-        let entry = clients.entry(client_id.to_string()).or_insert(RateLimitEntry {
-            count: 0,
-            window_start: now,
-        });
+        let entry = clients
+            .entry(client_id.to_string())
+            .or_insert(RateLimitEntry {
+                count: 0,
+                window_start: now,
+            });
 
         // Check if window has expired
         if now.duration_since(entry.window_start) > self.config.window {
@@ -105,9 +107,7 @@ impl RateLimiter {
     pub async fn cleanup(&self) {
         let now = Instant::now();
         let mut clients = self.clients.write().await;
-        clients.retain(|_, entry| {
-            now.duration_since(entry.window_start) <= self.config.window
-        });
+        clients.retain(|_, entry| now.duration_since(entry.window_start) <= self.config.window);
     }
 }
 
@@ -123,10 +123,7 @@ impl RateLimitInfo {
     /// Add rate limit headers to response
     pub fn add_headers<B>(&self, response: &mut axum::response::Response<B>) {
         let headers = response.headers_mut();
-        let _ = headers.insert(
-            "X-RateLimit-Limit",
-            self.limit.to_string().parse().unwrap(),
-        );
+        let _ = headers.insert("X-RateLimit-Limit", self.limit.to_string().parse().unwrap());
         let _ = headers.insert(
             "X-RateLimit-Remaining",
             self.remaining.to_string().parse().unwrap(),
@@ -153,7 +150,10 @@ fn extract_client_id(request: &Request) -> String {
     }
 
     // Fall back to IP address
-    if let Some(connect_info) = request.extensions().get::<axum::extract::ConnectInfo<std::net::SocketAddr>>() {
+    if let Some(connect_info) = request
+        .extensions()
+        .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+    {
         return format!("ip:{}", connect_info.0.ip());
     }
 
@@ -177,7 +177,7 @@ pub async fn rate_limit_middleware(
         }
         Err(info) => {
             warn!("Rate limit exceeded for client: {}", client_id);
-            
+
             let body = serde_json::json!({
                 "error": "RATE_LIMIT_EXCEEDED",
                 "message": "Too many requests. Please slow down.",
@@ -186,7 +186,10 @@ pub async fn rate_limit_middleware(
 
             let mut response = (
                 StatusCode::TOO_MANY_REQUESTS,
-                [(axum::http::header::RETRY_AFTER, info.reset_after.as_secs().to_string())],
+                [(
+                    axum::http::header::RETRY_AFTER,
+                    info.reset_after.as_secs().to_string(),
+                )],
                 axum::Json(body),
             )
                 .into_response();
@@ -200,7 +203,7 @@ pub async fn rate_limit_middleware(
 /// Create rate limiter and spawn cleanup task
 pub fn create_rate_limiter(config: RateLimitConfig) -> Arc<RateLimiter> {
     let limiter = Arc::new(RateLimiter::new(config));
-    
+
     // Spawn cleanup task
     let cleanup_limiter = limiter.clone();
     tokio::spawn(async move {
@@ -211,6 +214,6 @@ pub fn create_rate_limiter(config: RateLimitConfig) -> Arc<RateLimiter> {
             debug!("Rate limiter cleanup completed");
         }
     });
-    
+
     limiter
 }

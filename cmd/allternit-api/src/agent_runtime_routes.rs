@@ -15,16 +15,18 @@ use std::sync::Arc;
 use tracing::warn;
 
 use crate::agent_execution::{AgentRuntime, JobSpec, LocalAgentRuntime};
-use crate::AppState;
 use crate::auth::AuthUser;
 use crate::error::ApiError;
+use crate::AppState;
 
 pub fn agent_runtime_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/agent-runtimes", get(list_runtimes).post(create_runtime))
         .route(
             "/agent-runtimes/:id",
-            get(get_runtime).patch(update_runtime).delete(delete_runtime),
+            get(get_runtime)
+                .patch(update_runtime)
+                .delete(delete_runtime),
         )
         .route("/agent-runtimes/:id/heartbeat", post(heartbeat_runtime))
         .route(
@@ -145,7 +147,9 @@ async fn create_runtime(
     let id2 = id.clone();
     let user_id = user.user_id;
     let name = body.name.clone();
-    let clis = body.agent_clis.map(|c| serde_json::to_string(&c).unwrap_or_default());
+    let clis = body
+        .agent_clis
+        .map(|c| serde_json::to_string(&c).unwrap_or_default());
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -155,17 +159,30 @@ async fn create_runtime(
             params![id2, user_id, body.name, body.host, clis, body.workspace_id],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"runtime": {"id": id, "name": name, "status": "online"}}))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({"runtime": {"id": id, "name": name, "status": "online"}})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating runtime: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -214,7 +231,11 @@ async fn update_runtime(
     Path(id): Path<String>,
     Json(body): Json<UpdateRuntimeBody>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    if body.name.is_none() && body.host.is_none() && body.status.is_none() && body.agent_clis.is_none() {
+    if body.name.is_none()
+        && body.host.is_none()
+        && body.status.is_none()
+        && body.agent_clis.is_none()
+    {
         return Err(ApiError::BadRequest("no fields to update".to_string()));
     }
 
@@ -246,14 +267,19 @@ async fn update_runtime(
 
         sets.push("updated_at = CURRENT_TIMESTAMP".to_string());
 
-        let sql = format!("UPDATE agent_runtimes SET {} WHERE id = ? AND user_id = ?", sets.join(", "));
-        let mut params_ref: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+        let sql = format!(
+            "UPDATE agent_runtimes SET {} WHERE id = ? AND user_id = ?",
+            sets.join(", ")
+        );
+        let mut params_ref: Vec<&dyn rusqlite::ToSql> =
+            params_vec.iter().map(|p| p.as_ref()).collect();
         params_ref.push(&runtime_id);
         params_ref.push(&user_id);
 
         let affected = conn.execute(&sql, params_ref.as_slice())?;
         Ok::<_, rusqlite::Error>(affected)
-    }).await
+    })
+    .await
     .map_err(|e| ApiError::Internal(e.to_string()))?
     .map_err(ApiError::from)?;
 
@@ -308,7 +334,8 @@ async fn delete_runtime(
             params![id, user_id],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await
+    })
+    .await
     .map_err(|e| ApiError::Internal(e.to_string()))?
     .map_err(ApiError::from)?;
 
@@ -399,7 +426,11 @@ async fn create_runtime_job(
 
     let (status, exit_code, stdout, stderr, duration_ms, result_json) = match dispatch_result {
         Ok(result) => {
-            let status = if result.exit_code == 0 { "completed" } else { "failed" };
+            let status = if result.exit_code == 0 {
+                "completed"
+            } else {
+                "failed"
+            };
             let result_json = serde_json::to_string(&result).unwrap_or_default();
             (
                 status.to_string(),
@@ -460,11 +491,13 @@ fn verify_runtime_access(
     runtime_id: &str,
     user_id: &str,
 ) -> Result<(), rusqlite::Error> {
-    let exists: bool = conn.query_row(
-        "SELECT 1 FROM agent_runtimes WHERE id = ?1 AND user_id = ?2 LIMIT 1",
-        params![runtime_id, user_id],
-        |_| Ok(true),
-    ).unwrap_or(false);
+    let exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM agent_runtimes WHERE id = ?1 AND user_id = ?2 LIMIT 1",
+            params![runtime_id, user_id],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
 
     if !exists {
         // Return a custom error so callers can map it to a 404.

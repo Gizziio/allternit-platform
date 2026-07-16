@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "cmd/allternit-cloud-api/Dockerfile"
+  },
+  "deploy": {
+    "startCommand": "allternit-cloud-api",
+    "healthcheckPath": "/api/v1/health/live",
+    "healthcheckPort": 8080,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}

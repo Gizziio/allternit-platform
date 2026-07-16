@@ -61,12 +61,19 @@ async fn proxy_orchestrator(
     {
         request = request.header(reqwest::header::CONTENT_TYPE, content_type);
     }
-    if let Ok(password) = std::env::var("GIZZI_SERVER_PASSWORD") {
-        if !password.is_empty() {
-            let username =
-                std::env::var("GIZZI_SERVER_USERNAME").unwrap_or_else(|_| "gizzi".to_string());
-            request = request.basic_auth(username, Some(password));
-        }
+    let gizzi_password = std::env::var("GIZZI_PASSWORD")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            std::env::var("GIZZI_SERVER_PASSWORD")
+                .ok()
+                .filter(|value| !value.is_empty())
+        });
+    if let Some(password) = gizzi_password {
+        let username = std::env::var("GIZZI_USERNAME")
+            .or_else(|_| std::env::var("GIZZI_SERVER_USERNAME"))
+            .unwrap_or_else(|_| "gizzi".to_string());
+        request = request.basic_auth(username, Some(password));
     }
     if !body.is_empty() {
         request = request.body(body.to_vec());

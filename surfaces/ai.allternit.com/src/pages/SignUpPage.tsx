@@ -43,7 +43,7 @@ function SignUpContent() {
       <style>{`
         .signup-page {
           min-height: 100vh;
-          background: #0F0C0A;
+          background: #FAF9F7;
           display: flex;
           flex-direction: column;
           font-family: inherit;
@@ -54,7 +54,7 @@ function SignUpContent() {
           align-items: center;
           justify-content: space-between;
           padding: 16px 24px;
-          border-bottom: 1px solid var(--surface-hover);
+          border-bottom: 1px solid #E7E4DF;
           flex-shrink: 0;
         }
         .signup-logo {
@@ -66,16 +66,16 @@ function SignUpContent() {
         .signup-logo-text {
           font-size: 15px;
           font-weight: 700;
-          color: #ECECEC;
+          color: #0D0C0A;
           letter-spacing: -0.02em;
         }
         .signup-nav-link {
           font-size: 13px;
-          color: #664E3A;
+          color: #74716B;
           text-decoration: none;
           font-weight: 500;
         }
-        .signup-nav-link span { color: #D97757; }
+        .signup-nav-link span { color: #9A7658; }
         .signup-main {
           flex: 1;
           display: flex;
@@ -103,33 +103,33 @@ function SignUpContent() {
           font-weight: 800;
           letter-spacing: -0.04em;
           line-height: 1.05;
-          color: #F5EDE3;
+          color: #0D0C0A;
           margin-bottom: 14px;
           margin-top: 0;
         }
         .signup-sub {
           font-size: 15px;
           line-height: 1.65;
-          color: #664E3A;
+          color: #74716B;
           margin-bottom: 28px;
           max-width: 340px;
         }
         .signup-card {
-          background: #1A1410;
+          background: #FFFEFC;
           border-radius: 20px;
-          border: 1px solid var(--ui-border-muted);
+          border: 1px solid #E1E0DC;
           padding: 28px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+          box-shadow: 0 16px 48px rgba(30, 25, 20, 0.08);
           overflow: hidden;
         }
         .signup-legal {
           font-size: 11px;
-          color: #3A2A1E;
+          color: #989590;
           text-align: center;
           margin-top: 14px;
           line-height: 1.6;
         }
-        .signup-legal a { color: #664E3A; text-decoration: underline; }
+        .signup-legal a { color: #74716B; text-decoration: underline; }
         .signup-also { margin-top: 24px; }
         .signup-also-divider {
           display: flex;
@@ -137,10 +137,10 @@ function SignUpContent() {
           gap: 10px;
           margin-bottom: 10px;
         }
-        .signup-also-line { flex: 1; height: 1px; background: var(--surface-hover); }
+        .signup-also-line { flex: 1; height: 1px; background: #E7E4DF; }
         .signup-also-label {
           font-size: 10px;
-          color: #3A2A1E;
+          color: #989590;
           letter-spacing: 0.07em;
           text-transform: uppercase;
           white-space: nowrap;
@@ -154,20 +154,20 @@ function SignUpContent() {
           padding: 11px 14px;
           border-radius: 12px;
           text-decoration: none;
-          background: #1A1410;
-          border: 1px solid var(--ui-border-muted);
+          background: #FFFEFC;
+          border: 1px solid #E1E0DC;
           min-width: 0;
         }
         .signup-pill-title {
           font-size: 11px;
           font-weight: 600;
-          color: #C4A78A;
+          color: #403E39;
           line-height: 1.2;
           white-space: nowrap;
         }
         .signup-pill-sub {
           font-size: 10px;
-          color: #4A3020;
+          color: #74716B;
           margin-top: 1px;
           white-space: nowrap;
         }
@@ -213,7 +213,7 @@ function SignUpContent() {
             <h1 className="signup-heading">
               Any model.<br />
               Any agent.<br />
-              <span style={{ color: '#D97757' }}>All yours.</span>
+              <span style={{ color: '#9A7658' }}>All yours.</span>
             </h1>
 
             <p className="signup-sub">

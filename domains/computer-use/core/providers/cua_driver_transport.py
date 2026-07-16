@@ -1,0 +1,155 @@
+"""Safe local CLI transport for a reviewed Cua Driver installation."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import shutil
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+
+class CuaDriverUnavailableError(RuntimeError):
+    pass
+
+
+class CuaDriverCallError(RuntimeError):
+    def __init__(self, tool: str, message: str, *, exit_code: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.tool = tool
+        self.exit_code = exit_code
+
+
+@dataclass(frozen=True)
+class CuaDriverInstallation:
+    executable: str
+    manifest: Dict[str, Any]
+
+    @property
+    def version(self) -> str:
+        value = self.manifest.get("version")
+        return str(value) if value else "unknown"
+
+
+def discover_cua_driver(explicit_path: Optional[str] = None) -> Optional[str]:
+    candidates = [
+        explicit_path,
+        os.environ.get("ALLTERNIT_CUA_DRIVER_PATH"),
+        shutil.which("cua-driver"),
+        shutil.which("cua-driver-rs"),
+        str(Path.home() / ".local" / "bin" / "cua-driver"),
+        "/usr/local/bin/cua-driver",
+        "/opt/homebrew/bin/cua-driver",
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        path = Path(candidate).expanduser()
+        if path.is_file() and os.access(path, os.X_OK):
+            return str(path.resolve())
+    return None
+
+
+def _decode_json_output(stdout: bytes, command: str) -> Dict[str, Any]:
+    text = stdout.decode("utf-8", errors="replace").strip()
+    if not text:
+        return {}
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as error:
+        # Some releases log a prefix before the final JSON value. Only accept a
+        # final line that is itself valid JSON; never guess at arbitrary output.
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        try:
+            value = json.loads(lines[-1])
+        except (IndexError, json.JSONDecodeError) as final_error:
+            raise CuaDriverCallError(command, f"Cua Driver returned non-JSON output: {error}") from final_error
+    if not isinstance(value, dict):
+        raise CuaDriverCallError(command, "Cua Driver JSON response must be an object")
+    return value
+
+
+class CuaDriverTransport:
+    def __init__(self, executable: str, timeout_seconds: float = 30.0) -> None:
+        path = Path(executable).expanduser()
+        if not path.is_file() or not os.access(path, os.X_OK):
+            raise CuaDriverUnavailableError(f"Cua Driver executable is unavailable: {path}")
+        self.executable = str(path.resolve())
+        self.timeout_seconds = timeout_seconds
+        self.socket_path = os.environ.get("ALLTERNIT_CUA_DRIVER_SOCKET")
+
+    @classmethod
+    async def discover(
+        cls,
+        explicit_path: Optional[str] = None,
+        timeout_seconds: float = 30.0,
+    ) -> Optional["CuaDriverTransport"]:
+        executable = discover_cua_driver(explicit_path)
+        if executable is None:
+            return None
+        transport = cls(executable, timeout_seconds)
+        await transport.manifest()
+        return transport
+
+    async def _run(self, *arguments: str, timeout_seconds: Optional[float] = None) -> Dict[str, Any]:
+        allow_telemetry = os.environ.get("ALLTERNIT_ALLOW_UPSTREAM_TELEMETRY", "").strip().lower() in {
+            "1", "true", "yes", "on",
+        }
+        routed_arguments = list(arguments)
+        if self.socket_path and arguments and arguments[0] in {"call", "status", "stop", "config", "recording"}:
+            routed_arguments.extend(("--socket", self.socket_path))
+        process = await asyncio.create_subprocess_exec(
+            self.executable,
+            *routed_arguments,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env={
+                **os.environ,
+                "NO_COLOR": "1",
+                # Allternit owns consent. Environment override avoids mutating
+                # the user's global Cua configuration while defaulting offline.
+                "CUA_DRIVER_RS_TELEMETRY_ENABLED": "true" if allow_telemetry else "false",
+                "CUA_TELEMETRY_ENABLED": "true" if allow_telemetry else "false",
+            },
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=timeout_seconds or self.timeout_seconds,
+            )
+        except asyncio.TimeoutError as error:
+            process.kill()
+            await process.communicate()
+            raise CuaDriverCallError(arguments[0], "Cua Driver command timed out") from error
+        if process.returncode != 0:
+            message = stderr.decode("utf-8", errors="replace").strip() or stdout.decode(
+                "utf-8", errors="replace"
+            ).strip()
+            raise CuaDriverCallError(
+                arguments[0],
+                message or f"Cua Driver exited with {process.returncode}",
+                exit_code=process.returncode,
+            )
+        return _decode_json_output(stdout, arguments[0])
+
+    async def manifest(self) -> CuaDriverInstallation:
+        return CuaDriverInstallation(self.executable, await self._run("manifest"))
+
+    async def status(self) -> Dict[str, Any]:
+        return await self._run("status")
+
+    async def call(
+        self,
+        tool: str,
+        arguments: Dict[str, Any],
+        *,
+        screenshot_out_file: Optional[str] = None,
+        timeout_seconds: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        command = ["call", tool, json.dumps(arguments, sort_keys=True, separators=(",", ":"))]
+        if screenshot_out_file:
+            command.extend(("--screenshot-out-file", screenshot_out_file))
+        return await self._run(*command, timeout_seconds=timeout_seconds)

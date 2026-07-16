@@ -76,6 +76,7 @@ export function BrainsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [connect, setConnect] = useState<Record<string, ConnectPhase>>({});
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const pollTimers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   const setPhase = (id: string, c: ConnectPhase) =>
@@ -99,6 +100,37 @@ export function BrainsPanel() {
 
   useEffect(() => {
     load();
+    // One-time migration from the former browser-local provider gallery. Move
+    // each legacy value directly into the selected runtime and delete it only
+    // after Gizzi confirms the write.
+    void (async () => {
+      const prefix = 'allternit_provider_key_';
+      const legacy = Object.keys(localStorage)
+        .filter((name) => name.startsWith(prefix))
+        .map((name) => ({ name, provider: name.slice(prefix.length), key: localStorage.getItem(name) || '' }))
+        .filter(({ provider, key }) => /^[a-z0-9._-]{1,80}$/i.test(provider) && Boolean(key));
+      let migrated = false;
+      for (const item of legacy) {
+        try {
+          await api('/api/v1/onboarding/provider', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              provider: item.provider,
+              name: item.provider,
+              apiKey: item.key,
+              authType: 'api_key',
+              setDefault: false,
+            }),
+          });
+          localStorage.removeItem(item.name);
+          migrated = true;
+        } catch {
+          // Keep the legacy value until a runtime is available to receive it.
+        }
+      }
+      if (migrated) await load();
+    })();
     return () => {
       Object.values(pollTimers.current).forEach(clearInterval);
     };
@@ -172,6 +204,31 @@ export function BrainsPanel() {
       load();
     } catch (e: any) {
       setPhase(id, { phase: 'error', message: e?.message ?? 'Confirm failed' });
+    }
+  };
+
+  const saveApiKey = async (id: string) => {
+    const key = apiKeys[id]?.trim();
+    if (!key) return;
+    setPhase(id, { phase: 'busy' });
+    try {
+      await api('/api/v1/onboarding/provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: id,
+          name: id,
+          apiKey: key,
+          authType: 'api_key',
+          setDefault: false,
+        }),
+      });
+      setApiKeys((previous) => ({ ...previous, [id]: '' }));
+      localStorage.removeItem(`allternit_provider_key_${id}`);
+      setPhase(id, { phase: 'idle' });
+      await load();
+    } catch (failure: any) {
+      setPhase(id, { phase: 'error', message: failure?.message ?? 'Could not store provider credential' });
     }
   };
 
@@ -284,19 +341,40 @@ export function BrainsPanel() {
               </div>
             )}
             {(phase.phase === 'needs_key' || phase.phase === 'api_key') && (
-              <div className="flex items-center gap-2 pl-15 text-[12px] text-[var(--text-secondary)]">
-                <Key size={15} />
-                <span>This provider uses an API key.</span>
-                {phase.phase === 'needs_key' && phase.page && (
-                  <a
-                    href={phase.page}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 underline"
+              <div className="flex flex-col gap-2 pl-15 text-[12px] text-[var(--text-secondary)]">
+                <div className="flex items-center gap-2">
+                  <Key size={15} />
+                  <span>This provider uses an API key stored by the selected Gizzi runtime.</span>
+                  {phase.phase === 'needs_key' && phase.page && (
+                    <a
+                      href={phase.page}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 underline"
+                    >
+                      Get a key <ArrowSquareOut size={12} />
+                    </a>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    aria-label={`${p.provider_id} API key`}
+                    value={apiKeys[p.provider_id] || ''}
+                    onChange={(event) => setApiKeys((previous) => ({ ...previous, [p.provider_id]: event.target.value }))}
+                    placeholder="Paste API key"
+                    autoComplete="off"
+                    className="min-w-0 flex-1 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2 text-[12px] text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+                  />
+                  <button
+                    type="button"
+                    disabled={!apiKeys[p.provider_id]?.trim()}
+                    onClick={() => void saveApiKey(p.provider_id)}
+                    className="rounded-lg border border-solid border-[var(--accent-primary)] bg-[var(--accent-primary)] px-3 py-2 text-[12px] font-bold text-[var(--ui-text-inverse)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Get a key <ArrowSquareOut size={12} />
-                  </a>
-                )}
+                    Connect
+                  </button>
+                </div>
               </div>
             )}
             {phase.phase === 'error' && (

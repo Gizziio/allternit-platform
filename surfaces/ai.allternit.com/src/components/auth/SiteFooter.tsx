@@ -104,8 +104,8 @@ export function SiteFooter() {
 
   return (
     <footer style={{
-      background: 'var(--surface-canvas)',
-      color: 'var(--ui-text-primary)',
+      background: '#F4F1EC',
+      color: '#1A1916',
       paddingTop: 80,
       paddingBottom: 40,
       position: 'relative',
@@ -116,7 +116,7 @@ export function SiteFooter() {
         ref={borderRef}
         style={{
           position: 'absolute', top: 0, left: 0, right: 0, height: 1,
-          background: 'linear-gradient(to right, transparent, rgba(201,69,32,0.5), transparent)',
+          background: 'linear-gradient(to right, transparent, rgba(176,141,110,0.55), transparent)',
           transformOrigin: 'left',
           transform: 'scaleX(0)',
           opacity: 0,
@@ -140,7 +140,7 @@ export function SiteFooter() {
               <h3 style={{
                 fontFamily: 'var(--font-research)',
                 fontSize: 16, fontWeight: 400,
-                color: 'rgba(255,255,255,0.9)',
+                color: '#1A1916',
                 marginBottom: 22, lineHeight: 1.3,
               }}>
                 {col.title}
@@ -151,13 +151,13 @@ export function SiteFooter() {
                     <a
                       href={link.href}
                       style={{
-                        fontSize: 13, color: 'rgba(255,255,255,0.45)',
+                        fontSize: 13, color: '#74716B',
                         textDecoration: 'none',
                         transition: 'color 0.25s',
                         display: 'inline-block',
                       }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--ui-text-primary)'; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'; }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#1A1916'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#74716B'; }}
                     >
                       {link.label}
                     </a>
@@ -174,7 +174,7 @@ export function SiteFooter() {
           style={{
             opacity: 0,
             paddingTop: 28,
-            borderTop: '1px solid var(--ui-border-muted)',
+            borderTop: '1px solid #DDD9D2',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -184,7 +184,7 @@ export function SiteFooter() {
         >
           {/* Left: copyright + social */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', margin: 0 }}>
+            <p style={{ fontSize: 13, color: '#989590', margin: 0 }}>
               © 2026 Allternit PBC
             </p>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
@@ -195,15 +195,15 @@ export function SiteFooter() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  style={{ color: 'rgba(255,255,255,0.3)', transition: 'color 0.25s, transform 0.25s', display: 'flex' }}
+                  style={{ color: '#989590', transition: 'color 0.25s, transform 0.25s', display: 'flex' }}
                   onMouseEnter={e => {
                     const el = e.currentTarget as HTMLAnchorElement;
-                    el.style.color = 'var(--ui-text-primary)';
+                    el.style.color = '#1A1916';
                     el.style.transform = 'scale(1.15)';
                   }}
                   onMouseLeave={e => {
                     const el = e.currentTarget as HTMLAnchorElement;
-                    el.style.color = 'rgba(255,255,255,0.3)';
+                    el.style.color = '#989590';
                     el.style.transform = 'scale(1)';
                   }}
                 >
@@ -219,9 +219,9 @@ export function SiteFooter() {
               <a
                 key={link.label}
                 href={link.href}
-                style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', transition: 'color 0.25s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--ui-text-primary)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.3)'; }}
+                style={{ fontSize: 12, color: '#989590', textDecoration: 'none', transition: 'color 0.25s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#1A1916'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#989590'; }}
               >
                 {link.label}
               </a>

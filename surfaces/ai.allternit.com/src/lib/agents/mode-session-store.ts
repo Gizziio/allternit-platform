@@ -37,6 +37,7 @@ import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contracts';
 import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
 import { executeAgentMode } from './agent-mode-executor';
+import { gizziBaseUrl } from './api-config';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -100,6 +101,7 @@ export interface ModeSession {
     requiredEvidence?: string[];
     executionStatus?: 'pending' | 'running' | 'complete' | 'blocked' | 'invalid';
     validationErrors?: string[];
+    isolation?: 'worktree' | 'none';
   };
   // Runtime context pack (not persisted, rebuilt on load)
   _contextPack?: AgentContextPack;
@@ -120,6 +122,7 @@ export interface CreateModeSessionOptions {
   workspaceId?: string;
   workspaceFiles?: string[];
   systemPrompt?: string;
+  isolation?: 'worktree' | 'none';
   metadata?: Record<string, unknown>;
 }
 
@@ -184,6 +187,7 @@ function mapBackendSession(backend: BackendSession): ModeSession {
       contextHash: metadata.contextHash,
       contextRefreshedAt: metadata.contextRefreshedAt,
       agentFeatures: metadata.agentFeatures,
+      isolation: metadata.isolation,
     },
   };
 }
@@ -531,6 +535,15 @@ async function streamMessageWithContext(
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
 
+  if (
+    session.metadata.executionPersistence === 'local' &&
+    session.metadata.originSurface === 'code' &&
+    options.modelId
+  ) {
+    await streamLocalCodeMessageThroughGizzi(session, text, options.modelId, callbacks, signal);
+    return;
+  }
+
   if (!skipContext && session.metadata.agentModeId) {
     try {
       await executeAgentMode(session.metadata.agentModeId, text, session.metadata.templateTitle, {
@@ -621,6 +634,64 @@ async function streamMessageWithContext(
     signal,
     agentContext
   );
+}
+
+async function streamLocalCodeMessageThroughGizzi(
+  session: ModeSession,
+  text: string,
+  modelId: string,
+  callbacks: SendMessageOptions['callbacks'],
+  signal?: AbortSignal,
+): Promise<void> {
+  const sidecar = typeof window !== 'undefined' ? window.allternitSidecar : undefined;
+  const apiUrl = sidecar && typeof sidecar.getApiUrl === 'function'
+    ? await sidecar.getApiUrl()
+    : undefined;
+  // In the Electron shell the sidecar returns a credential-brokering custom
+  // protocol URL (allternit-gizzi://runtime). Outside Electron, or when the
+  // sidecar has not brokered a runtime, fall back to the direct loopback URL.
+  const base = (apiUrl || gizziBaseUrl()).replace(/\/$/, '');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  let gizziSessionId = typeof session.metadata.gizziSessionId === 'string'
+    ? session.metadata.gizziSessionId
+    : null;
+
+  if (!gizziSessionId) {
+    const createResponse = await fetch(`${base}/v1/session`, {
+      method: 'POST',
+      headers,
+      signal,
+      body: JSON.stringify({ title: session.name, surface: 'code' }),
+    });
+    if (!createResponse.ok) throw new Error(`Gizzi session creation failed (${createResponse.status})`);
+    const created = await createResponse.json() as { id?: string };
+    if (!created.id) throw new Error('Gizzi runtime did not return a session ID');
+    gizziSessionId = created.id;
+    session.metadata.gizziSessionId = created.id;
+  }
+
+  const separator = modelId.indexOf('/');
+  const providerID = separator > 0 ? modelId.slice(0, separator) : 'opencode';
+  const runtimeModelID = separator > 0 ? modelId.slice(separator + 1) : modelId;
+  const response = await fetch(`${base}/v1/session/${encodeURIComponent(gizziSessionId)}/message`, {
+    method: 'POST',
+    headers,
+    signal,
+    body: JSON.stringify({
+      sessionID: gizziSessionId,
+      parts: [{ type: 'text', text }],
+      model: { providerID, modelID: runtimeModelID },
+    }),
+  });
+  if (!response.ok) throw new Error(`Gizzi model request failed (${response.status})`);
+  const message = await response.json() as { parts?: Array<{ type?: string; text?: string }> };
+  const content = (message.parts ?? [])
+    .filter((part) => part.type === 'text' && typeof part.text === 'string')
+    .map((part) => part.text as string)
+    .join('\n')
+    .trim();
+  if (content) callbacks?.onChunk?.(content);
+  callbacks?.onDone?.();
 }
 
 // ============================================================================
@@ -750,10 +821,11 @@ export function createModeSessionStore(config: StoreConfig) {
                 workspaceId: options.workspaceId,
                 workspaceFiles: options.workspaceFiles,
                 systemPrompt: options.systemPrompt,
+                isolation: options.isolation,
                 contextRefreshedAt: now,
               },
             };
-            
+
             // Add optimistic session immediately
             set((state) => ({
               sessions: [optimisticSession, ...state.sessions],
@@ -794,6 +866,7 @@ export function createModeSessionStore(config: StoreConfig) {
                   workspaceId: options.workspaceId,
                   workspaceFiles: workspace?.files.map(f => f.path) || options.workspaceFiles,
                   systemPrompt,
+                  isolation: options.isolation,
                   contextRefreshedAt: now,
                 },
               });
@@ -842,6 +915,35 @@ export function createModeSessionStore(config: StoreConfig) {
               return session.id;
             } catch (error) {
               const message = error instanceof Error ? error.message : 'Failed to create session';
+              const localModeId = typeof options.metadata?.agentModeId === 'string'
+                ? options.metadata.agentModeId
+                : config.originSurface === 'code'
+                  ? 'code'
+                  : null;
+              const canRunLocally = Boolean(localModeId) && (
+                options.sessionMode === 'agent' || config.originSurface === 'code'
+              );
+              if (canRunLocally) {
+                logger.warn({ err: error }, `[${config.name}] Backend session unavailable; running built-in mode locally`);
+                set((state) => ({
+                  error: null,
+                  isLoading: false,
+                  sessions: state.sessions.map((session) =>
+                    session.id === optimisticId
+                      ? {
+                          ...session,
+                          metadata: {
+                            ...session.metadata,
+                            agentModeId: localModeId as CanonicalAgentModeId,
+                            executionPersistence: 'local',
+                          },
+                        }
+                      : session
+                  ),
+                  activeSessionId: optimisticId,
+                }));
+                return optimisticId;
+              }
               set((state) => ({
                 error: message,
                 isLoading: false,
@@ -882,10 +984,33 @@ export function createModeSessionStore(config: StoreConfig) {
           },
 
           updateSession: async (sessionId: string, updates: Partial<ModeSession>) => {
+            const currentSession = get().sessions.find((session) => session.id === sessionId);
+            set((state) => ({
+              sessions: state.sessions.map((session) =>
+                session.id === sessionId
+                  ? {
+                      ...session,
+                      ...updates,
+                      metadata: updates.metadata
+                        ? { ...session.metadata, ...updates.metadata }
+                        : session.metadata,
+                    }
+                  : session
+              ),
+            }));
+
+            // A session retained after backend creation failed intentionally
+            // lives in the persisted Zustand store. Its metadata must remain
+            // editable without retrying an API call that cannot succeed.
+            if (!isBackendSessionId(sessionId) || currentSession?.metadata.executionPersistence === 'local') {
+              return;
+            }
+
             try {
               const backendSession = await sessionApi.updateSession(sessionId, {
                 name: updates.name,
                 description: updates.description,
+                active: updates.isActive,
                 metadata: updates.metadata,
               });
 
@@ -962,7 +1087,9 @@ export function createModeSessionStore(config: StoreConfig) {
           sendMessageStream: async (sessionId: string, options: SendMessageOptions) => {
             const session = get().sessions.find((s) => s.id === sessionId);
             if (!session) throw new Error('Session not found');
-            if (!isBackendSessionId(sessionId)) {
+            const isLocalModeSession = session.metadata.executionPersistence === 'local'
+              && Boolean(session.metadata.agentModeId);
+            if (!isBackendSessionId(sessionId) && !isLocalModeSession) {
               throw new Error(`Cannot stream a message before a live session exists: ${sessionId}`);
             }
 
@@ -1244,7 +1371,9 @@ export function createModeSessionStore(config: StoreConfig) {
                         };
                       });
                     }
-                    const contract = getAgentModeContract(session.metadata.agentModeId);
+                    const contract = session.metadata.sessionMode === 'agent'
+                      ? getAgentModeContract(session.metadata.agentModeId)
+                      : null;
                     const validation = contract
                       ? validateAgentModeExecution(contract, {
                           content: assistantContent,

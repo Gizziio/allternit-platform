@@ -48,6 +48,20 @@ const FEATURED_TEMPLATES: Partial<Record<string, Template[]>> = {
     { title: 'Data Visualization', description: 'Build clear charts and dashboards', prompt: 'Create data visualizations from my dataset or metrics. Recommend appropriate chart types and produce a clear dashboard that communicates the important insights.', previewImage: '/images/templates/agent-cards/sheets-viz.jpg' },
     { title: 'Forecasting', description: 'Project trends with confidence ranges', prompt: 'Build a forecast model from my historical data. Analyze trend and seasonality, then create projections with assumptions, validation metrics, and confidence intervals.', previewImage: '/images/templates/agent-cards/sheets-forecast.jpg' },
   ],
+  image: [
+    { title: 'Product Photography', description: 'Commercial studio product imagery', prompt: 'Generate a polished commercial product photograph with controlled studio lighting, realistic materials, and a clean campaign-ready composition.', previewImage: '/images/templates/create/image-product.jpg' },
+    { title: 'Cinematic Portrait', description: 'Expressive portrait with intentional lighting', prompt: 'Generate an expressive cinematic portrait with a specific subject, environment, lens treatment, and intentional lighting.', previewImage: '/images/templates/create/image-portrait.jpg' },
+    { title: 'Epic Landscape', description: 'Atmospheric natural environment', prompt: 'Generate an atmospheric landscape with strong depth, natural detail, a defined time of day, and cinematic composition.', previewImage: '/images/templates/create/image-landscape.jpg' },
+    { title: 'Abstract Composition', description: 'Original color, texture, and form', prompt: 'Generate an original abstract artwork using a deliberate palette, layered texture, rhythm, and gallery-quality composition.', previewImage: '/images/templates/create/image-abstract.jpg' },
+    { title: 'Interior Visualization', description: 'Architectural space and material study', prompt: 'Generate a photorealistic interior visualization with a defined design style, accurate materials, natural lighting, and believable spatial proportions.', previewImage: '/images/templates/create/image-interior.jpg' },
+    { title: 'Food Editorial', description: 'Appetizing culinary campaign image', prompt: 'Generate premium food photography with a specific dish, editorial styling, appetizing texture, and professional culinary lighting.', previewImage: '/images/templates/create/image-food.jpg' },
+  ],
+  video: [
+    { title: 'Cinematic Scene', description: 'Film-quality camera movement and atmosphere', prompt: 'Generate a six-second cinematic video with a clearly described subject, action, environment, camera movement, lighting, and mood.', previewImage: '/images/templates/create/video-cinematic.jpg' },
+    { title: 'Nature Motion', description: 'Natural movement captured cinematically', prompt: 'Generate a six-second nature video featuring a specific environment, believable natural motion, atmospheric light, and smooth camera movement.', previewImage: '/images/templates/create/video-nature.jpg' },
+    { title: 'Product Reveal', description: 'Premium moving product showcase', prompt: 'Generate a six-second premium product reveal with controlled camera motion, studio lighting, realistic reflections, and advertising-quality pacing.', previewImage: '/images/templates/create/video-product.jpg' },
+    { title: 'Animated Story', description: 'Character-led animated moment', prompt: 'Generate a six-second animated story moment with a defined character, action, art direction, camera framing, and emotional beat.', previewImage: '/images/templates/create/video-animation.jpg' },
+  ],
 };
 
 export function getModeTemplates(modeId: string): Template[] {

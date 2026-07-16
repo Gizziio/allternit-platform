@@ -22,9 +22,8 @@ use tracing::{debug, error, info};
 use crate::AppState;
 use allternit_agent_system_rails::{
     project_dag, ContextPackSeal, ContextPackStore, ContextPackStoreOptions, DagMutation, Gate,
-    GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger,
-    LedgerOptions, LedgerQuery, Mail, MailOptions, ReceiptStore, ReceiptStoreOptions, Vault,
-    VaultOptions, WorkOps,
+    GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger, LedgerOptions, LedgerQuery,
+    Mail, MailOptions, ReceiptStore, ReceiptStoreOptions, Vault, VaultOptions, WorkOps,
 };
 
 // ============================================================================
@@ -123,11 +122,7 @@ impl RailsState {
         }));
 
         // Initialize WorkOps
-        let work_ops = Arc::new(WorkOps::new(
-            ledger.clone(),
-            Some("api".to_string()),
-            None,
-        ));
+        let work_ops = Arc::new(WorkOps::new(ledger.clone(), Some("api".to_string()), None));
 
         info!("Rails service state initialized successfully");
 
@@ -166,13 +161,19 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/workspace/:workspace_id/dags", get(list_dags))
         .route("/workspace/:workspace_id/dags", post(create_dag))
         .route("/workspace/:workspace_id/dags/:dag_id", get(get_dag))
-        .route("/workspace/:workspace_id/dags/:dag_id/start", post(start_dag))
+        .route(
+            "/workspace/:workspace_id/dags/:dag_id/start",
+            post(start_dag),
+        )
         // Leases
         .route("/leases", post(request_lease))
         .route("/leases/:lease_id", get(get_lease))
         // Context Packs (Checkpoints)
         .route("/workspace/:workspace_id/packs", post(create_context_pack))
-        .route("/workspace/:workspace_id/packs/:pack_id", get(get_context_pack))
+        .route(
+            "/workspace/:workspace_id/packs/:pack_id",
+            get(get_context_pack),
+        )
         // Gate / Policy
         .route("/gate/evaluate", post(evaluate_policy))
 }
@@ -339,21 +340,11 @@ async fn list_wihs(
 ) -> impl IntoResponse {
     info!(dag_id = ?req.dag_id, ready_only = ?req.ready_only, "Listing WIHs");
 
-    (
-        StatusCode::OK,
-        Json(WihListResponse {
-            wihs: Vec::new(),
-        }),
-    )
+    (StatusCode::OK, Json(WihListResponse { wihs: Vec::new() }))
 }
 
 async fn list_wihs_get(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
-    (
-        StatusCode::OK,
-        Json(WihListResponse {
-            wihs: Vec::new(),
-        }),
-    )
+    (StatusCode::OK, Json(WihListResponse { wihs: Vec::new() }))
 }
 
 async fn pickup_wih(
@@ -400,12 +391,7 @@ async fn sign_wih(
 ) -> impl IntoResponse {
     info!(wih_id = %wih_id, signature = %req.signature, "Signing WIH");
 
-    (
-        StatusCode::OK,
-        Json(WihSignResponse {
-            signed: true,
-        }),
-    )
+    (StatusCode::OK, Json(WihSignResponse { signed: true }))
 }
 
 async fn close_wih(
@@ -420,10 +406,7 @@ async fn close_wih(
         "Closing WIH"
     );
 
-    (
-        StatusCode::OK,
-        Json(WihCloseResponse { closed: true }),
-    )
+    (StatusCode::OK, Json(WihCloseResponse { closed: true }))
 }
 
 async fn list_dags(
@@ -448,18 +431,24 @@ async fn list_dags(
             let response: Vec<DagSummaryResponse> = dags
                 .into_iter()
                 .map(|(dag_id, dag)| {
-                    let status = dag.nodes.values()
+                    let status = dag
+                        .nodes
+                        .values()
                         .find(|n| n.parent_node_id.is_none())
                         .map(|n| n.status.clone())
                         .unwrap_or_else(|| "UNKNOWN".to_string());
-                    
-                    let created_at = dag.nodes.values()
+
+                    let created_at = dag
+                        .nodes
+                        .values()
                         .filter_map(|n| n.created_at.as_ref())
                         .min()
                         .cloned()
                         .unwrap_or_default();
-                        
-                    let updated_at = dag.nodes.values()
+
+                    let updated_at = dag
+                        .nodes
+                        .values()
                         .filter_map(|n| n.updated_at.as_ref())
                         .max()
                         .cloned()
@@ -494,7 +483,9 @@ async fn create_dag(
 ) -> impl IntoResponse {
     info!(workspace_id, name = req.name, "Creating DAG");
 
-    let dag_id = req.dag_id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let dag_id = req
+        .dag_id
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let node_id = format!("{}-root", dag_id);
 
     // In the new system, creating a DAG often means creating the first node
@@ -506,9 +497,15 @@ async fn create_dag(
         execution_mode: "shared".to_string(),
     };
 
-    match state.rails
+    match state
+        .rails
         .gate
-        .mutate_with_decision(&dag_id, "Creating DAG from API", Some(req.description.unwrap_or_default()), vec![mutation])
+        .mutate_with_decision(
+            &dag_id,
+            "Creating DAG from API",
+            Some(req.description.unwrap_or_default()),
+            vec![mutation],
+        )
         .await
     {
         Ok(_) => (
@@ -539,18 +536,24 @@ async fn get_dag(
     match state.rails.ledger.query(LedgerQuery::default()).await {
         Ok(events) => {
             let dag = project_dag(&events, &dag_id);
-            let status = dag.nodes.values()
+            let status = dag
+                .nodes
+                .values()
                 .find(|n| n.parent_node_id.is_none())
                 .map(|n| n.status.clone())
                 .unwrap_or_else(|| "UNKNOWN".to_string());
-            
-            let created_at = dag.nodes.values()
+
+            let created_at = dag
+                .nodes
+                .values()
                 .filter_map(|n| n.created_at.as_ref())
                 .min()
                 .cloned()
                 .unwrap_or_default();
-                
-            let updated_at = dag.nodes.values()
+
+            let updated_at = dag
+                .nodes
+                .values()
                 .filter_map(|n| n.updated_at.as_ref())
                 .max()
                 .cloned()
@@ -572,11 +575,15 @@ async fn get_dag(
                         related_to: vec![], // Relations handled separately
                     })
                     .collect(),
-                edges: dag.edges.into_iter().map(|e| DagEdgeResponse {
-                    from: e.from_node_id,
-                    to: e.to_node_id,
-                    edge_type: e.edge_type,
-                }).collect(),
+                edges: dag
+                    .edges
+                    .into_iter()
+                    .map(|e| DagEdgeResponse {
+                        from: e.from_node_id,
+                        to: e.to_node_id,
+                        edge_type: e.edge_type,
+                    })
+                    .collect(),
                 created_at,
                 updated_at,
             };
@@ -607,7 +614,12 @@ async fn start_dag(
         reason: Some("Starting via API".to_string()),
     };
 
-    match state.rails.gate.mutate_with_decision(&dag_id, "Starting DAG", None, vec![mutation]).await {
+    match state
+        .rails
+        .gate
+        .mutate_with_decision(&dag_id, "Starting DAG", None, vec![mutation])
+        .await
+    {
         Ok(_) => (
             StatusCode::OK,
             Json(serde_json::json!({
@@ -620,7 +632,7 @@ async fn start_dag(
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": e.to_string() })),
         )
-            .into_response()
+            .into_response(),
     }
 }
 

@@ -1,4 +1,3 @@
-
 //! Local Brain API routes — memory query and vector search.
 //!
 //! Provides `/api/local-brain` for semantic search across memory documents,
@@ -22,17 +21,24 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
+use crate::AppState;
 
 fn unauthorized() -> axum::response::Response {
-    (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response()
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({"error": "Unauthorized"})),
+    )
+        .into_response()
 }
 
 pub fn local_brain_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/local-brain", get(local_brain_entry).post(pull_local_brain))
+        .route(
+            "/local-brain",
+            get(local_brain_entry).post(pull_local_brain),
+        )
         .route("/local-brain/status", get(brain_status))
 }
 
@@ -71,7 +77,9 @@ async fn local_brain_entry(
 ) -> impl IntoResponse {
     let ollama_url = state.config.ollama_url();
     match q.q.clone().as_deref().map(str::trim) {
-        Some(query) if !query.is_empty() => query_brain_impl(state, user, q, query.to_string()).await,
+        Some(query) if !query.is_empty() => {
+            query_brain_impl(state, user, q, query.to_string()).await
+        }
         _ => local_brain_probe(headers, ollama_url).await,
     }
 }
@@ -166,14 +174,19 @@ async fn query_brain_impl(
                 "SELECT id, title, content, source_url, created_at
                  FROM memory_documents
                  WHERE user_id = ?1 AND (title LIKE ?2 OR content LIKE ?2)
-                 ORDER BY created_at DESC LIMIT ?3"
+                 ORDER BY created_at DESC LIMIT ?3",
             )?;
             let docs = stmt.query_map(params![&user_id, &pattern, limit as i64], |row| {
                 Ok(BrainResult {
                     id: row.get(0)?,
                     result_type: "document".to_string(),
                     title: row.get(1)?,
-                    snippet: row.get::<_, Option<String>>(2)?.unwrap_or_default().chars().take(200).collect(),
+                    snippet: row
+                        .get::<_, Option<String>>(2)?
+                        .unwrap_or_default()
+                        .chars()
+                        .take(200)
+                        .collect(),
                     score: 0.85,
                     source_url: row.get(3)?,
                     created_at: row.get(4)?,
@@ -192,14 +205,19 @@ async fn query_brain_impl(
                 "SELECT id, type, payload, source, timestamp
                  FROM memory_events
                  WHERE user_id = ?1 AND (type LIKE ?2 OR payload LIKE ?2 OR source LIKE ?2)
-                 ORDER BY timestamp DESC LIMIT ?3"
+                 ORDER BY timestamp DESC LIMIT ?3",
             )?;
             let events = stmt.query_map(params![&user_id, &pattern, limit as i64], |row| {
                 Ok(BrainResult {
                     id: row.get(0)?,
                     result_type: "event".to_string(),
                     title: row.get(1)?,
-                    snippet: row.get::<_, Option<String>>(2)?.unwrap_or_default().chars().take(200).collect(),
+                    snippet: row
+                        .get::<_, Option<String>>(2)?
+                        .unwrap_or_default()
+                        .chars()
+                        .take(200)
+                        .collect(),
                     score: 0.75,
                     source_url: None,
                     created_at: row.get(4)?,
@@ -220,14 +238,21 @@ async fn query_brain_impl(
                  LEFT JOIN conversation_messages m ON m.conversation_id = c.id
                  WHERE c.user_id = ?1 AND (c.title LIKE ?2 OR m.content LIKE ?2)
                  GROUP BY c.id
-                 ORDER BY c.created_at DESC LIMIT ?3"
+                 ORDER BY c.created_at DESC LIMIT ?3",
             )?;
             let convs = stmt.query_map(params![&user_id, &pattern, limit as i64], |row| {
                 Ok(BrainResult {
                     id: row.get(0)?,
                     result_type: "conversation".to_string(),
-                    title: row.get::<_, Option<String>>(1)?.unwrap_or_else(|| "Untitled".to_string()),
-                    snippet: row.get::<_, Option<String>>(2)?.unwrap_or_default().chars().take(200).collect(),
+                    title: row
+                        .get::<_, Option<String>>(1)?
+                        .unwrap_or_else(|| "Untitled".to_string()),
+                    snippet: row
+                        .get::<_, Option<String>>(2)?
+                        .unwrap_or_default()
+                        .chars()
+                        .take(200)
+                        .collect(),
                     score: 0.8,
                     source_url: None,
                     created_at: row.get(3)?,
@@ -254,24 +279,30 @@ async fn query_brain_impl(
             "results": data,
             "count": data.len(),
             "note": "Keyword search (semantic search unavailable — no embedding service configured)"
-        })).into_response(),
+        }))
+        .into_response(),
         Ok(Err(e)) => {
             warn!("DB error querying brain: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
 
 // ─── Pull Local Brain model over SSE ─────────────────────────────────────────
 
-async fn pull_local_brain(
-    State(state): State<Arc<AppState>>,
-    headers: HeaderMap,
-) -> Response {
+async fn pull_local_brain(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
     let _user = match get_user(&headers) {
         Some(u) => u,
         None => return unauthorized(),
@@ -440,5 +471,6 @@ async fn brain_status(
         } else {
             "Semantic search requires an embedding service (OLLAMA_URL or ALLTERNIT_EMBEDDING_URL)"
         }
-    })).into_response()
+    }))
+    .into_response()
 }

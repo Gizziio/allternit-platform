@@ -3,10 +3,17 @@
 import { ArrowSquareOut, ArrowsClockwise, CheckCircle, CircleNotch, Download, Terminal, Warning } from '@phosphor-icons/react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { openInBrowser } from '@/lib/openInBrowser';
+import { MiniAppRuntimeSurface } from '@/views/aci/MiniAppRuntimeSurface';
+import type { InstalledMiniApp } from '@/views/aci/mini-app.types';
 
 const HERMES_REPO = 'https://github.com/NousResearch/hermes-agent';
 const HERMES_DOCS = 'https://hermes-agent.nousresearch.com/docs';
 const HERMES_DASHBOARD = 'http://127.0.0.1:9119';
+const HERMES_APP: InstalledMiniApp = {
+  id: 'hermes', name: 'Hermes', description: 'Nous Research self-improving agent and messaging gateway.',
+  category: 'connector', source: 'builtin', url: HERMES_DASHBOARD, status: 'offline',
+  presentation: { mode: 'hybrid', uiUrl: HERMES_DASHBOARD, healthUrl: HERMES_DASHBOARD, electronPartition: 'persist:allternit-hermes', nativeRenderer: 'hermes', fallback: 'external-browser' },
+};
 
 type RuntimeStatus = { managed: boolean; running: boolean; port: number | null };
 type Phase = 'checking' | 'idle' | 'installing' | 'starting' | 'error';
@@ -45,10 +52,33 @@ export function HermesView() {
     await refresh();
   };
 
-  const launchDesktop = async () => {
+  const setupAndOpen = async () => {
     if (!miniApps) return;
-    const result = await miniApps.launchDesktop('hermes');
-    if (!result.success) { setPhase('error'); setMessage(result.error ?? 'Hermes Desktop failed to launch'); }
+    setMessage('');
+    let nextStatus = await miniApps.getStatus('hermes');
+    if (!nextStatus.running) {
+      setPhase('starting');
+      let result = await miniApps.start('hermes');
+      if (!result.success) {
+        setPhase('installing');
+        const installed = await miniApps.install('hermes');
+        if (!installed.success) {
+          setPhase('error');
+          setMessage(installed.error ?? 'Hermes installation failed');
+          return;
+        }
+        setPhase('starting');
+        result = await miniApps.start('hermes');
+        if (!result.success) {
+          setPhase('error');
+          setMessage(result.error ?? 'Hermes dashboard failed to start');
+          return;
+        }
+      }
+      nextStatus = await miniApps.getStatus('hermes');
+    }
+    setStatus(nextStatus);
+    setPhase('idle');
   };
 
   const busy = phase === 'checking' || phase === 'installing' || phase === 'starting';
@@ -64,7 +94,7 @@ export function HermesView() {
           <div className="flex gap-2">
             <button type="button" onClick={() => openInBrowser(HERMES_DOCS)} className="rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-xs">Docs</button>
             <button type="button" onClick={() => openInBrowser(HERMES_REPO)} className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-xs"><ArrowSquareOut size={13}/>GitHub</button>
-            <button type="button" onClick={() => void launchDesktop()} disabled={!miniApps} className="flex items-center gap-1.5 rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs text-[var(--bg-primary)] disabled:opacity-50"><ArrowSquareOut size={13}/>Launch Hermes Desktop</button>
+            <button type="button" onClick={() => void setupAndOpen()} disabled={!miniApps || busy} className="flex items-center gap-1.5 rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs text-[var(--bg-primary)] disabled:opacity-50"><ArrowSquareOut size={13}/>{status.running ? 'Open embedded dashboard' : 'Set up embedded dashboard'}</button>
           </div>
         </div>
 
@@ -83,7 +113,7 @@ export function HermesView() {
           {logs.length > 0 && <pre className="mt-4 max-h-52 overflow-auto rounded-xl bg-black/80 p-3 text-[11px] leading-5 text-neutral-300">{logs.join('\n')}</pre>}
           {busy && <CircleNotch size={16} className="mt-4 animate-spin text-[var(--accent-primary)]"/>}
         </div>
-        {status.running && <div className="h-[720px] overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]"><iframe src={HERMES_DASHBOARD} title="Hermes official dashboard" className="size-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads" /></div>}
+        {status.running && <MiniAppRuntimeSurface app={HERMES_APP} title="Hermes official dashboard" className="h-[720px] rounded-2xl border border-[var(--border-subtle)]" />}
       </div>
     </div>
   );

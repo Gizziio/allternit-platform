@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 import {
@@ -39,6 +39,8 @@ interface PromptModelSelectorProps {
   onBrowseAllModels?: () => void;
   onOpenProviderConnect?: () => void;
   isTerminalModels?: boolean;
+  /** The parent already renders the model pill; mount only the anchored menu. */
+  triggerless?: boolean;
   className?: string;
 }
 
@@ -69,6 +71,7 @@ export function PromptModelSelector({
   onBrowseAllModels,
   onOpenProviderConnect,
   isTerminalModels,
+  triggerless = false,
   className,
 }: PromptModelSelectorProps): React.ReactNode {
   const [open, setOpen] = useState(false);
@@ -76,6 +79,10 @@ export function PromptModelSelector({
   const { ollamaRunning, modelReady } = useLocalBrainStatus({ pollOnFocus: false });
   const sandboxMode = useChatStore((state) => state.sandboxMode);
   const setSandboxMode = useChatStore((state) => state.setSandboxMode);
+
+  useEffect(() => {
+    if (triggerless) setOpen(true);
+  }, [triggerless]);
 
   const enrichedModels = useMemo<ModelOption[]>(() => {
     const list = models.map((m) => ({
@@ -142,21 +149,27 @@ export function PromptModelSelector({
 
   return (
     <Popover.Root open={open} onOpenChange={handleOpenChange}>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "flex items-center gap-2 py-1 px-2 rounded-full text-sm font-medium transition-all",
-            className
-          )}
-        >
-          <span className="text-composer-muted">
-            <ProviderIcon providerId={getProviderId(selected)} />
-          </span>
-          <span className="text-secondary">{selected?.name || "Select model"}</span>
-          <CaretDown size={12} className={cn("text-composer-muted transition-transform", open && "rotate-180")} />
-        </button>
-      </Popover.Trigger>
+      {triggerless ? (
+        <Popover.Anchor asChild>
+          <span aria-hidden className="absolute right-0 bottom-full size-px" />
+        </Popover.Anchor>
+      ) : (
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-2 py-1 px-2 rounded-full text-sm font-medium transition-all",
+              className
+            )}
+          >
+            <span className="text-composer-muted">
+              <ProviderIcon providerId={getProviderId(selected)} />
+            </span>
+            <span className="text-secondary">{selected?.name || "Select model"}</span>
+            <CaretDown size={12} className={cn("text-composer-muted transition-transform", open && "rotate-180")} />
+          </button>
+        </Popover.Trigger>
+      )}
 
       <Popover.Portal>
         <Popover.Content

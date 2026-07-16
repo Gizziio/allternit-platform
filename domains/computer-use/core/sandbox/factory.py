@@ -11,8 +11,8 @@ def create_sandbox(config: SandboxConfig | None = None) -> BaseSandbox:
     Create the most appropriate sandbox for the current platform.
 
     AUTO selection logic:
-      macOS  → AppleVirtSandbox  (falls back to ProcessSandbox internally)
-      Linux with firecracker → FirecrackerSandbox (falls back internally)
+      macOS  → AppleVirtSandbox (fails closed when unavailable)
+      Linux with firecracker → FirecrackerSandbox (fails closed when unavailable)
       else   → ProcessSandbox
     """
     cfg = config or SandboxConfig()

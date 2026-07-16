@@ -50,8 +50,7 @@ pub fn terminal_router() -> Router<Arc<AppState>> {
 }
 
 fn gizzi_base_url() -> String {
-    crate::config::AppConfig::load()
-        .terminal_server_url()
+    crate::config::AppConfig::load().terminal_server_url()
 }
 
 async fn forward_to_gizzi(
@@ -141,7 +140,10 @@ async fn handle_terminal_message(
             StatusCode::OK,
             Json(TerminalMessageResponse {
                 success: true,
-                message: format!("{} forwarded to session {}", request.message_type, session_id),
+                message: format!(
+                    "{} forwarded to session {}",
+                    request.message_type, session_id
+                ),
                 data: None,
             }),
         ),
@@ -207,7 +209,6 @@ async fn handle_terminal_input(
         }
     }
 }
-
 
 // ─── Terminal lifecycle stubs ────────────────────────────────────────────────
 

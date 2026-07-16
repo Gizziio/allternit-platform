@@ -45,6 +45,18 @@ import {
 } from './types';
 import { EventStream } from './events';
 import { normalizeEndpoint, buildRequestHeaders, handleApiError } from './utils';
+import type {
+  ComputerActionTransaction,
+  ComputerApprovalGrant,
+  ComputerCapabilityManifest,
+  ComputerEnvironmentRecord,
+  ComputerEnvironmentLease,
+  ComputerEnvironmentProviderManifest,
+  ComputerImageRecord,
+  ComputerObservation,
+  ComputerRootDiscovery,
+  ComputerTransactionOutcome,
+} from './canonical';
 
 /**
  * Main client for the Allternit Computer Use Engine HTTP API.
@@ -84,6 +96,204 @@ export class AllternitComputerUseClient {
   // ===========================================================================
   // Core Execute Endpoint
   // ===========================================================================
+
+  /** Discover canonical providers and their enforceable capabilities. */
+  async listCanonicalProviders(): Promise<ComputerCapabilityManifest[]> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/providers`, {
+      method: 'GET',
+      headers: buildRequestHeaders(this.headers, this.apiKey, false),
+    });
+    if (!response.ok) await handleApiError(response);
+    const body = await response.json() as { providers: ComputerCapabilityManifest[] };
+    return body.providers;
+  }
+
+  /** Capture and persist one immutable canonical observation. */
+  async observeCanonical(request: {
+    provider_id?: string;
+    session_id: string;
+    environment_id?: string;
+    resource_id?: string;
+  }): Promise<ComputerObservation> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/observe`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerObservation>;
+  }
+
+  /** Discover browser and native roots across canonical providers. */
+  async findCanonicalRoots(request: {
+    session_id: string;
+    environment_id?: string;
+    provider_id?: string;
+  }): Promise<ComputerRootDiscovery> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/roots`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerRootDiscovery>;
+  }
+
+  /** Execute a state-bound canonical transaction. */
+  async executeCanonicalTransaction(
+    transaction: ComputerActionTransaction,
+    providerId = 'browser.playwright.canonical',
+  ): Promise<ComputerTransactionOutcome> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/transactions`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify({ provider_id: providerId, transaction }),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerTransactionOutcome>;
+  }
+
+  /** Issue a short-lived, single-use approval bound to an exact transaction. */
+  async approveCanonicalTransaction(
+    transaction: ComputerActionTransaction,
+    approvedBy: string,
+    ttlSeconds = 120,
+  ): Promise<ComputerApprovalGrant> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/approvals`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify({
+        transaction,
+        approved_by: approvedBy,
+        ttl_seconds: ttlSeconds,
+      }),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerApprovalGrant>;
+  }
+
+  async listCanonicalEnvironmentProviders(): Promise<ComputerEnvironmentProviderManifest[]> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/environment-providers`, {
+      headers: buildRequestHeaders(this.headers, this.apiKey, false),
+    });
+    if (!response.ok) await handleApiError(response);
+    return (await response.json() as { providers: ComputerEnvironmentProviderManifest[] }).providers;
+  }
+
+  async registerCanonicalImage(request: {
+    source: string; os: string; architecture: string; digest: string;
+    provenance?: Record<string, unknown>; scan_status?: string;
+  }): Promise<ComputerImageRecord> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/images`, {
+      method: 'POST', headers: buildRequestHeaders(this.headers, this.apiKey), body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerImageRecord>;
+  }
+
+  async createCanonicalEnvironment(request: {
+    owner_id: string; provider_id: string; os: string; isolation: string;
+    image_digest?: string; ttl_seconds?: number; metadata?: Record<string, unknown>;
+  }): Promise<ComputerEnvironmentRecord> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/environments`, {
+      method: 'POST', headers: buildRequestHeaders(this.headers, this.apiKey), body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerEnvironmentRecord>;
+  }
+
+  async approveCanonicalEnvironmentOperation(request: {
+    environment_id: string; holder_id: string; operation: string;
+    payload: Record<string, unknown>; approved_by: string; ttl_seconds?: number;
+  }): Promise<{ approval_id: string; operation_hash: string; approved_by: string; expires_at: number }> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/operation-approvals`, {
+      method: 'POST', headers: buildRequestHeaders(this.headers, this.apiKey), body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json();
+  }
+
+  async provisionCanonicalEnvironment(
+    environmentId: string, control: { lease_id: string; holder_id: string; approval_id: string },
+  ): Promise<ComputerEnvironmentRecord> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/environments/${encodeURIComponent(environmentId)}/provision`, {
+      method: 'POST', headers: buildRequestHeaders(this.headers, this.apiKey), body: JSON.stringify(control),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerEnvironmentRecord>;
+  }
+
+  async stopCanonicalEnvironment(
+    environmentId: string, control: { lease_id: string; holder_id: string; approval_id: string },
+  ): Promise<ComputerEnvironmentRecord> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/environments/${encodeURIComponent(environmentId)}/stop`, {
+      method: 'POST', headers: buildRequestHeaders(this.headers, this.apiKey), body: JSON.stringify(control),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerEnvironmentRecord>;
+  }
+
+  async acquireCanonicalEnvironmentLease(
+    environmentId: string, holderId: string, kind: 'agent' | 'human_takeover', ttlSeconds = 300,
+  ): Promise<ComputerEnvironmentLease> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/environments/${encodeURIComponent(environmentId)}/leases`, {
+      method: 'POST', headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify({ holder_id: holderId, kind, ttl_seconds: ttlSeconds }),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerEnvironmentLease>;
+  }
+
+  async getCanonicalTrajectory(sessionId: string): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/sessions/${encodeURIComponent(sessionId)}/trajectory`, {
+      headers: buildRequestHeaders(this.headers, this.apiKey, false),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<Record<string, unknown>>;
+  }
+
+  private async canonicalPost(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical${path}`, {
+      method: 'POST', headers: buildRequestHeaders(this.headers, this.apiKey), body: JSON.stringify(body),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<Record<string, unknown>>;
+  }
+
+  releaseCanonicalEnvironmentLease(leaseId: string, holderId: string): Promise<Record<string, unknown>> {
+    return this.canonicalPost(`/leases/${encodeURIComponent(leaseId)}/release`, { holder_id: holderId });
+  }
+
+  executeCanonicalEnvironmentCommand(environmentId: string, request: {
+    command: string[]; env?: Record<string, string>; secret_refs?: Record<string, string>;
+    lease_id: string; holder_id: string; approval_id: string;
+  }): Promise<Record<string, unknown>> {
+    return this.canonicalPost(`/environments/${encodeURIComponent(environmentId)}/exec`, request);
+  }
+
+  readCanonicalEnvironmentFile(environmentId: string, request: {
+    path: string; lease_id: string; holder_id: string;
+  }): Promise<Record<string, unknown>> {
+    return this.canonicalPost(`/environments/${encodeURIComponent(environmentId)}/files/read`, request);
+  }
+
+  writeCanonicalEnvironmentFile(environmentId: string, request: {
+    path: string; content: string; lease_id: string; holder_id: string; approval_id: string;
+  }): Promise<Record<string, unknown>> {
+    return this.canonicalPost(`/environments/${encodeURIComponent(environmentId)}/files/write`, request);
+  }
+
+  canonicalEnvironmentClipboard(environmentId: string, request: {
+    lease_id: string; holder_id: string; text?: string; approval_id?: string;
+  }): Promise<Record<string, unknown>> {
+    return this.canonicalPost(`/environments/${encodeURIComponent(environmentId)}/clipboard`, request);
+  }
+
+  executeCanonicalMobileAction(environmentId: string, request: {
+    action: string; arguments?: Record<string, unknown>; lease_id: string; holder_id: string; approval_id: string;
+  }): Promise<Record<string, unknown>> {
+    return this.canonicalPost(`/environments/${encodeURIComponent(environmentId)}/mobile/actions`, request);
+  }
 
   /**
    * Execute a canonical engine request.

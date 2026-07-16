@@ -12,15 +12,21 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn board_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/board-items", get(list_board).post(create_board))
-        .route("/board-items/:id", get(get_board).put(update_board).delete(delete_board))
+        .route(
+            "/board-items/:id",
+            get(get_board).put(update_board).delete(delete_board),
+        )
         .route("/board-items/:id/assign", post(assign_board))
-        .route("/board-items/:id/comments", get(list_comments).post(add_comment))
+        .route(
+            "/board-items/:id/comments",
+            get(list_comments).post(add_comment),
+        )
 }
 
 #[derive(Deserialize)]
@@ -49,7 +55,11 @@ async fn list_board(
         .unwrap_or(false);
 
     if !has_access {
-        return (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"}))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        )
+            .into_response();
     }
 
     let mut stmt = match conn.prepare(
@@ -102,7 +112,13 @@ async fn create_board(
 ) -> impl axum::response::IntoResponse {
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))).into_response(),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+                .into_response()
+        }
     };
 
     // Verify user has access to workspace
@@ -115,12 +131,20 @@ async fn create_board(
         .unwrap_or(false);
 
     if !has_access {
-        return (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"}))).into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        )
+            .into_response();
     }
 
     let id = uuid::Uuid::new_v4().to_string();
-    let labels = body.labels.map(|l| serde_json::to_string(&l).unwrap_or_default());
-    let deps = body.dependencies.map(|d| serde_json::to_string(&d).unwrap_or_default());
+    let labels = body
+        .labels
+        .map(|l| serde_json::to_string(&l).unwrap_or_default());
+    let deps = body
+        .dependencies
+        .map(|d| serde_json::to_string(&d).unwrap_or_default());
 
     match conn.execute(
         "INSERT INTO board_items (id, workspace_id, title, description, status, priority, labels, estimated_minutes, deadline, dependencies, reporter_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
@@ -193,11 +217,19 @@ async fn get_board(
         }
         Ok(Err(e)) => {
             warn!("DB error getting board: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -274,11 +306,19 @@ async fn update_board(
         }
         Ok(Err(e)) => {
             warn!("DB error updating board: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -317,11 +357,19 @@ async fn delete_board(
         }
         Ok(Err(e)) => {
             warn!("DB error deleting board: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -367,11 +415,19 @@ async fn assign_board(
         }
         Ok(Err(e)) => {
             warn!("DB error assigning board: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -417,16 +473,26 @@ async fn list_comments(
 
     match rows {
         Ok(Ok(comments)) => Json(json!({"comments": comments})).into_response(),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"}))).into_response()
-        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing comments: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -470,16 +536,26 @@ async fn add_comment(
 
     match result {
         Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"id": comment_id}))).into_response(),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"}))).into_response()
-        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error adding comment: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }

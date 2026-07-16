@@ -11,16 +11,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn memory_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/memory", get(list_memory))
         .route("/memory/health", get(memory_health))
         .route("/memory/consolidate", post(memory_consolidate))
-        .route("/memory/documents", get(list_documents).post(create_document))
+        .route(
+            "/memory/documents",
+            get(list_documents).post(create_document),
+        )
         .route("/memory/events", get(list_events).post(create_event))
         .route("/memory/query", post(query_memory))
         .route("/memory/edges", get(list_edges))
@@ -77,12 +80,17 @@ async fn list_memory() -> Json<serde_json::Value> {
 
 // ── Consolidate ─────────────────────────────────────────────────────────────
 
-async fn memory_consolidate(State(state): State<Arc<AppState>>) -> impl axum::response::IntoResponse {
+async fn memory_consolidate(
+    State(state): State<Arc<AppState>>,
+) -> impl axum::response::IntoResponse {
     let memory_url = state.config.memory_url();
 
     let client = reqwest::Client::new();
     match client
-        .post(format!("{}/api/consolidate", memory_url.trim_end_matches('/')))
+        .post(format!(
+            "{}/api/consolidate",
+            memory_url.trim_end_matches('/')
+        ))
         .timeout(std::time::Duration::from_secs(30))
         .send()
         .await
@@ -91,18 +99,22 @@ async fn memory_consolidate(State(state): State<Arc<AppState>>) -> impl axum::re
             if let Ok(body) = res.json::<serde_json::Value>().await {
                 (StatusCode::OK, Json(body))
             } else {
-                (StatusCode::OK, Json(json!({
-                    "success": true,
-                    "message": "Consolidation triggered",
-                })))
+                (
+                    StatusCode::OK,
+                    Json(json!({
+                        "success": true,
+                        "message": "Consolidation triggered",
+                    })),
+                )
             }
         }
-        Err(e) => {
-            (StatusCode::SERVICE_UNAVAILABLE, Json(json!({
+        Err(e) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
                 "success": false,
                 "message": format!("Memory service unreachable: {}", e),
-            })))
-        }
+            })),
+        ),
     }
 }
 
@@ -134,11 +146,21 @@ async fn list_documents(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
     let mut sql = "SELECT id, agent_id, title, source_type, source_url, chunk_count, is_indexed, created_at, updated_at FROM memory_documents WHERE user_id = ?1".to_string();
@@ -154,7 +176,12 @@ async fn list_documents(
 
     let mut stmt = match conn.prepare(&sql) {
         Ok(s) => s,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
     let docs: Vec<MemoryDoc> = match stmt.query_map(rusqlite::params_from_iter(args_refs), |row| {
@@ -195,11 +222,21 @@ async fn create_document(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
     let id = uuid::Uuid::new_v4().to_string();
@@ -251,11 +288,21 @@ async fn list_events(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
     let limit = params.limit.unwrap_or(100);
@@ -277,22 +324,28 @@ async fn list_events(
 
     let mut stmt = match conn.prepare(&sql) {
         Ok(s) => s,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
-    let events: Vec<MemoryEvent> = match stmt.query_map(rusqlite::params_from_iter(args_refs), |row| {
-        Ok(MemoryEvent {
-            id: row.get(0)?,
-            timestamp: row.get(1)?,
-            event_type: row.get(2)?,
-            payload: row.get(3)?,
-            agent_id: row.get(4)?,
-            source: row.get(5)?,
-        })
-    }) {
-        Ok(iter) => iter.filter_map(|r| r.ok()).collect(),
-        Err(_) => vec![],
-    };
+    let events: Vec<MemoryEvent> =
+        match stmt.query_map(rusqlite::params_from_iter(args_refs), |row| {
+            Ok(MemoryEvent {
+                id: row.get(0)?,
+                timestamp: row.get(1)?,
+                event_type: row.get(2)?,
+                payload: row.get(3)?,
+                agent_id: row.get(4)?,
+                source: row.get(5)?,
+            })
+        }) {
+            Ok(iter) => iter.filter_map(|r| r.ok()).collect(),
+            Err(_) => vec![],
+        };
 
     (StatusCode::OK, Json(json!(events)))
 }
@@ -314,11 +367,21 @@ async fn create_event(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+        }
     };
 
     let id = uuid::Uuid::new_v4().to_string();
@@ -359,7 +422,12 @@ async fn query_memory(
 ) -> impl axum::response::IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
     // Proxy to memory agent if available, otherwise return stub
     let memory_url = state.config.memory_url();
@@ -377,13 +445,18 @@ async fn query_memory(
             if let Ok(json) = res.json::<serde_json::Value>().await {
                 (StatusCode::OK, Json(json))
             } else {
-                (StatusCode::OK, Json(json!({"results": [], "query": body.query})))
+                (
+                    StatusCode::OK,
+                    Json(json!({"results": [], "query": body.query})),
+                )
             }
         }
-        Err(_) => (StatusCode::OK, Json(json!({"results": [], "query": body.query, "note": "Memory agent unavailable"}))),
+        Err(_) => (
+            StatusCode::OK,
+            Json(json!({"results": [], "query": body.query, "note": "Memory agent unavailable"})),
+        ),
     }
 }
-
 
 // ── Edges ───────────────────────────────────────────────────────────────────
 
@@ -405,7 +478,12 @@ async fn list_edges(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))) as (StatusCode, Json<serde_json::Value>),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            ) as (StatusCode, Json<serde_json::Value>)
+        }
     };
 
     let db = state.db.clone();
@@ -484,7 +562,12 @@ async fn list_entities(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))) as (StatusCode, Json<serde_json::Value>),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            ) as (StatusCode, Json<serde_json::Value>)
+        }
     };
 
     let db = state.db.clone();
@@ -497,17 +580,25 @@ async fn list_entities(
         let conn = db.connect()?;
         let mut sql = String::from(
             "SELECT id, entity_id, name, type, content, vector_id, last_updated
-             FROM memory_entities WHERE user_id = ?1"
+             FROM memory_entities WHERE user_id = ?1",
         );
-        if agent_id.is_some() { sql.push_str(" AND agent_id = ?2"); }
-        if entity_type.is_some() { sql.push_str(" AND type = ?3"); }
-        if q.is_some() { sql.push_str(" AND (name LIKE ?4 OR content LIKE ?4)"); }
+        if agent_id.is_some() {
+            sql.push_str(" AND agent_id = ?2");
+        }
+        if entity_type.is_some() {
+            sql.push_str(" AND type = ?3");
+        }
+        if q.is_some() {
+            sql.push_str(" AND (name LIKE ?4 OR content LIKE ?4)");
+        }
         sql.push_str(" ORDER BY last_updated DESC LIMIT 200");
 
         let mut stmt = conn.prepare(&sql)?;
         let like = q.map(|s| format!("%{}%", s));
         let rows = match (&agent_id, &entity_type, &like) {
-            (Some(a), Some(t), Some(l)) => stmt.query_map(params![user_id, a, t, l], row_to_entity)?,
+            (Some(a), Some(t), Some(l)) => {
+                stmt.query_map(params![user_id, a, t, l], row_to_entity)?
+            }
             (Some(a), Some(t), None) => stmt.query_map(params![user_id, a, t], row_to_entity)?,
             (Some(a), None, Some(l)) => stmt.query_map(params![user_id, a, l], row_to_entity)?,
             (Some(a), None, None) => stmt.query_map(params![user_id, a], row_to_entity)?,
@@ -515,9 +606,11 @@ async fn list_entities(
             (None, Some(t), None) => stmt.query_map(params![user_id, t], row_to_entity)?,
             (None, None, Some(l)) => stmt.query_map(params![user_id, l], row_to_entity)?,
             (None, None, None) => stmt.query_map(params![user_id], row_to_entity)?,
-        }.collect::<Result<Vec<_>, _>>()?;
+        }
+        .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
-    }).await;
+    })
+    .await;
 
     match rows {
         Ok(Ok(data)) => (StatusCode::OK, Json(json!({"entities": data}))),
@@ -566,7 +659,12 @@ async fn create_entity(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
 
     let db = state.db.clone();
@@ -595,14 +693,23 @@ async fn create_entity(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"success": true, "entity": {"id": id}}))),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({"success": true, "entity": {"id": id}})),
+        ),
         Ok(Err(e)) => {
             tracing::warn!("DB error creating entity: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             tracing::warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -616,51 +723,68 @@ async fn memory_stats(
 ) -> impl axum::response::IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
 
     let db = state.db.clone();
     let user_id = user.user_id;
 
-    let stats = tokio::task::spawn_blocking(move || {
-        let conn = db.connect()?;
-        let total_events: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM memory_events WHERE user_id = ?1",
-            params![user_id],
-            |row| row.get(0),
-        ).unwrap_or(0);
-        let total_entities: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM memory_entities WHERE user_id = ?1",
-            params![user_id],
-            |row| row.get(0),
-        ).unwrap_or(0);
-        let total_edges: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM memory_edges WHERE user_id = ?1",
-            params![user_id],
-            |row| row.get(0),
-        ).unwrap_or(0);
-        let total_vectors: i64 = conn.query_row(
+    let stats =
+        tokio::task::spawn_blocking(move || {
+            let conn = db.connect()?;
+            let total_events: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM memory_events WHERE user_id = ?1",
+                    params![user_id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+            let total_entities: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM memory_entities WHERE user_id = ?1",
+                    params![user_id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+            let total_edges: i64 = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM memory_edges WHERE user_id = ?1",
+                    params![user_id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
+            let total_vectors: i64 = conn.query_row(
             "SELECT COUNT(*) FROM memory_entities WHERE user_id = ?1 AND vector_id IS NOT NULL",
             params![user_id],
             |row| row.get(0),
         ).unwrap_or(0);
-        Ok::<_, rusqlite::Error>((total_events, total_entities, total_edges, total_vectors))
-    }).await;
+            Ok::<_, rusqlite::Error>((total_events, total_entities, total_edges, total_vectors))
+        })
+        .await;
 
     match stats {
-        Ok(Ok((events, entities, edges, vectors))) => {
-            (StatusCode::OK, Json(json!({
+        Ok(Ok((events, entities, edges, vectors))) => (
+            StatusCode::OK,
+            Json(json!({
                 "memories": { "total": events },
                 "insights": entities,
                 "connections": edges,
                 "vectors": vectors,
-            })))
-        }
-        _ => (StatusCode::OK, Json(json!({
-            "memories": { "total": 0 },
-            "insights": 0,
-            "connections": 0,
-            "vectors": 0,
-        }))),
+            })),
+        ),
+        _ => (
+            StatusCode::OK,
+            Json(json!({
+                "memories": { "total": 0 },
+                "insights": 0,
+                "connections": 0,
+                "vectors": 0,
+            })),
+        ),
     }
 }

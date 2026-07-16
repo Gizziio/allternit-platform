@@ -15,7 +15,10 @@ use crate::AppState;
 pub fn backend_install_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/backend-install", get(backend_install_status))
-        .route("/backend-install/progress", get(install_progress).post(install_progress_post))
+        .route(
+            "/backend-install/progress",
+            get(install_progress).post(install_progress_post),
+        )
         .route("/backend-install/test", post(install_test))
 }
 
@@ -43,25 +46,31 @@ async fn install_progress(State(_state): State<Arc<AppState>>) -> impl IntoRespo
 }
 
 async fn install_progress_post(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
-    (StatusCode::OK, Json(json!({
-        "success": true,
-        "message": "Allternit backend installed and activated successfully",
-        "installation_log": ["Legacy install flow — use /api/v1/ssh-connections instead"],
-        "version": env!("CARGO_PKG_VERSION"),
-        "api_url": null,
-        "reachable_from_shell": true,
-    })))
+    (
+        StatusCode::OK,
+        Json(json!({
+            "success": true,
+            "message": "Allternit backend installed and activated successfully",
+            "installation_log": ["Legacy install flow — use /api/v1/ssh-connections instead"],
+            "version": env!("CARGO_PKG_VERSION"),
+            "api_url": null,
+            "reachable_from_shell": true,
+        })),
+    )
 }
 
 async fn install_test(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
-    (StatusCode::OK, Json(json!({
-        "success": true,
-        "system_info": {
-            "os": "linux",
-            "distro": "ubuntu",
-            "version": "22.04",
-            "architecture": "x86_64",
-        },
-        "message": "SSH connection test stub — use /api/v1/ssh-connections for real tests",
-    })))
+    (
+        StatusCode::OK,
+        Json(json!({
+            "success": true,
+            "system_info": {
+                "os": "linux",
+                "distro": "ubuntu",
+                "version": "22.04",
+                "architecture": "x86_64",
+            },
+            "message": "SSH connection test stub — use /api/v1/ssh-connections for real tests",
+        })),
+    )
 }

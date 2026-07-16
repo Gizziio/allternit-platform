@@ -54,6 +54,9 @@ import { PromptInputProvider } from "@/components/ai-elements/prompt-input";
 import { ChatModelsProvider } from "@/providers/chat-models-provider";
 import { ModelSelectionProvider } from "@/providers/model-selection-provider";
 import { useDefaultModelSelection } from "@/hooks/use-default-model-selection";
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('DesignModeView');
 
 const VideoEditorView = lazy(() => import("./video/VideoEditorView").then((m) => ({ default: m.VideoEditorView })));
 const OfficeWorkspace = lazy(() => import("./office/OfficeWorkspace").then((m) => ({ default: m.OfficeWorkspace })));
@@ -479,18 +482,22 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       skillValues: { ...config.skillValues, ...skillParameters },
       isDeckSession: config.type === 'slides' || skill?.mode === 'deck',
     });
-    const sessionId = await createDesignSession({ name: config.name, projectId, sessionMode: 'agent', systemPrompt });
-    const userRequest = config.prompt?.trim() || config.name;
-    if (isContent) {
-      await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] Project: "${config.name}". User request: ${userRequest}\n\nRun skill_graph_ops action="sync" to read /content-skill-graph/index.md, then create the first working artifact for this request and open it in the canvas.` });
-    } else if (skill) {
-      const opener = skill.examplePrompt ?? `Run the ${skill.name} skill for this project.`;
-      const inputs = skill.inputs.map((i) => `${i.label ?? i.name}: ${config.skillValues?.[i.name] ?? i.default ?? ''}`).join('\n');
-      const params = skill.parameters.map((p) => `${p.label ?? p.name}: ${skillParameters[p.name] ?? p.default}`).join('\n');
-      await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nUser request: ${userRequest}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Begin the skill workflow now. Create the first usable design artifact and open it in the canvas; do not stop at a discovery question unless a required detail is truly missing.` });
-    } else {
-      const dirContext = dir ? ` The visual direction is "${dir.label}" — ${dir.mood}. Key references: ${dir.references.join(', ')}.` : '';
-      await sendMessageStream(sessionId, { text: `Create a ${config.type} for this request:\n\n${userRequest}\n\nProject name: "${config.name}".${dirContext}\n\nStart building immediately. Produce the first complete, editable design artifact, save it as a project file, and open it in the canvas. Make reasonable design decisions from the request instead of replying with only a discovery brief.` });
+    try {
+      const sessionId = await createDesignSession({ name: config.name, projectId, sessionMode: 'agent', systemPrompt });
+      const userRequest = config.prompt?.trim() || config.name;
+      if (isContent) {
+        await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] Project: "${config.name}". User request: ${userRequest}\n\nRun skill_graph_ops action="sync" to read /content-skill-graph/index.md, then create the first working artifact for this request and open it in the canvas.` });
+      } else if (skill) {
+        const opener = skill.examplePrompt ?? `Run the ${skill.name} skill for this project.`;
+        const inputs = skill.inputs.map((i) => `${i.label ?? i.name}: ${config.skillValues?.[i.name] ?? i.default ?? ''}`).join('\n');
+        const params = skill.parameters.map((p) => `${p.label ?? p.name}: ${skillParameters[p.name] ?? p.default}`).join('\n');
+        await sendMessageStream(sessionId, { text: `${opener}\n\nProject: ${config.name}\nUser request: ${userRequest}\nType: ${config.type}${dir ? `\nDirection: ${dir.label}` : ''}\n\n${inputs ? `Inputs:\n${inputs}\n\n` : ''}${params ? `Parameters:\n${params}\n\n` : ''}Begin the skill workflow now. Create the first usable design artifact and open it in the canvas; do not stop at a discovery question unless a required detail is truly missing.` });
+      } else {
+        const dirContext = dir ? ` The visual direction is "${dir.label}" — ${dir.mood}. Key references: ${dir.references.join(', ')}.` : '';
+        await sendMessageStream(sessionId, { text: `Create a ${config.type} for this request:\n\n${userRequest}\n\nProject name: "${config.name}".${dirContext}\n\nStart building immediately. Produce the first complete, editable design artifact, save it as a project file, and open it in the canvas. Make reasonable design decisions from the request instead of replying with only a discovery brief.` });
+      }
+    } catch (err) {
+      logger.error('Failed to start Design project agent session', { err, projectId });
     }
   }
 

@@ -40,8 +40,7 @@ export function VideoRenderer({
   const [isMuted, setIsMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
 
-  // Mock video URL (in production, use artifact.url)
-  const videoUrl = artifact.url || 'https://www.w3schools.com/html/mov_bbb.mp4';
+  const videoUrl = artifact.url || '';
 
   // Toggle play/pause
   const togglePlay = () => {

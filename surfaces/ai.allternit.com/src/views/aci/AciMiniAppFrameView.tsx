@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React from 'react';
 import {
   AppWindow,
   Globe,
@@ -8,12 +8,11 @@ import {
   Lightning,
   GearSix,
   ArrowSquareOut,
-  CircleNotch,
-  Warning,
-  ArrowsClockwise,
 } from '@phosphor-icons/react';
-import type { MiniAppCategory } from './mini-app.types';
+import type { InstalledMiniApp, MiniAppCategory, MiniAppPresentationContract } from './mini-app.types';
 import { openInBrowser } from '@/lib/openInBrowser';
+import { MiniAppRuntimeSurface } from './MiniAppRuntimeSurface';
+import { resolveMiniAppPresentation } from './mini-app-presentation';
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   runtime: <Cpu size={11} />,
@@ -29,6 +28,8 @@ export interface MiniAppFrameContext {
   name: string;
   category?: MiniAppCategory;
   version?: string;
+  miniApp?: InstalledMiniApp;
+  presentation?: MiniAppPresentationContract;
 }
 
 export function AciMiniAppFrameView({ context }: { context?: { context?: MiniAppFrameContext } }) {
@@ -38,44 +39,19 @@ export function AciMiniAppFrameView({ context }: { context?: { context?: MiniApp
   const name = ctx?.name ?? 'Mini-app';
   const category = ctx?.category ?? 'custom';
   const version = ctx?.version;
+  const app: InstalledMiniApp = ctx?.miniApp || {
+    id: name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+    name,
+    description: '',
+    category,
+    source: 'url',
+    url,
+    status: 'running',
+    presentation: ctx?.presentation || { mode: 'embedded', uiUrl: url, fallback: 'external-browser' },
+  };
+  const presentation = ctx?.presentation || resolveMiniAppPresentation(app);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const faviconUrl = useMemo(() => {
-    try {
-      const u = new URL(url);
-      return `${u.protocol}//${u.host}/favicon.ico`;
-    } catch {
-      return null;
-    }
-  }, [url]);
-
-  const handleLoad = useCallback(() => {
-    setLoading(false);
-    setError(null);
-  }, []);
-
-  const handleError = useCallback(() => {
-    setLoading(false);
-    setError('Failed to load mini-app. The service may be offline or unreachable.');
-  }, []);
-
-  const handleRetry = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    // Force iframe reload by temporarily clearing src
-    const iframe = document.querySelector(`iframe[title="${name}"]`) as HTMLIFrameElement | null;
-    if (iframe) {
-      const currentSrc = iframe.src;
-      iframe.src = 'about:blank';
-      setTimeout(() => {
-        iframe.src = currentSrc;
-      }, 50);
-    }
-  }, [name]);
-
-  if (!url) {
+  if (!url && presentation.mode !== 'native') {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
         <AppWindow size={24} className="text-[var(--text-tertiary)]" />
@@ -94,61 +70,19 @@ export function AciMiniAppFrameView({ context }: { context?: { context?: MiniApp
         <span className="text-sm font-medium text-[var(--text-primary)]">{name}</span>
         {version && <span className="text-[12px] text-[var(--text-tertiary)]">v{version}</span>}
         <span className="text-[12px] text-[var(--text-tertiary)] ml-1">Mini-app</span>
+        <span className="rounded-full bg-[var(--surface-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--text-tertiary)]">{presentation.mode}</span>
         <div className="ml-auto flex items-center gap-2">
-          <button type="button"
+          {url && <button type="button"
             onClick={() => openInBrowser(url)}
             className="flex items-center gap-1 rounded border border-[var(--border-subtle)] px-2 py-0.5 text-[12px] text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-colors"
             title="Open in new tab"
           >
             <ArrowSquareOut size={10} />
-          </button>
+          </button>}
         </div>
       </div>
 
-      {/* Iframe with loading and error states */}
-      <div className="relative flex-1 overflow-hidden">
-        {loading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[var(--bg-primary)]">
-            <CircleNotch size={24} className="animate-spin text-[var(--text-tertiary)]" />
-            <p className="text-sm text-[var(--text-secondary)]">Loading {name}…</p>
-          </div>
-        )}
-
-        {error && !loading && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[var(--bg-primary)] p-8 text-center">
-            <Warning size={28} className="text-[var(--status-warning)]" />
-            <div>
-              <p className="text-sm font-medium text-[var(--text-primary)]">Unable to load mini-app</p>
-              <p className="mt-1 text-xs text-[var(--text-secondary)] max-w-xs">{error}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button type="button"
-                onClick={handleRetry}
-                className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-colors"
-              >
-                <ArrowsClockwise size={12} />
-                Retry
-              </button>
-              <button type="button"
-                onClick={() => openInBrowser(url)}
-                className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-colors"
-              >
-                <ArrowSquareOut size={12} />
-                Open in new tab
-              </button>
-            </div>
-          </div>
-        )}
-
-        <iframe
-          src={url}
-          className="flex-1 w-full h-full border-none"
-          title={name}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"
-          onLoad={handleLoad}
-          onError={handleError}
-        />
-      </div>
+      <MiniAppRuntimeSurface app={app} presentation={presentation} title={name} className="flex-1" />
     </div>
   );
 }

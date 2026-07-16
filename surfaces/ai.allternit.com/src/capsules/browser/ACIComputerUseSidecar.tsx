@@ -276,6 +276,15 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
   const fetchWindows        = useBrowserAgentStore((s) => s.fetchWindows);
   const fetchNotifications  = useBrowserAgentStore((s) => s.fetchNotifications);
   const dismissNotification = useBrowserAgentStore((s) => s.dismissNotification);
+  const canonicalProviders  = useBrowserAgentStore((s) => s.canonicalProviders);
+  const canonicalProviderDiagnostics = useBrowserAgentStore((s) => s.canonicalProviderDiagnostics);
+  const canonicalObservation = useBrowserAgentStore((s) => s.canonicalObservation);
+  const canonicalOutcome    = useBrowserAgentStore((s) => s.canonicalOutcome);
+  const canonicalTrajectory = useBrowserAgentStore((s) => s.canonicalTrajectory);
+  const canonicalError      = useBrowserAgentStore((s) => s.canonicalError);
+  const canonicalLoading    = useBrowserAgentStore((s) => s.canonicalLoading);
+  const discoverCanonicalProviders = useBrowserAgentStore((s) => s.discoverCanonicalProviders);
+  const loadCanonicalTrajectory = useBrowserAgentStore((s) => s.loadCanonicalTrajectory);
 
   const [highlights, setHighlights]         = useState<HighlightBox[]>([]);
   const [imgNaturalSize, setImgNaturalSize] = useState({ w: 0, h: 0 });
@@ -291,6 +300,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
   const [directControlMode, setDirectControlMode] = useState(false);
   const [clickFlash, setClickFlash]               = useState<{ x: number; y: number; id: number } | null>(null);
   const [showConformance, setShowConformance]     = useState(false);
+  const [showCanonical, setShowCanonical]         = useState(false);
 
   const imgRef            = useRef<HTMLImageElement | null>(null);
   const containerRef      = useRef<HTMLDivElement | null>(null);
@@ -543,6 +553,20 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             ✓ Conf
           </button>
 
+          <button type="button" onClick={() => {
+            setShowCanonical((value) => !value);
+            if (!showCanonical) {
+              if (canonicalProviders.length === 0) void discoverCanonicalProviders();
+              void loadCanonicalTrajectory();
+            }
+          }} title="Canonical guarantees and evidence"
+            className={cn(
+              "px-1.5 py-0.5 text-[12px] border border-solid rounded cursor-pointer shrink-0 transition-colors",
+              showCanonical ? "bg-[#3b82f6]/20 border-[#3b82f6]/40 text-[#60a5fa]" : "bg-[var(--surface-hover)] border-[var(--ui-border-muted)] text-[var(--ui-text-muted)]"
+            )}>
+            ◇ Trust
+          </button>
+
           {/* Collapse → minimizes to ACIComputerUseBar above chat input */}
           <button type="button"
             onClick={toggleAciSidecar}
@@ -729,6 +753,67 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             {showConformance && (
               <div className="border-t border-solid border-[var(--surface-hover)] shrink-0 max-h-[300px] overflow-y-auto">
                 <ConformanceDashboard />
+              </div>
+            )}
+
+            {showCanonical && (
+              <div className="border-t border-solid border-[var(--surface-hover)] p-2.5 shrink-0 max-h-[260px] overflow-y-auto font-mono">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[12px] font-bold text-white/70">CANONICAL TRUST</span>
+                  <span className="text-[12px] text-white/35">{canonicalLoading ? 'refreshing…' : `${Object.keys(canonicalProviderDiagnostics).length} routes`}</span>
+                </div>
+                {canonicalError && <div className="text-[12px] text-[var(--status-error)] mb-2 break-words">{canonicalError}</div>}
+                <div className="space-y-1 mb-2">
+                  {canonicalProviders.map((provider) => (
+                    <div key={provider.provider_id} className="flex items-center justify-between gap-2 text-[12px] bg-white/[0.03] rounded px-1.5 py-1">
+                      <span className="text-white/55 truncate">{provider.provider_id}</span>
+                      <span className={provider.strict_background ? "text-[var(--status-success)]" : "text-[var(--status-warning)]"}>
+                        {provider.strict_background ? 'strict bg' : 'foreground'}
+                      </span>
+                    </div>
+                  ))}
+                  {Object.entries(canonicalProviderDiagnostics)
+                    .filter(([providerId, diagnostic]) => !diagnostic.available && !canonicalProviders.some((provider) => provider.provider_id === providerId))
+                    .map(([providerId, diagnostic]) => (
+                      <div key={providerId} className="text-[12px] bg-white/[0.03] rounded px-1.5 py-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-white/55 truncate">{providerId}</span>
+                          <span className="text-[var(--status-error)]">setup required</span>
+                        </div>
+                        <div className="text-white/30 truncate" title={diagnostic.message ?? diagnostic.reason}>
+                          {diagnostic.message ?? diagnostic.reason ?? 'runtime unavailable'}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                {canonicalObservation && (
+                  <div className="border-t border-white/5 pt-1.5 text-[12px] text-white/45 space-y-0.5">
+                    <div>state <span className="text-white/70">{canonicalObservation.state_id}</span></div>
+                    <div>epoch {canonicalObservation.epoch} · {canonicalObservation.elements.length} elements</div>
+                    <div>evidence {canonicalObservation.image ? canonicalObservation.image.sha256.slice(0, 12) : 'semantic only'}</div>
+                  </div>
+                )}
+                {canonicalOutcome && (
+                  <div className="border-t border-white/5 mt-1.5 pt-1.5 text-[12px]">
+                    <span className={canonicalOutcome.status === 'worked' ? "text-[var(--status-success)]" : canonicalOutcome.status === 'unknown' ? "text-[var(--status-warning)]" : "text-[var(--status-error)]"}>
+                      {canonicalOutcome.status.toUpperCase()}
+                    </span>
+                    <span className="text-white/40"> · {canonicalOutcome.receipt_id ?? 'no receipt'}</span>
+                  </div>
+                )}
+                {canonicalTrajectory && (
+                  <div className="border-t border-white/5 mt-1.5 pt-1.5 text-[12px] text-white/45">
+                    <div>{canonicalTrajectory.event_count ?? 0} ordered events</div>
+                    <div className="truncate">trajectory {canonicalTrajectory.sha256?.slice(0, 16) ?? 'unhashed'}</div>
+                    <div className="mt-1 space-y-0.5 max-h-20 overflow-y-auto">
+                      {canonicalTrajectory.events?.slice(-5).map((event, index) => (
+                        <div key={String(event.event_id ?? index)} className="truncate text-white/35">
+                          {String(event.event_type ?? 'event')}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -11,14 +11,27 @@ import {
   Brain,
   Warning,
   ArrowSquareOut,
+  Image as ImageIcon,
+  Play,
+  Stop,
+  X,
 } from '@phosphor-icons/react';
+import { LOCAL_MODEL_CATALOG } from '@/lib/local-models/catalog';
+import {
+  BONSAI_WEBGPU_CONSENT,
+  BONSAI_WEBGPU_MODEL_ID,
+  BONSAI_WEBGPU_PROVIDER_PREFERENCE,
+  bonsaiWebGpuProvider,
+} from '@/lib/local-models/providers/bonsai-webgpu';
 
 interface OllamaModel {
   name: string;
   size: number;
   digest: string;
   modified_at: string;
-  details: {
+  // Ollama omits this for some manually-imported/GGUF models, so it's not
+  // safe to assume every listed model has full details.
+  details?: {
     format: string;
     family: string;
     parameter_size: string;
@@ -41,6 +54,9 @@ interface PullProgress {
 
 type PullState = 'idle' | 'pulling' | 'done' | 'error';
 
+type BonsaiBridge = NonNullable<NonNullable<typeof window.allternit>['bonsai']>;
+type BonsaiStatus = Awaited<ReturnType<BonsaiBridge['getStatus']>>;
+
 export function LocalModelManager() {
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +65,18 @@ export function LocalModelManager() {
   const [pullState, setPullState] = useState<PullState>('idle');
   const [pullProgress, setPullProgress] = useState<PullProgress | null>(null);
   const [pullError, setPullError] = useState<string | null>(null);
+
+  const bonsai = typeof window !== 'undefined' ? window.allternit?.bonsai : undefined;
+  const [bonsaiStatus, setBonsaiStatus] = useState<BonsaiStatus | null>(null);
+  const [bonsaiBusy, setBonsaiBusy] = useState<'install' | 'start' | 'stop' | 'remove' | null>(null);
+  const [bonsaiProgress, setBonsaiProgress] = useState<string | null>(null);
+  const [bonsaiError, setBonsaiError] = useState<string | null>(null);
+  const [bonsaiLicenseAccepted, setBonsaiLicenseAccepted] = useState(false);
+  const [bonsaiConfirmRemove, setBonsaiConfirmRemove] = useState(false);
+  const [imageProvider, setImageProvider] = useState<'bonsai-local' | 'bonsai-webgpu'>('bonsai-local');
+  const [webGpuConsent, setWebGpuConsent] = useState(false);
+  const [webGpuBusy, setWebGpuBusy] = useState(false);
+  const [webGpuMessage, setWebGpuMessage] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -72,9 +100,95 @@ export function LocalModelManager() {
     }
   }, []);
 
+  const refreshBonsai = useCallback(async () => {
+    if (!bonsai) return;
+    try {
+      setBonsaiStatus(await bonsai.getStatus());
+    } catch {}
+  }, [bonsai]);
+
   useEffect(() => {
     Promise.all([fetchStatus(), fetchModels()]);
+    if (sessionStorage.getItem(BONSAI_WEBGPU_PROVIDER_PREFERENCE) === 'bonsai-webgpu' &&
+        sessionStorage.getItem(BONSAI_WEBGPU_CONSENT) === 'accepted') {
+      setImageProvider('bonsai-webgpu');
+      setWebGpuConsent(true);
+    }
   }, [fetchStatus, fetchModels]);
+
+  const selectLocalImage = () => {
+    sessionStorage.removeItem(BONSAI_WEBGPU_PROVIDER_PREFERENCE);
+    sessionStorage.removeItem(BONSAI_WEBGPU_CONSENT);
+    setImageProvider('bonsai-local');
+    setWebGpuConsent(false);
+    setWebGpuMessage(null);
+  };
+
+  const enableWebGpu = async () => {
+    if (!webGpuConsent) return;
+    sessionStorage.setItem(BONSAI_WEBGPU_CONSENT, 'accepted');
+    setWebGpuBusy(true);
+    setWebGpuMessage('Downloading and verifying the WebGPU runtime and model…');
+    try {
+      const manifest = LOCAL_MODEL_CATALOG.find(item => item.id === BONSAI_WEBGPU_MODEL_ID);
+      const runtime = manifest?.runtimes.find(item => item.engine === 'webgpu');
+      if (!manifest || !runtime) throw new Error('Bonsai WebGPU catalog entry is unavailable');
+      for await (const progress of bonsaiWebGpuProvider.installModel({ manifest, runtime })) {
+        if (progress.message) setWebGpuMessage(progress.message);
+      }
+      sessionStorage.setItem(BONSAI_WEBGPU_PROVIDER_PREFERENCE, 'bonsai-webgpu');
+      setImageProvider('bonsai-webgpu');
+    } catch (error) {
+      sessionStorage.removeItem(BONSAI_WEBGPU_PROVIDER_PREFERENCE);
+      setWebGpuMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setWebGpuBusy(false);
+    }
+  };
+
+  const removeWebGpu = async () => {
+    setWebGpuBusy(true);
+    setWebGpuMessage('Removing the cached WebGPU runtime and model weights…');
+    try {
+      await bonsaiWebGpuProvider.removeModel(BONSAI_WEBGPU_MODEL_ID);
+      selectLocalImage();
+      setWebGpuMessage('WebGPU runtime and model caches removed.');
+    } catch (error) {
+      setWebGpuMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setWebGpuBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshBonsai();
+    if (!bonsai) return;
+    return bonsai.onProgress((progress) => {
+      setBonsaiProgress(progress.message);
+      if (progress.stage === 'ready' || progress.stage === 'error' || progress.stage === 'cancelled') {
+        refreshBonsai();
+      }
+    });
+  }, [bonsai, refreshBonsai]);
+
+  const runBonsaiAction = async (action: 'install' | 'start' | 'stop' | 'remove') => {
+    if (!bonsai) return;
+    setBonsaiBusy(action);
+    setBonsaiError(null);
+    setBonsaiProgress(null);
+    try {
+      if (action === 'install') await bonsai.install();
+      else if (action === 'start') await bonsai.start();
+      else if (action === 'stop') await bonsai.stop();
+      else await bonsai.remove();
+      setBonsaiConfirmRemove(false);
+    } catch (err) {
+      setBonsaiError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBonsaiBusy(null);
+      await refreshBonsai();
+    }
+  };
 
   const startDownload = async () => {
     setPullState('pulling');
@@ -127,6 +241,7 @@ export function LocalModelManager() {
       : null;
 
   const otherModels = models.filter((m) => !m.name.startsWith('llama3.2:3b'));
+  const localCatalog = LOCAL_MODEL_CATALOG.filter((model) => model.kind === 'brain' || model.kind === 'image');
 
   if (loading) {
     return (
@@ -143,7 +258,7 @@ export function LocalModelManager() {
         <div>
           <h3 className="text-lg font-semibold mb-1 text-[var(--text-primary)]">Local Brain</h3>
           <p className="text-sm text-[var(--text-tertiary)]">
-            Offline AI that runs on your machine — no API key, no data sent anywhere.
+            Private inference on your device. Model downloads come from their declared publisher; prompts stay local unless you enable a network tool.
           </p>
         </div>
         <button type="button"
@@ -263,6 +378,241 @@ export function LocalModelManager() {
         </div>
       )}
 
+      {/* ── Bonsai Image companion card ── */}
+      <div>
+        <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Local Image</h4>
+        <p className="text-xs text-[var(--text-tertiary)] mb-3">
+          Bonsai Image 4B runs on this device through a loopback companion. No cloud provider is used.
+        </p>
+        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <button type="button" onClick={selectLocalImage}
+            className={`rounded-xl border p-3 text-left ${imageProvider === 'bonsai-local' ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/5' : 'border-[var(--border-subtle)] bg-secondary/10'}`}>
+            <span className="block text-sm font-semibold text-[var(--text-primary)]">Local (slow)</span>
+            <span className="mt-1 block text-xs text-[var(--text-tertiary)]">Private, auditable companion runtime · default</span>
+          </button>
+          <div className={`rounded-xl border p-3 ${imageProvider === 'bonsai-webgpu' ? 'border-amber-500/50 bg-amber-500/5' : 'border-[var(--border-subtle)] bg-secondary/10'}`}>
+            <div className="text-sm font-semibold text-[var(--text-primary)]">WebGPU (fast)</div>
+            <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-tertiary)]">
+              Fast WebGPU mode downloads an unaudited third-party runtime (webml-community/bonsai-image-webgpu) from Hugging Face. It runs entirely on your GPU and prompts stay on your device, but we cannot verify its telemetry, licensing, or security. Use Local mode for a fully auditable runtime.
+            </p>
+            <label className="mt-2 flex items-start gap-2 cursor-pointer">
+              <input type="checkbox" checked={webGpuConsent} disabled={webGpuBusy}
+                onChange={event => setWebGpuConsent(event.target.checked)} className="mt-0.5 accent-amber-500" />
+              <span className="text-[11px] text-[var(--text-tertiary)]">I understand and consent for this session.</span>
+            </label>
+            <div className="mt-2 flex items-center gap-2">
+              <button type="button" onClick={enableWebGpu} disabled={!webGpuConsent || webGpuBusy}
+                className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-black disabled:opacity-50">
+                {webGpuBusy ? 'Working…' : imageProvider === 'bonsai-webgpu' ? 'Reinstall WebGPU' : 'Enable WebGPU'}
+              </button>
+              <button type="button" onClick={removeWebGpu} disabled={webGpuBusy}
+                className="rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-xs font-bold text-red-500 disabled:opacity-50">
+                Remove cache
+              </button>
+            </div>
+            {webGpuMessage ? <p className="mt-2 text-[11px] break-words text-[var(--text-tertiary)]">{webGpuMessage}</p> : null}
+          </div>
+        </div>
+        {!bonsai ? (
+          <div className="p-4 rounded-xl border border-dashed border-[var(--border-subtle)] bg-secondary/10">
+            <div className="flex items-start gap-3">
+              <div className="size-8 rounded-lg bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
+                <ImageIcon size={18} />
+              </div>
+              <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">
+                Install, repair, and removal controls are available in the Allternit desktop app.
+                Image generation works whenever the companion runs at <code>http://127.0.0.1:8000</code>.
+              </p>
+            </div>
+          </div>
+        ) : bonsaiStatus?.installing || bonsaiBusy === 'install' ? (
+          <div className="p-4 rounded-xl border border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="size-8 rounded-lg bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
+                <ImageIcon size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-semibold text-[var(--text-primary)]">Installing Bonsai Image 4B</span>
+                <p className="text-xs text-[var(--text-tertiary)] truncate">
+                  {bonsaiProgress ?? 'Starting installer…'}
+                </p>
+              </div>
+              <button type="button"
+                onClick={() => { bonsai.cancelInstall(); }}
+                className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-secondary transition-colors"
+              >
+                <X size={12} /> Cancel
+              </button>
+            </div>
+            <div className="h-1.5 rounded-full bg-[var(--border-subtle)] overflow-hidden">
+              <div className="h-full rounded-full bg-[var(--accent-primary)] transition-all duration-300 animate-pulse" style={{ width: '40%' }} />
+            </div>
+          </div>
+        ) : bonsaiStatus?.running || bonsaiStatus?.installed ? (
+          <div className={`p-4 rounded-xl border ${bonsaiStatus.running ? 'border-green-500/30 bg-green-500/5' : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)]'}`}>
+            <div className="flex items-center gap-4">
+              <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${bonsaiStatus.running ? 'bg-green-500/10 text-green-500' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]'}`}>
+                <ImageIcon size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="font-semibold text-[var(--text-primary)]">Bonsai Image 4B</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded uppercase font-bold ${bonsaiStatus.running ? 'bg-green-500/10 text-green-500' : 'bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]'}`}>
+                    {bonsaiStatus.running ? 'Running' : 'Installed'}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--text-tertiary)] truncate">
+                  {bonsaiStatus.running
+                    ? 'Serving on 127.0.0.1:8000 · offline'
+                    : [
+                        bonsaiStatus.revisions?.model ? `model ${bonsaiStatus.revisions.model.slice(0, 12)}` : null,
+                        bonsaiStatus.revisions?.mlxWheel ? `mlx ${bonsaiStatus.revisions.mlxWheel}` : null,
+                      ].filter(Boolean).join(' · ') || 'Companion installed'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {bonsaiStatus.running ? (
+                  <button type="button"
+                    onClick={() => runBonsaiAction('stop')}
+                    disabled={bonsaiBusy !== null}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-secondary transition-colors disabled:opacity-50"
+                  >
+                    <Stop size={14} /> Stop
+                  </button>
+                ) : (
+                  <button type="button"
+                    onClick={() => runBonsaiAction('start')}
+                    disabled={bonsaiBusy !== null}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--accent-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-opacity disabled:opacity-50"
+                  >
+                    <Play size={14} /> Start
+                  </button>
+                )}
+                <button type="button"
+                  onClick={() => runBonsaiAction('install')}
+                  disabled={bonsaiBusy !== null}
+                  title="Re-run the installer (repair or update)"
+                  className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-secondary transition-colors disabled:opacity-50"
+                >
+                  <ArrowsClockwise size={16} />
+                </button>
+                {bonsaiConfirmRemove ? (
+                  <>
+                    <button type="button"
+                      onClick={() => runBonsaiAction('remove')}
+                      disabled={bonsaiBusy !== null}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-red-500 text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      Confirm delete
+                    </button>
+                    <button type="button"
+                      onClick={() => setBonsaiConfirmRemove(false)}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-secondary transition-colors"
+                    >
+                      Keep
+                    </button>
+                  </>
+                ) : (
+                  <button type="button"
+                    onClick={() => setBonsaiConfirmRemove(true)}
+                    disabled={bonsaiBusy !== null}
+                    title="Remove the companion and its managed model files"
+                    className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  >
+                    <Trash size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+            <div className="flex items-center gap-4">
+              <div className="size-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
+                <ImageIcon size={22} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="font-semibold text-[var(--text-primary)]">Bonsai Image 4B</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] uppercase font-bold">
+                    ~3.9 GB
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--text-tertiary)]">
+                  Local image generation · offline · deterministic seeds
+                </p>
+                <label className="mt-2 flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={bonsaiLicenseAccepted}
+                    onChange={(event) => setBonsaiLicenseAccepted(event.target.checked)}
+                    className="mt-0.5 accent-[var(--accent-primary)]"
+                  />
+                  <span className="text-[11px] leading-relaxed text-[var(--text-tertiary)]">
+                    I accept the Apache-2.0 license terms of the Bonsai model weights and the PrismML Image Studio runtime.
+                  </span>
+                </label>
+              </div>
+              <button type="button"
+                onClick={() => runBonsaiAction('install')}
+                disabled={!bonsaiLicenseAccepted || bonsaiBusy !== null}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--accent-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                <CloudArrowDown size={14} /> Install
+              </button>
+            </div>
+          </div>
+        )}
+        {bonsaiError ? (
+          <div className="mt-2 p-3 rounded-xl border border-red-500/30 bg-red-500/5 flex items-start gap-2">
+            <Warning size={16} className="text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-[var(--text-tertiary)] break-words">{bonsaiError}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <h4 className="text-sm font-semibold text-[var(--text-primary)]">Local model catalog</h4>
+          <p className="text-xs text-[var(--text-tertiary)]">
+            Replaceable model packages use trusted Allternit runtime adapters. Weights are downloaded from the publisher or imported by the user.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {localCatalog.map((manifest) => (
+            <div key={manifest.id} className="rounded-xl border border-[var(--border-subtle)] p-4 bg-secondary/10">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-[var(--text-primary)]">{manifest.name}</div>
+                  <div className="mt-1 text-xs text-[var(--text-tertiary)]">{manifest.description}</div>
+                </div>
+                <span className="shrink-0 rounded bg-[var(--accent-primary)]/10 px-2 py-1 text-[10px] font-bold uppercase text-[var(--accent-primary)]">
+                  {manifest.delivery.status === 'integrated' ? 'ready' : 'not installed'}
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {manifest.runtimes.map((runtime) => (
+                  <span key={`${manifest.id}-${runtime.engine}`} className="rounded-md bg-secondary px-2 py-1 text-[10px] font-semibold text-[var(--text-secondary)]">
+                    {runtime.engine}
+                  </span>
+                ))}
+                {manifest.requirements?.estimatedDownloadBytes ? (
+                  <span className="rounded-md bg-secondary px-2 py-1 text-[10px] font-semibold text-[var(--text-secondary)]">
+                    {(manifest.requirements.estimatedDownloadBytes / 1_000_000_000).toFixed(1)} GB
+                  </span>
+                ) : null}
+              </div>
+              {manifest.delivery.note ? (
+                <p className="mt-3 text-[10px] leading-relaxed text-[var(--text-tertiary)]">{manifest.delivery.note}</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-[var(--text-tertiary)]">
+          Security details are documented in <code>docs/LOCAL_FIRST_MODELS_AND_PRIVATE_BRAIN.md</code>.
+        </p>
+      </div>
+
       {/* ── Other installed models ── */}
       {otherModels.length > 0 && (
         <div>
@@ -282,18 +632,28 @@ export function LocalModelManager() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-[var(--text-primary)]">{model.name}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 uppercase font-bold">
-                        {model.details.quantization_level}
-                      </span>
+                      {model.details?.quantization_level && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 uppercase font-bold">
+                          {model.details.quantization_level}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-[var(--text-tertiary)] font-medium">
                       <span className="flex items-center gap-1">
                         <HardDrives size={12} /> {formatSize(model.size)}
                       </span>
-                      <span>•</span>
-                      <span>{model.details.parameter_size} parameters</span>
-                      <span>•</span>
-                      <span>{model.details.family}</span>
+                      {model.details?.parameter_size && (
+                        <>
+                          <span>•</span>
+                          <span>{model.details.parameter_size} parameters</span>
+                        </>
+                      )}
+                      {model.details?.family && (
+                        <>
+                          <span>•</span>
+                          <span>{model.details.family}</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

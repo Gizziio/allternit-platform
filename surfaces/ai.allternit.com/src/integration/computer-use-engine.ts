@@ -6,6 +6,16 @@ import {
   type ComputerUseResponse,
   type RequestOptions,
   type WatchRunOptions,
+  type CanonicalComputerCapabilityManifest,
+  type CanonicalProviderDiagnostic,
+  type CanonicalComputerObservation,
+  type CanonicalComputerTransaction,
+  type CanonicalComputerOutcome,
+  type CanonicalComputerRootDiscovery,
+  type CanonicalComputerApprovalGrant,
+  type CanonicalComputerEnvironment,
+  type CanonicalEnvironmentLease,
+  type CanonicalEnvironmentProviderManifest,
 } from '@allternit/sdk/computer-use';
 
 const ENGINE_BASE_URL_STORAGE_KEY = 'allternit.platform.computerUse.baseUrl';
@@ -136,8 +146,33 @@ export async function getPlatformComputerUseRuntime(): Promise<PlatformComputerU
 export type PlatformComputerUseClient = Pick<
   AllternitComputerUseClient,
   | 'execute'
+  | 'executeStream'
   | 'getReceipts'
   | 'watchRun'
+  | 'listCanonicalProviders'
+  | 'getCanonicalProviderCatalog'
+  | 'observeCanonical'
+  | 'findCanonicalRoots'
+  | 'executeCanonicalTransaction'
+  | 'approveCanonicalTransaction'
+  | 'getCanonicalEvents'
+  | 'listCanonicalEnvironmentProviders'
+  | 'createCanonicalEnvironment'
+  | 'provisionCanonicalEnvironment'
+  | 'stopCanonicalEnvironment'
+  | 'approveCanonicalEnvironmentOperation'
+  | 'acquireCanonicalEnvironmentLease'
+  | 'getCanonicalTrajectory'
+  | 'approveRun'
+  | 'denyRun'
+  | 'cancelRun'
+  | 'captureRunScreenshot'
+  | 'releaseCanonicalEnvironmentLease'
+  | 'executeCanonicalEnvironmentCommand'
+  | 'readCanonicalEnvironmentFile'
+  | 'writeCanonicalEnvironmentFile'
+  | 'canonicalEnvironmentClipboard'
+  | 'executeCanonicalMobileAction'
 >;
 
 let clientFactory: (baseUrl?: string) => PlatformComputerUseClient = (baseUrl?: string) =>
@@ -146,7 +181,7 @@ let clientFactory: (baseUrl?: string) => PlatformComputerUseClient = (baseUrl?: 
     
   });
 
-function getPlatformComputerUseClient(baseUrl?: string): PlatformComputerUseClient {
+export function getPlatformComputerUseClient(baseUrl?: string): PlatformComputerUseClient {
   return clientFactory(baseUrl);
 }
 
@@ -163,6 +198,18 @@ export function __setPlatformComputerUseClientFactory(
 }
 
 export type { ComputerUseRequest, ComputerUseResponse, RequestOptions, WatchRunOptions };
+export type {
+  CanonicalComputerApprovalGrant,
+  CanonicalComputerEnvironment,
+  CanonicalComputerCapabilityManifest,
+  CanonicalProviderDiagnostic,
+  CanonicalComputerObservation,
+  CanonicalComputerOutcome,
+  CanonicalComputerRootDiscovery,
+  CanonicalComputerTransaction,
+  CanonicalEnvironmentLease,
+  CanonicalEnvironmentProviderManifest,
+};
 
 // ── Discovery types ──────────────────────────────────────────────────────────
 

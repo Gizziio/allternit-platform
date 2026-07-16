@@ -11,6 +11,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   workspace: { singleton: false, maxInstances: 20, allowNew: true, surface: "view", ownsTabs: false },
   browser: { singleton: true, maxInstances: 1, allowNew: false, surface: "capsule", ownsTabs: true },
   'mini-apps-store': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'mini-app-review': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'browser-extensions': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'mini-app': { singleton: false, maxInstances: 10, allowNew: true, surface: 'view', ownsTabs: false },
   'addin-word': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

@@ -19,16 +19,25 @@ use crate::auth::{get_user, AuthUser};
 use crate::AppState;
 
 fn unauthorized() -> impl IntoResponse {
-    (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"})))
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({"error": "Unauthorized"})),
+    )
 }
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 pub fn conversation_router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/conversations", get(list_conversations).post(create_conversation))
+        .route(
+            "/conversations",
+            get(list_conversations).post(create_conversation),
+        )
         .route("/conversations/:id", get(get_conversation))
-        .route("/conversations/:id/messages", get(list_messages).post(create_message))
+        .route(
+            "/conversations/:id/messages",
+            get(list_messages).post(create_message),
+        )
         .route("/conversations/:id/replies", get(list_replies))
         .route("/conversations/:id/fork", post(fork_conversation))
 }
@@ -98,10 +107,15 @@ async fn list_conversations(
             "object": "list",
             "data": data,
             "has_more": false,
-        })).into_response(),
+        }))
+        .into_response(),
         Err(e) => {
             warn!("DB error listing conversations: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
     }
 }
@@ -127,7 +141,11 @@ async fn create_conversation(
     };
 
     let id = body.conversation_id.unwrap_or_else(|| {
-        format!("conv_{}_{}", chrono::Utc::now().timestamp_millis(), uuid::Uuid::new_v4().to_string().split('-').next().unwrap())
+        format!(
+            "conv_{}_{}",
+            chrono::Utc::now().timestamp_millis(),
+            uuid::Uuid::new_v4().to_string().split('-').next().unwrap()
+        )
     });
 
     let db = state.db.clone();
@@ -154,7 +172,8 @@ async fn create_conversation(
         "object": "conversation",
         "created_at": chrono::Utc::now().timestamp(),
         "metadata": body.metadata.unwrap_or(serde_json::Value::Null),
-    })).into_response()
+    }))
+    .into_response()
 }
 
 // ─── Get conversation ─────────────────────────────────────────────────────────
@@ -234,31 +253,34 @@ async fn list_messages(
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         // Verify conversation ownership first
-        let _ = conn.query_row(
-            "SELECT 1 FROM conversations WHERE id = ?1 AND user_id = ?2",
-            params![conv_id, user_id],
-            |_| Ok(true),
-        ).map_err(|_| rusqlite::Error::QueryReturnedNoRows)?;
+        let _ = conn
+            .query_row(
+                "SELECT 1 FROM conversations WHERE id = ?1 AND user_id = ?2",
+                params![conv_id, user_id],
+                |_| Ok(true),
+            )
+            .map_err(|_| rusqlite::Error::QueryReturnedNoRows)?;
 
         let mut stmt = conn.prepare(
             "SELECT id, created_at, conversation_id, role, content, parent_message_id, metadata
              FROM conversation_messages
              WHERE conversation_id = ?1
-             ORDER BY created_at ASC"
+             ORDER BY created_at ASC",
         )?;
 
-        let rows = stmt.query_map(params![conv_id], |row| {
-            Ok(MessageRow {
-                id: row.get(0)?,
-                created_at: row.get(1)?,
-                conversation_id: row.get(2)?,
-                role: row.get(3)?,
-                content: row.get(4)?,
-                parent_message_id: row.get(5)?,
-                metadata: row.get(6)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![conv_id], |row| {
+                Ok(MessageRow {
+                    id: row.get(0)?,
+                    created_at: row.get(1)?,
+                    conversation_id: row.get(2)?,
+                    role: row.get(3)?,
+                    content: row.get(4)?,
+                    parent_message_id: row.get(5)?,
+                    metadata: row.get(6)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok::<_, rusqlite::Error>(rows)
     })
@@ -266,31 +288,47 @@ async fn list_messages(
 
     match rows {
         Ok(Ok(data)) => {
-            let parsed: Vec<serde_json::Value> = data.into_iter().map(|m| {
-                let metadata_json: Option<serde_json::Value> = m.metadata.as_ref().and_then(|s| serde_json::from_str(s).ok());
-                json!({
-                    "id": m.id,
-                    "object": "conversation.message",
-                    "created_at": m.created_at,
-                    "conversation_id": m.conversation_id,
-                    "role": m.role,
-                    "content": m.content,
-                    "parent_message_id": m.parent_message_id,
-                    "metadata": metadata_json,
+            let parsed: Vec<serde_json::Value> = data
+                .into_iter()
+                .map(|m| {
+                    let metadata_json: Option<serde_json::Value> = m
+                        .metadata
+                        .as_ref()
+                        .and_then(|s| serde_json::from_str(s).ok());
+                    json!({
+                        "id": m.id,
+                        "object": "conversation.message",
+                        "created_at": m.created_at,
+                        "conversation_id": m.conversation_id,
+                        "role": m.role,
+                        "content": m.content,
+                        "parent_message_id": m.parent_message_id,
+                        "metadata": metadata_json,
+                    })
                 })
-            }).collect();
+                .collect();
             Json(json!({"object": "list", "conversation_id": conversation_id, "data": parsed, "has_more": false})).into_response()
         }
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"}))).into_response()
-        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing messages: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -363,17 +401,28 @@ async fn create_message(
             "role": role,
             "content": content,
             "created_at": chrono::Utc::now().timestamp(),
-        })).into_response(),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"}))).into_response()
-        }
+        }))
+        .into_response(),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "Access denied"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating message: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -573,4 +622,3 @@ struct MessageRow {
     parent_message_id: Option<String>,
     metadata: Option<String>,
 }
-

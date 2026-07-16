@@ -26,8 +26,7 @@ export interface VideoConfig extends PluginConfig {
   provider?: 'minimax' | 'kling';
   model?: string;
   duration?: 6 | 10;
-  resolution?: '720p' | '1080p';
-  apiKey?: string;
+  resolution?: '768p' | '1080p';
 }
 
 class VideoPlugin implements ModePlugin {
@@ -47,9 +46,9 @@ class VideoPlugin implements ModePlugin {
   isExecuting = false;
   config: VideoConfig = {
     provider: 'minimax',
-    model: 'T2V-01',
+    model: 'MiniMax-Hailuo-2.3',
     duration: 6,
-    resolution: '720p',
+    resolution: '1080p',
   };
 
   private eventHandlers: Map<string, Set<PluginEventHandler>> = new Map();
@@ -81,17 +80,6 @@ class VideoPlugin implements ModePlugin {
       this.config = { ...this.config, ...config };
     }
     
-    // Check for API key in localStorage (BYOK)
-    if (typeof window !== 'undefined') {
-      const savedKeys = localStorage.getItem('allternit_video_api_keys');
-      if (savedKeys) {
-        const keys = JSON.parse(savedKeys);
-        if (keys[this.config.provider!]) {
-          this.config.apiKey = keys[this.config.provider!];
-        }
-      }
-    }
-    
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
     console.debug('[VideoPlugin] Initialized (BYOK)');
@@ -109,17 +97,6 @@ class VideoPlugin implements ModePlugin {
   async execute(input: PluginInput): Promise<PluginOutput> {
     if (!this.isInitialized) {
       throw new Error('Plugin not initialized');
-    }
-
-    if (!this.config.apiKey) {
-      return {
-        success: false,
-        error: {
-          message: 'API key required. Please add your MiniMax or Kling API key in settings.',
-          code: 'NO_API_KEY',
-          recoverable: true,
-        },
-      };
     }
 
     this.isExecuting = true;
@@ -176,12 +153,6 @@ class VideoPlugin implements ModePlugin {
   }
 
   async health(): Promise<{ healthy: boolean; message?: string }> {
-    if (!this.config.apiKey) {
-      return { 
-        healthy: false, 
-        message: 'No API key configured. Add your MiniMax or Kling API key.' 
-      };
-    }
     return { healthy: true };
   }
 
@@ -198,7 +169,7 @@ class VideoPlugin implements ModePlugin {
       model: this.config.model!,
       duration: this.config.duration!,
       resolution: this.config.resolution!,
-    }, { minimax: this.config.apiKey });
+    });
 
     return {
       success: true,

@@ -16,12 +16,12 @@ use std::sync::Arc;
 use tracing::{debug, info};
 
 use crate::{
-    ApiError, ApiState,
     auth::middleware::AuthContext,
     services::cost_service::{
-        CostBreakdown, CostRate, CostService, CostServiceImpl, RunCost,
-        SetCostRateRequest, UpdateBudgetRequest, UserCostBudget, UserCostSummary,
+        CostBreakdown, CostRate, CostService, CostServiceImpl, RunCost, SetCostRateRequest,
+        UpdateBudgetRequest, UserCostBudget, UserCostSummary,
     },
+    ApiError, ApiState,
 };
 
 // ============================================================================
@@ -190,20 +190,18 @@ pub async fn get_run_cost(
     debug!("Fetching cost for run: {}", run_id);
 
     // Verify user has access to this run
-    let run: crate::db::cowork_models::Run = sqlx::query_as(
-        "SELECT * FROM runs WHERE id = ?"
-    )
-    .bind(&run_id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(ApiError::DatabaseError)?
-    .ok_or_else(|| ApiError::NotFound(format!("Run not found: {}", run_id)))?;
+    let run: crate::db::cowork_models::Run = sqlx::query_as("SELECT * FROM runs WHERE id = ?")
+        .bind(&run_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(ApiError::DatabaseError)?
+        .ok_or_else(|| ApiError::NotFound(format!("Run not found: {}", run_id)))?;
 
     // Check ownership (simplified - in production, check tenant/organization access too)
     if let Some(owner_id) = &run.owner_id {
         if owner_id != &auth.user.user_id {
             return Err(ApiError::Forbidden(
-                "You don't have access to this run's cost data".to_string()
+                "You don't have access to this run's cost data".to_string(),
             ));
         }
     }
@@ -277,7 +275,7 @@ pub async fn update_budget(
     if let Some(budget) = request.monthly_budget {
         if budget < 0.0 {
             return Err(ApiError::BadRequest(
-                "Monthly budget cannot be negative".to_string()
+                "Monthly budget cannot be negative".to_string(),
             ));
         }
     }
@@ -285,13 +283,15 @@ pub async fn update_budget(
     if let Some(threshold) = request.alert_threshold {
         if threshold < 0.0 || threshold > 100.0 {
             return Err(ApiError::BadRequest(
-                "Alert threshold must be between 0 and 100".to_string()
+                "Alert threshold must be between 0 and 100".to_string(),
             ));
         }
     }
 
     let service = CostServiceImpl::new(state.db.clone());
-    let budget = service.update_user_budget(&auth.user.user_id, request).await?;
+    let budget = service
+        .update_user_budget(&auth.user.user_id, request)
+        .await?;
 
     info!("Updated budget for user: {}", auth.user.user_id);
 
@@ -308,7 +308,10 @@ pub async fn reset_monthly_costs(
 ) -> Result<StatusCode, ApiError> {
     // In a real implementation, check if user is admin
     // For now, we just log and reset
-    info!("Resetting monthly costs (requested by: {})", auth.user.user_id);
+    info!(
+        "Resetting monthly costs (requested by: {})",
+        auth.user.user_id
+    );
 
     sqlx::query("UPDATE user_cost_budgets SET current_month_cost = 0, last_alert_at = NULL")
         .execute(&state.db)
@@ -353,14 +356,14 @@ pub async fn set_cost_rate(
     // Validate inputs
     if request.cost_per_hour < 0.0 {
         return Err(ApiError::BadRequest(
-            "Cost per hour cannot be negative".to_string()
+            "Cost per hour cannot be negative".to_string(),
         ));
     }
 
     if let Some(storage) = request.storage_cost_per_gb_month {
         if storage < 0.0 {
             return Err(ApiError::BadRequest(
-                "Storage cost cannot be negative".to_string()
+                "Storage cost cannot be negative".to_string(),
             ));
         }
     }
@@ -368,7 +371,7 @@ pub async fn set_cost_rate(
     if let Some(transfer) = request.transfer_cost_per_gb {
         if transfer < 0.0 {
             return Err(ApiError::BadRequest(
-                "Transfer cost cannot be negative".to_string()
+                "Transfer cost cannot be negative".to_string(),
             ));
         }
     }

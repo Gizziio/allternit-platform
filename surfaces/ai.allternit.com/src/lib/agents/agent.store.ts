@@ -206,6 +206,12 @@ interface AgentActions {
 
 const AGENT_FETCH_TIMEOUT_MS = 4500;
 
+// Multiple mounted AgentView instances (e.g. Agent Hub's Studio tab underneath
+// the Settings overlay, plus Settings > Agents itself) share this one store.
+// Without dedupe, two concurrent fetchAgents() calls race, and whichever one
+// errors/times out last wipes `agents` back to [] for every consumer.
+let fetchAgentsInFlight: Promise<void> | null = null;
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   return Promise.race([
     promise,
@@ -264,29 +270,37 @@ export const useAgentStore = create<AgentState & AgentActions>()(
       // Agent CRUD
       // ----------------------------------------------------------------------
       
-      fetchAgents: async () => {
-        set({ isLoadingAgents: true, error: null });
-        try {
-          const agents = await withTimeout(
-            agentService.listAgents(),
-            AGENT_FETCH_TIMEOUT_MS,
-            'AGENT_FETCH',
-          );
-          set({ agents, isLoadingAgents: false });
-        } catch (err) {
-          // Don't block UI on network errors - just show empty state with warning
-          const errorMsg = err instanceof Error ? err.message : 'Failed to fetch agents';
-          set({ 
-            agents: [],
-            error:
-              errorMsg.includes('Network') ||
-              errorMsg.includes('fetch') ||
-              errorMsg.includes('AGENT_FETCH_TIMEOUT')
-              ? 'API_OFFLINE' // Special error code for offline state
-              : errorMsg,
-            isLoadingAgents: false 
-          });
-        }
+      fetchAgents: () => {
+        if (fetchAgentsInFlight) return fetchAgentsInFlight;
+
+        fetchAgentsInFlight = (async () => {
+          set({ isLoadingAgents: true, error: null });
+          try {
+            const agents = await withTimeout(
+              agentService.listAgents(),
+              AGENT_FETCH_TIMEOUT_MS,
+              'AGENT_FETCH',
+            );
+            set({ agents, isLoadingAgents: false });
+          } catch (err) {
+            // Don't block UI on network errors - just show empty state with warning
+            const errorMsg = err instanceof Error ? err.message : 'Failed to fetch agents';
+            set({
+              agents: [],
+              error:
+                errorMsg.includes('Network') ||
+                errorMsg.includes('fetch') ||
+                errorMsg.includes('AGENT_FETCH_TIMEOUT')
+                ? 'API_OFFLINE' // Special error code for offline state
+                : errorMsg,
+              isLoadingAgents: false
+            });
+          } finally {
+            fetchAgentsInFlight = null;
+          }
+        })();
+
+        return fetchAgentsInFlight;
       },
 
       selectAgent: async (agentId) => {

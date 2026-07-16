@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef, useCallback, useEffect, useState } from "react";
+import React, { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "framer-motion";
+import { CheckCircle, CircleDashed, ListChecks, SpinnerGap } from "@phosphor-icons/react";
 import type { ExtensionSidepanelComposerProps } from "./ExtensionSidepanelShell.types";
 import {
   RADIUS,
@@ -12,8 +13,82 @@ import {
 import { MentionAutocomplete, getMention, MENTION_OPTIONS } from "./MentionAutocomplete";
 import { QuickActionOverlay } from "./QuickActionOverlay";
 import { useBrowserCapture } from "./useBrowserCapture";
+import { useBrowserAgentStore } from "../browserAgent.store";
+import type { PageAgentActivity, PageAgentHistoricalEvent } from "../browserAgent.store";
 
 const browser = MODE_COLORS.browser;
+
+// ============================================================================
+// ACI todo top deck — tray tucked behind the composer card, mirroring the
+// chat/cowork top-deck pattern (z-0 tray + negative margin, card sits on top).
+// The agent's step goals from the ACI store are listed as todos.
+// ============================================================================
+
+interface AciTodo {
+  id: string;
+  content: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+function activityTodoContent(activity: PageAgentActivity): string | null {
+  switch (activity.type) {
+    case 'thinking':
+      return 'Thinking…';
+    case 'executing':
+      return `Running ${activity.tool}`;
+    case 'retrying':
+      return `Retrying (${activity.attempt}/${activity.maxAttempts})`;
+    default:
+      return null; // 'executed' / 'error' are already surfaced in the history feed
+  }
+}
+
+function buildAciTodos(
+  history: PageAgentHistoricalEvent[],
+  activity: PageAgentActivity | null,
+): AciTodo[] {
+  const todos: AciTodo[] = [];
+  history.forEach((event, index) => {
+    if (event.type !== 'step') return;
+    todos.push({
+      id: `step-${event.stepIndex ?? index}`,
+      content: event.reflection?.next_goal || event.action?.name || `Step ${(event.stepIndex ?? index) + 1}`,
+      status: 'completed',
+    });
+  });
+  if (activity) {
+    const content = activityTodoContent(activity);
+    if (content) todos.push({ id: 'current-activity', content, status: 'in_progress' });
+  }
+  return todos.slice(-6);
+}
+
+function AciTodoTopDeck({ todos }: { todos: AciTodo[] }) {
+  const done = todos.filter((t) => t.status === 'completed').length;
+  return (
+    <div className="relative z-0 w-full max-h-[132px] -mb-3 box-border overflow-y-auto bg-input-bg border-t border-r border-l border-input-border rounded-t-2xl px-4 pt-2.5 pb-5 flex flex-col gap-1.5 animate-deck-rise">
+      <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">
+        <ListChecks size={12} className="text-accent" />
+        <span>Todos</span>
+        <span className="ml-auto font-bold normal-case tracking-normal">{done}/{todos.length}</span>
+      </div>
+      {todos.map((todo) => (
+        <div key={todo.id} className="flex items-center gap-2 min-w-0">
+          {todo.status === 'completed' ? (
+            <CheckCircle size={13} weight="fill" className="shrink-0" style={{ color: 'var(--status-success)' }} />
+          ) : todo.status === 'in_progress' ? (
+            <SpinnerGap size={13} className="shrink-0 animate-spin text-accent" />
+          ) : (
+            <CircleDashed size={13} className="shrink-0 text-muted-foreground" />
+          )}
+          <span className={`truncate text-xs ${todo.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+            {todo.content}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function BrowserExtensionComposer({
   isRunning,
@@ -29,6 +104,14 @@ export function BrowserExtensionComposer({
   const [detectedUrl, setDetectedUrl] = useState<string | null>(null);
   const [showQuickAction, setShowQuickAction] = useState(false);
   const { capture, isCapturing, lastResult, clearResult } = useBrowserCapture();
+
+  // ACI session state — feeds the todo top deck above the composer card
+  const pageAgentHistory = useBrowserAgentStore((s) => s.pageAgentHistory);
+  const pageAgentActivity = useBrowserAgentStore((s) => s.pageAgentActivity);
+  const aciTodos = useMemo(
+    () => buildAciTodos(pageAgentHistory, pageAgentActivity),
+    [pageAgentHistory, pageAgentActivity],
+  );
 
   // Auto-resize textarea
   useEffect(() => {
@@ -140,15 +223,12 @@ export function BrowserExtensionComposer({
         onClose={() => setShowMention(false)}
       />
 
+      {aciTodos.length > 0 && <AciTodoTopDeck todos={aciTodos} />}
+
       <div
+        className="relative z-10 flex items-end w-full rounded-2xl border border-composer-glass-border bg-composer-glass-bg backdrop-blur-xl backdrop-saturate-150 shadow-xl px-3 py-[9px]"
         style={{
-          display: "flex",
-          alignItems: "flex-end",
           gap: 10,
-          background: `color-mix(in srgb, ${browser.accent} 6%, var(--shell-view-bg))`,
-          border: "1px solid var(--shell-divider)",
-          borderRadius: RADIUS.xl,
-          padding: "9px 10px 9px 12px",
           transition: ANIMATION.fast,
         }}
         onFocus={(e) => {
@@ -158,8 +238,8 @@ export function BrowserExtensionComposer({
         }}
         onBlur={(e) => {
           const target = e.currentTarget;
-          target.style.borderColor = "var(--shell-divider)";
-          target.style.boxShadow = "none";
+          target.style.borderColor = "";
+          target.style.boxShadow = "";
         }}
         tabIndex={-1}
       >

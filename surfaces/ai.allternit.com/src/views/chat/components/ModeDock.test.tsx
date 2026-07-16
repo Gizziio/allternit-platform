@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ModeDock } from './ModeDock';
 
@@ -73,13 +73,14 @@ describe('ModeDock', () => {
     fireEvent.click(screen.getByRole('button', { name: /Mode: Agent Swarm/i }));
 
     await waitFor(() => expect(screen.getByText('Agent mode')).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: /Agent Swarm/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Deep Research/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Websites/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Docs/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Sheets/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Code$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Flow$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Computer$/i })).not.toBeInTheDocument();
+    const popover = screen.getByRole('dialog');
+    expect(within(popover).getByRole('button', { name: /Agent Swarm/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /Deep Research/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /Websites/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /Docs/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /Sheets/i })).toBeInTheDocument();
+    expect(within(popover).queryByRole('button', { name: /^Code$/i })).not.toBeInTheDocument();
+    expect(within(popover).queryByRole('button', { name: /^Flow$/i })).not.toBeInTheDocument();
+    expect(within(popover).queryByRole('button', { name: /^Computer$/i })).not.toBeInTheDocument();
   });
 });

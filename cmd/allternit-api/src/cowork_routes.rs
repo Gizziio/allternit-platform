@@ -12,29 +12,57 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
+use crate::AppState;
 
 fn unauthorized() -> axum::response::Response {
-    (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response()
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({"error": "Unauthorized"})),
+    )
+        .into_response()
 }
 
 pub fn cowork_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/cowork", get(cowork_status))
         .route("/cowork/sessions", get(list_sessions).post(create_session))
-        .route("/cowork/sessions/:id", get(get_session).put(update_session).patch(update_session).delete(delete_session))
+        .route(
+            "/cowork/sessions/:id",
+            get(get_session)
+                .put(update_session)
+                .patch(update_session)
+                .delete(delete_session),
+        )
         .route("/cowork/personas", get(list_personas).post(create_persona))
-        .route("/cowork/personas/:id", get(get_persona).put(update_persona).patch(update_persona).delete(delete_persona))
+        .route(
+            "/cowork/personas/:id",
+            get(get_persona)
+                .put(update_persona)
+                .patch(update_persona)
+                .delete(delete_persona),
+        )
         .route("/cowork/projects", get(list_projects).post(create_project))
-        .route("/cowork/projects/:id", get(get_project).put(update_project).patch(update_project).delete(delete_project))
+        .route(
+            "/cowork/projects/:id",
+            get(get_project)
+                .put(update_project)
+                .patch(update_project)
+                .delete(delete_project),
+        )
         .route("/cowork/memory", get(get_memory).post(store_memory))
-        .route("/cowork/memory/search", get(search_memory_get).post(search_memory))
+        .route(
+            "/cowork/memory/search",
+            get(search_memory_get).post(search_memory),
+        )
         .route("/cowork/memory/health", get(memory_health))
         .route("/cowork/connectors", get(list_connectors))
         .route("/cowork/approvals", get(list_approvals))
-        .route("/cowork/suggestions", get(list_suggestions).post(create_suggestion))
+        .route(
+            "/cowork/suggestions",
+            get(list_suggestions).post(create_suggestion),
+        )
         .route("/cowork/team-execute", post(team_execute))
         .route("/cowork/run-agent", post(run_agent))
 }
@@ -146,25 +174,26 @@ async fn list_sessions(
         let mut stmt = conn.prepare(
             "SELECT id, user_id, project_id, title, status, mode, checkpoint, metadata,
                     started_at, completed_at, created_at, updated_at
-             FROM cowork_sessions WHERE user_id = ?1 ORDER BY updated_at DESC"
+             FROM cowork_sessions WHERE user_id = ?1 ORDER BY updated_at DESC",
         )?;
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok(SessionRow {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                project_id: row.get(2)?,
-                title: row.get(3)?,
-                status: row.get(4)?,
-                mode: row.get(5)?,
-                checkpoint: row.get(6)?,
-                metadata: row.get(7)?,
-                started_at: row.get(8)?,
-                completed_at: row.get(9)?,
-                created_at: row.get(10)?,
-                updated_at: row.get(11)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![user_id], |row| {
+                Ok(SessionRow {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    project_id: row.get(2)?,
+                    title: row.get(3)?,
+                    status: row.get(4)?,
+                    mode: row.get(5)?,
+                    checkpoint: row.get(6)?,
+                    metadata: row.get(7)?,
+                    started_at: row.get(8)?,
+                    completed_at: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
     })
     .await;
@@ -173,11 +202,19 @@ async fn list_sessions(
         Ok(Ok(sessions)) => Json(json!({ "sessions": sessions })).into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing sessions: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -229,14 +266,26 @@ async fn create_session(
     .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({ "session": { "id": id } }))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({ "session": { "id": id } })),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating session: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -255,7 +304,7 @@ async fn get_session(
         let mut stmt = conn.prepare(
             "SELECT id, user_id, project_id, title, status, mode, checkpoint, metadata,
                     started_at, completed_at, created_at, updated_at
-             FROM cowork_sessions WHERE id = ?1 AND user_id = ?2"
+             FROM cowork_sessions WHERE id = ?1 AND user_id = ?2",
         )?;
         let row = stmt.query_row(params![id, user_id], |row| {
             Ok(SessionRow {
@@ -284,11 +333,19 @@ async fn get_session(
         }
         Ok(Err(e)) => {
             warn!("DB error getting session: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -323,7 +380,15 @@ async fn update_session(
                 completed_at = COALESCE(?5, completed_at),
                 updated_at = CURRENT_TIMESTAMP
              WHERE id = ?6 AND user_id = ?7",
-            params![body.status, body.title, body.checkpoint, body.metadata, body.completed_at, id, user_id],
+            params![
+                body.status,
+                body.title,
+                body.checkpoint,
+                body.metadata,
+                body.completed_at,
+                id,
+                user_id
+            ],
         )?;
         Ok::<_, rusqlite::Error>(())
     })
@@ -333,11 +398,19 @@ async fn update_session(
         Ok(Ok(())) => Json(json!({"ok": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error updating session: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -365,11 +438,19 @@ async fn delete_session(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error deleting session: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -412,11 +493,19 @@ async fn list_personas(
         Ok(Ok(personas)) => Json(json!({ "personas": personas })).into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing personas: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -462,14 +551,26 @@ async fn create_persona(
     .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({ "persona": { "id": id } }))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({ "persona": { "id": id } })),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating persona: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -513,11 +614,19 @@ async fn get_persona(
         }
         Ok(Err(e)) => {
             warn!("DB error getting persona: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -571,11 +680,19 @@ async fn update_persona(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error updating persona: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -603,11 +720,19 @@ async fn delete_persona(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error deleting persona: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -651,11 +776,19 @@ async fn list_projects(
         Ok(Ok(projects)) => Json(json!({ "projects": projects })).into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing projects: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -702,14 +835,26 @@ async fn create_project(
     .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({ "project": { "id": id } }))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({ "project": { "id": id } })),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating project: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -754,11 +899,19 @@ async fn get_project(
         }
         Ok(Err(e)) => {
             warn!("DB error getting project: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -814,11 +967,19 @@ async fn update_project(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error updating project: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -846,11 +1007,19 @@ async fn delete_project(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error deleting project: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -869,22 +1038,23 @@ async fn get_memory(
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, user_id, project_id, session_id, content, type, tags, source, created_at
-             FROM cowork_memory_entries WHERE user_id = ?1 ORDER BY created_at DESC"
+             FROM cowork_memory_entries WHERE user_id = ?1 ORDER BY created_at DESC",
         )?;
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok(MemoryEntryRow {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                project_id: row.get(2)?,
-                session_id: row.get(3)?,
-                content: row.get(4)?,
-                type_: row.get(5)?,
-                tags: row.get(6)?,
-                source: row.get(7)?,
-                created_at: row.get(8)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![user_id], |row| {
+                Ok(MemoryEntryRow {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    project_id: row.get(2)?,
+                    session_id: row.get(3)?,
+                    content: row.get(4)?,
+                    type_: row.get(5)?,
+                    tags: row.get(6)?,
+                    source: row.get(7)?,
+                    created_at: row.get(8)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
     })
     .await;
@@ -896,11 +1066,19 @@ async fn get_memory(
         }
         Ok(Err(e)) => {
             warn!("DB error getting memories: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -948,14 +1126,24 @@ async fn store_memory(
     .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({ "memory": { "id": id } }))).into_response(),
+        Ok(Ok(())) => {
+            (StatusCode::CREATED, Json(json!({ "memory": { "id": id } }))).into_response()
+        }
         Ok(Err(e)) => {
             warn!("DB error storing memory: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -981,22 +1169,23 @@ async fn search_memory(
             "SELECT id, user_id, project_id, session_id, content, type, tags, source, created_at
              FROM cowork_memory_entries
              WHERE user_id = ?1 AND content LIKE ?2 ESCAPE '\\'
-             ORDER BY created_at DESC"
+             ORDER BY created_at DESC",
         )?;
-        let rows = stmt.query_map(params![user_id, pattern], |row| {
-            Ok(MemoryEntryRow {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                project_id: row.get(2)?,
-                session_id: row.get(3)?,
-                content: row.get(4)?,
-                type_: row.get(5)?,
-                tags: row.get(6)?,
-                source: row.get(7)?,
-                created_at: row.get(8)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![user_id, pattern], |row| {
+                Ok(MemoryEntryRow {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    project_id: row.get(2)?,
+                    session_id: row.get(3)?,
+                    content: row.get(4)?,
+                    type_: row.get(5)?,
+                    tags: row.get(6)?,
+                    source: row.get(7)?,
+                    created_at: row.get(8)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
     })
     .await;
@@ -1008,11 +1197,19 @@ async fn search_memory(
         }
         Ok(Err(e)) => {
             warn!("DB error searching memories: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1056,11 +1253,13 @@ async fn memory_health(
         Ok(Ok(())) => Json(json!({"status": "healthy", "connected": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB health check failed: {}", e);
-            Json(json!({"status": "unhealthy", "connected": false, "error": e.to_string()})).into_response()
+            Json(json!({"status": "unhealthy", "connected": false, "error": e.to_string()}))
+                .into_response()
         }
         Err(e) => {
             warn!("DB health task panicked: {}", e);
-            Json(json!({"status": "unhealthy", "connected": false, "error": "internal error"})).into_response()
+            Json(json!({"status": "unhealthy", "connected": false, "error": "internal error"}))
+                .into_response()
         }
     }
 }
@@ -1079,21 +1278,22 @@ async fn list_connectors(
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, user_id, name, enabled, config, last_used, created_at, updated_at
-             FROM cowork_connectors WHERE user_id = ?1 ORDER BY updated_at DESC"
+             FROM cowork_connectors WHERE user_id = ?1 ORDER BY updated_at DESC",
         )?;
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok(ConnectorRow {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                name: row.get(2)?,
-                enabled: row.get(3)?,
-                config: row.get(4)?,
-                last_used: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![user_id], |row| {
+                Ok(ConnectorRow {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    enabled: row.get(3)?,
+                    config: row.get(4)?,
+                    last_used: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
     })
     .await;
@@ -1105,11 +1305,19 @@ async fn list_connectors(
         }
         Ok(Err(e)) => {
             warn!("DB error listing connectors: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1129,19 +1337,20 @@ async fn list_approvals(
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, user_id, content, source, dismissed, created_at
-             FROM cowork_approvals ORDER BY created_at DESC"
+             FROM cowork_approvals ORDER BY created_at DESC",
         )?;
-        let rows = stmt.query_map([], |row| {
-            Ok(SuggestionRow {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                content: row.get(2)?,
-                source: row.get(3)?,
-                dismissed: row.get(4)?,
-                created_at: row.get(5)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(SuggestionRow {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    content: row.get(2)?,
+                    source: row.get(3)?,
+                    dismissed: row.get(4)?,
+                    created_at: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
     })
     .await;
@@ -1153,11 +1362,19 @@ async fn list_approvals(
         }
         Ok(Err(e)) => {
             warn!("DB error listing approvals: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1176,19 +1393,20 @@ async fn list_suggestions(
             "SELECT id, user_id, content, source, dismissed, created_at
              FROM cowork_suggestions
              WHERE (user_id = ?1 OR user_id IS NULL) AND dismissed = 0
-             ORDER BY created_at DESC"
+             ORDER BY created_at DESC",
         )?;
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok(SuggestionRow {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                content: row.get(2)?,
-                source: row.get(3)?,
-                dismissed: row.get(4)?,
-                created_at: row.get(5)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![user_id], |row| {
+                Ok(SuggestionRow {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    content: row.get(2)?,
+                    source: row.get(3)?,
+                    dismissed: row.get(4)?,
+                    created_at: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
     })
     .await;
@@ -1200,11 +1418,19 @@ async fn list_suggestions(
         }
         Ok(Err(e)) => {
             warn!("DB error listing suggestions: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1233,7 +1459,12 @@ async fn create_suggestion(
         conn.execute(
             "INSERT INTO cowork_suggestions (id, user_id, content, source, dismissed)
              VALUES (?1, ?2, ?3, ?4, 0)",
-            params![id2, user_id, body.content, body.source.unwrap_or_else(|| "system".to_string())],
+            params![
+                id2,
+                user_id,
+                body.content,
+                body.source.unwrap_or_else(|| "system".to_string())
+            ],
         )?;
         Ok::<_, rusqlite::Error>(())
     })
@@ -1243,11 +1474,19 @@ async fn create_suggestion(
         Ok(Ok(())) => (StatusCode::CREATED, Json(json!({ "id": id }))).into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating suggestion: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1292,14 +1531,26 @@ async fn team_execute(
     .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::OK, Json(json!({"execution_id": id, "status": "queued"}))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::OK,
+            Json(json!({"execution_id": id, "status": "queued"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating team execution: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1325,42 +1576,58 @@ async fn run_agent(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let agent_id = body.agent_id
-            .or_else(|| body.spec.as_ref().and_then(|s| s.get("id").and_then(|v| v.as_str()).map(|s| s.to_string())));
-        let prompt = body.prompt
-            .or_else(|| body.spec.as_ref().and_then(|s| s.get("prompt").and_then(|v| v.as_str()).map(|s| s.to_string())));
-        let command = body.role
-            .or_else(|| body.spec.as_ref().and_then(|s| s.get("role").and_then(|v| v.as_str()).map(|s| s.to_string())));
+        let agent_id = body.agent_id.or_else(|| {
+            body.spec
+                .as_ref()
+                .and_then(|s| s.get("id").and_then(|v| v.as_str()).map(|s| s.to_string()))
+        });
+        let prompt = body.prompt.or_else(|| {
+            body.spec.as_ref().and_then(|s| {
+                s.get("prompt")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            })
+        });
+        let command = body.role.or_else(|| {
+            body.spec.as_ref().and_then(|s| {
+                s.get("role")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            })
+        });
         conn.execute(
             "INSERT INTO cowork_executions (id, user_id, kind, agent_id, command, prompt, status)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![
-                id2,
-                user_id,
-                "agent",
-                agent_id,
-                command,
-                prompt,
-                "running",
-            ],
+            params![id2, user_id, "agent", agent_id, command, prompt, "running",],
         )?;
         Ok::<_, rusqlite::Error>(())
     })
     .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::OK, Json(json!({"execution_id": id, "status": "running"}))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::OK,
+            Json(json!({"execution_id": id, "status": "running"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating agent execution: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
-
 
 async fn cowork_status() -> impl IntoResponse {
     Json(json!({

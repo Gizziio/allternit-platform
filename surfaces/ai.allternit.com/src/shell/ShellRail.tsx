@@ -112,6 +112,7 @@ interface ShellRailProps {
   onSidecarToggle?: () => void;
   sidecarOpen?: boolean;
   onOpenCustomize?: (tab?: string) => void;
+  sessionOnlyId?: string;
 }
 
 const BROWSER_MODE_VIEW_TYPES = new Set<string>([
@@ -137,6 +138,7 @@ export function ShellRail({
   isCollapsed,
   onModeChange,
   onOpenCustomize,
+  sessionOnlyId,
 }: ShellRailProps): React.ReactNode | null {
   // Determine current surface for agent mode glow
   const currentSurface: AgentModeSurface = 
@@ -167,6 +169,7 @@ export function ShellRail({
   const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
 
   const browserAgentSessions = useBrowserAgentStore((state) => state.pageAgentSessions);
+  const aciSessionId = useBrowserAgentStore((state) => state.aciSessionId);
   const pinnedMiniApps = usePinnedMiniApps();
 
   const [recentsExpanded, setRecentsExpanded] = useState(true);
@@ -186,12 +189,12 @@ export function ShellRail({
 
   // Per-mode rail tab visibility (browser/code only; home has no More menu)
   const [browserRailTabs, setBrowserRailTabs] = useState<Record<string, boolean>>(() => {
-    if (typeof window === 'undefined') return { 'agent-hub': true, 'mini-apps-store': true, 'browser-extensions': true };
+    if (typeof window === 'undefined') return { 'mini-apps-store': true, 'browser-extensions': true };
     try {
       const saved = JSON.parse(localStorage.getItem('allternit-browser-rail-tabs') ?? '{}');
-      return { 'agent-hub': true, 'mini-apps-store': true, 'browser-extensions': true, ...saved };
+      return { 'mini-apps-store': true, 'browser-extensions': true, ...saved };
     } catch {
-      return { 'agent-hub': true, 'mini-apps-store': true, 'browser-extensions': true };
+      return { 'mini-apps-store': true, 'browser-extensions': true };
     }
   });
   const [codeRailTabs, setCodeRailTabs] = useState<Record<string, boolean>>(() => {
@@ -301,23 +304,23 @@ export function ShellRail({
       });
     });
 
-    // Browser agent sessions
+    // Browser agent sessions (ACI session store — the only recents shown in ACI mode)
     (browserAgentSessions || []).forEach(s => {
       list.push({
         id: s.id,
         title: s.task || 'Untitled Browser Run',
         mode: 'browser',
         icon: Globe,
-        isActive: activeViewType === 'browser',
+        isActive: s.sessionId != null && s.sessionId === aciSessionId,
         updatedAt: Number(s.createdAt || 0),
         kind: 'browser',
-        status: 'active',
+        status: s.status === 'completed' ? 'completed' : 'active',
         sessionId: s.id,
       });
     });
 
-    return list.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 15);
-  }, [chatSessions, activeChatSessionId, codeSessions, activeCodeSessionId, coworkSessions, activeCoworkSessionId, coworkStore.tasks, coworkStore.activeTaskId, browserAgentSessions, activeViewType]);
+    return list.sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [chatSessions, activeChatSessionId, codeSessions, activeCodeSessionId, coworkSessions, activeCoworkSessionId, coworkStore.tasks, coworkStore.activeTaskId, browserAgentSessions, aciSessionId, activeViewType]);
 
   const filteredRecentItems = useMemo(() => {
     const now = new Date();
@@ -327,8 +330,16 @@ export function ShellRail({
     const monthAgo = new Date(now);
     monthAgo.setMonth(monthAgo.getMonth() - 1);
 
-    return recentItems.filter((item) => {
-      if (typeFilter !== 'all' && item.kind !== typeFilter) return false;
+    // ACI (browser) mode recents come exclusively from the ACI session store;
+    // other modes show the merged cross-mode recents.
+    const base = mode === 'browser'
+      ? recentItems.filter((item) => item.mode === 'browser')
+      : recentItems;
+
+    const filtered = base.filter((item) => {
+      // The ACI panel has no type filter; ignore typeFilter there so a value
+      // set in another mode can't blank the list.
+      if (mode !== 'browser' && typeFilter !== 'all' && item.kind !== typeFilter) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       if (dateFilter !== 'all') {
         const date = new Date(item.updatedAt);
@@ -338,7 +349,11 @@ export function ShellRail({
       }
       return true;
     });
-  }, [recentItems, typeFilter, statusFilter, dateFilter]);
+
+    // Cross-mode recents stay capped; the ACI list is bounded by the store
+    // itself (PAGE_AGENT_SESSION_LIMIT) so it is shown in full.
+    return mode === 'browser' ? filtered : filtered.slice(0, 15);
+  }, [recentItems, typeFilter, statusFilter, dateFilter, mode]);
 
   // Code-mode recents: filter, sort, and group code sessions only
   const codeProjectOptions = useMemo(() => {
@@ -474,6 +489,22 @@ export function ShellRail({
 
   if (isCollapsed) return null;
 
+  if (sessionOnlyId) {
+    const session = codeSessions.find((item) => item.id === sessionOnlyId);
+    return (
+      <div className="size-full flex flex-col bg-[var(--shell-rail-bg)] overflow-hidden">
+        <div className="h-11 shrink-0" />
+        <div className="px-3 pt-3">
+          <div className="px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--shell-item-muted)]">Code session</div>
+          <button type="button" onClick={() => session && openNativeSessionSurface(session)} className="mt-2 flex w-full items-center gap-2.5 rounded-xl border-none bg-[var(--shell-item-active-bg)] px-3 py-2.5 text-left text-[var(--shell-item-active-fg)] cursor-pointer">
+            <TerminalWindow size={15} weight="fill" />
+            <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{session?.name || 'Session'}</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="size-full flex flex-col bg-[var(--shell-rail-bg)] relative overflow-hidden outline-none"
@@ -570,14 +601,6 @@ export function ShellRail({
         <>
           {/* BROWSER TABS */}
           <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
-            {browserRailTabs['agent-hub'] && (
-              <RailItem
-                icon={Robot}
-                label="Agent Hub"
-                isActive={activeViewType === 'agent-hub'}
-                onClick={() => onOpen?.('agent-hub')}
-              />
-            )}
             {browserRailTabs['mini-apps-store'] && (
               <RailItem
                 icon={AppWindow}
@@ -596,7 +619,6 @@ export function ShellRail({
             )}
             <MoreDropdown
               tabs={[
-                { id: 'agent-hub', label: 'Agent Hub', icon: Robot, visible: browserRailTabs['agent-hub'] },
                 { id: 'mini-apps-store', label: 'Mini-apps Store', icon: AppWindow, visible: browserRailTabs['mini-apps-store'] },
                 { id: 'browser-extensions', label: 'Office & Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
               ]}
@@ -633,7 +655,7 @@ export function ShellRail({
             </>
           )}
 
-          {/* BROWSER RECENTS */}
+          {/* BROWSER RECENTS — ACI sessions only (from the ACI session store) */}
           <RecentsPanel
             expanded={recentsExpanded}
             onToggle={() => setRecentsExpanded((v) => !v)}
@@ -659,23 +681,6 @@ export function ShellRail({
                   collisionPadding={12}
                 >
                   <div className="flex flex-col gap-3">
-                    <FilterRow label="Type" value={typeFilter === 'all' ? 'All' : typeFilter}>
-                      <div className="flex flex-col gap-0.5">
-                        {(['all', 'chat', 'cowork', 'task', 'agent', 'browser', 'code'] as const).map((k) => (
-                          <button
-                            key={k}
-                            type="button"
-                            onClick={() => setTypeFilter(k)}
-                            className={cn(
-                              "text-left px-2 py-1.5 rounded-md text-[12px] capitalize transition-colors",
-                              typeFilter === k ? "bg-[var(--shell-item-hover)] text-[var(--accent-primary)]" : "text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)]"
-                            )}
-                          >
-                            {k}
-                          </button>
-                        ))}
-                      </div>
-                    </FilterRow>
                     <FilterRow label="Status" value={statusFilter === 'all' ? 'All' : statusFilter}>
                       <div className="flex flex-col gap-0.5">
                         {(['all', 'active', 'completed', 'archived'] as const).map((s) => (

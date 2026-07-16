@@ -93,7 +93,9 @@ export async function listAgents(): Promise<Agent[]> {
 
 export async function getAgent(agentId: string): Promise<Agent> {
   try {
-    const agent = await api.getAgent(agentId);
+    const response = await api.getAgent(agentId);
+    // allternit-api wraps the row as { agent: {...} }; unwrap before transforming.
+    const agent = (response as { agent?: unknown })?.agent ?? response;
 
     // Normalize casing first, then validate the canonical shape. Validating
     // the raw payload rejects every snake_case backend response.
@@ -203,7 +205,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
   const apiInput: Record<string, unknown> = {
     name: input.name,
     description: input.description,
-    agent_type: input.type || 'worker',
+    type: input.type || 'worker',
     parent_agent_id: input.parentAgentId,
     model: input.model,
     provider: input.provider,
@@ -248,9 +250,13 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         logger.debug(`API call attempt ${attempt + 1}/${maxRetries}`);
-        const agent = await api.createAgent(apiInput as Omit<Agent, 'id'>);
+        const response = await api.createAgent(apiInput as Omit<Agent, 'id'>);
         logger.debug(`Agent created in ${Date.now() - startTime}ms`);
-        return transformAgentFromApi(agent);
+        // allternit-api's create response only carries { agent: { id } } — no
+        // other fields — so merge the generated id over what we already sent
+        // instead of transforming a near-empty row.
+        const created = (response as { agent?: { id?: string } })?.agent ?? (response as { id?: string });
+        return transformAgentFromApi({ ...apiInput, ...created });
       } catch (error: any) {
         lastError = error;
         logger.error({ status: error.status, message: error.message }, `Attempt ${attempt + 1} failed`);
@@ -359,7 +365,7 @@ export async function updateAgent(
   
   if (updates.name !== undefined) apiUpdates.name = updates.name;
   if (updates.description !== undefined) apiUpdates.description = updates.description;
-  if (updates.type !== undefined) apiUpdates.agent_type = updates.type;
+  if (updates.type !== undefined) apiUpdates.type = updates.type;
   if (updates.parentAgentId !== undefined) apiUpdates.parent_agent_id = updates.parentAgentId;
   if (updates.model !== undefined) apiUpdates.model = updates.model;
   if (updates.provider !== undefined) apiUpdates.provider = updates.provider;
@@ -397,8 +403,10 @@ export async function updateAgent(
   if (updates.writeScope !== undefined) apiUpdates.write_scope = updates.writeScope;
 
   try {
-    const agent = await api.updateAgent(agentId, apiUpdates);
-    return transformAgentFromApi(agent);
+    // allternit-api's update response is just { success: true } — no row —
+    // so re-fetch to return the agent's actual post-update state.
+    await api.updateAgent(agentId, apiUpdates);
+    return await getAgent(agentId);
   } catch (error) {
     if (shouldUseLocalAgentRegistryFallback(error)) {
       return updateLocalAgent(agentId, updates);

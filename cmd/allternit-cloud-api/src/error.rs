@@ -69,6 +69,9 @@ pub enum ApiError {
     #[error("Validation error: {0}")]
     ValidationError(String),
 
+    #[error("Service unavailable: {0}")]
+    ServiceUnavailable(String),
+
     #[error("Internal error: {0}")]
     Internal(String),
 }
@@ -85,7 +88,7 @@ impl IntoResponse for ApiError {
         let is_production = std::env::var("Allternit_API_DEVELOPMENT_MODE")
             .map(|v| v != "true" && v != "1")
             .unwrap_or(true);
-        
+
         let (status, error_code, message) = match &self {
             ApiError::DeploymentNotFound(id) => {
                 (StatusCode::NOT_FOUND, "DEPLOYMENT_NOT_FOUND", id.clone())
@@ -96,66 +99,97 @@ impl IntoResponse for ApiError {
             ApiError::ProviderNotFound(id) => {
                 (StatusCode::NOT_FOUND, "PROVIDER_NOT_FOUND", id.clone())
             }
-            ApiError::NotFound(id) => {
-                (StatusCode::NOT_FOUND, "NOT_FOUND", id.clone())
-            }
-            ApiError::InvalidCredentials(_) => {
-                (StatusCode::UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid credentials".to_string())
-            }
-            ApiError::Unauthorized(_) => {
-                (StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Unauthorized".to_string())
-            }
-            ApiError::Forbidden(_) => {
-                (StatusCode::FORBIDDEN, "FORBIDDEN", "Access forbidden".to_string())
-            }
-            ApiError::TokenExpired(_) => {
-                (StatusCode::UNAUTHORIZED, "TOKEN_EXPIRED", "Token has expired".to_string())
-            }
-            ApiError::InvalidToken(_) => {
-                (StatusCode::UNAUTHORIZED, "INVALID_TOKEN", "Invalid token".to_string())
-            }
-            ApiError::DeploymentFailed(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "DEPLOYMENT_FAILED", msg.clone())
-            }
-            ApiError::SshError(_) if is_production => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "CONNECTION_ERROR", "Connection failed".to_string())
-            }
+            ApiError::NotFound(id) => (StatusCode::NOT_FOUND, "NOT_FOUND", id.clone()),
+            ApiError::InvalidCredentials(_) => (
+                StatusCode::UNAUTHORIZED,
+                "INVALID_CREDENTIALS",
+                "Invalid credentials".to_string(),
+            ),
+            ApiError::Unauthorized(_) => (
+                StatusCode::UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Unauthorized".to_string(),
+            ),
+            ApiError::Forbidden(_) => (
+                StatusCode::FORBIDDEN,
+                "FORBIDDEN",
+                "Access forbidden".to_string(),
+            ),
+            ApiError::TokenExpired(_) => (
+                StatusCode::UNAUTHORIZED,
+                "TOKEN_EXPIRED",
+                "Token has expired".to_string(),
+            ),
+            ApiError::InvalidToken(_) => (
+                StatusCode::UNAUTHORIZED,
+                "INVALID_TOKEN",
+                "Invalid token".to_string(),
+            ),
+            ApiError::DeploymentFailed(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DEPLOYMENT_FAILED",
+                msg.clone(),
+            ),
+            ApiError::SshError(_) if is_production => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "CONNECTION_ERROR",
+                "Connection failed".to_string(),
+            ),
             ApiError::SshError(msg) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "SSH_ERROR", msg.clone())
             }
-            ApiError::DatabaseError(_) if is_production => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "DATABASE_ERROR", "Database error".to_string())
-            }
-            ApiError::DatabaseError(e) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "DATABASE_ERROR", e.to_string())
-            }
-            ApiError::MigrationError(_) if is_production => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "MIGRATION_ERROR", "Migration error".to_string())
-            }
-            ApiError::MigrationError(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "MIGRATION_ERROR", msg.clone())
-            }
-            ApiError::SerializationError(_) => {
-                (StatusCode::BAD_REQUEST, "SERIALIZATION_ERROR", "Invalid JSON".to_string())
-            }
-            ApiError::IoError(_) if is_production => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "IO_ERROR", "I/O error".to_string())
-            }
-            ApiError::IoError(e) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "IO_ERROR", e.to_string())
-            }
-            ApiError::BadRequest(msg) => {
-                (StatusCode::BAD_REQUEST, "BAD_REQUEST", msg.clone())
-            }
-            ApiError::ValidationError(msg) => {
-                (StatusCode::UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", msg.clone())
-            }
-            ApiError::Internal(_) if is_production => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Internal server error".to_string())
-            }
-            ApiError::Internal(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", msg.clone())
-            }
+            ApiError::DatabaseError(_) if is_production => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DATABASE_ERROR",
+                "Database error".to_string(),
+            ),
+            ApiError::DatabaseError(e) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DATABASE_ERROR",
+                e.to_string(),
+            ),
+            ApiError::MigrationError(_) if is_production => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "MIGRATION_ERROR",
+                "Migration error".to_string(),
+            ),
+            ApiError::MigrationError(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "MIGRATION_ERROR",
+                msg.clone(),
+            ),
+            ApiError::SerializationError(_) => (
+                StatusCode::BAD_REQUEST,
+                "SERIALIZATION_ERROR",
+                "Invalid JSON".to_string(),
+            ),
+            ApiError::IoError(_) if is_production => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "IO_ERROR",
+                "I/O error".to_string(),
+            ),
+            ApiError::IoError(e) => (StatusCode::INTERNAL_SERVER_ERROR, "IO_ERROR", e.to_string()),
+            ApiError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "BAD_REQUEST", msg.clone()),
+            ApiError::ValidationError(msg) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "VALIDATION_ERROR",
+                msg.clone(),
+            ),
+            ApiError::ServiceUnavailable(msg) => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "SERVICE_UNAVAILABLE",
+                msg.clone(),
+            ),
+            ApiError::Internal(_) if is_production => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error".to_string(),
+            ),
+            ApiError::Internal(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                msg.clone(),
+            ),
         };
 
         let body = Json(ErrorResponse {

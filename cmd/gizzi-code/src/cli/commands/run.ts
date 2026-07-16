@@ -328,6 +328,11 @@ export const RunCommand = cmd({
         describe: "skip all permission checks (use in sandboxed environments only)",
         default: false,
       })
+      .option("dangerously-skip-sandbox", {
+        type: "boolean",
+        describe: "run the Bash tool fully unsandboxed (sandboxed by default otherwise)",
+        default: false,
+      })
       .option("allowedTools", {
         type: "array",
         string: true,
@@ -381,6 +386,7 @@ export const RunCommand = cmd({
     // Set permission flags before anything else
     if (args.permissionMode) Flag.GIZZI_PERMISSION_MODE = args.permissionMode
     if (args.dangerouslySkipPermissions) Flag.GIZZI_SKIP_PERMISSIONS = true
+    if (args.dangerouslySkipSandbox) Flag.GIZZI_SANDBOX_DISABLE = true
     if (args.worktree) Flag.GIZZI_WORKTREE = path.resolve(args.worktree)
     if (args.fallbackModel) Flag.GIZZI_FALLBACK_MODEL = args.fallbackModel
 

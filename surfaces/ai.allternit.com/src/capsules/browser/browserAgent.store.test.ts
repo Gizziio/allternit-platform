@@ -192,10 +192,22 @@ describe('browserAgent.store', () => {
     expect(useBrowserAgentStore.getState().status).toBe('Done');
   });
 
-  it('runPageAgentGoal keeps ACI status idle and uses pageAgentStatus for extension runs', async () => {
-    mockFetch.mockResolvedValueOnce({
-      json: () => Promise.resolve({ sessionId: 'page-1' }),
-    });
+  it('runPageAgentGoal keeps ACI status idle and runs the goal on the gizzi brain', async () => {
+    // 1. session create  2. event stream (never emits)  3. message run
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 'page-1' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: new ReadableStream({ start() {} }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ info: {}, parts: [{ type: 'text', text: 'Finished summary' }] }),
+      });
 
     useBrowserAgentStore.getState().runPageAgentGoal('Summarize this page', {
       apiKey: 'NA',
@@ -212,61 +224,34 @@ describe('browserAgent.store', () => {
     expect(state.pageAgentStatus).toBe('running');
     expect(state.pageAgentActivity).toEqual({ type: 'thinking' });
 
-    await new Promise((r) => setTimeout(r, 0));
+    await vi.waitFor(() => {
+      expect(useBrowserAgentStore.getState().pageAgentStatus).toBe('completed');
+    });
 
+    // Session was created on the local gizzi runtime
     expect(mockFetch).toHaveBeenCalledWith(
-      '/api/page-agent/run',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({
-          task: 'Summarize this page',
-          config: {
-            apiKey: 'NA',
-            baseURL: 'https://api.example.com/v1',
-            model: 'gpt-5.4',
-            language: 'en-US',
-            maxSteps: 24,
-            systemInstruction: 'Stay on the current page unless you need a new tab.',
-            experimentalLlmsTxt: true,
-          },
-        }),
-      }),
+      'http://127.0.0.1:4096/v1/session',
+      expect.objectContaining({ method: 'POST' }),
     );
 
-    const es = MockEventSource.instances[0];
-    es.emit({
-      type: 'history',
-      payload: {
-        events: [{ type: 'observation', content: 'Read the current page.' }],
-      },
-      timestamp: Date.now(),
-    });
-
-    es.emit({
-      type: 'status',
-      payload: { status: 'running' },
-      timestamp: Date.now(),
-    });
+    // The goal was sent as a message on that session
+    const messageCall = mockFetch.mock.calls.find(
+      ([url]) => url === 'http://127.0.0.1:4096/v1/session/page-1/message',
+    );
+    expect(messageCall).toBeDefined();
+    const body = JSON.parse((messageCall?.[1] as RequestInit).body as string);
+    expect(body.parts).toEqual([{ type: 'text', text: 'Summarize this page' }]);
+    expect(body.system).toBe('Stay on the current page unless you need a new tab.');
 
     state = useBrowserAgentStore.getState();
     expect(state.status).toBe('Idle');
-    expect(state.pageAgentStatus).toBe('running');
-    expect(state.pageAgentHistory).toEqual([{ type: 'observation', content: 'Read the current page.' }]);
-
-    es.emit({
-      type: 'done',
-      payload: { success: true, data: 'Finished summary' },
-      timestamp: Date.now(),
-    });
-
-    state = useBrowserAgentStore.getState();
-    expect(state.status).toBe('Idle');
-    expect(state.pageAgentStatus).toBe('completed');
+    expect(state.pageAgentSessionId).toBe('page-1');
     expect(state.pageAgentActivity).toBeNull();
     expect(state.pageAgentSessions).toHaveLength(1);
     expect(state.pageAgentSessions[0]?.task).toBe('Summarize this page');
+    expect(state.pageAgentSessions[0]?.sessionId).toBe('page-1');
     expect(state.pageAgentSessions[0]?.history).toEqual([
-      { type: 'observation', content: 'Read the current page.' },
+      { type: 'observation', content: 'Finished summary' },
     ]);
   });
 });

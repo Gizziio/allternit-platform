@@ -20,19 +20,11 @@ Usage in main.py:
 """
 
 import os
-import sys
-from pathlib import Path
 from typing import Optional, Any
 
-# Add observability to path
-OBSERVABILITY_PATH = Path(__file__).parent.parent / "observability"
-if str(OBSERVABILITY_PATH) not in sys.path:
-    sys.path.insert(0, str(OBSERVABILITY_PATH))
-
-# Import recorder
-from recorder import SessionRecorder, RecorderConfig, ActionFrame
-from analyzer import RunAnalyzer
-from replay import MultiFormatBuilder, ReplayConfig
+from observability.recorder import SessionRecorder, RecorderConfig, ActionFrame
+from observability.analyzer import RunAnalyzer
+from observability.replay import MultiFormatBuilder, ReplayConfig
 
 # Global recorder instance
 recorder: Optional[SessionRecorder] = None

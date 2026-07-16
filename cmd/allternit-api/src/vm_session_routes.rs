@@ -88,7 +88,6 @@ pub struct CreateVmSessionRequest {
     pub memory_mb: Option<u64>,
 
     // ── Workspace bootstrap ──────────────────────────────────────────────────
-
     /// Git remote URL to clone into /workspace inside the VM.
     /// When provided the VM clones the repo fresh (like CC cloud sessions).
     /// When absent the host workdir is bind-mounted at /workspace instead.
@@ -110,7 +109,6 @@ pub struct CreateVmSessionRequest {
     pub skip_bootstrap: bool,
 
     // ── Tool-specific environment ────────────────────────────────────────────
-
     /// Exa API key for the WebSearch tool.
     /// Injected as EXA_API_KEY inside the VM environment.
     #[serde(default)]
@@ -310,10 +308,12 @@ async fn create_session_handler(
                 prewarm_pool: None,
             };
 
-            let execution_handle = driver
-                .spawn(spawn_spec)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Spawn failed: {e}")))?;
+            let execution_handle = driver.spawn(spawn_spec).await.map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Spawn failed: {e}"),
+                )
+            })?;
 
             let handle_str = execution_handle.id.to_string();
             info!(
@@ -325,17 +325,10 @@ async fn create_session_handler(
             // ── Bootstrap the VM environment ─────────────────────────────────
             // Run the setup script inside the freshly spawned VM.
             if !request.skip_bootstrap {
-                let bootstrap_script = build_bootstrap_script(
-                    &request,
-                    &workspace_path,
-                );
+                let bootstrap_script = build_bootstrap_script(&request, &workspace_path);
 
                 let bootstrap_cmd = CommandSpec {
-                    command: vec![
-                        "bash".to_string(),
-                        "-c".to_string(),
-                        bootstrap_script,
-                    ],
+                    command: vec!["bash".to_string(), "-c".to_string(), bootstrap_script],
                     env_vars: HashMap::new(),
                     working_dir: Some("/".to_string()),
                     stdin_data: None,
@@ -351,10 +344,12 @@ async fn create_session_handler(
                 .await
                 {
                     Ok(Ok(result)) => {
-                        let stdout = result.stdout
+                        let stdout = result
+                            .stdout
                             .map(|b| String::from_utf8_lossy(&b).into_owned())
                             .unwrap_or_default();
-                        let stderr = result.stderr
+                        let stderr = result
+                            .stderr
                             .map(|b| String::from_utf8_lossy(&b).into_owned())
                             .unwrap_or_default();
                         bootstrap_log = format!("{}\n{}", stdout, stderr);
@@ -390,7 +385,8 @@ async fn create_session_handler(
         {
             let _ = driver;
             warn!("vm-driver feature not compiled — falling back to local process execution");
-            bootstrap_log = "vm-driver feature not enabled; running in local process mode".to_string();
+            bootstrap_log =
+                "vm-driver feature not enabled; running in local process mode".to_string();
         }
     } else {
         // No VM driver — run bootstrap locally so tools are verified present
@@ -457,7 +453,8 @@ async fn create_session_handler(
 ///     rust-analyzer + gopls + clangd + typescript-language-server + pyright (lsp),
 ///     MCP bundled server npm packages (sequential-thinking, context7)
 fn build_bootstrap_script(request: &CreateVmSessionRequest, workspace_path: &str) -> String {
-    let mut script = String::from(r#"#!/usr/bin/env bash
+    let mut script = String::from(
+        r#"#!/usr/bin/env bash
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 export PATH="/root/.cargo/bin:/root/.nvm/versions/node/$(ls /root/.nvm/versions/node/ 2>/dev/null | tail -1)/bin:/usr/local/go/bin:/usr/local/bin:$PATH"
@@ -835,7 +832,8 @@ echo "  kubectl: $(kubectl version --client 2>/dev/null | head -1 || echo 'not a
 echo "  helm:    $(helm version --short 2>/dev/null || echo 'not available')"
 echo "  ffmpeg:  $(ffmpeg -version 2>/dev/null | head -1 || echo 'not available')"
 
-"#);
+"#,
+    );
 
     // ── Extra packages ────────────────────────────────────────────────────────
     if !request.extra_packages.is_empty() {
@@ -904,22 +902,26 @@ echo "  SSH key installed"
         ));
     } else {
         // No SSH key provided — still set up known_hosts so HTTPS git works smoothly
-        script.push_str(r#"
+        script.push_str(
+            r#"
 mkdir -p /root/.ssh
 chmod 700 /root/.ssh
 ssh-keyscan -H github.com gitlab.com bitbucket.org >> /root/.ssh/known_hosts 2>/dev/null || true
-"#);
+"#,
+        );
     }
 
     // ── Git config ────────────────────────────────────────────────────────────
-    script.push_str(r#"
+    script.push_str(
+        r#"
 echo "[gizzi-bootstrap] Configuring git..."
 git config --global user.email "gizzi@allternit.local"
 git config --global user.name "Gizzi Code"
 git config --global init.defaultBranch main
 git config --global core.autocrlf false
 git config --global safe.directory '*'
-"#);
+"#,
+    );
 
     // ── Workspace setup ───────────────────────────────────────────────────────
     if let Some(remote) = &request.git_remote {
@@ -1008,11 +1010,13 @@ python3 -m ipykernel install --user --name python3 2>&1 || true
 
     // ── Cleanup sensitive data ─────────────────────────────────────────────────
     if request.ssh_key_b64.is_some() {
-        script.push_str(r#"
+        script.push_str(
+            r#"
 # Remove SSH key from disk after use (it stays in the driver's memory-backed rootfs)
 rm -f /root/.ssh/id_rsa
 echo "[gizzi-bootstrap] SSH key removed from disk"
-"#);
+"#,
+        );
     }
 
     script.push_str(r#"
@@ -1049,10 +1053,7 @@ echo "[gizzi-bootstrap] ============================================"
 
 /// Run a lightweight bootstrap for the process-fallback path (no real VM).
 /// Mostly just verifies the workspace and git state.
-async fn run_local_bootstrap(
-    request: &CreateVmSessionRequest,
-    workspace_path: &str,
-) -> String {
+async fn run_local_bootstrap(request: &CreateVmSessionRequest, workspace_path: &str) -> String {
     let mut log = format!(
         "[gizzi-local] Process fallback mode — workdir: {}\n",
         request.workdir
@@ -1105,11 +1106,12 @@ async fn get_session_handler(
     Path(session_id): Path<String>,
 ) -> Result<Json<VmSession>, (StatusCode, String)> {
     let sessions = state.vm_sessions.read().await;
-    sessions
-        .get(&session_id)
-        .cloned()
-        .map(Json)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("VM session {session_id} not found")))
+    sessions.get(&session_id).cloned().map(Json).ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            format!("VM session {session_id} not found"),
+        )
+    })
 }
 
 /// POST /vm-session/:session_id/execute
@@ -1124,7 +1126,12 @@ async fn exec_in_session_handler(
         let sessions = state.vm_sessions.read().await;
         sessions.get(&session_id).cloned()
     }
-    .ok_or_else(|| (StatusCode::NOT_FOUND, format!("VM session {session_id} not found")))?;
+    .ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            format!("VM session {session_id} not found"),
+        )
+    })?;
 
     if session.status != VmSessionStatus::Running {
         return Err((
@@ -1133,69 +1140,72 @@ async fn exec_in_session_handler(
         ));
     }
 
-    let (exit_code, stdout, stderr, vm_backed) =
-        if let (Some(driver), Some(handle_id)) = (state.vm_driver.as_ref(), &session.handle_id) {
-            // ── Real VM execution ──────────────────────────────────────────
-            #[cfg(feature = "vm-driver")]
-            {
-                use allternit_driver_interface::{CommandSpec, ExecutionHandle, ExecutionId, TenantId};
+    let (exit_code, stdout, stderr, vm_backed) = if let (Some(driver), Some(handle_id)) =
+        (state.vm_driver.as_ref(), &session.handle_id)
+    {
+        // ── Real VM execution ──────────────────────────────────────────
+        #[cfg(feature = "vm-driver")]
+        {
+            use allternit_driver_interface::{CommandSpec, ExecutionHandle, ExecutionId, TenantId};
 
-                let handle_uuid = Uuid::parse_str(handle_id)
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            let handle_uuid = Uuid::parse_str(handle_id)
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-                let handle = ExecutionHandle {
-                    id: ExecutionId(handle_uuid),
-                    tenant: TenantId::new(format!("gizzi-{}", session_id))
-                        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
-                    driver_info: HashMap::new(),
-                    env_spec: Default::default(),
-                };
+            let handle = ExecutionHandle {
+                id: ExecutionId(handle_uuid),
+                tenant: TenantId::new(format!("gizzi-{}", session_id))
+                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?,
+                driver_info: HashMap::new(),
+                env_spec: Default::default(),
+            };
 
-                let cwd = request
-                    .workdir
-                    .as_deref()
-                    .map(|rel| format!("{}/{}", session.workspace_path, rel))
-                    .unwrap_or_else(|| session.workspace_path.clone());
+            let cwd = request
+                .workdir
+                .as_deref()
+                .map(|rel| format!("{}/{}", session.workspace_path, rel))
+                .unwrap_or_else(|| session.workspace_path.clone());
 
-                let cmd = CommandSpec {
-                    command: vec![
-                        "bash".to_string(),
-                        "-c".to_string(),
-                        request.command.clone(),
-                    ],
-                    env_vars: request.env.clone(),
-                    working_dir: Some(cwd),
-                    stdin_data: None,
-                    capture_stdout: true,
-                    capture_stderr: true,
-                };
+            let cmd = CommandSpec {
+                command: vec![
+                    "bash".to_string(),
+                    "-c".to_string(),
+                    request.command.clone(),
+                ],
+                env_vars: request.env.clone(),
+                working_dir: Some(cwd),
+                stdin_data: None,
+                capture_stdout: true,
+                capture_stderr: true,
+            };
 
-                let result = driver
-                    .exec(&handle, cmd)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Exec failed: {e}")))?;
+            let result = driver.exec(&handle, cmd).await.map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Exec failed: {e}"),
+                )
+            })?;
 
-                let stdout = result
-                    .stdout
-                    .map(|b| String::from_utf8_lossy(&b).into_owned())
-                    .unwrap_or_default();
-                let stderr = result
-                    .stderr
-                    .map(|b| String::from_utf8_lossy(&b).into_owned())
-                    .unwrap_or_default();
+            let stdout = result
+                .stdout
+                .map(|b| String::from_utf8_lossy(&b).into_owned())
+                .unwrap_or_default();
+            let stderr = result
+                .stderr
+                .map(|b| String::from_utf8_lossy(&b).into_owned())
+                .unwrap_or_default();
 
-                (result.exit_code, stdout, stderr, true)
-            }
+            (result.exit_code, stdout, stderr, true)
+        }
 
-            #[cfg(not(feature = "vm-driver"))]
-            {
-                let _ = (driver, handle_id);
-                local_exec(&request, &session).await?
-            }
-        } else {
-            // ── Local process fallback ────────────────────────────────────
+        #[cfg(not(feature = "vm-driver"))]
+        {
+            let _ = (driver, handle_id);
             local_exec(&request, &session).await?
-        };
+        }
+    } else {
+        // ── Local process fallback ────────────────────────────────────
+        local_exec(&request, &session).await?
+    };
 
     // Update last_used timestamp
     {
@@ -1225,7 +1235,12 @@ async fn destroy_session_handler(
         let mut sessions = state.vm_sessions.write().await;
         sessions.remove(&session_id)
     }
-    .ok_or_else(|| (StatusCode::NOT_FOUND, format!("VM session {session_id} not found")))?;
+    .ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            format!("VM session {session_id} not found"),
+        )
+    })?;
 
     info!(session_id = %session_id, "Destroying VM session");
 
@@ -1291,7 +1306,12 @@ async fn local_exec(
                 format!("Command timed out after {}s", request.timeout_secs),
             )
         })?
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Spawn failed: {e}")))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Spawn failed: {e}"),
+            )
+        })?;
 
     let stdout = String::from_utf8_lossy(&result.stdout).into_owned();
     let stderr = String::from_utf8_lossy(&result.stderr).into_owned();

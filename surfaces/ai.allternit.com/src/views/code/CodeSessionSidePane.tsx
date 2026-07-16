@@ -1,23 +1,16 @@
 "use client";
 
 import React, { useState } from 'react';
-import { FolderSimple, Globe, Terminal, GitBranch, FileCode } from '@phosphor-icons/react';
-import { CodePreviewPane } from './CodePreviewPane';
+import { FolderSimple, GitDiff, Package, Scroll, Terminal, X } from '@phosphor-icons/react';
 import { CodeDiffPanel } from './CodeDiffPanel';
 import { CodeFileEditor } from './CodeFileEditor';
 import { ExplorerView } from './ExplorerView';
-import GitView from './GitView';
+import { CodeAciPane } from './CodeAciPane';
+import { CodeTranscriptPane } from './CodeTranscriptPane';
 import { UnifiedTerminal } from '@/components/workspace/UnifiedTerminal';
+import { ArtifactCenter } from './ArtifactCenter';
 
-type SidePaneTab = 'files' | 'preview' | 'terminal' | 'git' | 'diff';
-
-const TABS: { id: SidePaneTab; label: string; icon: typeof FolderSimple }[] = [
-  { id: 'files', label: 'Files', icon: FolderSimple },
-  { id: 'diff', label: 'Diff', icon: FileCode },
-  { id: 'preview', label: 'Preview', icon: Globe },
-  { id: 'terminal', label: 'Terminal', icon: Terminal },
-  { id: 'git', label: 'Git', icon: GitBranch },
-];
+type SidePaneTab = 'artifacts' | 'files' | 'terminal' | 'diff' | 'aci' | 'transcript';
 
 interface TerminalContext {
   repoName?: string;
@@ -31,16 +24,15 @@ interface CodeSessionSidePaneProps {
   sessionId?: string;
   workingDir?: string;
   terminalContext?: TerminalContext;
+  onClose?: () => void;
 }
 
 /**
- * Right-hand pane for an active code session: turns code mode into a real
- * coding session (like Claude Code / Codex desktop) instead of a bare chat
- * thread — workspace files, live preview, terminal, and git one click away.
- * Tabs are keep-alive so the terminal session and preview survive switching.
+ * Focused right-hand pane opened by the floating session launcher.
+ * Each target owns its content and local controls; navigation is not duplicated here.
  */
-export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, sessionId, workingDir, terminalContext }: CodeSessionSidePaneProps): React.ReactNode {
-  const [internalTab, setInternalTab] = useState<SidePaneTab>('files');
+export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, sessionId, workingDir, terminalContext, onClose }: CodeSessionSidePaneProps): React.ReactNode {
+  const [internalTab, setInternalTab] = useState<SidePaneTab>('terminal');
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const activeTab = controlledTab ?? internalTab;
   const setActiveTab = (tab: SidePaneTab) => {
@@ -52,6 +44,20 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
     setActiveTab('files');
   };
   const closeFile = () => setSelectedFilePath(null);
+  const paneMeta = activeTab === 'terminal'
+    ? { label: 'Terminal', icon: Terminal }
+    : activeTab === 'diff'
+      ? { label: `Working tree${workingDir ? ` · ${workingDir.split('/').pop()}` : ''}`, icon: GitDiff }
+      : activeTab === 'artifacts'
+        ? { label: 'Artifacts', icon: Package }
+        : activeTab === 'transcript'
+          ? { label: 'Transcript', icon: Scroll }
+          : { label: 'Files', icon: FolderSimple };
+  const PaneIcon = paneMeta.icon;
+
+  if (activeTab === 'aci') {
+    return <CodeAciPane onClose={() => onClose?.()} />;
+  }
 
   return (
     <div
@@ -64,46 +70,41 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
       }}
     >
       <div
-        role="tablist"
-        aria-label="Code session panels"
         style={{
           display: 'flex',
-          gap: 2,
-          padding: '6px 8px',
+          alignItems: 'center',
+          gap: 7,
+          height: 40,
+          padding: '0 7px 0 11px',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           flexShrink: 0,
         }}
       >
-        {TABS.map(({ id, label, icon: Icon }) => {
-          const active = activeTab === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              data-testid={`code-side-tab-${id}`}
-              onClick={() => setActiveTab(id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                height: 28,
-                padding: '0 10px',
-                borderRadius: 9,
-                border: 'none',
-                background: active ? 'rgba(255, 255, 255, 0.10)' : 'transparent',
-                color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              <Icon size={13} weight={active ? 'fill' : 'regular'} />
-              {label}
-            </button>
-          );
-        })}
+        <PaneIcon size={16} weight="duotone" style={{ color: 'var(--accent-code)' }} />
+        <span style={{ fontSize: 12, fontWeight: 650, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{paneMeta.label}</span>
+        {onClose ? (
+          <button
+            type="button"
+            aria-label="Close workspace panel"
+            data-testid="code-side-pane-close"
+            onClick={onClose}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              marginLeft: 'auto',
+              borderRadius: 9,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+            }}
+          >
+            <X size={14} />
+          </button>
+        ) : null}
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
@@ -115,20 +116,20 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
           {selectedFilePath ? (
             <CodeFileEditor filePath={selectedFilePath} onClose={closeFile} />
           ) : (
-            <ExplorerView onOpenFile={openFile} />
+            <ExplorerView rootPath={workingDir} onOpenFile={openFile} />
           )}
         </div>
         <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'diff' ? 'flex' : 'none', flexDirection: 'column' }}>
-          <CodeDiffPanel />
-        </div>
-        <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'preview' ? 'flex' : 'none', flexDirection: 'column' }}>
-          <CodePreviewPane />
+          <CodeDiffPanel workingDir={workingDir} />
         </div>
         <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'terminal' ? 'flex' : 'none', flexDirection: 'column', background: '#0d1117' }}>
           <UnifiedTerminal sessionId={sessionId ?? 'allternit-session'} workingDir={workingDir} terminalContext={terminalContext} />
         </div>
-        <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'git' ? 'flex' : 'none', flexDirection: 'column', overflow: 'auto' }}>
-          <GitView />
+        <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'artifacts' ? 'flex' : 'none', flexDirection: 'column' }}>
+          <ArtifactCenter />
+        </div>
+        <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'transcript' ? 'flex' : 'none', flexDirection: 'column' }}>
+          <CodeTranscriptPane sessionId={sessionId} />
         </div>
       </div>
     </div>

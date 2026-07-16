@@ -57,13 +57,25 @@ async fn execute_tool(
     headers: HeaderMap,
     Json(body): Json<ExecuteToolRequest>,
 ) -> impl IntoResponse {
-    let user = match headers.get("x-allternit-user-id").and_then(|v| v.to_str().ok()) {
+    let user = match headers
+        .get("x-allternit-user-id")
+        .and_then(|v| v.to_str().ok())
+    {
         Some(user_id) => AuthUser {
             user_id: user_id.to_string(),
-            email: headers.get("x-allternit-user-email").and_then(|v| v.to_str().ok()).map(|s| s.to_string()),
-            name: headers.get("x-allternit-user-name").and_then(|v| v.to_str().ok()).map(|s| s.to_string()),
+            email: headers
+                .get("x-allternit-user-email")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
+            name: headers
+                .get("x-allternit-user-name")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
             avatar_url: None,
-            tenant_id: headers.get("x-allternit-tenant-id").and_then(|v| v.to_str().ok()).map(|s| s.to_string()),
+            tenant_id: headers
+                .get("x-allternit-tenant-id")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
         },
         None => {
             return (
@@ -74,10 +86,7 @@ async fn execute_tool(
     };
 
     let start = std::time::Instant::now();
-    info!(
-        "Executing tool '{}' for user '{}'",
-        body.tool, user.user_id
-    );
+    info!("Executing tool '{}' for user '{}'", body.tool, user.user_id);
 
     let result = match execute_tool_internal(&body, &user.user_id).await {
         Ok(result) => json!({
@@ -169,13 +178,10 @@ async fn shell_exec(request: &ExecuteToolRequest) -> Result<Value, String> {
         cmd.current_dir(dir);
     }
 
-    let output = tokio::time::timeout(
-        std::time::Duration::from_secs(timeout_secs),
-        cmd.output(),
-    )
-    .await
-    .map_err(|_| "Shell command timed out")?
-    .map_err(|e| format!("Failed to execute shell command: {}", e))?;
+    let output = tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), cmd.output())
+        .await
+        .map_err(|_| "Shell command timed out")?
+        .map_err(|e| format!("Failed to execute shell command: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -296,9 +302,8 @@ async fn system_env(request: &ExecuteToolRequest) -> Result<Value, String> {
         let value = std::env::var(key).ok();
         Ok(json!({ "key": key, "value": value }))
     } else {
-        let envs: std::collections::HashMap<String, Option<String>> = std::env::vars()
-            .map(|(k, v)| (k, Some(v)))
-            .collect();
+        let envs: std::collections::HashMap<String, Option<String>> =
+            std::env::vars().map(|(k, v)| (k, Some(v))).collect();
         Ok(json!({ "env": envs }))
     }
 }
@@ -313,7 +318,9 @@ async fn http_get(request: &ExecuteToolRequest) -> Result<Value, String> {
         .ok_or("Missing 'url' argument")?;
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(request.timeout.unwrap_or(30)))
+        .timeout(std::time::Duration::from_secs(
+            request.timeout.unwrap_or(30),
+        ))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -343,7 +350,9 @@ async fn http_post(request: &ExecuteToolRequest) -> Result<Value, String> {
         .ok_or("Missing 'url' argument")?;
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(request.timeout.unwrap_or(30)))
+        .timeout(std::time::Duration::from_secs(
+            request.timeout.unwrap_or(30),
+        ))
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -361,7 +370,10 @@ async fn http_post(request: &ExecuteToolRequest) -> Result<Value, String> {
         }
     }
 
-    let resp = req.send().await.map_err(|e| format!("HTTP POST failed: {}", e))?;
+    let resp = req
+        .send()
+        .await
+        .map_err(|e| format!("HTTP POST failed: {}", e))?;
 
     let status = resp.status().as_u16();
     let body = resp
@@ -386,7 +398,6 @@ async fn time_now(_request: &ExecuteToolRequest) -> Result<Value, String> {
         "time": now.format("%H:%M:%S").to_string(),
     }))
 }
-
 
 // ─── List tools (stub) ───────────────────────────────────────────────────────
 

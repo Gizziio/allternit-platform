@@ -98,31 +98,31 @@ export function AgentSessionsTab() {
   }, [items, searchQuery, surfaceFilter]);
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-solid border-[var(--border-subtle)] shrink-0">
-        <div className="flex items-center gap-3 flex-1 px-3.5 py-2 bg-[var(--surface-hover)] rounded-xl border border-solid border-[var(--border-subtle)] transition-colors focus-within:border-[var(--border-default)]">
+    <div className="h-full w-full overflow-auto">
+      <div className="mx-auto flex w-full max-w-6xl flex-col px-8 pb-12 pt-6">
+      <div className="flex shrink-0 items-center gap-3">
+        <div className="flex h-11 flex-1 items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 transition-colors focus-within:border-[var(--accent-primary)]">
           <MagnifyingGlass size={16} className="text-[var(--text-tertiary)] shrink-0" />
           <input
             aria-label="Search agent sessions"
             type="text"
-            placeholder="Search agent sessions..."
+            placeholder="Search agent sessions…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-[var(--text-primary)] text-[14px] placeholder:text-[var(--text-tertiary)]"
+            className="flex-1 border-none bg-transparent text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
           />
         </div>
-        <div className="flex items-center gap-1 bg-[var(--surface-hover)] p-1 rounded-xl border border-solid border-[var(--border-subtle)]">
+        <div className="flex items-center gap-1 overflow-x-auto">
           {(['all', 'chat', 'code', 'cowork', 'design'] as const).map((surface) => (
             <button
               key={surface}
               type="button"
               onClick={() => setSurfaceFilter(surface)}
               className={cn(
-                "px-3 py-1.5 rounded-lg border-none text-[13px] font-medium capitalize cursor-pointer transition-colors",
+                "h-8 rounded-lg px-3 text-xs font-medium capitalize transition-colors",
                 surfaceFilter === surface
-                  ? "bg-[var(--accent-primary)]/15 text-[var(--accent-primary)]"
-                  : "bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  ? "bg-[var(--text-primary)] text-[var(--bg-elevated)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
               )}
             >
               {surface === 'all' ? 'All' : SURFACE_META[surface].label}
@@ -131,14 +131,11 @@ export function AgentSessionsTab() {
         </div>
       </div>
 
-      {/* List */}
-      <div className="flex-1 overflow-y-auto px-6 py-3">
+      <div className="mt-8">
         {filteredItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-            <div className="size-14 rounded-full bg-[var(--surface-hover)] flex items-center justify-center text-[var(--text-tertiary)]">
-              <Robot size={28} />
-            </div>
-            <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">No agent sessions</h3>
+          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+            <Robot size={48} className="text-[var(--text-tertiary)] opacity-40" />
+            <h3 className="text-sm font-normal text-[var(--text-secondary)]">No agent sessions.</h3>
             <p className="text-[13px] text-[var(--text-tertiary)] max-w-xs">
               {searchQuery || surfaceFilter !== 'all'
                 ? 'Try adjusting your search or surface filter.'
@@ -146,7 +143,7 @@ export function AgentSessionsTab() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-col pb-8">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredItems.map((item) => {
               const SurfaceIcon = SURFACE_META[item.surface].icon;
               return (
@@ -161,20 +158,22 @@ export function AgentSessionsTab() {
                       openSession(item);
                     }
                   }}
-                  className="group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors hover:bg-[var(--surface-hover)]"
+                  className="group flex min-h-[150px] cursor-pointer flex-col rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 transition-all duration-200 hover:border-[var(--border-hover)] hover:shadow-md"
                 >
-                  <Robot size={18} weight="bold" className="shrink-0 text-[var(--accent-primary)]" />
-                  <div className="flex-1 min-w-0">
-                    <span className="block text-[14px] text-[var(--text-primary)] truncate">{item.name}</span>
+                  <div className="flex w-full items-start justify-between gap-3">
+                    <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-hover)] text-[var(--text-primary)]"><Robot size={20} weight="duotone" /></div>
+                    <span className="flex items-center gap-1.5 rounded-full bg-[var(--surface-hover)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
+                      <SurfaceIcon size={12} />
+                      {SURFACE_META[item.surface].label}
+                    </span>
+                  </div>
+                  <div className="mt-4 min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold text-[var(--text-primary)]">{item.name}</span>
                     {item.agentName && (
-                      <span className="block text-[12px] text-[var(--text-tertiary)] truncate">{item.agentName}</span>
+                      <span className="mt-1 block truncate text-[13px] text-[var(--text-secondary)]">{item.agentName}</span>
                     )}
                   </div>
-                  <span className="flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)] shrink-0">
-                    <SurfaceIcon size={14} />
-                    {SURFACE_META[item.surface].label}
-                  </span>
-                  <span className="text-[12px] text-[var(--text-tertiary)] whitespace-nowrap shrink-0 w-16 text-right">
+                  <span className="mt-3 text-xs text-[var(--text-tertiary)]">
                     {formatSessionDate(item.updatedAt)}
                   </span>
                 </div>
@@ -182,6 +181,7 @@ export function AgentSessionsTab() {
             })}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

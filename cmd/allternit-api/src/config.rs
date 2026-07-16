@@ -14,7 +14,6 @@
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing::{info, warn};
-use crate::secrets;
 
 /// Company-level configuration. These values are part of the packaged app and
 /// should not be edited by end users. They standardize auth, endpoints, and
@@ -94,9 +93,9 @@ pub struct UserConfig {
     #[serde(rename = "gatewayUrl")]
     pub gateway_url: Option<String>,
 
-    /// Provider API keys. In production these should be moved to the OS
-    /// keychain; this field is a transitional store.
-    #[serde(rename = "providerApiKeys")]
+    /// Legacy provider secret field. Loaded only so an old config can be
+    /// migrated; never returned or written again. Gizzi owns credentials.
+    #[serde(rename = "providerApiKeys", default, skip_serializing)]
     pub provider_api_keys: Option<serde_json::Map<String, serde_json::Value>>,
 
     /// Whether onboarding has been completed.
@@ -245,16 +244,19 @@ impl AppConfig {
 
     /// Default encryption key for local data.
     ///
-    /// Resolution order matches `token_crypto`: env (`ENCRYPTION_KEY`) ->
-    /// baked company config (empty by design) -> per-host OS keychain
-    /// (`platform:encryption-key`). Nothing secret is baked into the package;
-    /// the key is generated per machine on first onboarding.
+    /// The signed desktop process injects this through the environment. A
+    /// headless runtime may use its mode-0600 local key managed by
+    /// `token_crypto`; this config accessor never touches OS Keychain.
     pub fn encryption_key(&self) -> Option<String> {
         std::env::var("ENCRYPTION_KEY")
             .ok()
             .filter(|s| !s.is_empty())
-            .or_else(|| self.company.encryption_key.clone().filter(|s| !s.is_empty()))
-            .or_else(|| crate::secrets::get_secret(crate::token_crypto::PLATFORM_KEY_ACCOUNT))
+            .or_else(|| {
+                self.company
+                    .encryption_key
+                    .clone()
+                    .filter(|s| !s.is_empty())
+            })
     }
 
     /// Tenant identifier for this packaged deployment.
@@ -539,7 +541,8 @@ impl From<SaveUserConfigPayload> for UserConfig {
             default_model: payload.default_model,
             terminal_server_url: payload.terminal_server_url,
             gateway_url: payload.gateway_url,
-            provider_api_keys: payload.provider_api_keys,
+            // Never copy provider credentials into Allternit's user config.
+            provider_api_keys: None,
             onboarding_complete: payload.onboarding_complete,
             ollama_url: payload.ollama_url,
             memory_url: payload.memory_url,
@@ -565,14 +568,19 @@ fn read_gizzi_default_model() -> Option<String> {
     }
 
     // Infer default from the first provider's first model.
-    value.get("provider")?.as_object()?.iter().next().and_then(|(provider_id, provider)| {
-        let model_id = provider
-            .get("models")
-            .and_then(|m| m.as_object())
-            .and_then(|m| m.keys().next())
-            .cloned()?;
-        Some(format!("{}/{}", provider_id, model_id))
-    })
+    value
+        .get("provider")?
+        .as_object()?
+        .iter()
+        .next()
+        .and_then(|(provider_id, provider)| {
+            let model_id = provider
+                .get("models")
+                .and_then(|m| m.as_object())
+                .and_then(|m| m.keys().next())
+                .cloned()?;
+            Some(format!("{}/{}", provider_id, model_id))
+        })
 }
 
 /// Convenience builder that looks up a provider by id from the Gizzi runtime
@@ -587,20 +595,27 @@ pub fn build_gizzi_harness_for_provider(provider_id: &str) -> Option<serde_json:
 }
 
 /// Best-effort build of a Gizzi harness for a provider configured in the Gizzi
-/// runtime user config. Injects API keys from the OS keychain for subprocess
-/// providers so CLI brains (Claude CLI, etc.) authenticate without writing
-/// secrets to disk.
-pub fn build_gizzi_harness(provider_id: &str, provider: &serde_json::Value) -> Option<serde_json::Value> {
+/// runtime user config. Credentials are resolved exclusively by Gizzi and are
+/// never inserted into a session payload by allternit-api.
+pub fn build_gizzi_harness(
+    _provider_id: &str,
+    provider: &serde_json::Value,
+) -> Option<serde_json::Value> {
     let provider = provider.as_object()?;
 
     // Subprocess provider (e.g. claude-cli, custom local scripts).
     if let Some(cmd) = provider.get("subprocess_cmd").and_then(|v| v.as_str()) {
-        let mut harness = serde_json::json!({
+        return Some(serde_json::json!({
             "mode": "subprocess",
             "subprocess": { "command": cmd, "env": {} }
-        });
-        inject_subprocess_api_key(provider_id, &mut harness);
-        return Some(harness);
+        }));
+    }
+
+    // API-key providers are already configured in Gizzi and Gizzi owns their
+    // credentials. Omitting a BYOK harness prevents a secret-less override from
+    // shadowing the runtime's authenticated provider.
+    if provider.get("auth_type").and_then(|v| v.as_str()) == Some("api_key") {
+        return None;
     }
 
     // Local/OpenAI-compatible provider (e.g. Ollama).
@@ -615,56 +630,7 @@ pub fn build_gizzi_harness(provider_id: &str, provider: &serde_json::Value) -> O
         }));
     }
 
-    // BYOK cloud-style providers with an explicit baseURL / auth_type.
-    if provider.get("auth_type").and_then(|v| v.as_str()) == Some("api_key") {
-        let base_url = provider
-            .get("baseURL")
-            .or_else(|| provider.get("options").and_then(|o| o.get("baseURL")))
-            .and_then(|v| v.as_str())
-            .unwrap_or_default();
-        return Some(serde_json::json!({
-            "mode": "byok",
-            "byok": {
-                "baseURLs": { provider_id: base_url },
-                "keys": {}
-            }
-        }));
-    }
-
     None
-}
-
-/// Inject the provider API key (stored in the OS keychain) into a subprocess
-/// harness's env. The env variable name is inferred from the provider id:
-///   - providers whose id contains "claude" -> ANTHROPIC_API_KEY
-/// Everything else falls back to a generic LLM_API_KEY so the subprocess can
-/// pick it up if it supports one.
-fn inject_subprocess_api_key(provider_id: &str, harness: &mut serde_json::Value) {
-    let env_name = if provider_id.to_lowercase().contains("claude") {
-        "ANTHROPIC_API_KEY"
-    } else {
-        "LLM_API_KEY"
-    };
-
-    match secrets::get_secret(&secrets::provider_account(provider_id)) {
-        Some(key) if !key.is_empty() => {
-            if let Some(subprocess) = harness.get_mut("subprocess").and_then(|v| v.as_object_mut()) {
-                let env = subprocess
-                    .entry("env")
-                    .or_insert_with(|| serde_json::json!({}))
-                    .as_object_mut()
-                    .unwrap();
-                env.insert(env_name.to_string(), serde_json::json!(key));
-                info!(provider = %provider_id, env = %env_name, "Injected API key into subprocess harness env");
-            }
-        }
-        Some(_) => {
-            // Key exists but is empty — nothing to inject.
-        }
-        None => {
-            warn!(provider = %provider_id, "No API key found in keychain for subprocess provider");
-        }
-    }
 }
 
 /// Best-effort build of a Gizzi harness for the default model configured in
@@ -681,7 +647,11 @@ pub fn read_gizzi_default_harness() -> Option<serde_json::Value> {
         .and_then(|v| v.as_str())
         .and_then(|m| m.split_once('/').map(|(p, _)| p.to_string()))?;
 
-    let provider = value.get("provider")?.as_object()?.get(&provider_id)?.clone();
+    let provider = value
+        .get("provider")?
+        .as_object()?
+        .get(&provider_id)?
+        .clone();
     build_gizzi_harness(&provider_id, &provider)
 }
 
@@ -753,7 +723,11 @@ fn migrate_legacy_gizzi_config() {
         std::fs::read_to_string(path)
             .ok()
             .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
-            .and_then(|v| v.get("provider").and_then(|p| p.as_object()).map(|o| o.len()))
+            .and_then(|v| {
+                v.get("provider")
+                    .and_then(|p| p.as_object())
+                    .map(|o| o.len())
+            })
             .unwrap_or(0)
     };
 
@@ -777,7 +751,11 @@ fn migrate_legacy_gizzi_config() {
     }
 
     match std::fs::copy(&source, &target) {
-        Ok(bytes) => info!(from = %source.display(), to = %target.display(), bytes, "Migrated legacy gizzi brain config"),
-        Err(err) => warn!(error = %err, from = %source.display(), to = %target.display(), "Failed to migrate legacy gizzi brain config"),
+        Ok(bytes) => {
+            info!(from = %source.display(), to = %target.display(), bytes, "Migrated legacy gizzi brain config")
+        }
+        Err(err) => {
+            warn!(error = %err, from = %source.display(), to = %target.display(), "Failed to migrate legacy gizzi brain config")
+        }
     }
 }

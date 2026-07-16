@@ -25,7 +25,8 @@ import {
 } from '@phosphor-icons/react';
 import { VPSConnectionsPanel } from './VPSConnectionsPanel';
 import { ToastProvider } from '@/components/ui/toast-provider';
-import { usePlatformUser, usePlatformSignOut, usePlatformHardSignOut, usePlatformSessions, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
+import { usePlatformAuth, usePlatformUser, usePlatformSignOut, usePlatformHardSignOut, usePlatformSessions, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
+import { env } from '@/lib/env';
 import { useThemeStore } from '@/design/ThemeStore';
 import { LocalModelManager } from '@/components/models/LocalModelManager';
 import { InfrastructureSettings } from './InfrastructureSettings';
@@ -138,6 +139,7 @@ const PermissionRow: React.FC<{
 
 function ClerkAuthPanel() {
   const { isLoaded, isSignedIn, user: _user } = usePlatformUser();
+  const { getToken } = usePlatformAuth();
   const { sessions } = usePlatformSessions();
   const user = _user as any;
   const signOut = usePlatformSignOut();
@@ -145,6 +147,12 @@ function ClerkAuthPanel() {
   const [backendSummary, setBackendSummary] = useState<{ mode: string; url: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [restarting, setRestarting] = useState(false);
+  const [runtimes, setRuntimes] = useState<any[]>([]);
+  const [activeRuntimeId, setActiveRuntimeId] = useState(() => (
+    typeof window === 'undefined' ? null : localStorage.getItem('allternit.active-runtime-id')
+  ));
+  const [runtimesLoading, setRuntimesLoading] = useState(false);
+  const [runtimesError, setRuntimesError] = useState<string | null>(null);
 
   const isElectron = typeof window !== 'undefined' && !!(window as any).allternit?.backend;
 
@@ -180,6 +188,74 @@ function ClerkAuthPanel() {
     void refreshBackendSummary();
   }, [refreshBackendSummary]);
 
+  const refreshRuntimes = useCallback(async () => {
+    setRuntimesLoading(true);
+    setRuntimesError(null);
+    try {
+      const localSession = await window.allternit?.auth?.getSession?.().catch(() => null);
+      const clerkToken = await getToken().catch(() => null);
+      if (clerkToken) {
+        const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
+        const response = await fetch(`${cloudBase}/api/v1/runtime-devices`, {
+          headers: { Authorization: `Bearer ${clerkToken}` },
+        });
+        if (!response.ok) throw new Error(`Runtime registry returned ${response.status}`);
+        const payload = await response.json();
+        const cloudRuntimes = Array.isArray(payload.runtimes) ? payload.runtimes : [];
+        const selected = localStorage.getItem('allternit.active-runtime-id');
+        const nextSelected = cloudRuntimes.some((runtime: any) => runtime.id === selected && runtime.status === 'online')
+          ? selected
+          : cloudRuntimes.find((runtime: any) => runtime.status === 'online')?.id ?? null;
+        if (nextSelected) localStorage.setItem('allternit.active-runtime-id', nextSelected);
+        else localStorage.removeItem('allternit.active-runtime-id');
+        setActiveRuntimeId(nextSelected);
+        setRuntimes(cloudRuntimes);
+        return;
+      }
+      if (localSession) {
+        setRuntimes([{
+          id: localSession.runtimeId,
+          name: 'This desktop',
+          runtimeType: 'desktop',
+          status: 'online',
+          lastSeenAt: new Date().toISOString(),
+          credentialExpiresAt: new Date(localSession.expiresAt).toISOString(),
+          current: true,
+        }]);
+        return;
+      }
+      setRuntimes([]);
+    } catch (failure) {
+      setRuntimesError(failure instanceof Error ? failure.message : 'Unable to load runtimes');
+    } finally {
+      setRuntimesLoading(false);
+    }
+  }, [getToken]);
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) void refreshRuntimes();
+  }, [isLoaded, isSignedIn, refreshRuntimes]);
+
+  const revokeRuntime = useCallback(async (runtimeId: string) => {
+    const clerkToken = await getToken().catch(() => null);
+    if (!clerkToken) {
+      await window.allternit?.shell?.openExternal?.('https://platform.allternit.com');
+      return;
+    }
+    const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
+    const response = await fetch(`${cloudBase}/api/v1/runtime-devices/${encodeURIComponent(runtimeId)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${clerkToken}` },
+    });
+    if (!response.ok) throw new Error(`Unable to revoke runtime (${response.status})`);
+    await refreshRuntimes();
+  }, [getToken, refreshRuntimes]);
+
+  const activateRuntime = useCallback((runtimeId: string) => {
+    localStorage.setItem('allternit.active-runtime-id', runtimeId);
+    setActiveRuntimeId(runtimeId);
+  }, []);
+
   const openSettingsSection = useCallback((section: SettingsSection, tab?: string) => {
     window.dispatchEvent(new CustomEvent('allternit:open-settings', {
       detail: { section, tab },
@@ -200,7 +276,7 @@ function ClerkAuthPanel() {
       : backendSummary.mode === 'bundled'
         ? 'This account is signed in against the bundled local stack. Signing out ends the desktop session without changing the bundled backend.'
         : 'This account is signed in while the desktop shell points at a development backend. Signing out only affects the desktop account session.'
-    : 'Backend selection is managed separately from desktop OAuth and can be changed without signing out.';
+    : 'Backend selection is separate from runtime pairing and can be changed without signing out.';
 
   const manageBackendTab: 'overview' | 'connections' =
     backendSummary?.mode === 'remote' ? 'connections' : 'overview';
@@ -226,8 +302,7 @@ function ClerkAuthPanel() {
         <SectionHeading>Sign in to your Allternit account</SectionHeading>
         <PlatformSignIn />
         <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed mt-4">
-          Desktop OAuth and backend selection are separate.
-          Use Infrastructure or VPS Connections to change the active backend without resetting auth.
+          Your Allternit account approves desktop and VPS runtimes. Provider connections remain scoped to the runtime that uses them.
         </p>
       </div>
     );
@@ -301,8 +376,64 @@ function ClerkAuthPanel() {
         <p className="text-[13px] text-[var(--text-secondary)] py-3">No active sessions.</p>
       )}
 
-      <SectionHeading>Trusted devices</SectionHeading>
-      <p className="text-[13px] text-[var(--text-secondary)] py-3">No trusted devices.</p>
+      <SectionHeading>Runtimes</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] -mt-1 mb-3">
+        Desktop and VPS runtimes pair with this account using revocable device identities. They never store your Clerk session.
+      </p>
+      {runtimesLoading ? (
+        <SkeletonRow lines={2} />
+      ) : runtimesError ? (
+        <SettingsRow label="Runtime registry" description={runtimesError}>
+          <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void refreshRuntimes()}>
+            <ArrowsClockwise size={14} /> Retry
+          </button>
+        </SettingsRow>
+      ) : runtimes.length > 0 ? (
+        <SettingsTable columns={['Runtime', 'Status', 'Last seen', '']}>
+          {runtimes.map((runtime: any) => (
+            <tr key={runtime.id}>
+              <SettingsTableCell>
+                <div className="flex items-center gap-2 min-w-0">
+                  {runtime.runtimeType === 'vps' ? <Cloud size={16} /> : <DeviceMobile size={16} />}
+                  <span className="truncate">{runtime.name}</span>
+                  {(runtime.current || runtime.id === activeRuntimeId) && <SettingsTableChip>Active</SettingsTableChip>}
+                </div>
+                <div className="text-[11px] text-[var(--text-tertiary)] font-mono mt-1 truncate max-w-[230px]">{runtime.hostname || runtime.id}</div>
+              </SettingsTableCell>
+              <SettingsTableCell>
+                <Badge className={runtime.status === 'online' ? 'text-[var(--status-success)] bg-[var(--status-success)]/10' : undefined}>
+                  {runtime.status || 'offline'}
+                </Badge>
+              </SettingsTableCell>
+              <SettingsTableCell className="text-[var(--text-secondary)]">
+                {runtime.lastSeenAt ? new Date(runtime.lastSeenAt).toLocaleString() : 'Never'}
+              </SettingsTableCell>
+              <SettingsTableCell className="text-right">
+                <div className="flex justify-end gap-1.5">
+                  {!runtime.current && runtime.status === 'online' && runtime.id !== activeRuntimeId && (
+                    <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => activateRuntime(runtime.id)}>Use</button>
+                  )}
+                  <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void revokeRuntime(runtime.id)}>
+                    {runtime.current ? 'Manage' : 'Revoke'}
+                  </button>
+                </div>
+              </SettingsTableCell>
+            </tr>
+          ))}
+        </SettingsTable>
+      ) : (
+        <EmptyState
+          icon={<HardDrives size={24} />}
+          title="No paired runtimes"
+          caption="Open Allternit Desktop or start a VPS runtime to pair it with this account."
+        />
+      )}
+
+      <SectionHeading>Models & providers</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] -mt-1 mb-3">
+        Provider authorization belongs to the selected runtime. Allternit shows connection state but never substitutes your Clerk credential for a Claude, OpenAI, or local-model credential.
+      </p>
+      <BrainsPanel />
 
       <SectionHeading>Backend</SectionHeading>
       <SettingsRow label="Connection" description={backendLabel ?? 'Backend state unavailable'}>
@@ -333,9 +464,9 @@ function ClerkAuthPanel() {
         </div>
       </SettingsRow>
 
-      <SectionHeading>Offline-first sovereignty</SectionHeading>
+      <SectionHeading>Local runtime privacy</SectionHeading>
       <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed py-1">
-        Your Private Brain remains 100% functional without internet. All neural memories, local models (Ollama), and tool schemas are stored securely on this device.
+        Provider secrets, local models, and tool credentials stay on the runtime that owns them. The cloud stores runtime identity, capabilities, status, and audit metadata—not provider tokens.
       </p>
     </div>
   );
@@ -349,6 +480,7 @@ const logger = createModuleLogger('SettingsView');
 
 const PermissionsPanel = () => {
   const [permStatus, setPermStatus] = useState<any>(null);
+  const [driverStatus, setDriverStatus] = useState<any>(null);
   const [permChecking, setPermChecking] = useState(false);
 
   useEffect(() => {
@@ -356,6 +488,7 @@ const PermissionsPanel = () => {
     if (!api) return;
     const unsub = api.onStatusChanged((status: any) => setPermStatus(status));
     api.check().then(setPermStatus).catch(() => {});
+    api.getDriverStatus?.().then(setDriverStatus).catch(() => {});
     return unsub;
   }, []);
 
@@ -364,6 +497,8 @@ const PermissionsPanel = () => {
     try {
       const result = await (window as any).allternit!.permissionGuide!.requestCheck();
       setPermStatus(result);
+      const driver = await (window as any).allternit!.permissionGuide!.getDriverStatus?.();
+      if (driver) setDriverStatus(driver);
     } finally {
       setPermChecking(false);
     }
@@ -401,6 +536,20 @@ const PermissionsPanel = () => {
         status={permStatus?.accessibility}
         onGrant={() => presentGuide('accessibility')}
       />
+
+      <SettingsRow
+        label="Allternit computer-use engine"
+        description={driverStatus?.error ?? 'Embedded in the Allternit app; no separate CuaDriver approval is required'}
+      >
+        <span className={cn(
+          'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium',
+          driverStatus?.running
+            ? 'bg-[var(--status-success-muted)] text-[var(--status-success)]'
+            : 'bg-[var(--status-warning-muted)] text-[var(--status-warning)]',
+        )}>
+          {driverStatus?.running ? 'Active · Allternit-owned' : 'Unavailable'}
+        </span>
+      </SettingsRow>
       <PermissionRow
         label="Screen Recording"
         description="Allows Allternit to see your screen and take screenshots"
@@ -1369,12 +1518,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
     </div>
-    <PluginManager
-      isOpen={fullManagerTab !== null}
-      initialTab={fullManagerTab ?? undefined}
-      onClose={() => setFullManagerTab(null)}
-      onOpenSettings={() => setFullManagerTab(null)}
-    />
+    {fullManagerTab !== null && (
+      <PluginManager
+        isOpen
+        initialTab={fullManagerTab}
+        onClose={() => setFullManagerTab(null)}
+        onOpenSettings={() => setFullManagerTab(null)}
+      />
+    )}
     </>
   );
 };

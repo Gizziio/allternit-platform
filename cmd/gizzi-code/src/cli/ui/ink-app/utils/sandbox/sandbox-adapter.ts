@@ -11,6 +11,7 @@ import { join, resolve, sep } from 'path';
 import { statSync, rmSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { memoize } from 'lodash-es';
+import { SessionSandbox, DEFAULT_SESSION_KEY } from '@/runtime/context/sandbox/session-sandbox';
 
 // ============================================================================
 // Type Definitions
@@ -609,11 +610,13 @@ const checkDependencies = memoize((): SandboxDependencyCheck => {
 // ============================================================================
 
 function getSandboxEnabledSetting(): boolean {
+  // SessionSandbox (keyed by DEFAULT_SESSION_KEY for this process-wide toggle)
+  // is the source of truth for whether bash.ts actually enforces sandboxing --
+  // not the settings.json blob, which the runtime never reads for this decision.
   try {
-    const settings = getSettings_DEPRECATED();
-    return settings?.sandbox?.enabled ?? false;
+    return SessionSandbox.get(DEFAULT_SESSION_KEY)?.enabled ?? false;
   } catch (error) {
-    logForDebugging(`Failed to get sandbox setting: ${error}`);
+    logForDebugging(`Failed to read sandbox state: ${error}`);
     return false;
   }
 }
@@ -789,8 +792,12 @@ async function setSandboxSettings(options: {
   autoAllowBashIfSandboxed?: boolean;
   allowUnsandboxedCommands?: boolean;
 }): Promise<void> {
+  // Persist the raw settings blob too (the Dependencies/Overrides/Config tabs
+  // and `enabledPlatforms`/`excludedCommands` still read from it), but
+  // SessionSandbox is what actually flips bash.ts enforcement -- update both,
+  // or a toggle in the UI would keep lying about the real state.
   const existingSettings = getSettingsForSource('localSettings');
-  
+
   updateSettingsForSource('localSettings', {
     sandbox: {
       ...existingSettings?.sandbox,
@@ -803,6 +810,12 @@ async function setSandboxSettings(options: {
       }),
     },
   });
+
+  if (options.enabled === true) {
+    SessionSandbox.enable(DEFAULT_SESSION_KEY);
+  } else if (options.enabled === false) {
+    await SessionSandbox.disable(DEFAULT_SESSION_KEY);
+  }
 }
 
 function getExcludedCommands(): string[] {

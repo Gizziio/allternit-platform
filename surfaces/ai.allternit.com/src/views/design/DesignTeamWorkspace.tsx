@@ -144,8 +144,11 @@ function useLiveCursors(): LiveCursor[] {
 
 function makeReviewToken(projectName: string): string {
   const slug = projectName.toLowerCase().replace(/\s+/g, "-");
-  const token = btoa(`${slug}:${Date.now()}`).replace(/=/g, "").slice(0, 16);
-  return `https://allternit.studio/review/${slug}?token=${token}`;
+  const bytes = new TextEncoder().encode(`${slug}:${Date.now()}`);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  const token = btoa(binary).replace(/=/g, "").slice(0, 16);
+  return `https://allternit.studio/review/${encodeURIComponent(slug)}?token=${token}`;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────

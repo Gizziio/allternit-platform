@@ -43,7 +43,7 @@ function SignInContent() {
       <style>{`
         .signin-page {
           min-height: 100vh;
-          background: #0F0C0A;
+          background: #FAF9F7;
           display: flex;
           flex-direction: column;
           font-family: inherit;
@@ -54,7 +54,7 @@ function SignInContent() {
           align-items: center;
           justify-content: space-between;
           padding: 16px 24px;
-          border-bottom: 1px solid var(--surface-hover);
+          border-bottom: 1px solid #E7E4DF;
           flex-shrink: 0;
         }
         .signin-logo {
@@ -66,16 +66,16 @@ function SignInContent() {
         .signin-logo-text {
           font-size: 15px;
           font-weight: 700;
-          color: #ECECEC;
+          color: #0D0C0A;
           letter-spacing: -0.02em;
         }
         .signin-nav-link {
           font-size: 13px;
-          color: #664E3A;
+          color: #74716B;
           text-decoration: none;
           font-weight: 500;
         }
-        .signin-nav-link span { color: #D97757; }
+        .signin-nav-link span { color: #9A7658; }
         .signin-main {
           flex: 1;
           display: flex;
@@ -103,33 +103,33 @@ function SignInContent() {
           font-weight: 800;
           letter-spacing: -0.04em;
           line-height: 1.05;
-          color: #F5EDE3;
+          color: #0D0C0A;
           margin-bottom: 14px;
           margin-top: 0;
         }
         .signin-sub {
           font-size: 15px;
           line-height: 1.65;
-          color: #664E3A;
+          color: #74716B;
           margin-bottom: 28px;
           max-width: 320px;
         }
         .signin-card {
-          background: #1A1410;
+          background: #FFFEFC;
           border-radius: 20px;
-          border: 1px solid var(--ui-border-muted);
+          border: 1px solid #E1E0DC;
           padding: 28px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+          box-shadow: 0 16px 48px rgba(30, 25, 20, 0.08);
           overflow: hidden;
         }
         .signin-legal {
           font-size: 11px;
-          color: #3A2A1E;
+          color: #989590;
           text-align: center;
           margin-top: 14px;
           line-height: 1.6;
         }
-        .signin-legal a { color: #664E3A; text-decoration: underline; }
+        .signin-legal a { color: #74716B; text-decoration: underline; }
         .signin-also {
           margin-top: 24px;
         }
@@ -142,11 +142,11 @@ function SignInContent() {
         .signin-also-line {
           flex: 1;
           height: 1px;
-          background: var(--surface-hover);
+          background: #E7E4DF;
         }
         .signin-also-label {
           font-size: 10px;
-          color: #3A2A1E;
+          color: #989590;
           letter-spacing: 0.07em;
           text-transform: uppercase;
           white-space: nowrap;
@@ -163,20 +163,20 @@ function SignInContent() {
           padding: 11px 14px;
           border-radius: 12px;
           text-decoration: none;
-          background: #1A1410;
-          border: 1px solid var(--ui-border-muted);
+          background: #FFFEFC;
+          border: 1px solid #E1E0DC;
           min-width: 0;
         }
         .signin-pill-title {
           font-size: 11px;
           font-weight: 600;
-          color: #C4A78A;
+          color: #403E39;
           line-height: 1.2;
           white-space: nowrap;
         }
         .signin-pill-sub {
           font-size: 10px;
-          color: #4A3020;
+          color: #74716B;
           margin-top: 1px;
           white-space: nowrap;
         }
@@ -223,7 +223,7 @@ function SignInContent() {
             <h1 className="signin-heading">
               Welcome<br />
               back to<br />
-              <span style={{ color: '#D97757' }}>Allternit.</span>
+              <span style={{ color: '#9A7658' }}>Allternit.</span>
             </h1>
 
             <p className="signin-sub">

@@ -15,9 +15,9 @@ use std::{collections::HashMap, convert::Infallible, sync::Arc, sync::Mutex};
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::{AppState, default_model};
 use crate::config::build_gizzi_harness_for_provider;
 use crate::gizzi_chat_stream::configure_harness_on_gizzi;
+use crate::{default_model, AppState};
 
 /// In-memory map from platform chatId → Gizzi session ID. Gizzi generates its
 /// own session IDs, so we cache the mapping for the lifetime of the API process.
@@ -97,8 +97,7 @@ pub fn v1_router() -> Router<Arc<AppState>> {
 }
 
 pub fn agent_chat_router() -> Router<Arc<AppState>> {
-    Router::new()
-        .route("/agent-chat", any(agent_chat_bridge))
+    Router::new().route("/agent-chat", any(agent_chat_bridge))
 }
 
 async fn health() -> impl IntoResponse {
@@ -117,15 +116,31 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     let body_bytes = match body_to_bytes(body).await {
         Ok(b) => b,
         Err(_) => {
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": "bad request body"}))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "bad request body"})),
+            )
+                .into_response();
         }
     };
 
-    let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap_or(serde_json::Value::Null);
+    let body_json: serde_json::Value =
+        serde_json::from_slice(&body_bytes).unwrap_or(serde_json::Value::Null);
 
-    let chat_id = body_json.get("chatId").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let message = body_json.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let system_prompt = body_json.get("systemPrompt").and_then(|v| v.as_str()).unwrap_or("");
+    let chat_id = body_json
+        .get("chatId")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let message = body_json
+        .get("message")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let system_prompt = body_json
+        .get("systemPrompt")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
     let effective_message = if system_prompt.trim().is_empty() {
         message.clone()
     } else {
@@ -140,7 +155,8 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     // packaged app can target any Gizzi provider/model without recompiling.
     let (default_provider, default_model_id) = default_model();
     let default_label = format!("{}/{}", default_provider, default_model_id);
-    let raw_model = body_json.get("runtimeModelId")
+    let raw_model = body_json
+        .get("runtimeModelId")
         .or_else(|| body_json.get("modelId"))
         .and_then(|v| v.as_str())
         .unwrap_or(&default_label)
@@ -158,7 +174,8 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
         return (
             StatusCode::BAD_REQUEST,
             Json(json!({"error": "chatId and message are required"})),
-        ).into_response();
+        )
+            .into_response();
     }
 
     let gizzi = gizzi_base();
@@ -345,7 +362,9 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
         .into_response()
 }
 
-async fn body_to_bytes(body: Body) -> Result<axum::body::Bytes, Box<dyn std::error::Error + Send + Sync>> {
+async fn body_to_bytes(
+    body: Body,
+) -> Result<axum::body::Bytes, Box<dyn std::error::Error + Send + Sync>> {
     use http_body_util::BodyExt;
     let collected = body.collect().await?;
     Ok(collected.to_bytes())

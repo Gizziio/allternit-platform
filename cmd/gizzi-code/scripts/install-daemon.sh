@@ -184,8 +184,13 @@ install_linux() {
 
 verify_running() {
   local url="http://127.0.0.1:4096/health"
+  local password="${1:-}"
+  local curl_auth=()
+  if [[ -n "$password" ]]; then
+    curl_auth=(-u "gizzi:${password}")
+  fi
   for i in {1..10}; do
-    if curl -fsS "$url" >/dev/null 2>&1; then
+    if curl -fsS "${curl_auth[@]}" "$url" >/dev/null 2>&1; then
       print_success "Daemon is responding on ${url}"
       return 0
     fi
@@ -224,15 +229,17 @@ main() {
   fi
   print_info "Using binary: ${binary}"
 
-  local password
-  if [[ -n "${GIZZI_SERVER_PASSWORD:-}" ]]; then
-    password="$GIZZI_SERVER_PASSWORD"
-  else
-    password="$(prompt_secret "Set a GIZZI_SERVER_PASSWORD for the daemon")"
-  fi
+  # A loopback-only daemon is protected by the OS network boundary and should
+  # not depend on Allternit/Clerk credentials. Operators who deliberately expose
+  # Gizzi may still opt into independent HTTP Basic auth through this variable.
+  local password="${GIZZI_SERVER_PASSWORD:-}"
 
   local api_url
-  api_url="$(prompt_with_default "Allternit API URL" "http://127.0.0.1:8013")"
+  if [[ "${GIZZI_DAEMON_UNATTENDED:-false}" == "true" ]]; then
+    api_url="${ALLTERNIT_API_URL:-http://127.0.0.1:8013}"
+  else
+    api_url="$(prompt_with_default "Allternit API URL" "http://127.0.0.1:8013")"
+  fi
   export ALLTERNIT_API_URL="$api_url"
 
   case "$platform" in
@@ -241,7 +248,7 @@ main() {
   esac
 
   echo ""
-  verify_running || true
+  verify_running "$password" || true
 
   echo ""
   print_success "Setup complete."

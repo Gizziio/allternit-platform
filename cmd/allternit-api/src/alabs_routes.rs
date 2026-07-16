@@ -1,4 +1,3 @@
-
 //! A://Labs API routes — Courses, Lessons, Enrollments, Certifications, Articles.
 //!
 //! Mirrors the Next.js `/api/v1` ALABS layer. OpenMAIC lesson generation
@@ -9,7 +8,7 @@ use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::{get, post, delete},
+    routing::{delete, get, post},
     Json, Router,
 };
 use rusqlite::params;
@@ -19,9 +18,9 @@ use std::sync::Arc;
 use tracing::{info, warn};
 use uuid::Uuid;
 
-use crate::AppState;
 use crate::auth::AuthUser;
 use crate::gizzi_completion;
+use crate::AppState;
 
 fn db_error(e: impl std::fmt::Display) -> impl IntoResponse {
     (
@@ -40,14 +39,23 @@ pub fn alabs_router() -> Router<Arc<AppState>> {
         .route("/lessons/:id", delete(delete_lesson))
         .route("/lessons/generate", post(generate_lesson))
         // Enrollments
-        .route("/enrollments", get(list_enrollments).post(upsert_enrollment))
+        .route(
+            "/enrollments",
+            get(list_enrollments).post(upsert_enrollment),
+        )
         // Certifications
-        .route("/certifications", get(list_certifications).post(create_certification))
+        .route(
+            "/certifications",
+            get(list_certifications).post(create_certification),
+        )
         // Articles
         .route("/articles", get(list_articles).post(create_article))
         .route("/articles/:slug", get(get_article))
         // Capabilities
-        .route("/capabilities", get(list_capabilities).post(create_capability))
+        .route(
+            "/capabilities",
+            get(list_capabilities).post(create_capability),
+        )
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -149,9 +157,11 @@ async fn get_course(
 
     match row {
         Ok(Ok(row)) => (StatusCode::OK, Json(json!(row))).into_response(),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::NOT_FOUND, Json(json!({"error": "Course not found"}))).into_response()
-        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Course not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => db_error(e).into_response(),
         Err(e) => db_error(e).into_response(),
     }
@@ -273,9 +283,15 @@ async fn create_lesson(
     _headers: HeaderMap,
     Json(body): Json<CreateLessonBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
-    let id = format!("lesson_{}", Uuid::new_v4().to_string().replace("-", "").get(0..16).unwrap_or(""));
+    let id = format!(
+        "lesson_{}",
+        Uuid::new_v4()
+            .to_string()
+            .replace("-", "")
+            .get(0..16)
+            .unwrap_or("")
+    );
     let now = chrono::Utc::now().to_rfc3339();
 
     let result = tokio::task::spawn_blocking(move || {
@@ -315,7 +331,6 @@ async fn delete_lesson(
     _headers: HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let id_for_db = id.clone();
     let result = tokio::task::spawn_blocking(move || {
@@ -325,7 +340,8 @@ async fn delete_lesson(
             params![chrono::Utc::now().to_rfc3339(), &id_for_db],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(())) => {
@@ -367,7 +383,6 @@ async fn generate_lesson(
     _headers: HeaderMap,
     Json(body): Json<GenerateLessonBody>,
 ) -> impl IntoResponse {
-
     // Fetch course details
     let db = state.db.clone();
     let course_id = body.course_id.clone();
@@ -377,15 +392,27 @@ async fn generate_lesson(
             "SELECT code, title, description, tier FROM alabs_courses WHERE id = ?1",
             [&course_id],
             |row| {
-                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?, row.get::<_, String>(3)?))
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, String>(3)?,
+                ))
             },
         )?;
         Ok::<_, rusqlite::Error>(row)
-    }).await;
+    })
+    .await;
 
     let (_course_code, course_title, course_desc, tier) = match course {
         Ok(Ok(c)) => c,
-        _ => return (StatusCode::NOT_FOUND, Json(json!({"error": "Course not found"}))).into_response(),
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({"error": "Course not found"})),
+            )
+                .into_response()
+        }
     };
 
     // Build LLM prompt for lesson generation
@@ -443,7 +470,11 @@ Rules:
     )
 }
 
-fn parse_llm_lesson(text: &str, body: &GenerateLessonBody, course_title: &str) -> GeneratedLessonResponse {
+fn parse_llm_lesson(
+    text: &str,
+    body: &GenerateLessonBody,
+    course_title: &str,
+) -> GeneratedLessonResponse {
     // Try to extract JSON from the response
     let json_str = if let Some(start) = text.find('{') {
         if let Some(end) = text.rfind('}') {
@@ -465,20 +496,31 @@ fn parse_llm_lesson(text: &str, body: &GenerateLessonBody, course_title: &str) -
             let scene_json = serde_json::to_string(&serde_json::json!({
                 "version": "1.0",
                 "scenes": scenes,
-            })).unwrap_or_else(|_| generate_fallback_scenes(&body.topic));
+            }))
+            .unwrap_or_else(|_| generate_fallback_scenes(&body.topic));
 
-            let content_markdown = scenes.as_array()
+            let content_markdown = scenes
+                .as_array()
                 .map(|arr| {
-                    arr.iter().map(|s| {
-                        let t = s["title"].as_str().unwrap_or("");
-                        let c = s["content"].as_str().unwrap_or("");
-                        format!("## {}\n\n{}\n\n", t, c)
-                    }).collect::<String>()
+                    arr.iter()
+                        .map(|s| {
+                            let t = s["title"].as_str().unwrap_or("");
+                            let c = s["content"].as_str().unwrap_or("");
+                            format!("## {}\n\n{}\n\n", t, c)
+                        })
+                        .collect::<String>()
                 })
                 .unwrap_or_default();
 
             GeneratedLessonResponse {
-                id: format!("lesson_{}", Uuid::new_v4().to_string().replace("-", "").get(0..16).unwrap_or("")),
+                id: format!(
+                    "lesson_{}",
+                    Uuid::new_v4()
+                        .to_string()
+                        .replace("-", "")
+                        .get(0..16)
+                        .unwrap_or("")
+                ),
                 course_id: body.course_id.clone(),
                 title,
                 description,
@@ -494,7 +536,10 @@ fn parse_llm_lesson(text: &str, body: &GenerateLessonBody, course_title: &str) -
     }
 }
 
-fn generate_fallback_lesson(body: &GenerateLessonBody, course_title: &str) -> GeneratedLessonResponse {
+fn generate_fallback_lesson(
+    body: &GenerateLessonBody,
+    course_title: &str,
+) -> GeneratedLessonResponse {
     let scenes = serde_json::json!({
         "version": "1.0",
         "scenes": [
@@ -643,7 +688,6 @@ async fn list_enrollments(
     _headers: HeaderMap,
     Query(q): Query<ListEnrollmentsQuery>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -693,7 +737,6 @@ async fn upsert_enrollment(
     _headers: HeaderMap,
     Json(body): Json<UpsertEnrollmentBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let now = chrono::Utc::now().to_rfc3339();
@@ -770,7 +813,6 @@ async fn list_certifications(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -820,9 +862,15 @@ async fn create_certification(
     _headers: HeaderMap,
     Json(body): Json<CreateCertificationBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
-    let id = format!("cert_{}", Uuid::new_v4().to_string().replace("-", "").get(0..16).unwrap_or(""));
+    let id = format!(
+        "cert_{}",
+        Uuid::new_v4()
+            .to_string()
+            .replace("-", "")
+            .get(0..16)
+            .unwrap_or("")
+    );
     let now = chrono::Utc::now().to_rfc3339();
 
     let result = tokio::task::spawn_blocking(move || {
@@ -969,9 +1017,15 @@ async fn create_article(
     _headers: HeaderMap,
     Json(body): Json<CreateArticleBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
-    let id = format!("art_{}", Uuid::new_v4().to_string().replace("-", "").get(0..16).unwrap_or(""));
+    let id = format!(
+        "art_{}",
+        Uuid::new_v4()
+            .to_string()
+            .replace("-", "")
+            .get(0..16)
+            .unwrap_or("")
+    );
     let now = chrono::Utc::now().to_rfc3339();
 
     let result = tokio::task::spawn_blocking(move || {
@@ -1055,14 +1109,15 @@ async fn get_article(
 
     match row {
         Ok(Ok(row)) => (StatusCode::OK, Json(json!(row))).into_response(),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::NOT_FOUND, Json(json!({"error": "Article not found"}))).into_response()
-        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Article not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => db_error(e).into_response(),
         Err(e) => db_error(e).into_response(),
     }
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Capabilities
@@ -1099,9 +1154,19 @@ async fn create_capability(
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let db = state.db.clone();
-    let name = body.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let category = body.get("category").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let description = body.get("description").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let name = body
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let category = body
+        .get("category")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let description = body
+        .get("description")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
 
     let row = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;

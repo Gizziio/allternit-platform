@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 
-use crate::AppState;
 use crate::auth::get_user;
+use crate::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QueueItem {
@@ -77,12 +77,24 @@ async fn list_queue(
 ) -> impl IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
+                .into_response()
+        }
     };
 
     let mut sql = "SELECT id, task_id, agent_id, agent_role, status, claimed_at, started_at, completed_at, result, error, retry_count, max_retries, created_at FROM cowork_queue WHERE 1=1".to_string();
@@ -97,7 +109,10 @@ async fn list_queue(
 
     if let Some(ref workspace_id) = query.workspace_id {
         param_count += 1;
-        sql.push_str(&format!(" AND task_id IN (SELECT id FROM tasks WHERE workspace_id = ?{})", param_count));
+        sql.push_str(&format!(
+            " AND task_id IN (SELECT id FROM tasks WHERE workspace_id = ?{})",
+            param_count
+        ));
         params.push(Box::new(workspace_id.clone()));
     }
 
@@ -105,7 +120,13 @@ async fn list_queue(
 
     let mut stmt = match conn.prepare(&sql) {
         Ok(s) => s,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     let items: Vec<QueueItem> = match stmt.query_map(rusqlite::params_from_iter(params), |row| {
@@ -126,7 +147,13 @@ async fn list_queue(
         })
     }) {
         Ok(iter) => iter.filter_map(|r| r.ok()).collect(),
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     (StatusCode::OK, Json(items)).into_response()
@@ -139,18 +166,36 @@ async fn claim_queue(
 ) -> impl IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let mut conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
+                .into_response()
+        }
     };
 
     // Find the next pending queue item
     let tx = match conn.transaction() {
         Ok(t) => t,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
     let mut sql = "SELECT id, task_id FROM cowork_queue WHERE status = 'pending'".to_string();
@@ -159,20 +204,28 @@ async fn claim_queue(
 
     if let Some(ref workspace_id) = body.workspace_id {
         param_count += 1;
-        sql.push_str(&format!(" AND task_id IN (SELECT id FROM tasks WHERE workspace_id = ?{})", param_count));
+        sql.push_str(&format!(
+            " AND task_id IN (SELECT id FROM tasks WHERE workspace_id = ?{})",
+            param_count
+        ));
         params.push(Box::new(workspace_id.clone()));
     }
     sql.push_str(" ORDER BY created_at ASC LIMIT 1");
 
-    let next_item: Option<(String, String)> = match tx.query_row(
-        &sql,
-        rusqlite::params_from_iter(params),
-        |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
-    ) {
-        Ok(row) => Some(row),
-        Err(rusqlite::Error::QueryReturnedNoRows) => None,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
-    };
+    let next_item: Option<(String, String)> =
+        match tx.query_row(&sql, rusqlite::params_from_iter(params), |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        }) {
+            Ok(row) => Some(row),
+            Err(rusqlite::Error::QueryReturnedNoRows) => None,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": e.to_string()})),
+                )
+                    .into_response()
+            }
+        };
 
     let (id, task_id) = match next_item {
         Some(item) => item,
@@ -184,22 +237,38 @@ async fn claim_queue(
         "UPDATE cowork_queue 
          SET status = 'claimed', agent_id = ?1, agent_role = ?2, claimed_at = CURRENT_TIMESTAMP 
          WHERE id = ?3",
-        rusqlite::params![&body.agent_id, body.agent_role.as_deref().unwrap_or(""), &id],
+        rusqlite::params![
+            &body.agent_id,
+            body.agent_role.as_deref().unwrap_or(""),
+            &id
+        ],
     );
 
     if let Err(e) = result {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response();
     }
 
     if let Err(e) = tx.commit() {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response();
     }
 
-    (StatusCode::OK, Json(json!({
-        "id": id,
-        "task_id": task_id,
-        "status": "claimed",
-    }))).into_response()
+    (
+        StatusCode::OK,
+        Json(json!({
+            "id": id,
+            "task_id": task_id,
+            "status": "claimed",
+        })),
+    )
+        .into_response()
 }
 
 async fn start_queue(
@@ -209,12 +278,24 @@ async fn start_queue(
 ) -> impl IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
+                .into_response()
+        }
     };
 
     let result = conn.execute(
@@ -225,9 +306,17 @@ async fn start_queue(
     );
 
     match result {
-        Ok(0) => (StatusCode::NOT_FOUND, Json(json!({"error": "Queue item not found"}))).into_response(),
+        Ok(0) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Queue item not found"})),
+        )
+            .into_response(),
         Ok(_) => (StatusCode::OK, Json(json!({"id": id, "status": "running"}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -239,27 +328,56 @@ async fn complete_queue(
 ) -> impl IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"}))).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database error"})),
+            )
+                .into_response()
+        }
     };
 
-    let status = if body.error.is_some() { "failed" } else { "completed" };
+    let status = if body.error.is_some() {
+        "failed"
+    } else {
+        "completed"
+    };
 
     let result = conn.execute(
         "UPDATE cowork_queue 
          SET status = ?1, result = ?2, error = ?3, completed_at = CURRENT_TIMESTAMP 
          WHERE id = ?4",
-        rusqlite::params![status, body.result.as_deref().unwrap_or(""), body.error.as_deref().unwrap_or(""), &id],
+        rusqlite::params![
+            status,
+            body.result.as_deref().unwrap_or(""),
+            body.error.as_deref().unwrap_or(""),
+            &id
+        ],
     );
 
     match result {
-        Ok(0) => (StatusCode::NOT_FOUND, Json(json!({"error": "Queue item not found"}))).into_response(),
+        Ok(0) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Queue item not found"})),
+        )
+            .into_response(),
         Ok(_) => (StatusCode::OK, Json(json!({"id": id, "status": status}))).into_response(),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }
 
@@ -270,15 +388,29 @@ async fn create_queue(
 ) -> impl IntoResponse {
     let _user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
 
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
     };
 
-    let queue_id = payload.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let queue_id = payload
+        .id
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let status = payload.status.unwrap_or_else(|| "pending".to_string());
 
     match conn.execute(
@@ -292,17 +424,21 @@ async fn create_queue(
             &status,
         ],
     ) {
-        Ok(_) => {
-            (StatusCode::CREATED, Json(json!({
+        Ok(_) => (
+            StatusCode::CREATED,
+            Json(json!({
                 "id": queue_id,
                 "task_id": payload.task_id,
                 "agent_id": payload.agent_id,
                 "agent_role": payload.agent_role,
                 "status": status,
-            }))).into_response()
-        }
-        Err(e) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
-        }
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }

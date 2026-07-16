@@ -9,6 +9,7 @@ export type ViewType =
   | "workspace"
   | "browser"
   | "mini-apps-store"
+  | "mini-app-review"
   | "mini-app"
   | "addin-word"
   | "addin-excel"

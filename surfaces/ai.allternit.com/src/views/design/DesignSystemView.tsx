@@ -9,6 +9,7 @@ import {
 import { useDesignSessionActions, useDesignSessionStore } from './DesignSessionStore';
 import { useDesignCanvasStore, tokensToJSON, tokensToCSSVars } from './DesignCanvasStore';
 import { pushClipboardItem } from './DesignClipboardStore';
+import { cn } from '@/lib/utils';
 
 // ── Token data ────────────────────────────────────────────────────────────────
 

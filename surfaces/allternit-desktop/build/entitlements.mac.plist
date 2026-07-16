@@ -20,6 +20,12 @@
   <key>com.apple.security.network.server</key>
   <true/>
 
+  <!-- Native computer use. TCC approval remains owned by Allternit Desktop. -->
+  <key>com.apple.security.device.screen-capture</key>
+  <true/>
+  <key>com.apple.security.automation.apple-events</key>
+  <true/>
+
   <!-- File system access for VM images and user data -->
   <key>com.apple.security.files.user-selected.read-write</key>
   <true/>

@@ -5,6 +5,7 @@ Executes Python and JavaScript code in a subprocess with timeout.
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import subprocess
 from dataclasses import dataclass
@@ -29,7 +30,10 @@ from base_adapter import (  # noqa: E402
 @dataclass
 class InterpreterConfig:
     timeout: int = 30
-    sandbox: bool = False
+    # Sandboxed by default: code runs inside AllternitSandboxBackend's VM
+    # (Apple Virtualization / Firecracker), not as a bare host subprocess.
+    # Set False only as an explicit, intentional opt-out.
+    sandbox: bool = True
 
 
 class InterpreterAdapter(BaseAdapter):
@@ -40,6 +44,9 @@ class InterpreterAdapter(BaseAdapter):
 
     def __init__(self, config: Optional[InterpreterConfig] = None) -> None:
         self._config = config or InterpreterConfig()
+        # session_id -> environment_id, so each session reuses one provisioned
+        # sandbox instead of booting a fresh VM per run_code call.
+        self._sandbox_environments: dict[str, str] = {}
 
     # ------------------------------------------------------------------
     # BaseAdapter interface
@@ -57,7 +64,17 @@ class InterpreterAdapter(BaseAdapter):
         pass  # No persistent resources needed
 
     async def close(self) -> None:
-        pass
+        if not self._sandbox_environments:
+            return
+        from core.environment_backends import default_environment_backend_service
+
+        service = default_environment_backend_service()
+        for environment_id in self._sandbox_environments.values():
+            try:
+                await service.stop(environment_id)
+            except Exception:
+                pass
+        self._sandbox_environments.clear()
 
     async def capabilities(self) -> AdapterCapabilities:
         return AdapterCapabilities(
@@ -84,10 +101,11 @@ class InterpreterAdapter(BaseAdapter):
         envelope = self._make_envelope(action, session_id, run_id, mode="execute")
 
         if action.action_type == "run_code":
-            result = self._run_code(
+            result = await self._run_code(
                 code=action.parameters.get("code", ""),
                 language=action.parameters.get("language", "python"),
                 timeout=self._config.timeout,
+                session_id=session_id,
             )
             envelope.extracted_content = result
             envelope.status = "completed" if result["success"] else "failed"
@@ -125,8 +143,15 @@ class InterpreterAdapter(BaseAdapter):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _run_code(self, code: str, language: str, timeout: int) -> dict[str, Any]:
-        """Run code in a subprocess. Returns a normalised result dict."""
+    async def _run_code(self, code: str, language: str, timeout: int, session_id: str) -> dict[str, Any]:
+        """Run code and return a normalised result dict.
+
+        Sandboxed by default (self._config.sandbox): executes inside the
+        AllternitSandboxBackend VM instead of a bare host subprocess. Falling back
+        to a local subprocess only happens when sandboxing is explicitly disabled
+        via InterpreterConfig(sandbox=False) -- an unavailable sandbox backend is a
+        failure result, not a silent downgrade to unsandboxed execution.
+        """
         if not code:
             return {"success": False, "output": "", "error": "No code provided", "exit_code": 1}
 
@@ -142,6 +167,54 @@ class InterpreterAdapter(BaseAdapter):
                 "exit_code": 1,
             }
 
+        if self._config.sandbox:
+            return await self._run_code_sandboxed(cmd, timeout, session_id)
+        return self._run_code_local(cmd, timeout)
+
+    async def _run_code_sandboxed(self, cmd: list[str], timeout: int, session_id: str) -> dict[str, Any]:
+        from core.environment_backends import default_environment_authority, default_environment_backend_service
+
+        authority = default_environment_authority()
+        service = default_environment_backend_service()
+        try:
+            environment_id = self._sandbox_environments.get(session_id)
+            if environment_id is None:
+                record = authority.create_environment(
+                    owner_id=f"interpreter-adapter:{session_id}",
+                    provider_id="allternit.local-sandbox",
+                    os="linux",
+                    isolation="vm",
+                    image_digest=None,
+                    ttl_seconds=None,
+                    metadata={"network_policy": "denied", "readonly_root": True},
+                )
+                await service.provision(record.environment_id)
+                environment_id = record.environment_id
+                self._sandbox_environments[session_id] = environment_id
+
+            result = await asyncio.wait_for(service.execute(environment_id, cmd, {}), timeout=timeout)
+            return {
+                "success": bool(result.get("success")),
+                "output": result.get("stdout", ""),
+                "error": result.get("stderr") or None,
+                "exit_code": result.get("exit_code", -1),
+            }
+        except asyncio.TimeoutError:
+            return {
+                "success": False,
+                "output": "",
+                "error": f"Execution timed out after {timeout}s",
+                "exit_code": -1,
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "success": False,
+                "output": "",
+                "error": f"Sandboxed execution unavailable: {exc}",
+                "exit_code": -1,
+            }
+
+    def _run_code_local(self, cmd: list[str], timeout: int) -> dict[str, Any]:
         try:
             proc = subprocess.run(
                 cmd,

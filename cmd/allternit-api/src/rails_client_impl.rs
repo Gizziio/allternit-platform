@@ -3,10 +3,10 @@
 //! Implements the RailsClient trait from allternit-cowork-runtime
 //! to communicate with the Allternit Rails service.
 
-use async_trait::async_trait;
 use allternit_cowork_runtime::{
-    CreateJobSpec, CreateRunSpec, CoworkEvent, JobId, JobState, RunId, RunState,
+    CoworkEvent, CreateJobSpec, CreateRunSpec, JobId, JobState, RunId, RunState,
 };
+use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::{debug, info};
 

@@ -12,7 +12,7 @@ import log from 'electron-log';
 import { z } from 'zod';
 
 // ── Schema version — bump when adding/removing/renaming fields ───────────────
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 // ── Zod Schemas ──────────────────────────────────────────────────────────────
 
@@ -46,7 +46,6 @@ export const AppPrefsSchema = z.object({
 
 export const SidecarStateSchema = z.object({
   apiUrl: z.string(),
-  password: z.string(),
   port: z.number(),
 }).nullable();
 
@@ -90,8 +89,11 @@ const DEFAULTS: PersistedStateSchema = {
 type Migration = (raw: Record<string, unknown>) => void;
 
 const MIGRATIONS: Record<number, Migration> = {
-  // 1 → 2: example future migration
-  // 2: (raw) => { raw.prefs = raw.prefs ?? {}; },
+  2: (raw) => {
+    if (raw.sidecar && typeof raw.sidecar === 'object') {
+      delete (raw.sidecar as Record<string, unknown>).password;
+    }
+  },
 };
 
 // ── Manager ──────────────────────────────────────────────────────────────────

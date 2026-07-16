@@ -23,7 +23,10 @@ fn self_port() -> u16 {
 pub fn runtime_backend_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/runtime-backend", get(runtime_backend_status))
-        .route("/runtime/backend", get(get_runtime_backend).post(set_runtime_backend))
+        .route(
+            "/runtime/backend",
+            get(get_runtime_backend).post(set_runtime_backend),
+        )
         .route("/runtime/backend/manual", post(register_manual_backend))
         .route(
             "/runtime/execution-mode",
@@ -56,11 +59,7 @@ fn execution_mode_store() -> &'static Mutex<RuntimeExecutionModePayload> {
         Mutex::new(RuntimeExecutionModePayload {
             mode: "safe".to_string(),
             updated_at: chrono::Utc::now().to_rfc3339(),
-            supported_modes: vec![
-                "plan".to_string(),
-                "safe".to_string(),
-                "auto".to_string(),
-            ],
+            supported_modes: vec!["plan".to_string(), "safe".to_string(), "auto".to_string()],
         })
     })
 }
@@ -76,9 +75,7 @@ async fn get_runtime_execution_mode() -> impl IntoResponse {
     }
 }
 
-async fn set_runtime_execution_mode(
-    Json(body): Json<SetExecutionModeBody>,
-) -> impl IntoResponse {
+async fn set_runtime_execution_mode(Json(body): Json<SetExecutionModeBody>) -> impl IntoResponse {
     let mode = body.mode;
     if !matches!(mode.as_str(), "plan" | "safe" | "auto") {
         return (
@@ -128,9 +125,9 @@ async fn get_runtime_backend(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
-    let user_id = headers.get("x-allternit-user-id")
+    let user_id = headers
+        .get("x-allternit-user-id")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("anonymous")
         .to_string();
@@ -140,37 +137,41 @@ async fn get_runtime_backend(
         let conn = db.connect()?;
 
         // Read preference
-        let pref: (String, String, Option<String>) = conn.query_row(
-            "SELECT mode, fallback_mode, active_remote_backend_target_id
+        let pref: (String, String, Option<String>) = conn
+            .query_row(
+                "SELECT mode, fallback_mode, active_remote_backend_target_id
              FROM user_backend_preferences WHERE user_id = ?1",
-            params![user_id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        ).unwrap_or(("local".to_string(), "local".to_string(), None));
+                params![user_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap_or(("local".to_string(), "local".to_string(), None));
 
         // List all targets for this user
         let mut stmt = conn.prepare(
             "SELECT id, ssh_connection_id, name, status, install_state, backend_url, gateway_url,
                     gateway_ws_url, installed_version, supported_client_range,
                     last_verified_at, last_heartbeat_at, last_error
-             FROM remote_backend_targets WHERE user_id = ?1 ORDER BY updated_at DESC"
+             FROM remote_backend_targets WHERE user_id = ?1 ORDER BY updated_at DESC",
         )?;
-        let targets: Vec<BackendTargetRow> = stmt.query_map(params![user_id], |row| {
-            Ok(BackendTargetRow {
-                id: row.get(0)?,
-                ssh_connection_id: row.get(1)?,
-                name: row.get(2)?,
-                status: row.get(3)?,
-                install_state: row.get(4)?,
-                backend_url: row.get(5)?,
-                gateway_url: row.get(6)?,
-                gateway_ws_url: row.get(7)?,
-                installed_version: row.get(8)?,
-                supported_client_range: row.get(9)?,
-                last_verified_at: row.get(10)?,
-                last_heartbeat_at: row.get(11)?,
-                last_error: row.get(12)?,
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let targets: Vec<BackendTargetRow> = stmt
+            .query_map(params![user_id], |row| {
+                Ok(BackendTargetRow {
+                    id: row.get(0)?,
+                    ssh_connection_id: row.get(1)?,
+                    name: row.get(2)?,
+                    status: row.get(3)?,
+                    install_state: row.get(4)?,
+                    backend_url: row.get(5)?,
+                    gateway_url: row.get(6)?,
+                    gateway_ws_url: row.get(7)?,
+                    installed_version: row.get(8)?,
+                    supported_client_range: row.get(9)?,
+                    last_verified_at: row.get(10)?,
+                    last_heartbeat_at: row.get(11)?,
+                    last_error: row.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Find active backend
         let active = if let Some(ref target_id) = pref.2 {
@@ -180,14 +181,17 @@ async fn get_runtime_backend(
         };
 
         Ok::<_, rusqlite::Error>((pref, active, targets))
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok((pref, active, targets))) => {
-            let gateway_url = active.as_ref()
+            let gateway_url = active
+                .as_ref()
                 .and_then(|a| a.gateway_url.clone())
                 .unwrap_or_else(|| format!("http://127.0.0.1:{}", port));
-            let gateway_ws_url = active.as_ref()
+            let gateway_ws_url = active
+                .as_ref()
                 .and_then(|a| a.gateway_ws_url.clone())
                 .unwrap_or_else(|| format!("ws://127.0.0.1:{}", port));
 
@@ -217,7 +221,8 @@ async fn get_runtime_backend(
                 "gateway_ws_url": gateway_ws_url,
                 "active_backend": active_backend,
                 "available_backends": targets,
-            })).into_response()
+            }))
+            .into_response()
         }
         _ => {
             // Return local default on error
@@ -243,7 +248,8 @@ async fn get_runtime_backend(
                     "last_error": null,
                 },
                 "available_backends": [],
-            })).into_response()
+            }))
+            .into_response()
         }
     }
 }
@@ -267,7 +273,6 @@ async fn set_runtime_backend(
     headers: HeaderMap,
     Json(body): Json<SetBackendBody>,
 ) -> impl IntoResponse {
-
     let mode = body.mode.unwrap_or_else(|| "local".to_string());
     let fallback = body.fallback_mode.unwrap_or_else(|| "local".to_string());
 
@@ -309,14 +314,24 @@ async fn set_runtime_backend(
     }).await;
 
     match result {
-        Ok(Ok(_)) => get_runtime_backend(State(state), headers).await.into_response(),
+        Ok(Ok(_)) => get_runtime_backend(State(state), headers)
+            .await
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error setting backend: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -340,27 +355,40 @@ async fn register_manual_backend(
     _headers: HeaderMap,
     Json(body): Json<RegisterManualBody>,
 ) -> impl IntoResponse {
-
     let gateway_url = body.gateway_url.trim_end_matches('/').to_string();
     if gateway_url.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "gatewayUrl is required"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "gatewayUrl is required"})),
+        )
+            .into_response();
     }
 
     // Health check
     let health = match verify_backend_health(&gateway_url, body.gateway_token.as_deref()).await {
         Ok(h) => h,
         Err(e) => {
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": format!("Runtime backend is not reachable: {}", e)}))).into_response();
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": format!("Runtime backend is not reachable: {}", e)})),
+            )
+                .into_response();
         }
     };
 
     if !health.reachable {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Runtime backend is not reachable"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Runtime backend is not reachable"})),
+        )
+            .into_response();
     }
 
     let db = state.db.clone();
     let user_id = user.user_id;
-    let name = body.name.unwrap_or_else(|| "Manual Runtime Backend".to_string());
+    let name = body
+        .name
+        .unwrap_or_else(|| "Manual Runtime Backend".to_string());
     let gw_url = gateway_url.clone();
     let gw_ws = body.gateway_ws_url.clone();
     let token = body.gateway_token.clone();
@@ -426,37 +454,50 @@ async fn register_manual_backend(
     }).await;
 
     match result {
-        Ok(Ok(target_id)) => {
-            Json(json!({
-                "success": true,
-                "message": "Runtime backend registered",
-                "backend_target": {
-                    "id": target_id,
-                    "name": name,
-                    "status": "ready",
-                    "install_state": "installed",
-                    "backend_url": gateway_url,
-                },
-            })).into_response()
-        }
+        Ok(Ok(target_id)) => Json(json!({
+            "success": true,
+            "message": "Runtime backend registered",
+            "backend_target": {
+                "id": target_id,
+                "name": name,
+                "status": "ready",
+                "install_state": "installed",
+                "backend_url": gateway_url,
+            },
+        }))
+        .into_response(),
         Ok(Err(e)) => {
             warn!("DB error registering manual backend: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
 
-async fn verify_backend_health(url: &str, token: Option<&str>) -> Result<HealthResult, reqwest::Error> {
+async fn verify_backend_health(
+    url: &str,
+    token: Option<&str>,
+) -> Result<HealthResult, reqwest::Error> {
     let client = reqwest::Client::new();
     let mut req = client.get(format!("{}/health", url.trim_end_matches('/')));
     if let Some(t) = token {
         req = req.header("Authorization", format!("Bearer {}", t));
     }
-    let resp = req.timeout(std::time::Duration::from_secs(10)).send().await?;
+    let resp = req
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await?;
     Ok(HealthResult {
         reachable: resp.status().is_success(),
     })
@@ -473,12 +514,11 @@ fn base64_url_encode(input: &str) -> String {
 
 fn parse_url_host_port(url: &str) -> Result<(String, i64), rusqlite::Error> {
     // Simple URL parser: scheme://host:port/path
-    let without_scheme = url.split_once("://")
-        .map(|(_, rest)| rest)
-        .unwrap_or(url);
-    let (host_port, _) = without_scheme.split_once('/')
+    let without_scheme = url.split_once("://").map(|(_, rest)| rest).unwrap_or(url);
+    let (host_port, _) = without_scheme
+        .split_once('/')
         .unwrap_or((without_scheme, ""));
-    
+
     let (host, port) = if let Some((h, p)) = host_port.rsplit_once(':') {
         let h = h.trim_start_matches('[').trim_end_matches(']');
         match p.parse::<u16>() {
@@ -489,6 +529,6 @@ fn parse_url_host_port(url: &str) -> Result<(String, i64), rusqlite::Error> {
         let default_port = if url.starts_with("https://") { 443 } else { 80 };
         (host_port.to_string(), default_port as i64)
     };
-    
+
     Ok((host, port))
 }

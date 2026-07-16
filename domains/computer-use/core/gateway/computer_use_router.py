@@ -60,15 +60,6 @@ except ImportError:
     _session_manager_available = False
 
 try:
-    import sys as _sys2, os as _os2
-    _sys2.path.insert(0, _os2.path.join(_os2.path.dirname(__file__), ".."))
-    from adapters.browser.gateway_proxy_adapter import GatewayProxyAdapter
-    _proxy_adapter_available = True
-except ImportError:
-    GatewayProxyAdapter = None  # type: ignore[assignment,misc]
-    _proxy_adapter_available = False
-
-try:
     from core.action_recorder import ActionRecorder
     _recorder_available = True
 except ImportError:
@@ -90,7 +81,7 @@ def _get_adapter_for_planning(target_scope: str, adapter_preference: Optional[st
 
     Preferred: ComputerUseExecutor singleton — gives the full waterfall
     (extension → CDP → playwright → desktop) for non-Claude paths.
-    Fallback: GatewayProxyAdapter directly (if executor unavailable).
+    No HTTP self-loop fallback is permitted when the executor is unavailable.
     """
     if _get_executor is not None:
         try:
@@ -100,9 +91,6 @@ def _get_adapter_for_planning(target_scope: str, adapter_preference: Optional[st
         except Exception:
             pass
 
-    # Executor unavailable — fall back to a direct GatewayProxyAdapter
-    if _proxy_adapter_available and GatewayProxyAdapter is not None:
-        return GatewayProxyAdapter()
     return None
 
 
@@ -304,8 +292,8 @@ async def _execute_non_claude_path(
             vision_provider = VisionProviderFactory.create_from_env()
     else:
         vision_provider = VisionProviderFactory.create_from_env()
-    # Use the executor waterfall (extension → CDP → playwright → desktop).
-    # Falls back to raw GatewayProxyAdapter only if the executor is unavailable.
+    # Use only in-process executor routes. The retired gateway proxy must not
+    # recurse back into this process over HTTP.
     adapter = _get_adapter_for_planning(body.target_scope, body.options.get("adapter_preference"))
 
     # Approval callback wired through RunState.approval_future

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useModelDiscovery, api } from '@/integration/api-client';
+import { useModelDiscovery } from '@/integration/api-client';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 import {
   Check,
@@ -151,11 +151,25 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
       setIsConnecting(true);
       setError(null);
       
-      // Simulate validation / saving API key locally
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
       if (selectedProvider) {
-        localStorage.setItem(`allternit_provider_key_${selectedProvider}`, apiKey);
+        const response = await fetch('/api/v1/onboarding/provider', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: selectedProvider,
+            name: currentMeta?.name || selectedProvider,
+            apiKey,
+            authType: 'api_key',
+            setDefault: false,
+          }),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({})) as { error?: string };
+          throw new Error(payload.error || `Provider connection failed (${response.status})`);
+        }
+        // Remove the obsolete browser-secret format if this user is upgrading
+        // from the former simulated connection flow.
+        localStorage.removeItem(`allternit_provider_key_${selectedProvider}`);
         window.dispatchEvent(new CustomEvent('allternit:provider-connected', { detail: { providerId: selectedProvider } }));
       }
       

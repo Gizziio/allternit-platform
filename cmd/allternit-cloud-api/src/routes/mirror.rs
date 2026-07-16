@@ -7,14 +7,14 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post, delete},
+    routing::{delete, get, post},
     Json, Router,
 };
+use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use uuid::Uuid;
-use chrono::{Duration, Utc};
 use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::ApiState;
 
@@ -89,11 +89,7 @@ async fn create_mirror_session(
     let now = Utc::now();
     let expires_at = now + Duration::minutes(req.ttl_minutes as i64);
 
-    let pairing_url = format!(
-        "{}/shell/pair/{}",
-        get_base_url(),
-        pairing_code
-    );
+    let pairing_url = format!("{}/shell/pair/{}", get_base_url(), pairing_code);
 
     let result = sqlx::query(
         r#"
@@ -112,7 +108,11 @@ async fn create_mirror_session(
 
     match result {
         Ok(_) => {
-            tracing::info!("Mirror session created: {} for run: {}", session_id, req.run_id);
+            tracing::info!(
+                "Mirror session created: {} for run: {}",
+                session_id,
+                req.run_id
+            );
             (
                 StatusCode::CREATED,
                 Json(serde_json::json!({
@@ -124,7 +124,8 @@ async fn create_mirror_session(
                     "expires_at": expires_at,
                     "qr_code_data": pairing_url,
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Failed to create mirror session: {}", e);
@@ -133,16 +134,15 @@ async fn create_mirror_session(
                 Json(serde_json::json!({
                     "error": "Failed to create mirror session"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
 
 /// GET /api/v1/mirror
 /// List all active mirror sessions
-async fn list_mirror_sessions(
-    State(state): State<Arc<ApiState>>,
-) -> impl IntoResponse {
+async fn list_mirror_sessions(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
     let user_id = "anonymous";
 
     let sessions = sqlx::query_as::<_, MirrorSession>(
@@ -166,7 +166,8 @@ async fn list_mirror_sessions(
                 Json(serde_json::json!({
                     "error": "Failed to list sessions"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -195,7 +196,8 @@ async fn get_mirror_session(
             Json(serde_json::json!({
                 "error": "Session not found"
             })),
-        ).into_response(),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to get mirror session: {}", e);
             (
@@ -203,7 +205,8 @@ async fn get_mirror_session(
                 Json(serde_json::json!({
                     "error": "Failed to get session"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -214,12 +217,10 @@ async fn delete_mirror_session(
     State(state): State<Arc<ApiState>>,
     Path(session_id): Path<String>,
 ) -> impl IntoResponse {
-    let result = sqlx::query(
-        "UPDATE mirror_sessions SET status = 'ended' WHERE id = ?",
-    )
-    .bind(&session_id)
-    .execute(&state.db)
-    .await;
+    let result = sqlx::query("UPDATE mirror_sessions SET status = 'ended' WHERE id = ?")
+        .bind(&session_id)
+        .execute(&state.db)
+        .await;
 
     match result {
         Ok(rows) => {
@@ -231,14 +232,16 @@ async fn delete_mirror_session(
                         "success": true,
                         "message": "Session ended"
                     })),
-                ).into_response()
+                )
+                    .into_response()
             } else {
                 (
                     StatusCode::NOT_FOUND,
                     Json(serde_json::json!({
                         "error": "Session not found"
                     })),
-                ).into_response()
+                )
+                    .into_response()
             }
         }
         Err(e) => {
@@ -248,7 +251,8 @@ async fn delete_mirror_session(
                 Json(serde_json::json!({
                     "error": "Failed to end session"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -272,13 +276,11 @@ async fn pair_mobile_device(
 
     match session {
         Ok(Some(s)) => {
-            sqlx::query(
-                "UPDATE mirror_sessions SET status = 'paired' WHERE id = ?",
-            )
-            .bind(&s.id)
-            .execute(&state.db)
-            .await
-            .ok();
+            sqlx::query("UPDATE mirror_sessions SET status = 'paired' WHERE id = ?")
+                .bind(&s.id)
+                .execute(&state.db)
+                .await
+                .ok();
 
             tracing::info!("Mobile device paired with session: {}", s.id);
 
@@ -289,14 +291,16 @@ async fn pair_mobile_device(
                     "status": "paired",
                     "message": "Successfully paired with desktop session"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
         Ok(None) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({
                 "error": "Invalid or expired pairing code"
             })),
-        ).into_response(),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to pair mobile device: {}", e);
             (
@@ -304,7 +308,8 @@ async fn pair_mobile_device(
                 Json(serde_json::json!({
                     "error": "Failed to pair device"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }
@@ -339,14 +344,16 @@ async fn get_pairing_info(
                     "pairing_url": pairing_url,
                     "expires_at": s.expires_at,
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
         Ok(None) => (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({
                 "error": "Invalid or expired pairing code"
             })),
-        ).into_response(),
+        )
+            .into_response(),
         Err(e) => {
             tracing::error!("Failed to get pairing info: {}", e);
             (
@@ -354,7 +361,8 @@ async fn get_pairing_info(
                 Json(serde_json::json!({
                     "error": "Failed to get pairing info"
                 })),
-            ).into_response()
+            )
+                .into_response()
         }
     }
 }

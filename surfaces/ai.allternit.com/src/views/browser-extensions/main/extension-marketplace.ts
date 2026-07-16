@@ -1,0 +1,8 @@
+import type { Extension } from './BrowserExtensions.types';
+
+export const EXTENSION_MARKETPLACE: Extension[] = [
+  { id: 'market-claude-chrome', name: 'Claude in Chrome', description: 'AI assistant for navigating sites and completing multi-step browser workflows.', icon: '✦', version: 'latest', author: 'Anthropic', category: 'ai', isInstalled: false, isEnabled: false, permissions: ['tabs', 'scripts'], storeUrl: 'https://chromewebstore.google.com/detail/claude/fcoeoabgfenejglbffodgkkbkcdhcgfn' },
+  { id: 'market-ublock-origin', name: 'uBlock Origin', description: 'Fast, efficient and privacy-focused content blocking for the browser.', icon: 'U', version: 'latest', author: 'Raymond Hill', category: 'utilities', isInstalled: false, isEnabled: false, permissions: ['tabs'], storeUrl: 'https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm' },
+  { id: 'market-1password', name: '1Password', description: 'Secure password manager and digital wallet with browser autofill.', icon: '1P', version: 'latest', author: '1Password', category: 'productivity', isInstalled: false, isEnabled: false, permissions: ['tabs', 'clipboard'], storeUrl: 'https://chromewebstore.google.com/detail/1password-password-manage/aeblfdkhhhdcdjpifhhbdiojplfjncoa' },
+  { id: 'market-grammarly', name: 'Grammarly', description: 'Writing assistant for grammar, spelling, clarity and tone.', icon: 'G', version: 'latest', author: 'Grammarly', category: 'productivity', isInstalled: false, isEnabled: false, permissions: ['scripts'], storeUrl: 'https://chromewebstore.google.com/detail/grammarly-grammar-checker/kbfnbcaeplbcioakkpcpgfkobkghlhen' },
+];

@@ -38,6 +38,10 @@ export const URLS = {
   ACU_RELAY: `http://${HOSTS.LOOPBACK}:${PORTS.ACU_RELAY}`,
   NOTEBOOK: `http://${HOSTS.LOOPBACK}:${PORTS.NOTEBOOK}`,
   VOICE: `http://${HOSTS.LOOPBACK}:${PORTS.VOICE}`,
+  /** Canonical Allternit control plane. Human Clerk sessions approve runtime pairing here. */
+  CLOUD_API: 'https://api.allternit.com',
+  /** Canonical browser experience. Pairing must never follow a local static UI URL. */
+  PLATFORM: 'https://platform.allternit.com',
   PRODUCTION_UI: 'https://ai.allternit.com',
   /** Local static platform UI fallback served by the Rust API at the root path. */
   PLATFORM_STATIC: `http://${HOSTS.LOOPBACK}:${PORTS.API}`,

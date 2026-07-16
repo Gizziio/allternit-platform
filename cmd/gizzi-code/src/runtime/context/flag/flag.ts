@@ -70,11 +70,17 @@ export namespace Flag {
   export const GIZZI_MODELS_URL = env("GIZZI_MODELS_URL")
   export const GIZZI_MODELS_PATH = env("GIZZI_MODELS_PATH")
 
-  // Sandbox — enable OS-level subprocess isolation (bwrap on Linux, sandbox-exec on macOS)
-  // When set, ALL agent bash sessions start sandboxed. Individual sessions can still toggle.
+  // Sandbox — OS-level subprocess isolation (bwrap on Linux, sandbox-exec on macOS)
+  // is on by default for every Bash tool call. GIZZI_SANDBOX is kept as an
+  // explicit "force on" signal for other call sites (cowork runtime, onboarding
+  // UI); it is no longer required to enable sandboxing in bash.ts.
   export const GIZZI_SANDBOX = truthy("GIZZI_SANDBOX")
-  // When sandbox is on, allow outbound network (default true — agents need npm/pip/cargo)
-  export const GIZZI_SANDBOX_ALLOW_NETWORK = !truthy("GIZZI_SANDBOX_BLOCK_NETWORK")
+  // Explicit, intentional opt-out — mirrors --dangerously-skip-permissions.
+  // Set this (or pass --dangerously-skip-sandbox) to run Bash fully unsandboxed.
+  export let GIZZI_SANDBOX_DISABLE: boolean = truthy("GIZZI_SANDBOX_DISABLE")
+  // When sandbox is on, allow outbound network. Default: denied — agents that
+  // need npm/pip/cargo must opt in explicitly (matches Claude Code's default-deny).
+  export const GIZZI_SANDBOX_ALLOW_NETWORK = truthy("GIZZI_SANDBOX_ALLOW_NETWORK")
 
   // Cowork VM runtime endpoint (allternit-api POST /sandbox/execute)
   export const GIZZI_SANDBOX_RUNTIME_URL = env("GIZZI_SANDBOX_RUNTIME_URL")

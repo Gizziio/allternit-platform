@@ -169,7 +169,7 @@ class SlidesPlugin implements ModePlugin {
             type: 'code' as const,
             url: `slides://markdown/${Date.now()}`,
             name: 'slides.md',
-            metadata: { format: 'markdown', slideCount: slideContent.slides.length },
+            metadata: { format: 'markdown', slideCount: slideContent.slides.length, content },
           }];
           break;
         

@@ -1,0 +1,16 @@
+# Registry API image. Build context is the repository root (cargo workspace).
+
+FROM rust:1-bookworm AS build
+WORKDIR /workspace
+COPY . .
+RUN cargo build --release -p allternit-registry-apps
+
+FROM debian:bookworm-slim
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+COPY --from=build /workspace/target/release/registry-apps /usr/local/bin/registry-apps
+ENV HOST=0.0.0.0 PORT=3109
+EXPOSE 3109
+USER nobody
+ENTRYPOINT ["registry-apps"]

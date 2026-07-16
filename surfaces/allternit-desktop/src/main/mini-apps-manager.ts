@@ -7,7 +7,15 @@
 
 import { spawn, ChildProcess } from 'node:child_process';
 import * as net from 'node:net';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { createHash } from 'node:crypto';
+import { app, dialog } from 'electron';
 import log from 'electron-log';
+import { deleteAllMiniAppSecrets, getMiniAppSecretEnvironment, listMiniAppSecrets } from './mini-app-secrets.js';
+import { sandboxCommand, type MiniAppSandboxPermissions } from './mini-app-sandbox.js';
+import { startMiniAppPolicyProxy, type MiniAppPolicyProxy } from './mini-app-policy-proxy.js';
+import { buildOAuthEnv, collectOAuthProviders } from './mini-app-oauth-inject.js';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -22,6 +30,196 @@ export interface MiniAppConfig {
   port: number;
   statusArgs?: string[];
   harnessManaged?: boolean;
+  dynamic?: boolean;
+  appId?: string;
+  requestedSecrets?: string[];
+  workingDirectory?: string;
+  permissions?: MiniAppSandboxPermissions;
+  oauthProviders?: Array<{ providerId: string; envName: string }>;
+}
+
+export interface MiniAppRuntimeRegistration {
+  id: string;
+  name: string;
+  version?: string;
+  installCommand?: string;
+  startCommand?: string;
+  stopCommand?: string;
+  healthUrl?: string;
+  permissions?: { network?: string[]; filesystem?: string[]; secrets?: string[]; processes?: boolean };
+  /** Manifest OAuth declaration (providerId -> provider config). Covered by
+   * the approval fingerprint, so changing providers/scopes re-triggers approval. */
+  oauth?: Record<string, unknown>;
+}
+
+type ApprovedRuntime = { registration: MiniAppRuntimeRegistration; fingerprint: string; approvedAt: string; previous?: Omit<ApprovedRuntime, 'previous'> };
+const approvedRuntimes = new Map<string, ApprovedRuntime>();
+
+function approvalsPath(): string {
+  return path.join(app.getPath('userData'), 'mini-app-runtime-approvals.json');
+}
+
+function fingerprint(registration: MiniAppRuntimeRegistration): string {
+  return createHash('sha256').update(JSON.stringify(registration)).digest('hex');
+}
+
+function loadApprovals(): void {
+  if (approvedRuntimes.size) return;
+  try {
+    const stored = JSON.parse(fs.readFileSync(approvalsPath(), 'utf8')) as ApprovedRuntime[];
+    for (const item of stored) {
+      if (item.fingerprint === fingerprint(item.registration)) approvedRuntimes.set(item.registration.id, item);
+    }
+  } catch { /* First run or an invalid approval file starts empty. */ }
+}
+
+function persistApprovals(): void {
+  fs.mkdirSync(path.dirname(approvalsPath()), { recursive: true });
+  fs.writeFileSync(approvalsPath(), JSON.stringify([...approvedRuntimes.values()], null, 2), { mode: 0o600 });
+}
+
+function validateRegistration(registration: MiniAppRuntimeRegistration): string | null {
+  if (!/^[a-z0-9][a-z0-9:._/-]{1,199}$/i.test(registration.id)) return 'Invalid miniapp identifier';
+  for (const command of [registration.installCommand, registration.startCommand, registration.stopCommand].filter(Boolean) as string[]) {
+    if (command.length > 4096 || command.includes('\0')) return 'Runtime command is invalid';
+  }
+  if (!registration.startCommand && !registration.installCommand) return 'No runtime commands were declared';
+  if (!registration.permissions?.processes) return 'Process permission is required for command-based runtimes';
+  for (const name of registration.permissions.secrets || []) {
+    if (!/^[A-Z][A-Z0-9_]{1,127}$/.test(name)) return `Invalid secret name: ${name}`;
+  }
+  for (const location of registration.permissions.filesystem || []) {
+    if (!(path.isAbsolute(location) || location.startsWith('~/'))) return `Filesystem permissions must use absolute or home-relative paths: ${location}`;
+  }
+  const oauth = collectOAuthProviders(registration.oauth);
+  if (oauth.error) return oauth.error;
+  return null;
+}
+
+function dynamicConfig(id: string): MiniAppConfig | null {
+  loadApprovals();
+  const approved = approvedRuntimes.get(id);
+  if (!approved || approved.fingerprint !== fingerprint(approved.registration)) return null;
+  const item = approved.registration;
+  const requestedSecrets = item.permissions?.secrets || [];
+  const missingSecrets = requestedSecrets.filter((name) => !listMiniAppSecrets(id).includes(name));
+  if (missingSecrets.length) return null;
+  const workingDirectory = path.join(app.getPath('userData'), 'mini-apps', createHash('sha256').update(id).digest('hex').slice(0, 24));
+  fs.mkdirSync(workingDirectory, { recursive: true, mode: 0o700 });
+  const port = (() => { try { return Number(new URL(item.healthUrl || '').port) || 0; } catch { return 0; } })();
+  return {
+    packageName: `${item.name}${item.version ? ` ${item.version}` : ''}`,
+    installCommand: '/bin/sh', installArgs: ['-lc', item.installCommand || 'true'],
+    binary: '/bin/sh', startArgs: ['-lc', item.startCommand || 'true'], port,
+    harnessManaged: !item.startCommand,
+    dynamic: true, appId: id, requestedSecrets, workingDirectory, permissions: item.permissions,
+    oauthProviders: collectOAuthProviders(item.oauth).providers,
+  };
+}
+
+function processEnvironment(config: MiniAppConfig): NodeJS.ProcessEnv {
+  if (!config.dynamic || !config.appId) return { ...process.env };
+  const environment: NodeJS.ProcessEnv = {};
+  for (const name of ['PATH', 'HOME', 'USER', 'SHELL', 'TMPDIR', 'LANG']) {
+    if (process.env[name]) environment[name] = process.env[name];
+  }
+  // Firmlinked TMPDIR (/var/folders/…) canonicalized to the backing-store
+  // form as belt-and-braces (profile ancestor literals already make the
+  // firmlink form traversable, but older profiles may not have them).
+  if (environment.TMPDIR) {
+    try {
+      environment.TMPDIR = fs.realpathSync(environment.TMPDIR);
+    } catch { /* keep the original value */ }
+  }
+  return { ...environment, ...getMiniAppSecretEnvironment(config.appId, config.requestedSecrets || []), ALLTERNIT_MINIAPP_ID: config.appId };
+}
+
+function resolveConfig(id: string): MiniAppConfig | undefined {
+  return MINI_APP_CONFIGS[id] || dynamicConfig(id) || undefined;
+}
+
+// ─── OAuth token injection ───────────────────────────────────────────────────
+// The broker lives in unified-main; it registers a resolver here at startup to
+// avoid a circular import. Tokens are resolved in the main process and go
+// straight into the child environment — they never cross IPC.
+type OAuthTokenResolver = (appId: string, providerId: string) => Promise<string | null>;
+let oauthTokenResolver: OAuthTokenResolver | null = null;
+export function setMiniAppOAuthTokenResolver(resolver: OAuthTokenResolver): void {
+  oauthTokenResolver = resolver;
+}
+
+async function oauthEnvironment(config: MiniAppConfig): Promise<Record<string, string>> {
+  if (!config.dynamic || !config.appId || !config.oauthProviders?.length || !oauthTokenResolver) return {};
+  const tokens: Record<string, string | null> = {};
+  for (const provider of config.oauthProviders) {
+    try {
+      tokens[provider.envName] = await oauthTokenResolver(config.appId, provider.providerId);
+    } catch (error) {
+      log.warn(`[mini-apps] OAuth token for ${config.appId}/${provider.providerId} unavailable:`, error);
+      tokens[provider.envName] = null;
+    }
+  }
+  return buildOAuthEnv(tokens);
+}
+
+export function getMiniAppApproval(id: string, registration?: MiniAppRuntimeRegistration): { approved: boolean; fingerprint?: string; approvedAt?: string } {
+  loadApprovals();
+  const approved = approvedRuntimes.get(id);
+  const matches = Boolean(approved && (!registration || approved.fingerprint === fingerprint(registration)));
+  return { approved: matches, fingerprint: registration ? fingerprint(registration) : approved?.fingerprint, approvedAt: matches ? approved?.approvedAt : undefined };
+}
+
+export async function reviewAndApproveMiniApp(registration: MiniAppRuntimeRegistration): Promise<{ success: boolean; approved: boolean; fingerprint?: string; error?: string }> {
+  const error = validateRegistration(registration);
+  if (error) return { success: false, approved: false, error };
+  const permissions = registration.permissions;
+  const detail = [
+    registration.installCommand && `Install: ${registration.installCommand}`,
+    registration.startCommand && `Start: ${registration.startCommand}`,
+    registration.stopCommand && `Stop: ${registration.stopCommand}`,
+    permissions?.network?.length && `Network: ${permissions.network.join(', ')}`,
+    permissions?.filesystem?.length && `Files: ${permissions.filesystem.join(', ')}`,
+    permissions?.secrets?.length && `Secrets: ${permissions.secrets.join(', ')}`,
+    permissions?.processes && 'May launch local processes',
+  ].filter(Boolean).join('\n\n');
+  const response = await dialog.showMessageBox({ type: 'warning', title: `Approve ${registration.name}`, message: 'Review this miniapp runtime', detail, buttons: ['Cancel', 'Approve runtime'], defaultId: 0, cancelId: 0, noLink: true });
+  if (response.response !== 1) return { success: true, approved: false };
+  const current = approvedRuntimes.get(registration.id);
+  const approved: ApprovedRuntime = {
+    registration,
+    fingerprint: fingerprint(registration),
+    approvedAt: new Date().toISOString(),
+    previous: current ? { registration: current.registration, fingerprint: current.fingerprint, approvedAt: current.approvedAt } : undefined,
+  };
+  approvedRuntimes.set(registration.id, approved); persistApprovals();
+  return { success: true, approved: true, fingerprint: approved.fingerprint };
+}
+
+export function revokeMiniAppApproval(id: string): void {
+  loadApprovals(); approvedRuntimes.delete(id); persistApprovals();
+}
+
+export function rollbackMiniAppRuntime(id: string): { success: boolean; error?: string } {
+  loadApprovals();
+  const current = approvedRuntimes.get(id);
+  if (!current?.previous) return { success: false, error: 'No previously approved runtime is available' };
+  stopMiniApp(id);
+  approvedRuntimes.set(id, { ...current.previous });
+  persistApprovals();
+  return { success: true };
+}
+
+export function removeMiniAppRuntime(id: string): { success: boolean; error?: string } {
+  stopMiniApp(id);
+  revokeMiniAppApproval(id);
+  deleteAllMiniAppSecrets(id);
+  const workingDirectory = path.join(app.getPath('userData'), 'mini-apps', createHash('sha256').update(id).digest('hex').slice(0, 24));
+  try {
+    fs.rmSync(workingDirectory, { recursive: true, force: true });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export const MINI_APP_CONFIGS: Record<string, MiniAppConfig> = {
@@ -58,6 +256,7 @@ interface RunningApp {
   id: string;
   process: ChildProcess;
   port: number;
+  proxy?: MiniAppPolicyProxy;
 }
 
 const runningApps = new Map<string, RunningApp>();
@@ -111,17 +310,25 @@ export async function installMiniApp(
   id: string,
   onProgress: (p: InstallProgress) => void,
 ): Promise<InstallResult> {
-  const config = MINI_APP_CONFIGS[id];
+  const config = resolveConfig(id);
   if (!config) {
     return { success: false, error: `Unknown mini-app: ${id}` };
   }
 
   onProgress({ id, line: `Installing ${config.packageName}…`, type: 'info' });
+  const command = config.dynamic
+    // Install-time dependency resolution legitimately needs package
+    // registries beyond the runtime host list; steady-state execution never
+    // gets full network (see startMiniApp / verifyHealthy).
+    ? sandboxCommand(config.installCommand, config.installArgs, config.workingDirectory!, config.permissions || {}, 'full')
+    : { binary: config.installCommand, args: config.installArgs };
+  if ('error' in command) return { success: false, error: command.error };
 
   return new Promise((resolve) => {
-    const proc = spawn(config.installCommand, config.installArgs, {
-      env: { ...process.env },
-      shell: true,
+    const proc = spawn(command.binary, command.args, {
+      env: processEnvironment(config),
+      cwd: config.workingDirectory,
+      shell: !config.dynamic,
     });
 
     proc.stdout?.on('data', (chunk: Buffer) => {
@@ -161,7 +368,7 @@ export async function startMiniApp(
   id: string,
   onProgress?: (p: InstallProgress) => void,
 ): Promise<{ success: boolean; error?: string }> {
-  const config = MINI_APP_CONFIGS[id];
+  const config = resolveConfig(id);
   if (!config) return { success: false, error: `Unknown mini-app: ${id}` };
   if (config.harnessManaged) {
     return { success: false, error: `${config.binary} is started by the Allternit/Gizzi harness when a session begins` };
@@ -175,9 +382,30 @@ export async function startMiniApp(
 
   onProgress?.({ id, line: `Starting ${config.binary}…`, type: 'info' });
 
-  const proc = spawn(config.binary, config.startArgs, {
-    env: { ...process.env },
-    shell: true,
+  // Community runtimes with a declared network permission get loopback-only
+  // sandbox network access; all external egress goes through the per-session
+  // policy proxy, which enforces the approved hostname list.
+  let proxy: MiniAppPolicyProxy | undefined;
+  if (config.dynamic && config.permissions?.network?.length) {
+    try {
+      proxy = await startMiniAppPolicyProxy({ appId: id, allowedHosts: config.permissions.network });
+    } catch (error) {
+      return { success: false, error: `Network policy proxy failed to start: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  }
+
+  const command = config.dynamic
+    ? sandboxCommand(config.binary, config.startArgs, config.workingDirectory!, config.permissions || {})
+    : { binary: config.binary, args: config.startArgs };
+  if ('error' in command) {
+    await proxy?.close();
+    return { success: false, error: command.error };
+  }
+
+  const proc = spawn(command.binary, command.args, {
+    env: { ...processEnvironment(config), ...(proxy?.environment || {}), ...(await oauthEnvironment(config)) },
+    cwd: config.workingDirectory,
+    shell: !config.dynamic,
     detached: false,
   });
 
@@ -190,15 +418,17 @@ export async function startMiniApp(
 
   proc.on('close', (code) => {
     log.info(`[mini-apps] ${id} exited with code ${code}`);
+    void proxy?.close();
     runningApps.delete(id);
   });
 
   proc.on('error', (err) => {
     log.error(`[mini-apps] ${id} start error:`, err);
+    void proxy?.close();
     runningApps.delete(id);
   });
 
-  runningApps.set(id, { id, process: proc, port: config.port });
+  runningApps.set(id, { id, process: proc, port: config.port, proxy });
 
   if (config.port === 0) {
     // Hermes starts a managed gateway daemon and exits; OMP remains attached as
@@ -206,7 +436,10 @@ export async function startMiniApp(
     if (config.statusArgs) {
       await new Promise((resolve) => setTimeout(resolve, 500));
       const up = await commandSucceeds(config.binary, config.statusArgs);
-      if (!up) return { success: false, error: `${config.binary} gateway did not report a running status` };
+      if (!up) {
+        await proxy?.close();
+        return { success: false, error: `${config.binary} gateway did not report a running status` };
+      }
     }
     onProgress?.({ id, line: `✓ ${config.binary} runtime started`, type: 'info' });
     return { success: true };
@@ -222,6 +455,7 @@ export async function startMiniApp(
     }
   }
 
+  await proxy?.close();
   return { success: false, error: `${config.binary} did not bind to port ${config.port} within 10 s` };
 }
 
@@ -229,9 +463,24 @@ export async function startMiniApp(
 
 export function stopMiniApp(id: string): void {
   const app = runningApps.get(id);
-  if (!app) return;
-  try { app.process.kill('SIGTERM'); } catch { /* ignore */ }
-  runningApps.delete(id);
+  if (app) {
+    try { app.process.kill('SIGTERM'); } catch { /* ignore */ }
+    void app.proxy?.close();
+    runningApps.delete(id);
+  }
+  loadApprovals();
+  const registration = approvedRuntimes.get(id)?.registration;
+  const stopCommand = registration?.stopCommand;
+  if (stopCommand) {
+    const config = dynamicConfig(id);
+    const command = config && sandboxCommand('/bin/sh', ['-lc', stopCommand], config.workingDirectory!, config.permissions || {});
+    if (!command || 'error' in command) {
+      log.warn(`[mini-apps] ${id} stop command blocked because its sandbox is unavailable`);
+      return;
+    }
+    const proc = spawn(command.binary, command.args, { env: processEnvironment(config), cwd: config.workingDirectory, shell: false, detached: false });
+    proc.once('error', (error) => log.warn(`[mini-apps] ${id} stop command failed`, error));
+  }
   log.info(`[mini-apps] ${id} stopped`);
 }
 
@@ -253,7 +502,7 @@ export async function getMiniAppStatus(id: string): Promise<{
   running: boolean;
   port: number | null;
 }> {
-  const config = MINI_APP_CONFIGS[id];
+  const config = resolveConfig(id);
   if (!config) return { managed: false, running: false, port: null };
 
   const tracked = runningApps.has(id);
@@ -264,5 +513,6 @@ export async function getMiniAppStatus(id: string): Promise<{
 }
 
 export function listKnownIds(): string[] {
-  return Object.keys(MINI_APP_CONFIGS);
+  loadApprovals();
+  return [...new Set([...Object.keys(MINI_APP_CONFIGS), ...approvedRuntimes.keys()])];
 }

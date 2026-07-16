@@ -9,7 +9,8 @@
  * The wrapper gives the spawned process:
  *   - READ access to the entire host filesystem
  *   - WRITE access only to declared write paths (workdir + /tmp by default)
- *   - NETWORK access configurable (default: allowed so npm/cargo/etc. work)
+ *   - NETWORK access configurable (default: denied — set GIZZI_SANDBOX_ALLOW_NETWORK
+ *     or an explicit policy override for npm/cargo/etc.)
  *
  * The agent's reasoning, tool dispatch, and API connections are completely
  * outside this boundary — only subprocesses spawned by the Bash tool are wrapped.
@@ -28,7 +29,7 @@ const log = Log.create({ service: "shell-sandbox" })
 export interface SandboxPolicy {
   /** Paths the subprocess may write to. Workdir + /tmp are always included. */
   allowWritePaths: string[]
-  /** Allow outbound network. Default: true (agents need npm/pip/cargo etc.) */
+  /** Allow outbound network. Default: false — deny unless explicitly opted in. */
   allowNetwork: boolean
 }
 
@@ -75,6 +76,47 @@ export namespace Sandbox {
   // Linux: bubblewrap
   // ─────────────────────────────────────────────────────────
 
+  // ─────────────────────────────────────────────────────────
+  // Shared write-path allowlist
+  // ─────────────────────────────────────────────────────────
+
+  /**
+   * The full set of paths a sandboxed process may write to, given a cwd and
+   * policy. Shared by bwrapArgs, writeSeatbeltProfile, and isWriteAllowed so
+   * the app-layer check (used by file-write tools) can never drift from what
+   * the OS-level sandbox actually permits.
+   */
+  function writeAllowlist(cwd: string, policy: SandboxPolicy): string[] {
+    return [
+      cwd,
+      os.tmpdir(),
+      "/var/tmp",
+      "/private/tmp",           // macOS
+      "/private/var/folders",   // macOS per-user temp area
+      path.join(os.homedir(), ".cache"),
+      path.join(os.homedir(), ".npm"),
+      path.join(os.homedir(), ".cargo"),
+      path.join(os.homedir(), ".pnpm-store"),
+      path.join(os.homedir(), ".bun"),
+      ...policy.allowWritePaths,
+    ]
+  }
+
+  /**
+   * App-layer check for tools (write/edit/multiedit/apply_patch) that write
+   * files directly instead of spawning a shell command. This is NOT kernel
+   * enforcement like bwrap/Seatbelt give the Bash tool -- Bun/Node's fs calls
+   * never pass through bwrap/sandbox-exec -- it's a plain path check against
+   * the same allowlist, enforced in application code.
+   */
+  export function isWriteAllowed(filePath: string, cwd: string, policy: SandboxPolicy): boolean {
+    const resolved = path.resolve(filePath)
+    return writeAllowlist(cwd, policy).some((allowed) => {
+      const allowedResolved = path.resolve(allowed)
+      return resolved === allowedResolved || resolved.startsWith(allowedResolved + path.sep)
+    })
+  }
+
   function bwrapArgs(command: string, shell: string, cwd: string, policy: SandboxPolicy): WrappedCommand {
     const args: string[] = []
 
@@ -99,21 +141,7 @@ export namespace Sandbox {
     }
 
     // Write access to workdir and user home area
-    const writePaths = [
-      cwd,
-      os.tmpdir(),         // /tmp
-      "/var/tmp",
-      ...policy.allowWritePaths,
-    ]
-
-    // Always allow writes to the home .cache directory (npm, pip, cargo, etc.)
-    const homeCache = path.join(os.homedir(), ".cache")
-    writePaths.push(homeCache)
-
-    // .npm, .cargo/registry etc. — common package caches
-    for (const cache of [".npm", ".cargo", ".pnpm-store", ".bun"]) {
-      writePaths.push(path.join(os.homedir(), cache))
-    }
+    const writePaths = writeAllowlist(cwd, policy)
 
     for (const p of writePaths) {
       args.push("--bind-try", p, p)
@@ -199,21 +227,7 @@ ${networkRule}
     const existing = profilePaths.get(sessionID)
     if (existing) return existing
 
-    const writePaths = [
-      cwd,
-      os.tmpdir(),
-      "/private/tmp",
-      "/var/tmp",
-      "/private/var/folders",  // macOS per-user temp area
-      path.join(os.homedir(), ".cache"),
-      path.join(os.homedir(), ".npm"),
-      path.join(os.homedir(), ".cargo"),
-      path.join(os.homedir(), ".pnpm-store"),
-      path.join(os.homedir(), ".bun"),
-      ...policy.allowWritePaths,
-    ]
-
-    const profile = buildSeatbeltProfile(writePaths, policy.allowNetwork)
+    const profile = buildSeatbeltProfile(writeAllowlist(cwd, policy), policy.allowNetwork)
     const profilePath = path.join(os.tmpdir(), `gizzi-sandbox-${sessionID}.sb`)
     await writeFile(profilePath, profile, "utf8")
     profilePaths.set(sessionID, profilePath)

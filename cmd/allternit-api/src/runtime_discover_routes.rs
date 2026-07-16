@@ -1,11 +1,6 @@
 //! Runtime Discover API routes
 
-use axum::{
-    extract::State,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
+use axum::{extract::State, response::IntoResponse, routing::get, Json, Router};
 use serde_json::json;
 use std::sync::Arc;
 

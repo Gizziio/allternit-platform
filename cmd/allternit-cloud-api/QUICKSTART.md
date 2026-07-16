@@ -1,288 +1,191 @@
-# Cowork Runtime Quick Start
+# Allternit Cloud API Quick Start
 
-Get started with the Cowork Runtime in 5 minutes.
+The Allternit Cloud API is the hosted control plane for user accounts, runtime pairing, and the browser-to-runtime relay. Users self-host the Allternit Desktop or VPS runtime; this service is what binds those runtimes to their Allternit account.
 
 ---
 
 ## Prerequisites
 
-- Rust toolchain (1.70+)
-- SQLite (or Postgres for production)
-- Allternit CLI (optional, for client access)
+- Rust toolchain (1.78+)
+- SQLite for local development, Postgres for production
+- A Clerk account and application for `platform.allternit.com`
 
 ---
 
 ## 1. Start the Control Plane
 
-The Control Plane is the central API server for the Cowork Runtime.
-
 ```bash
-# From the allternit workspace root
+# From the workspace root
 cargo run -p allternit-cloud-api
 ```
 
-The API server starts on `http://localhost:8080` by default.
+The server starts on `http://localhost:8080` by default.
 
-**Environment Variables:**
+**Required environment variables:**
 
-| Variable | Default | Description |
+| Variable | Example | Description |
 |----------|---------|-------------|
 | `PORT` | `8080` | HTTP server port |
-| `DATABASE_URL` | `./data/api.db` | Database connection string |
-| `RUST_LOG` | `info` | Log level |
+| `DATABASE_URL` | `./data/api.db` | SQLite path or Postgres URL |
+| `CLERK_ISSUER` | `https://clerk.platform.allternit.com` | Clerk JWT issuer |
+| `CLERK_JWKS_URL` | `https://clerk.platform.allternit.com/.well-known/jwks.json` | Clerk signing keys |
+| `ALLTERNIT_PLATFORM_URL` | `https://platform.allternit.com` | Browser pairing origin |
+| `CORS_ALLOWED_ORIGINS` | `https://platform.allternit.com,https://ai.allternit.com` | Allowed browser origins |
 
 ---
 
-## 2. Verify Installation
+## 2. Run Migrations
 
-Check that the API is running:
+Migrations run automatically on startup by default. To run them manually:
 
 ```bash
-curl http://localhost:8080/health
+sqlx migrate run --source cmd/allternit-cloud-api/migrations --database-url $DATABASE_URL
 ```
 
-Expected response:
+The runtime-pairing tables are created by `011_runtime_pairing.sql`.
+
+---
+
+## 3. Verify Health
+
+```bash
+curl http://localhost:8080/api/v1/health/live
+```
+
+Expected:
 
 ```json
-{"status": "ok"}
+{"status":"ok"}
 ```
 
 ---
 
-## 3. Create Your First Run
+## 4. Pair a Desktop Runtime
 
-### Using curl
+### 4.1 Create a pairing request from the desktop
+
+This is normally done automatically by Allternit Desktop, but you can simulate it:
 
 ```bash
-# Create a run
-curl -X POST http://localhost:8080/api/v1/runs \
+# Generate an Ed25519 keypair first; here we use a placeholder public key.
+curl -X POST http://localhost:8080/api/v1/runtime-pairings \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Hello World",
-    "mode": "local",
-    "config": {
-      "command": "echo",
-      "args": ["Hello from Cowork Runtime!"]
-    },
-    "auto_start": true
+    "name": "Test Desktop",
+    "runtimeType": "desktop",
+    "hostname": "test-machine",
+    "platform": "darwin-arm64",
+    "version": "0.1.0",
+    "publicKey": "base64url-encoded-32-byte-public-key"
   }'
 ```
 
-### Using the Gizzi CLI
+Response:
 
-```bash
-# Create and start a run
-gizzi cowork start "Hello World" --mode local --command "echo Hello!"
-
-# List runs
-gizzi cowork list
-
-# Get run details (use the ID from the list)
-gizzi cowork show <run-id>
+```json
+{
+  "pairingId": "uuid",
+  "deviceCode": "secret",
+  "userCode": "ABCD-2345",
+  "challenge": "secret",
+  "verificationUrl": "https://platform.allternit.com/pair?code=ABCD-2345",
+  "expiresAt": "...",
+  "pollIntervalSeconds": 2
+}
 ```
 
----
+### 4.2 Approve in the browser
 
-## 4. Attach to a Run
+Open the `verificationUrl` while signed into `platform.allternit.com`, then approve the runtime.
 
-Watch a run's output in real-time:
+### 4.3 Exchange for a device credential
 
-### Using curl (SSE stream)
-
-```bash
-curl -N http://localhost:8080/api/v1/runs/{run-id}/events/stream
-```
-
-### Using the CLI
+Back on the desktop, sign the challenge and exchange:
 
 ```bash
-gizzi cowork attach <run-id>
-```
-
-Press `Ctrl+C` to detach (the run continues in the background).
-
----
-
-## 5. Schedule a Recurring Job
-
-### Using curl
-
-```bash
-# Create a schedule that runs daily at 2 AM
-curl -X POST http://localhost:8080/api/v1/schedules \
+curl -X POST http://localhost:8080/api/v1/runtime-pairings/exchange \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Daily Backup",
-    "cron_expr": "0 2 * * *",
-    "natural_lang": "daily at 2am",
-    "job_template": {
-      "command": "./backup.sh",
-      "working_dir": "/app"
-    },
-    "enabled": true
+    "pairingId": "uuid",
+    "deviceCode": "secret",
+    "signature": "base64url-ed25519-signature-of-allternit-runtime-pairing:pairingId:challenge"
   }'
 ```
 
-### Using the CLI
+Response:
 
-```bash
-# Create a schedule
-gizzi cowork schedule create "Daily Backup" \
-  --schedule "0 2 * * *" \
-  --command "./backup.sh"
-
-# List schedules
-gizzi cowork schedule list
-
-# Trigger immediately
-gizzi cowork schedule trigger <schedule-id>
-
-# Disable/Enable
-gizzi cowork schedule disable <schedule-id>
-gizzi cowork schedule enable <schedule-id>
+```json
+{
+  "runtimeId": "rt_uuid",
+  "userId": "user_uuid",
+  "userEmail": "eoj@allternit.com",
+  "deviceToken": "allternit_runtime_...",
+  "tokenType": "Bearer",
+  "expiresAt": "...",
+  "capabilities": ["runtime:connect", "runtime:execute", ...]
+}
 ```
 
 ---
 
-## 6. Work with Approvals
+## 5. Connect the Runtime Relay
 
-When a run needs human approval:
-
-### List pending approvals
+The desktop/VPS runtime opens an outbound WebSocket to the cloud API:
 
 ```bash
-# Using curl
-curl "http://localhost:8080/api/v1/approvals?status=pending"
-
-# Using CLI
-gizzi cowork approval list
+wscat -c "ws://localhost:8080/api/v1/runtime-relay/connect/rt_uuid" \
+  -x '{"type":"authenticate","runtime_id":"rt_uuid","device_token":"allternit_runtime_..."}'
 ```
 
-### Approve or deny
+Once authenticated, the browser can proxy requests to this runtime.
+
+---
+
+## 6. Proxy a Request from the Browser
+
+With a Clerk token in `Authorization`:
 
 ```bash
-# Approve
-gizzi cowork approval approve <approval-id> --message "Looks good!"
+curl -X POST http://localhost:8080/api/v1/runtime-devices/rt_uuid/proxy \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "GET",
+    "path": "/api/v1/health",
+    "headers": {},
+    "body": "",
+    "bodyEncoding": "utf8"
+  }'
+```
 
-# Deny
-gizzi cowork approval deny <approval-id> --reason "Need more testing"
+The cloud API verifies the runtime belongs to the Clerk user, checks capabilities, forwards the request over the runtime WebSocket, and streams the response back.
+
+---
+
+## 7. List and Revoke Runtimes
+
+```bash
+# List runtimes
+curl http://localhost:8080/api/v1/runtime-devices \
+  -H "Authorization: Bearer <clerk-session-token>"
+
+# Revoke a runtime
+curl -X DELETE http://localhost:8080/api/v1/runtime-devices/rt_uuid \
+  -H "Authorization: Bearer <clerk-session-token>"
 ```
 
 ---
 
-## 7. Common Workflows
+## Production Notes
 
-### Run a Local Script
-
-```bash
-gizzi cowork start "Data Processing" \
-  --mode local \
-  --command "python process_data.py" \
-  --working-dir /path/to/project \
-  --env "INPUT_FILE=data.csv" \
-  --attach
-```
-
-### Monitor a Long-Running Run
-
-```bash
-# Start detached
-gizzi cowork start "Long Task" --command "./long-task.sh"
-
-# Check status later
-gizzi cowork list --status running
-
-# View logs
-gizzi cowork logs <run-id> --follow
-
-# Stop if needed
-gizzi cowork stop <run-id>
-```
-
-### Pause and Resume
-
-```bash
-# Pause a running run
-gizzi cowork pause <run-id>
-
-# Resume when ready
-gizzi cowork resume <run-id>
-```
-
----
-
-## 8. Web UI Access
-
-The Control Plane includes a built-in web UI for visual run management:
-
-```
-http://localhost:8080/ui
-```
-
-Features:
-- Run list with status indicators
-- Real-time log streaming
-- Approval management
-- Schedule configuration
+- Use Postgres for `DATABASE_URL` so concurrent runtimes and web workers can share state.
+- Store Clerk secrets and runtime encryption keys in Railway/Fly/AWS secret management, never in the repo.
+- Run at least two instances behind a load balancer for availability; the relay state is currently in-memory, so sticky sessions or a shared Redis backend would be needed for multi-instance deployments.
 
 ---
 
 ## Next Steps
 
-- Read the full [API Reference](./API.md)
-- Check the [CLI Guide](../../7-apps/cli/COWORK.md)
-- Review the [System Architecture](../../COWORK_ARCHITECTURE.md)
-- Explore [examples](./examples/)
-
----
-
-## Troubleshooting
-
-### Port already in use
-
-```bash
-# Use a different port
-PORT=8081 cargo run -p allternit-cloud-api
-```
-
-### Database locked
-
-The default SQLite database is in `./data/api.db`. For concurrent access:
-
-```bash
-# Use Postgres in production
-DATABASE_URL="postgres://user:pass@localhost/cowork" cargo run -p allternit-cloud-api
-```
-
-### Run won't start
-
-Check the run's events for error details:
-
-```bash
-curl http://localhost:8080/api/v1/runs/{run-id}/events
-```
-
----
-
-## Configuration
-
-Create a `.env` file in your project root:
-
-```bash
-# Server configuration
-PORT=8080
-HOST=0.0.0.0
-
-# Database
-DATABASE_URL=./data/api.db
-
-# Runtime paths
-LOCAL_RUNTIME_SOCKET=/var/run/allternit-runtime.sock
-
-# Logging
-RUST_LOG=info,allternit_cloud_api=debug
-
-# Features
-ENABLE_APPROVALS=true
-DEFAULT_APPROVAL_TIMEOUT=300
-```
+- Read the full [Runtime Pairing Protocol](./RUNTIME_PAIRING.md)
+- Read the [API Reference](./API.md) for Cowork Runtime endpoints
+- See `../../infrastructure/` for deployment templates

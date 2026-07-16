@@ -140,7 +140,7 @@ class UnifiedPluginRegistry {
       {
         id: 'image',
         name: 'Image',
-        description: 'Generate images from text prompts using Pollinations.ai (FREE)',
+        description: 'Generate images locally from text prompts with Bonsai Image 4B',
         version: '1.0.0',
         source: 'built-in',
         status: 'enabled',

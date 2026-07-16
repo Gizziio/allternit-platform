@@ -34,7 +34,7 @@ class FirecrackerSandbox(BaseSandbox):
 
     Communicates with Firecracker via its REST API over a Unix domain socket.
     Requires the `firecracker` binary and a pre-built kernel + rootfs image.
-    Falls back to ProcessSandbox when Firecracker is not available.
+    Process fallback is disabled by default and requires explicit legacy opt-in.
 
     REST API surface used:
       PUT /boot-source       — set kernel image + boot args
@@ -56,6 +56,15 @@ class FirecrackerSandbox(BaseSandbox):
 
     def _use_fallback(self) -> bool:
         return self._fallback is not None
+
+    def _allow_fallback(self) -> bool:
+        return bool(self.config.extra.get("allow_process_fallback", False))
+
+    async def _fallback_or_raise(self, reason: str) -> str:
+        if not self._allow_fallback():
+            raise RuntimeError(f"Firecracker unavailable and process fallback is disabled: {reason}")
+        self._fallback = ProcessSandbox(self.config)
+        return await self._fallback.start()
 
     async def _api(
         self,
@@ -159,8 +168,7 @@ class FirecrackerSandbox(BaseSandbox):
 
     async def start(self) -> str:
         if not FIRECRACKER_AVAILABLE:
-            self._fallback = ProcessSandbox(self.config)
-            return await self._fallback.start()
+            return await self._fallback_or_raise("binary not found")
 
         self._sandbox_id = str(uuid.uuid4())[:8]
         self._socket_path = _API_SOCKET_TEMPLATE.format(sandbox_id=self._sandbox_id)
@@ -175,15 +183,13 @@ class FirecrackerSandbox(BaseSandbox):
                 stderr=asyncio.subprocess.PIPE,
             )
         except FileNotFoundError:
-            self._fallback = ProcessSandbox(self.config)
-            return await self._fallback.start()
+            return await self._fallback_or_raise("binary disappeared during launch")
 
         # Wait for the API socket to appear.
         socket_ready = await self._wait_for_socket()
         if not socket_ready:
             await self._kill_fc()
-            self._fallback = ProcessSandbox(self.config)
-            return await self._fallback.start()
+            return await self._fallback_or_raise("API socket did not become ready")
 
         # Configure and boot the microVM.
         try:
@@ -191,8 +197,7 @@ class FirecrackerSandbox(BaseSandbox):
         except Exception:  # noqa: BLE001
             # Kernel/rootfs images absent in dev — fall back gracefully.
             await self._kill_fc()
-            self._fallback = ProcessSandbox(self.config)
-            return await self._fallback.start()
+            return await self._fallback_or_raise("VM boot configuration failed")
 
         return self._sandbox_id
 
@@ -205,16 +210,13 @@ class FirecrackerSandbox(BaseSandbox):
             assert self._fallback is not None
             return await self._fallback.run(command, env)
 
-        # In a production setup you would use vsock or serial console to
-        # execute commands inside the guest. That requires a guest agent
-        # (e.g. Firecracker's Jailer + a custom init) which is outside
-        # the scope of this integration layer.
-        #
-        # For now we run the command on the host in a subprocess, scoped
-        # to the sandbox working directory, until the guest agent is wired
-        # up. This is equivalent to ProcessSandbox but preserves the
-        # sandbox_id and the Firecracker VM lifecycle for tasks that only
-        # need network isolation at the hypervisor level.
+        if not self._allow_fallback():
+            raise RuntimeError(
+                "Firecracker guest command transport is unavailable; refusing host execution"
+            )
+
+        # Compatibility is opt-in only. Callers that need process isolation
+        # should select ProcessSandbox explicitly.
         temp_sandbox = ProcessSandbox(self.config)
         await temp_sandbox.start()
         result = await temp_sandbox.run(command, env)

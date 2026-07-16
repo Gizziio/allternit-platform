@@ -1,4 +1,3 @@
-
 //! Cowork Team API routes
 
 use axum::extract::Extension;
@@ -15,29 +14,62 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
+use crate::AppState;
 
 fn unauthorized() -> axum::response::Response {
-    (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))).into_response()
+    (
+        StatusCode::UNAUTHORIZED,
+        Json(json!({"error": "Unauthorized"})),
+    )
+        .into_response()
 }
 
 fn forbidden() -> axum::response::Response {
-    (StatusCode::FORBIDDEN, Json(json!({"error": "Access denied"}))).into_response()
+    (
+        StatusCode::FORBIDDEN,
+        Json(json!({"error": "Access denied"})),
+    )
+        .into_response()
 }
 
 pub fn cowork_team_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/cowork-team", get(cowork_team_status))
-        .route("/cowork-team/workspaces", get(list_team_workspaces).post(create_team_workspace))
-        .route("/cowork-team/workspaces/:id", get(get_team_workspace).put(update_team_workspace).delete(delete_team_workspace))
-        .route("/cowork-team/workspaces/:id/members", get(list_workspace_members).post(add_workspace_member))
-        .route("/cowork-team/skills", get(list_team_skills2).post(create_team_skill2))
-        .route("/cowork-team/skills/:id", get(get_team_skill2).put(update_team_skill2).delete(delete_team_skill2))
+        .route(
+            "/cowork-team/workspaces",
+            get(list_team_workspaces).post(create_team_workspace),
+        )
+        .route(
+            "/cowork-team/workspaces/:id",
+            get(get_team_workspace)
+                .put(update_team_workspace)
+                .delete(delete_team_workspace),
+        )
+        .route(
+            "/cowork-team/workspaces/:id/members",
+            get(list_workspace_members).post(add_workspace_member),
+        )
+        .route(
+            "/cowork-team/skills",
+            get(list_team_skills2).post(create_team_skill2),
+        )
+        .route(
+            "/cowork-team/skills/:id",
+            get(get_team_skill2)
+                .put(update_team_skill2)
+                .delete(delete_team_skill2),
+        )
         .route("/cowork-team/agents", get(list_team_agents))
-        .route("/cowork-team/board/:id/assign", post(assign_board_item).delete(unassign_board_item))
-        .route("/cowork-team/runtimes", get(list_team_runtimes).post(create_team_runtime))
+        .route(
+            "/cowork-team/board/:id/assign",
+            post(assign_board_item).delete(unassign_board_item),
+        )
+        .route(
+            "/cowork-team/runtimes",
+            get(list_team_runtimes).post(create_team_runtime),
+        )
         .route("/cowork-team/parse-prd", post(parse_prd))
 }
 
@@ -59,7 +91,6 @@ async fn list_team_workspaces(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -103,13 +134,15 @@ async fn create_team_workspace(
     _headers: HeaderMap,
     Json(body): Json<CreateTeamWorkspaceBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let id = uuid::Uuid::new_v4().to_string();
     let id2 = id.clone();
     let user_id = user.user_id;
     let name = body.name.clone();
-    let slug = name.to_lowercase().replace(" ", "-").replace(|c: char| !c.is_alphanumeric() && c != '-', "");
+    let slug = name
+        .to_lowercase()
+        .replace(" ", "-")
+        .replace(|c: char| !c.is_alphanumeric() && c != '-', "");
     let name_for_db = name.clone();
     let slug_for_db = slug.clone();
     let description = body.description;
@@ -124,14 +157,26 @@ async fn create_team_workspace(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"workspace": {"id": id, "name": name, "slug": slug}}))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({"workspace": {"id": id, "name": name, "slug": slug}})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating team workspace: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -142,7 +187,6 @@ async fn get_team_workspace(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let ws_id = id.clone();
     let user_id = user.user_id;
@@ -170,8 +214,14 @@ async fn get_team_workspace(
 
     match row {
         Ok(Ok(ws)) => Json(json!({"workspace": ws})).into_response(),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response(),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
+            (StatusCode::NOT_FOUND, Json(json!({"error": "not_found"}))).into_response()
+        }
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        )
+            .into_response(),
     }
 }
 
@@ -188,7 +238,6 @@ async fn update_team_workspace(
     _headers: HeaderMap,
     Json(body): Json<UpdateTeamWorkspaceBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -204,7 +253,11 @@ async fn update_team_workspace(
 
     match result {
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response(),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        )
+            .into_response(),
     }
 }
 
@@ -214,7 +267,6 @@ async fn delete_team_workspace(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -225,11 +277,16 @@ async fn delete_team_workspace(
             params![id, user_id],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(())) => Json(json!({"ok": true})).into_response(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response(),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        )
+            .into_response(),
     }
 }
 
@@ -250,7 +307,6 @@ async fn list_workspace_members(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let ws_id = id.clone();
     let user_id = user.user_id;
@@ -283,7 +339,11 @@ async fn list_workspace_members(
     match rows {
         Ok(Ok(data)) => Json(json!({"members": data})).into_response(),
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => forbidden().into_response(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response(),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        )
+            .into_response(),
     }
 }
 
@@ -303,7 +363,6 @@ async fn add_workspace_member(
     _headers: HeaderMap,
     Json(body): Json<AddMemberBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let ws_id = id.clone();
     let user_id = user.user_id.clone();
@@ -337,15 +396,27 @@ async fn add_workspace_member(
     }).await;
 
     match result {
-        Ok(Ok(mid)) => (StatusCode::CREATED, Json(json!({"member": {"id": mid, "role": role}}))).into_response(),
+        Ok(Ok(mid)) => (
+            StatusCode::CREATED,
+            Json(json!({"member": {"id": mid, "role": role}})),
+        )
+            .into_response(),
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => forbidden(),
         Ok(Err(e)) => {
             warn!("DB error adding member: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -371,10 +442,12 @@ async fn list_team_skills2(
     _headers: HeaderMap,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
-    let ws_id = params.get("workspaceId").cloned().or_else(|| params.get("workspace_id").cloned());
+    let ws_id = params
+        .get("workspaceId")
+        .cloned()
+        .or_else(|| params.get("workspace_id").cloned());
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -440,7 +513,6 @@ async fn create_team_skill2(
     _headers: HeaderMap,
     Json(body): Json<CreateTeamSkillBody2>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let id = uuid::Uuid::new_v4().to_string();
     let id2 = id.clone();
@@ -484,15 +556,27 @@ async fn create_team_skill2(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"skill": {"id": id, "name": body.name}}))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({"skill": {"id": id, "name": body.name}})),
+        )
+            .into_response(),
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => forbidden(),
         Ok(Err(e)) => {
             warn!("DB error creating team skill: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -503,7 +587,6 @@ async fn get_team_skill2(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -552,7 +635,6 @@ async fn update_team_skill2(
     _headers: HeaderMap,
     Json(body): Json<UpdateTeamSkillBody2>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -588,7 +670,11 @@ async fn update_team_skill2(
     match result {
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => forbidden(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response(),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        )
+            .into_response(),
     }
 }
 
@@ -598,7 +684,6 @@ async fn delete_team_skill2(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -630,7 +715,11 @@ async fn delete_team_skill2(
     match result {
         Ok(Ok(())) => Json(json!({"ok": true})).into_response(),
         Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => forbidden(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response(),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        )
+            .into_response(),
     }
 }
 
@@ -642,7 +731,6 @@ async fn list_team_agents(
     _headers: HeaderMap,
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let ws_id = params.get("workspaceId").cloned();
@@ -718,7 +806,6 @@ async fn assign_board_item(
     _headers: HeaderMap,
     Json(body): Json<AssignBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let item_id = id.clone();
@@ -738,7 +825,11 @@ async fn assign_board_item(
 
     match result {
         Ok(Ok(())) => Json(json!({"item": {"id": id}})).into_response(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response(),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        )
+            .into_response(),
     }
 }
 
@@ -748,7 +839,6 @@ async fn unassign_board_item(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let item_id = id.clone();
@@ -768,7 +858,11 @@ async fn unassign_board_item(
 
     match result {
         Ok(Ok(())) => Json(json!({"item": {"id": id}})).into_response(),
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response(),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        )
+            .into_response(),
     }
 }
 
@@ -791,7 +885,6 @@ async fn list_team_runtimes(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -799,22 +892,25 @@ async fn list_team_runtimes(
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
             "SELECT id, name, host, agent_clis, status, last_heartbeat, workspace_id, created_at
-             FROM agent_runtimes WHERE user_id = ?1 ORDER BY created_at DESC"
+             FROM agent_runtimes WHERE user_id = ?1 ORDER BY created_at DESC",
         )?;
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok(TeamRuntimeRow {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                host: row.get(2)?,
-                agent_clis: row.get(3)?,
-                status: row.get(4)?,
-                last_heartbeat: row.get(5)?,
-                workspace_id: row.get(6)?,
-                created_at: row.get(7)?,
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let rows = stmt
+            .query_map(params![user_id], |row| {
+                Ok(TeamRuntimeRow {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    host: row.get(2)?,
+                    agent_clis: row.get(3)?,
+                    status: row.get(4)?,
+                    last_heartbeat: row.get(5)?,
+                    workspace_id: row.get(6)?,
+                    created_at: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
-    }).await;
+    })
+    .await;
 
     match rows {
         Ok(Ok(data)) => Json(json!({"runtimes": data})).into_response(),
@@ -838,13 +934,14 @@ async fn create_team_runtime(
     _headers: HeaderMap,
     Json(body): Json<CreateTeamRuntimeBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let id = uuid::Uuid::new_v4().to_string();
     let id2 = id.clone();
     let user_id = user.user_id;
     let name = body.name.clone();
-    let clis = body.agent_clis.map(|c| serde_json::to_string(&c).unwrap_or_default());
+    let clis = body
+        .agent_clis
+        .map(|c| serde_json::to_string(&c).unwrap_or_default());
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -854,17 +951,30 @@ async fn create_team_runtime(
             params![id2, user_id, body.name, body.host, clis, body.workspace_id],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"runtime": {"id": id, "name": name, "status": "online"}}))).into_response(),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({"runtime": {"id": id, "name": name, "status": "online"}})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating team runtime: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -906,9 +1016,9 @@ async fn parse_prd(
         "items": items,
         "summary": format!("Parsed {} tasks from PRD description", max),
         "task_count": max,
-    })).into_response()
+    }))
+    .into_response()
 }
-
 
 async fn cowork_team_status() -> impl IntoResponse {
     Json(json!({

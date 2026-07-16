@@ -71,8 +71,8 @@ impl AuthenticatedUser {
 
     /// Check if user has a specific permission
     pub fn has_permission(&self, permission: &str) -> bool {
-        self.permissions.contains(&"*".to_string()) ||
-        self.permissions.contains(&permission.to_string())
+        self.permissions.contains(&"*".to_string())
+            || self.permissions.contains(&permission.to_string())
     }
 
     /// Check if user has any of the specified permissions

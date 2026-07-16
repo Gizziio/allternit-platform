@@ -13,18 +13,53 @@ export interface AgentModeExecutorCallbacks {
 
 const MODE_PLUGIN: Partial<Record<CanonicalAgentModeId, PluginId>> = {
   swarms: 'swarms', research: 'research', website: 'website', data: 'data',
-  slides: 'slides', image: 'image', video: 'video',
+  slides: 'slides', image: 'image', video: 'video', code: 'code',
 };
 
 const MODE_KIND: Record<CanonicalAgentModeId, ArtifactKind> = {
   swarms: 'document', research: 'document', website: 'html', docs: 'document',
   data: 'sheet', slides: 'slides', image: 'image', video: 'video',
+  code: 'jsx',
 };
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
   })[character]!);
+}
+
+async function ensureVideoProviderKey(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const status = await fetch('/api/v1/providers/minimax/auth/status');
+  if (status.ok) {
+    const payload = await status.json().catch(() => ({})) as { provider?: { authenticated?: boolean } };
+    if (payload.provider?.authenticated) {
+      localStorage.removeItem('allternit_video_api_keys');
+      return;
+    }
+  }
+  let legacyKey = '';
+  try {
+    const saved = JSON.parse(localStorage.getItem('allternit_video_api_keys') || '{}') as Record<string, string>;
+    legacyKey = saved.minimax?.trim() || '';
+  } catch {
+    localStorage.removeItem('allternit_video_api_keys');
+  }
+  const key = legacyKey || window.prompt('Connect MiniMax to the selected Allternit runtime. The key is stored by Gizzi, not in this browser.');
+  if (!key?.trim()) throw new Error('Video generation needs a MiniMax API key.');
+  const connected = await fetch('/api/v1/onboarding/provider', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider: 'minimax',
+      name: 'MiniMax',
+      apiKey: key.trim(),
+      authType: 'api_key',
+      setDefault: false,
+    }),
+  });
+  if (!connected.ok) throw new Error(`MiniMax could not be connected to the selected runtime (${connected.status}).`);
+  localStorage.removeItem('allternit_video_api_keys');
 }
 
 async function executeDocs(prompt: string, signal?: AbortSignal): Promise<PluginOutput> {
@@ -51,15 +86,14 @@ async function executeSheets(prompt: string, signal?: AbortSignal): Promise<Plug
     model,
     temperature: 0.2,
     abortSignal: signal,
-    prompt: `Create an editable spreadsheet-style deliverable for the request below. Return one self-contained semantic HTML document only. Include a clearly labeled table, typed values, and a Formula column containing spreadsheet formulas beginning with = wherever calculations or forecasting are requested. Include assumptions and source-data sections. Do not use markdown fences.\n\n${prompt}`,
+    prompt: `Create an editable spreadsheet deliverable for the request below. Return valid CSV only, with one header row and at least five data rows. Include typed numeric cells and a Formula column containing formulas beginning with = wherever calculations or forecasting are requested. Keep formulas comma-free so the CSV remains parseable. Include assumption and source fields as columns when relevant. Do not use markdown fences or commentary.\n\n${prompt}`,
   });
-  const html = /<(?:table|html|main)[\s>]/i.test(text)
-    ? text
-    : `<main><h1>Spreadsheet</h1><table><tr><th>Result</th></tr><tr><td>${escapeHtml(text)}</td></tr></table></main>`;
+  const csv = text.replace(/^```(?:csv)?\s*/i, '').replace(/```\s*$/i, '').trim();
+  if (!csv.includes('\n') || !csv.includes(',')) throw new Error('Spreadsheet generation returned invalid CSV data.');
   return {
     success: true,
     content: 'Editable spreadsheet created with formulas and assumptions.',
-    artifacts: [{ type: 'file', name: 'spreadsheet.html', url: `data:text/html;charset=utf-8,${encodeURIComponent(html)}`, metadata: { html, format: 'spreadsheet-html' } }],
+    artifacts: [{ type: 'file', name: 'spreadsheet.csv', url: `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`, metadata: { content: csv, format: 'csv' } }],
   };
 }
 
@@ -67,6 +101,10 @@ function primaryContent(modeId: CanonicalAgentModeId, output: PluginOutput): str
   const artifacts = output.artifacts ?? [];
   const htmlArtifact = artifacts.find((artifact) => typeof artifact.metadata?.html === 'string');
   if (htmlArtifact) return String(htmlArtifact.metadata?.html);
+  const contentArtifact = artifacts.find((artifact) => typeof artifact.metadata?.content === 'string');
+  if (modeId === 'data' || modeId === 'slides') {
+    if (contentArtifact) return String(contentArtifact.metadata?.content);
+  }
   if (modeId === 'image' || modeId === 'video') return artifacts[0]?.url ?? output.content ?? '';
   if (modeId === 'website') {
     const files = artifacts
@@ -87,9 +125,14 @@ export async function executeAgentMode(
   if (signal?.aborted) throw new DOMException('Mode execution cancelled', 'AbortError');
   const toolCallId = `mode-${modeId}-${Date.now()}`;
   const toolName = `${modeId}_mode_execute`;
-  callbacks.onToolCall?.({ toolCallId, toolName, input: { prompt, templateTitle } });
+  callbacks.onToolCall?.({
+    toolCallId,
+    toolName,
+    input: templateTitle === undefined ? { prompt } : { prompt, templateTitle },
+  });
 
   const pluginId = MODE_PLUGIN[modeId];
+  if (modeId === 'video') await ensureVideoProviderKey();
   let plugin: Awaited<ReturnType<typeof createPluginInstance>> | undefined;
   const output = modeId === 'docs'
     ? await executeDocs(prompt, signal)
@@ -102,7 +145,7 @@ export async function executeAgentMode(
           try {
             return await plugin.execute({
               prompt,
-              options: { templateTitle, format: modeId === 'slides' ? 'html' : undefined },
+              options: { templateTitle, format: modeId === 'slides' ? 'markdown' : undefined },
             });
           } finally {
             signal?.removeEventListener('abort', cancel);

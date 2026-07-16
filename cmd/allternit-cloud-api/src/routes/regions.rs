@@ -6,12 +6,12 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
-use std::sync::Arc;
 use serde::Deserialize;
+use std::sync::Arc;
 
 use crate::{
-    ApiError, ApiState,
     db::models::{Region, RegionSummary},
+    ApiError, ApiState,
 };
 
 /// Query parameters for listing regions
@@ -100,7 +100,8 @@ pub async fn list_regions(
 
     // Filter by minimum capacity if specified
     let regions = if let Some(min_cap) = query.min_capacity {
-        regions.into_iter()
+        regions
+            .into_iter()
             .filter(|r| r.available_capacity >= min_cap)
             .collect()
     } else {
@@ -115,15 +116,14 @@ pub async fn get_region(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> Result<Json<Region>, ApiError> {
-    let region = sqlx::query_as::<_, Region>(
-        "SELECT * FROM regions WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
+    let region = sqlx::query_as::<_, Region>("SELECT * FROM regions WHERE id = ?")
+        .bind(&id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| ApiError::DatabaseError(e))?;
 
-    region.ok_or_else(|| ApiError::NotFound(format!("Region not found: {}", id)))
+    region
+        .ok_or_else(|| ApiError::NotFound(format!("Region not found: {}", id)))
         .map(Json)
 }
 
@@ -144,20 +144,18 @@ pub async fn get_region_capacity(
     }
 
     let capacity = sqlx::query_as::<_, crate::db::models::RegionCapacity>(
-        "SELECT * FROM region_capacity WHERE region_id = ?"
+        "SELECT * FROM region_capacity WHERE region_id = ?",
     )
     .bind(&id)
     .fetch_optional(&state.db)
     .await
     .map_err(|e| ApiError::DatabaseError(e))?;
 
-    let region = sqlx::query_as::<_, Region>(
-        "SELECT capacity FROM regions WHERE id = ?"
-    )
-    .bind(&id)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| ApiError::DatabaseError(e))?;
+    let region = sqlx::query_as::<_, Region>("SELECT capacity FROM regions WHERE id = ?")
+        .bind(&id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(|e| ApiError::DatabaseError(e))?;
 
     let (current, queued) = capacity
         .map(|c| (c.current_runs, c.queued_runs))

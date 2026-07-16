@@ -1,0 +1,136 @@
+# Allternit miniapps registry — staging stack.
+#
+# Services: PostgreSQL 16, MinIO (S3-compatible, quarantine + published
+# buckets), the apps-registry API, an intake worker, and nginx as the TLS
+# terminator / rate limiter. A daily pg_dump backup ships to MinIO.
+#
+#   cp .env.example .env   # fill in secrets
+#   docker compose up -d
+#
+# Kill switches (emergency stop) are registry API calls, not compose changes:
+#   curl -X POST $REGISTRY/v1/admin/kill-switches \
+#     -H "Authorization: Bearer $MINIAPP_REGISTRY_ADMIN_TOKEN" \
+#     -H 'content-type: application/json' \
+#     -d '{"scope":"marketplace","enabled":true,"reason":"incident","actor":"ops"}'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-registry}
+      POSTGRES_USER: ${POSTGRES_USER:-registry}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIAPP_ASSETS_QUARANTINE_BUCKET: ${MINIAPP_ASSETS_QUARANTINE_BUCKET:-miniapp-quarantine}
+      MINIAPP_ASSETS_BUCKET: ${MINIAPP_ASSETS_BUCKET:-miniapp-assets}
+      MINIAPP_BACKUP_BUCKET: ${MINIAPP_BACKUP_BUCKET:-registry-backups}
+    volumes:
+      - ./init-minio.sh:/init-minio.sh:ro
+
+  registry:
+    build:
+      # Build context is the repository root (cargo workspace).
+      context: ../../..
+      dockerfile: services/registry/deploy/staging/Dockerfile.registry
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      HOST: 0.0.0.0
+      PORT: "3109"
+      DATABASE_URL: postgres://${POSTGRES_USER:-registry}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-registry}
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      MINIAPP_ASSETS_QUARANTINE_BUCKET: ${MINIAPP_ASSETS_QUARANTINE_BUCKET:-miniapp-quarantine}
+      MINIAPP_ASSETS_BUCKET: ${MINIAPP_ASSETS_BUCKET:-miniapp-assets}
+      MINIAPP_REGISTRY_ADMIN_TOKEN: ${MINIAPP_REGISTRY_ADMIN_TOKEN:?set MINIAPP_REGISTRY_ADMIN_TOKEN}
+      MINIAPP_INTAKE_WORKER_TOKEN: ${MINIAPP_INTAKE_WORKER_TOKEN:?set MINIAPP_INTAKE_WORKER_TOKEN}
+      # Approvals require completed pipeline evidence in staging.
+      MINIAPP_INTAKE_ENFORCE: ${MINIAPP_INTAKE_ENFORCE:-1}
+    restart: unless-stopped
+
+  worker:
+    image: node:22-alpine
+    depends_on:
+      - registry
+    working_dir: /worker
+    command: ["node", "worker.mjs"]
+    environment:
+      REGISTRY_URL: http://registry:3109
+      WORKER_TOKEN: ${MINIAPP_INTAKE_WORKER_TOKEN}
+      WORKER_NAME: staging-worker-1
+      POLL_INTERVAL_MS: "5000"
+    volumes:
+      - ../../intake-worker:/worker:ro
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    depends_on:
+      - registry
+    ports:
+      - "${REGISTRY_TLS_PORT:-8443}:8443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    restart: unless-stopped
+
+  backup:
+    image: postgres:16-alpine
+    depends_on:
+      - postgres
+      - minio-init
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-registry}
+      PGUSER: ${POSTGRES_USER:-registry}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIAPP_BACKUP_BUCKET: ${MINIAPP_BACKUP_BUCKET:-registry-backups}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  minio-data:

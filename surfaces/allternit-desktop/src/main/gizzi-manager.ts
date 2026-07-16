@@ -14,7 +14,6 @@
 
 import { app } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
-import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'node:url';
@@ -27,11 +26,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const GIZZI_PORT = PORTS.GIZZI;
 const HEALTH_TIMEOUT_MS = 30_000;
 
+export interface GizziStartConfig {
+  /** Credential persisted by the installed always-on daemon, when present. */
+  existingPassword?: string | null;
+}
+
+type GizziProbeResult = 'ready' | 'unauthorized' | 'unhealthy' | 'unreachable';
+
 export class GizziManager {
   private static instance: GizziManager;
   private proc: ChildProcess | null = null;
   private password: string | null = null;
-  private lastConfig: any = null;
+  private lastConfig: GizziStartConfig | null = null;
+  private usingExternalRuntime = false;
+  private stopping = false;
   private resolvedBinaryPath: string | null | undefined;
 
   static getInstance(): GizziManager {
@@ -42,10 +50,28 @@ export class GizziManager {
   }
 
   /** Start gizzi-code terminal server. Returns its base URL. */
-  async start(config: any = {}): Promise<string> {
+  async start(config: GizziStartConfig = {}): Promise<string> {
     this.lastConfig = config;
-    if (this.proc) {
+    if (this.proc || this.usingExternalRuntime) {
       return this.getUrl();
+    }
+
+    const existingPassword = config.existingPassword ?? null;
+    const existingRuntime = await this.probe(existingPassword);
+    if (existingRuntime === 'ready') {
+      this.password = existingPassword;
+      this.usingExternalRuntime = true;
+      log.info(`[GizziManager] Reusing existing Gizzi runtime at ${this.getUrl()}`);
+      return this.getUrl();
+    }
+    if (existingRuntime === 'unauthorized') {
+      throw new Error(
+        `A password-protected Gizzi runtime is already using port ${GIZZI_PORT}, ` +
+        'but its configured daemon credential did not match.'
+      );
+    }
+    if (existingRuntime === 'unhealthy') {
+      throw new Error(`Another unhealthy Gizzi runtime is already using port ${GIZZI_PORT}`);
     }
 
     const binaryPath = this.resolveBinaryPath();
@@ -56,8 +82,11 @@ export class GizziManager {
       );
     }
 
-    // Per-session password — prevents other local processes hitting the runtime
-    this.password = crypto.randomBytes(24).toString('hex');
+    // The managed runtime is loopback-only and reachable only through the
+    // signed desktop/API brokers. There is no second user-facing Gizzi login or
+    // persistent Basic credential. `password` remains only for adopting a
+    // legacy daemon until it is reinstalled.
+    this.password = null;
 
     const env: Record<string, string> = {
       ...Object.fromEntries(
@@ -66,10 +95,6 @@ export class GizziManager {
       // Gizzi terminal server config
       GIZZI_PORT: String(GIZZI_PORT),
       GIZZI_HOST: '127.0.0.1',
-      GIZZI_SERVER_USERNAME: 'gizzi',
-      GIZZI_SERVER_PASSWORD: this.password,
-      GIZZI_PASSWORD: this.password,
-      GIZZI_USERNAME: 'gizzi',
       // Point at allternit-api for operator-level routes (vm-session, rails, etc.)
       ALLTERNIT_API_URL: URLS.API,
       NODE_ENV: 'production',
@@ -77,25 +102,30 @@ export class GizziManager {
 
     log.info(`[GizziManager] Starting gizzi-code on port ${GIZZI_PORT} from ${binaryPath}`);
 
-    this.proc = spawn(binaryPath, ['serve', '--port', String(GIZZI_PORT), '--hostname', '127.0.0.1', '--print-logs'], {
+    const proc = spawn(binaryPath, ['serve', '--port', String(GIZZI_PORT), '--hostname', '127.0.0.1', '--print-logs'], {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
+    this.proc = proc;
 
-    this.proc.stdout?.on('data', (d: Buffer) =>
+    proc.stdout?.on('data', (d: Buffer) =>
       log.info('[Gizzi]', d.toString().trim())
     );
-    this.proc.stderr?.on('data', (d: Buffer) =>
+    proc.stderr?.on('data', (d: Buffer) =>
       log.warn('[Gizzi]', d.toString().trim())
     );
-    this.proc.on('exit', (code) => {
+    proc.on('exit', (code) => {
       log.warn(`[GizziManager] exited (code ${code})`);
-      this.proc = null;
-      this.password = null;
+      const intentionalStop = this.stopping;
+      this.stopping = false;
+      if (this.proc === proc) {
+        this.proc = null;
+        this.password = null;
+      }
 
       // Auto-restart logic
-      if (app.isPackaged || process.env.NODE_ENV === 'production') {
+      if (!intentionalStop && this.lastConfig && (app.isPackaged || process.env.NODE_ENV === 'production')) {
         log.info('[GizziManager] AI runtime crashed unexpectedly, respawning in 1s...');
         setTimeout(() => {
           if (this.lastConfig) {
@@ -114,8 +144,16 @@ export class GizziManager {
   }
 
   stop(): void {
+    this.lastConfig = null;
+    if (this.usingExternalRuntime) {
+      log.info('[GizziManager] Detaching from always-on Gizzi runtime');
+      this.usingExternalRuntime = false;
+      this.password = null;
+      return;
+    }
     if (this.proc) {
       log.info('[GizziManager] Stopping…');
+      this.stopping = true;
       this.proc.kill('SIGTERM');
       this.proc = null;
       this.password = null;
@@ -138,9 +176,9 @@ export class GizziManager {
     return this.password;
   }
 
-  /** True if the gizzi-code process is currently managed by this instance */
+  /** True when a spawned or adopted Gizzi runtime is available. */
   isRunning(): boolean {
-    return this.proc !== null;
+    return this.proc !== null || this.usingExternalRuntime;
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────
@@ -151,6 +189,9 @@ export class GizziManager {
     const authHeader = this.getAuthHeader();
 
     while (Date.now() < deadline) {
+      if (!this.proc) {
+        throw new Error('gizzi-code exited before becoming ready');
+      }
       try {
         const res = await fetch(url, {
           signal: AbortSignal.timeout(2000),
@@ -166,6 +207,23 @@ export class GizziManager {
       await new Promise(r => setTimeout(r, 200));
     }
     throw new Error(`gizzi-code did not start within ${HEALTH_TIMEOUT_MS / 1000}s`);
+  }
+
+  private async probe(password: string | null): Promise<GizziProbeResult> {
+    const authHeader = password
+      ? `Basic ${Buffer.from(`gizzi:${password}`).toString('base64')}`
+      : undefined;
+    try {
+      const res = await fetch(`${this.getUrl()}/v1/global/health`, {
+        signal: AbortSignal.timeout(1000),
+        headers: authHeader ? { Authorization: authHeader } : undefined,
+      });
+      if (res.ok || res.status === 404) return 'ready';
+      if (res.status === 401) return 'unauthorized';
+      return 'unhealthy';
+    } catch {
+      return 'unreachable';
+    }
   }
 
   private resolveBinaryPath(): string | null {

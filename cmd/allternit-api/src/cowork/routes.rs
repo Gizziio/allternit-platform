@@ -18,13 +18,18 @@ pub fn background_router(state: Arc<CoworkBgState>) -> Router {
     Router::new()
         .route("/cowork/brain/summary", get(get_summary))
         .route("/cowork/brain/runs", get(get_runs))
-        .route("/cowork/brain/settings", get(get_settings).put(put_settings))
+        .route(
+            "/cowork/brain/settings",
+            get(get_settings).put(put_settings),
+        )
         .with_state(state)
 }
 
 async fn get_summary(State(s): State<Arc<CoworkBgState>>) -> impl axum::response::IntoResponse {
     match s.handle.summary().await {
-        Ok(summary) => axum::Json(serde_json::to_value(summary).unwrap_or_default()).into_response(),
+        Ok(summary) => {
+            axum::Json(serde_json::to_value(summary).unwrap_or_default()).into_response()
+        }
         Err(e) => (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             axum::Json(serde_json::json!({ "error": e.to_string() })),
@@ -54,7 +59,9 @@ async fn get_runs(
 
 async fn get_settings(State(s): State<Arc<CoworkBgState>>) -> impl axum::response::IntoResponse {
     match s.handle.get_settings().await {
-        Ok(settings) => axum::Json(serde_json::to_value(settings).unwrap_or_default()).into_response(),
+        Ok(settings) => {
+            axum::Json(serde_json::to_value(settings).unwrap_or_default()).into_response()
+        }
         Err(e) => (
             axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             axum::Json(serde_json::json!({ "error": e.to_string() })),

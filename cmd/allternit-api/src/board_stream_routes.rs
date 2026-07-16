@@ -1,4 +1,3 @@
-
 //! Board Stream SSE API routes
 
 use axum::extract::Extension;
@@ -14,9 +13,9 @@ use serde_json::json;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::AppState;
-use crate::auth::AuthUser;
 use crate::auth::get_user;
+use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn board_stream_router() -> Router<Arc<AppState>> {
     Router::new()

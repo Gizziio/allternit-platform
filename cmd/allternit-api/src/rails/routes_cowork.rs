@@ -20,8 +20,8 @@ use allternit_cowork_runtime::{
     RunId, RunManager, RunMode, RunState,
 };
 
-use crate::AppState;
 use crate::auth::get_user;
+use crate::AppState;
 
 /// Request to create a new run
 #[derive(Debug, Deserialize)]
@@ -288,7 +288,10 @@ fn db_error(e: rusqlite::Error) -> ErrorResponse {
     }
 }
 
-fn persist_run(conn: &rusqlite::Connection, run: &allternit_cowork_runtime::Run) -> Result<(), rusqlite::Error> {
+fn persist_run(
+    conn: &rusqlite::Connection,
+    run: &allternit_cowork_runtime::Run,
+) -> Result<(), rusqlite::Error> {
     conn.execute(
         "INSERT INTO cowork_runs (id, tenant_id, workspace_id, initiator, mode, state, entrypoint, dag_id, current_job_id, current_checkpoint_id, policy_profile, created_at, updated_at, completed_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
@@ -407,7 +410,8 @@ async fn create_run(
         &run.id.to_string(),
         "run_created",
         json!({ "dag_id": run.dag_id, "mode": run.mode.to_string() }),
-    ).map_err(db_error)?;
+    )
+    .map_err(db_error)?;
 
     Ok(Json(run.into()))
 }
@@ -421,18 +425,19 @@ async fn start_run(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    manager.transition_run_state(run_id, RunState::Planned).await?;
-    manager.transition_run_state(run_id, RunState::Queued).await?;
-    manager.transition_run_state(run_id, RunState::Running).await?;
+    manager
+        .transition_run_state(run_id, RunState::Planned)
+        .await?;
+    manager
+        .transition_run_state(run_id, RunState::Queued)
+        .await?;
+    manager
+        .transition_run_state(run_id, RunState::Running)
+        .await?;
 
     let conn = state.db.connect().map_err(db_error)?;
     update_run_state_in_db(&conn, &run_id.to_string(), RunState::Running).map_err(db_error)?;
-    insert_run_event(
-        &conn,
-        &run_id.to_string(),
-        "run_started",
-        json!({}),
-    ).map_err(db_error)?;
+    insert_run_event(&conn, &run_id.to_string(), "run_started", json!({})).map_err(db_error)?;
 
     Ok(Json(json!({ "started": true })))
 }
@@ -499,7 +504,8 @@ async fn transition_run(
         &run_id.to_string(),
         "run_state_changed",
         json!({ "state": req.state.to_string() }),
-    ).map_err(db_error)?;
+    )
+    .map_err(db_error)?;
 
     Ok(Json(json!({ "ok": true })))
 }
@@ -516,12 +522,7 @@ async fn cancel_run(
 
     let conn = state.db.connect().map_err(db_error)?;
     update_run_state_in_db(&conn, &run_id.to_string(), RunState::Cancelled).map_err(db_error)?;
-    insert_run_event(
-        &conn,
-        &run_id.to_string(),
-        "run_cancelled",
-        json!({}),
-    ).map_err(db_error)?;
+    insert_run_event(&conn, &run_id.to_string(), "run_cancelled", json!({})).map_err(db_error)?;
 
     Ok(Json(json!({ "cancelled": true })))
 }
@@ -591,13 +592,15 @@ async fn create_job(
     conn.execute(
         "UPDATE cowork_runs SET current_job_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
         rusqlite::params![job.id.to_string(), run_id.to_string()],
-    ).map_err(db_error)?;
+    )
+    .map_err(db_error)?;
     insert_run_event(
         &conn,
         &run_id.to_string(),
         "job_created",
         json!({ "job_id": job.id.to_string(), "job_type": job.job_type }),
-    ).map_err(db_error)?;
+    )
+    .map_err(db_error)?;
 
     Ok(Json(job.into()))
 }
@@ -650,7 +653,8 @@ async fn transition_job(
         &run_id,
         "job_state_changed",
         json!({ "job_id": job_id.to_string(), "state": req.state.to_string() }),
-    ).map_err(db_error)?;
+    )
+    .map_err(db_error)?;
 
     Ok(Json(json!({ "ok": true })))
 }
@@ -717,7 +721,8 @@ async fn create_handoff(
     conn.execute(
         "UPDATE cowork_runs SET current_job_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
         rusqlite::params![job.id.to_string(), run_id_str],
-    ).map_err(db_error)?;
+    )
+    .map_err(db_error)?;
     insert_run_event(
         &conn,
         &run_id_str,
@@ -728,7 +733,8 @@ async fn create_handoff(
             "task_id": req.task_id,
             "job_id": job.id.to_string(),
         }),
-    ).map_err(db_error)?;
+    )
+    .map_err(db_error)?;
 
     Ok(Json(HandoffResponse {
         id: handoff_id,
@@ -784,7 +790,9 @@ async fn attach(
         .map(|p| p.into_permissions())
         .unwrap_or_else(PermissionSet::read_only);
 
-    let attachment = manager.attach(run_id, req.client_type, req.session_id, permissions).await?;
+    let attachment = manager
+        .attach(run_id, req.client_type, req.session_id, permissions)
+        .await?;
     Ok(Json(attachment.into()))
 }
 
@@ -820,7 +828,12 @@ async fn list_attachments(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
     let attachments = manager.list_attachments(run_id).await?;
-    Ok(Json(attachments.into_iter().map(AttachmentResponse::from).collect()))
+    Ok(Json(
+        attachments
+            .into_iter()
+            .map(AttachmentResponse::from)
+            .collect(),
+    ))
 }
 
 /// Create a checkpoint
@@ -833,7 +846,9 @@ async fn create_checkpoint(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
 
-    let checkpoint = manager.checkpoint(run_id, None, req.step_index, req.cursor_state).await?;
+    let checkpoint = manager
+        .checkpoint(run_id, None, req.step_index, req.cursor_state)
+        .await?;
 
     let conn = state.db.connect().map_err(db_error)?;
     conn.execute(
@@ -845,7 +860,8 @@ async fn create_checkpoint(
         &run_id.to_string(),
         "checkpoint_created",
         json!({ "checkpoint_id": checkpoint.id }),
-    ).map_err(db_error)?;
+    )
+    .map_err(db_error)?;
 
     Ok(Json(checkpoint.into()))
 }
@@ -859,7 +875,12 @@ async fn list_checkpoints(
     let run_id = parse_run_id(&run_id)?;
     let manager = run_manager(&state)?;
     let checkpoints = manager.list_checkpoints(run_id).await?;
-    Ok(Json(checkpoints.into_iter().map(CheckpointResponse::from).collect()))
+    Ok(Json(
+        checkpoints
+            .into_iter()
+            .map(CheckpointResponse::from)
+            .collect(),
+    ))
 }
 
 /// Recover a run from its latest checkpoint
@@ -883,10 +904,15 @@ async fn recover_run(
                 &run_id.to_string(),
                 "run_recovered",
                 json!({ "checkpoint_id": checkpoint.id, "cursor": cursor }),
-            ).map_err(db_error)?;
-            Ok(Json(json!({ "recovered": true, "checkpoint_id": checkpoint.id, "cursor": cursor })))
+            )
+            .map_err(db_error)?;
+            Ok(Json(
+                json!({ "recovered": true, "checkpoint_id": checkpoint.id, "cursor": cursor }),
+            ))
         }
-        None => Ok(Json(json!({ "recovered": false, "reason": "no checkpoint" }))),
+        None => Ok(Json(
+            json!({ "recovered": false, "reason": "no checkpoint" }),
+        )),
     }
 }
 
@@ -900,7 +926,10 @@ pub fn cowork_routes() -> Router<Arc<AppState>> {
         .route("/runs/:run_id/start", post(start_run))
         .route("/runs/:run_id/cancel", post(cancel_run))
         .route("/runs/:run_id/state", post(transition_run))
-        .route("/runs/:run_id/events", get(get_run_events).post(post_run_event))
+        .route(
+            "/runs/:run_id/events",
+            get(get_run_events).post(post_run_event),
+        )
         .route("/runs/:run_id/events/stream", get(stream_events))
         // Jobs / DAG nodes
         .route("/runs/:run_id/jobs", post(create_job))
@@ -1023,8 +1052,8 @@ async fn get_run_events(
     let rows = stmt
         .query_map(rusqlite::params![&run_id], |row| {
             let payload_str: String = row.get(3)?;
-            let payload: serde_json::Value = serde_json::from_str(&payload_str)
-                .unwrap_or_else(|_| serde_json::Value::Null);
+            let payload: serde_json::Value =
+                serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::Value::Null);
             Ok(RunEventResponse {
                 id: row.get(0)?,
                 run_id: row.get(1)?,
@@ -1055,13 +1084,9 @@ async fn post_run_event(
     let id = uuid::Uuid::new_v4().to_string();
     conn.execute(
         "INSERT INTO cowork_run_events (id, run_id, event_type, payload) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![
-            &id,
-            &run_id,
-            &req.event_type,
-            &req.payload.to_string(),
-        ],
-    ).map_err(db_error)?;
+        rusqlite::params![&id, &run_id, &req.event_type, &req.payload.to_string(),],
+    )
+    .map_err(db_error)?;
 
     Ok(Json(json!({ "id": id })))
 }

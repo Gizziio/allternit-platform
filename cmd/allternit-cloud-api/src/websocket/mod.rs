@@ -1,11 +1,11 @@
 //! WebSocket module for live deployment events
 
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::{
-    extract::{Path, State, Query},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
 };
-use axum::extract::ws::{WebSocket, WebSocketUpgrade, Message};
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use std::sync::Arc;
@@ -44,10 +44,11 @@ pub async fn ws_handler(
     State(state): State<Arc<ApiState>>,
 ) -> impl IntoResponse {
     // Try to get token from multiple sources
-    let token = query.token
+    let token = query
+        .token
         .or_else(|| extract_token_from_header(&headers))
         .or_else(|| extract_token_from_protocol(&headers));
-    
+
     // Validate token if provided
     let token_valid = if let Some(token) = token {
         validate_ws_token(&state.db, &token).await
@@ -101,10 +102,10 @@ fn extract_token_from_protocol(headers: &axum::http::HeaderMap) -> Option<String
 /// Validate WebSocket token against database
 async fn validate_ws_token(db: &sqlx::SqlitePool, token: &str) -> bool {
     use crate::auth::models::ApiToken;
-    
+
     // Simple hash for lookup
     let token_hash = format!("{:x}", md5::compute(token.as_bytes()));
-    
+
     let result: Option<ApiToken> = sqlx::query_as::<_, ApiToken>(
         r#"
         SELECT id, token_hash, name, user_id, permissions, created_at, expires_at, last_used_at, is_revoked
@@ -117,39 +118,33 @@ async fn validate_ws_token(db: &sqlx::SqlitePool, token: &str) -> bool {
     .await
     .ok()
     .flatten();
-    
+
     if let Some(token_record) = result {
         // Check expiration
         if token_record.is_expired() {
             return false;
         }
-        
+
         // Update last_used_at
-        let _ = sqlx::query(
-            "UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?"
-        )
-        .bind(&token_record.id)
-        .execute(db)
-        .await;
-        
+        let _ = sqlx::query("UPDATE api_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE id = ?")
+            .bind(&token_record.id)
+            .execute(db)
+            .await;
+
         return true;
     }
-    
+
     // Check for dev token
     token == "dev-api-token"
 }
 
 /// Handle WebSocket connection
-async fn handle_socket(
-    socket: WebSocket,
-    deployment_id: Uuid,
-    state: Arc<ApiState>,
-) {
+async fn handle_socket(socket: WebSocket, deployment_id: Uuid, state: Arc<ApiState>) {
     let (mut sender, mut receiver) = socket.split();
-    
+
     // Subscribe to deployment events
     let mut rx = state.event_tx.subscribe();
-    
+
     // Spawn task to receive messages from client (mostly for ping/pong)
     let recv_task = tokio::spawn(async move {
         while let Some(msg) = receiver.next().await {
@@ -160,7 +155,7 @@ async fn handle_socket(
             }
         }
     });
-    
+
     // Send deployment events to client
     let send_task = tokio::spawn(async move {
         // Send initial connection message
@@ -172,11 +167,11 @@ async fn handle_socket(
             timestamp: chrono::Utc::now(),
             data: None,
         };
-        
+
         if let Ok(json) = serde_json::to_string(&init_event) {
             let _ = sender.send(Message::Text(json)).await;
         }
-        
+
         // Listen for deployment events
         while let Ok(event) = rx.recv().await {
             // Only send events for this deployment
@@ -189,7 +184,7 @@ async fn handle_socket(
             }
         }
     });
-    
+
     // Wait for either task to complete
     tokio::select! {
         _ = recv_task => {},

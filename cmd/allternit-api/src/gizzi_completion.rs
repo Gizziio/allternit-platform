@@ -29,9 +29,7 @@ pub async fn complete(
         .trim_end_matches('/')
         .to_string();
 
-    let (provider_id, model_id) = model
-        .cloned()
-        .unwrap_or_else(default_model);
+    let (provider_id, model_id) = model.cloned().unwrap_or_else(default_model);
     let model_label = format!("{}/{}", provider_id, model_id);
 
     let client = Client::builder()
@@ -147,7 +145,10 @@ pub async fn complete(
                     let event_type = event.get("type").and_then(|t| t.as_str()).unwrap_or("");
                     let props = &event["properties"];
 
-                    let evt_session = props.get("sessionID").and_then(|v| v.as_str()).unwrap_or("");
+                    let evt_session = props
+                        .get("sessionID")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
                     if !evt_session.is_empty() && evt_session != session_id {
                         continue;
                     }

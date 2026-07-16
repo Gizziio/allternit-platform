@@ -13,8 +13,8 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::{info, warn};
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 struct SshClient;
 
@@ -34,7 +34,10 @@ pub fn ssh_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/ssh", get(ssh_status))
         .route("/ssh-connections", get(list_ssh).post(create_ssh))
-        .route("/ssh-connections/:id", get(get_ssh).put(update_ssh).delete(delete_ssh))
+        .route(
+            "/ssh-connections/:id",
+            get(get_ssh).put(update_ssh).delete(delete_ssh),
+        )
         .route("/ssh-connections/:id/connect", post(connect_ssh))
         .route("/ssh-connections/:id/disconnect", post(disconnect_ssh))
         .route("/ssh-connections/:id/execute", post(execute_ssh))
@@ -104,7 +107,13 @@ async fn create_ssh(
 ) -> impl axum::response::IntoResponse {
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "DB error"}))).into_response(),
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "DB error"})),
+            )
+                .into_response()
+        }
     };
 
     let id = uuid::Uuid::new_v4().to_string();
@@ -132,7 +141,9 @@ async fn get_ssh(
 ) -> impl axum::response::IntoResponse {
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => return (StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))).into_response(),
+        Err(_) => {
+            return (StatusCode::NOT_FOUND, Json(json!({"error": "Not found"}))).into_response()
+        }
     };
 
     let result: Option<(String, String, String, i64, String, String)> = conn
@@ -181,7 +192,15 @@ async fn update_ssh(
                 auth_type = COALESCE(?5, auth_type),
                 updated_at = CURRENT_TIMESTAMP
              WHERE id = ?6 AND user_id = ?7",
-            params![body.name, body.host, body.port, body.username, body.auth_type, id, user_id],
+            params![
+                body.name,
+                body.host,
+                body.port,
+                body.username,
+                body.auth_type,
+                id,
+                user_id
+            ],
         )?;
         Ok::<_, rusqlite::Error>(())
     })
@@ -191,11 +210,19 @@ async fn update_ssh(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error updating ssh: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -223,11 +250,19 @@ async fn delete_ssh(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error deleting ssh: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -255,11 +290,19 @@ async fn connect_ssh(
         Ok(Ok(())) => Json(json!({"success": true, "status": "connected"})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error connecting ssh: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -287,11 +330,19 @@ async fn disconnect_ssh(
         Ok(Ok(())) => Json(json!({"success": true, "status": "disconnected"})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error disconnecting ssh: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -349,11 +400,19 @@ async fn execute_ssh(
         }
         Ok(Err(e)) => {
             warn!("DB error fetching ssh connection: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response();
         }
         Err(e) => {
             warn!("Task panicked: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response();
         }
     };
 
@@ -365,8 +424,15 @@ async fn execute_ssh(
     let mut handle = match client::connect(config, addr, sh).await {
         Ok(h) => h,
         Err(e) => {
-            warn!("SSH connection failed to {}:{}: {}", conn_info.host, conn_info.port, e);
-            return (StatusCode::SERVICE_UNAVAILABLE, Json(json!({"error": "connection_failed", "message": e.to_string()}))).into_response();
+            warn!(
+                "SSH connection failed to {}:{}: {}",
+                conn_info.host, conn_info.port, e
+            );
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": "connection_failed", "message": e.to_string()})),
+            )
+                .into_response();
         }
     };
 
@@ -374,39 +440,67 @@ async fn execute_ssh(
         "password" => {
             let password = conn_info.encrypted_password.unwrap_or_default();
             if password.is_empty() {
-                return (StatusCode::UNPROCESSABLE_ENTITY, Json(json!({"error": "missing_password"}))).into_response();
+                return (
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    Json(json!({"error": "missing_password"})),
+                )
+                    .into_response();
             }
-            handle.authenticate_password(&conn_info.username, password).await
+            handle
+                .authenticate_password(&conn_info.username, password)
+                .await
         }
         "private_key" => {
             let key_pem = conn_info.encrypted_private_key.unwrap_or_default();
             if key_pem.is_empty() {
-                return (StatusCode::UNPROCESSABLE_ENTITY, Json(json!({"error": "missing_private_key"}))).into_response();
+                return (
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    Json(json!({"error": "missing_private_key"})),
+                )
+                    .into_response();
             }
             match russh::keys::decode_secret_key(&key_pem, None) {
                 Ok(key) => {
                     let key_with_alg = russh::keys::PrivateKeyWithHashAlg::new(Arc::new(key), None);
-                    handle.authenticate_publickey(&conn_info.username, key_with_alg).await
+                    handle
+                        .authenticate_publickey(&conn_info.username, key_with_alg)
+                        .await
                 }
                 Err(e) => {
                     warn!("Failed to decode SSH private key: {}", e);
-                    return (StatusCode::UNPROCESSABLE_ENTITY, Json(json!({"error": "invalid_private_key", "message": e.to_string()}))).into_response();
+                    return (
+                        StatusCode::UNPROCESSABLE_ENTITY,
+                        Json(json!({"error": "invalid_private_key", "message": e.to_string()})),
+                    )
+                        .into_response();
                 }
             }
         }
         _ => {
-            return (StatusCode::UNPROCESSABLE_ENTITY, Json(json!({"error": "unsupported_auth_type", "auth_type": conn_info.auth_type}))).into_response();
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({"error": "unsupported_auth_type", "auth_type": conn_info.auth_type})),
+            )
+                .into_response();
         }
     };
 
     match auth_result {
         Ok(russh::client::AuthResult::Success) => {}
         Ok(russh::client::AuthResult::Failure { .. }) => {
-            return (StatusCode::UNAUTHORIZED, Json(json!({"error": "ssh_auth_failed"}))).into_response();
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "ssh_auth_failed"})),
+            )
+                .into_response();
         }
         Err(e) => {
             warn!("SSH authentication error: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "ssh_auth_error", "message": e.to_string()}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "ssh_auth_error", "message": e.to_string()})),
+            )
+                .into_response();
         }
     }
 
@@ -414,13 +508,21 @@ async fn execute_ssh(
         Ok(ch) => ch,
         Err(e) => {
             warn!("Failed to open SSH channel: {}", e);
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "channel_open_failed", "message": e.to_string()}))).into_response();
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "channel_open_failed", "message": e.to_string()})),
+            )
+                .into_response();
         }
     };
 
     if let Err(e) = channel.exec(true, body.command.as_str()).await {
         warn!("Failed to exec command on SSH channel: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "exec_failed", "message": e.to_string()}))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "exec_failed", "message": e.to_string()})),
+        )
+            .into_response();
     }
 
     let mut stdout = String::new();
@@ -443,16 +545,22 @@ async fn execute_ssh(
         }
     }
 
-    let _ = handle.disconnect(russh::Disconnect::ByApplication, "done", "en").await;
+    let _ = handle
+        .disconnect(russh::Disconnect::ByApplication, "done", "en")
+        .await;
 
-    info!("SSH execute success on {}@{}: {}", conn_info.username, conn_info.host, body.command);
+    info!(
+        "SSH execute success on {}@{}: {}",
+        conn_info.username, conn_info.host, body.command
+    );
 
     Json(json!({
         "success": true,
         "stdout": stdout,
         "stderr": stderr,
         "exit_code": exit_code,
-    })).into_response()
+    }))
+    .into_response()
 }
 
 async fn test_ssh(
@@ -465,13 +573,18 @@ async fn test_ssh(
 
     let connections = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, name, host, port FROM ssh_connections WHERE user_id = ?1"
-        )?;
-        let rows = stmt.query_map(params![user_id], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?, row.get::<_, i64>(3)?))
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let mut stmt =
+            conn.prepare("SELECT id, name, host, port FROM ssh_connections WHERE user_id = ?1")?;
+        let rows = stmt
+            .query_map(params![user_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, i64>(3)?,
+                ))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
     })
     .await;
@@ -479,7 +592,11 @@ async fn test_ssh(
     let conns = match connections {
         Ok(Ok(rows)) => rows,
         _ => {
-            return (StatusCode::OK, Json(json!({"success": true, "connections": [], "latency_ms": 0}))).into_response();
+            return (
+                StatusCode::OK,
+                Json(json!({"success": true, "connections": [], "latency_ms": 0})),
+            )
+                .into_response();
         }
     };
 
@@ -519,7 +636,11 @@ async fn test_ssh(
         }
     }
 
-    let avg_latency = if !results.is_empty() { total_latency / results.len() as u64 } else { 0 };
+    let avg_latency = if !results.is_empty() {
+        total_latency / results.len() as u64
+    } else {
+        0
+    };
 
     Json(json!({
         "success": true,
@@ -527,9 +648,9 @@ async fn test_ssh(
         "reachable": reachable,
         "total": results.len(),
         "avg_latency_ms": avg_latency,
-    })).into_response()
+    }))
+    .into_response()
 }
-
 
 async fn ssh_status() -> impl IntoResponse {
     Json(json!({

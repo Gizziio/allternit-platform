@@ -11,15 +11,22 @@ interface AgentGalleryGridProps {
   onSearchChange: (q: string) => void;
   onSelectAgent: (id: string) => void;
   forceListMode?: boolean;
+  /** Cap the grid at 2 columns for narrow embeds (e.g. the Settings modal) instead of the viewport-driven 3/4-column layout. */
+  compact?: boolean;
 }
 
-export function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelectAgent }: AgentGalleryGridProps) {
+export function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelectAgent, compact }: AgentGalleryGridProps) {
   const filtered = agents.filter((a) => {
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
+    const name = typeof a.name === 'string' ? a.name : '';
+    const description = typeof a.description === 'string' ? a.description : '';
+    const capabilities = Array.isArray(a.capabilities) ? a.capabilities : [];
     return (
-      a.name.toLowerCase().includes(q) ||
-      a.description.toLowerCase().includes(q) ||
-      a.capabilities.some((c) => c.toLowerCase().includes(q))
+      name.toLowerCase().includes(q) ||
+      description.toLowerCase().includes(q) ||
+      capabilities.some((capability) =>
+        typeof capability === 'string' && capability.toLowerCase().includes(q)
+      )
     );
   });
 
@@ -28,22 +35,19 @@ export function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelect
   const orgAgents = filtered.filter((a) => a.source === "organization");
 
   return (
-    <div className="py-2 flex flex-col gap-7">
-      {/* Search bar */}
-      <div className="flex items-center gap-2.5 px-2">
-        <div
-          className="flex-1 flex items-center gap-2.5 px-3.5 py-2.5 rounded-[10px] bg-[var(--surface-hover)] border border-solid border-[var(--ui-border-muted)] transition-[border-color] duration-200 focus-within:border-[var(--accent-primary)]"
-        >
-          <MagnifyingGlass size={16} className="text-[var(--text-muted)]" />
+    <div className="flex flex-col gap-8">
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-11 flex-1 items-center gap-2.5 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 transition-colors focus-within:border-[var(--accent-primary)]">
+          <MagnifyingGlass size={16} className="text-[var(--text-tertiary)]" />
           <input aria-label="Input" type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search for agents"
-            className="flex-1 bg-transparent border-none outline-none text-[var(--text-primary)] text-[14px] font-sans"
+            placeholder="Search agents…"
+            className="flex-1 border-none bg-transparent text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
           />
         </div>
         <button type="button"
-          className="size-9 rounded-[10px] border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-hover)] text-[var(--text-muted)] flex items-center justify-center cursor-pointer hover:bg-[var(--bg-secondary)]"
+          className="flex size-11 items-center justify-center rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)]"
         >
           <Faders size={16} />
         </button>
@@ -55,6 +59,7 @@ export function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelect
         agents={myAgents}
         onSelectAgent={onSelectAgent}
         startIndex={0}
+        compact={compact}
       />
 
       {/* From vendor */}
@@ -64,6 +69,7 @@ export function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelect
           agents={vendorAgents}
           onSelectAgent={onSelectAgent}
           startIndex={myAgents.length}
+          compact={compact}
         />
       )}
 
@@ -74,13 +80,14 @@ export function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelect
           agents={orgAgents}
           onSelectAgent={onSelectAgent}
           startIndex={myAgents.length + vendorAgents.length}
+          compact={compact}
         />
       )}
 
       {filtered.length === 0 && (
-        <div className="text-center py-12 px-4 text-[var(--text-muted)]">
-          <MagnifyingGlass size={32} className="mx-auto mb-3 opacity-30" />
-          <p className="text-[14px]">No agents match "{searchQuery}"</p>
+        <div className="px-4 py-24 text-center text-[var(--text-secondary)]">
+          <MagnifyingGlass size={48} className="mx-auto mb-3 text-[var(--text-tertiary)] opacity-40" />
+          <p className="text-sm">No agents match “{searchQuery}”.</p>
         </div>
       )}
     </div>
@@ -92,19 +99,21 @@ function AgentSection({
   agents,
   onSelectAgent,
   startIndex,
+  compact,
 }: {
   title: string;
   agents: Agent[];
   onSelectAgent: (id: string) => void;
   startIndex: number;
+  compact?: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
   if (agents.length === 0) return null;
 
   return (
-    <div className="px-2">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[15px] font-semibold text-[var(--text-primary)] m-0">
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="m-0 text-sm font-medium text-[var(--text-primary)]">
           {title}
         </h2>
         {agents.length > 6 && (
@@ -117,7 +126,7 @@ function AgentSection({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+      <div className={`grid grid-cols-1 gap-5 ${compact ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
         {(expanded ? agents : agents.slice(0, 6)).map((agent, i) => (
           <AgentGalleryCard
             key={agent.id}

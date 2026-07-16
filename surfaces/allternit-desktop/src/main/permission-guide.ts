@@ -3,7 +3,7 @@
  *
  * Cross-platform permission detection + native/Electron overlay guide.
  *
- * macOS:   systemPreferences + native Swift overlay (permission-guide-cli)
+ * macOS:   Electron host requests; macOS attributes grants to Allternit Desktop
  * Windows: desktopCapturer real-capture test + Electron overlay
  * Linux:   desktopCapturer real-capture test + Electron overlay
  */
@@ -193,45 +193,22 @@ export async function presentGuide(panel: PermissionPanel): Promise<PresentResul
 // ─── macOS: Native Swift overlay ─────────────────────────────────────────────
 
 async function presentMacOSGuide(panel: PermissionPanel): Promise<PresentResult> {
-  const binaryPath = resolveBinaryPath();
-  if (!binaryPath) {
-    log.error('[PermissionGuide] Cannot present — binary not found');
-    return { success: false, error: 'permission-guide-cli binary not found' };
-  }
-
-  const panelArg = panel === 'screen-recording' ? 'screen-recording' : 'accessibility';
-  log.info(`[PermissionGuide] Spawning permission-guide-cli with arg: ${panelArg}`);
-
   try {
-    activeProcess = spawn(binaryPath, [panelArg], {
-      detached: false,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
     activePanel = panel;
-
-    log.info(`[PermissionGuide] Spawned PID: ${activeProcess.pid}`);
-
-    activeProcess.stdout?.on('data', (d: Buffer) => {
-      log.info('[PermissionGuide] stdout:', d.toString().trim());
-    });
-    activeProcess.stderr?.on('data', (d: Buffer) => {
-      log.warn('[PermissionGuide] stderr:', d.toString().trim());
-    });
-    activeProcess.on('exit', (code, signal) => {
-      log.info(`[PermissionGuide] Process exited — code: ${code}, signal: ${signal}`);
-      activeProcess = null;
-      activePanel = null;
-    });
-    activeProcess.on('error', (err) => {
-      log.error('[PermissionGuide] Process error:', err);
-      activeProcess = null;
-      activePanel = null;
-    });
-
+    if (panel === 'accessibility') {
+      // `true` raises the native TCC prompt from the Electron main process, so
+      // the privacy row belongs to com.allternit.desktop.
+      systemPreferences.isTrustedAccessibilityClient(true);
+      await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+    } else {
+      // A real host-owned capture attempt registers Allternit in the Screen
+      // Recording pane. The embedded driver never prompts independently.
+      await testScreenCapture();
+      await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+    }
     return { success: true };
   } catch (error) {
-    log.error('[PermissionGuide] Failed to spawn permission-guide-cli:', error);
-    activeProcess = null;
+    log.error('[PermissionGuide] Failed to request host-owned permission:', error);
     activePanel = null;
     return { success: false, error: (error as Error).message };
   }

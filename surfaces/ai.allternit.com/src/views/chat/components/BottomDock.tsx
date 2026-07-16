@@ -28,7 +28,7 @@ function ChatCoworkToggle() {
     <div
       role="group"
       aria-label="Chat or Cowork"
-      className="flex items-center rounded-md overflow-hidden border border-composer-border bg-composer-soft h-7 flex-shrink-0"
+      className="flex items-center rounded-md overflow-hidden border border-composer-border bg-transparent h-7 flex-shrink-0"
     >
       <button
         type="button"
@@ -37,7 +37,7 @@ function ChatCoworkToggle() {
         className={cn(
           'flex items-center gap-1 px-2 h-full border-none transition-all duration-150 text-xs font-semibold',
           mode === 'chat'
-            ? 'bg-composer-hover text-primary'
+            ? 'bg-composer-soft text-primary rounded-r-md'
             : 'bg-transparent text-muted hover:text-primary'
         )}
       >
@@ -51,7 +51,7 @@ function ChatCoworkToggle() {
         className={cn(
           'flex items-center gap-1 px-2 h-full border-none border-l border-composer-border transition-all duration-150 text-xs font-semibold',
           mode === 'cowork'
-            ? 'bg-composer-hover text-[var(--accent-cowork)]'
+            ? 'bg-composer-soft text-primary rounded-l-md'
             : 'bg-transparent text-muted hover:text-primary'
         )}
       >

@@ -5,13 +5,12 @@
 import React from 'react';
 import { CaretLeft, X } from '@phosphor-icons/react';
 import { AgentAvatar } from '@/components/Avatar/AgentAvatar';
-import type { Agent, CharacterStats } from '@/lib/agents/agent.types';
+import type { Agent } from '@/lib/agents/agent.types';
 
 type TabId = 'overview' | 'runs' | 'tasks' | 'checkpoints' | 'tools' | 'comms' | 'monitoring' | 'environment' | 'swarm' | 'character' | 'workspace' | 'settings';
 
 interface DashboardHeaderProps {
   agent: Agent;
-  stats?: CharacterStats;
   onClose?: () => void;
   activeTab: TabId;
 }
@@ -31,7 +30,7 @@ const tabLabels: Record<TabId, string> = {
   settings: 'Settings',
 };
 
-export const DashboardHeader = ({ agent, stats, onClose, activeTab }: DashboardHeaderProps) => {
+export const DashboardHeader = ({ agent, onClose, activeTab }: DashboardHeaderProps) => {
   return (
     <div className="bg-studio-card text-studio-text-primary flex items-center justify-between border-b border-studio-border-subtle px-5 py-4">
       <div className="flex items-center gap-4">
@@ -48,8 +47,8 @@ export const DashboardHeader = ({ agent, stats, onClose, activeTab }: DashboardH
           </div>
           <div>
             <h3 className="font-semibold text-base text-white [font-family:var(--font-research)]">{agent.name}</h3>
-            <p className="text-xs text-studio-text-muted mt-0.5">
-              {stats?.class || 'Agent'} • Level {stats?.level || 1}
+            <p className="text-xs text-studio-text-muted mt-0.5 capitalize">
+              {agent.type} • {agent.status}
             </p>
           </div>
         </div>

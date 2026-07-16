@@ -1,4 +1,4 @@
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -93,7 +93,8 @@ fn now_unix() -> u64 {
 }
 
 fn init_db(conn: &Connection) -> rusqlite::Result<()> {
-    conn.execute_batch("
+    conn.execute_batch(
+        "
         PRAGMA journal_mode=WAL;
         PRAGMA synchronous=NORMAL;
 
@@ -119,7 +120,8 @@ fn init_db(conn: &Connection) -> rusqlite::Result<()> {
         );
 
         INSERT OR IGNORE INTO background_settings (id) VALUES (1);
-    ")
+    ",
+    )
 }
 
 fn load_settings(conn: &Connection) -> rusqlite::Result<BackgroundSettings> {
@@ -209,8 +211,10 @@ fn recent_runs(conn: &Connection, limit: u32) -> rusqlite::Result<Vec<Background
 }
 
 fn run_count(conn: &Connection) -> rusqlite::Result<u64> {
-    conn.query_row("SELECT COUNT(*) FROM background_runs", [], |r| r.get::<_, i64>(0))
-        .map(|n| n as u64)
+    conn.query_row("SELECT COUNT(*) FROM background_runs", [], |r| {
+        r.get::<_, i64>(0)
+    })
+    .map(|n| n as u64)
 }
 
 fn last_run_at(conn: &Connection) -> rusqlite::Result<Option<u64>> {
@@ -288,7 +292,10 @@ impl CoworkBackgroundService {
             }
 
             let cadence = Duration::from_secs(settings.cadence_minutes * 60);
-            info!("Background service: next cycle in {} min", settings.cadence_minutes);
+            info!(
+                "Background service: next cycle in {} min",
+                settings.cadence_minutes
+            );
             sleep(cadence).await;
         }
     }
@@ -344,7 +351,9 @@ impl CoworkBackgroundService {
             let conn = self.db.lock().await;
             update_run(&conn, &run)?;
         }
-        let critique_passed = self.critique(&settings.api_url, &evidence, &hypothesis).await;
+        let critique_passed = self
+            .critique(&settings.api_url, &evidence, &hypothesis)
+            .await;
 
         // Phase 4: Synthesize decision
         run.stage = RunStage::Synthesizing;
@@ -355,7 +364,10 @@ impl CoworkBackgroundService {
         let (outcome, decision) = if critique_passed {
             (RunOutcome::Suggest, format!("Suggestion: {hypothesis}"))
         } else {
-            (RunOutcome::Defer, "Critique rejected hypothesis — deferring".to_string())
+            (
+                RunOutcome::Defer,
+                "Critique rejected hypothesis — deferring".to_string(),
+            )
         };
         run.decision = Some(decision.clone());
 
@@ -381,7 +393,10 @@ impl CoworkBackgroundService {
             update_run(&conn, &run)?;
         }
 
-        info!("Background service: cycle {run_id} completed — {:?}", run.outcome);
+        info!(
+            "Background service: cycle {run_id} completed — {:?}",
+            run.outcome
+        );
         Ok(())
     }
 
@@ -395,7 +410,10 @@ impl CoworkBackgroundService {
             Ok(res) if res.status().is_success() => {
                 if let Ok(body) = res.text().await {
                     if body.len() > 20 {
-                        parts.push(format!("Recent cowork sessions: {}", &body[..body.len().min(500)]));
+                        parts.push(format!(
+                            "Recent cowork sessions: {}",
+                            &body[..body.len().min(500)]
+                        ));
                     }
                 }
             }
@@ -408,7 +426,10 @@ impl CoworkBackgroundService {
             Ok(res) if res.status().is_success() => {
                 if let Ok(body) = res.text().await {
                     if body.len() > 20 {
-                        parts.push(format!("Recent cowork runs: {}", &body[..body.len().min(500)]));
+                        parts.push(format!(
+                            "Recent cowork runs: {}",
+                            &body[..body.len().min(500)]
+                        ));
                     }
                 }
             }
@@ -422,7 +443,13 @@ impl CoworkBackgroundService {
         }
     }
 
-    async fn call_run_agent(&self, api_url: &str, agent_id: &str, role: &str, prompt: &str) -> Option<String> {
+    async fn call_run_agent(
+        &self,
+        api_url: &str,
+        agent_id: &str,
+        role: &str,
+        prompt: &str,
+    ) -> Option<String> {
         let client = reqwest::Client::new();
         let body = serde_json::json!({
             "spec": { "id": agent_id, "role": role, "prompt": prompt }
@@ -435,7 +462,10 @@ impl CoworkBackgroundService {
         {
             Ok(res) if res.status().is_success() => {
                 if let Ok(json) = res.json::<serde_json::Value>().await {
-                    return json.get("output").and_then(|v| v.as_str()).map(|s| s.to_string());
+                    return json
+                        .get("output")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
                 }
             }
             _ => {}
@@ -449,14 +479,22 @@ impl CoworkBackgroundService {
         );
         self.call_run_agent(api_url, "bg-ideate", "strategist", &prompt)
             .await
-            .unwrap_or_else(|| format!("Consider reviewing recent cowork activity: {}", &evidence[..evidence.len().min(100)]))
+            .unwrap_or_else(|| {
+                format!(
+                    "Consider reviewing recent cowork activity: {}",
+                    &evidence[..evidence.len().min(100)]
+                )
+            })
     }
 
     async fn critique(&self, api_url: &str, evidence: &str, hypothesis: &str) -> bool {
         let prompt = format!(
             "Evidence: {evidence}\nProposed suggestion: {hypothesis}\n\nIs this suggestion useful and actionable? Reply with only 'yes' or 'no'."
         );
-        match self.call_run_agent(api_url, "bg-critique", "critic", &prompt).await {
+        match self
+            .call_run_agent(api_url, "bg-critique", "critic", &prompt)
+            .await
+        {
             Some(text) => text.trim().to_lowercase().starts_with("yes"),
             None => true,
         }

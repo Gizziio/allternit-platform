@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { 
   X, 
@@ -35,10 +35,11 @@ const STUDIO_THEME = {
 };
 
 export function AgentDetailView({ agentId }: { agentId: string }) {
-  
+
   const {
     agents,
-    characterStats,
+    runs,
+    fetchRuns,
     selectAgent,
     setIsEditing,
     deleteAgent,
@@ -46,10 +47,14 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
   } = useAgentStore();
 
   const agent = agents.find(a => a.id === agentId);
-  
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
-  
+
+  useEffect(() => {
+    fetchRuns(agentId);
+  }, [agentId, fetchRuns]);
+
   if (!agent) {
     return null;
   }
@@ -84,7 +89,20 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
   const blueprint = parseCharacterBlueprint(agent?.config);
   const setupId = blueprint?.setup || "generalist";
   const avatarConfig = (agent?.config?.avatar as AvatarConfig) || createDefaultAvatarConfig(setupId);
-  const agentCharacterStats = characterStats[agentId];
+
+  const agentRuns = runs[agentId] || [];
+  const completedRuns = agentRuns.filter(r => r.status === 'completed');
+  const failedRuns = agentRuns.filter(r => r.status === 'failed');
+  const finishedRuns = completedRuns.length + failedRuns.length;
+  const successRate = finishedRuns > 0 ? Math.round((completedRuns.length / finishedRuns) * 100) : null;
+  const durations = completedRuns
+    .filter(r => r.completedAt)
+    .map(r => new Date(r.completedAt!).getTime() - new Date(r.startedAt).getTime())
+    .filter(ms => ms > 0);
+  const avgResponseSeconds = durations.length > 0
+    ? Math.round((durations.reduce((sum, ms) => sum + ms, 0) / durations.length) / 1000)
+    : null;
+  const lastActive = agent.lastRunAt || agentRuns[0]?.startedAt;
 
   const statusColors: Record<string, string> = {
     'online': 'var(--status-success)',
@@ -644,7 +662,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
           </div>
         </div>
 
-        {/* Statistics Card */}
+        {/* Performance Card */}
         <div style={{
           flex: 1,
           borderRadius: '16px',
@@ -665,84 +683,57 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
               letterSpacing: '0.1em',
               color: STUDIO_THEME.textMuted,
             }}>
-              Character Stats
+              Performance
             </span>
           </div>
 
           <div style={{ padding: '20px', flex: 1 }}>
-            {agentCharacterStats ? (
-              <>
-                {/* Level & Class */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  marginBottom: '20px',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: `color-mix(in srgb, var(--accent-primary) 10%, transparent)`,
-                  border: `1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)`,
-                }}>
-                  <div>
-                    <div style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginBottom: '2px' }}>Class</div>
-                    <div style={{ fontSize: '14px', color: STUDIO_THEME.textPrimary, fontWeight: 600 }}>{agentCharacterStats.class}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginBottom: '2px' }}>Level</div>
-                    <div style={{ fontSize: '24px', color: STUDIO_THEME.accent, fontWeight: 700 }}>{agentCharacterStats.level}</div>
-                  </div>
-                </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '20px',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              background: `color-mix(in srgb, var(--accent-primary) 10%, transparent)`,
+              border: `1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)`,
+            }}>
+              <div>
+                <div style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginBottom: '2px' }}>Status</div>
+                <div style={{ fontSize: '14px', color: STUDIO_THEME.textPrimary, fontWeight: 600, textTransform: 'capitalize' }}>{agent.status}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginBottom: '2px' }}>Total Runs</div>
+                <div style={{ fontSize: '24px', color: STUDIO_THEME.accent, fontWeight: 700 }}>{agentRuns.length}</div>
+              </div>
+            </div>
 
-                {/* Stats */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {agentCharacterStats.relevantStats.slice(0, 4).map((statKey) => {
-                    const definition = agentCharacterStats.statDefinitions.find((item) => item.key === statKey);
-                    return (
-                      <div key={statKey} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                      }}>
-                        <span style={{
-                          fontSize: '12px',
-                          color: STUDIO_THEME.textSecondary,
-                          width: '80px',
-                        }}>
-                          {definition?.label || statKey}
-                        </span>
-                        <div style={{
-                          flex: 1,
-                          height: '6px',
-                          background: 'var(--ui-border-default)',
-                          borderRadius: '3px',
-                          overflow: 'hidden',
-                        }}>
-                          <div style={{
-                            width: `${agentCharacterStats.stats[statKey]}%`,
-                            height: '100%',
-                            background: `linear-gradient(90deg, ${STUDIO_THEME.accent}, var(--accent-secondary))`,
-                            borderRadius: '3px',
-                          }} />
-                        </div>
-                        <span style={{
-                          fontSize: '12px',
-                          color: STUDIO_THEME.textPrimary,
-                          fontWeight: 600,
-                          width: '32px',
-                          textAlign: 'right',
-                        }}>
-                          {agentCharacterStats.stats[statKey]}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Success Rate</span>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 600 }}>
+                  {successRate != null ? `${successRate}%` : '—'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Avg Response Time</span>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 600 }}>
+                  {avgResponseSeconds != null ? `${avgResponseSeconds}s` : '—'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Last Active</span>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 600 }}>
+                  {lastActive ? new Date(lastActive).toLocaleDateString() : '—'}
+                </span>
+              </div>
+            </div>
+
+            {agentRuns.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px 0 0' }}>
                 <Sparkle style={{ width: 32, height: 32, color: STUDIO_THEME.textMuted, margin: '0 auto 12px' }} />
                 <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>
-                  No character stats available
+                  No runs yet — metrics will populate after this agent runs.
                 </p>
               </div>
             )}

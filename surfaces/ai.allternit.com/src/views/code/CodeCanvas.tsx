@@ -8,6 +8,7 @@ import {
   Stack,
   Lightning,
   FolderSimple,
+  ChartBar,
 } from '@phosphor-icons/react';
 import {
   Conversation,
@@ -55,6 +56,8 @@ import {
 import { usePendingPermissions, usePendingQuestions } from '@/lib/agents';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
+import { SessionTodoDock, useSessionComposerState } from '@/components/session-composer';
+import { gizziBaseUrl } from '@/lib/agents/api-config';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -90,7 +93,6 @@ interface ActionGroup {
 
 interface CodeCanvasProps {
   isPreviewCollapsed: boolean;
-  onOpenSideTab?: (tab: 'files' | 'preview' | 'terminal' | 'git') => void;
 }
 
 interface CodeModelSelection {
@@ -256,7 +258,7 @@ const codeMenuTheme = {
   hoverBg: 'var(--surface-hover)',
 };
 
-export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed, onOpenSideTab }: CodeCanvasProps) {
+export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanvasProps) {
   const openDrawer = useDrawerStore((state) => state.openDrawer);
   const setConsoleTab = useDrawerStore((state) => state.setConsoleTab);
   const embeddedSessionId = useCodeSessionStore((s) => s.activeSessionId);
@@ -642,6 +644,9 @@ function CodeSessionSurface({
   // Tracks the gizzi ses_* ID for regular (non-agent) chat within this surface instance
   const [regularChatSessionId, setRegularChatSessionId] = useState<string | null>(null);
   const regularChatSessionCreating = useRef(false);
+  // Worktree preference chosen before a session exists yet; once a session is
+  // active, its metadata.isolation is the source of truth instead.
+  const [pendingWorktree, setPendingWorktree] = useState(false);
   const [agentModePulse, setAgentModePulse] = useState(0);
   const prevAgentModeEnabledRef = useRef(agentModeEnabled);
   if (prevAgentModeEnabledRef.current !== agentModeEnabled) {
@@ -706,13 +711,20 @@ function CodeSessionSurface({
       layoutMode === 'thread' ? 'canvas' : 'thread',
     );
   }, [activeWorkspaceId, layoutMode]);
+  const codeSession = embeddedAgentSession?.session as CodeSession | null | undefined;
+  const worktreeEnabled = isEmbeddedAgentSession
+    ? codeSession?.metadata?.isolation === 'worktree'
+    : pendingWorktree;
   const handleToggleWorktree = useCallback(() => {
-    if (!activeSessionId) return;
-    useCodeModeStore.getState().setSessionIsolation(
-      activeSessionId,
-      activeSession?.isolation === 'worktree' ? 'sandbox' : 'worktree',
-    );
-  }, [activeSessionId, activeSession?.isolation]);
+    if (isEmbeddedAgentSession && embeddedAgentSession?.sessionId) {
+      const nextIsolation = codeSession?.metadata?.isolation === 'worktree' ? 'none' : 'worktree';
+      void useCodeSessionStore.getState().updateSession(embeddedAgentSession.sessionId, {
+        metadata: { ...codeSession?.metadata, isolation: nextIsolation },
+      });
+      return;
+    }
+    setPendingWorktree((prev) => !prev);
+  }, [isEmbeddedAgentSession, embeddedAgentSession?.sessionId, codeSession]);
   const handleOpenFolder = useCallback(async () => {
     try {
       if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
@@ -734,7 +746,6 @@ function CodeSessionSurface({
   const handleSwitchBranch = useCallback((_branch: string) => {
     // Reserved for git branch switching once a backend action is available.
   }, []);
-  const codeSession = embeddedAgentSession?.session as CodeSession | null | undefined;
   // Only sessions actually bound to an agent (agent metadata present) get the
   // context strip — a plain code session must not render the agent card.
   const hasAgentBinding = Boolean(
@@ -785,6 +796,7 @@ function CodeSessionSurface({
           agentId: selectedAgent?.id,
           agentName: selectedAgent?.name,
           workspaceId: activeWorkspaceId,
+          isolation: pendingWorktree ? 'worktree' : 'none',
           metadata: {
             runtimeModel: selectedAgent?.model,
             agentFeatures: { workspace: true, tools: true, automation: true },
@@ -804,7 +816,11 @@ function CodeSessionSurface({
     if (!sessionId && !regularChatSessionCreating.current) {
       regularChatSessionCreating.current = true;
       try {
-        sessionId = await createCodeSession({ name: 'Code Session', workspaceId: activeWorkspaceId });
+        sessionId = await createCodeSession({
+          name: 'Code Session',
+          workspaceId: activeWorkspaceId,
+          isolation: pendingWorktree ? 'worktree' : 'none',
+        });
         setRegularChatSessionId(sessionId);
       } catch (err) {
         logger.warn({ err: err }, 'Session creation failed');
@@ -828,6 +844,7 @@ function CodeSessionSurface({
     embeddedAgentSession?.sessionId,
     effectiveModelId,
     isEmbeddedAgentSession,
+    pendingWorktree,
     regularChatSessionId,
     sendCodeMessageStream,
     selectedAgent,
@@ -968,6 +985,7 @@ function CodeSessionSurface({
         onOpenFolder={handleOpenFolder}
         onRefreshWorkspace={handleRefreshWorkspace}
         onToggleWorktree={handleToggleWorktree}
+        worktreeEnabled={worktreeEnabled}
         onSwitchBranch={handleSwitchBranch}
       />
     );
@@ -975,7 +993,6 @@ function CodeSessionSurface({
 
   return (
     <LaunchpadStage
-      activeAction={activeAction}
       activeWorkspace={activeWorkspace}
       activeSession={activeSession}
       agentContextStrip={embeddedAgentStrip}
@@ -985,11 +1002,8 @@ function CodeSessionSurface({
       isProcessing={isProcessing}
       onOpenConsole={onOpenConsole}
       onSelectModel={onSelectModel}
-      onPreviewTemplate={onPreviewTemplate}
-      onSelectTemplate={onSelectTemplate}
       onSend={handleSend}
       onSetActiveSession={onSetActiveSession}
-      onToggleAction={onToggleAction}
       onToggleSessionPicker={onToggleSessionPicker}
       onToggleWorkspacePicker={onToggleWorkspacePicker}
       selectedModel={selectedModel}
@@ -1019,13 +1033,13 @@ function CodeSessionSurface({
       onOpenFolder={handleOpenFolder}
       onRefreshWorkspace={handleRefreshWorkspace}
       onToggleWorktree={handleToggleWorktree}
+      worktreeEnabled={worktreeEnabled}
       onSwitchBranch={handleSwitchBranch}
     />
   );
 }
 
 function LaunchpadStage({
-  activeAction,
   activeWorkspace,
   activeSession,
   agentContextStrip,
@@ -1035,11 +1049,8 @@ function LaunchpadStage({
   isProcessing,
   onOpenConsole,
   onSelectModel,
-  onPreviewTemplate,
-  onSelectTemplate,
   onSend,
   onSetActiveSession,
-  onToggleAction,
   onToggleSessionPicker,
   onToggleWorkspacePicker,
   selectedModel,
@@ -1066,13 +1077,12 @@ function LaunchpadStage({
   composerTopInfoBar,
   composerQuestionBar,
   bottomDockContent,
-  onOpenSideTab,
   onOpenFolder,
   onRefreshWorkspace,
   onToggleWorktree,
+  worktreeEnabled,
   onSwitchBranch,
 }: {
-  activeAction: ActionGroup | null;
   activeWorkspace: ReturnType<typeof getActiveWorkspace>;
   activeSession: ReturnType<typeof getActiveSession>;
   agentContextStrip?: React.ReactNode;
@@ -1082,11 +1092,8 @@ function LaunchpadStage({
   isProcessing: boolean;
   onOpenConsole: () => void;
   onSelectModel: (selection: CodeModelSelection) => void;
-  onPreviewTemplate: (prompt: string) => void;
-  onSelectTemplate: (prompt: string) => void;
   onSend: (text: string) => void;
   onSetActiveSession: (sessionId: string) => void;
-  onToggleAction: (id: ActionGroupId) => void;
   onToggleSessionPicker: () => void;
   onToggleWorkspacePicker: () => void;
   selectedModel: string;
@@ -1113,10 +1120,10 @@ function LaunchpadStage({
   composerTopInfoBar: React.ReactNode;
   composerQuestionBar: React.ReactNode;
   bottomDockContent: React.ReactNode;
-  onOpenSideTab?: (tab: 'files' | 'preview' | 'terminal' | 'git') => void;
   onOpenFolder?: () => void;
   onRefreshWorkspace?: () => void;
   onToggleWorktree?: () => void;
+  worktreeEnabled: boolean;
   onSwitchBranch?: (branch: string) => void;
 }) {
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
@@ -1187,10 +1194,25 @@ function LaunchpadStage({
         >
           Run a command or describe a task to start coding.
         </div>
-        {showUsage && (
+        {showUsage ? (
           <div style={{ marginTop: 24 }}>
             <CodeUsageDashboard onClose={() => setShowUsage(false)} />
           </div>
+        ) : (
+          <button
+            type="button"
+            data-testid="code-show-usage"
+            onClick={() => setShowUsage(true)}
+            style={{
+              ...pillControlStyle,
+              marginTop: 24,
+              width: 'fit-content',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <ChartBar size={14} />
+            Show usage
+          </button>
         )}
       </div>
 
@@ -1211,7 +1233,7 @@ function LaunchpadStage({
         >
           <CodeWorkspaceBar
             activeWorkspace={activeWorkspace}
-            activeSession={activeSession}
+            worktreeEnabled={worktreeEnabled}
             activeWorkspaceId={activeWorkspaceId}
             workspaces={workspaces}
             workspaceReady={workspaceReady}
@@ -1326,10 +1348,10 @@ function ConversationStage({
   composerTopInfoBar,
   composerQuestionBar,
   bottomDockContent,
-  onOpenSideTab,
   onOpenFolder,
   onRefreshWorkspace,
   onToggleWorktree,
+  worktreeEnabled,
   onSwitchBranch,
 }: {
   activeAction: ActionGroup | null;
@@ -1376,10 +1398,10 @@ function ConversationStage({
   composerTopInfoBar: React.ReactNode;
   composerQuestionBar: React.ReactNode;
   bottomDockContent: React.ReactNode;
-  onOpenSideTab?: (tab: 'files' | 'preview' | 'terminal' | 'git') => void;
   onOpenFolder?: () => void;
   onRefreshWorkspace?: () => void;
   onToggleWorktree?: () => void;
+  worktreeEnabled: boolean;
   onSwitchBranch?: (branch: string) => void;
 }) {
   const codeSessions = useCodeSessionStore((s) => s.sessions ?? []);
@@ -1388,6 +1410,12 @@ function ConversationStage({
     () => codeSessions.find((s) => s.id === activeCodeSessionId) ?? null,
     [activeCodeSessionId, codeSessions],
   );
+  const {
+    todos,
+    allTodosDone,
+    todosVisible,
+    dismissTodos,
+  } = useSessionComposerState(gizziBaseUrl(), activeCodeSessionId ?? '__inactive__');
   const sessionDisplayName = activeCodeSession?.name ?? activeSession?.title ?? 'Code Session';
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
   return (
@@ -1507,29 +1535,18 @@ function ConversationStage({
         }}
       >
         <div style={{ width: '100%', maxWidth: CONTENT_WIDTH, margin: '0 auto' }}>
-          {/* Top deck sits behind the composer card, full composer width */}
-          <div
-            data-testid="code-top-deck"
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              marginBottom: -12,
-              padding: '0 0 16px',
-            }}
-          >
-            <CodeWorkspaceBar
-              activeWorkspace={activeWorkspace}
-              activeSession={activeSession}
-              activeWorkspaceId={activeWorkspaceId}
-              workspaces={workspaces}
-              workspaceReady={workspaceReady}
-              onConfirmWorkspace={onConfirmWorkspace}
-              onOpenFolder={onOpenFolder}
-              onRefresh={onRefreshWorkspace}
-              onToggleWorktree={onToggleWorktree}
-              onSwitchBranch={onSwitchBranch}
-            />
-          </div>
+          {todosVisible && (
+            <div
+              data-testid="code-session-todos"
+              style={{ position: 'relative', zIndex: 1, marginBottom: 8 }}
+            >
+              <SessionTodoDock
+                todos={todos}
+                allDone={allTodosDone}
+                onDismiss={dismissTodos}
+              />
+            </div>
+          )}
           <div data-testid="code-shared-composer" style={{ position: 'relative', zIndex: 2, marginTop: 8 }}>
             <ACIComputerUseBar suppressInBrowserMode />
             {attachmentPreviewItems.length > 0 && (
@@ -1651,5 +1668,3 @@ function CodeComposerMetadata({
     </div>
   );
 }
-
-

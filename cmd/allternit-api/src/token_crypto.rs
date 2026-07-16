@@ -19,10 +19,7 @@ use sha2::{Digest, Sha256};
 const ENC_PREFIX: &str = "enc:v1:";
 const PLAIN_PREFIX: &str = "plain:";
 
-/// OS-keychain account holding the auto-generated platform encryption key, so
-/// token sealing is zero-touch and persistent across restarts with no plaintext
-/// file and nothing for the user to configure.
-pub const PLATFORM_KEY_ACCOUNT: &str = "platform:encryption-key";
+const PLATFORM_KEY_FILE: &str = "connector-encryption.key";
 
 fn derive(passphrase: &str) -> [u8; 32] {
     let digest = Sha256::digest(passphrase.as_bytes());
@@ -34,31 +31,53 @@ fn derive(passphrase: &str) -> [u8; 32] {
 fn key_bytes() -> Option<[u8; 32]> {
     static K: std::sync::OnceLock<[u8; 32]> = std::sync::OnceLock::new();
     // Return a cached key when we have one. Critically, do NOT cache a negative
-    // result: the first-run wizard may generate the keychain key mid-process, and
+    // result: the first-run wizard may generate the runtime key mid-process, and
     // a cached None would pin this process to plaintext until restart. Re-probe
     // the sources whenever no key is cached yet.
     if let Some(k) = K.get() {
         return Some(*k);
     }
-    // Align with the platform's canonical encryption knob: `ENCRYPTION_KEY`
-    // (config.rs::encryption_key, also backed by company.json). Keep
-    // `ALLTERNIT_ENCRYPTION_KEY` as an explicit override, then fall back to the
-    // zero-touch keychain key generated on first run — one secret drives both
-    // the platform and connector-token sealing, no split-brain key.
+    // The signed desktop process provides `ALLTERNIT_ENCRYPTION_KEY`. Headless
+    // runtimes fall back to a mode-0600 runtime file; this process never talks
+    // to OS Keychain.
     let raw = std::env::var("ALLTERNIT_ENCRYPTION_KEY")
         .ok()
         .filter(|s| !s.is_empty())
-        .or_else(|| std::env::var("ENCRYPTION_KEY").ok().filter(|s| !s.is_empty()))
-        .or_else(|| crate::secrets::get_secret(PLATFORM_KEY_ACCOUNT))?;
+        .or_else(|| {
+            std::env::var("ENCRYPTION_KEY")
+                .ok()
+                .filter(|s| !s.is_empty())
+        })
+        .or_else(read_runtime_key)?;
     let k = derive(&raw);
     let _ = K.set(k); // ignore Err if another thread raced us
     Some(*K.get().unwrap())
 }
 
-/// Ensure an encryption key exists: env override → keychain (auto-generated on
-/// first run). Called once at startup before any connector op so the cached key
-/// is warm. Returns true if sealing is available, false if every source failed
-/// (headless keychain) — tokens then store `plain:` for that process only.
+fn runtime_key_path() -> std::path::PathBuf {
+    if let Ok(path) = std::env::var("ALLTERNIT_PLATFORM_KEY_FILE") {
+        if !path.is_empty() {
+            return path.into();
+        }
+    }
+    let directory = std::env::var("ALLTERNIT_DATA_DIR")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| dirs::data_dir().map(|path| path.join("allternit")))
+        .unwrap_or_else(|| std::path::PathBuf::from("/var/lib/allternit"));
+    directory.join(PLATFORM_KEY_FILE)
+}
+
+fn read_runtime_key() -> Option<String> {
+    std::fs::read_to_string(runtime_key_path())
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+/// Ensure an encryption key exists. Desktop supplies it from Electron
+/// `safeStorage`; headless/VPS mode creates a private local runtime key.
 pub fn ensure_platform_key() -> bool {
     if encryption_enabled() {
         return true;
@@ -68,10 +87,32 @@ pub fn ensure_platform_key() -> bool {
     bytes[..16].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
     bytes[16..].copy_from_slice(uuid::Uuid::new_v4().as_bytes());
     let passphrase = hex::encode(bytes);
-    if crate::secrets::set_secret(PLATFORM_KEY_ACCOUNT, &passphrase).is_err() {
-        return false;
+    let path = runtime_key_path();
+    if let Some(parent) = path.parent() {
+        if std::fs::create_dir_all(parent).is_err() {
+            return false;
+        }
     }
-    true
+
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    match options.open(&path) {
+        Ok(mut file) => {
+            use std::io::Write;
+            if file.write_all(passphrase.as_bytes()).is_err() {
+                let _ = std::fs::remove_file(&path);
+                return false;
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(_) => return false,
+    }
+    key_bytes().is_some()
 }
 
 pub fn encryption_enabled() -> bool {

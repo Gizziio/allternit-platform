@@ -52,32 +52,42 @@ fi
 # ── Open Notebook FastAPI ────────────────────────────────────────────────────
 if port_open "$ON_PORT"; then
   echo "[dev] Open Notebook backend already running on $ON_PORT"
-  exit 0
+else
+  VENV_UVICORN="$SCRIPT_DIR/.venv/bin/uvicorn"
+  if [ ! -x "$VENV_UVICORN" ]; then
+    echo "[dev] Repo venv missing at $SCRIPT_DIR/.venv — run: uv sync (or python3 -m venv .venv && .venv/bin/pip install -e .) inside services/open-notebook first."
+    exit 1
+  fi
+
+  echo "[dev] Starting Open Notebook backend on $ON_PORT..."
+  # OLLAMA_MODEL: the platform default is qwen3:4b (see cmd/gizzi-code's sidecar
+  # config) but that's a multi-GB pull not guaranteed to be on every dev
+  # machine; qwen2.5:0.5b is a smaller stand-in already available locally.
+  # Export OLLAMA_MODEL=qwen3:4b yourself once you've pulled it.
+  (
+    cd "$SCRIPT_DIR/src"
+    SURREAL_URL="ws://127.0.0.1:$SURREAL_PORT/rpc" \
+    SURREAL_USER="root" \
+    SURREAL_PASSWORD="root" \
+    SURREAL_NAMESPACE="open_notebook" \
+    SURREAL_DATABASE="open_notebook" \
+    OPEN_NOTEBOOK_ENCRYPTION_KEY="${OPEN_NOTEBOOK_ENCRYPTION_KEY:-allternit-default-key-change-me}" \
+    OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5:0.5b}" \
+    nohup "$VENV_UVICORN" main:app --host 127.0.0.1 --port "$ON_PORT" \
+      > "$DATA_DIR/backend.log" 2>&1 &
+    disown
+  )
+
+  for _ in $(seq 1 30); do
+    port_open "$ON_PORT" && break
+    sleep 1
+  done
+  port_open "$ON_PORT" || { echo "[dev] Open Notebook backend failed to start — see $DATA_DIR/backend.log"; exit 1; }
+  echo "[dev] Open Notebook backend ready on http://127.0.0.1:$ON_PORT"
 fi
 
-VENV_UVICORN="$SCRIPT_DIR/.venv/bin/uvicorn"
-if [ ! -x "$VENV_UVICORN" ]; then
-  echo "[dev] Repo venv missing at $SCRIPT_DIR/.venv — run: uv sync (or python3 -m venv .venv && .venv/bin/pip install -e .) inside services/open-notebook first."
-  exit 1
-fi
-
-echo "[dev] Starting Open Notebook backend on $ON_PORT..."
-(
-  cd "$SCRIPT_DIR/src"
-  SURREAL_URL="ws://127.0.0.1:$SURREAL_PORT/rpc" \
-  SURREAL_USER="root" \
-  SURREAL_PASSWORD="root" \
-  SURREAL_NAMESPACE="open_notebook" \
-  SURREAL_DATABASE="open_notebook" \
-  OPEN_NOTEBOOK_ENCRYPTION_KEY="${OPEN_NOTEBOOK_ENCRYPTION_KEY:-allternit-default-key-change-me}" \
-  nohup "$VENV_UVICORN" main:app --host 127.0.0.1 --port "$ON_PORT" \
-    > "$DATA_DIR/backend.log" 2>&1 &
-  disown
-)
-
-for _ in $(seq 1 30); do
-  port_open "$ON_PORT" && break
-  sleep 1
-done
-port_open "$ON_PORT" || { echo "[dev] Open Notebook backend failed to start — see $DATA_DIR/backend.log"; exit 1; }
-echo "[dev] Open Notebook backend ready on http://127.0.0.1:$ON_PORT"
+# These run detached and survive `vite` restarts — they won't print anything
+# in your dev console after this point, so leave a pointer to their logs.
+echo "[dev] Research backend logs:"
+echo "[dev]   SurrealDB → $DATA_DIR/surreal.log"
+echo "[dev]   Backend   → $DATA_DIR/backend.log"

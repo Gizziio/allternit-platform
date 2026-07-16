@@ -11,7 +11,7 @@ export interface VideoGenerationConfig {
   provider: 'minimax' | 'runway' | 'pika' | 'stable' | 'custom';
   model?: string;
   duration?: 6 | 10 | 15; // seconds
-  resolution?: '720p' | '1080p';
+  resolution?: '768p' | '1080p';
   fps?: 24 | 30 | 60;
   aspectRatio?: '16:9' | '9:16' | '1:1' | '4:3';
 }
@@ -59,13 +59,12 @@ export interface VideoGenerationResult {
 export async function generateVideo(
   prompt: string,
   config: Partial<VideoGenerationConfig> = {},
-  apiKeys?: { minimax?: string; runway?: string }
 ): Promise<VideoGenerationResult> {
   const defaultConfig: VideoGenerationConfig = {
     provider: 'minimax',
-    model: 'T2V-01',
+    model: 'MiniMax-Hailuo-2.3',
     duration: 6,
-    resolution: '720p',
+    resolution: '1080p',
     fps: 24,
     aspectRatio: '16:9',
     ...config,
@@ -73,11 +72,14 @@ export async function generateVideo(
 
   switch (defaultConfig.provider) {
     case 'minimax': {
-      const key = apiKeys?.minimax ?? (typeof process !== 'undefined' ? process.env.MINIMAX_API_KEY : undefined);
-      if (!key) {
-        throw new Error('Video generation requires a MiniMax API key. Add MINIMAX_API_KEY to your environment or provide it in settings.');
-      }
-      return generateVideoMiniMax(prompt, key, defaultConfig);
+      const response = await fetch('/api/v1/providers/video/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, ...defaultConfig }),
+      });
+      const payload = await response.json().catch(() => ({})) as VideoGenerationResult & { message?: string };
+      if (!response.ok) throw new Error(payload.message || `Video generation failed (${response.status}).`);
+      return payload;
     }
     case 'runway': {
       const key = apiKeys?.runway ?? (typeof process !== 'undefined' ? process.env.RUNWAY_API_KEY : undefined);
@@ -89,75 +91,6 @@ export async function generateVideo(
     default:
       throw new Error(`Video provider '${defaultConfig.provider}' is not yet integrated.`);
   }
-}
-
-async function generateVideoMiniMax(
-  prompt: string,
-  apiKey: string,
-  config: VideoGenerationConfig
-): Promise<VideoGenerationResult> {
-  // Submit generation task
-  const submitRes = await fetch('https://api.minimax.chat/v1/video_generation', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: config.model ?? 'T2V-01',
-      prompt,
-      duration: config.duration ?? 6,
-    }),
-  });
-
-  if (!submitRes.ok) {
-    const err = await submitRes.json().catch(() => ({})) as Record<string, unknown>;
-    throw new Error(`MiniMax API error: ${(err as any)?.message ?? submitRes.statusText}`);
-  }
-
-  const submitData = await submitRes.json() as { task_id: string };
-  const taskId = submitData.task_id;
-
-  // Poll for completion (up to 5 minutes)
-  const deadline = Date.now() + 5 * 60 * 1000;
-  while (Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-    const pollRes = await fetch(`https://api.minimax.chat/v1/query/video_generation?task_id=${taskId}`, {
-      headers: { 'Authorization': `Bearer ${apiKey}` },
-    });
-
-    if (!pollRes.ok) continue;
-
-    const pollData = await pollRes.json() as { status: string; file_id?: string; download_url?: string };
-
-    if (pollData.status === 'Success' && pollData.download_url) {
-      return {
-        videos: [{
-          id: `minimax_${taskId}`,
-          url: pollData.download_url,
-          prompt,
-          metadata: {
-            provider: 'minimax',
-            model: config.model ?? 'T2V-01',
-            duration: config.duration ?? 6,
-            resolution: config.resolution ?? '720p',
-            fps: config.fps ?? 24,
-            aspectRatio: config.aspectRatio ?? '16:9',
-            createdAt: new Date().toISOString(),
-          },
-        }],
-        prompt,
-        config,
-      };
-    }
-
-    if (pollData.status === 'Fail') {
-      throw new Error('MiniMax video generation failed.');
-    }
-  }
-
-  throw new Error('MiniMax video generation timed out after 5 minutes.');
 }
 
 /**
@@ -178,7 +111,7 @@ export async function generateVideoFromImage(
     provider: 'minimax',
     model: 'I2V-01',
     duration: 6,
-    resolution: '720p',
+    resolution: '1080p',
     fps: 24,
     aspectRatio: '16:9',
     ...config,

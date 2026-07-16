@@ -1,4 +1,3 @@
-
 //! Artifact API routes — local SQLite persistence.
 //!
 //! Mirrors the Next.js `/api/v1/artifacts` layer.
@@ -17,18 +16,29 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn artifact_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/artifacts", get(list_artifacts).post(create_artifact))
         .route("/artifacts/search", get(search_artifacts))
         .route("/artifacts/stats", get(get_artifact_stats))
-        .route("/artifacts/:id", get(get_artifact).patch(update_artifact).delete(delete_artifact))
+        .route(
+            "/artifacts/:id",
+            get(get_artifact)
+                .patch(update_artifact)
+                .delete(delete_artifact),
+        )
         .route("/artifacts/:id/revisions", get(list_revisions))
-        .route("/artifacts/:id/sections", get(list_sections).post(add_section))
-        .route("/artifacts/:id/sections/:section_id", patch(update_section).delete(delete_section))
+        .route(
+            "/artifacts/:id/sections",
+            get(list_sections).post(add_section),
+        )
+        .route(
+            "/artifacts/:id/sections/:section_id",
+            patch(update_section).delete(delete_section),
+        )
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -166,36 +176,40 @@ fn fetch_artifact_with_related(
 
     let mut stmt = conn.prepare(
         "SELECT id, artifact_id, heading, kind, body, position, created_at, updated_at
-         FROM artifact_sections WHERE artifact_id = ?1 ORDER BY position ASC, created_at ASC"
+         FROM artifact_sections WHERE artifact_id = ?1 ORDER BY position ASC, created_at ASC",
     )?;
-    let sections: Vec<SectionRow> = stmt.query_map(params![artifact_id], |row| {
-        Ok(SectionRow {
-            id: row.get(0)?,
-            artifact_id: row.get(1)?,
-            heading: row.get(2)?,
-            kind: row.get(3)?,
-            body: row.get(4)?,
-            position: row.get(5)?,
-            created_at: row.get(6)?,
-            updated_at: row.get(7)?,
-        })
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let sections: Vec<SectionRow> = stmt
+        .query_map(params![artifact_id], |row| {
+            Ok(SectionRow {
+                id: row.get(0)?,
+                artifact_id: row.get(1)?,
+                heading: row.get(2)?,
+                kind: row.get(3)?,
+                body: row.get(4)?,
+                position: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     let mut stmt = conn.prepare(
         "SELECT id, artifact_id, reason, snapshot, created_at
-         FROM artifact_revisions WHERE artifact_id = ?1 ORDER BY created_at DESC"
+         FROM artifact_revisions WHERE artifact_id = ?1 ORDER BY created_at DESC",
     )?;
-    let revisions: Vec<RevisionRow> = stmt.query_map(params![artifact_id], |row| {
-        let snapshot_str: String = row.get(3)?;
-        let snapshot = serde_json::from_str(&snapshot_str).unwrap_or(json!({}));
-        Ok(RevisionRow {
-            id: row.get(0)?,
-            artifact_id: row.get(1)?,
-            reason: row.get(2)?,
-            snapshot,
-            created_at: row.get(4)?,
-        })
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let revisions: Vec<RevisionRow> = stmt
+        .query_map(params![artifact_id], |row| {
+            let snapshot_str: String = row.get(3)?;
+            let snapshot = serde_json::from_str(&snapshot_str).unwrap_or(json!({}));
+            Ok(RevisionRow {
+                id: row.get(0)?,
+                artifact_id: row.get(1)?,
+                reason: row.get(2)?,
+                snapshot,
+                created_at: row.get(4)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Some(ArtifactRow {
         id: artifact.0,
@@ -205,7 +219,10 @@ fn fetch_artifact_with_related(
         artifact_type: artifact.4,
         status: artifact.5,
         summary: artifact.6,
-        tags: artifact.7.and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default(),
+        tags: artifact
+            .7
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or_default(),
         created_at: artifact.8,
         updated_at: artifact.9,
         sections,
@@ -231,7 +248,8 @@ fn serialize_snapshot(artifact: &ArtifactRow) -> String {
             "updatedAt": s.updated_at,
         })).collect::<Vec<_>>(),
         "updatedAt": artifact.updated_at,
-    }).to_string()
+    })
+    .to_string()
 }
 
 fn create_revision(
@@ -259,7 +277,6 @@ async fn list_artifacts(
     _headers: HeaderMap,
     Query(q): Query<ListQuery>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -353,11 +370,19 @@ async fn list_artifacts(
         Ok(Ok(artifacts)) => Json(json!({"artifacts": artifacts})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing artifacts: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -372,18 +397,24 @@ async fn create_artifact(
     _headers: HeaderMap,
     Json(body): Json<CreateBody>,
 ) -> impl IntoResponse {
-
     let workspace_id = body.workspace_id.trim().to_string();
     let title = body.title.trim().to_string();
     if workspace_id.is_empty() || title.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "workspace_id and title are required"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "workspace_id and title are required"})),
+        )
+            .into_response();
     }
 
     let db = state.db.clone();
     let user_id = user.user_id;
     let artifact_type = body.artifact_type.unwrap_or_else(|| "document".to_string());
     let status = body.status.unwrap_or_else(|| "draft".to_string());
-    let summary = body.summary.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+    let summary = body
+        .summary
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
     let tags = normalize_tags(body.tags);
     let _tags_json = serde_json::to_string(&tags).unwrap_or_default();
     let sections_input = body.sections.unwrap_or_default();
@@ -424,14 +455,24 @@ async fn create_artifact(
     }).await;
 
     match result {
-        Ok(Ok(artifact)) => (StatusCode::CREATED, Json(json!({"artifact": artifact}))).into_response(),
+        Ok(Ok(artifact)) => {
+            (StatusCode::CREATED, Json(json!({"artifact": artifact}))).into_response()
+        }
         Ok(Err(e)) => {
             warn!("DB error creating artifact: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -446,25 +487,37 @@ async fn get_artifact(
     _headers: HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         fetch_artifact_with_related(&conn, &id, &user_id)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some(artifact))) => Json(json!({"artifact": artifact})).into_response(),
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Artifact not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Artifact not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error getting artifact: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -480,7 +533,6 @@ async fn update_artifact(
     Path(id): Path<String>,
     Json(body): Json<UpdateBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -489,11 +541,13 @@ async fn update_artifact(
         let tx = conn.transaction()?;
 
         // Verify ownership
-        let exists: bool = tx.query_row(
-            "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
-            params![&id, &user_id],
-            |_row| Ok(true),
-        ).unwrap_or(false);
+        let exists: bool = tx
+            .query_row(
+                "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
+                params![&id, &user_id],
+                |_row| Ok(true),
+            )
+            .unwrap_or(false);
         if !exists {
             return Ok::<_, rusqlite::Error>(None);
         }
@@ -518,18 +572,25 @@ async fn update_artifact(
         }
         if body.summary.is_some() {
             updates.push("summary = ?".to_string());
-            params_vec.push(Box::new(body.summary.map(|s| s.trim().to_string()).filter(|s| !s.is_empty())));
+            params_vec.push(Box::new(
+                body.summary
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty()),
+            ));
         }
         if body.tags.is_some() {
             updates.push("tags = ?".to_string());
-            params_vec.push(Box::new(serde_json::to_string(&normalize_tags(body.tags)).unwrap_or_default()));
+            params_vec.push(Box::new(
+                serde_json::to_string(&normalize_tags(body.tags)).unwrap_or_default(),
+            ));
         }
 
         if !updates.is_empty() {
             updates.push("updated_at = CURRENT_TIMESTAMP".to_string());
             let sql = format!("UPDATE artifacts SET {} WHERE id = ?", updates.join(", "));
             params_vec.push(Box::new(id.clone()));
-            let params_ref: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+            let params_ref: Vec<&dyn rusqlite::ToSql> =
+                params_vec.iter().map(|p| p.as_ref()).collect();
             tx.execute(&sql, rusqlite::params_from_iter(params_ref))?;
         }
 
@@ -538,18 +599,31 @@ async fn update_artifact(
 
         tx.commit()?;
         Ok(Some(artifact))
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some(artifact))) => Json(json!({"artifact": artifact})).into_response(),
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Artifact not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Artifact not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error updating artifact: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -564,7 +638,6 @@ async fn delete_artifact(
     _headers: HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -575,18 +648,31 @@ async fn delete_artifact(
             params![&id, &user_id],
         )?;
         Ok::<_, rusqlite::Error>(rows)
-    }).await;
+    })
+    .await;
 
     match result {
-        Ok(Ok(0)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Artifact not found"}))).into_response(),
+        Ok(Ok(0)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Artifact not found"})),
+        )
+            .into_response(),
         Ok(Ok(_)) => Json(json!({"ok": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error deleting artifact: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -601,7 +687,6 @@ async fn search_artifacts(
     _headers: HeaderMap,
     Query(q): Query<SearchQuery>,
 ) -> impl IntoResponse {
-
     let query = q.q.unwrap_or_default().trim().to_lowercase();
     if query.is_empty() {
         return Json(json!({"artifacts": []})).into_response();
@@ -658,11 +743,19 @@ async fn search_artifacts(
         Ok(Ok(artifacts)) => Json(json!({"artifacts": artifacts})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error searching artifacts: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -686,7 +779,6 @@ async fn get_artifact_stats(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -701,30 +793,41 @@ async fn get_artifact_stats(
                     MAX(updated_at) as latest
              FROM artifacts WHERE user_id = ?1
              GROUP BY workspace_id
-             ORDER BY latest DESC"
+             ORDER BY latest DESC",
         )?;
-        let stats: Vec<ArtifactStats> = stmt.query_map(params![user_id], |row| {
-            Ok(ArtifactStats {
-                workspace_id: row.get(0)?,
-                total: row.get(1)?,
-                drafts: row.get(2)?,
-                final_count: row.get(3)?,
-                updated_at: row.get(4)?,
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let stats: Vec<ArtifactStats> = stmt
+            .query_map(params![user_id], |row| {
+                Ok(ArtifactStats {
+                    workspace_id: row.get(0)?,
+                    total: row.get(1)?,
+                    drafts: row.get(2)?,
+                    final_count: row.get(3)?,
+                    updated_at: row.get(4)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok::<_, rusqlite::Error>(stats)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(stats)) => Json(json!({"stats": stats})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error getting artifact stats: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -739,7 +842,6 @@ async fn list_revisions(
     _headers: HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -747,44 +849,61 @@ async fn list_revisions(
         let conn = db.connect()?;
 
         // Verify ownership
-        let exists: bool = conn.query_row(
-            "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
-            params![&id, &user_id],
-            |_row| Ok(true),
-        ).unwrap_or(false);
+        let exists: bool = conn
+            .query_row(
+                "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
+                params![&id, &user_id],
+                |_row| Ok(true),
+            )
+            .unwrap_or(false);
         if !exists {
             return Ok::<_, rusqlite::Error>(None);
         }
 
         let mut stmt = conn.prepare(
             "SELECT id, artifact_id, reason, snapshot, created_at
-             FROM artifact_revisions WHERE artifact_id = ?1 ORDER BY created_at DESC"
+             FROM artifact_revisions WHERE artifact_id = ?1 ORDER BY created_at DESC",
         )?;
-        let revisions: Vec<RevisionRow> = stmt.query_map(params![&id], |row| {
-            let snapshot_str: String = row.get(3)?;
-            let snapshot = serde_json::from_str(&snapshot_str).unwrap_or(json!({}));
-            Ok(RevisionRow {
-                id: row.get(0)?,
-                artifact_id: row.get(1)?,
-                reason: row.get(2)?,
-                snapshot,
-                created_at: row.get(4)?,
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let revisions: Vec<RevisionRow> = stmt
+            .query_map(params![&id], |row| {
+                let snapshot_str: String = row.get(3)?;
+                let snapshot = serde_json::from_str(&snapshot_str).unwrap_or(json!({}));
+                Ok(RevisionRow {
+                    id: row.get(0)?,
+                    artifact_id: row.get(1)?,
+                    reason: row.get(2)?,
+                    snapshot,
+                    created_at: row.get(4)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Some(revisions))
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some(revisions))) => Json(json!({"revisions": revisions})).into_response(),
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Artifact not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Artifact not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing revisions: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -799,52 +918,68 @@ async fn list_sections(
     _headers: HeaderMap,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
 
-        let exists: bool = conn.query_row(
-            "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
-            params![&id, &user_id],
-            |_row| Ok(true),
-        ).unwrap_or(false);
+        let exists: bool = conn
+            .query_row(
+                "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
+                params![&id, &user_id],
+                |_row| Ok(true),
+            )
+            .unwrap_or(false);
         if !exists {
             return Ok::<_, rusqlite::Error>(None);
         }
 
         let mut stmt = conn.prepare(
             "SELECT id, artifact_id, heading, kind, body, position, created_at, updated_at
-             FROM artifact_sections WHERE artifact_id = ?1 ORDER BY position ASC, created_at ASC"
+             FROM artifact_sections WHERE artifact_id = ?1 ORDER BY position ASC, created_at ASC",
         )?;
-        let sections: Vec<SectionRow> = stmt.query_map(params![&id], |row| {
-            Ok(SectionRow {
-                id: row.get(0)?,
-                artifact_id: row.get(1)?,
-                heading: row.get(2)?,
-                kind: row.get(3)?,
-                body: row.get(4)?,
-                position: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let sections: Vec<SectionRow> = stmt
+            .query_map(params![&id], |row| {
+                Ok(SectionRow {
+                    id: row.get(0)?,
+                    artifact_id: row.get(1)?,
+                    heading: row.get(2)?,
+                    kind: row.get(3)?,
+                    body: row.get(4)?,
+                    position: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Some(sections))
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some(sections))) => Json(json!({"sections": sections})).into_response(),
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Artifact not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Artifact not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing sections: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -860,10 +995,13 @@ async fn add_section(
     Path(id): Path<String>,
     Json(body): Json<SectionBody>,
 ) -> impl IntoResponse {
-
     let heading = body.heading.unwrap_or_default().trim().to_string();
     if heading.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "heading is required"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "heading is required"})),
+        )
+            .into_response();
     }
 
     let db = state.db.clone();
@@ -928,15 +1066,29 @@ async fn add_section(
     }).await;
 
     match result {
-        Ok(Ok(Some(section))) => (StatusCode::CREATED, Json(json!({"section": section}))).into_response(),
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Artifact not found"}))).into_response(),
+        Ok(Ok(Some(section))) => {
+            (StatusCode::CREATED, Json(json!({"section": section}))).into_response()
+        }
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Artifact not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error adding section: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -952,7 +1104,6 @@ async fn update_section(
     Path((artifact_id, section_id)): Path<(String, String)>,
     Json(body): Json<SectionBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -960,20 +1111,24 @@ async fn update_section(
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
 
-        let exists: bool = tx.query_row(
-            "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
-            params![&artifact_id, &user_id],
-            |_row| Ok(true),
-        ).unwrap_or(false);
+        let exists: bool = tx
+            .query_row(
+                "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
+                params![&artifact_id, &user_id],
+                |_row| Ok(true),
+            )
+            .unwrap_or(false);
         if !exists {
             return Ok::<_, rusqlite::Error>(None);
         }
 
-        let has_section: bool = tx.query_row(
-            "SELECT 1 FROM artifact_sections WHERE id = ?1 AND artifact_id = ?2",
-            params![&section_id, &artifact_id],
-            |_row| Ok(true),
-        ).unwrap_or(false);
+        let has_section: bool = tx
+            .query_row(
+                "SELECT 1 FROM artifact_sections WHERE id = ?1 AND artifact_id = ?2",
+                params![&section_id, &artifact_id],
+                |_row| Ok(true),
+            )
+            .unwrap_or(false);
         if !has_section {
             return Ok(None);
         }
@@ -1003,9 +1158,13 @@ async fn update_section(
 
         if !updates.is_empty() {
             updates.push("updated_at = CURRENT_TIMESTAMP".to_string());
-            let sql = format!("UPDATE artifact_sections SET {} WHERE id = ?", updates.join(", "));
+            let sql = format!(
+                "UPDATE artifact_sections SET {} WHERE id = ?",
+                updates.join(", ")
+            );
             params_vec.push(Box::new(section_id.clone()));
-            let params_ref: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+            let params_ref: Vec<&dyn rusqlite::ToSql> =
+                params_vec.iter().map(|p| p.as_ref()).collect();
             tx.execute(&sql, rusqlite::params_from_iter(params_ref))?;
         }
 
@@ -1016,40 +1175,61 @@ async fn update_section(
         )?;
 
         let artifact = fetch_artifact_with_related(&tx, &artifact_id, &user_id)?.unwrap();
-        create_revision(&tx, &artifact_id, &format!("section:{}:updated", section_id), &artifact)?;
+        create_revision(
+            &tx,
+            &artifact_id,
+            &format!("section:{}:updated", section_id),
+            &artifact,
+        )?;
 
         tx.commit()?;
 
         let mut stmt = conn.prepare(
             "SELECT id, artifact_id, heading, kind, body, position, created_at, updated_at
-             FROM artifact_sections WHERE id = ?1"
+             FROM artifact_sections WHERE id = ?1",
         )?;
-        let section: Option<SectionRow> = stmt.query_map(params![&section_id], |row| {
-            Ok(SectionRow {
-                id: row.get(0)?,
-                artifact_id: row.get(1)?,
-                heading: row.get(2)?,
-                kind: row.get(3)?,
-                body: row.get(4)?,
-                position: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-            })
-        })?.next().transpose()?;
+        let section: Option<SectionRow> = stmt
+            .query_map(params![&section_id], |row| {
+                Ok(SectionRow {
+                    id: row.get(0)?,
+                    artifact_id: row.get(1)?,
+                    heading: row.get(2)?,
+                    kind: row.get(3)?,
+                    body: row.get(4)?,
+                    position: row.get(5)?,
+                    created_at: row.get(6)?,
+                    updated_at: row.get(7)?,
+                })
+            })?
+            .next()
+            .transpose()?;
 
         Ok(section)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some(section))) => Json(json!({"section": section})).into_response(),
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Section not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Section not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error updating section: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -1064,7 +1244,6 @@ async fn delete_section(
     _headers: HeaderMap,
     Path((artifact_id, section_id)): Path<(String, String)>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -1072,20 +1251,24 @@ async fn delete_section(
         let mut conn = db.connect()?;
         let tx = conn.transaction()?;
 
-        let exists: bool = tx.query_row(
-            "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
-            params![&artifact_id, &user_id],
-            |_row| Ok(true),
-        ).unwrap_or(false);
+        let exists: bool = tx
+            .query_row(
+                "SELECT 1 FROM artifacts WHERE id = ?1 AND user_id = ?2",
+                params![&artifact_id, &user_id],
+                |_row| Ok(true),
+            )
+            .unwrap_or(false);
         if !exists {
             return Ok::<_, rusqlite::Error>(false);
         }
 
-        let has_section: bool = tx.query_row(
-            "SELECT 1 FROM artifact_sections WHERE id = ?1 AND artifact_id = ?2",
-            params![&section_id, &artifact_id],
-            |_row| Ok(true),
-        ).unwrap_or(false);
+        let has_section: bool = tx
+            .query_row(
+                "SELECT 1 FROM artifact_sections WHERE id = ?1 AND artifact_id = ?2",
+                params![&section_id, &artifact_id],
+                |_row| Ok(true),
+            )
+            .unwrap_or(false);
         if !has_section {
             return Ok(false);
         }
@@ -1102,22 +1285,40 @@ async fn delete_section(
         )?;
 
         let artifact = fetch_artifact_with_related(&tx, &artifact_id, &user_id)?.unwrap();
-        create_revision(&tx, &artifact_id, &format!("section:{}:deleted", section_id), &artifact)?;
+        create_revision(
+            &tx,
+            &artifact_id,
+            &format!("section:{}:deleted", section_id),
+            &artifact,
+        )?;
 
         tx.commit()?;
         Ok(true)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(true)) => Json(json!({"ok": true})).into_response(),
-        Ok(Ok(false)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Section not found"}))).into_response(),
+        Ok(Ok(false)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Section not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error deleting section: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }

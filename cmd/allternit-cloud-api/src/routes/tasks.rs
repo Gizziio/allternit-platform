@@ -5,17 +5,13 @@
 use axum::{
     extract::{Extension, Path, Query, State},
     routing::{get, post},
-    Json,
-    Router,
+    Json, Router,
 };
-use std::sync::Arc;
 use serde::Deserialize;
+use std::sync::Arc;
 
 use crate::{
-    ApiError, ApiState,
-    auth::middleware::AuthContext,
-    db::cowork_models::*,
-    services::task_service,
+    auth::middleware::AuthContext, db::cowork_models::*, services::task_service, ApiError, ApiState,
 };
 
 /// Query parameters for listing tasks
@@ -159,12 +155,19 @@ pub async fn assign_task(
     Path(id): Path<String>,
     Json(request): Json<AssignTaskRequest>,
 ) -> Result<Json<Task>, ApiError> {
-    tracing::info!("Assigning task {} to {:?} {}", id, request.assignee_type, request.assignee_id);
+    tracing::info!(
+        "Assigning task {} to {:?} {}",
+        id,
+        request.assignee_type,
+        request.assignee_id
+    );
 
     let tenant_id = Some(auth_context.user.user_id.clone());
     let assigned_by = Some(auth_context.user.user_id.as_str());
 
-    let task = task_service::assign_task(&state.db, &id, request, tenant_id.as_deref(), assigned_by).await?;
+    let task =
+        task_service::assign_task(&state.db, &id, request, tenant_id.as_deref(), assigned_by)
+            .await?;
 
     Ok(Json(task))
 }
@@ -222,14 +225,14 @@ pub async fn optimize_tasks(
 
     let tenant_id = Some(auth_context.user.user_id.clone());
 
-    let tasks = task_service::optimize_tasks(
-        &state.db,
-        &query.workspace_id,
-        tenant_id.as_deref(),
-    )
-    .await?;
+    let tasks =
+        task_service::optimize_tasks(&state.db, &query.workspace_id, tenant_id.as_deref()).await?;
 
-    tracing::info!("Optimized {} tasks for workspace: {}", tasks.len(), query.workspace_id);
+    tracing::info!(
+        "Optimized {} tasks for workspace: {}",
+        tasks.len(),
+        query.workspace_id
+    );
     Ok(Json(tasks))
 }
 
@@ -274,13 +277,8 @@ pub async fn complete_queue_item(
 ) -> Result<Json<TaskQueueEntry>, ApiError> {
     tracing::info!("Completing queue item: {}", id);
 
-    let entry = task_service::complete_queue_item(
-        &state.db,
-        &id,
-        request.result,
-        request.error,
-    )
-    .await?;
+    let entry =
+        task_service::complete_queue_item(&state.db, &id, request.result, request.error).await?;
 
     Ok(Json(entry))
 }
@@ -295,7 +293,12 @@ pub struct TaskEventsQuery {
 pub async fn task_events_sse(
     State(state): State<Arc<ApiState>>,
     Query(query): Query<TaskEventsQuery>,
-) -> Result<axum::response::Sse<impl futures::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>, ApiError> {
+) -> Result<
+    axum::response::Sse<
+        impl futures::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>,
+    >,
+    ApiError,
+> {
     use axum::response::sse::{Event as SseEvent, Sse};
     use futures::stream::{self, StreamExt};
     use tokio::time::{sleep, Duration};
@@ -309,7 +312,7 @@ pub async fn task_events_sse(
             WHERE t.workspace_id = ?
             ORDER BY e.created_at DESC
             LIMIT 100
-            "#
+            "#,
         )
         .bind(ws_id)
         .fetch_all(&state.db)
@@ -317,18 +320,17 @@ pub async fn task_events_sse(
         .map_err(ApiError::DatabaseError)?
     } else {
         sqlx::query_as::<_, TaskEvent>(
-            "SELECT * FROM task_events ORDER BY created_at DESC LIMIT 100"
+            "SELECT * FROM task_events ORDER BY created_at DESC LIMIT 100",
         )
         .fetch_all(&state.db)
         .await
         .map_err(ApiError::DatabaseError)?
     };
 
-    let historical = stream::iter(events.into_iter().rev())
-        .map(|event| {
-            let data = serde_json::to_string(&event).unwrap_or_default();
-            Ok::<_, std::convert::Infallible>(SseEvent::default().data(data))
-        });
+    let historical = stream::iter(events.into_iter().rev()).map(|event| {
+        let data = serde_json::to_string(&event).unwrap_or_default();
+        Ok::<_, std::convert::Infallible>(SseEvent::default().data(data))
+    });
 
     let heartbeat = stream::unfold((), |_| async {
         sleep(Duration::from_secs(30)).await;
@@ -348,9 +350,15 @@ pub async fn task_events_sse(
 pub fn task_routes() -> Router<Arc<ApiState>> {
     Router::new()
         .route("/api/v1/tasks", post(create_task).get(list_tasks))
-        .route("/api/v1/tasks/:id", get(get_task).put(update_task).delete(delete_task))
+        .route(
+            "/api/v1/tasks/:id",
+            get(get_task).put(update_task).delete(delete_task),
+        )
         .route("/api/v1/tasks/:id/assign", post(assign_task))
-        .route("/api/v1/tasks/:id/comments", get(list_comments).post(add_comment))
+        .route(
+            "/api/v1/tasks/:id/comments",
+            get(list_comments).post(add_comment),
+        )
         .route("/api/v1/tasks/optimize", post(optimize_tasks))
         .route("/api/v1/tasks/stream", get(task_events_sse))
         .route("/api/v1/queue", get(list_queue_items))

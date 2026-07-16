@@ -12,6 +12,6 @@
   "clerkJwksUrl": "",
   "clerkIssuer": "",
   "clerkWebhookSecret": "",
-  "selfHosted": true,
+  "selfHosted": false,
   "encryptionKey": ""
 }

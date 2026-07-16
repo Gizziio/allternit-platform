@@ -27,7 +27,7 @@ const SURFACES: AppMode[] = ['chat', 'cowork', 'code', 'design', 'browser'];
 const AGENT_TYPES: AgentType[] = ['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer'];
 const TRUST_TIERS: NonNullable<Agent['trustTier']>[] = ['safe', 'low', 'standard', 'elevated', 'admin', 'critical'];
 
-export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () => void }) {
+export function EditAgentForm({ agent, onCancel, onSaved }: { agent: Agent; onCancel: () => void; onSaved?: () => void }) {
   const { updateAgent } = useAgentStore();
   const [name, setName] = useState(agent.name);
   const [description, setDescription] = useState(agent.description);
@@ -58,6 +58,7 @@ export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () 
     setIsSubmitting(true);
     try {
       await updateAgent(agent.id, updates);
+      onSaved?.();
       onCancel();
     } catch (err) {
       logger.error({ err }, 'Failed to update agent');
@@ -72,7 +73,7 @@ export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () 
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-6 overflow-auto">
+    <div className="flex flex-col items-center justify-start h-full p-6 overflow-auto">
       <div className="w-full max-w-2xl p-8 rounded-2xl border" style={{ background: STUDIO_THEME.bgCard, borderColor: STUDIO_THEME.borderSubtle }}>
         <h2 className="text-2xl font-serif mb-6" style={{ color: STUDIO_THEME.textPrimary }}>Edit Agent</h2>
         <form onSubmit={handleSubmit} className="space-y-6">

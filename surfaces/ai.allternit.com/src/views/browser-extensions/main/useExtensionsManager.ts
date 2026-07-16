@@ -9,6 +9,7 @@ export function useExtensionsManager() {
   const toggleExtension = useBrowserExtensionsStore((state) => state.toggleExtension);
   const updateExtension = useBrowserExtensionsStore((state) => state.updateExtension);
   const removeExtension = useBrowserExtensionsStore((state) => state.removeExtension);
+  const addExtension = useBrowserExtensionsStore((state) => state.addExtension);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<ExtensionCategory>('all');
   const [showNotification, setShowNotification] = useState<string | null>(null);
@@ -70,6 +71,7 @@ export function useExtensionsManager() {
     isInstalled: extension.installStatus === 'installed',
     isEnabled: extension.enabled,
     permissions: Object.keys(extension.permissions || {}),
+    permissionDetails: extension.permissions,
   })), [extensions]);
 
   const filteredExtensions = useMemo(() => normalized.filter((extension) => {
@@ -79,5 +81,17 @@ export function useExtensionsManager() {
     return matchesSearch && matchesCategory;
   }), [activeCategory, normalized, searchQuery]);
 
-  return { extensions: normalized, searchQuery, setSearchQuery, activeCategory, setActiveCategory, showNotification, filteredExtensions, handleToggle, handleInstall, handleUninstall };
+  const addCustomExtension = useCallback((input: { name: string; description: string; icon?: string; storeUrl?: string }) => {
+    addExtension({ name: input.name, description: input.description, icon: input.icon || 'E', version: '1.0.0', author: 'Custom', category: 'utilities', enabled: true, installStatus: 'installed', storeUrl: input.storeUrl, permissions: {} });
+    notify(`Added and enabled ${input.name}`);
+  }, [addExtension, notify]);
+
+  const installMarketplaceExtension = useCallback((extension: { name: string; description: string; icon: string; version: string; author: string; category: Exclude<ExtensionCategory, 'all'>; storeUrl?: string }) => {
+    const existing = extensions.find((item) => item.name === extension.name);
+    if (existing) { updateExtension(existing.id, { installStatus: 'installed', enabled: true }); return; }
+    addExtension({ ...extension, enabled: true, installStatus: 'installed', permissions: {} });
+    notify(`Installed and enabled ${extension.name}`);
+  }, [addExtension, extensions, notify, updateExtension]);
+
+  return { extensions: normalized, searchQuery, setSearchQuery, activeCategory, setActiveCategory, showNotification, filteredExtensions, handleToggle, handleInstall, handleUninstall, addCustomExtension, installMarketplaceExtension };
 }

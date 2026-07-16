@@ -2,25 +2,24 @@
 
 import React from "react";
 import { 
-  PuzzlePiece, 
   Trash, 
-  Check, 
   X,
   ToggleLeft,
   ToggleRight,
   Plus
 } from '@phosphor-icons/react';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Extension } from "./BrowserExtensions.types";
+import { ExtensionLogo } from "./ExtensionLogo";
 
 interface ExtensionCardProps {
   extension: Extension;
   onToggle: (id: string) => void;
   onUninstall: (id: string) => void;
   onInstall: (id: string) => void;
+  onOpen: (extension: Extension) => void;
 }
 
 export const ExtensionCard: React.FC<ExtensionCardProps> = ({
@@ -28,45 +27,40 @@ export const ExtensionCard: React.FC<ExtensionCardProps> = ({
   onToggle,
   onUninstall,
   onInstall,
+  onOpen,
 }) => {
   return (
     <Card className={cn(
-      "overflow-hidden transition-all duration-200 border-solid",
-      extension.isInstalled ? "bg-[var(--shell-floating-bg)] border-[var(--shell-divider)]" : "bg-transparent border-dashed border-[var(--shell-divider)] opacity-80 hover:opacity-100"
+      "h-full min-h-[230px] overflow-visible rounded-xl border-solid bg-[var(--bg-elevated)] transition-all duration-200 hover:border-[var(--border-hover)] hover:shadow-md",
+      extension.isInstalled ? "border-[var(--border-subtle)]" : "border-dashed border-[var(--border-default)]"
     )}>
-      <CardContent className="p-5 flex flex-col h-full">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="size-12 rounded-2xl bg-[color-mix(in_srgb,var(--accent-browser)_12%,var(--shell-view-bg))] text-[var(--accent-browser)] flex items-center justify-center shrink-0 border border-solid border-[var(--accent-browser)]/20">
-              <span className="text-xl font-black">{extension.icon}</span>
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-[15px] truncate">{extension.name}</h3>
-                {extension.isInstalled && extension.isEnabled && (
-                  <div className="size-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
-                )}
-              </div>
-              <p className="text-[11px] text-[var(--shell-item-muted)] font-medium">v{extension.version} • {extension.author}</p>
-            </div>
-          </div>
-          
-          <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-widest bg-zinc-800/50">
+      <CardContent className="flex h-full flex-col p-5 pt-5">
+        <button type="button" onClick={() => onOpen(extension)} className="flex flex-1 flex-col text-left">
+        <div className="mb-4 flex w-full items-start justify-between gap-3">
+          <ExtensionLogo extension={extension} />
+          <span className="rounded-full bg-[var(--surface-hover)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
             {extension.category}
-          </Badge>
+          </span>
         </div>
 
-        <p className="text-[13px] text-[var(--shell-item-muted)] leading-relaxed mb-6 line-clamp-2">
+        <div className="flex w-full min-w-0 items-center gap-2">
+          <h3 className="truncate text-[15px] font-semibold text-[var(--text-primary)]">{extension.name}</h3>
+          {extension.isInstalled && extension.isEnabled && <span className="size-2 shrink-0 rounded-full bg-green-500" />}
+        </div>
+        <p className="mt-1 text-[11px] font-medium text-[var(--text-tertiary)]">v{extension.version} · {extension.author}</p>
+        <p className="mb-5 mt-3 line-clamp-3 text-[13px] leading-relaxed text-[var(--text-secondary)]">
           {extension.description}
         </p>
+        <span className="mb-4 mt-auto text-xs font-medium text-[var(--accent-primary)]">View details</span>
+        </button>
 
-        <div className="mt-auto flex items-center justify-between gap-3">
+        <div className="flex min-h-9 items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
           {extension.isInstalled ? (
             <>
               <div className="flex items-center gap-2">
                 <button type="button"
-                  onClick={() => onToggle(extension.id)}
-                  className="bg-transparent border-none p-0 cursor-pointer text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] transition-colors"
+                  onClick={(event) => { event.stopPropagation(); onToggle(extension.id); }}
+                  className="cursor-pointer border-none bg-transparent p-0 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]"
                   title={extension.isEnabled ? "Disable extension" : "Enable extension"}
                 >
                   {extension.isEnabled ? (
@@ -76,8 +70,8 @@ export const ExtensionCard: React.FC<ExtensionCardProps> = ({
                   )}
                 </button>
                 <span className={cn(
-                  "text-[11px] font-bold uppercase tracking-wider",
-                  extension.isEnabled ? "text-[var(--accent-browser)]" : "text-[var(--shell-item-muted)]"
+                    "text-[11px] font-semibold",
+                  extension.isEnabled ? "text-[var(--accent-primary)]" : "text-[var(--text-tertiary)]"
                 )}>
                   {extension.isEnabled ? "Active" : "Off"}
                 </span>
@@ -86,16 +80,16 @@ export const ExtensionCard: React.FC<ExtensionCardProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onUninstall(extension.id)}
-                className="text-[var(--shell-item-muted)] hover:text-red-500 hover:bg-red-500/10 px-2 h-8"
+                onClick={(event) => { event.stopPropagation(); onUninstall(extension.id); }}
+                className="h-8 px-2 text-[var(--text-tertiary)] hover:bg-red-500/10 hover:text-red-500"
               >
                 {extension.owned ? <X size={16} /> : <Trash size={16} />}
               </Button>
             </>
           ) : (
             <Button
-              onClick={() => onInstall(extension.id)}
-              className="w-full font-bold h-9 bg-[var(--accent-browser)] hover:brightness-110"
+              onClick={(event) => { event.stopPropagation(); onInstall(extension.id); }}
+              className="h-9 w-full bg-[var(--text-primary)] font-medium text-[var(--bg-elevated)] hover:opacity-90"
             >
               <Plus size={16} className="mr-2" weight="bold" /> Install Extension
             </Button>

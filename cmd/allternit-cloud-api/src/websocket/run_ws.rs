@@ -9,9 +9,9 @@ use axum::{
 };
 use std::sync::Arc;
 
-use crate::{ApiError, ApiState};
 use crate::db::cowork_models::*;
 use crate::services::{EventStore, EventStoreImpl, RunService};
+use crate::{ApiError, ApiState};
 
 /// WebSocket handler for run events
 pub async fn run_ws_handler(
@@ -25,11 +25,11 @@ pub async fn run_ws_handler(
         .fetch_optional(&state.db)
         .await
         .map_err(|e| ApiError::DatabaseError(e))?;
-    
+
     if run.is_none() {
         return Err(ApiError::NotFound(format!("Run not found: {}", run_id)));
     }
-    
+
     Ok(ws.on_upgrade(move |socket| handle_run_socket(socket, state, run_id)))
 }
 
@@ -41,9 +41,9 @@ async fn handle_run_socket(
 ) {
     use axum::extract::ws::Message;
     use futures::stream::StreamExt;
-    
+
     tracing::info!("WebSocket connected for run: {}", run_id);
-    
+
     // Create event store and subscribe to events
     let event_store = EventStoreImpl::new(state.db.clone());
     let mut event_rx = match event_store.subscribe(&run_id).await {
@@ -54,12 +54,12 @@ async fn handle_run_socket(
             return;
         }
     };
-    
+
     // Register attachment
     let client_id = uuid::Uuid::new_v4().to_string();
     let attachment_id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
-    
+
     let _ = sqlx::query(
         r#"
         INSERT INTO attachments (id, run_id, client_id, client_type, cursor_sequence, attached_at, last_seen_at)
@@ -75,10 +75,10 @@ async fn handle_run_socket(
     .bind(now)
     .execute(&state.db)
     .await;
-    
+
     // Get latest sequence for cursor tracking
     let latest_sequence = event_store.get_latest_sequence(&run_id).await.unwrap_or(0);
-    
+
     // Send initial connection acknowledgment
     let ack = serde_json::json!({
         "type": "connected",
@@ -86,12 +86,12 @@ async fn handle_run_socket(
         "client_id": &client_id,
         "latest_sequence": latest_sequence,
     });
-    
+
     if let Err(e) = socket.send(Message::Text(ack.to_string())).await {
         tracing::error!("Failed to send ack: {}", e);
         return;
     }
-    
+
     // Main message loop
     loop {
         tokio::select! {
@@ -104,12 +104,12 @@ async fn handle_run_socket(
                         continue;
                     }
                 };
-                
+
                 if let Err(e) = socket.send(Message::Text(event_json)).await {
                     tracing::error!("Failed to send event: {}", e);
                     break;
                 }
-                
+
                 // Update cursor position
                 let _ = sqlx::query(
                     "UPDATE attachments SET cursor_sequence = ?, last_seen_at = ? WHERE id = ?"
@@ -120,7 +120,7 @@ async fn handle_run_socket(
                 .execute(&state.db)
                 .await;
             }
-            
+
             // Receive messages from client
             Some(msg) = socket.next() => {
                 match msg {
@@ -151,7 +151,7 @@ async fn handle_run_socket(
                     _ => {}
                 }
             }
-            
+
             // Timeout/heartbeat check
             else => {
                 // Send heartbeat
@@ -159,7 +159,7 @@ async fn handle_run_socket(
                     "type": "heartbeat",
                     "timestamp": chrono::Utc::now().to_rfc3339(),
                 });
-                
+
                 if let Err(e) = socket.send(Message::Text(heartbeat.to_string())).await {
                     tracing::error!("Failed to send heartbeat: {}", e);
                     break;
@@ -167,16 +167,14 @@ async fn handle_run_socket(
             }
         }
     }
-    
+
     // Clean up attachment
-    let _ = sqlx::query(
-        "UPDATE attachments SET detached_at = ? WHERE id = ?"
-    )
-    .bind(chrono::Utc::now())
-    .bind(&attachment_id)
-    .execute(&state.db)
-    .await;
-    
+    let _ = sqlx::query("UPDATE attachments SET detached_at = ? WHERE id = ?")
+        .bind(chrono::Utc::now())
+        .bind(&attachment_id)
+        .execute(&state.db)
+        .await;
+
     tracing::info!("WebSocket disconnected for run: {}", run_id);
 }
 
@@ -194,10 +192,10 @@ async fn handle_client_message(
         #[serde(flatten)]
         payload: serde_json::Value,
     }
-    
+
     let msg: ClientMessage = serde_json::from_str(text)
         .map_err(|e| ApiError::BadRequest(format!("Invalid message format: {}", e)))?;
-    
+
     match msg.msg_type.as_str() {
         "approval_response" => {
             #[derive(serde::Deserialize)]
@@ -206,19 +204,19 @@ async fn handle_client_message(
                 approved: bool,
                 reason: Option<String>,
             }
-            
+
             let approval: ApprovalResponse = serde_json::from_value(msg.payload)
                 .map_err(|e| ApiError::BadRequest(format!("Invalid approval response: {}", e)))?;
-            
+
             // Emit approval event
             let event_store = EventStoreImpl::new(state.db.clone());
-            
+
             let event_type = if approval.approved {
                 EventType::ApprovalGiven
             } else {
                 EventType::ApprovalDenied
             };
-            
+
             let payload = if approval.approved {
                 serde_json::json!({
                     "tool_name": approval.tool_name,
@@ -233,36 +231,42 @@ async fn handle_client_message(
                     "denied_at": chrono::Utc::now().to_rfc3339(),
                 })
             };
-            
-            event_store.append_with_source(
-                run_id,
-                event_type,
-                payload,
-                Some(client_id),
-                Some(ClientType::Web),
-            ).await?;
-            
+
+            event_store
+                .append_with_source(
+                    run_id,
+                    event_type,
+                    payload,
+                    Some(client_id),
+                    Some(ClientType::Web),
+                )
+                .await?;
+
             tracing::info!(
                 "Approval {} for tool {} in run {}",
-                if approval.approved { "granted" } else { "denied" },
+                if approval.approved {
+                    "granted"
+                } else {
+                    "denied"
+                },
                 approval.tool_name,
                 run_id
             );
         }
-        
+
         "cursor_sync" => {
             #[derive(serde::Deserialize)]
             struct CursorSync {
                 sequence: i64,
             }
-            
+
             let sync: CursorSync = serde_json::from_value(msg.payload)
                 .map_err(|e| ApiError::BadRequest(format!("Invalid cursor sync: {}", e)))?;
-            
+
             // Update attachment cursor
             let _ = sqlx::query(
                 "UPDATE attachments SET cursor_sequence = ?, last_seen_at = ? 
-                 WHERE run_id = ? AND client_id = ?"
+                 WHERE run_id = ? AND client_id = ?",
             )
             .bind(sync.sequence)
             .bind(chrono::Utc::now())
@@ -271,20 +275,20 @@ async fn handle_client_message(
             .execute(&state.db)
             .await;
         }
-        
+
         "command" => {
             #[derive(serde::Deserialize)]
             struct Command {
                 command: String,
             }
-            
+
             let cmd: Command = serde_json::from_value(msg.payload)
                 .map_err(|e| ApiError::BadRequest(format!("Invalid command: {}", e)))?;
-            
+
             // Handle commands like pause, resume, cancel
             use crate::services::RunServiceImpl;
             let run_service = RunServiceImpl::from_arc(Arc::new(state.db.clone()));
-            
+
             match cmd.command.as_str() {
                 "pause" => {
                     run_service.pause(run_id).await?;
@@ -296,15 +300,21 @@ async fn handle_client_message(
                     run_service.cancel(run_id, None).await?;
                 }
                 _ => {
-                    return Err(ApiError::BadRequest(format!("Unknown command: {}", cmd.command)));
+                    return Err(ApiError::BadRequest(format!(
+                        "Unknown command: {}",
+                        cmd.command
+                    )));
                 }
             }
         }
-        
+
         _ => {
-            return Err(ApiError::BadRequest(format!("Unknown message type: {}", msg.msg_type)));
+            return Err(ApiError::BadRequest(format!(
+                "Unknown message type: {}",
+                msg.msg_type
+            )));
         }
     }
-    
+
     Ok(())
 }

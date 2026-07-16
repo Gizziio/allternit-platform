@@ -1,4 +1,3 @@
-
 //! OpenAI-compatible Agents v1 API routes
 //!
 //! Mirrors Next.js `/api/agents/v1/*` layer.
@@ -17,8 +16,8 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn agents_v1_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -43,9 +42,10 @@ fn fetch_agent_by_id(
         "SELECT id, user_id, name, description, type, parent_agent_id, model, provider,
                 capabilities, system_prompt, tools, max_iterations, temperature, config,
                 status, workspace_id, avatar, identity_key, created_at, updated_at, last_run_at
-         FROM agents WHERE id = ?1 AND user_id = ?2"
+         FROM agents WHERE id = ?1 AND user_id = ?2",
     )?;
-    let rows: Vec<AgentRow> = stmt.query_map(params![agent_id, user_id], map_agent_row)?
+    let rows: Vec<AgentRow> = stmt
+        .query_map(params![agent_id, user_id], map_agent_row)?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(rows.into_iter().next())
 }
@@ -58,9 +58,10 @@ fn list_user_agents(
         "SELECT id, user_id, name, description, type, parent_agent_id, model, provider,
                 capabilities, system_prompt, tools, max_iterations, temperature, config,
                 status, workspace_id, avatar, identity_key, created_at, updated_at, last_run_at
-         FROM agents WHERE user_id = ?1 ORDER BY updated_at DESC"
+         FROM agents WHERE user_id = ?1 ORDER BY updated_at DESC",
     )?;
-    let rows: Vec<AgentRow> = stmt.query_map(params![user_id], map_agent_row)?
+    let rows: Vec<AgentRow> = stmt
+        .query_map(params![user_id], map_agent_row)?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(rows)
 }
@@ -120,57 +121,98 @@ struct AgentRow {
 // ─── Profile builder (mirrors Next.js buildAgentProfile) ──────────────────────
 
 fn build_agent_profile(agent: &AgentRow) -> Value {
-    let config: Value = agent.config.as_ref()
+    let config: Value = agent
+        .config
+        .as_ref()
         .and_then(|c| serde_json::from_str(c).ok())
         .unwrap_or(json!({}));
 
     let profile_override = config.get("profile").cloned().unwrap_or(json!({}));
 
-    let instructions = profile_override.get("instructions")
+    let instructions = profile_override
+        .get("instructions")
         .and_then(|v| v.as_str())
         .or(agent.system_prompt.as_deref())
         .unwrap_or("");
 
-    let model_config = profile_override.get("modelConfig").cloned().unwrap_or(json!({}));
-    let provider = model_config.get("provider")
+    let model_config = profile_override
+        .get("modelConfig")
+        .cloned()
+        .unwrap_or(json!({}));
+    let provider = model_config
+        .get("provider")
         .and_then(|v| v.as_str())
         .unwrap_or(&agent.provider);
-    let model = model_config.get("model")
+    let model = model_config
+        .get("model")
         .and_then(|v| v.as_str())
         .unwrap_or(&agent.model);
-    let temperature = model_config.get("temperature")
+    let temperature = model_config
+        .get("temperature")
         .and_then(|v| v.as_f64())
         .or(Some(agent.temperature));
-    let max_context_tokens = model_config.get("maxContextTokens")
+    let max_context_tokens = model_config
+        .get("maxContextTokens")
         .and_then(|v| v.as_u64())
         .or_else(|| config.get("maxContextTokens").and_then(|v| v.as_u64()));
-    let max_output_tokens = model_config.get("maxOutputTokens")
+    let max_output_tokens = model_config
+        .get("maxOutputTokens")
         .and_then(|v| v.as_u64())
         .or_else(|| config.get("maxOutputTokens").and_then(|v| v.as_u64()));
-    let max_steps = model_config.get("maxSteps")
+    let max_steps = model_config
+        .get("maxSteps")
         .and_then(|v| v.as_u64())
         .or_else(|| config.get("maxSteps").and_then(|v| v.as_u64()))
         .or_else(|| Some(agent.max_iterations as u64));
 
     let capabilities = derive_capabilities(agent, &profile_override);
 
-    let tool_policy = profile_override.get("toolPolicy").cloned().unwrap_or(json!({}));
-    let built_in_tool_ids = tool_policy.get("builtInToolIds")
+    let tool_policy = profile_override
+        .get("toolPolicy")
+        .cloned()
+        .unwrap_or(json!({}));
+    let built_in_tool_ids = tool_policy
+        .get("builtInToolIds")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<_>>())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect::<Vec<_>>()
+        })
         .unwrap_or_else(|| parse_json_string_array(agent.tools.as_deref()));
-    let mcp_server_ids = tool_policy.get("mcpServerIds")
+    let mcp_server_ids = tool_policy
+        .get("mcpServerIds")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<_>>())
-        .unwrap_or_else(|| parse_json_string_array(config.get("mcpServerIds").and_then(|v| v.as_str())));
-    let allowed_mcp_tool_ids = tool_policy.get("allowedMcpToolIds")
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_else(|| {
+            parse_json_string_array(config.get("mcpServerIds").and_then(|v| v.as_str()))
+        });
+    let allowed_mcp_tool_ids = tool_policy
+        .get("allowedMcpToolIds")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<_>>())
-        .unwrap_or_else(|| parse_json_string_array(config.get("allowedMcpToolIds").and_then(|v| v.as_str())));
-    let deferred_tool_ids = tool_policy.get("deferredToolIds")
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_else(|| {
+            parse_json_string_array(config.get("allowedMcpToolIds").and_then(|v| v.as_str()))
+        });
+    let deferred_tool_ids = tool_policy
+        .get("deferredToolIds")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<_>>())
-        .unwrap_or_else(|| parse_json_string_array(config.get("deferredToolIds").and_then(|v| v.as_str())));
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_else(|| {
+            parse_json_string_array(config.get("deferredToolIds").and_then(|v| v.as_str()))
+        });
 
     json!({
         "agentId": agent.id,
@@ -198,7 +240,10 @@ fn build_agent_profile(agent: &AgentRow) -> Value {
 }
 
 fn derive_capabilities(agent: &AgentRow, profile_override: &Value) -> Value {
-    if let Some(cap) = profile_override.get("capabilities").and_then(|v| v.as_object()) {
+    if let Some(cap) = profile_override
+        .get("capabilities")
+        .and_then(|v| v.as_object())
+    {
         return json!(cap);
     }
 
@@ -206,17 +251,39 @@ fn derive_capabilities(agent: &AgentRow, profile_override: &Value) -> Value {
     let mut flags = serde_json::Map::new();
     for cap in caps {
         match cap.as_str() {
-            "execute_code" => { flags.insert("execute_code".to_string(), json!(true)); }
-            "file_search" => { flags.insert("file_search".to_string(), json!(true)); }
-            "context" => { flags.insert("context".to_string(), json!(true)); }
-            "mcp_tools" => { flags.insert("mcp_tools".to_string(), json!(true)); }
-            "deferred_tools" => { flags.insert("deferred_tools".to_string(), json!(true)); }
-            "artifacts" => { flags.insert("artifacts".to_string(), json!(true)); }
-            "actions" => { flags.insert("actions".to_string(), json!(true)); }
-            "chain" => { flags.insert("chain".to_string(), json!(true)); }
-            "web_search" => { flags.insert("web_search".to_string(), json!(true)); }
-            "computer-use" => { flags.insert("computer_use".to_string(), json!(true)); }
-            "filesystem" => { flags.insert("filesystem".to_string(), json!(true)); }
+            "execute_code" => {
+                flags.insert("execute_code".to_string(), json!(true));
+            }
+            "file_search" => {
+                flags.insert("file_search".to_string(), json!(true));
+            }
+            "context" => {
+                flags.insert("context".to_string(), json!(true));
+            }
+            "mcp_tools" => {
+                flags.insert("mcp_tools".to_string(), json!(true));
+            }
+            "deferred_tools" => {
+                flags.insert("deferred_tools".to_string(), json!(true));
+            }
+            "artifacts" => {
+                flags.insert("artifacts".to_string(), json!(true));
+            }
+            "actions" => {
+                flags.insert("actions".to_string(), json!(true));
+            }
+            "chain" => {
+                flags.insert("chain".to_string(), json!(true));
+            }
+            "web_search" => {
+                flags.insert("web_search".to_string(), json!(true));
+            }
+            "computer-use" => {
+                flags.insert("computer_use".to_string(), json!(true));
+            }
+            "filesystem" => {
+                flags.insert("filesystem".to_string(), json!(true));
+            }
             _ => {}
         }
     }
@@ -224,12 +291,15 @@ fn derive_capabilities(agent: &AgentRow, profile_override: &Value) -> Value {
 }
 
 fn parse_json_string_array(value: Option<&str>) -> Vec<String> {
-    value.and_then(|v| serde_json::from_str::<Vec<String>>(v).ok())
+    value
+        .and_then(|v| serde_json::from_str::<Vec<String>>(v).ok())
         .unwrap_or_default()
 }
 
 fn agent_to_remote_model(agent: &AgentRow) -> Value {
-    let created = agent.created_at.parse::<chrono::DateTime<chrono::Utc>>()
+    let created = agent
+        .created_at
+        .parse::<chrono::DateTime<chrono::Utc>>()
         .map(|d| d.timestamp())
         .unwrap_or_else(|_| {
             // Fallback: try parsing as RFC3339 or naive datetime
@@ -254,7 +324,6 @@ async fn list_models(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -262,7 +331,8 @@ async fn list_models(
         let conn = db.connect()?;
         let agents = list_user_agents(&conn, &user_id)?;
         Ok::<_, rusqlite::Error>(agents)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(agents)) => {
@@ -270,15 +340,24 @@ async fn list_models(
             Json(json!({
                 "object": "list",
                 "data": data,
-            })).into_response()
+            }))
+            .into_response()
         }
         Ok(Err(e)) => {
             warn!("DB error listing models: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -291,7 +370,6 @@ async fn get_model(
     _headers: HeaderMap,
     Path(model_id): Path<String>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -299,18 +377,31 @@ async fn get_model(
         let conn = db.connect()?;
         let agent = fetch_agent_by_id(&conn, &model_id, &user_id)?;
         Ok::<_, rusqlite::Error>(agent)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some(agent))) => Json(agent_to_remote_model(&agent)).into_response(),
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Agent not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Agent not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error getting model: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -328,7 +419,6 @@ async fn list_tools(
     _headers: HeaderMap,
     Query(q): Query<ListToolsQuery>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let model_id = q.model;
@@ -338,7 +428,8 @@ async fn list_tools(
         let conn = db.connect()?;
         let agent = fetch_agent_by_id(&conn, &model_id, &user_id)?;
         Ok::<_, rusqlite::Error>(agent)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some(agent))) => {
@@ -347,57 +438,100 @@ async fn list_tools(
                 "object": "list",
                 "data": tools,
                 "model": model_id_resp,
-            })).into_response()
+            }))
+            .into_response()
         }
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Agent not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Agent not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing tools: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
 
 fn build_deferred_tools(agent: &AgentRow) -> Vec<Value> {
-    let config: Value = agent.config.as_ref()
+    let config: Value = agent
+        .config
+        .as_ref()
         .and_then(|c| serde_json::from_str(c).ok())
         .unwrap_or(json!({}));
 
     let profile_override = config.get("profile").cloned().unwrap_or(json!({}));
-    let tool_policy = profile_override.get("toolPolicy").cloned().unwrap_or(json!({}));
+    let tool_policy = profile_override
+        .get("toolPolicy")
+        .cloned()
+        .unwrap_or(json!({}));
 
-    let deferred_tool_ids = tool_policy.get("deferredToolIds")
+    let deferred_tool_ids = tool_policy
+        .get("deferredToolIds")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<_>>())
-        .unwrap_or_else(|| parse_json_string_array(config.get("deferredToolIds").and_then(|v| v.as_str())));
-
-    let allowed_mcp_tool_ids: Vec<String> = tool_policy.get("allowedMcpToolIds")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-        .unwrap_or_else(|| parse_json_string_array(config.get("allowedMcpToolIds").and_then(|v| v.as_str())));
-
-    let mcp_server_ids: Vec<String> = tool_policy.get("mcpServerIds")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-        .unwrap_or_else(|| parse_json_string_array(config.get("mcpServerIds").and_then(|v| v.as_str())));
-
-    deferred_tool_ids.iter().enumerate().map(|(i, id)| {
-        let is_allowed = allowed_mcp_tool_ids.contains(id);
-        let server_id = mcp_server_ids.get(i).or(mcp_server_ids.first()).cloned();
-        json!({
-            "id": id,
-            "label": id,
-            "serverId": server_id,
-            "description": if is_allowed {
-                "Deferred MCP tool available to this agent profile."
-            } else {
-                "Deferred tool declared on this agent profile."
-            },
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect::<Vec<_>>()
         })
-    }).collect()
+        .unwrap_or_else(|| {
+            parse_json_string_array(config.get("deferredToolIds").and_then(|v| v.as_str()))
+        });
+
+    let allowed_mcp_tool_ids: Vec<String> = tool_policy
+        .get("allowedMcpToolIds")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_else(|| {
+            parse_json_string_array(config.get("allowedMcpToolIds").and_then(|v| v.as_str()))
+        });
+
+    let mcp_server_ids: Vec<String> = tool_policy
+        .get("mcpServerIds")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_else(|| {
+            parse_json_string_array(config.get("mcpServerIds").and_then(|v| v.as_str()))
+        });
+
+    deferred_tool_ids
+        .iter()
+        .enumerate()
+        .map(|(i, id)| {
+            let is_allowed = allowed_mcp_tool_ids.contains(id);
+            let server_id = mcp_server_ids.get(i).or(mcp_server_ids.first()).cloned();
+            json!({
+                "id": id,
+                "label": id,
+                "serverId": server_id,
+                "description": if is_allowed {
+                    "Deferred MCP tool available to this agent profile."
+                } else {
+                    "Deferred tool declared on this agent profile."
+                },
+            })
+        })
+        .collect()
 }
 
 // ─── POST /agents/v1/tools/search ─────────────────────────────────────────────
@@ -414,7 +548,6 @@ async fn search_tools(
     _headers: HeaderMap,
     Json(body): Json<SearchToolsBody>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let model_id = body.model;
@@ -425,7 +558,8 @@ async fn search_tools(
         let conn = db.connect()?;
         let agent = fetch_agent_by_id(&conn, &model_id, &user_id)?;
         Ok::<_, rusqlite::Error>(agent)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some(agent))) => {
@@ -433,26 +567,51 @@ async fn search_tools(
             let filtered: Vec<Value> = if query.is_empty() {
                 tools
             } else {
-                tools.into_iter().filter(|t| {
-                    t.get("id").and_then(|v| v.as_str()).map(|s| s.to_lowercase().contains(&query)).unwrap_or(false)
-                    || t.get("label").and_then(|v| v.as_str()).map(|s| s.to_lowercase().contains(&query)).unwrap_or(false)
-                    || t.get("description").and_then(|v| v.as_str()).map(|s| s.to_lowercase().contains(&query)).unwrap_or(false)
-                }).collect()
+                tools
+                    .into_iter()
+                    .filter(|t| {
+                        t.get("id")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_lowercase().contains(&query))
+                            .unwrap_or(false)
+                            || t.get("label")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_lowercase().contains(&query))
+                                .unwrap_or(false)
+                            || t.get("description")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_lowercase().contains(&query))
+                                .unwrap_or(false)
+                    })
+                    .collect()
             };
             Json(json!({
                 "object": "list",
                 "data": filtered,
                 "model": model_id_resp,
-            })).into_response()
+            }))
+            .into_response()
         }
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Agent not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Agent not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error searching tools: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -477,13 +636,17 @@ async fn activate_tools(
     _headers: HeaderMap,
     Json(body): Json<ActivateToolsBody>,
 ) -> impl IntoResponse {
-
-    let tool_ids: Vec<String> = body.tool_ids
+    let tool_ids: Vec<String> = body
+        .tool_ids
         .or_else(|| body.tool_id.map(|id| vec![id]))
         .unwrap_or_default();
 
     if tool_ids.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "At least one tool_id is required"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "At least one tool_id is required"})),
+        )
+            .into_response();
     }
 
     let db = state.db.clone();
@@ -575,22 +738,35 @@ async fn activate_tools(
     match result {
         Ok(Ok((found, activated))) => {
             if !found {
-                return (StatusCode::NOT_FOUND, Json(json!({"error": "Agent not found"}))).into_response();
+                return (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({"error": "Agent not found"})),
+                )
+                    .into_response();
             }
             Json(json!({
                 "success": true,
                 "sessionId": session_id_resp,
                 "model": model_id_resp,
                 "activatedToolIds": activated,
-            })).into_response()
+            }))
+            .into_response()
         }
         Ok(Err(e)) => {
             warn!("DB error activating tools: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
@@ -603,7 +779,6 @@ async fn get_response(
     _headers: HeaderMap,
     Path(response_id): Path<String>,
 ) -> impl IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
     let response_id_for_db = response_id.clone();
@@ -614,23 +789,29 @@ async fn get_response(
         // Find assistant message with matching response_id in metadata
         // Since SQLite doesn't support JSON path queries natively, we do a LIKE search
         let pattern = format!("%\"response_id\":\"{}\"%", response_id_for_db);
-        let row: Option<(String, String, String, String)> = conn.query_row(
-            "SELECT cm.id, cm.content, cm.metadata, c.id as conversation_id
+        let row: Option<(String, String, String, String)> = conn
+            .query_row(
+                "SELECT cm.id, cm.content, cm.metadata, c.id as conversation_id
              FROM conversation_messages cm
              JOIN conversations c ON cm.conversation_id = c.id
              WHERE cm.role = 'assistant' AND cm.metadata LIKE ?1 AND c.user_id = ?2
              ORDER BY cm.created_at DESC LIMIT 1",
-            params![&pattern, &user_id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
-        ).ok();
+                params![&pattern, &user_id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .ok();
 
         Ok::<_, rusqlite::Error>(row)
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(Some((_, content, metadata, conversation_id)))) => {
             let meta: Value = serde_json::from_str(&metadata).unwrap_or(json!({}));
-            let model_id = meta.get("model").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let model_id = meta
+                .get("model")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
 
             Json(json!({
                 "id": response_id,
@@ -660,22 +841,32 @@ async fn get_response(
                     "agent_profile": null,
                     "artifacts": [],
                 },
-            })).into_response()
+            }))
+            .into_response()
         }
-        Ok(Ok(None)) => (StatusCode::NOT_FOUND, Json(json!({"error": "Response not found"}))).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Response not found"})),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error getting response: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
     }
 }
-
-
-
 
 async fn agents_v1_status() -> impl IntoResponse {
     Json(json!({

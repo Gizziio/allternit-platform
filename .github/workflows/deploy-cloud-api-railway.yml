@@ -1,0 +1,28 @@
+name: Deploy Cloud API to Railway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/allternit-cloud-api/**'
+      - 'cmd/allternit-cloud-api/migrations/**'
+      - 'infrastructure/cloud/**'
+      - 'infrastructure/providers/hetzner/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/deploy-cloud-api-railway.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        run: railway up --service allternit-cloud-api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

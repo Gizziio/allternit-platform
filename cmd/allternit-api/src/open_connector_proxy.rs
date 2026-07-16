@@ -53,7 +53,12 @@ fn aliases() -> &'static HashMap<String, String> {
 /// sidecar reports live connections under its own spelling.
 fn reverse_aliases() -> &'static HashMap<String, String> {
     static R: OnceLock<HashMap<String, String>> = OnceLock::new();
-    R.get_or_init(|| aliases().iter().map(|(k, v)| (v.clone(), k.clone())).collect())
+    R.get_or_init(|| {
+        aliases()
+            .iter()
+            .map(|(k, v)| (v.clone(), k.clone()))
+            .collect()
+    })
 }
 
 /// Map an Allternit catalog connector id to the sidecar provider id that
@@ -161,7 +166,12 @@ async fn admin_get(path: &str) -> Result<Value, ProxyError> {
 /// that need to decide whether sidecar-backed connectors are usable right now.
 pub async fn is_reachable() -> bool {
     let url = format!("{}/health", sidecar_url());
-    client().get(&url).send().await.map(|r| r.status().is_success()).unwrap_or(false)
+    client()
+        .get(&url)
+        .send()
+        .await
+        .map(|r| r.status().is_success())
+        .unwrap_or(false)
 }
 
 /// Slim per-provider view used by the connector catalog merge. Deliberately
@@ -186,8 +196,9 @@ pub struct ProviderSummary {
 /// **Allternit catalog ids** (after applying reverse aliases), so callers in
 /// `connector_routes.rs` can look providers up with the original catalog id.
 pub async fn provider_summaries() -> Result<Arc<HashMap<String, ProviderSummary>>, ProxyError> {
-    static CACHE: OnceLock<tokio::sync::Mutex<Option<(Instant, Arc<HashMap<String, ProviderSummary>>)>>> =
-        OnceLock::new();
+    static CACHE: OnceLock<
+        tokio::sync::Mutex<Option<(Instant, Arc<HashMap<String, ProviderSummary>>)>>,
+    > = OnceLock::new();
     let lock = CACHE.get_or_init(|| tokio::sync::Mutex::new(None));
     {
         let guard = lock.lock().await;
@@ -208,7 +219,11 @@ pub async fn provider_summaries() -> Result<Arc<HashMap<String, ProviderSummary>
             let auth_types: Vec<String> = p
                 .get("authTypes")
                 .and_then(|v| v.as_array())
-                .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
                 .unwrap_or_default();
             let executable_actions = p
                 .get("execution")
@@ -228,7 +243,12 @@ pub async fn provider_summaries() -> Result<Arc<HashMap<String, ProviderSummary>
             let key = allternit_id(service).unwrap_or_else(|| service.to_string());
             map.insert(
                 key,
-                ProviderSummary { auth_types, executable_actions, display_name, homepage_url },
+                ProviderSummary {
+                    auth_types,
+                    executable_actions,
+                    display_name,
+                    homepage_url,
+                },
             );
         }
     }
@@ -283,7 +303,8 @@ pub async fn get_provider(service: &str) -> Result<Value, ProxyError> {
 /// Drop all cached sidecar data (e.g. after the sidecar restarts).
 pub async fn invalidate_caches() {
     static PROVIDERS: OnceLock<tokio::sync::Mutex<Option<(Instant, Value)>>> = OnceLock::new();
-    static PER_SERVICE: OnceLock<tokio::sync::Mutex<HashMap<String, (Instant, Value)>>> = OnceLock::new();
+    static PER_SERVICE: OnceLock<tokio::sync::Mutex<HashMap<String, (Instant, Value)>>> =
+        OnceLock::new();
     if let Some(lock) = PROVIDERS.get() {
         *lock.lock().await = None;
     }
@@ -369,13 +390,21 @@ pub async fn start_oauth(service: &str, user_id: &str) -> Result<Value, ProxyErr
 /// (e.g. `{authType: "api_key", values: {apiKey: ...}}` or
 /// `{authType: "no_auth"}`) — the secret lands only in the sidecar's own
 /// encrypted SQLite, never in Rust's DB.
-pub async fn upsert_credential(service: &str, user_id: &str, body: Value) -> Result<Value, ProxyError> {
+pub async fn upsert_credential(
+    service: &str,
+    user_id: &str,
+    body: Value,
+) -> Result<Value, ProxyError> {
     let sidecar_service = sidecar_id(service);
     let mut payload = body;
     if let Some(obj) = payload.as_object_mut() {
         obj.insert("connectionName".to_string(), json!(user_id));
     }
-    let url = format!("{}/api/connections/{}", sidecar_url(), urlencoding(&sidecar_service));
+    let url = format!(
+        "{}/api/connections/{}",
+        sidecar_url(),
+        urlencoding(&sidecar_service)
+    );
     let mut req = client().put(&url).json(&payload);
     if let Some(tok) = admin_token() {
         req = req.bearer_auth(tok);
@@ -485,7 +514,9 @@ pub async fn proxy_oauth_callback(query: &str) -> Result<(u16, String), ProxyErr
 fn urlencoding(s: &str) -> String {
     s.bytes()
         .map(|b| match b {
-            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => (b as char).to_string(),
+            b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                (b as char).to_string()
+            }
             _ => format!("%{:02X}", b),
         })
         .collect()

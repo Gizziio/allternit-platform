@@ -58,7 +58,7 @@ const SURFACE_ICONS: Record<AppMode, React.ElementType> = {
 };
 
 function initials(name: string): string {
-  return name
+  return (name || "Agent")
     .split(/\s+/)
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase())
@@ -83,7 +83,7 @@ function formatUpdatedAt(ts?: string | number | Date): string {
 
 function AgentCardAvatar({ agent, accent }: { agent: Agent; accent: string }) {
   const avatarConfig = (agent as any).avatar || (agent.config as any)?.avatar;
-  const size = 48;
+  const size = 40;
 
   if (avatarConfig && (avatarConfig.eyes || avatarConfig.antennas || avatarConfig.baseShape)) {
     return (
@@ -170,6 +170,10 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
   const handleRun = (e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(false);
+    // No inline prompt input on the card itself, so "Run" opens the agent's
+    // detail view (where Launch Agent Dashboard > Runs can start one) rather
+    // than doing nothing, which is what this previously did.
+    onClick();
   };
 
   const surfaces = useMemo(() => agent.allowedSurfaces?.slice(0, 4) || [], [agent.allowedSurfaces]);
@@ -189,21 +193,11 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
         onClick={() => !menuOpen && onClick()}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => { setIsHovered(false); setMenuOpen(false); }}
-        whileHover={{ y: -5, transition: { duration: 0.2 } }}
         className={cn(
-          "group relative flex h-full cursor-pointer flex-col rounded-2xl border border-solid bg-[var(--bg-elevated)] transition-colors duration-200",
-          "border-[var(--border-default)] hover:border-[var(--border-hover)]"
+          "group relative flex h-full min-h-[190px] cursor-pointer flex-col rounded-xl border border-solid bg-[var(--bg-elevated)] transition-all duration-200",
+          "border-[var(--border-subtle)] hover:border-[var(--border-hover)] hover:shadow-md"
         )}
-        style={{
-          boxShadow: isHovered ? `0 18px 40px -16px color-mix(in srgb, ${accent} 25%, transparent)` : undefined,
-        }}
       >
-        {/* Top accent bar */}
-        <div
-          className="absolute left-0 top-0 h-1 w-full transition-all duration-200 group-hover:h-1.5"
-          style={{ background: accent }}
-        />
-
         <div className="flex h-full flex-col gap-4 p-5">
           {/* Header */}
           <div className="flex items-start justify-between gap-3">
@@ -414,7 +408,9 @@ function QuickAction({
       onClick={onClick}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold shadow-lg backdrop-blur-md"
+      title={label}
+      aria-label={label}
+      className="flex size-8 shrink-0 items-center justify-center rounded-lg shadow-lg backdrop-blur-md"
       style={{
         background: danger
           ? "color-mix(in srgb, var(--status-error) 12%, var(--surface-panel))"
@@ -424,7 +420,6 @@ function QuickAction({
       }}
     >
       {icon}
-      {label}
     </motion.button>
   );
 }

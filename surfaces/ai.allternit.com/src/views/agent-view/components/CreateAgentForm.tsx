@@ -218,6 +218,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
   const [activeStep, setActiveStep] = useState<string>("identity");
   const [error, setError] = useState<string | null>(null);
   const [workspaceWarning, setWorkspaceWarning] = useState<string | null>(null);
+  const [browserWarningDismissed, setBrowserWarningDismissed] = useState(false);
   const [isForgeQueued, setIsForgeQueued] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
@@ -594,9 +595,10 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
       )}
 
       <div className="mb-4 flex flex-col gap-2">
-        <BrowserCompatibilityWarningComponent 
-          compatibility={browserCompatibility} 
-          onDismiss={() => {}} 
+        <BrowserCompatibilityWarningComponent
+          compatibility={browserCompatibility}
+          dismissed={browserWarningDismissed}
+          onDismiss={() => setBrowserWarningDismissed(true)}
         />
         <DuplicateNameWarning agentName={formData.name} />
       </div>

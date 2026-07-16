@@ -1,0 +1,49 @@
+# Git
+.git
+.gitignore
+
+# Node / pnpm
+node_modules
+.pnpm-store
+**/node_modules
+
+# Build outputs
+target
+dist
+build
+.next
+out
+
+# IDE / OS
+.DS_Store
+.idea
+.vscode
+*.swp
+*.swo
+
+# Logs
+*.log
+logs
+
+# Test / local data
+.data
+data/
+*.db
+*.db-journal
+
+# Media / archives
+*.mp4
+*.mov
+*.zip
+*.tar.gz
+
+# Playwright / cache
+.cache
+.playwright-cli
+
+# References / archive (large, not needed for cloud API)
+.references
+archive
+
+# Documentation
+*.md

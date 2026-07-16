@@ -84,7 +84,7 @@ export const PLUGINS = {
   image: {
     id: 'image',
     name: 'Image',
-    description: 'Image generation via Pollinations (FREE)',
+    description: 'Local image generation via the Bonsai companion',
     icon: 'Image',
     lazyImport: () => import('@/plugins/built-in/image/plugin'),
     capabilities: ['text-to-image', 'image-variations', 'style-transfer', 'upscale'],
@@ -134,8 +134,8 @@ export async function loadPlugin(id: PluginId): Promise<ModePlugin> {
 export async function createPluginInstance(id: PluginId): Promise<ModePlugin> {
   const definition = PLUGINS[id];
   if (!definition) throw new Error(`Plugin not found: ${id}`);
-  const module = await definition.lazyImport() as Record<string, unknown>;
-  const factory = Object.entries(module).find(([name, value]) =>
+  const module = await definition.lazyImport();
+  const factory = Object.entries(module as unknown as Record<string, unknown>).find(([name, value]) =>
     /^create[A-Z].*Plugin$/.test(name) && typeof value === 'function'
   )?.[1] as (() => ModePlugin) | undefined;
   if (!factory) throw new Error(`Plugin ${id} does not export an instance factory`);

@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::Json;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 // Re-export the main types for use by other services
 pub use app_types::*;
@@ -133,7 +133,12 @@ impl RegistryAppState {
         apps.values().cloned().collect()
     }
 
-    pub fn search_apps(&self, category: Option<&str>, platform: Option<&str>, search: Option<&str>) -> Vec<AppDefinition> {
+    pub fn search_apps(
+        &self,
+        category: Option<&str>,
+        platform: Option<&str>,
+        search: Option<&str>,
+    ) -> Vec<AppDefinition> {
         let apps = self.app_store.read().unwrap();
 
         apps.values()
@@ -152,9 +157,13 @@ impl RegistryAppState {
                 }
 
                 if let Some(search) = search {
-                    if !app.name.to_lowercase().contains(&search.to_lowercase()) &&
-                       !app.description.to_lowercase().contains(&search.to_lowercase()) &&
-                       !app.id.to_lowercase().contains(&search.to_lowercase()) {
+                    if !app.name.to_lowercase().contains(&search.to_lowercase())
+                        && !app
+                            .description
+                            .to_lowercase()
+                            .contains(&search.to_lowercase())
+                        && !app.id.to_lowercase().contains(&search.to_lowercase())
+                    {
                         return false;
                     }
                 }
@@ -220,7 +229,10 @@ pub async fn handle_register_app(
     State(state): State<Arc<RegistryAppState>>,
     request: Json<RegisterAppRequest>,
 ) -> Result<Json<RegisterAppResponse>, StatusCode> {
-    let mut apps = state.app_store.write().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut apps = state
+        .app_store
+        .write()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     apps.insert(request.app.id.clone(), request.app.clone());
 
@@ -233,7 +245,10 @@ pub async fn handle_register_app(
 pub async fn handle_list_apps(
     State(state): State<Arc<RegistryAppState>>,
 ) -> Result<Json<Vec<AppDefinition>>, StatusCode> {
-    let apps = state.app_store.read().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let apps = state
+        .app_store
+        .read()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(apps.values().cloned().collect()))
 }
 
@@ -241,7 +256,10 @@ pub async fn handle_get_app(
     State(state): State<Arc<RegistryAppState>>,
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> Result<Json<AppDefinition>, StatusCode> {
-    let apps = state.app_store.read().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let apps = state
+        .app_store
+        .read()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let app = apps.get(&id).ok_or(StatusCode::NOT_FOUND)?;
     Ok(Json(app.clone()))
 }
@@ -250,7 +268,10 @@ pub async fn handle_search_apps(
     State(state): State<Arc<RegistryAppState>>,
     request: Json<QueryAppsRequest>,
 ) -> Result<Json<Vec<AppDefinition>>, StatusCode> {
-    let apps = state.app_store.read().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let apps = state
+        .app_store
+        .read()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let filtered_apps: Vec<AppDefinition> = apps
         .values()
@@ -269,9 +290,13 @@ pub async fn handle_search_apps(
             }
 
             if let Some(ref search) = request.search {
-                if !app.name.to_lowercase().contains(&search.to_lowercase()) &&
-                   !app.description.to_lowercase().contains(&search.to_lowercase()) &&
-                   !app.id.to_lowercase().contains(&search.to_lowercase()) {
+                if !app.name.to_lowercase().contains(&search.to_lowercase())
+                    && !app
+                        .description
+                        .to_lowercase()
+                        .contains(&search.to_lowercase())
+                    && !app.id.to_lowercase().contains(&search.to_lowercase())
+                {
                     return false;
                 }
             }
@@ -296,7 +321,10 @@ pub async fn handle_authenticate_user(
     axum::extract::Path(app_id): axum::extract::Path<String>,
     request: Json<AuthenticateUserRequest>,
 ) -> Result<Json<AuthenticateUserResponse>, StatusCode> {
-    let apps = state.app_store.read().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let apps = state
+        .app_store
+        .read()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let app = apps.get(&app_id).ok_or(StatusCode::NOT_FOUND)?;
 
     // In a real implementation, this would handle the actual authentication
@@ -309,7 +337,8 @@ pub async fn handle_authenticate_user(
                 auth_token: None, // OAuth requires redirect flow
                 requires_redirect: true,
                 redirect_url: app.oauth_config.as_ref().map(|config| {
-                    format!("{}?client_id={}&redirect_uri={}&scope={}&response_type=code",
+                    format!(
+                        "{}?client_id={}&redirect_uri={}&scope={}&response_type=code",
                         config.authorization_url,
                         config.client_id,
                         "https://allternit.com/oauth/callback", // This would come from request
@@ -317,7 +346,7 @@ pub async fn handle_authenticate_user(
                     )
                 }),
             }))
-        },
+        }
         "api_key" => {
             // For API key, we'd validate the provided key
             Ok(Json(AuthenticateUserResponse {
@@ -326,7 +355,7 @@ pub async fn handle_authenticate_user(
                 requires_redirect: false,
                 redirect_url: None,
             }))
-        },
+        }
         "none" => {
             // For no auth, just return success
             Ok(Json(AuthenticateUserResponse {
@@ -335,10 +364,8 @@ pub async fn handle_authenticate_user(
                 requires_redirect: false,
                 redirect_url: None,
             }))
-        },
-        _ => {
-            Err(StatusCode::BAD_REQUEST)
         }
+        _ => Err(StatusCode::BAD_REQUEST),
     }
 }
 
@@ -347,11 +374,18 @@ pub async fn handle_execute_tool(
     axum::extract::Path((app_id, tool_id)): axum::extract::Path<(String, String)>,
     request: Json<ExecuteToolRequest>,
 ) -> Result<Json<ExecuteToolResponse>, StatusCode> {
-    let apps = state.app_store.read().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let apps = state
+        .app_store
+        .read()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let app = apps.get(&app_id).ok_or(StatusCode::NOT_FOUND)?;
 
     // Find the tool in the app
-    let tool = app.tools.iter().find(|t| t.id == tool_id).ok_or(StatusCode::NOT_FOUND)?;
+    let tool = app
+        .tools
+        .iter()
+        .find(|t| t.id == tool_id)
+        .ok_or(StatusCode::NOT_FOUND)?;
 
     // In a real implementation, this would call the actual tool
     // For now, we'll simulate the execution
@@ -365,7 +399,7 @@ pub async fn handle_execute_tool(
                 "start_time": request.parameters.get("start_time").unwrap_or(&serde_json::Value::String("".to_string())),
                 "end_time": request.parameters.get("end_time").unwrap_or(&serde_json::Value::String("".to_string())),
             }))
-        },
+        }
         _ => {
             // For other tools, return a generic success
             Some(serde_json::json!({
@@ -377,11 +411,15 @@ pub async fn handle_execute_tool(
     };
 
     // Find the appropriate UI card for this tool
-    let ui_card = app.ui_cards.iter()
+    let ui_card = app
+        .ui_cards
+        .iter()
         .find(|card| {
             // Simple matching - in reality this would be more sophisticated
-            card.title_template.to_lowercase().contains(&tool.name.to_lowercase()) ||
-            card.content_template.to_string().contains(&tool.id)
+            card.title_template
+                .to_lowercase()
+                .contains(&tool.name.to_lowercase())
+                || card.content_template.to_string().contains(&tool.id)
         })
         .cloned();
 

@@ -8,7 +8,7 @@
 use axum::{
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
-    response::{IntoResponse, Response, sse::Sse},
+    response::{sse::Sse, IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
@@ -20,10 +20,9 @@ use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
 use tracing::warn;
 
-use crate::AppState;
-use crate::config::{AppConfig, read_gizzi_default_harness};
+use crate::config::{read_gizzi_default_harness, AppConfig};
 use crate::db::DbHandle;
-use crate::secrets;
+use crate::AppState;
 
 fn gizzi_base() -> String {
     // Reload from disk each time so runtime URL changes (wizard, settings) take
@@ -36,74 +35,43 @@ fn gizzi_base() -> String {
 
 fn gizzi_client(headers: &HeaderMap) -> Client {
     let mut builder = Client::builder();
-    if let Some(auth) = headers.get(header::AUTHORIZATION).and_then(|v| v.to_str().ok()) {
-        let mut default_headers = reqwest::header::HeaderMap::new();
+    let mut default_headers = reqwest::header::HeaderMap::new();
+
+    // The platform API and Gizzi have separate auth boundaries. A Clerk bearer
+    // token authenticates the browser to this API, but a password-protected
+    // Gizzi daemon expects Basic auth. Never forward the Clerk token upstream.
+    let gizzi_password = std::env::var("GIZZI_PASSWORD")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .or_else(|| {
+            std::env::var("GIZZI_SERVER_PASSWORD")
+                .ok()
+                .filter(|value| !value.is_empty())
+        });
+    if let Some(password) = gizzi_password {
+        let username = std::env::var("GIZZI_USERNAME")
+            .or_else(|_| std::env::var("GIZZI_SERVER_USERNAME"))
+            .unwrap_or_else(|_| "gizzi".to_string());
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+        let encoded = STANDARD.encode(format!("{username}:{password}"));
+        if let Ok(value) = reqwest::header::HeaderValue::from_str(&format!("Basic {encoded}")) {
+            default_headers.insert(reqwest::header::AUTHORIZATION, value);
+        }
+    } else if let Some(auth) = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| value.starts_with("Basic "))
+    {
+        // Desktop callers may already have the daemon's Basic credentials.
         if let Ok(value) = reqwest::header::HeaderValue::from_str(auth) {
             default_headers.insert(reqwest::header::AUTHORIZATION, value);
-            builder = builder.default_headers(default_headers);
         }
     }
+
+    if !default_headers.is_empty() {
+        builder = builder.default_headers(default_headers);
+    }
     builder.build().unwrap_or_else(|_| Client::new())
-}
-
-/// Inject provider API keys from the OS keychain into a Gizzi harness.
-///
-/// The wizard stores keys in the keychain and writes provider metadata (baseURL,
-/// npm, models) to the Gizzi config without secrets. At session creation time
-/// we merge the key into `harness.byok.keys.{provider}` so Gizzi can authenticate.
-fn inject_provider_keys(
-    harness: Option<serde_json::Value>,
-    provider_id: &str,
-) -> Option<serde_json::Value> {
-    // Only inject API keys for BYOK-style harnesses. Subprocess, local, and cloud
-    // harnesses carry their own auth (CLI env, base URL tokens, OAuth) and must
-    // not be converted into a BYOK shape.
-    let mode = harness
-        .as_ref()
-        .and_then(|h| h.get("mode"))
-        .and_then(|v| v.as_str())
-        .unwrap_or("byok");
-    if mode != "byok" {
-        return harness;
-    }
-
-    let key = secrets::get_secret(&secrets::provider_account(provider_id))?;
-
-    let mut harness = harness.unwrap_or_else(|| {
-        json!({
-            "mode": "byok",
-            "byok": { "keys": {}, "baseURLs": {} }
-        })
-    });
-
-    let byok = harness
-        .as_object_mut()
-        .and_then(|obj| obj.get_mut("byok"))
-        .and_then(|v| v.as_object_mut())?;
-
-    let keys = byok.entry("keys").or_insert_with(|| json!({}));
-    if let Some(keys_obj) = keys.as_object_mut() {
-        keys_obj.insert(provider_id.to_string(), json!(key));
-    }
-
-    // Ensure harness mode is set to byok when we are injecting keys.
-    if let Some(obj) = harness.as_object_mut() {
-        obj.entry("mode").or_insert_with(|| json!("byok"));
-    }
-
-    Some(harness)
-}
-
-/// Extract the provider id from a Gizzi model reference object or a
-/// "provider/model" string.
-fn provider_id_from_model(model: &serde_json::Value) -> Option<String> {
-    if let Some(provider_id) = model.get("providerID").and_then(|v| v.as_str()) {
-        return Some(provider_id.to_string());
-    }
-    if let Some(s) = model.as_str().and_then(|s| s.split_once('/').map(|(p, _)| p)) {
-        return Some(s.to_string());
-    }
-    None
 }
 
 /// Verify that the requested agent is allowed to run on the requested surface.
@@ -152,9 +120,14 @@ pub fn agent_session_router() -> Router<Arc<AppState>> {
         .route("/agent-sessions", get(list_sessions).post(create_session))
         .route(
             "/agent-sessions/:id",
-            get(get_session).patch(update_session).delete(delete_session),
+            get(get_session)
+                .patch(update_session)
+                .delete(delete_session),
         )
-        .route("/agent-sessions/:id/messages", get(list_messages).post(send_message))
+        .route(
+            "/agent-sessions/:id/messages",
+            get(list_messages).post(send_message),
+        )
         .route("/agent-sessions/:id/abort", post(abort_session))
         .route("/agent-sessions/:id/revert", post(revert_session))
         .route("/agent-sessions/:id/unrevert", post(unrevert_session))
@@ -296,11 +269,7 @@ fn to_iso(timestamp_ms: Option<i64>) -> String {
 
 fn transform_session(info: GizziSessionInfo, db: &DbHandle) -> serde_json::Value {
     let created_at = to_iso(info.time.as_ref().and_then(|t| t.created));
-    let updated_at = to_iso(
-        info.time
-            .as_ref()
-            .and_then(|t| t.updated.or(t.created)),
-    );
+    let updated_at = to_iso(info.time.as_ref().and_then(|t| t.updated.or(t.created)));
 
     // Restore the original frontend surface if the API normalized it before
     // sending to Gizzi (e.g. "design" -> "chat").
@@ -452,7 +421,10 @@ fn select_model(metadata: Option<&serde_json::Value>) -> serde_json::Value {
     }
 
     let (provider_id, model_id) = AppConfig::load().default_model();
-    json!(GizziModelRef { provider_id, model_id })
+    json!(GizziModelRef {
+        provider_id,
+        model_id
+    })
 }
 
 async fn gizzi_json<T: serde::de::DeserializeOwned>(
@@ -478,7 +450,10 @@ async fn gizzi_json<T: serde::de::DeserializeOwned>(
     if !response.status().is_success() {
         let status =
             StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
-        let body = response.text().await.unwrap_or_else(|_| "Upstream error".to_string());
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Upstream error".to_string());
         return Err((status, Json(json!({ "error": body }))).into_response());
     }
 
@@ -515,7 +490,10 @@ async fn gizzi_no_content(
     if !response.status().is_success() {
         let status =
             StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
-        let body = response.text().await.unwrap_or_else(|_| "Upstream error".to_string());
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Upstream error".to_string());
         return Err((status, Json(json!({ "error": body }))).into_response());
     }
 
@@ -601,10 +579,7 @@ async fn create_session(
             .map(|s| s.to_string())
     });
     if let Some(ref s) = surface {
-        payload.insert(
-            "surface".to_string(),
-            json!(normalize_surface_for_gizzi(s)),
-        );
+        payload.insert("surface".to_string(), json!(normalize_surface_for_gizzi(s)));
     }
 
     // Always set the platform default model so Gizzi sessions know which brain
@@ -633,24 +608,9 @@ async fn create_session(
         read_gizzi_default_harness()
     };
 
-    // Determine which provider this session will use so we can inject the
-    // user's API key from the OS keychain into the harness.
-    let provider_id = agent_harness
-        .as_ref()
-        .and_then(|h| h.get("model"))
-        .and_then(provider_id_from_model)
-        .or_else(|| {
-            payload
-                .get("model")
-                .and_then(provider_id_from_model)
-        })
-        .unwrap_or_else(|| {
-            let (provider, _) = AppConfig::load().default_model();
-            provider
-        });
-
-    let harness = inject_provider_keys(agent_harness, &provider_id);
-    if let Some(harness) = harness {
+    // Provider credentials remain inside Gizzi. Only non-secret harness
+    // configuration crosses this gateway boundary.
+    if let Some(harness) = agent_harness {
         payload.insert("harness".to_string(), harness);
     }
     let session = match gizzi_json::<GizziSessionInfo>(
@@ -670,7 +630,11 @@ async fn create_session(
         let _ = state.db.set_session_origin_surface(&session.id, s);
     }
 
-    (StatusCode::CREATED, Json(transform_session(session, &state.db))).into_response()
+    (
+        StatusCode::CREATED,
+        Json(transform_session(session, &state.db)),
+    )
+        .into_response()
 }
 
 async fn get_session(
@@ -708,14 +672,25 @@ async fn update_session(
     if let Some(active) = body.active {
         payload.insert("archived".to_string(), json!(!active));
     }
-    if let Some(ref permission) = body.metadata.as_ref().and_then(|m| m.get("permission")).cloned() {
+    if let Some(ref permission) = body
+        .metadata
+        .as_ref()
+        .and_then(|m| m.get("permission"))
+        .cloned()
+    {
         payload.insert("permission".to_string(), permission.clone());
     }
     if let Some(ref s) = surface {
         payload.insert("surface".to_string(), json!(normalize_surface_for_gizzi(s)));
     }
 
-    match gizzi_json::<GizziSessionInfo>(&client, reqwest::Method::PATCH, &path, Some(serde_json::Value::Object(payload))).await
+    match gizzi_json::<GizziSessionInfo>(
+        &client,
+        reqwest::Method::PATCH,
+        &path,
+        Some(serde_json::Value::Object(payload)),
+    )
+    .await
     {
         Ok(session) => {
             if let Some(ref s) = surface {
@@ -740,7 +715,13 @@ async fn list_messages(headers: HeaderMap, Path(session_id): Path<String>) -> im
     let client = gizzi_client(&headers);
     let path = format!("/v1/session/{}/messages", urlencoding::encode(&session_id));
     match gizzi_json::<Vec<GizziMessage>>(&client, reqwest::Method::GET, &path, None).await {
-        Ok(messages) => Json(messages.into_iter().map(transform_message).collect::<Vec<_>>()).into_response(),
+        Ok(messages) => Json(
+            messages
+                .into_iter()
+                .map(transform_message)
+                .collect::<Vec<_>>(),
+        )
+        .into_response(),
         Err(response) => response,
     }
 }
@@ -813,7 +794,10 @@ async fn compact_session() -> impl IntoResponse {
 fn parse_sse_data_block(block: &str) -> Option<String> {
     let data_lines = block
         .lines()
-        .filter_map(|line| line.strip_prefix("data:").map(|value| value.trim_start().to_string()))
+        .filter_map(|line| {
+            line.strip_prefix("data:")
+                .map(|value| value.trim_start().to_string())
+        })
         .collect::<Vec<_>>();
 
     if data_lines.is_empty() {
@@ -825,10 +809,9 @@ fn parse_sse_data_block(block: &str) -> Option<String> {
 
 async fn fetch_latest_message(client: &Client, session_id: &str) -> Option<serde_json::Value> {
     let path = format!("/v1/session/{}/messages", urlencoding::encode(session_id));
-    let messages =
-        gizzi_json::<Vec<GizziMessage>>(client, reqwest::Method::GET, &path, None)
-            .await
-            .ok()?;
+    let messages = gizzi_json::<Vec<GizziMessage>>(client, reqwest::Method::GET, &path, None)
+        .await
+        .ok()?;
     messages.into_iter().last().map(transform_message)
 }
 
@@ -942,7 +925,10 @@ async fn transform_bus_event(
 async fn sync_sessions(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-) -> Result<Sse<impl Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>, Response> {
+) -> Result<
+    Sse<impl Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>>,
+    Response,
+> {
     let client = gizzi_client(&headers);
     let response = client
         .get(format!("{}/v1/event", gizzi_base()))
@@ -961,7 +947,10 @@ async fn sync_sessions(
     if !response.status().is_success() {
         let status =
             StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
-        let body = response.text().await.unwrap_or_else(|_| "Upstream error".to_string());
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| "Upstream error".to_string());
         return Err((status, Json(json!({ "error": body }))).into_response());
     }
 

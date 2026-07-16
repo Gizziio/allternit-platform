@@ -58,7 +58,7 @@ const BUNDLED_PLUGINS: BundledPlugin[] = [
   {
     id: 'image',
     name: 'Image',
-    description: 'Generate images from text prompts using Pollinations.ai (FREE)',
+    description: 'Generate images locally from text prompts with Bonsai Image 4B',
     version: '1.0.0',
     author: { name: 'Allternit', verified: true },
     category: 'create',

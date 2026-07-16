@@ -98,15 +98,18 @@ impl ApiToken {
             false
         }
     }
-    
+
     /// Get permissions as Vec<String>
     pub fn permissions(&self) -> Vec<String> {
         self.permissions.0.clone()
     }
-    
+
     /// Check if token has a specific permission
     pub fn has_permission(&self, permission: &str) -> bool {
-        self.permissions.0.iter().any(|p| p == permission || p == "*")
+        self.permissions
+            .0
+            .iter()
+            .any(|p| p == permission || p == "*")
     }
 }
 
@@ -242,22 +245,22 @@ pub enum Permission {
     RunsWrite,
     RunsDelete,
     RunsExecute,
-    
+
     // Schedule permissions
     SchedulesRead,
     SchedulesWrite,
     SchedulesDelete,
     SchedulesTrigger,
-    
+
     // Approval permissions
     ApprovalsRead,
     ApprovalsWrite,
-    
+
     // Checkpoint permissions
     CheckpointsRead,
     CheckpointsWrite,
     CheckpointsRestore,
-    
+
     // User/Admin permissions
     UsersRead,
     UsersWrite,

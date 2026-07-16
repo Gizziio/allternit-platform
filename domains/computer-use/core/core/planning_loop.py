@@ -550,7 +550,7 @@ class PlanningLoop:
         """Capture screenshot via adapter or executor."""
         import base64 as _b64
         try:
-            # GatewayProxyAdapter convenience method
+            # Compatibility adapters may expose a direct screenshot method.
             if hasattr(self.adapter, "screenshot") and not self._is_executor():
                 return await self.adapter.screenshot(session_id)
 

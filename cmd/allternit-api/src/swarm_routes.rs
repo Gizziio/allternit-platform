@@ -12,8 +12,8 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 pub fn swarm_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -94,12 +94,18 @@ async fn list_swarms(
         Ok(Ok(swarms)) => Json(json!({ "swarms": swarms })).into_response(),
         Ok(Err(e)) => {
             warn!("DB error listing swarms: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
                 .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
                 .into_response()
         }
     }
@@ -156,17 +162,25 @@ async fn create_swarm(
     .await;
 
     match result {
-        Ok(Ok(())) => {
-            (StatusCode::CREATED, Json(json!({ "id": id, "name": resp_name }))).into_response()
-        }
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({ "id": id, "name": resp_name })),
+        )
+            .into_response(),
         Ok(Err(e)) => {
             warn!("DB error creating swarm: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
                 .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
                 .into_response()
         }
     }
@@ -216,12 +230,18 @@ async fn execute_swarm(
         }
         Ok(Err(e)) => {
             warn!("DB error executing swarm: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
                 .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
                 .into_response()
         }
     }
@@ -270,17 +290,22 @@ async fn get_execution(
         }
         Ok(Err(e)) => {
             warn!("DB error getting execution: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
                 .into_response()
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
                 .into_response()
         }
     }
 }
-
 
 // ─── Swarm threads (stub) ───────────────────────────────────────────────────
 

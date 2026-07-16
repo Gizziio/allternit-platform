@@ -9,7 +9,7 @@ normalized ResultEnvelope.
 Adapter waterfall (highest → lowest priority):
   1. browser.extension  — BROWSER.* actions via HTTP relay :3012 → Desktop → TCP 3011 → extension
   2. browser.cdp        — Chrome/Electron CDP connection (headless or headed)
-  3. browser.playwright — GatewayProxyAdapter → /v1/execute Playwright sessions
+  3. browser.playwright — directly registered physical Playwright adapter
   4. desktop.pyautogui  — Desktop automation fallback
   5. desktop.accessibility — Accessibility tree fallback
 

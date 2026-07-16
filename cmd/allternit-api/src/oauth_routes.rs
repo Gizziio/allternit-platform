@@ -2,8 +2,8 @@
 
 use axum::{
     extract::State,
-    http::StatusCode,
-    response::IntoResponse,
+    http::{HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Redirect},
     routing::post,
     Json, Router,
 };
@@ -11,8 +11,8 @@ use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
-use crate::AppState;
 use crate::auth::get_user;
+use crate::AppState;
 
 pub fn oauth_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -32,19 +32,43 @@ struct AuthorizeBody {
 
 async fn oauth_authorize(
     State(state): State<Arc<AppState>>,
-    headers: axum::http::HeaderMap,
+    headers: HeaderMap,
     Json(body): Json<AuthorizeBody>,
 ) -> impl IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
     };
+
+    if body.client_id == "allternit-desktop" {
+        return (
+            StatusCode::GONE,
+            Json(json!({
+                "error": "desktop_oauth_retired",
+                "message": "Allternit Desktop now uses runtime device pairing at https://platform.allternit.com/pair"
+            })),
+        ).into_response();
+    }
+    if !is_allowed_redirect(&body.client_id, &body.redirect_uri) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "invalid_redirect_uri"})),
+        )
+            .into_response();
+    }
 
     let code = uuid::Uuid::new_v4().to_string();
     let code2 = code.clone();
     let user_id = user.user_id;
     let client_id = body.client_id;
     let redirect_uri = body.redirect_uri;
+    let redirect_uri_for_db = redirect_uri.clone();
     let state_val = body.state.unwrap_or_default();
     let state_val2 = state_val.clone();
 
@@ -62,7 +86,7 @@ async fn oauth_authorize(
                 &user_id,
                 "",
                 serde_json::json!({
-                    "redirect_uri": redirect_uri,
+                    "redirect_uri": redirect_uri_for_db,
                     "user_email": body.user_email,
                     "code_challenge_method": body.code_challenge_method,
                     "created_at": chrono::Utc::now().to_rfc3339(),
@@ -73,18 +97,56 @@ async fn oauth_authorize(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::OK, Json(json!({
-            "code": code,
-            "state": state_val,
-        }))),
+        Ok(Ok(())) => {
+            // Redirect back to the supplied redirect_uri (e.g. allternit://auth/callback)
+            // so the OS hands control back to the desktop app after browser auth.
+            let sep = if redirect_uri.contains('?') { '&' } else { '?' };
+            let location = format!(
+                "{}{}code={}&state={}",
+                redirect_uri,
+                sep,
+                urlencoding::encode(&code),
+                urlencoding::encode(&state_val)
+            );
+            match HeaderValue::try_from(location.clone()) {
+                Ok(_location_header) => Redirect::to(&location).into_response(),
+                Err(_) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({"error": "Invalid redirect_uri"})),
+                )
+                    .into_response(),
+            }
+        }
         Ok(Err(e)) => {
             tracing::warn!("DB error storing OAuth code: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to generate authorization code"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to generate authorization code"})),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
         }
+    }
+}
+
+fn is_allowed_redirect(client_id: &str, redirect_uri: &str) -> bool {
+    if client_id != "gizzi-code" && client_id != "gizzi-browser" {
+        return false;
+    }
+    let Ok(url) = reqwest::Url::parse(redirect_uri) else {
+        return false;
+    };
+    match url.scheme() {
+        "allternit" | "gizzi" => true,
+        "http" => matches!(url.host_str(), Some("127.0.0.1" | "localhost" | "::1")),
+        _ => false,
     }
 }
 
@@ -101,7 +163,12 @@ async fn oauth_revoke_user(
 ) -> impl IntoResponse {
     let user = match get_user(&headers) {
         Some(u) => u,
-        None => return (StatusCode::UNAUTHORIZED, Json(json!({"error": "Unauthorized"}))),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
     };
 
     let user_id = body.user_id.unwrap_or_else(|| user.user_id.clone());
@@ -115,17 +182,27 @@ async fn oauth_revoke_user(
             [&target_user],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::OK, Json(json!({"status": "ok", "revoked": true}))),
+        Ok(Ok(())) => (
+            StatusCode::OK,
+            Json(json!({"status": "ok", "revoked": true})),
+        ),
         Ok(Err(e)) => {
             tracing::warn!("DB error revoking OAuth sessions: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to revoke sessions"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to revoke sessions"})),
+            )
         }
         Err(e) => {
             tracing::warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }

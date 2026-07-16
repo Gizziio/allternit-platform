@@ -1,4 +1,3 @@
-
 //! SSH Key API routes
 
 use axum::extract::Extension;
@@ -14,8 +13,8 @@ use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
 
-use crate::AppState;
 use crate::auth::AuthUser;
+use crate::AppState;
 
 fn fingerprint_public_key(public_key: &str) -> String {
     let hash = md5::compute(public_key.trim().as_bytes());
@@ -32,7 +31,10 @@ pub fn ssh_key_router() -> Router<Arc<AppState>> {
         .route("/ssh-keys", get(list_ssh_keys).post(create_ssh_key))
         .route("/ssh-keys/generate", post(generate_ssh_key))
         .route("/ssh-keys/import", post(import_ssh_key))
-        .route("/ssh-keys/:id", get(get_ssh_key).put(update_ssh_key).delete(delete_ssh_key))
+        .route(
+            "/ssh-keys/:id",
+            get(get_ssh_key).put(update_ssh_key).delete(delete_ssh_key),
+        )
 }
 
 // ─── List SSH keys ──────────────────────────────────────────────────────────────
@@ -42,7 +44,6 @@ async fn list_ssh_keys(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let user_id = user.user_id;
 
@@ -93,14 +94,20 @@ async fn create_ssh_key(
     _headers: HeaderMap,
     Json(body): Json<CreateSshKey>,
 ) -> impl axum::response::IntoResponse {
-
     let name = body.name.trim().to_string();
     if name.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Name is required"})));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Name is required"})),
+        );
     }
 
     let public_key = body.public_key.unwrap_or_default();
-    let fingerprint = if public_key.is_empty() { String::new() } else { fingerprint_public_key(&public_key) };
+    let fingerprint = if public_key.is_empty() {
+        String::new()
+    } else {
+        fingerprint_public_key(&public_key)
+    };
     let key_type = body.key_type.unwrap_or_else(|| "ed25519".to_string());
     let bits = body.bits.unwrap_or(256);
     let private_key = body.private_key;
@@ -126,14 +133,25 @@ async fn create_ssh_key(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({ "id": id, "name": name, "fingerprint": fingerprint, "public_key": public_key, "key_type": key_type, "bits": bits }))),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(
+                json!({ "id": id, "name": name, "fingerprint": fingerprint, "public_key": public_key, "key_type": key_type, "bits": bits }),
+            ),
+        ),
         Ok(Err(e)) => {
             warn!("DB error creating SSH key: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -154,14 +172,18 @@ async fn generate_ssh_key(
     _headers: HeaderMap,
     Json(body): Json<GenerateSshKey>,
 ) -> impl axum::response::IntoResponse {
-
     let name = body.name.trim().to_string();
     if name.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Name is required"})));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Name is required"})),
+        );
     }
 
     let key_type = body.key_type.unwrap_or_else(|| "ed25519".to_string());
-    let bits = body.bits.unwrap_or_else(|| if key_type == "rsa" { 4096 } else { 256 });
+    let bits = body
+        .bits
+        .unwrap_or_else(|| if key_type == "rsa" { 4096 } else { 256 });
     let (algo, bits_str) = match key_type.as_str() {
         "rsa" => ("rsa", format!("{}", bits)),
         "ecdsa" => ("ecdsa", "256".to_string()),
@@ -176,39 +198,50 @@ async fn generate_ssh_key(
 
     let gen_result = tokio::task::spawn_blocking(move || {
         std::fs::create_dir_all(&tmp_dir)?;
-        
+
         let mut cmd = std::process::Command::new("ssh-keygen");
-        cmd.arg("-t").arg(algo)
-           .arg("-f").arg(&key_file)
-           .arg("-N").arg("")
-           .arg("-C").arg(format!("allternit-{}", name_for_gen))
-           .stdout(std::process::Stdio::null())
-           .stderr(std::process::Stdio::null());
-        
+        cmd.arg("-t")
+            .arg(algo)
+            .arg("-f")
+            .arg(&key_file)
+            .arg("-N")
+            .arg("")
+            .arg("-C")
+            .arg(format!("allternit-{}", name_for_gen))
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null());
+
         if algo == "rsa" {
             cmd.arg("-b").arg(&bits_str);
         }
-        
+
         let status = cmd.status()?;
         if !status.success() {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "ssh-keygen failed"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "ssh-keygen failed",
+            ));
         }
 
         let private_key = std::fs::read_to_string(&key_file)?;
         let public_key = std::fs::read_to_string(format!("{}.pub", key_file))?;
-        
+
         // Cleanup
         let _ = std::fs::remove_file(&key_file);
         let _ = std::fs::remove_file(format!("{}.pub", key_file));
         let _ = std::fs::remove_dir(&tmp_dir);
-        
+
         Ok::<_, std::io::Error>((private_key, public_key))
-    }).await;
+    })
+    .await;
 
     let (private_key, public_key) = match gen_result {
         Ok(Ok(pair)) => pair,
         _ => {
-            return (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to generate SSH key"})));
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Failed to generate SSH key"})),
+            );
         }
     };
 
@@ -235,20 +268,29 @@ async fn generate_ssh_key(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({
-            "id": id,
-            "name": name,
-            "public_key": public_key,
-            "private_key": private_key,
-            "fingerprint": fingerprint,
-        }))),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({
+                "id": id,
+                "name": name,
+                "public_key": public_key,
+                "private_key": private_key,
+                "fingerprint": fingerprint,
+            })),
+        ),
         Ok(Err(e)) => {
             warn!("DB error storing generated SSH key: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -268,19 +310,25 @@ async fn import_ssh_key(
     _headers: HeaderMap,
     Json(body): Json<ImportSshKey>,
 ) -> impl axum::response::IntoResponse {
-
     let name = body.name.trim().to_string();
     if name.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Name is required"})));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "Name is required"})),
+        );
     }
 
     let private_key = body.private_key.trim().to_string();
     if private_key.is_empty() {
-        return (StatusCode::BAD_REQUEST, Json(json!({"error": "private_key is required"})));
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "private_key is required"})),
+        );
     }
 
     // Derive public key from private key using ssh-keygen -y
-    let tmp_dir = std::env::temp_dir().join(format!("allternit_ssh_import_{}", uuid::Uuid::new_v4()));
+    let tmp_dir =
+        std::env::temp_dir().join(format!("allternit_ssh_import_{}", uuid::Uuid::new_v4()));
     let key_file = format!("{}/key", tmp_dir.to_string_lossy());
 
     let pub_result = tokio::task::spawn_blocking({
@@ -291,7 +339,7 @@ async fn import_ssh_key(
         move || {
             std::fs::create_dir_all(&tmp_dir)?;
             std::fs::write(&key_file, private_key)?;
-            
+
             let mut cmd = std::process::Command::new("ssh-keygen");
             cmd.arg("-y").arg("-f").arg(&key_file);
             if let Some(pp) = passphrase {
@@ -299,26 +347,33 @@ async fn import_ssh_key(
                     cmd.arg("-P").arg(pp);
                 }
             }
-            
+
             let output = cmd.output()?;
             let public_key = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            
+
             // Cleanup
             let _ = std::fs::remove_file(&key_file);
             let _ = std::fs::remove_dir(&tmp_dir);
-            
+
             if public_key.is_empty() {
-                return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to derive public key"));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Failed to derive public key",
+                ));
             }
-            
+
             Ok::<_, std::io::Error>(public_key)
         }
-    }).await;
+    })
+    .await;
 
     let public_key = match pub_result {
         Ok(Ok(pk)) => pk,
         _ => {
-            return (StatusCode::BAD_REQUEST, Json(json!({"error": "Failed to derive public key from private key"})));
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "Failed to derive public key from private key"})),
+            );
         }
     };
 
@@ -331,7 +386,8 @@ async fn import_ssh_key(
         "ecdsa"
     } else {
         "ed25519"
-    }.to_string();
+    }
+    .to_string();
 
     let bits = if key_type == "rsa" { 4096i64 } else { 256i64 };
     let passphrase = body.passphrase;
@@ -356,20 +412,29 @@ async fn import_ssh_key(
     }).await;
 
     match result {
-        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({
-            "id": id,
-            "name": name,
-            "fingerprint": fingerprint,
-            "public_key": public_key,
-            "created_at": chrono::Utc::now().to_rfc3339(),
-        }))),
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({
+                "id": id,
+                "name": name,
+                "fingerprint": fingerprint,
+                "public_key": public_key,
+                "created_at": chrono::Utc::now().to_rfc3339(),
+            })),
+        ),
         Ok(Err(e)) => {
             warn!("DB error importing SSH key: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -382,7 +447,6 @@ async fn get_ssh_key(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -411,10 +475,14 @@ async fn get_ssh_key(
 
     match row {
         Ok(Ok(data)) => (StatusCode::OK, Json(json!(data))),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::NOT_FOUND, Json(json!({"error": "SSH key not found"})))
-        }
-        _ => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))),
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "SSH key not found"})),
+        ),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "internal error"})),
+        ),
     }
 }
 
@@ -433,7 +501,6 @@ async fn update_ssh_key(
     _headers: HeaderMap,
     Json(body): Json<UpdateSshKey>,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -442,13 +509,15 @@ async fn update_ssh_key(
 
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
-        
-        let existing: Option<String> = conn.query_row(
-            "SELECT id FROM ssh_keys WHERE id = ?1 AND user_id = ?2",
-            params![id2, user_id],
-            |row| row.get(0),
-        ).ok();
-        
+
+        let existing: Option<String> = conn
+            .query_row(
+                "SELECT id FROM ssh_keys WHERE id = ?1 AND user_id = ?2",
+                params![id2, user_id],
+                |row| row.get(0),
+            )
+            .ok();
+
         if existing.is_none() {
             return Err(rusqlite::Error::QueryReturnedNoRows);
         }
@@ -467,23 +536,35 @@ async fn update_ssh_key(
             return Ok::<_, rusqlite::Error>(());
         }
 
-        let sql = format!("UPDATE ssh_keys SET {} WHERE id = '{}'", sets.join(", "), id2.replace('\'', "''"));
+        let sql = format!(
+            "UPDATE ssh_keys SET {} WHERE id = '{}'",
+            sets.join(", "),
+            id2.replace('\'', "''")
+        );
         conn.execute(&sql, [])?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(())) => (StatusCode::OK, Json(json!({"success": true}))),
-        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
-            (StatusCode::NOT_FOUND, Json(json!({"error": "SSH key not found"})))
-        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "SSH key not found"})),
+        ),
         Ok(Err(e)) => {
             warn!("DB error updating SSH key: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }
@@ -496,7 +577,6 @@ async fn delete_ssh_key(
     Extension(user): Extension<AuthUser>,
     _headers: HeaderMap,
 ) -> impl axum::response::IntoResponse {
-
     let db = state.db.clone();
     let id2 = id.clone();
     let user_id = user.user_id;
@@ -508,17 +588,24 @@ async fn delete_ssh_key(
             params![id2, user_id],
         )?;
         Ok::<_, rusqlite::Error>(())
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(Ok(())) => (StatusCode::OK, Json(json!({"success": true}))),
         Ok(Err(e)) => {
             warn!("DB error deleting SSH key: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
         }
         Err(e) => {
             warn!("DB task panicked: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"})))
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
         }
     }
 }

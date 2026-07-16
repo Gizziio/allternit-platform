@@ -1,7 +1,7 @@
 /**
  * Image Plugin
  * 
- * Image generation via Pollinations.ai (FREE).
+ * Local-first image generation via the packaged Bonsai companion.
  * Similar to: DALL-E, Midjourney, Stable Diffusion
  */
 
@@ -15,13 +15,20 @@ import type {
   PluginEventHandler 
 } from '../types';
 import {
+  checkBonsaiLocal,
   generateImages,
-  generateVariationsPollinations,
   type ImageGenerationResult,
 } from '@/lib/agents/modes/image-generation';
+import {
+  BONSAI_WEBGPU_CONSENT,
+  BONSAI_WEBGPU_PROVIDER_PREFERENCE,
+  bonsaiWebGpuProvider,
+} from '@/lib/local-models/providers/bonsai-webgpu';
+
+type BonsaiImageProvider = 'bonsai-local' | 'bonsai-webgpu';
 
 export interface ImageConfig extends PluginConfig {
-  defaultProvider?: string;
+  defaultProvider?: BonsaiImageProvider;
   defaultSize?: string;
   defaultN?: number;
 }
@@ -42,7 +49,7 @@ class ImagePlugin implements ModePlugin {
   isInitialized = false;
   isExecuting = false;
   config: ImageConfig = {
-    defaultProvider: 'pollinations',
+    defaultProvider: 'bonsai-local',
     defaultSize: '1024x1024',
     defaultN: 4,
   };
@@ -78,7 +85,7 @@ class ImagePlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.debug('[ImagePlugin] Initialized with Pollinations.ai (FREE)');
+    console.debug('[ImagePlugin] Initialized with local Bonsai');
   }
 
   async destroy(): Promise<void> {
@@ -149,24 +156,33 @@ class ImagePlugin implements ModePlugin {
   }
 
   async health(): Promise<{ healthy: boolean; message?: string }> {
-    return { healthy: true };
+    if (this.selectedProvider() === 'bonsai-webgpu') {
+      const status = await bonsaiWebGpuProvider.connect();
+      return { healthy: status.connected, message: status.error ?? 'Bonsai WebGPU is available.' };
+    }
+    const healthy = await checkBonsaiLocal();
+    return {
+      healthy,
+      message: healthy ? 'Local Bonsai companion is ready.' : 'Local Bonsai companion is not running or its model is unavailable.',
+    };
   }
 
   private async generateImages(prompt: string): Promise<PluginOutput> {
+    const provider = this.selectedProvider();
     this.emit({ 
       type: 'progress', 
-      payload: { step: 'generating', message: 'Generating images with Pollinations.ai...' },
+      payload: { step: 'generating', message: provider === 'bonsai-webgpu' ? 'Generating locally with fast Bonsai WebGPU…' : 'Generating locally with Bonsai Image 4B...' },
       timestamp: Date.now() 
     });
 
     const result = await generateImages(
       prompt,
       {
-        provider: 'pollinations',
+        provider,
         n: this.config.defaultN,
         size: this.config.defaultSize as '1024x1024' | '1024x1792' | '1792x1024',
       },
-      { preferredProvider: 'pollinations', apiKeys: {} }
+      { preferredProvider: provider, apiKeys: {} }
     );
 
     return {
@@ -192,7 +208,12 @@ class ImagePlugin implements ModePlugin {
       timestamp: Date.now()
     });
 
-    const result = await generateVariationsPollinations(imageId, prompt, this.config.defaultN ?? 4);
+    const provider = this.selectedProvider();
+    const result = await generateImages(
+      prompt,
+      { provider, n: this.config.defaultN ?? 4 },
+      { preferredProvider: provider, apiKeys: {} },
+    );
     return {
       success: true,
       content: this.formatImageOutput(result),
@@ -205,6 +226,15 @@ class ImagePlugin implements ModePlugin {
         },
       })),
     };
+  }
+
+  private selectedProvider(): BonsaiImageProvider {
+    if (typeof window !== 'undefined') {
+      const preference = sessionStorage.getItem(BONSAI_WEBGPU_PROVIDER_PREFERENCE);
+      const consent = sessionStorage.getItem(BONSAI_WEBGPU_CONSENT);
+      if (preference === 'bonsai-webgpu' && consent === 'accepted') return 'bonsai-webgpu';
+    }
+    return this.config.defaultProvider === 'bonsai-webgpu' ? 'bonsai-webgpu' : 'bonsai-local';
   }
 
   private async upscaleImage(imageId: string): Promise<PluginOutput> {

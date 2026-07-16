@@ -259,56 +259,46 @@ export const BashTool = Tool.define("bash", async () => {
       // ── End VM Session execution ───────────────────────────────────────────
 
       // ── Sandbox wrapping ───────────────────────────────────────────────────
-      // If the session has sandbox enabled (or GIZZI_SANDBOX is set globally),
-      // wrap the subprocess with bwrap (Linux) or sandbox-exec (macOS) so all
-      // child processes inherit the isolation boundary — same as Claude Code.
-      const sandboxState = SessionSandbox.get(ctx.sessionID)
-      const sandboxEnabled =
-        sandboxState?.enabled ??
-        (Flag.GIZZI_SANDBOX ? (() => {
-          // Auto-enable for this session with defaults if the flag is set globally
-          SessionSandbox.enable(ctx.sessionID, {
-            allowWritePaths: [cwd],
-            allowNetwork: Flag.GIZZI_SANDBOX_ALLOW_NETWORK,
-          })
-          return true
-        })() : false)
+      // Sandboxed by default (bwrap on Linux, sandbox-exec on macOS) — same as
+      // Claude Code. GIZZI_SANDBOX_DISABLE (or an explicit per-session /sandbox
+      // toggle) is the only opt-out. If sandboxing is enabled but no isolation
+      // driver is available on a platform that's supposed to support one
+      // (Linux without bwrap), this fails closed — it throws rather than
+      // silently running the command unsandboxed.
+      const sandboxState = SessionSandbox.ensureDefault(ctx.sessionID, [cwd])
+      const sandboxEnabled = sandboxState?.enabled ?? false
 
       let proc: ReturnType<typeof spawn>
 
       if (sandboxEnabled && process.platform !== "win32") {
-        const policy = sandboxState?.policy ?? {
-          allowWritePaths: [cwd],
-          allowNetwork: Flag.GIZZI_SANDBOX_ALLOW_NETWORK,
+        const driver = Sandbox.detect()
+        if (driver === "none") {
+          throw new Error(
+            "Sandbox is enabled by default but no isolation driver is available on this platform. " +
+              "Install bubblewrap (e.g. `apt install bubblewrap`) to sandbox Bash, or set " +
+              "GIZZI_SANDBOX_DISABLE=1 / pass --dangerously-skip-sandbox to run unsandboxed intentionally.",
+          )
         }
+
         const wrapped = await Sandbox.wrap({
           command: params.command,
           shell,
           cwd,
           sessionID: ctx.sessionID,
-          policy,
+          policy: sandboxState!.policy,
         })
-
-        if (wrapped) {
-          log.info("sandbox active", { driver: Sandbox.detect(), sessionID: ctx.sessionID })
-          proc = spawn(wrapped.bin, wrapped.args, {
-            cwd,
-            env: { ...process.env, ...shellEnv.env },
-            stdio: ["ignore", "pipe", "pipe"],
-            // Don't use detached with bwrap/sandbox-exec — --die-with-parent handles cleanup
-            detached: false,
-          })
-        } else {
-          // Driver unavailable — fall through to unsandboxed spawn
-          log.warn("sandbox requested but driver returned null, running unsandboxed")
-          proc = spawn(params.command, {
-            shell,
-            cwd,
-            env: { ...process.env, ...shellEnv.env },
-            stdio: ["ignore", "pipe", "pipe"],
-            detached: process.platform !== "win32",
-          })
+        if (!wrapped) {
+          throw new Error("Sandbox driver became unavailable while wrapping the command.")
         }
+
+        log.info("sandbox active", { driver, sessionID: ctx.sessionID })
+        proc = spawn(wrapped.bin, wrapped.args, {
+          cwd,
+          env: { ...process.env, ...shellEnv.env },
+          stdio: ["ignore", "pipe", "pipe"],
+          // Don't use detached with bwrap/sandbox-exec — --die-with-parent handles cleanup
+          detached: false,
+        })
       } else {
         proc = spawn(params.command, {
           shell,

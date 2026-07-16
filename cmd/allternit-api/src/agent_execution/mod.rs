@@ -88,8 +88,7 @@ async fn dispatch_via_driver(
     driver: &dyn ExecutionDriver,
     job: JobSpec,
 ) -> Result<JobResult, AgentExecutionError> {
-    let tenant = TenantId::new("local")
-        .map_err(|e| AgentExecutionError::Driver(e.to_string()))?;
+    let tenant = TenantId::new("local").map_err(|e| AgentExecutionError::Driver(e.to_string()))?;
 
     let spawn_spec = SpawnSpec {
         tenant,

@@ -154,30 +154,12 @@ class ApiFileSystem implements FileSystemAPI {
 
     const candidates = new Set<string>();
 
+    // The unified Rust gateway serves /api/v1/files, and the desktop shell
+    // always spawns it on 8013 — try it first so detection settles without
+    // probing unrelated sidecars (gizzi on 4096 has no files API).
+    candidates.add('http://127.0.0.1:8013');
+
     if (typeof window !== 'undefined') {
-      const sidecar = (window as any).allternitSidecar;
-      if (sidecar?.getApiUrl) {
-        try {
-          const apiUrl = await sidecar.getApiUrl();
-          if (typeof apiUrl === 'string' && apiUrl.trim()) {
-            candidates.add(this.normalizeBaseUrl(apiUrl.trim()));
-          }
-        } catch {
-          // Ignore sidecar API lookup errors.
-        }
-      }
-
-      if (sidecar?.getBasicAuth) {
-        try {
-          const basicAuth = await sidecar.getBasicAuth();
-          if (basicAuth?.header) {
-            this.authHeader = basicAuth.header;
-          }
-        } catch {
-          // Ignore auth lookup errors.
-        }
-      }
-
       const injectedGateway = (window as any).__ALLTERNIT_GATEWAY_URL__;
       if (typeof injectedGateway === 'string' && injectedGateway.trim()) {
         candidates.add(this.normalizeBaseUrl(injectedGateway.trim()));
@@ -188,8 +170,7 @@ class ApiFileSystem implements FileSystemAPI {
       }
     }
 
-    // Always include local fallback backends so stale sidecar URLs can recover.
-    candidates.add('http://127.0.0.1:8013');
+    // Local fallback backends for non-desktop dev setups.
     candidates.add('http://127.0.0.1:3210');
     candidates.add('http://127.0.0.1:3000');
 

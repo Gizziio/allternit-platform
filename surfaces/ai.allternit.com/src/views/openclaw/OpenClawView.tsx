@@ -11,20 +11,19 @@
  */
 
 import React, {
-  useCallback,
   useEffect,
-  useRef,
   useState,
 } from 'react';
 import {
   Warning,
   ArrowsClockwise,
   Robot,
-  XCircle,
   ArrowSquareOut,
   Gear,
 } from '@phosphor-icons/react';
 import { openInBrowser } from '@/lib/openInBrowser';
+import { MiniAppRuntimeSurface } from '@/views/aci/MiniAppRuntimeSurface';
+import type { InstalledMiniApp } from '@/views/aci/mini-app.types';
 
 // ============================================================================
 // Gateway config
@@ -42,6 +41,11 @@ function resolveGatewayUrl(): string {
 
 const OPENCLAW_GATEWAY_URL = resolveGatewayUrl();
 const HEALTH_INTERVAL_MS   = 8000;
+const OPENCLAW_APP: InstalledMiniApp = {
+  id: 'openclaw', name: 'OpenClaw', description: 'Official OpenClaw personal-agent gateway and control UI.',
+  category: 'runtime', source: 'builtin', url: OPENCLAW_GATEWAY_URL, status: 'running',
+  presentation: { mode: 'hybrid', uiUrl: OPENCLAW_GATEWAY_URL, healthUrl: OPENCLAW_GATEWAY_URL, electronPartition: 'persist:allternit-openclaw', nativeRenderer: 'openclaw', fallback: 'external-browser' },
+};
 
 // ============================================================================
 // Types
@@ -194,59 +198,7 @@ function TabBar({ active, onChange }: { active: ViewTab; onChange: (t: ViewTab) 
 // ============================================================================
 
 function GatewayUiTab() {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [loading, setLoading]         = useState(true);
-  const [iframeError, setIframeError] = useState(false);
-
-  const handleLoad  = useCallback(() => setLoading(false), []);
-  const handleError = useCallback(() => { setLoading(false); setIframeError(true); }, []);
-
-  if (iframeError) {
-    return (
-      <div className="h-full flex items-center justify-center p-8">
-        <div className="text-center space-y-3 max-w-xs">
-          <XCircle size={28} className="mx-auto" style={{ color: '#f87171' }} />
-          <p className="text-sm font-medium">Could not embed OpenClaw UI</p>
-          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-            The gateway interface may be blocked in this context.
-          </p>
-          <button type="button"
-            onClick={() => openInBrowser(OPENCLAW_GATEWAY_URL)}
-            className="flex items-center gap-2 mx-auto px-4 py-2 rounded-lg text-sm"
-            style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-primary)', border: 'none', cursor: 'pointer' }}
-          >
-            <ArrowSquareOut size={14} />
-            Open in Browser
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full relative">
-      {loading && (
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ backgroundColor: 'var(--bg-primary)' }}
-        >
-          <div className="flex flex-col items-center gap-2 opacity-40">
-            <ArrowsClockwise size={24} className="animate-spin" />
-            <p className="text-sm">Loading OpenClaw…</p>
-          </div>
-        </div>
-      )}
-      <iframe
-        ref={iframeRef}
-        src={OPENCLAW_GATEWAY_URL}
-        className="w-full h-full border-0"
-        onLoad={handleLoad}
-        onError={handleError}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
-        title="OpenClaw Gateway"
-      />
-    </div>
-  );
+  return <MiniAppRuntimeSurface app={OPENCLAW_APP} title="OpenClaw Gateway" />;
 }
 
 // ============================================================================

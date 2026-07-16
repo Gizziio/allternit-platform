@@ -67,6 +67,8 @@ const config: Config = {
   			'menu-border': 'var(--shell-menu-border)',
   			'input-bg': 'var(--chat-composer-bg)',
   			'input-border': 'var(--chat-composer-border)',
+  			'composer-glass-bg': 'var(--chat-composer-glass-bg)',
+  			'composer-glass-border': 'var(--chat-composer-glass-border)',
   			'composer-bg': 'var(--chat-composer-bg)',
   			'composer-border': 'var(--chat-composer-border)',
   			'composer-soft': 'var(--chat-composer-soft)',

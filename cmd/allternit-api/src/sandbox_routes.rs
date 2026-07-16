@@ -17,8 +17,7 @@ use tokio::io::AsyncBufReadExt;
 use tracing::{debug, error};
 
 use allternit_driver_interface::{
-    CommandSpec, ExecutionId,
-    PolicySpec, ResourceSpec, SpawnSpec, TenantId, EnvironmentSpec,
+    CommandSpec, EnvironmentSpec, ExecutionId, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
 };
 
 use crate::AppState;
@@ -105,18 +104,24 @@ async fn execute_handler(
     Json(request): Json<SandboxExecuteRequest>,
 ) -> Result<Json<SandboxExecuteResponse>, (StatusCode, String)> {
     debug!("Sandbox execute request: {:?}", request);
-    
+
     // Get the execution driver
-    let driver = state.vm_driver.as_ref()
-        .ok_or((StatusCode::SERVICE_UNAVAILABLE, "VM driver not available".to_string()))?;
-    
+    let driver = state.vm_driver.as_ref().ok_or((
+        StatusCode::SERVICE_UNAVAILABLE,
+        "VM driver not available".to_string(),
+    ))?;
+
     // Build spawn spec
     let spawn_spec = build_spawn_spec(&request)?;
-    
+
     // Spawn execution environment
-    let handle = driver.spawn(spawn_spec).await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to spawn: {}", e)))?;
-    
+    let handle = driver.spawn(spawn_spec).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to spawn: {}", e),
+        )
+    })?;
+
     // Build command spec
     let command_spec = CommandSpec {
         command: vec![
@@ -130,16 +135,26 @@ async fn execute_handler(
         capture_stdout: true,
         capture_stderr: true,
     };
-    
-    let result = driver.exec(&handle, command_spec).await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Execution failed: {}", e)))?;
-    
+
+    let result = driver.exec(&handle, command_spec).await.map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Execution failed: {}", e),
+        )
+    })?;
+
     // Cleanup
     let _ = driver.destroy(&handle).await;
-    
-    let stdout = result.stdout.map(|v| String::from_utf8_lossy(&v).into_owned()).unwrap_or_default();
-    let stderr = result.stderr.map(|v| String::from_utf8_lossy(&v).into_owned()).unwrap_or_default();
-    
+
+    let stdout = result
+        .stdout
+        .map(|v| String::from_utf8_lossy(&v).into_owned())
+        .unwrap_or_default();
+    let stderr = result
+        .stderr
+        .map(|v| String::from_utf8_lossy(&v).into_owned())
+        .unwrap_or_default();
+
     Ok(Json(SandboxExecuteResponse {
         exit_code: result.exit_code,
         stdout,
@@ -159,7 +174,10 @@ async fn execute_stream_handler(
         "node" | "javascript" => ("node", vec!["-e", &request.code]),
         "bash" | "sh" => ("bash", vec!["-c", &request.code]),
         _ => {
-            let body = format!("data: {{\"type\":\"error\",\"message\":\"Unsupported language: {}\"}}\n\n", request.language);
+            let body = format!(
+                "data: {{\"type\":\"error\",\"message\":\"Unsupported language: {}\"}}\n\n",
+                request.language
+            );
             return Response::builder()
                 .status(200)
                 .header(header::CONTENT_TYPE, "text/event-stream")
@@ -255,12 +273,15 @@ async fn capabilities_handler(
     let caps = if let Some(driver) = state.vm_driver.as_ref() {
         driver.capabilities()
     } else {
-        return Err((StatusCode::SERVICE_UNAVAILABLE, "VM driver not available".to_string()));
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "VM driver not available".to_string(),
+        ));
     };
-    
+
     let driver_type = format!("{:?}", caps.driver_type).to_lowercase();
     let isolation_level = format!("{:?}", caps.isolation).to_lowercase();
-    
+
     Ok(Json(SandboxCapabilitiesResponse {
         driver_type,
         isolation_level,
@@ -286,9 +307,12 @@ async fn health_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<String, (StatusCode, String)> {
     if state.vm_driver.is_none() {
-        return Err((StatusCode::SERVICE_UNAVAILABLE, "VM driver not initialized".to_string()));
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "VM driver not initialized".to_string(),
+        ));
     }
-    
+
     Ok("OK".to_string())
 }
 
@@ -303,7 +327,7 @@ fn build_spawn_spec(request: &SandboxExecuteRequest) -> Result<SpawnSpec, (Statu
     } else {
         ResourceSpec::minimal()
     };
-    
+
     let tenant = TenantId::new(format!("api-{}", uuid::Uuid::new_v4()))
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 

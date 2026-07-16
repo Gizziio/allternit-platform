@@ -1,9 +1,4 @@
-use axum::{
-    extract::Request,
-    http::StatusCode,
-    response::IntoResponse,
-    Json, Router,
-};
+use axum::{extract::Request, http::StatusCode, response::IntoResponse, Json, Router};
 use serde_json::json;
 use std::sync::Arc;
 

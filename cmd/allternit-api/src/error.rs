@@ -40,9 +40,7 @@ impl ApiError {
             ApiError::Unauthorized => "Unauthorized".to_string(),
             ApiError::NotFound(msg) => msg.clone(),
             ApiError::BadRequest(msg) => msg.clone(),
-            ApiError::DbError(_) | ApiError::Internal(_) => {
-                "Internal server error".to_string()
-            }
+            ApiError::DbError(_) | ApiError::Internal(_) => "Internal server error".to_string(),
         }
     }
 }

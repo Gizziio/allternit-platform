@@ -4,6 +4,7 @@ import { GlobalDropzoneProvider } from '@/components/GlobalDropzone';
 import { getSession } from '@/lib/auth-browser';
 import { SessionProvider } from '@/providers/session-provider';
 import { VoiceProvider } from '@/providers/voice-provider';
+import { ModeProvider } from '@/providers/mode-provider';
 import DesignModeView from '@/views/design/DesignModeView';
 
 export default function DesignPage() {
@@ -16,13 +17,15 @@ export default function DesignPage() {
   return (
     <TooltipProvider>
       <VoiceProvider>
-        <SessionProvider session={session}>
-          <GlobalDropzoneProvider>
-            <main style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-              <DesignModeView />
-            </main>
-          </GlobalDropzoneProvider>
-        </SessionProvider>
+        <ModeProvider defaultMode="design">
+          <SessionProvider session={session}>
+            <GlobalDropzoneProvider>
+              <main style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+                <DesignModeView />
+              </main>
+            </GlobalDropzoneProvider>
+          </SessionProvider>
+        </ModeProvider>
       </VoiceProvider>
     </TooltipProvider>
   );

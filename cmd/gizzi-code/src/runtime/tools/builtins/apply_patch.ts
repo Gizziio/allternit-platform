@@ -7,7 +7,7 @@ import { FileWatcher } from "@/shared/file/watcher"
 import { Instance } from "@/runtime/context/project/instance"
 import { Patch } from "@/runtime/integrations/patch"
 import { createTwoFilesPatch, diffLines } from "diff"
-import { assertExternalDirectory } from "@/runtime/tools/builtins/external-directory"
+import { assertExternalDirectory, assertSandboxWriteAllowed } from "@/runtime/tools/builtins/external-directory"
 import { trimDiff } from "@/runtime/tools/builtins/edit"
 import { LSP } from "@/runtime/integrations/lsp"
 import { Filesystem } from "@/shared/util/filesystem"
@@ -60,6 +60,7 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
     for (const hunk of hunks) {
       const filePath = path.resolve(Instance.directory, hunk.path)
       await assertExternalDirectory(ctx, filePath)
+      assertSandboxWriteAllowed(ctx, filePath)
 
       switch (hunk.type) {
         case "add": {
@@ -118,6 +119,7 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
 
           const movePath = hunk.move_path ? path.resolve(Instance.directory, hunk.move_path) : undefined
           await assertExternalDirectory(ctx, movePath)
+          assertSandboxWriteAllowed(ctx, movePath)
 
           fileChanges.push({
             filePath,

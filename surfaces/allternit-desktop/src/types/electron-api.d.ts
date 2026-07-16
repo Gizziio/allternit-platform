@@ -41,10 +41,6 @@ export interface SidecarAPI {
   restart(): Promise<boolean>;
   getStatus(): Promise<SidecarStatus['status']>;
   getApiUrl(): Promise<string | undefined>;
-  getAuthPassword(): Promise<string | undefined>;
-  getBasicAuth(): Promise<{ username: string; password: string; header: string } | undefined>;
-  getPersistedConfig(): Promise<{ apiUrl: string; password: string; port: number } | null>;
-  clearPersistedConfig(): Promise<boolean>;
   onStatusChanged(handler: (status: string) => void): () => void;
 }
 
@@ -53,6 +49,26 @@ export interface BackendAPI {
   restart(): Promise<string>;
   sidecar: SidecarAPI;
   onDownloadProgress(handler: (progress: { stage: string; percent: number }) => void): () => void;
+}
+
+export interface BonsaiStatus {
+  installed: boolean;
+  running: boolean;
+  installing: boolean;
+  url: string;
+  revisions?: { source?: string; model?: string; mlxWheel?: string };
+  installDir: string;
+  error?: string;
+}
+
+export interface BonsaiAPI {
+  getStatus(): Promise<BonsaiStatus>;
+  install(): Promise<void>;
+  cancelInstall(): Promise<boolean>;
+  start(): Promise<void>;
+  stop(): Promise<boolean>;
+  remove(): Promise<void>;
+  onProgress(handler: (progress: { stage: string; message: string }) => void): () => void;
 }
 
 export interface VmSetupAPI {
@@ -131,8 +147,10 @@ export interface AppAPI {
 export interface AuthAccount {
   userId: string;
   userEmail: string;
-  accessToken: string;
   expiresAt: number;
+  runtimeId: string;
+  organizationId?: string;
+  capabilities: string[];
 }
 
 export interface AuthAPI {
@@ -234,6 +252,14 @@ export interface PermissionGuideAPI {
   present(panel: PermissionPanel): Promise<{ success: boolean; alreadyGranted?: boolean; error?: string }>;
   dismiss(): Promise<{ success: boolean; error?: string }>;
   getStatus(): Promise<{ active: boolean }>;
+  getDriverStatus(): Promise<{
+    available: boolean;
+    running: boolean;
+    embedded: boolean;
+    executable?: string;
+    socket?: string;
+    error?: string;
+  }>;
   onStatusChanged(handler: (status: PermissionStatus) => void): () => void;
 }
 
@@ -330,13 +356,99 @@ export interface MiniAppsAPI {
   stop(id: string): Promise<{ success: boolean }>;
   getStatus(id: string): Promise<MiniAppStatus>;
   launchDesktop(id: string): Promise<{ success: boolean; error?: string }>;
+  getApproval(id: string, registration?: MiniAppRuntimeRegistration): Promise<{ approved: boolean; fingerprint?: string; approvedAt?: string }>;
+  reviewAndApprove(registration: MiniAppRuntimeRegistration): Promise<{ success: boolean; approved: boolean; fingerprint?: string; error?: string }>;
+  revokeApproval(id: string): Promise<{ success: boolean }>;
+  setSecret(id: string, name: string, value: string): Promise<{ success: boolean; error?: string }>;
+  listSecrets(id: string): Promise<string[]>;
+  deleteSecret(id: string, name: string): Promise<{ success: boolean }>;
+  removeRuntime(id: string): Promise<{ success: boolean; error?: string }>;
+  rollbackRuntime(id: string): Promise<{ success: boolean; error?: string }>;
+  installRelease(options: MiniAppReleaseInstallOptions): Promise<MiniAppReleaseInstallResult>;
+  rollbackRelease(id: string, registryUrl?: string): Promise<{ success: boolean; error?: string; currentVersion?: string }>;
+  removeRelease(id: string, registryUrl?: string): Promise<{ success: boolean; error?: string }>;
+  listReleaseInstalls(): Promise<MiniAppReleaseInstallInfo[]>;
+  getReleaseInstall(id: string): Promise<MiniAppReleaseInstallInfo | null>;
+  oauthStart(appId: string, providerId: string, provider: MiniAppOAuthProvider, accountId: string): Promise<{ flowId?: string; error?: string }>;
+  oauthCancel(flowId: string): Promise<{ success: boolean }>;
+  oauthAccounts(appId: string): Promise<MiniAppOAuthAccountMetadata[]>;
+  oauthDisconnect(appId: string, providerId: string, accountId: string): Promise<{ success: boolean; error?: string }>;
+  onOAuthComplete(handler: (result: MiniAppOAuthFlowResult) => void): () => void;
   onProgress(handler: (p: MiniAppInstallProgress) => void): () => void;
+}
+
+export interface MiniAppReleaseInstallOptions {
+  registryUrl: string;
+  id: string;
+  version?: string;
+}
+
+export interface MiniAppReleaseInstallResult {
+  success: boolean;
+  error?: string;
+  id: string;
+  version?: string;
+  previousVersion?: string;
+  rolledBack?: boolean;
+}
+
+export interface MiniAppReleaseInstallInfo {
+  id: string;
+  currentVersion?: string;
+  previousVersion?: string;
+  healthy: boolean;
+  releases: Record<string, { installedAt: string; sha256: string; signature: string; publisherKey: string; healthy: boolean }>;
+}
+
+export interface MiniAppOAuthProvider {
+  authorizationUrl: string;
+  tokenUrl: string;
+  revocationUrl?: string;
+  clientId: string;
+  scopes: string[];
+  additionalAuthParams?: Record<string, string>;
+}
+
+export interface MiniAppOAuthAccountMetadata {
+  appId: string;
+  providerId: string;
+  accountId: string;
+  scopes: string[];
+  expiresAt?: string;
+  createdAt: string;
+  lastRefreshedAt?: string;
+  needsReauth: boolean;
+}
+
+export interface MiniAppOAuthFlowResult {
+  flowId: string;
+  success: boolean;
+  error?: string;
+  scopes?: string[];
+  expiresAt?: string;
+  appId: string;
+  providerId: string;
+  accountId: string;
+}
+
+export interface MiniAppRuntimeRegistration {
+  id: string;
+  name: string;
+  version?: string;
+  installCommand?: string;
+  startCommand?: string;
+  stopCommand?: string;
+  healthUrl?: string;
+  permissions?: { network?: string[]; filesystem?: string[]; secrets?: string[]; processes?: boolean };
+  /** Manifest OAuth declaration; covered by the approval fingerprint. */
+  oauth?: Record<string, unknown>;
 }
 
 export interface AllternitDesktopAPI {
   sdk: { getBackendUrl(): Promise<string> };
   connection: ConnectionAPI;
   backend: BackendAPI;
+  bonsai: BonsaiAPI;
   vm: VmSetupAPI;
   window: WindowAPI;
   store: StoreAPI;
