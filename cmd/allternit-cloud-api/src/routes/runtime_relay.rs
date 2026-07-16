@@ -241,6 +241,7 @@ async fn create_socket_ticket(
             "The selected runtime is offline".to_string(),
         ));
     }
+    services_touch_runtime(&state, &runtime_id).await;
 
     let ticket = Uuid::new_v4().to_string();
     let expires_at = Instant::now() + Duration::from_secs(30);
@@ -285,6 +286,7 @@ async fn connect_browser_socket(
         .open_relay_socket(&runtime_id, &ticket.path)
         .await?;
     let quota_service = state.quota_service.clone();
+    let db = state.db.clone();
 
     Ok(ws.on_upgrade(move |socket| {
         browser_socket(
@@ -293,6 +295,7 @@ async fn connect_browser_socket(
             ticket.path,
             relay_socket_id,
             quota_service,
+            db,
         )
     }))
 }
@@ -303,11 +306,15 @@ async fn browser_socket(
     path: String,
     relay_socket_id: String,
     quota_service: crate::services::SharedQuotaService,
+    db: sqlx::SqlitePool,
 ) {
     let connection = relay_hub().read().await.get(&runtime_id).cloned();
     let Some(connection) = connection else {
+        let _ = quota_service.close_relay_socket(&relay_socket_id, 0).await;
         return;
     };
+    let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
+    let mut last_activity_write = Instant::now();
     let socket_id = Uuid::new_v4().to_string();
     let (runtime_sender, mut runtime_events) = mpsc::unbounded_channel();
     connection
@@ -325,6 +332,7 @@ async fn browser_socket(
         .is_err()
     {
         connection.sockets.lock().await.remove(&socket_id);
+        let _ = quota_service.close_relay_socket(&relay_socket_id, 0).await;
         return;
     }
 
@@ -335,11 +343,19 @@ async fn browser_socket(
             browser = stream.next() => {
                 match browser {
                     Some(Ok(Message::Text(body))) => {
+                        if last_activity_write.elapsed() >= Duration::from_secs(60) {
+                            let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
+                            last_activity_write = Instant::now();
+                        }
                         let _ = connection.sender.send(CloudMessage::SocketData {
                             socket_id: socket_id.clone(), body, body_encoding: "utf8".to_string(),
                         });
                     }
                     Some(Ok(Message::Binary(body))) => {
+                        if last_activity_write.elapsed() >= Duration::from_secs(60) {
+                            let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
+                            last_activity_write = Instant::now();
+                        }
                         let _ = connection.sender.send(CloudMessage::SocketData {
                             socket_id: socket_id.clone(), body: STANDARD.encode(body), body_encoding: "base64".to_string(),
                         });
@@ -357,10 +373,18 @@ async fn browser_socket(
                         if sink.send(Message::Text("{\"type\":\"allternit_socket_ready\"}".to_string())).await.is_err() { break; }
                     }
                     Some(RuntimeSocketFrame::Data(body, true)) => {
+                        if last_activity_write.elapsed() >= Duration::from_secs(60) {
+                            let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
+                            last_activity_write = Instant::now();
+                        }
                         egress_bytes += body.len() as i64;
                         if sink.send(Message::Binary(body.to_vec())).await.is_err() { break; }
                     }
                     Some(RuntimeSocketFrame::Data(body, false)) => {
+                        if last_activity_write.elapsed() >= Duration::from_secs(60) {
+                            let _ = crate::services::touch_runtime_activity(&db, &runtime_id).await;
+                            last_activity_write = Instant::now();
+                        }
                         egress_bytes += body.len() as i64;
                         let text = String::from_utf8_lossy(&body).into_owned();
                         if sink.send(Message::Text(text)).await.is_err() { break; }
@@ -409,6 +433,23 @@ async fn runtime_socket(socket: WebSocket, state: Arc<ApiState>, expected_id: St
     {
         let _ = sink.send(Message::Close(None)).await;
         return;
+    }
+    let hosted_instance_id: Option<String> = sqlx::query_scalar(
+        "SELECT id FROM hosted_runtime_instances WHERE runtime_device_id = ? AND status != 'destroyed'",
+    )
+    .bind(&runtime_id)
+    .fetch_optional(&state.db)
+    .await
+    .ok()
+    .flatten();
+    if let Some(instance_id) = hosted_instance_id {
+        let _ = sqlx::query(
+            "UPDATE hosted_runtime_instances SET status = 'running', active_since = COALESCE(active_since, CURRENT_TIMESTAMP), last_activity_at = COALESCE(last_activity_at, CURRENT_TIMESTAMP), last_synced_at = CURRENT_TIMESTAMP WHERE id = ?",
+        )
+        .bind(&instance_id)
+        .execute(&state.db)
+        .await;
+        let _ = crate::services::record_runtime_started(&state.db, &instance_id).await;
     }
 
     let (sender, mut outgoing) = mpsc::unbounded_channel();
@@ -560,6 +601,7 @@ async fn proxy_to_runtime(
             "Runtime pairing does not grant {required_capability}"
         )));
     }
+    services_touch_runtime(&state, &runtime_id).await;
 
     let connection = relay_hub().read().await.get(&runtime_id).cloned();
     let Some(connection) = connection else {
@@ -627,6 +669,12 @@ async fn proxy_to_runtime(
             )
                 .into_response())
         }
+    }
+}
+
+async fn services_touch_runtime(state: &ApiState, runtime_id: &str) {
+    if let Err(error) = crate::services::touch_runtime_activity(&state.db, runtime_id).await {
+        tracing::debug!(%runtime_id, "Unable to record hosted runtime activity: {}", error);
     }
 }
 

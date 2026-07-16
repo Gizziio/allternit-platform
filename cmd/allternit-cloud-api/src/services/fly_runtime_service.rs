@@ -5,10 +5,9 @@
 //! cloud API relay; the machines have no public services.
 
 use crate::error::ApiError;
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::time::Duration;
-use tracing::{info, warn};
+use tracing::info;
 use uuid::Uuid;
 
 const FLY_API_BASE: &str = "https://api.machines.dev/v1";
@@ -49,8 +48,7 @@ pub struct ProvisionedMachine {
 }
 
 /// Fly machine status as returned by the Machines API.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Clone)]
 pub enum FlyMachineState {
     Created,
     Starting,
@@ -59,7 +57,6 @@ pub enum FlyMachineState {
     Stopped,
     Destroying,
     Destroyed,
-    #[serde(untagged)]
     Other(String),
 }
 
@@ -69,16 +66,21 @@ pub struct FlyRuntimeService {
     client: reqwest::Client,
     token: String,
     app: String,
+    org_slug: String,
     image: String,
 }
 
 impl FlyRuntimeService {
     pub fn new(token: String) -> Result<Self, ApiError> {
         let app = std::env::var("FLY_HOSTED_APP")
-            .or_else(|_| std::env::var("FLY_APP_NAME"))
             .unwrap_or_else(|_| "allternit-hosted-runtimes".to_string());
         let image =
             std::env::var("HOSTED_RUNTIME_IMAGE").unwrap_or_else(|_| DEFAULT_IMAGE.to_string());
+        let org_slug = std::env::var("FLY_ORG_SLUG").map_err(|_| {
+            ApiError::ServiceUnavailable(
+                "FLY_ORG_SLUG is required for hosted runtime provisioning.".to_string(),
+            )
+        })?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(60))
             .build()
@@ -87,6 +89,7 @@ impl FlyRuntimeService {
             client,
             token,
             app,
+            org_slug,
             image,
         })
     }
@@ -112,7 +115,7 @@ impl FlyRuntimeService {
         if response.status() == reqwest::StatusCode::NOT_FOUND {
             info!("Creating Fly app for hosted runtimes: {}", self.app);
             let create_url = format!("{}/apps", FLY_API_BASE);
-            let body = json!({ "app_name": self.app, "org_slug": "personal" });
+            let body = json!({ "app_name": self.app, "org_slug": self.org_slug });
             let create = self
                 .client
                 .post(&create_url)
@@ -152,9 +155,20 @@ impl FlyRuntimeService {
         let volume_id = self
             .create_volume(&config.region, config.volume_size_gb)
             .await?;
-        let machine_id = self
+        let machine_id = match self
             .create_machine(config, &volume_id, bootstrap_token)
-            .await?;
+            .await
+        {
+            Ok(machine_id) => machine_id,
+            Err(machine_error) => {
+                if let Err(cleanup_error) = self.delete_volume(&volume_id).await {
+                    return Err(ApiError::Internal(format!(
+                        "{machine_error}; cleanup of Fly volume {volume_id} also failed: {cleanup_error}"
+                    )));
+                }
+                return Err(machine_error);
+            }
+        };
 
         Ok(ProvisionedMachine {
             app: self.app.clone(),
@@ -201,6 +215,26 @@ impl FlyRuntimeService {
         Ok(id.to_string())
     }
 
+    async fn delete_volume(&self, volume_id: &str) -> Result<(), ApiError> {
+        let url = format!("{}/apps/{}/volumes/{}", FLY_API_BASE, self.app, volume_id);
+        let response = self
+            .client
+            .delete(&url)
+            .header("Authorization", self.auth())
+            .send()
+            .await
+            .map_err(|e| ApiError::Internal(format!("Fly volume destroy failed: {e}")))?;
+        if response.status().is_success() || response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(());
+        }
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        Err(ApiError::Internal(format!(
+            "Fly volume destroy returned {}: {}",
+            status, text
+        )))
+    }
+
     async fn create_machine(
         &self,
         config: &HostedMachineConfig,
@@ -236,9 +270,9 @@ impl FlyRuntimeService {
                     "memory_mb": config.memory_mb
                 },
                 "env": env,
-                "files": [{
-                    "guest_path": "/data",
-                    "name": volume_id
+                "mounts": [{
+                    "volume": volume_id,
+                    "path": "/data"
                 }],
                 "services": [],
                 "auto_destroy": false,
@@ -294,7 +328,10 @@ impl FlyRuntimeService {
 
     /// Destroy a machine and its volume.
     pub async fn destroy(&self, machine_id: &str, volume_id: Option<&str>) -> Result<(), ApiError> {
-        let url = format!("{}/apps/{}/machines/{}", FLY_API_BASE, self.app, machine_id);
+        let url = format!(
+            "{}/apps/{}/machines/{}?force=true",
+            FLY_API_BASE, self.app, machine_id
+        );
         let response = self
             .client
             .delete(&url)
@@ -302,7 +339,7 @@ impl FlyRuntimeService {
             .send()
             .await
             .map_err(|e| ApiError::Internal(format!("Fly machine destroy failed: {e}")))?;
-        if !response.status().is_success() {
+        if !response.status().is_success() && response.status() != reqwest::StatusCode::NOT_FOUND {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
             return Err(ApiError::Internal(format!(
@@ -312,16 +349,7 @@ impl FlyRuntimeService {
         }
 
         if let Some(volume_id) = volume_id {
-            let vol_url = format!("{}/apps/{}/volumes/{}", FLY_API_BASE, self.app, volume_id);
-            let vol_resp = self
-                .client
-                .delete(&vol_url)
-                .header("Authorization", self.auth())
-                .send()
-                .await;
-            if let Err(e) = vol_resp {
-                warn!("Failed to destroy Fly volume {}: {}", volume_id, e);
-            }
+            self.delete_volume(volume_id).await?;
         }
         Ok(())
     }
@@ -351,8 +379,16 @@ impl FlyRuntimeService {
         let state = payload["state"]
             .as_str()
             .ok_or_else(|| ApiError::Internal("Fly status response missing state".to_string()))?;
-        serde_json::from_str(&format!("\"{}\"", state))
-            .map_err(|_| ApiError::Internal(format!("Unknown Fly machine state: {}", state)))
+        Ok(match state {
+            "created" => FlyMachineState::Created,
+            "starting" => FlyMachineState::Starting,
+            "started" => FlyMachineState::Started,
+            "stopping" => FlyMachineState::Stopping,
+            "stopped" => FlyMachineState::Stopped,
+            "destroying" => FlyMachineState::Destroying,
+            "destroyed" => FlyMachineState::Destroyed,
+            other => FlyMachineState::Other(other.to_string()),
+        })
     }
 
     async fn send_empty_post(&self, url: &str) -> Result<(), ApiError> {
@@ -381,6 +417,7 @@ pub struct HostedInstanceRow {
     pub id: String,
     pub user_id: String,
     pub organization_id: Option<String>,
+    pub name: String,
     pub runtime_device_id: Option<String>,
     pub billing_mode: String,
     pub fly_app: Option<String>,
@@ -391,6 +428,10 @@ pub struct HostedInstanceRow {
     pub cpus: i64,
     pub memory_mb: i64,
     pub status: String,
+    pub idle_timeout_minutes: i64,
+    pub last_activity_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub active_since: Option<chrono::DateTime<chrono::Utc>>,
+    pub stop_reason: Option<String>,
     pub started_at: Option<chrono::DateTime<chrono::Utc>>,
     pub stopped_at: Option<chrono::DateTime<chrono::Utc>>,
     pub destroyed_at: Option<chrono::DateTime<chrono::Utc>>,

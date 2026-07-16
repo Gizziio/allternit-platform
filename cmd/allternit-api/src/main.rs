@@ -237,6 +237,8 @@ async fn main() {
         .merge(runtime_backend_router())
         .merge(agents_v1_router())
         .merge(allternit_api::connector_routes::connector_router())
+        .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
+        .merge(allternit_api::usage_routes::usage_router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())
@@ -287,7 +289,10 @@ async fn main() {
         // provider's consent screen with no Clerk JWT, so these must be
         // public: the curated-3 loopback callback (moved out of the protected
         // router) and the open-connector sidecar's `/oauth/callback` proxy.
-        .merge(allternit_api::connector_routes::connector_public_router());
+        .merge(allternit_api::connector_routes::connector_public_router())
+        // Internal-only: the ACU Python gateway has no Clerk session, so
+        // these handlers authenticate with a dedicated service token.
+        .merge(allternit_api::internal_routes::internal_router());
 
     // Mount the offline platform UI at `/` when a static export is available.
     // This is intentionally last among the explicit public routes so that

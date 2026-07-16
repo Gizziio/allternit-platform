@@ -534,7 +534,40 @@ async fn exchange_pairing(
             "Pairing request was already consumed".to_string(),
         ));
     }
+    if let Some(hosted_instance_id) = pairing.hosted_instance_id.as_deref() {
+        let linked = sqlx::query(
+            r#"
+            UPDATE hosted_runtime_instances
+            SET runtime_device_id = ?, status = 'running',
+                bootstrap_token_hash = NULL,
+                active_since = COALESCE(active_since, CURRENT_TIMESTAMP),
+                last_activity_at = CURRENT_TIMESTAMP,
+                last_synced_at = CURRENT_TIMESTAMP,
+                error_message = NULL
+            WHERE id = ? AND user_id = ?
+              AND bootstrap_token_hash IS NOT NULL
+              AND runtime_device_id IS NULL
+            "#,
+        )
+        .bind(&runtime_id)
+        .bind(hosted_instance_id)
+        .bind(&user_id)
+        .execute(&mut *transaction)
+        .await?
+        .rows_affected();
+        if linked != 1 {
+            transaction.rollback().await?;
+            return Err(ApiError::Unauthorized(
+                "Hosted runtime bootstrap was already consumed or its ownership changed"
+                    .to_string(),
+            ));
+        }
+    }
     transaction.commit().await?;
+
+    if let Some(hosted_instance_id) = pairing.hosted_instance_id.as_deref() {
+        crate::services::record_runtime_started(&state.db, hosted_instance_id).await?;
+    }
 
     let user_email = sqlx::query_scalar::<_, String>("SELECT email FROM users WHERE id = ?")
         .bind(&user_id)

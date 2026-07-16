@@ -1,0 +1,35 @@
+name: Configure Clerk organization
+
+on:
+  workflow_dispatch:
+    inputs:
+      owner_email:
+        description: Existing Clerk user who receives owner/admin billing access
+        required: true
+        default: gizzi_io@proton.me
+      organization_name:
+        description: Clerk organization name
+        required: true
+        default: Allternit
+      organization_slug:
+        description: Clerk organization slug
+        required: true
+        default: allternit
+
+permissions:
+  contents: read
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure organization and owner access
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          CLERK_OWNER_EMAIL: ${{ inputs.owner_email }}
+          CLERK_ORGANIZATION_NAME: ${{ inputs.organization_name }}
+          CLERK_ORGANIZATION_SLUG: ${{ inputs.organization_slug }}
+        run: bash scripts/configure-clerk-organization.sh

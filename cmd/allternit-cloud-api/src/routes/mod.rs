@@ -5,6 +5,7 @@ pub mod auth;
 pub mod costs;
 pub mod deployments;
 pub mod health;
+pub mod hosted_entitlements;
 pub mod hosted_runtimes;
 pub mod instances;
 pub mod jobs;

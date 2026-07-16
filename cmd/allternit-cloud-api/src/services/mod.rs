@@ -3,6 +3,7 @@
 pub mod cost_service;
 pub mod event_store;
 pub mod fly_runtime_service;
+pub mod hosted_runtime_lifecycle;
 pub mod quota_service;
 pub mod run_service;
 pub mod scheduler_service;
@@ -16,6 +17,11 @@ pub use cost_service::{
 pub use event_store::{event_utils, EventStore, EventStoreImpl};
 pub use fly_runtime_service::{
     FlyMachineState, FlyRuntimeService, HostedInstanceRow, HostedMachineConfig, ProvisionedMachine,
+};
+pub use hosted_runtime_lifecycle::{
+    hosted_usage_summary, record_runtime_started, record_runtime_stopped,
+    start_hosted_runtime_lifecycle_task, touch_instance_activity, touch_runtime_activity,
+    HostedUsageSummary,
 };
 pub use quota_service::{QuotaService, SharedQuotaService, UserQuota};
 pub use run_service::{RunListFilter, RunService, RunServiceImpl};

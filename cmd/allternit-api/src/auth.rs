@@ -28,6 +28,9 @@ const DESKTOP_ACCESS_TOKEN_HEADER: &str = "x-allternit-desktop-access-token";
 const USER_ID_HEADER: &str = "x-allternit-user-id";
 const USER_EMAIL_HEADER: &str = "x-allternit-user-email";
 const USER_NAME_HEADER: &str = "x-allternit-user-name";
+const ORGANIZATION_ID_HEADER: &str = "x-allternit-organization-id";
+const ORGANIZATION_ROLE_HEADER: &str = "x-allternit-organization-role";
+const ORGANIZATION_SLUG_HEADER: &str = "x-allternit-organization-slug";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -94,6 +97,9 @@ pub struct AuthUser {
     pub name: Option<String>,
     pub avatar_url: Option<String>,
     pub tenant_id: Option<String>,
+    pub organization_id: Option<String>,
+    pub organization_role: Option<String>,
+    pub organization_slug: Option<String>,
 }
 
 /// Build a default local user for dev/test mode.
@@ -104,11 +110,14 @@ fn local_dev_user(tenant_id: Option<String>) -> AuthUser {
         name: Some("Local Developer".to_string()),
         avatar_url: None,
         tenant_id,
+        organization_id: None,
+        organization_role: None,
+        organization_slug: None,
     }
 }
 
 /// Returns true when the request appears to originate from the same machine.
-fn is_localhost_origin(headers: &HeaderMap) -> bool {
+pub(crate) fn is_localhost_origin(headers: &HeaderMap) -> bool {
     let host = headers
         .get("host")
         .and_then(|v| v.to_str().ok())
@@ -146,10 +155,29 @@ struct ClerkClaims {
     /// Avatar URL
     #[serde(default, rename = "image_url")]
     image_url: Option<String>,
+    /// Clerk session token v2 organization claim.
+    #[serde(default)]
+    o: Option<ClerkOrganizationClaims>,
+    /// Clerk session token v1 organization claims. Kept during migration.
+    #[serde(default)]
+    org_id: Option<String>,
+    #[serde(default)]
+    org_role: Option<String>,
+    #[serde(default)]
+    org_slug: Option<String>,
     /// Issuer
     iss: String,
     /// Expiration
     exp: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ClerkOrganizationClaims {
+    id: String,
+    #[serde(default)]
+    rol: Option<String>,
+    #[serde(default)]
+    slg: Option<String>,
 }
 
 /// JWKS key entry
@@ -396,50 +424,99 @@ pub async fn verify_token(
 
     let claims = token_data.claims;
 
+    let (organization_id, organization_role, organization_slug) = match claims.o {
+        Some(organization) => (Some(organization.id), organization.rol, organization.slg),
+        None => (claims.org_id, claims.org_role, claims.org_slug),
+    };
+
     Ok(AuthUser {
         user_id: claims.sub,
         email: claims.email,
         name: claims.name,
         avatar_url: claims.image_url,
         tenant_id: None,
+        organization_id,
+        organization_role,
+        organization_slug,
     })
 }
 
-/// Ensure a user exists in the local SQLite DB, creating if necessary
-pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<(), AuthError> {
+/// Ensure a user exists in the local SQLite DB, creating if necessary.
+/// Returns the verified active organization, if the request has one. Callers
+/// assign this back onto the per-request `AuthUser` rather than trusting a
+/// possibly stale users-table pointer. Enterprise BYOC remains organization
+/// scoped; a personal organization is never synthesized for a solo session.
+pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<Option<String>, AuthError> {
     let conn = db
         .connect()
         .map_err(|e| AuthError::DbError(e.to_string()))?;
 
-    let exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM users WHERE id = ?1 LIMIT 1",
-            [&user.user_id],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
+    conn.execute(
+        "INSERT INTO users (id, email, name, avatar_url, created_at, updated_at)
+         VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT(id) DO UPDATE SET
+            email = COALESCE(excluded.email, users.email),
+            name = COALESCE(excluded.name, users.name),
+            avatar_url = COALESCE(excluded.avatar_url, users.avatar_url),
+            updated_at = CURRENT_TIMESTAMP",
+        rusqlite::params![
+            &user.user_id,
+            user.email.as_deref(),
+            user.name.as_deref(),
+            user.avatar_url.as_deref(),
+        ],
+    )
+    .map_err(|e| AuthError::DbError(e.to_string()))?;
 
-    if !exists {
-        info!("Creating local user record for {}", user.user_id);
+    let Some(organization_id) = user.organization_id.as_deref() else {
         conn.execute(
-            "INSERT INTO users (id, email, name, avatar_url, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-             ON CONFLICT(id) DO UPDATE SET
-                email = excluded.email,
-                name = excluded.name,
-                avatar_url = excluded.avatar_url,
-                updated_at = CURRENT_TIMESTAMP",
-            rusqlite::params![
-                &user.user_id,
-                user.email.as_deref().unwrap_or(""),
-                user.name.as_deref().unwrap_or(""),
-                user.avatar_url.as_deref().unwrap_or(""),
-            ],
+            "UPDATE users SET organization_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
+            [&user.user_id],
         )
         .map_err(|e| AuthError::DbError(e.to_string()))?;
-    }
+        return Ok(None);
+    };
+    let organization_name = user
+        .organization_slug
+        .as_deref()
+        .unwrap_or(organization_id)
+        .to_string();
+    let role = user
+        .organization_role
+        .as_deref()
+        .unwrap_or("member")
+        .strip_prefix("org:")
+        .unwrap_or_else(|| user.organization_role.as_deref().unwrap_or("member"))
+        .to_string();
 
-    Ok(())
+    let member_id = format!("{organization_id}:{}", user.user_id);
+
+    conn.execute(
+        "INSERT INTO organizations (id, name, billing_email, created_at, updated_at)
+         VALUES (?1, ?2, ?3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT(id) DO UPDATE SET
+            name = excluded.name,
+            billing_email = COALESCE(organizations.billing_email, excluded.billing_email),
+            updated_at = CURRENT_TIMESTAMP",
+        rusqlite::params![organization_id, organization_name, user.email.as_deref()],
+    )
+    .map_err(|e| AuthError::DbError(e.to_string()))?;
+
+    conn.execute(
+        "INSERT INTO organization_members (id, organization_id, user_id, role, joined_at)
+         VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP)
+         ON CONFLICT(organization_id, user_id) DO UPDATE SET role = excluded.role",
+        rusqlite::params![member_id, organization_id, &user.user_id, role],
+    )
+    .map_err(|e| AuthError::DbError(e.to_string()))?;
+
+    conn.execute(
+        "UPDATE users SET organization_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
+        rusqlite::params![organization_id, &user.user_id],
+    )
+    .map_err(|e| AuthError::DbError(e.to_string()))?;
+
+    Ok(Some(organization_id.to_string()))
 }
 
 // ─── Axum Middleware ────────────────────────────────────────────────────────
@@ -459,6 +536,20 @@ fn extract_header_string(headers: &HeaderMap, name: &'static str) -> Option<Stri
 }
 
 fn insert_user_headers(headers: &mut HeaderMap, user: &AuthUser) {
+    // Never let caller-supplied identity/scope headers survive authentication.
+    // Desktop bootstrap values have already been copied into `user` before
+    // this function runs; Clerk values came from the verified JWT.
+    for name in [
+        USER_ID_HEADER,
+        USER_EMAIL_HEADER,
+        USER_NAME_HEADER,
+        "x-allternit-tenant-id",
+        ORGANIZATION_ID_HEADER,
+        ORGANIZATION_ROLE_HEADER,
+        ORGANIZATION_SLUG_HEADER,
+    ] {
+        headers.remove(name);
+    }
     headers.insert(
         HeaderName::from_static(USER_ID_HEADER),
         HeaderValue::from_str(&user.user_id).unwrap(),
@@ -473,6 +564,21 @@ fn insert_user_headers(headers: &mut HeaderMap, user: &AuthUser) {
             headers.insert(HeaderName::from_static(USER_NAME_HEADER), value);
         }
     }
+    if let Some(ref organization_id) = user.organization_id {
+        if let Ok(value) = HeaderValue::from_str(organization_id) {
+            headers.insert(HeaderName::from_static(ORGANIZATION_ID_HEADER), value);
+        }
+    }
+    if let Some(ref role) = user.organization_role {
+        if let Ok(value) = HeaderValue::from_str(role) {
+            headers.insert(HeaderName::from_static(ORGANIZATION_ROLE_HEADER), value);
+        }
+    }
+    if let Some(ref slug) = user.organization_slug {
+        if let Ok(value) = HeaderValue::from_str(slug) {
+            headers.insert(HeaderName::from_static(ORGANIZATION_SLUG_HEADER), value);
+        }
+    }
 }
 
 fn extract_desktop_bootstrap_user(headers: &HeaderMap) -> Option<AuthUser> {
@@ -481,12 +587,17 @@ fn extract_desktop_bootstrap_user(headers: &HeaderMap) -> Option<AuthUser> {
     let email = extract_header_string(headers, USER_EMAIL_HEADER);
     let name = extract_header_string(headers, USER_NAME_HEADER);
     let tenant_id = extract_header_string(headers, "x-allternit-tenant-id");
+    let organization_id =
+        extract_header_string(headers, ORGANIZATION_ID_HEADER).or_else(|| tenant_id.clone());
     Some(AuthUser {
         user_id,
         email,
         name,
         avatar_url: None,
         tenant_id,
+        organization_id,
+        organization_role: extract_header_string(headers, ORGANIZATION_ROLE_HEADER),
+        organization_slug: extract_header_string(headers, ORGANIZATION_SLUG_HEADER),
     })
 }
 
@@ -497,9 +608,10 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
-    if let Some(user) = extract_desktop_bootstrap_user(request.headers()) {
-        if let Err(e) = ensure_user_in_db(&state.db, &user) {
-            return e.into_response();
+    if let Some(mut user) = extract_desktop_bootstrap_user(request.headers()) {
+        match ensure_user_in_db(&state.db, &user) {
+            Ok(organization_id) => user.organization_id = organization_id,
+            Err(e) => return e.into_response(),
         }
 
         let headers = request.headers_mut();
@@ -511,10 +623,12 @@ pub async fn auth_middleware(
     // Try Clerk JWT first
     if let Some(token) = extract_bearer_token(request.headers()) {
         match verify_token(&state.jwks, &token, &state.auth_config).await {
-            Ok(user) => {
-                // Ensure user exists in local DB
-                if let Err(e) = ensure_user_in_db(&state.db, &user) {
-                    return e.into_response();
+            Ok(mut user) => {
+                // Sync only the signed active Clerk organization into the
+                // request and local membership tables.
+                match ensure_user_in_db(&state.db, &user) {
+                    Ok(organization_id) => user.organization_id = organization_id,
+                    Err(e) => return e.into_response(),
                 }
 
                 // Add user context as headers for backward compatibility
@@ -544,9 +658,10 @@ pub async fn auth_middleware(
     // treat it as the default local user. This keeps the packaged-app and
     // browser dev flows working without distributing Clerk tokens to devs.
     if state.config.local_dev_bypass() && is_localhost_origin(request.headers()) {
-        let user = local_dev_user(Some(state.config.tenant_id()));
-        if let Err(e) = ensure_user_in_db(&state.db, &user) {
-            return e.into_response();
+        let mut user = local_dev_user(Some(state.config.tenant_id()));
+        match ensure_user_in_db(&state.db, &user) {
+            Ok(organization_id) => user.organization_id = organization_id,
+            Err(e) => return e.into_response(),
         }
         let headers = request.headers_mut();
         insert_user_headers(headers, &user);
@@ -557,9 +672,10 @@ pub async fn auth_middleware(
     // Self-hosted bypass: packaged apps that ship without Clerk keys trust the
     // local desktop bootstrap headers or localhost origin.
     if state.config.self_hosted() {
-        if let Some(user) = extract_desktop_bootstrap_user(request.headers()) {
-            if let Err(e) = ensure_user_in_db(&state.db, &user) {
-                return e.into_response();
+        if let Some(mut user) = extract_desktop_bootstrap_user(request.headers()) {
+            match ensure_user_in_db(&state.db, &user) {
+                Ok(organization_id) => user.organization_id = organization_id,
+                Err(e) => return e.into_response(),
             }
             let headers = request.headers_mut();
             insert_user_headers(headers, &user);
@@ -568,9 +684,10 @@ pub async fn auth_middleware(
         }
 
         if is_localhost_origin(request.headers()) {
-            let user = local_dev_user(Some(state.config.tenant_id()));
-            if let Err(e) = ensure_user_in_db(&state.db, &user) {
-                return e.into_response();
+            let mut user = local_dev_user(Some(state.config.tenant_id()));
+            match ensure_user_in_db(&state.db, &user) {
+                Ok(organization_id) => user.organization_id = organization_id,
+                Err(e) => return e.into_response(),
             }
             let headers = request.headers_mut();
             insert_user_headers(headers, &user);
@@ -589,8 +706,10 @@ pub async fn optional_auth_middleware(
     next: Next,
 ) -> Response {
     if let Some(token) = extract_bearer_token(request.headers()) {
-        if let Ok(user) = verify_token(&state.jwks, &token, &state.auth_config).await {
-            let _ = ensure_user_in_db(&state.db, &user);
+        if let Ok(mut user) = verify_token(&state.jwks, &token, &state.auth_config).await {
+            if let Ok(organization_id) = ensure_user_in_db(&state.db, &user) {
+                user.organization_id = organization_id;
+            }
             request.extensions_mut().insert(user);
         }
     }
@@ -619,11 +738,25 @@ pub fn get_user(headers: &HeaderMap) -> Option<AuthUser> {
         .get("x-allternit-tenant-id")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
+    let organization_id = headers
+        .get(ORGANIZATION_ID_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string())
+        .or_else(|| tenant_id.clone());
     Some(AuthUser {
         user_id: user_id.to_string(),
         email,
         name,
         avatar_url: None,
         tenant_id,
+        organization_id,
+        organization_role: headers
+            .get(ORGANIZATION_ROLE_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string()),
+        organization_slug: headers
+            .get(ORGANIZATION_SLUG_HEADER)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string()),
     })
 }

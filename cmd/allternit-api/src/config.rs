@@ -48,6 +48,12 @@ pub struct CompanyConfig {
     #[serde(rename = "encryptionKey")]
     pub encryption_key: Option<String>,
 
+    /// Shared secret the ACU (computer-use) Python gateway presents on
+    /// internal-only routes (e.g. cloud-credential resolution, usage-event
+    /// ingestion) since that service has no Clerk JWT to send.
+    #[serde(rename = "internalServiceToken")]
+    pub internal_service_token: Option<String>,
+
     /// Company branding / tenant marker.
     #[serde(rename = "tenantId")]
     pub tenant_id: Option<String>,
@@ -254,6 +260,21 @@ impl AppConfig {
             .or_else(|| {
                 self.company
                     .encryption_key
+                    .clone()
+                    .filter(|s| !s.is_empty())
+            })
+    }
+
+    /// Shared secret for internal-only routes the ACU Python gateway calls
+    /// (cloud-credential resolution, usage-event ingestion). `None` means
+    /// those routes are unreachable except via the local-dev bypass.
+    pub fn internal_service_token(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_INTERNAL_SERVICE_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| {
+                self.company
+                    .internal_service_token
                     .clone()
                     .filter(|s| !s.is_empty())
             })

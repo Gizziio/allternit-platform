@@ -22,6 +22,8 @@ pub struct UserQuota {
     pub max_relay_mb_per_day: i64,
     pub max_hosted_runtime_hours_monthly: i64,
     pub can_create_hosted_runtime: bool,
+    pub max_hosted_runtimes: i64,
+    pub max_hosted_runtime_memory_mb: i64,
     pub hard_spend_cap_usd: Option<f64>,
 }
 
@@ -64,6 +66,8 @@ impl QuotaService {
                 q.max_relay_mb_per_day,
                 q.max_hosted_runtime_hours_monthly,
                 q.can_create_hosted_runtime,
+                q.max_hosted_runtimes,
+                q.max_hosted_runtime_memory_mb,
                 q.hard_spend_cap_usd
             FROM user_runtime_quotas q
             WHERE q.user_id = ?
@@ -87,12 +91,14 @@ impl QuotaService {
                 user_id, plan_tier_id,
                 max_active_devices, max_pairings_per_day, max_relay_sockets,
                 max_relay_mb_per_day, max_hosted_runtime_hours_monthly,
-                can_create_hosted_runtime, hard_spend_cap_usd
+                can_create_hosted_runtime, max_hosted_runtimes,
+                max_hosted_runtime_memory_mb, hard_spend_cap_usd
             )
             SELECT ?, id,
                 max_active_devices, max_pairings_per_day, max_relay_sockets,
                 max_relay_mb_per_day, max_hosted_runtime_hours_monthly,
-                can_create_hosted_runtime, hard_spend_cap_usd
+                can_create_hosted_runtime, max_hosted_runtimes,
+                max_hosted_runtime_memory_mb, hard_spend_cap_usd
             FROM plan_tiers
             WHERE id = ?
             ON CONFLICT(user_id) DO UPDATE SET
@@ -103,6 +109,8 @@ impl QuotaService {
                 max_relay_mb_per_day = excluded.max_relay_mb_per_day,
                 max_hosted_runtime_hours_monthly = excluded.max_hosted_runtime_hours_monthly,
                 can_create_hosted_runtime = excluded.can_create_hosted_runtime,
+                max_hosted_runtimes = excluded.max_hosted_runtimes,
+                max_hosted_runtime_memory_mb = excluded.max_hosted_runtime_memory_mb,
                 hard_spend_cap_usd = excluded.hard_spend_cap_usd
             "#,
         )
@@ -397,7 +405,11 @@ impl QuotaService {
         // Relay bandwidth is not directly billed today, but we include a nominal
         // $0.02/MB placeholder so a runaway socket cannot silently spend nothing.
         let relay_cost = relay_egress_mb as f64 * 0.02;
-        let current = run_cost + relay_cost;
+        let hosted_cost = crate::services::hosted_usage_summary(&self.db, user_id)
+            .await
+            .map(|summary| summary.estimated_cost_usd)
+            .unwrap_or(0.0);
+        let current = run_cost + relay_cost + hosted_cost;
 
         if current >= cap {
             return Err(ApiError::Forbidden(format!(
@@ -418,6 +430,73 @@ impl QuotaService {
     pub fn can_create_hosted_runtime(&self, quota: &UserQuota) -> bool {
         quota.can_create_hosted_runtime
     }
+
+    /// Enforce the paid entitlement, per-user instance count, machine-size
+    /// ceiling, and monthly runtime-hour allowance before provisioning.
+    pub async fn check_hosted_runtime_creation(
+        &self,
+        user_id: &str,
+        quota: &UserQuota,
+        requested_memory_mb: i64,
+    ) -> Result<(), ApiError> {
+        if !quota.can_create_hosted_runtime || quota.max_hosted_runtimes <= 0 {
+            return Err(ApiError::Forbidden(
+                "Your plan does not include hosted runtimes. Upgrade to a hosted compute plan."
+                    .to_string(),
+            ));
+        }
+        if requested_memory_mb <= 0
+            || requested_memory_mb > quota.max_hosted_runtime_memory_mb
+            || !matches!(requested_memory_mb, 512 | 1024 | 2048)
+        {
+            return Err(ApiError::Forbidden(format!(
+                "Your {} plan allows hosted runtimes up to {} MB.",
+                quota.plan_tier_id, quota.max_hosted_runtime_memory_mb
+            )));
+        }
+
+        let active_count: i64 = sqlx::query_scalar(
+            r#"
+            SELECT COUNT(*) FROM hosted_runtime_instances
+            WHERE user_id = ? AND status NOT IN ('destroying', 'destroyed')
+            "#,
+        )
+        .bind(user_id)
+        .fetch_one(&self.db)
+        .await?;
+        if active_count >= quota.max_hosted_runtimes {
+            return Err(ApiError::Forbidden(format!(
+                "Hosted runtime limit reached ({}/{}). Destroy an existing runtime or upgrade your plan.",
+                active_count, quota.max_hosted_runtimes
+            )));
+        }
+
+        self.check_hosted_runtime_hours(user_id, quota).await
+    }
+
+    /// Prevent a stopped machine from starting once its monthly allowance is
+    /// exhausted. A value of zero means the tier has no hosted entitlement,
+    /// not unlimited usage.
+    pub async fn check_hosted_runtime_hours(
+        &self,
+        user_id: &str,
+        quota: &UserQuota,
+    ) -> Result<(), ApiError> {
+        if quota.max_hosted_runtime_hours_monthly <= 0 {
+            return Err(ApiError::Forbidden(
+                "Your plan has no hosted runtime hours available.".to_string(),
+            ));
+        }
+        let usage = crate::services::hosted_usage_summary(&self.db, user_id).await?;
+        let limit_seconds = quota.max_hosted_runtime_hours_monthly * 3600;
+        if usage.total_seconds >= limit_seconds {
+            return Err(ApiError::Forbidden(format!(
+                "Monthly hosted runtime allowance reached ({} hours).",
+                quota.max_hosted_runtime_hours_monthly
+            )));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -430,6 +509,8 @@ struct UserQuotaRow {
     max_relay_mb_per_day: i64,
     max_hosted_runtime_hours_monthly: i64,
     can_create_hosted_runtime: i64,
+    max_hosted_runtimes: i64,
+    max_hosted_runtime_memory_mb: i64,
     #[sqlx(default)]
     hard_spend_cap_usd: Option<f64>,
 }
@@ -445,6 +526,8 @@ impl From<UserQuotaRow> for UserQuota {
             max_relay_mb_per_day: row.max_relay_mb_per_day,
             max_hosted_runtime_hours_monthly: row.max_hosted_runtime_hours_monthly,
             can_create_hosted_runtime: row.can_create_hosted_runtime != 0,
+            max_hosted_runtimes: row.max_hosted_runtimes,
+            max_hosted_runtime_memory_mb: row.max_hosted_runtime_memory_mb,
             hard_spend_cap_usd: row.hard_spend_cap_usd,
         }
     }

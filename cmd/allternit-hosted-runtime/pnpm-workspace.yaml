@@ -1,0 +1,19 @@
+packages:
+  - "cmd/agent-daemon"
+  - "cmd/gizzi-code"
+  - "cmd/gizzi-code/packages/*"
+  - "sdk/allternit-sdk"
+  - "packages/@allternit/request-scorer"
+  - "packages/@allternit/computer-use-protocol"
+  - "packages/@allternit/util"
+  - "services/orchestration/control-plane/allternit-orchestrator"
+  - "domains/kernel/core"
+  - "domains/governance/governor"
+  - "infrastructure/chrome-stream/agent-systems/allternit-browser"
+
+onlyBuiltDependencies:
+  - "@parcel/watcher"
+  - "@scarf/scarf"
+  - better-sqlite3
+  - protobufjs
+  - sharp

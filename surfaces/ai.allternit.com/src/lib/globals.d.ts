@@ -34,6 +34,7 @@ declare global {
           expiresAt: number;
           runtimeId: string;
           organizationId?: string;
+          organizationRole?: string;
           capabilities: string[];
         }>;
         listAccounts: () => Promise<Array<{

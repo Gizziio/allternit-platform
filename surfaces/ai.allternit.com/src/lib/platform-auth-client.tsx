@@ -34,6 +34,7 @@ type DesktopSession = {
   expiresAt: number
   runtimeId: string
   organizationId?: string
+  organizationRole?: string
   capabilities: string[]
 }
 
@@ -314,6 +315,7 @@ function buildDisabledAuthValue() {
       userId: null as string | null | undefined,
       sessionId: null as string | null | undefined,
       orgId: null as string | null | undefined,
+      orgRole: null as string | null | undefined,
       actor: null as unknown,
       getToken: async () => null as string | null,
     },
@@ -341,6 +343,7 @@ function buildDesktopAuthValue(session: DesktopSession | null, isLoaded: boolean
       userId: session?.userId ?? null,
       sessionId: session?.runtimeId ?? null,
       orgId: session?.organizationId ?? null,
+      orgRole: session?.organizationRole ?? null,
       actor: null as unknown,
       // Runtime credentials remain in Electron main. Requests to the local API
       // are authorized by the desktop broker, never by renderer JavaScript.

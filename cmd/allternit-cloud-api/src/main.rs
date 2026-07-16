@@ -152,6 +152,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         fly_runtime_service,
     });
 
+    if state.fly_runtime_service.is_some() {
+        services::start_hosted_runtime_lifecycle_task(state.clone());
+    }
+
     // Start scheduler service (background task)
     let scheduler_enabled = std::env::var("SCHEDULER_ENABLED")
         .map(|v| v.parse::<bool>().unwrap_or(true))

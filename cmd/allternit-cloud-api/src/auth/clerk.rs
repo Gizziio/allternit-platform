@@ -39,8 +39,17 @@ struct ClerkClaims {
     name: Option<String>,
     #[serde(default)]
     image_url: Option<String>,
+    /// Clerk session token v2 organization claim.
+    #[serde(default)]
+    o: Option<ClerkOrganizationClaims>,
+    /// Clerk session token v1 organization claim.
     #[serde(default)]
     org_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ClerkOrganizationClaims {
+    id: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -139,12 +148,17 @@ impl ClerkVerifier {
             .map_err(|_| ApiError::Unauthorized("Invalid or expired Clerk session".to_string()))?
             .claims;
 
+        let organization_id = claims
+            .o
+            .map(|organization| organization.id)
+            .or(claims.org_id);
+
         Ok(ClerkUser {
             id: claims.sub,
             email: claims.email.or(claims.email_address),
             name: claims.name,
             image_url: claims.image_url,
-            organization_id: claims.org_id,
+            organization_id,
         })
     }
 }

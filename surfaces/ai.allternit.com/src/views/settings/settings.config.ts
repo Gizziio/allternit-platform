@@ -47,7 +47,7 @@ export interface SettingsNavItem {
 export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'signin', label: 'Account', icon: React.createElement(User, { size: 18 }), group: 'account' },
   { id: 'usage', label: 'Usage', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
-  { id: 'billing', label: 'Billing', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
+  { id: 'billing', label: 'Plans & compute', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
   { id: 'privacy', label: 'Privacy', icon: React.createElement(Lock, { size: 18 }), group: 'account' },
   { id: 'general', label: 'General', icon: React.createElement(GearSix, { size: 18 }), group: 'platform' },
   { id: 'appearance', label: 'Appearance', icon: React.createElement(Palette, { size: 18 }), group: 'platform' },
@@ -61,7 +61,8 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'cowork', label: 'Cowork', icon: React.createElement(Briefcase, { size: 18 }), group: 'products' },
   { id: 'extensions', label: 'Extensions', icon: React.createElement(PuzzlePiece, { size: 18 }), group: 'products' },
   { id: 'infrastructure', label: 'Infrastructure', icon: React.createElement(Cloud, { size: 18 }), group: 'infrastructure' },
-  { id: 'vps', label: 'VPS Connections', icon: React.createElement(HardDrives, { size: 18 }), group: 'infrastructure' },
+  { id: 'vps', label: 'VPS & servers', icon: React.createElement(HardDrives, { size: 18 }), group: 'infrastructure' },
+  { id: 'cloud-credentials', label: 'Enterprise BYOC', icon: React.createElement(Cloud, { size: 18 }), group: 'infrastructure' },
   { id: 'environment', label: 'Environment', icon: React.createElement(SlidersHorizontal, { size: 18 }), group: 'infrastructure' },
   { id: 'security', label: 'Security', icon: React.createElement(Shield, { size: 18 }), group: 'infrastructure' },
   { id: 'agents', label: 'Agents', icon: React.createElement(Robot, { size: 18 }), group: 'infrastructure' },

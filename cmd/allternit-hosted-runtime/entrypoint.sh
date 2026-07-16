@@ -11,28 +11,31 @@ chmod 700 /data
 export ALLTERNIT_GATEWAY_URL="${ALLTERNIT_GATEWAY_URL:-http://127.0.0.1:8013}"
 export ALLTERNIT_RUNTIME_IDENTITY_PATH="${ALLTERNIT_RUNTIME_IDENTITY_PATH:-/data/runtime-identity.json}"
 
-# TODO: replace with the real Gizzi gateway startup command once the CLI exposes
-# a headless server mode. For now this placeholder keeps the container alive
-# so the relay can connect.
+gateway_pid=""
+daemon_pid=""
+
+shutdown() {
+  trap - TERM INT EXIT
+  if [ -n "$daemon_pid" ]; then kill -TERM "$daemon_pid" 2>/dev/null || true; fi
+  if [ -n "$gateway_pid" ]; then kill -TERM "$gateway_pid" 2>/dev/null || true; fi
+  wait 2>/dev/null || true
+}
+
+trap shutdown TERM INT EXIT
+
 start_gizzi_gateway() {
   echo "[hosted-runtime] Starting Gizzi gateway on ${ALLTERNIT_GATEWAY_URL}..."
-  # Example: cd /app/cmd/gizzi-code && bun run start server --port 8013
-  # Leaving the port open via a simple TCP listener avoids crash loops while
-  # the integration is being finished.
-  bun -e "
-    const http = require('http');
-    const server = http.createServer((req, res) => {
-      res.writeHead(503, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'gizzi_gateway_not_ready' }));
-    });
-    server.listen(8013, '127.0.0.1', () => console.log('[gizzi-gateway] placeholder listening on 8013'));
-  " &
+  /app/cmd/gizzi-code/dist/gizzi-code serve \
+    --hostname 127.0.0.1 \
+    --port "${PORT:-8013}" &
+  gateway_pid=$!
 }
 
 start_agent_daemon() {
   echo "[hosted-runtime] Starting agent-daemon..."
   cd /app/cmd/agent-daemon
-  exec bun run start
+  bun dist/index.js &
+  daemon_pid=$!
 }
 
 # Best-effort: wait for the gateway socket to accept connections.
@@ -50,5 +53,9 @@ wait_for_gateway() {
 }
 
 start_gizzi_gateway
-wait_for_gateway || true
+wait_for_gateway
 start_agent_daemon
+
+# Exit the container if either half fails. Fly's on-failure policy will
+# restart the machine, while the trap always terminates the surviving child.
+wait -n "$gateway_pid" "$daemon_pid"

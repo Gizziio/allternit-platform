@@ -76,6 +76,18 @@ async fn execute_tool(
                 .get("x-allternit-tenant-id")
                 .and_then(|v| v.to_str().ok())
                 .map(|s| s.to_string()),
+            organization_id: headers
+                .get("x-allternit-organization-id")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
+            organization_role: headers
+                .get("x-allternit-organization-role")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
+            organization_slug: headers
+                .get("x-allternit-organization-slug")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string()),
         },
         None => {
             return (

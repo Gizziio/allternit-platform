@@ -195,8 +195,6 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .merge(routes::tasks::task_routes())
         // Mirror session endpoints (merged from api/cloud/allternit-cloud-api)
         .merge(routes::mirror::create_mirror_routes())
-        // Hosted runtime endpoints
-        .merge(routes::hosted_runtimes::routes())
         // WebSocket endpoint for run events
         .route("/ws/runs/:id", get(websocket::run_ws_handler))
         // Deployment endpoints (existing)
@@ -287,6 +285,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // like an OAuth device authorization endpoint.
         .merge(routes::runtime_pairing::routes())
         .merge(routes::runtime_relay::routes())
+        // These handlers verify Clerk or billing credentials themselves. They
+        // must not pass through the legacy allternit_* API-token middleware.
+        .merge(routes::hosted_runtimes::routes())
+        .merge(routes::hosted_entitlements::routes())
         .layer(axum_middleware::from_fn_with_state(
             state.public_rate_limiter.clone(),
             crate::middleware::rate_limit::rate_limit_middleware,

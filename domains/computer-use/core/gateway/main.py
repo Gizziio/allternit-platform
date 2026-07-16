@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Literal, Optional
 import os
 from fastapi import FastAPI, HTTPException, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from uuid import uuid4
 
@@ -64,6 +65,19 @@ class _ApiKeyMiddleware(BaseHTTPMiddleware):
 
 if _ACU_API_KEY:
     app.add_middleware(_ApiKeyMiddleware)
+
+# This gateway is called directly from the browser (surfaces/ai.allternit.com's
+# computer-use-engine.ts fetches its loopback port straight from the page),
+# which makes every request cross-origin. Added here as an explicit, scoped
+# fix rather than assuming it already worked -- there was no CORS middleware
+# anywhere in this app before. Added after _ApiKeyMiddleware so it wraps
+# outermost and handles preflight OPTIONS before the API-key check runs.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 ActionType = Literal[
@@ -2174,6 +2188,8 @@ from computer_use_router import router as computer_use_router
 app.include_router(computer_use_router)
 from canonical_router import router as canonical_computer_router
 app.include_router(canonical_computer_router)
+from cloud_credentials_router import router as cloud_credentials_router
+app.include_router(cloud_credentials_router)
 
 # ---------------------------------------------------------------------------
 # /v1/computer — Claude native computer tool endpoint

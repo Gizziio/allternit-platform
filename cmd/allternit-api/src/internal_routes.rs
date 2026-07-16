@@ -1,0 +1,184 @@
+//! Internal-only routes the ACU (computer-use) Python gateway calls — never
+//! exposed to end users or the Clerk-authenticated frontend. Gated by
+//! `internal_auth::require_internal_token`, not `auth_middleware`, since the
+//! calling service has no Clerk session to present. See
+//! `internal_auth.rs` for why this exists and its fail-closed posture.
+
+use axum::{
+    extract::{Path, State},
+    http::{HeaderMap, StatusCode},
+    response::IntoResponse,
+    routing::post,
+    Json, Router,
+};
+use rusqlite::params;
+use serde::Deserialize;
+use serde_json::{json, Value};
+use std::sync::Arc;
+use tracing::warn;
+
+use crate::internal_auth::require_internal_token;
+use crate::pricing::compute_cost_cents;
+use crate::token_crypto;
+use crate::AppState;
+
+pub fn internal_router() -> Router<Arc<AppState>> {
+    Router::new()
+        .route(
+            "/internal/cloud-credentials/:id/resolve",
+            post(resolve_credential),
+        )
+        .route("/internal/usage-events", post(ingest_usage_event))
+}
+
+#[derive(Debug, Deserialize)]
+struct ResolveCredentialRequest {
+    organization_id: String,
+}
+
+/// Resolves a sealed cloud credential for the ACU gateway to actually
+/// provision against. Verifies the caller-asserted `organization_id` matches
+/// the row's real owner before unsealing anything — the minimal
+/// cross-org-misuse guard: a caller that doesn't already know which org owns
+/// a credential id can't fish for it by guessing ids, and a mismatch is
+/// logged, not just silently rejected.
+async fn resolve_credential(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<ResolveCredentialRequest>,
+) -> impl IntoResponse {
+    if let Err(status) = require_internal_token(&headers, &state) {
+        return (status, Json(json!({"error": "unauthorized"}))).into_response();
+    }
+
+    let db = state.db.clone();
+    let requested_org = body.organization_id;
+
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, (StatusCode, Value)> {
+        let conn = db.connect().map_err(|e| {
+            (StatusCode::INTERNAL_SERVER_ERROR, json!({"error": "db_error", "message": e.to_string()}))
+        })?;
+
+        let row = conn
+            .query_row(
+                "SELECT organization_id, provider, region, external_id, secret_sealed, status
+                 FROM cloud_credentials WHERE id = ?1",
+                params![id],
+                |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, Option<String>>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                        row.get::<_, String>(4)?,
+                        row.get::<_, String>(5)?,
+                    ))
+                },
+            )
+            .map_err(|_| {
+                (StatusCode::NOT_FOUND, json!({"error": "not_found", "message": "No such cloud credential."}))
+            })?;
+
+        let (owner_org, provider, region, external_id, secret_sealed, status) = row;
+
+        if owner_org != requested_org {
+            warn!(
+                credential_id = %id,
+                requested_org = %requested_org,
+                actual_org = %owner_org,
+                "cloud credential resolve rejected: organization mismatch"
+            );
+            return Err((
+                StatusCode::FORBIDDEN,
+                json!({"error": "organization_mismatch", "message": "This credential does not belong to the requested organization."}),
+            ));
+        }
+        if status != "active" {
+            return Err((
+                StatusCode::CONFLICT,
+                json!({"error": "credential_revoked", "message": format!("Credential status is '{status}', not active.")}),
+            ));
+        }
+
+        let secret_json = token_crypto::open(&secret_sealed);
+        let secret: Value = serde_json::from_str(&secret_json).unwrap_or(Value::Null);
+
+        Ok(json!({
+            "provider": provider,
+            "region": region,
+            "external_id": external_id,
+            "secret": secret,
+        }))
+    })
+    .await;
+
+    // Never log the response body -- it carries the unsealed secret.
+    match result {
+        Ok(Ok(value)) => (StatusCode::OK, Json(value)).into_response(),
+        Ok(Err((status, body))) => (status, Json(body)).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "task_join_error"}))).into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct UsageEventRequest {
+    organization_id: String,
+    environment_id: String,
+    resource_type: String,
+    quantity: f64,
+    unit: String,
+    provider: Option<String>,
+    started_at: String,
+    ended_at: String,
+    idempotency_key: Option<String>,
+    metadata: Option<Value>,
+}
+
+/// Ingests one usage-metering event. Cost is always computed server-side
+/// (pricing.rs) — never trust a client-supplied cost. Idempotent on
+/// `idempotency_key`: the Python gateway's `stop()` does a best-effort POST
+/// with no local durability, so a retried delivery after a network blip must
+/// be a no-op, not a double-charge.
+async fn ingest_usage_event(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<UsageEventRequest>,
+) -> impl IntoResponse {
+    if let Err(status) = require_internal_token(&headers, &state) {
+        return (status, Json(json!({"error": "unauthorized"}))).into_response();
+    }
+
+    let cost_cents = compute_cost_cents(&body.resource_type, &body.unit, body.quantity);
+    let id = uuid::Uuid::new_v4().to_string();
+    let db = state.db.clone();
+    let metadata_str = body.metadata.map(|v| v.to_string());
+
+    let result = tokio::task::spawn_blocking(move || -> Result<(), (StatusCode, Value)> {
+        let conn = db.connect().map_err(|e| {
+            (StatusCode::INTERNAL_SERVER_ERROR, json!({"error": "db_error", "message": e.to_string()}))
+        })?;
+
+        conn.execute(
+            "INSERT OR IGNORE INTO usage_events
+                (id, organization_id, environment_id, resource_type, quantity, unit,
+                 provider, started_at, ended_at, computed_cost_cents, idempotency_key, metadata)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+            params![
+                id, body.organization_id, body.environment_id, body.resource_type,
+                body.quantity, body.unit, body.provider, body.started_at, body.ended_at,
+                cost_cents, body.idempotency_key, metadata_str,
+            ],
+        )
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, json!({"error": "db_error", "message": e.to_string()})))?;
+
+        Ok(())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"computed_cost_cents": cost_cents}))).into_response(),
+        Ok(Err((status, body))) => (status, Json(body)).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "task_join_error"}))).into_response(),
+    }
+}

@@ -15,6 +15,13 @@ primary_region = 'lax'
   DEFAULT_PLAN_TIER = 'free'
   RATE_LIMIT_RPM = '60'
   PUBLIC_RATE_LIMIT_RPM = '30'
+  HOSTED_RUNTIME_IDLE_TIMEOUT_MINUTES = '15'
+  HOSTED_RUNTIME_RECONCILE_SECONDS = '60'
+  FLY_ORG_SLUG = 'allternit'
+  FLY_HOSTED_ALLOWED_REGIONS = 'lax'
+
+  # Set these with `fly secrets set`; never commit their values:
+  # FLY_API_TOKEN, ALLTERNIT_BILLING_SYNC_SECRET
 
 [[mounts]]
   source = 'allternit_cloud_api_data'

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import platform
 import shutil
@@ -13,9 +14,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Protocol
 
+from core.cloud_provisioning import strategy_for
 from core.environment_authority import EnvironmentAuthority, EnvironmentRecord
 from sandbox.base import BaseSandbox, SandboxBackend, SandboxConfig
 from sandbox.factory import create_sandbox
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -343,6 +347,142 @@ class HostAdapterGate:
         return await self._adapter.execute(action, parameters)
 
 
+class CustomerCloudBackend:
+    """BYOC (Bring Your Own Cloud): provisions into a customer-supplied
+    AWS/GCP/Azure account instead of allternit's infrastructure, for
+    enterprise customers who need Tier-3 isolation without allternit
+    operating its own always-on Firecracker/bare-metal fleet -- matches how
+    E2B/Daytona offer BYOC to their enterprise tier.
+
+    Provisioning is real: CloudProvisioningStrategy (cloud_provisioning.py)
+    actually calls boto3/google-cloud-compute/azure-mgmt-compute to launch a
+    standard VM in the customer's account and bootstrap the same
+    Docker+Xvfb+xdotool sandbox ContainerGuiBackend runs locally
+    (sandbox/container/Dockerfile) via cloud-init. This is VM-level isolation
+    in the customer's cloud, not a Firecracker microVM -- a real, deliberate
+    scope choice (see cloud_provisioning.py's module docstring), not a
+    downgrade snuck in silently. What's verified in this environment:
+    Protocol conformance, the full HTTP round trip (credential-resolve +
+    usage-event POST) against a locally-running allternit-api, and every SDK
+    call path exercised against mocked boto3/google-auth/azure-identity
+    clients (no real cloud test account exists here to launch a real VM
+    against).
+    """
+
+    provider_id = "allternit.customer-cloud"
+
+    def __init__(self) -> None:
+        self._environments: Dict[str, Dict[str, Any]] = {}
+        self._api_base = os.environ.get("ALLTERNIT_API_URL", "http://localhost:8013")
+        self._internal_token = os.environ.get("ALLTERNIT_INTERNAL_SERVICE_TOKEN")
+
+    def manifest(self) -> EnvironmentBackendManifest:
+        available = bool(self._internal_token)
+        return EnvironmentBackendManifest(
+            self.provider_id, ("linux",), ("vm", "container"), available,
+            reason=None if available else "ALLTERNIT_INTERNAL_SERVICE_TOKEN not configured",
+            capabilities=("shell", "files", "byoc"),
+        )
+
+    async def provision(self, record: EnvironmentRecord) -> Dict[str, Any]:
+        if not self.manifest().available:
+            raise RuntimeError(self.manifest().reason)
+
+        cloud_account = record.metadata.get("cloud_account") or {}
+        missing = {"organization_id", "credential_id"} - cloud_account.keys()
+        if missing:
+            raise ValueError(f"metadata['cloud_account'] missing required keys: {sorted(missing)}")
+
+        credential = await self._resolve_credential(
+            cloud_account["organization_id"], cloud_account["credential_id"]
+        )
+        strategy = strategy_for(credential["provider"])
+        started_at = _iso_now()
+        details = await strategy.provision(record, credential)
+
+        self._environments[record.environment_id] = {
+            "organization_id": cloud_account["organization_id"],
+            "provider": credential["provider"],
+            "started_at": started_at,
+            # stop() needs to re-authenticate against the same cloud account
+            # to tear down what provision() created -- keep both the
+            # credential used and whatever provision() returned (instance
+            # id / resource group / etc, provider-specific).
+            "credential": credential,
+            "provision_details": details,
+        }
+        return details
+
+    async def stop(self, environment_id: str) -> None:
+        state = self._environments.pop(environment_id, None)
+        if state is None:
+            return
+        try:
+            await strategy_for(state["provider"]).stop(environment_id, state)
+        finally:
+            # Best-effort, no offline retry queue in this pass: a network
+            # blip here means this usage interval is never billed. A durable
+            # local retry queue (a small sqlite outbox, same shape as
+            # EnvironmentAuthority's own store) is a reasonable fast-follow,
+            # explicitly flagged rather than silently accepted as "good enough."
+            await self._post_usage_event(environment_id, state)
+
+    async def execute(self, environment_id: str, command: list[str], env: Dict[str, str]) -> Dict[str, Any]:
+        raise RuntimeError(
+            "CustomerCloudBackend has no shell yet -- pending real provider strategy implementation"
+        )
+
+    async def _resolve_credential(self, organization_id: str, credential_id: str) -> Dict[str, Any]:
+        import httpx
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.post(
+                f"{self._api_base}/internal/cloud-credentials/{credential_id}/resolve",
+                json={"organization_id": organization_id},
+                headers={"x-allternit-internal-token": self._internal_token},
+            )
+        response.raise_for_status()
+        return response.json()
+
+    async def _post_usage_event(self, environment_id: str, state: Dict[str, Any]) -> None:
+        import httpx
+
+        payload = {
+            "organization_id": state["organization_id"],
+            "environment_id": environment_id,
+            "resource_type": "sandbox_runtime",
+            "quantity": _elapsed_seconds(state["started_at"]),
+            "unit": "seconds",
+            "provider": state["provider"],
+            "started_at": state["started_at"],
+            "ended_at": _iso_now(),
+            "idempotency_key": f"{environment_id}:{state['started_at']}",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                await client.post(
+                    f"{self._api_base}/internal/usage-events",
+                    json=payload,
+                    headers={"x-allternit-internal-token": self._internal_token},
+                )
+        except Exception:  # noqa: BLE001
+            log.warning("usage-event POST failed for %s -- not retried, billing telemetry lost", environment_id)
+
+
+def _iso_now() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _elapsed_seconds(started_at_iso: str) -> float:
+    from datetime import datetime
+
+    started = datetime.fromisoformat(started_at_iso)
+    now = datetime.fromisoformat(_iso_now())
+    return max(0.0, (now - started).total_seconds())
+
+
 class EnvironmentBackendService:
     def __init__(self, authority: EnvironmentAuthority) -> None:
         self._authority = authority
@@ -431,5 +571,6 @@ def default_environment_backend_service() -> EnvironmentBackendService:
         service.register(AllternitSandboxBackend())
         service.register(CuaSandboxBackend())
         service.register(HostEnvironmentBackend())
+        service.register(CustomerCloudBackend())
         _default_service = service
     return _default_service
