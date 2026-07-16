@@ -122,6 +122,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let quota_service = Arc::new(services::QuotaService::new(db.clone()));
     tracing::info!("Quota service initialized");
 
+    // Create Fly runtime service if a token is available.
+    let fly_runtime_service =
+        std::env::var("FLY_API_TOKEN").ok().and_then(
+            |token| match services::FlyRuntimeService::new(token) {
+                Ok(service) => {
+                    tracing::info!("Fly runtime service initialized");
+                    Some(service)
+                }
+                Err(error) => {
+                    tracing::warn!("Failed to initialize Fly runtime service: {}", error);
+                    None
+                }
+            },
+        );
+
     // Create API state with shared services
     let state = Arc::new(ApiState {
         db,
@@ -134,6 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         public_rate_limiter,
         cost_service,
         quota_service,
+        fly_runtime_service,
     });
 
     // Start scheduler service (background task)

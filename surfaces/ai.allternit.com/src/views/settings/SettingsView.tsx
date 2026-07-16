@@ -153,6 +153,9 @@ function ClerkAuthPanel() {
   ));
   const [runtimesLoading, setRuntimesLoading] = useState(false);
   const [runtimesError, setRuntimesError] = useState<string | null>(null);
+  const [hostedRuntimes, setHostedRuntimes] = useState<any[]>([]);
+  const [hostedLoading, setHostedLoading] = useState(false);
+  const [hostedError, setHostedError] = useState<string | null>(null);
 
   const isElectron = typeof window !== 'undefined' && !!(window as any).allternit?.backend;
 
@@ -195,7 +198,7 @@ function ClerkAuthPanel() {
       const localSession = await window.allternit?.auth?.getSession?.().catch(() => null);
       const clerkToken = await getToken().catch(() => null);
       if (clerkToken) {
-        const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
+        const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
         const response = await fetch(`${cloudBase}/api/v1/runtime-devices`, {
           headers: { Authorization: `Bearer ${clerkToken}` },
         });
@@ -242,7 +245,7 @@ function ClerkAuthPanel() {
       await window.allternit?.shell?.openExternal?.('https://platform.allternit.com');
       return;
     }
-    const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://api.allternit.com')!.replace(/\/$/, '');
+    const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
     const response = await fetch(`${cloudBase}/api/v1/runtime-devices/${encodeURIComponent(runtimeId)}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${clerkToken}` },
@@ -255,6 +258,110 @@ function ClerkAuthPanel() {
     localStorage.setItem('allternit.active-runtime-id', runtimeId);
     setActiveRuntimeId(runtimeId);
   }, []);
+
+  const cloudApiBase = useCallback(() => {
+    return env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
+  }, []);
+
+  const refreshHostedRuntimes = useCallback(async () => {
+    setHostedLoading(true);
+    setHostedError(null);
+    try {
+      const clerkToken = await getToken().catch(() => null);
+      if (!clerkToken) {
+        setHostedRuntimes([]);
+        return;
+      }
+      const response = await fetch(`${cloudApiBase()}/api/v1/hosted-runtimes`, {
+        headers: { Authorization: `Bearer ${clerkToken}` },
+      });
+      if (!response.ok) throw new Error(`Hosted runtimes returned ${response.status}`);
+      const payload = await response.json();
+      setHostedRuntimes(Array.isArray(payload) ? payload : []);
+    } catch (failure) {
+      setHostedError(failure instanceof Error ? failure.message : 'Unable to load hosted runtimes');
+    } finally {
+      setHostedLoading(false);
+    }
+  }, [getToken, cloudApiBase]);
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) void refreshHostedRuntimes();
+  }, [isLoaded, isSignedIn, refreshHostedRuntimes]);
+
+  const createHostedRuntime = useCallback(async () => {
+    const clerkToken = await getToken().catch(() => null);
+    if (!clerkToken) return;
+    setHostedLoading(true);
+    try {
+      const response = await fetch(`${cloudApiBase()}/api/v1/hosted-runtimes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${clerkToken}` },
+        body: JSON.stringify({ region: 'lax', memoryMb: 1024 }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.message || `Unable to create hosted runtime (${response.status})`);
+      }
+      await refreshHostedRuntimes();
+      await refreshRuntimes();
+    } catch (failure) {
+      setHostedError(failure instanceof Error ? failure.message : 'Unable to create hosted runtime');
+    } finally {
+      setHostedLoading(false);
+    }
+  }, [getToken, cloudApiBase, refreshHostedRuntimes, refreshRuntimes]);
+
+  const startHostedRuntime = useCallback(async (id: string) => {
+    const clerkToken = await getToken().catch(() => null);
+    if (!clerkToken) return;
+    setHostedLoading(true);
+    try {
+      const response = await fetch(`${cloudApiBase()}/api/v1/hosted-runtimes/${encodeURIComponent(id)}/start`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${clerkToken}` },
+      });
+      if (!response.ok) throw new Error(`Unable to start hosted runtime (${response.status})`);
+      await refreshHostedRuntimes();
+      await refreshRuntimes();
+    } finally {
+      setHostedLoading(false);
+    }
+  }, [getToken, cloudApiBase, refreshHostedRuntimes, refreshRuntimes]);
+
+  const stopHostedRuntime = useCallback(async (id: string) => {
+    const clerkToken = await getToken().catch(() => null);
+    if (!clerkToken) return;
+    setHostedLoading(true);
+    try {
+      const response = await fetch(`${cloudApiBase()}/api/v1/hosted-runtimes/${encodeURIComponent(id)}/stop`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${clerkToken}` },
+      });
+      if (!response.ok) throw new Error(`Unable to stop hosted runtime (${response.status})`);
+      await refreshHostedRuntimes();
+      await refreshRuntimes();
+    } finally {
+      setHostedLoading(false);
+    }
+  }, [getToken, cloudApiBase, refreshHostedRuntimes, refreshRuntimes]);
+
+  const destroyHostedRuntime = useCallback(async (id: string) => {
+    const clerkToken = await getToken().catch(() => null);
+    if (!clerkToken) return;
+    setHostedLoading(true);
+    try {
+      const response = await fetch(`${cloudApiBase()}/api/v1/hosted-runtimes/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${clerkToken}` },
+      });
+      if (!response.ok) throw new Error(`Unable to destroy hosted runtime (${response.status})`);
+      await refreshHostedRuntimes();
+      await refreshRuntimes();
+    } finally {
+      setHostedLoading(false);
+    }
+  }, [getToken, cloudApiBase, refreshHostedRuntimes, refreshRuntimes]);
 
   const openSettingsSection = useCallback((section: SettingsSection, tab?: string) => {
     window.dispatchEvent(new CustomEvent('allternit:open-settings', {
@@ -427,6 +534,76 @@ function ClerkAuthPanel() {
           title="No paired runtimes"
           caption="Open Allternit Desktop or start a VPS runtime to pair it with this account."
         />
+      )}
+
+      <SectionHeading>Hosted runtimes</SectionHeading>
+      <p className="text-[13px] text-[var(--text-secondary)] -mt-1 mb-3">
+        Paid users can run an Allternit brain in the cloud. The machine has no public ports; all traffic is relayed through the cloud API.
+      </p>
+      {hostedLoading ? (
+        <SkeletonRow lines={2} />
+      ) : hostedError ? (
+        <SettingsRow label="Hosted runtimes" description={hostedError}>
+          <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void refreshHostedRuntimes()}>
+            <ArrowsClockwise size={14} /> Retry
+          </button>
+        </SettingsRow>
+      ) : (
+        <>
+          <div className="flex justify-end mb-2">
+            <button
+              type="button"
+              className={QUIET_BUTTON_CLASS}
+              onClick={() => void createHostedRuntime()}
+              disabled={hostedLoading}
+            >
+              <Cloud size={14} /> Create hosted runtime
+            </button>
+          </div>
+          {hostedRuntimes.length > 0 ? (
+            <SettingsTable columns={['Runtime', 'Status', 'Created', '']}>
+              {hostedRuntimes.map((runtime: any) => (
+                <tr key={runtime.id}>
+                  <SettingsTableCell>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Cloud size={16} />
+                      <span className="truncate">{runtime.name}</span>
+                      {runtime.runtimeDeviceId === activeRuntimeId && <SettingsTableChip>Active</SettingsTableChip>}
+                    </div>
+                    <div className="text-[11px] text-[var(--text-tertiary)] font-mono mt-1 truncate max-w-[230px]">{runtime.id}</div>
+                  </SettingsTableCell>
+                  <SettingsTableCell>
+                    <Badge className={runtime.status === 'running' ? 'text-[var(--status-success)] bg-[var(--status-success)]/10' : undefined}>
+                      {runtime.status}
+                    </Badge>
+                  </SettingsTableCell>
+                  <SettingsTableCell className="text-[var(--text-secondary)]">
+                    {runtime.createdAt ? new Date(runtime.createdAt).toLocaleString() : 'Unknown'}
+                  </SettingsTableCell>
+                  <SettingsTableCell className="text-right">
+                    <div className="flex justify-end gap-1.5">
+                      {runtime.status === 'stopped' && (
+                        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void startHostedRuntime(runtime.id)}>Start</button>
+                      )}
+                      {(runtime.status === 'running' || runtime.status === 'starting') && (
+                        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void stopHostedRuntime(runtime.id)}>Stop</button>
+                      )}
+                      <button type="button" className={DESTRUCTIVE_BUTTON_CLASS} onClick={() => void destroyHostedRuntime(runtime.id)}>
+                        <Trash size={14} />
+                      </button>
+                    </div>
+                  </SettingsTableCell>
+                </tr>
+              ))}
+            </SettingsTable>
+          ) : (
+            <EmptyState
+              icon={<Cloud size={24} />}
+              title="No hosted runtimes"
+              caption="Create a hosted runtime to use a cloud-based Allternit brain."
+            />
+          )}
+        </>
       )}
 
       <SectionHeading>Models & providers</SectionHeading>

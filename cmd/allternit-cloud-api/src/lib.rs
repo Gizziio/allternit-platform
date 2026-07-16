@@ -52,6 +52,8 @@ pub struct ApiState {
     pub cost_service: Arc<dyn services::CostService>,
     /// Quota service for free-tier guardrails
     pub quota_service: services::SharedQuotaService,
+    /// Fly runtime service for hosted runtimes
+    pub fly_runtime_service: Option<services::FlyRuntimeService>,
 }
 
 /// Create the API router
@@ -193,6 +195,8 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .merge(routes::tasks::task_routes())
         // Mirror session endpoints (merged from api/cloud/allternit-cloud-api)
         .merge(routes::mirror::create_mirror_routes())
+        // Hosted runtime endpoints
+        .merge(routes::hosted_runtimes::routes())
         // WebSocket endpoint for run events
         .route("/ws/runs/:id", get(websocket::run_ws_handler))
         // Deployment endpoints (existing)

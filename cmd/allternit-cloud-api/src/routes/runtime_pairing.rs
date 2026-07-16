@@ -45,6 +45,12 @@ pub struct CreatePairingRequest {
     public_key: String,
     #[serde(default)]
     capabilities: Vec<String>,
+    /// Set only by hosted runtimes auto-provisioned for a paying user.
+    #[serde(default)]
+    hosted_instance_id: Option<String>,
+    /// One-time bootstrap secret issued to a hosted runtime during provisioning.
+    #[serde(default)]
+    hosted_bootstrap_token: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -136,6 +142,7 @@ struct PairingRow {
     status: String,
     user_id: Option<String>,
     organization_id: Option<String>,
+    hosted_instance_id: Option<String>,
     expires_at: DateTime<Utc>,
 }
 
@@ -190,13 +197,53 @@ async fn create_pairing(
     let capabilities_json = serde_json::to_string(&capabilities)?;
     let expires_at = Utc::now() + Duration::minutes(PAIRING_TTL_MINUTES);
 
+    // Hosted runtimes are provisioned by the cloud API and carry a one-time
+    // bootstrap token. If valid, we create an already-approved pairing for the
+    // owning user so the machine can exchange it without a Clerk session.
+    let hosted_approval = if request.runtime_type == "hosted" {
+        Some(
+            validate_hosted_bootstrap(
+                &state,
+                request.hosted_instance_id.as_deref(),
+                request.hosted_bootstrap_token.as_deref(),
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
+
+    let status = if hosted_approval.is_some() {
+        "approved"
+    } else {
+        "pending"
+    };
+    let user_id = hosted_approval
+        .as_ref()
+        .map(|approval| approval.user_id.clone());
+    let organization_id = hosted_approval
+        .as_ref()
+        .and_then(|approval| approval.organization_id.clone());
+    let hosted_instance_id = hosted_approval
+        .as_ref()
+        .map(|approval| approval.instance_id.clone());
+
+    if let Some(ref user_id) = user_id {
+        let quota = state.quota_service.ensure_quota(user_id).await?;
+        state.quota_service.check_spend_cap(user_id, &quota).await?;
+        state
+            .quota_service
+            .record_pairing_created(user_id, &quota)
+            .await?;
+    }
+
     sqlx::query(
         r#"
         INSERT INTO runtime_pairings (
             id, device_code_hash, user_code, challenge, public_key,
             public_key_fingerprint, name, runtime_type, hostname, platform,
-            version, capabilities, status, expires_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+            version, capabilities, status, user_id, organization_id, hosted_instance_id, expires_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
     )
     .bind(&pairing_id)
@@ -211,6 +258,10 @@ async fn create_pairing(
     .bind(request.platform.as_deref())
     .bind(request.version.as_deref())
     .bind(capabilities_json)
+    .bind(status)
+    .bind(user_id.as_deref())
+    .bind(organization_id.as_deref())
+    .bind(hosted_instance_id.as_deref())
     .bind(expires_at)
     .execute(&state.db)
     .await?;
@@ -365,7 +416,7 @@ async fn exchange_pairing(
         r#"
         SELECT id, user_code, challenge, public_key, public_key_fingerprint,
                name, runtime_type, hostname, platform, version, capabilities,
-               status, user_id, organization_id, expires_at
+               status, user_id, organization_id, hosted_instance_id, expires_at
         FROM runtime_pairings
         WHERE id = ? AND device_code_hash = ?
         "#,
@@ -426,10 +477,14 @@ async fn exchange_pairing(
         .quota_service
         .check_active_device_cap(&user_id, &quota)
         .await?;
-    state
-        .quota_service
-        .record_pairing_created(&user_id, &quota)
-        .await?;
+    // Non-hosted pairings only record the daily pairing count at exchange time
+    // because the owning user is unknown when the pairing is created.
+    if pairing.hosted_instance_id.is_none() {
+        state
+            .quota_service
+            .record_pairing_created(&user_id, &quota)
+            .await?;
+    }
 
     let runtime_id = format!("rt_{}", Uuid::new_v4().simple());
     let device_token = format!("allternit_runtime_{}", random_secret(48));
@@ -689,7 +744,7 @@ async fn pairing_by_code(state: &ApiState, code: &str) -> Result<PairingRow, Api
         r#"
         SELECT id, user_code, challenge, public_key, public_key_fingerprint,
                name, runtime_type, hostname, platform, version, capabilities,
-               status, user_id, organization_id, expires_at
+               status, user_id, organization_id, hosted_instance_id, expires_at
         FROM runtime_pairings WHERE user_code = ?
         "#,
     )
@@ -753,9 +808,9 @@ fn validate_pairing_request(request: &CreatePairingRequest) -> Result<(), ApiErr
             "Runtime name must be 1-100 characters".to_string(),
         ));
     }
-    if request.runtime_type != "desktop" && request.runtime_type != "vps" {
+    if !matches!(request.runtime_type.as_str(), "desktop" | "vps" | "hosted") {
         return Err(ApiError::BadRequest(
-            "runtimeType must be desktop or vps".to_string(),
+            "runtimeType must be desktop, vps, or hosted".to_string(),
         ));
     }
     decode_public_key(&request.public_key)?;
@@ -807,6 +862,52 @@ fn pairing_signature_message(pairing_id: &str, challenge: &str) -> String {
     format!("allternit-runtime-pairing:{pairing_id}:{challenge}")
 }
 
+struct HostedApproval {
+    instance_id: String,
+    user_id: String,
+    organization_id: Option<String>,
+}
+
+async fn validate_hosted_bootstrap(
+    state: &ApiState,
+    instance_id: Option<&str>,
+    token: Option<&str>,
+) -> Result<HostedApproval, ApiError> {
+    let instance_id = instance_id
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| ApiError::BadRequest("hosted_instance_id is required".to_string()))?;
+    let token = token
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| ApiError::Unauthorized("hosted_bootstrap_token is required".to_string()))?;
+
+    let row: (String, Option<String>, Option<String>) = sqlx::query_as(
+        r#"
+        SELECT user_id, organization_id, bootstrap_token_hash
+        FROM hosted_runtime_instances
+        WHERE id = ? AND status IN ('creating', 'starting', 'running', 'stopped')
+        "#,
+    )
+    .bind(instance_id)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| ApiError::Unauthorized("Invalid hosted instance".to_string()))?;
+
+    let expected_hash = row.2.ok_or_else(|| {
+        ApiError::Unauthorized("Hosted instance has no bootstrap token".to_string())
+    })?;
+    if expected_hash != sha256_hex(token.as_bytes()) {
+        return Err(ApiError::Unauthorized(
+            "Invalid hosted bootstrap token".to_string(),
+        ));
+    }
+
+    Ok(HostedApproval {
+        instance_id: instance_id.to_string(),
+        user_id: row.0,
+        organization_id: row.1,
+    })
+}
+
 fn normalize_user_code(value: &str) -> String {
     let compact = value
         .chars()
@@ -832,7 +933,7 @@ fn generate_user_code() -> String {
     format!("{}-{}", group(), group())
 }
 
-fn random_secret(bytes: usize) -> String {
+pub(crate) fn random_secret(bytes: usize) -> String {
     let mut data = vec![0_u8; bytes];
     rand::thread_rng().fill_bytes(&mut data);
     URL_SAFE_NO_PAD.encode(data)

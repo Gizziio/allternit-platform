@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import WebSocket from 'ws';
 import { discoverAgentClis } from './discovery';
 
-const CLOUD_API_URL = (process.env.ALLTERNIT_CLOUD_API_URL || 'https://api.allternit.com').replace(/\/$/, '');
+const CLOUD_API_URL = (process.env.ALLTERNIT_CLOUD_API_URL || 'https://allternit-cloud-api.fly.dev').replace(/\/$/, '');
 const RUNTIME_NAME = process.env.ALLTERNIT_RUNTIME_NAME || `${hostname()} VPS`;
 const IDENTITY_PATH = process.env.ALLTERNIT_RUNTIME_IDENTITY_PATH
   || join(homedir(), '.config', 'allternit', 'runtime-identity.json');
@@ -70,6 +70,11 @@ async function beginPairing(): Promise<RuntimeIdentity> {
   const publicDer = publicKey.export({ type: 'spki', format: 'der' });
   const publicKeyRaw = publicDer.subarray(publicDer.length - 32).toString('base64url');
   const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+
+  if (process.env.ALLTERNIT_PAIRING_MODE === 'hosted_auto') {
+    return beginHostedPairing(publicKeyRaw, privateKeyPem);
+  }
+
   const clis = discoverAgentClis();
   const response = await fetch(`${CLOUD_API_URL}/api/v1/runtime-pairings`, {
     method: 'POST',
@@ -137,6 +142,72 @@ async function beginPairing(): Promise<RuntimeIdentity> {
     console.log(`Paired as ${next.userEmail} (${next.runtimeId}).`);
     return next;
   }
+}
+
+async function beginHostedPairing(
+  publicKeyRaw: string,
+  privateKeyPem: string,
+): Promise<RuntimeIdentity> {
+  const instanceId = process.env.ALLTERNIT_HOSTED_INSTANCE_ID;
+  const bootstrapToken = process.env.ALLTERNIT_HOSTED_BOOTSTRAP_TOKEN;
+  if (!instanceId || !bootstrapToken) {
+    throw new Error('Hosted pairing requires ALLTERNIT_HOSTED_INSTANCE_ID and ALLTERNIT_HOSTED_BOOTSTRAP_TOKEN');
+  }
+
+  console.log('[AgentDaemon] Starting hosted auto-pairing…');
+  const response = await fetch(`${CLOUD_API_URL}/api/v1/runtime-pairings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: RUNTIME_NAME,
+      runtimeType: 'hosted',
+      hostname: hostname(),
+      platform: `${platform()}-${arch()}`,
+      version: process.env.npm_package_version || '0.1.0',
+      publicKey: publicKeyRaw,
+      capabilities: [
+        'runtime:connect',
+        'runtime:execute',
+        'runtime:files',
+        'runtime:terminal',
+        'providers:connect',
+        'providers:use',
+      ],
+      hostedInstanceId: instanceId,
+      hostedBootstrapToken: bootstrapToken,
+    }),
+  });
+  if (!response.ok) throw new Error(`Unable to begin hosted pairing (${response.status})`);
+  const pairing = await response.json() as PairingStart;
+
+  const message = `allternit-runtime-pairing:${pairing.pairingId}:${pairing.challenge}`;
+  const signature = sign(null, Buffer.from(message), privateKeyPem).toString('base64url');
+
+  const exchange = await fetch(`${CLOUD_API_URL}/api/v1/runtime-pairings/exchange`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      pairingId: pairing.pairingId,
+      deviceCode: pairing.deviceCode,
+      signature,
+    }),
+  });
+  const payload = await exchange.json().catch(() => ({})) as any;
+  if (!exchange.ok) throw new Error(payload.message || payload.error || `Hosted pairing exchange failed (${exchange.status})`);
+  const next: RuntimeIdentity = {
+    runtimeId: payload.runtimeId,
+    userId: payload.userId,
+    userEmail: payload.userEmail,
+    organizationId: payload.organizationId,
+    deviceToken: payload.deviceToken,
+    expiresAt: payload.expiresAt,
+    capabilities: payload.capabilities || [],
+    privateKeyPem,
+    publicKey: publicKeyRaw,
+  };
+  await saveIdentity(next);
+  console.log(`[AgentDaemon] Hosted runtime paired as ${next.userEmail} (${next.runtimeId}).`);
+  return next;
 }
 
 async function heartbeat(): Promise<void> {
