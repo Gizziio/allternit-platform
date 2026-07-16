@@ -50,7 +50,7 @@ request() {
 # Organizations are enabled without synthesizing an organization for every
 # solo account. Clerk's existing Personal Accounts choice remains untouched.
 request PATCH /instance/organization_settings \
-  '{"enabled":true,"max_allowed_memberships":100,"admin_delete_enabled":false}' >/dev/null
+  '{"enabled":true,"admin_delete_enabled":false}' >/dev/null
 
 users="$(request GET '/users?limit=500&order_by=-created_at')"
 owner_user_id="$(
@@ -86,7 +86,7 @@ if [[ -z "$organization_id" ]]; then
     --arg name "$CLERK_ORGANIZATION_NAME" \
     --arg slug "$CLERK_ORGANIZATION_SLUG" \
     --arg created_by "$owner_user_id" \
-    '{name:$name, slug:$slug, created_by:$created_by, max_allowed_memberships:100}')"
+    '{name:$name, slug:$slug, created_by:$created_by}')"
   organization="$(request POST /organizations "$organization_payload")"
   organization_id="$(jq -r '.id' <<<"$organization")"
   action='created'
@@ -94,7 +94,7 @@ else
   organization_payload="$(jq -cn \
     --arg name "$CLERK_ORGANIZATION_NAME" \
     --arg slug "$CLERK_ORGANIZATION_SLUG" \
-    '{name:$name, slug:$slug, max_allowed_memberships:100}')"
+    '{name:$name, slug:$slug}')"
   request PATCH "/organizations/${organization_id}" "$organization_payload" >/dev/null
   action='updated'
 fi

@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Install build deps for native modules.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl python3 make g++ \
+    && apt-get install -y --no-install-recommends ca-certificates curl nodejs npm python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the hosted runtime's minimal workspace and package manifests first for
