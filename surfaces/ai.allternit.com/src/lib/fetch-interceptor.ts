@@ -47,6 +47,23 @@ function runtimePath(value: string): string {
   return `${parsed.pathname}${parsed.search}`;
 }
 
+/**
+ * True only for absolute URLs that explicitly name a loopback backend
+ * (e.g. http://127.0.0.1:8013/terminal/create). These target the operator's
+ * own local API, so they must reach it directly: they are never candidates
+ * for the cloud relay or the "no paired runtime" guard, which exist for
+ * relative/same-origin runtime paths in the hosted web app.
+ */
+function isLocalOperatorApiUrl(value: string): boolean {
+  try {
+    if (!/^(https?|wss?):\/\//i.test(value)) return false;
+    const parsed = new URL(value);
+    return parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
+  } catch {
+    return false;
+  }
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (let offset = 0; offset < bytes.length; offset += 0x8000) {
@@ -355,7 +372,7 @@ function installWebSocketInterceptor(): void {
     url: string | URL,
     protocols?: string | string[],
   ): WebSocket {
-    if (!isDesktopShell() && isRuntimeApiUrl(String(url))) {
+    if (!isDesktopShell() && isRuntimeApiUrl(String(url)) && !isLocalOperatorApiUrl(String(url))) {
       return new RuntimeRelayWebSocket(url) as unknown as WebSocket;
     }
     return protocols === undefined ? new NativeWebSocket(url) : new NativeWebSocket(url, protocols);
@@ -399,6 +416,15 @@ export function installFetchInterceptor(getToken?: TokenGetter): void {
 
     // Desktop runtime credentials are deliberately unavailable here. Electron
     // main injects them only while brokering requests to the loopback API.
+
+    // Local operator API: an absolute loopback URL names this machine's own
+    // backend, so skip the cloud relay and the paired-runtime guard entirely.
+    if (isLocalOperatorApiUrl(url)) {
+      return originalFetch(input, {
+        ...init,
+        headers,
+      })
+    }
 
     const activeRuntimeId = localStorage.getItem('allternit.active-runtime-id')
     if (!isDesktopShell() && activeRuntimeId && isRuntimeApiUrl(url) && token) {

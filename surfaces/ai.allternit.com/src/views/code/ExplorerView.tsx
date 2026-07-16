@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { filesApi } from '@/lib/agents/files-api';
 import {
   FolderOpen,
@@ -172,13 +172,23 @@ export const ExplorerView: React.FC<ExplorerViewProps> = ({ rootPath, onOpenFile
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [filterText, setFilterText] = useState('');
   const [droppedFiles, setDroppedFiles] = useState<DroppedFile[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+    setIsLoading(true);
+    setError(null);
     filesApi.listDirectory({ path: rootPath || '.', recursive: true })
       .then((res) => {
         if (!isMounted) return;
-        const items = res.entries ?? [];
+        const items = (res.entries ?? []).slice().sort((a, b) => {
+          // Build directories before their children regardless of API order.
+          const aDir = a.type === 'directory' ? 0 : 1;
+          const bDir = b.type === 'directory' ? 0 : 1;
+          if (aDir !== bDir) return aDir - bDir;
+          return a.path.localeCompare(b.path);
+        });
         const toNode = (entry: (typeof items)[number]): FileNode => ({
           name: entry.name,
           path: entry.path,
@@ -195,8 +205,9 @@ export const ExplorerView: React.FC<ExplorerViewProps> = ({ rootPath, onOpenFile
         const roots: FileNode[] = [];
         for (const node of nodes) {
           const normalized = node.path.replace(/\/$/, '');
-          const parentPath = normalized.slice(0, normalized.lastIndexOf('/'));
-          const parent = byPath.get(parentPath);
+          const lastSlash = normalized.lastIndexOf('/');
+          const parentPath = lastSlash > 0 ? normalized.slice(0, lastSlash) : '';
+          const parent = parentPath ? byPath.get(parentPath) : null;
           if (parent?.type === 'folder') {
             parent.children ??= [];
             parent.children.push(node);
@@ -205,8 +216,19 @@ export const ExplorerView: React.FC<ExplorerViewProps> = ({ rootPath, onOpenFile
           }
         }
         setFileTree(roots);
+        setExpandedFolders((prev) => {
+          const next = new Set(prev);
+          roots.forEach((node) => { if (node.type === 'folder') next.add(node.path); });
+          return next;
+        });
       })
-      .catch(() => {});
+      .catch((reason: unknown) => {
+        if (!isMounted) return;
+        setError(reason instanceof Error ? reason.message : 'Unable to load files');
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -270,6 +292,32 @@ export const ExplorerView: React.FC<ExplorerViewProps> = ({ rootPath, onOpenFile
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  const filterTree = useCallback((nodes: FileNode[], query: string): FileNode[] => {
+    if (!query.trim()) return nodes;
+    const lowered = query.toLowerCase();
+    return nodes.reduce<FileNode[]>((acc, node) => {
+      if (node.type === 'folder') {
+        const filteredChildren = node.children ? filterTree(node.children, query) : [];
+        if (node.name.toLowerCase().includes(lowered) || filteredChildren.length > 0) {
+          acc.push({ ...node, children: filteredChildren });
+        }
+      } else if (node.name.toLowerCase().includes(lowered)) {
+        acc.push(node);
+      }
+      return acc;
+    }, []);
+  }, []);
+
+  const filteredTree = useMemo(() => filterTree(fileTree, filterText), [fileTree, filterText]);
+  const filterActive = filterText.trim().length > 0;
+
+  function collectFolderPaths(node: FileNode): string[] {
+    if (node.type !== 'folder') return [];
+    const paths = [node.path];
+    node.children?.forEach((child) => paths.push(...collectFolderPaths(child)));
+    return paths;
+  }
 
   return (
     <GlassSurface>
@@ -348,17 +396,31 @@ export const ExplorerView: React.FC<ExplorerViewProps> = ({ rootPath, onOpenFile
 
         {/* File Tree */}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-          {fileTree.map((node) => (
-            <FileTreeItem
-              key={node.path}
-              node={node}
-              expandedFolders={expandedFolders}
-              onToggleExpand={handleToggleExpand}
-              selectedFile={selectedFile}
-              onSelectFile={handleSelectFile}
-              level={0}
-            />
-          ))}
+          {isLoading ? (
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+              Loading files…
+            </div>
+          ) : error ? (
+            <div style={{ padding: 16, color: 'var(--status-error)', fontSize: 13 }}>
+              {error}
+            </div>
+          ) : filteredTree.length === 0 ? (
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 13 }}>
+              {filterActive ? 'No files match your search.' : 'No files found.'}
+            </div>
+          ) : (
+            filteredTree.map((node) => (
+              <FileTreeItem
+                key={node.path}
+                node={node}
+                expandedFolders={filterActive ? new Set(collectFolderPaths(node)) : expandedFolders}
+                onToggleExpand={handleToggleExpand}
+                selectedFile={selectedFile}
+                onSelectFile={handleSelectFile}
+                level={0}
+              />
+            ))
+          )}
         </div>
       </div>
     </GlassSurface>

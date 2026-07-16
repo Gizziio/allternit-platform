@@ -65,7 +65,15 @@ export class TensorLayout {
     const pass = encoder.beginComputePass({ label: `bonsai-owned-${entryPoint}` });
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.dispatchWorkgroups(Math.ceil(elements / 256));
+    const [x, y] = dispatch1D(elements);
+    pass.dispatchWorkgroups(x, y);
     pass.end();
   }
+}
+
+function dispatch1D(elements: number): [number, number] {
+  const groups = Math.ceil(elements / 256);
+  if (groups <= 65535) return [groups, 1];
+  const y = Math.ceil(groups / 65535);
+  return [Math.ceil(groups / y), y];
 }

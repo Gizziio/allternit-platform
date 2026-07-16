@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import base64
 import logging
 import os
 import platform
@@ -94,6 +96,12 @@ class AllternitSandboxBackend:
             return self._instances[environment_id]
         except KeyError as error:
             raise KeyError(f"Environment {environment_id!r} is not owned by this process") from error
+
+    def sandbox_instance(self, environment_id: str) -> BaseSandbox:
+        """Public accessor so VmGuiBackend can attach to the same running
+        FirecrackerSandbox instance this backend already provisioned, instead
+        of provisioning a second, disconnected one."""
+        return self._instance(environment_id)
 
     async def stop(self, environment_id: str) -> None:
         sandbox = self._instance(environment_id)
@@ -233,6 +241,30 @@ class CuaSandboxBackend:
         output_path.write_bytes(data)
         return {"path": str(output_path), "size_bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
+    async def screenshot(self, environment_id: str) -> Dict[str, Any]:
+        """Capture the guest's screen via the Cua SDK -- real GUI observation
+        inside whatever VM/container Cua is backing this environment with,
+        not a host screenshot."""
+        image_bytes = await self._instance(environment_id).screenshot()
+        return {
+            "image_b64": base64.b64encode(image_bytes).decode("ascii"),
+            "media_type": "image/png",
+        }
+
+    async def mouse_action(self, environment_id: str, action: str, arguments: Dict[str, Any]) -> None:
+        allowed = {"click", "double_click", "right_click", "move", "down", "up", "scroll"}
+        if action not in allowed:
+            raise ValueError(f"Unsupported mouse action {action!r}")
+        handler = getattr(self._instance(environment_id).mouse, action)
+        await handler(**arguments)
+
+    async def keyboard_action(self, environment_id: str, action: str, arguments: Dict[str, Any]) -> None:
+        allowed = {"type", "press", "key_down", "key_up"}
+        if action not in allowed:
+            raise ValueError(f"Unsupported keyboard action {action!r}")
+        handler = getattr(self._instance(environment_id).keyboard, action)
+        await handler(**arguments)
+
     async def mobile_action(self, environment_id: str, action: str, arguments: Dict[str, Any]) -> None:
         allowed = {
             "tap", "long_press", "double_tap", "type_text", "swipe", "scroll_up",
@@ -345,6 +377,255 @@ class HostAdapterGate:
     async def execute(self, action: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         await self._ensure_environment()
         return await self._adapter.execute(action, parameters)
+
+
+class _VmGuiSession:
+    """One GUI session for a single FirecrackerSandbox: a local TCP forwarder
+    (so a standard RFB client library never has to know about vsock/UDS) plus
+    the mouse/keyboard/screenshot calls layered on top of it.
+
+    v1 simplification, flagged rather than hidden: each action opens a fresh
+    asyncvnc connection instead of holding one open across the session. A
+    persistent connection is the right production optimization but depends on
+    asyncvnc's exact reconnect/context-manager semantics, which weren't
+    confirmed against its actual source in this session -- verify before
+    assuming the persistent-connection version is a safe follow-up change.
+    """
+
+    def __init__(self, sandbox: Any, guest_vnc_port: int) -> None:
+        self._sandbox = sandbox
+        self._guest_vnc_port = guest_vnc_port
+        self._forward_server: Optional[asyncio.AbstractServer] = None
+        self._local_port: Optional[int] = None
+
+    async def start_forwarder(self) -> None:
+        async def handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+            try:
+                vsock_reader, vsock_writer = await self._sandbox._vsock_connect(self._guest_vnc_port)
+            except Exception:  # noqa: BLE001
+                writer.close()
+                return
+
+            async def pipe(src: asyncio.StreamReader, dst: asyncio.StreamWriter) -> None:
+                try:
+                    while True:
+                        chunk = await src.read(65536)
+                        if not chunk:
+                            break
+                        dst.write(chunk)
+                        await dst.drain()
+                except Exception:  # noqa: BLE001
+                    pass
+                finally:
+                    dst.close()
+
+            await asyncio.gather(pipe(reader, vsock_writer), pipe(vsock_reader, writer))
+
+        self._forward_server = await asyncio.start_server(handle, "127.0.0.1", 0)
+        self._local_port = self._forward_server.sockets[0].getsockname()[1]  # type: ignore[index]
+
+    def _connect(self):
+        import asyncvnc
+
+        return asyncvnc.connect("127.0.0.1", self._local_port)
+
+    async def screenshot(self) -> Dict[str, Any]:
+        import io
+
+        from PIL import Image
+
+        async with self._connect() as client:
+            pixels = await client.screenshot()
+        image = Image.fromarray(pixels)
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        return {"image_b64": base64.b64encode(buf.getvalue()).decode("ascii"), "media_type": "image/png"}
+
+    async def mouse_action(self, action: str, arguments: Dict[str, Any]) -> None:
+        async with self._connect() as client:
+            if "x" in arguments and "y" in arguments and action != "scroll":
+                client.mouse.move(int(arguments["x"]), int(arguments["y"]))
+            if action in ("move",):
+                pass
+            elif action == "click":
+                client.mouse.click()
+            elif action == "double_click":
+                client.mouse.click()
+                client.mouse.click()
+            elif action == "right_click":
+                client.mouse.right_click()
+            elif action == "scroll":
+                amount = int(arguments.get("amount", 3))
+                scroll = client.mouse.scroll_up if arguments.get("direction", "down") == "up" else client.mouse.scroll_down
+                for _ in range(abs(amount)):
+                    scroll()
+            elif action in ("down", "up"):
+                raise ValueError("Discrete button down/up is not yet supported by VmGuiBackend")
+            else:
+                raise ValueError(f"Unsupported mouse action {action!r}")
+
+    async def keyboard_action(self, action: str, arguments: Dict[str, Any]) -> None:
+        async with self._connect() as client:
+            if action == "type":
+                client.keyboard.write(str(arguments.get("text", "")))
+            elif action == "press":
+                keys = arguments.get("keys", "")
+                key_list = keys.split("+") if isinstance(keys, str) else list(keys)
+                client.keyboard.press(*key_list)
+            else:
+                raise ValueError(f"Unsupported keyboard action {action!r}")
+
+    async def close(self) -> None:
+        if self._forward_server is not None:
+            self._forward_server.close()
+            self._forward_server = None
+
+
+class ContainerGuiBackend:
+    """GUI actions via a Docker container (Xvfb + mutter + x11vnc/noVNC).
+
+    Deliberately mirrors Anthropic's own computer-use-demo exactly, confirmed
+    against its real Dockerfile and tools/computer.py rather than assumed:
+    agent control goes through `docker exec` running xdotool/scrot, never
+    VNC/RFB -- VNC (x11vnc + noVNC) exists only for a human to watch in a
+    browser. This is a genuinely different, weaker isolation boundary than
+    VmGuiBackend's Firecracker microVM (shared host kernel via containers,
+    not a separate guest kernel) -- the same tradeoff Anthropic made
+    deliberately for this exact use case, not a shortcut we invented.
+
+    Verified end-to-end against a real running container on this host
+    (docker build + docker run + xdotool mousemove + scrot, image pixels
+    inspected) -- unlike VmGuiBackend, which is unverified pending real
+    Firecracker/KVM hardware.
+    """
+
+    provider_id = "allternit.container-gui"
+    IMAGE = "allternit-gui-sandbox:latest"
+
+    def __init__(self) -> None:
+        self._containers: Dict[str, str] = {}
+
+    def manifest(self) -> EnvironmentBackendManifest:
+        available = shutil.which("docker") is not None
+        return EnvironmentBackendManifest(
+            self.provider_id, ("linux",), ("container",), available,
+            reason=None if available else "docker_not_available",
+            capabilities=("screen", "mouse", "keyboard"),
+        )
+
+    async def provision(self, record: EnvironmentRecord) -> Dict[str, Any]:
+        if not self.manifest().available:
+            raise RuntimeError("docker is not available on this host")
+
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "run", "-d", "--rm", "-P", self.IMAGE,
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            raise RuntimeError(f"docker run failed: {stderr.decode(errors='replace')}")
+        container_id = stdout.decode().strip()
+        self._containers[record.environment_id] = container_id
+
+        ready = False
+        for _ in range(50):
+            check = await asyncio.create_subprocess_exec(
+                "docker", "exec", container_id, "bash", "-c", "DISPLAY=:1 xdotool getmouselocation",
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+            )
+            await check.wait()
+            if check.returncode == 0:
+                ready = True
+                break
+            await asyncio.sleep(0.1)
+        if not ready:
+            await self.stop(record.environment_id)
+            raise RuntimeError("Container display did not become ready (Xvfb never came up)")
+
+        return {"container_id": container_id}
+
+    async def stop(self, environment_id: str) -> None:
+        container_id = self._containers.pop(environment_id, None)
+        if container_id:
+            proc = await asyncio.create_subprocess_exec(
+                "docker", "rm", "-f", container_id,
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+            )
+            await proc.wait()
+
+    async def execute(self, environment_id: str, command: list[str], env: Dict[str, str]) -> Dict[str, Any]:
+        raise RuntimeError(
+            "ContainerGuiBackend has no generic shell -- use AllternitSandboxBackend for argv execution"
+        )
+
+    def _container(self, environment_id: str) -> str:
+        try:
+            return self._containers[environment_id]
+        except KeyError as error:
+            raise KeyError(f"No container for environment {environment_id!r} -- call provision() first") from error
+
+    async def _exec(self, environment_id: str, shell_command: str) -> tuple[int, str, str]:
+        container_id = self._container(environment_id)
+        proc = await asyncio.create_subprocess_exec(
+            "docker", "exec", container_id, "bash", "-c", f"DISPLAY=:1 {shell_command}",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        return proc.returncode, stdout.decode(errors="replace"), stderr.decode(errors="replace")
+
+    async def screenshot(self, environment_id: str) -> Dict[str, Any]:
+        # -o: overwrite the previous screenshot file; -p: capture the cursor
+        # too (without it, the pointer is invisible in every screenshot --
+        # caught by actually running this and comparing against a manual
+        # `scrot -p` capture, not by inspection).
+        exit_code, _, stderr = await self._exec(environment_id, "scrot -o -p /tmp/screenshot.png")
+        if exit_code != 0:
+            raise RuntimeError(f"scrot failed: {stderr}")
+        exit_code, stdout, stderr = await self._exec(environment_id, "base64 /tmp/screenshot.png")
+        if exit_code != 0:
+            raise RuntimeError(f"base64 encode failed: {stderr}")
+        return {"image_b64": stdout.strip(), "media_type": "image/png"}
+
+    async def mouse_action(self, environment_id: str, action: str, arguments: Dict[str, Any]) -> None:
+        x, y = arguments.get("x"), arguments.get("y")
+        move = f"xdotool mousemove --sync {int(x)} {int(y)} && " if x is not None and y is not None else ""
+        if action == "move":
+            command = f"xdotool mousemove --sync {int(x)} {int(y)}"
+        elif action == "click":
+            command = f"{move}xdotool click 1"
+        elif action == "double_click":
+            command = f"{move}xdotool click --repeat 2 --delay 10 1"
+        elif action == "right_click":
+            command = f"{move}xdotool click 3"
+        elif action == "down":
+            command = f"{move}xdotool mousedown 1"
+        elif action == "up":
+            command = f"{move}xdotool mouseup 1"
+        elif action == "scroll":
+            amount = int(arguments.get("amount", 3))
+            button = "4" if arguments.get("direction", "down") == "up" else "5"
+            command = f"xdotool click --repeat {abs(amount)} {button}"
+        else:
+            raise ValueError(f"Unsupported mouse action {action!r}")
+
+        exit_code, _, stderr = await self._exec(environment_id, command)
+        if exit_code != 0:
+            raise RuntimeError(f"xdotool mouse action failed: {stderr}")
+
+    async def keyboard_action(self, environment_id: str, action: str, arguments: Dict[str, Any]) -> None:
+        if action == "type":
+            text = shlex.quote(str(arguments.get("text", "")))
+            command = f"xdotool type --delay 12 -- {text}"
+        elif action == "press":
+            keys = arguments.get("keys", "")
+            key_arg = keys if isinstance(keys, str) else "+".join(keys)
+            command = f"xdotool key -- {shlex.quote(key_arg)}"
+        else:
+            raise ValueError(f"Unsupported keyboard action {action!r}")
+
+        exit_code, _, stderr = await self._exec(environment_id, command)
+        if exit_code != 0:
+            raise RuntimeError(f"xdotool keyboard action failed: {stderr}")
 
 
 class CustomerCloudBackend:
@@ -483,6 +764,70 @@ def _elapsed_seconds(started_at_iso: str) -> float:
     return max(0.0, (now - started).total_seconds())
 
 
+class VmGuiBackend:
+    """GUI actions for Firecracker-only environments (no Cua runtime
+    available), via the guest agent's display tunnel -- see
+    research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md. Unlike AllternitSandboxBackend
+    (argv execution) and HostEnvironmentBackend (audit gate only), this is the
+    piece that gives GUI-driving adapters real isolation on Firecracker: the
+    click/type/screenshot actually happen inside the guest's virtual display,
+    not on the host.
+
+    Not independently provisionable -- it attaches to a FirecrackerSandbox
+    that AllternitSandboxBackend already started, via `attach()`.
+    """
+
+    provider_id = "allternit.vm-gui"
+
+    def __init__(self) -> None:
+        self._sessions: Dict[str, _VmGuiSession] = {}
+
+    def manifest(self) -> EnvironmentBackendManifest:
+        return EnvironmentBackendManifest(
+            self.provider_id, ("linux",), ("vm",), True,
+            capabilities=("screen", "mouse", "keyboard"),
+        )
+
+    async def provision(self, record: EnvironmentRecord) -> Dict[str, Any]:
+        raise RuntimeError(
+            "VmGuiBackend attaches to an already-provisioned Firecracker sandbox via attach(); "
+            "it is not independently provisionable."
+        )
+
+    async def stop(self, environment_id: str) -> None:
+        session = self._sessions.pop(environment_id, None)
+        if session is not None:
+            await session.close()
+
+    async def execute(self, environment_id: str, command: list[str], env: Dict[str, str]) -> Dict[str, Any]:
+        raise RuntimeError("VmGuiBackend has no shell -- use AllternitSandboxBackend for argv execution")
+
+    async def attach(self, environment_id: str, sandbox: Any, width: int = 1280, height: int = 800) -> None:
+        if environment_id in self._sessions:
+            return
+        vnc_port = await sandbox.start_display(width=width, height=height)
+        session = _VmGuiSession(sandbox, vnc_port)
+        await session.start_forwarder()
+        self._sessions[environment_id] = session
+
+    async def screenshot(self, environment_id: str) -> Dict[str, Any]:
+        return await self._require(environment_id).screenshot()
+
+    async def mouse_action(self, environment_id: str, action: str, arguments: Dict[str, Any]) -> None:
+        await self._require(environment_id).mouse_action(action, arguments)
+
+    async def keyboard_action(self, environment_id: str, action: str, arguments: Dict[str, Any]) -> None:
+        await self._require(environment_id).keyboard_action(action, arguments)
+
+    def _require(self, environment_id: str) -> _VmGuiSession:
+        try:
+            return self._sessions[environment_id]
+        except KeyError as error:
+            raise KeyError(
+                f"No GUI session attached for environment {environment_id!r} -- call attach() first"
+            ) from error
+
+
 class EnvironmentBackendService:
     def __init__(self, authority: EnvironmentAuthority) -> None:
         self._authority = authority
@@ -571,6 +916,8 @@ def default_environment_backend_service() -> EnvironmentBackendService:
         service.register(AllternitSandboxBackend())
         service.register(CuaSandboxBackend())
         service.register(HostEnvironmentBackend())
+        service.register(VmGuiBackend())
+        service.register(ContainerGuiBackend())
         service.register(CustomerCloudBackend())
         _default_service = service
     return _default_service

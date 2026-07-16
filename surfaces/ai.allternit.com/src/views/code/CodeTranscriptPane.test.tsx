@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 const { mockStore } = vi.hoisted(() => ({ mockStore: vi.fn() }));
@@ -10,7 +10,7 @@ vi.mock('./CodeSessionStore', () => ({
 }));
 
 Object.defineProperty(navigator, 'clipboard', {
-  value: { writeText: vi.fn() },
+  value: { writeText: vi.fn(() => Promise.resolve(undefined)) },
   writable: true,
 });
 
@@ -30,7 +30,7 @@ const mockState = {
 };
 
 describe('CodeTranscriptPane', () => {
-  it('renders session messages and allows copying the transcript', () => {
+  it('renders session messages and allows copying the transcript', async () => {
     mockStore.mockReturnValue(mockState);
 
     render(<CodeTranscriptPane sessionId="sess-1" />);
@@ -39,8 +39,13 @@ describe('CodeTranscriptPane', () => {
     expect(screen.getByText('Hi there')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument());
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-      expect.stringContaining('[10:00 AM] You:\nHello'),
+      expect.stringContaining('You:\nHello'),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('Assistant:\nHi there'),
     );
   });
 

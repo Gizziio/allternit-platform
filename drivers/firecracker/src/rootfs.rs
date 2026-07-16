@@ -940,6 +940,20 @@ impl RootfsBuilder {
             let _ = fs::create_dir_all(format!("{}/{}", mount_point, dir)).await;
         }
 
+        // Install the guest agent (+ Xvnc/fluxbox for display sessions) --
+        // see research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md. Best-effort: a
+        // rootfs without these still boots and runs (just without a real
+        // exec/display channel), matching this function's existing pattern
+        // of degrading gracefully rather than failing the whole build.
+        if let Err(e) = self.install_guest_agent(&mount_point).await {
+            warn!(
+                event = "rootfs.guest_agent_install_failed",
+                error = %e,
+                "Failed to install guest agent into rootfs -- FirecrackerSandbox.run() \
+                 will not be able to reach a guest agent in this image"
+            );
+        }
+
         // Normalize timestamps if in deterministic mode
         if let Some(time) = base_time {
             if let Err(e) = self.normalize_timestamps(&mount_point, time).await {
@@ -1138,6 +1152,14 @@ impl RootfsBuilder {
                 }
             })?;
 
+        if let Err(e) = self.install_guest_agent(&mount_point).await {
+            warn!(
+                event = "rootfs.guest_agent_install_failed",
+                error = %e,
+                "Failed to install guest agent into minimal rootfs"
+            );
+        }
+
         // Unmount
         let _ = Command::new("sync").output().await;
         let _ = Command::new("umount").arg(&mount_point).output().await;
@@ -1150,6 +1172,143 @@ impl RootfsBuilder {
                     String::from_utf8_lossy(&output.stderr)
                 ),
             });
+        }
+
+        Ok(())
+    }
+
+    /// Install the guest agent binary (+ best-effort Xvnc/fluxbox for
+    /// display sessions) into an already-mounted rootfs.
+    ///
+    /// See research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md. This is what makes
+    /// `FirecrackerSandbox.run()` (Python) and `exec_in_vm`/
+    /// `start_display_in_vm` (this crate) have a real guest to talk to --
+    /// without it, both fail closed (by design) rather than silently running
+    /// unsandboxed, but neither actually executes anything in the guest.
+    ///
+    /// The binary itself is not built here (this crate doesn't cross-compile
+    /// `drivers/firecracker-guest-agent` inline) -- it's expected to already
+    /// exist at `ALLTERNIT_GUEST_AGENT_BINARY`, following the same
+    /// pre-built-artifact convention `extract_oci_image` already uses for
+    /// `ALLTERNIT_VM_DIR`. A CI/build step producing that binary (e.g.
+    /// `cargo build --release -p allternit-guest-agent --target
+    /// x86_64-unknown-linux-musl`) is a prerequisite this method assumes.
+    async fn install_guest_agent(&self, mount_point: &str) -> Result<(), DriverError> {
+        let agent_binary = std::env::var("ALLTERNIT_GUEST_AGENT_BINARY").map_err(|_| {
+            DriverError::InternalError {
+                message: "ALLTERNIT_GUEST_AGENT_BINARY not set -- build \
+                          drivers/firecracker-guest-agent and point this env var at the \
+                          compiled binary for the guest's target architecture"
+                    .to_string(),
+            }
+        })?;
+
+        if !Path::new(&agent_binary).exists() {
+            return Err(DriverError::InternalError {
+                message: format!("ALLTERNIT_GUEST_AGENT_BINARY does not exist: {agent_binary}"),
+            });
+        }
+
+        let dest_bin_dir = format!("{mount_point}/usr/local/bin");
+        fs::create_dir_all(&dest_bin_dir)
+            .await
+            .map_err(|e| DriverError::InternalError {
+                message: format!("Failed to create {dest_bin_dir}: {e}"),
+            })?;
+
+        let dest_bin = format!("{dest_bin_dir}/allternit-guest-agent");
+        fs::copy(&agent_binary, &dest_bin)
+            .await
+            .map_err(|e| DriverError::InternalError {
+                message: format!("Failed to copy guest agent binary: {e}"),
+            })?;
+
+        let chmod_ok = Command::new("chmod")
+            .args(["755", &dest_bin])
+            .output()
+            .await
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if !chmod_ok {
+            warn!(
+                event = "rootfs.guest_agent_chmod_failed",
+                path = %dest_bin,
+                "Failed to chmod guest agent binary -- it may not be executable in the guest"
+            );
+        }
+
+        // Start-on-boot hook. /etc/rc.local is the most broadly-supported
+        // "run this once at the end of boot" mechanism across minimal
+        // Debian/Ubuntu/Alpine-derived images without needing to know the
+        // base image's specific init system (systemd/OpenRC/sysvinit/none).
+        // If the base image doesn't honor rc.local, this line is inert and
+        // the agent simply won't start -- start() in firecracker_sandbox.py
+        // already fails closed (Ping timeout) rather than assuming success,
+        // so that failure mode is caught, not silent.
+        let rc_local_path = format!("{mount_point}/etc/rc.local");
+        let rc_local_line = "/usr/local/bin/allternit-guest-agent >/var/log/allternit-guest-agent.log 2>&1 &\n";
+        let existing = fs::read_to_string(&rc_local_path).await.unwrap_or_default();
+        if !existing.contains("allternit-guest-agent") {
+            let mut contents = if existing.trim().is_empty() {
+                "#!/bin/sh\n".to_string()
+            } else {
+                existing
+            };
+            contents.push_str(rc_local_line);
+            contents.push_str("exit 0\n");
+            fs::write(&rc_local_path, contents)
+                .await
+                .map_err(|e| DriverError::InternalError {
+                    message: format!("Failed to write {rc_local_path}: {e}"),
+                })?;
+            let _ = Command::new("chmod")
+                .args(["755", &rc_local_path])
+                .output()
+                .await;
+        }
+
+        // Best-effort: Xvnc (TigerVNC) + fluxbox for StartDisplay. Not fatal
+        // if unavailable -- Execute/Ping/GetMetrics still work without a
+        // display; StartDisplay will just fail closed (Xvnc missing) later,
+        // consistent with this whole project's fail-closed philosophy.
+        let has_apt = Path::new(&format!("{mount_point}/usr/bin/apt-get")).exists();
+        if has_apt {
+            let install = Command::new("chroot")
+                .args([
+                    mount_point,
+                    "apt-get",
+                    "install",
+                    "-y",
+                    "--no-install-recommends",
+                    "tigervnc-standalone-server",
+                    "fluxbox",
+                ])
+                .output()
+                .await;
+            match install {
+                Ok(output) if output.status.success() => {
+                    info!(event = "rootfs.display_packages_installed", "Installed Xvnc + fluxbox");
+                }
+                Ok(output) => {
+                    warn!(
+                        event = "rootfs.display_packages_failed",
+                        stderr = %String::from_utf8_lossy(&output.stderr),
+                        "Failed to install Xvnc/fluxbox -- StartDisplay will fail closed in this image"
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        event = "rootfs.display_packages_error",
+                        error = %e,
+                        "chroot apt-get failed to run -- StartDisplay will fail closed in this image"
+                    );
+                }
+            }
+        } else {
+            debug!(
+                event = "rootfs.display_packages_skipped",
+                "No apt-get in rootfs -- skipping Xvnc/fluxbox install (non-Debian base image)"
+            );
         }
 
         Ok(())

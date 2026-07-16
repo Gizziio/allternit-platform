@@ -28,11 +28,21 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
   const [annotations, setAnnotations] = useState<Array<{ x: number; y: number; id: number }>>([]);
   const [selectedPoint, setSelectedPoint] = useState<{ x: number; y: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setEngineBaseUrl(getPlatformComputerUseBaseUrl());
     queueMicrotask(() => void useBrowserAgentStore.getState().refreshEngineHealth());
   }, [setEngineBaseUrl]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: MouseEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [menuOpen]);
 
   const saveScreenshot = async () => {
     const captured = await captureScreenshot();
@@ -77,7 +87,7 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
         <span style={{ fontSize: 12, fontWeight: 650, marginRight: 'auto' }}>ACI dev server</span>
         <button type="button" aria-label="Annotate" title="Annotate" onClick={() => setTool((value) => value === 'annotate' ? null : 'annotate')} style={{ ...headerButton, background: tool === 'annotate' ? 'var(--surface-active)' : 'transparent' }}><NotePencil size={15} /></button>
         <button type="button" aria-label="Select element" title="Select element" onClick={() => setTool((value) => value === 'select' ? null : 'select')} style={{ ...headerButton, background: tool === 'select' ? 'var(--surface-active)' : 'transparent' }}><CursorClick size={15} /></button>
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }} ref={menuRef}>
           <button type="button" aria-label="ACI actions" onClick={() => setMenuOpen((value) => !value)} style={headerButton}><DotsThree size={18} /></button>
           {menuOpen ? (
             <div style={{ position: 'absolute', top: 34, right: 0, zIndex: 10, width: 222, padding: 5, border: '1px solid var(--border-subtle)', borderRadius: 10, background: 'var(--surface-floating)', boxShadow: '0 14px 30px rgba(0,0,0,.24)' }}>

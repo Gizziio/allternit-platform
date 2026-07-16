@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Globe, ArrowSquareOut } from '@phosphor-icons/react';
 import { GizziMascot } from '@/components/ai-elements/GizziMascot';
 import { getActiveSession, useCodeModeStore } from './CodeModeStore';
+import { useDrawerStore } from '@/drawers/drawer.store';
 
 function isValidPreviewUrl(value: string): boolean {
   return /^https?:\/\//.test(value);
@@ -25,14 +26,16 @@ export function CodePreviewPane(): React.ReactNode {
 
   const [urlInput, setUrlInput] = useState(configuredUrl ?? '');
   const [loadedUrl, setLoadedUrl] = useState(configuredUrl ?? '');
+  const openDrawer = useDrawerStore((state) => state.openDrawer);
+  const setConsoleTab = useDrawerStore((state) => state.setConsoleTab);
 
   // Keep input in sync if the active session changes and supplies a new URL.
-  if (configuredUrl && configuredUrl !== loadedUrl) {
-    setLoadedUrl(configuredUrl);
-    if (configuredUrl !== urlInput) {
+  useEffect(() => {
+    if (configuredUrl && configuredUrl !== loadedUrl) {
+      setLoadedUrl(configuredUrl);
       setUrlInput(configuredUrl);
     }
-  }
+  }, [configuredUrl, loadedUrl]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,17 +182,27 @@ export function CodePreviewPane(): React.ReactNode {
         )}
       </div>
 
-      <div
+      <button
+        type="button"
+        onClick={() => {
+          setConsoleTab('mission-control');
+          openDrawer('console', { tab: 'mission-control', minHeight: 320 });
+        }}
         style={{
           padding: '10px 12px',
           borderTop: '1px solid rgba(255, 255, 255, 0.05)',
           fontSize: 12,
           color: 'var(--text-tertiary)',
           flexShrink: 0,
+          background: 'transparent',
+          border: 'none',
+          textAlign: 'left',
+          cursor: 'pointer',
+          width: '100%',
         }}
       >
-        View session logs
-      </div>
+        View session activity
+      </button>
     </div>
   );
 }

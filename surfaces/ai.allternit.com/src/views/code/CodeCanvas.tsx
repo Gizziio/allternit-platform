@@ -71,6 +71,13 @@ const CODE_MODEL_NAMES: Record<string, string> = {
   'kimi-cli': 'Kimi CLI',
 };
 
+const CODE_RUNTIME_PERMISSION_MODES: Record<CodeSessionMode, 'default' | 'acceptEdits' | 'plan'> = {
+  SAFE: 'plan',
+  DEFAULT: 'default',
+  AUTO: 'acceptEdits',
+  PLAN: 'plan',
+};
+
 const CODE_CHAT_MODEL_FALLBACKS: Record<string, string> = {
   codex: 'codex-cli/codex-mini-latest',
   'claude-code': 'claude-cli/claude-sonnet-4-6',
@@ -92,7 +99,7 @@ interface ActionGroup {
 }
 
 interface CodeCanvasProps {
-  isPreviewCollapsed: boolean;
+  // Canvas fills its container; collapse state is handled by the parent layout.
 }
 
 interface CodeModelSelection {
@@ -258,7 +265,7 @@ const codeMenuTheme = {
   hoverBg: 'var(--surface-hover)',
 };
 
-export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanvasProps) {
+export function CodeCanvas(_props: CodeCanvasProps) {
   const openDrawer = useDrawerStore((state) => state.openDrawer);
   const setConsoleTab = useDrawerStore((state) => state.setConsoleTab);
   const embeddedSessionId = useCodeSessionStore((s) => s.activeSessionId);
@@ -656,6 +663,9 @@ function CodeSessionSurface({
   const setActiveCodeSession = useCodeSessionStore(
     (state) => state.setActiveSession,
   );
+  const updateCodeSession = useCodeSessionStore(
+    (state) => state.updateSession,
+  );
   const sendCodeMessageStream = useCodeSessionStore(
     (state) => state.sendMessageStream,
   );
@@ -695,14 +705,35 @@ function CodeSessionSurface({
   const effectiveWorkspaceReady = isEmbeddedAgentSession || workspaceReady;
   const hasMessages = displayMessages.length > 0;
   const layoutMode = activeWorkspace?.layoutMode ?? 'thread';
-  const sessionMode = activeSession?.mode ?? 'DEFAULT';
+  const [sessionMode, setSessionMode] = useState<CodeSessionMode>(
+    activeSession?.mode ?? 'DEFAULT',
+  );
+  useEffect(() => {
+    setSessionMode(activeSession?.mode ?? 'DEFAULT');
+  }, [activeSession?.mode, activeSession?.session_id]);
   const handleSessionModeChange = useCallback(
     (mode: CodeSessionMode) => {
-      if (activeSessionId) {
-        useCodeModeStore.getState().setSessionMode(activeSessionId, mode);
+      setSessionMode(mode);
+
+      if (activeSession?.session_id) {
+        useCodeModeStore.getState().setSessionMode(activeSession.session_id, mode);
+      }
+
+      const runtimeState = useCodeSessionStore.getState();
+      const runtimeSessionId = runtimeState.activeSessionId;
+      const runtimeSession = runtimeState.sessions.find((session) => session.id === runtimeSessionId);
+      if (runtimeSessionId && runtimeSession) {
+        void updateCodeSession(runtimeSessionId, {
+          metadata: {
+            ...runtimeSession.metadata,
+            codePermissionMode: CODE_RUNTIME_PERMISSION_MODES[mode],
+          },
+        }).catch((error) => {
+          logger.warn({ err: error }, 'Failed to persist Code permission mode');
+        });
       }
     },
-    [activeSessionId],
+    [activeSession?.session_id, updateCodeSession],
   );
   const handleToggleLayoutMode = useCallback(() => {
     if (!activeWorkspaceId) return;
@@ -714,7 +745,7 @@ function CodeSessionSurface({
   const codeSession = embeddedAgentSession?.session as CodeSession | null | undefined;
   const worktreeEnabled = isEmbeddedAgentSession
     ? codeSession?.metadata?.isolation === 'worktree'
-    : pendingWorktree;
+    : activeSession?.isolation === 'worktree' || pendingWorktree;
   const handleToggleWorktree = useCallback(() => {
     if (isEmbeddedAgentSession && embeddedAgentSession?.sessionId) {
       const nextIsolation = codeSession?.metadata?.isolation === 'worktree' ? 'none' : 'worktree';
@@ -723,8 +754,12 @@ function CodeSessionSurface({
       });
       return;
     }
-    setPendingWorktree((prev) => !prev);
-  }, [isEmbeddedAgentSession, embeddedAgentSession?.sessionId, codeSession]);
+    const nextWorktree = !worktreeEnabled;
+    setPendingWorktree(nextWorktree);
+    if (activeSessionId) {
+      useCodeModeStore.getState().setSessionIsolation(activeSessionId, nextWorktree ? 'worktree' : 'sandbox');
+    }
+  }, [isEmbeddedAgentSession, embeddedAgentSession?.sessionId, codeSession, worktreeEnabled, activeSessionId]);
   const handleOpenFolder = useCallback(async () => {
     try {
       if (typeof window !== 'undefined' && 'showDirectoryPicker' in window) {
@@ -800,6 +835,7 @@ function CodeSessionSurface({
           metadata: {
             runtimeModel: selectedAgent?.model,
             agentFeatures: { workspace: true, tools: true, automation: true },
+            codePermissionMode: CODE_RUNTIME_PERMISSION_MODES[sessionMode],
           },
         });
         setActiveCodeSession(sessionId);
@@ -820,6 +856,9 @@ function CodeSessionSurface({
           name: 'Code Session',
           workspaceId: activeWorkspaceId,
           isolation: pendingWorktree ? 'worktree' : 'none',
+          metadata: {
+            codePermissionMode: CODE_RUNTIME_PERMISSION_MODES[sessionMode],
+          },
         });
         setRegularChatSessionId(sessionId);
       } catch (err) {
@@ -849,6 +888,7 @@ function CodeSessionSurface({
     sendCodeMessageStream,
     selectedAgent,
     selectedAgentId,
+    sessionMode,
     setActiveCodeSession,
   ]);
 
@@ -923,15 +963,6 @@ function CodeSessionSurface({
     <CodeBottomStatusBar
       sessionMode={sessionMode}
       onSessionModeChange={handleSessionModeChange}
-      selectedModelDisplayName={selectedModelDisplayName || selectedModel || 'Model'}
-      onAddAttachment={onAddChatAttachment}
-      metadata={
-        <CodeComposerMetadata
-          workspacePath={activeWorkspace?.root_path}
-          branch={activeWorkspace?.repo_status?.branch}
-          workspaceName={activeWorkspace?.display_name}
-        />
-      }
     />
   );
 
@@ -1128,7 +1159,6 @@ function LaunchpadStage({
 }) {
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
   const [showUsage, setShowUsage] = useState(true);
-  const [greetingIndex, setGreetingIndex] = useState(0);
 
   const greetings = useMemo(
     () => [
@@ -1140,13 +1170,7 @@ function LaunchpadStage({
     ],
     [],
   );
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setGreetingIndex((i) => (i + 1) % greetings.length);
-    }, 4000);
-    return () => window.clearInterval(interval);
-  }, [greetings.length]);
+  const greeting = useMemo(() => greetings[Math.floor(Math.random() * greetings.length)], [greetings]);
 
   return (
     <div
@@ -1182,7 +1206,7 @@ function LaunchpadStage({
             minHeight: '1.2em',
           }}
         >
-          {greetings[greetingIndex]}
+          {greeting}
         </div>
         <div
           style={{
@@ -1457,8 +1481,14 @@ function ConversationStage({
           <select
             aria-label="Session"
             data-testid="code-session-header-selector"
-            value={activeSessionId}
-            onChange={(e) => onSetActiveSession(e.target.value)}
+            value={activeCodeSessionId ?? ''}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next) {
+                setActiveCodeSession(next);
+                onSetActiveSession(next);
+              }
+            }}
             style={{
               maxWidth: 200,
               padding: '4px 8px',
@@ -1470,9 +1500,9 @@ function ConversationStage({
               fontWeight: 600,
             }}
           >
-            {workspaceSessions.map((session) => (
-              <option key={session.session_id} value={session.session_id}>
-                {session.title}
+            {codeSessions.map((session) => (
+              <option key={session.id} value={session.id}>
+                {session.name}
               </option>
             ))}
           </select>
@@ -1610,61 +1640,6 @@ function ConversationStage({
         isOpen={previewModalOpen}
         onClose={onClosePreviewModal}
       />
-    </div>
-  );
-}
-
-
-function CodeComposerMetadata({
-  workspacePath,
-  branch,
-  workspaceName,
-}: {
-  workspacePath?: string;
-  branch?: string;
-  workspaceName?: string;
-}) {
-  const items: string[] = [];
-  if (workspaceName) items.push(workspaceName);
-  if (workspacePath) items.push(workspacePath);
-  if (branch) items.push(branch);
-
-  if (items.length === 0) return null;
-
-  return (
-    <div
-      data-testid="code-composer-metadata"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '4px 10px',
-        borderRadius: 999,
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        background: 'rgba(255, 255, 255, 0.03)',
-        color: 'var(--ui-text-muted)',
-        fontSize: 11,
-        fontWeight: 600,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-      }}
-      title={items.join(' · ')}
-    >
-      {items.map((item, index) => (
-        <React.Fragment key={index}>
-          {index > 0 && <span style={{ opacity: 0.4 }}>·</span>}
-          <span
-            style={{
-              maxWidth: 180,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {item}
-          </span>
-        </React.Fragment>
-      ))}
     </div>
   );
 }

@@ -41,7 +41,7 @@ The pane header shows the active tool icon + label and a close button. Content i
 
 | Tab | Content | Backend integration |
 |-----|---------|---------------------|
-| `terminal` | `UnifiedTerminal` | Creates a real PTY session via `POST /api/terminal/create`, streams output through `EventSource /api/terminal/:id/stream`, and sends stdin via `POST /api/terminal/:id/input` |
+| `terminal` | `UnifiedTerminal` | Creates a shell session via `POST /terminal/create`, streams output through `EventSource /terminal/:id/stream`, and sends stdin via `POST /terminal/:id/input` |
 | `diff` | `CodeDiffPanel` | POSTs to `/git/diff` with the workspace root path |
 | `files` | `ExplorerView` | Calls `filesApi.listDirectory({ path: workingDir, recursive: true })` |
 | `artifacts` | `ArtifactCenter` | Reads from the execution event stream / receipt store |
@@ -68,15 +68,15 @@ ACI settings in `browserAgent.store.ts` are included in every new computer-use r
 
 ## Detached session window
 
-"Open in → New window" invokes `window.allternit.shell.openSession` (Electron) or falls back to `window.open` with query params:
+"Open in → New window" invokes `window.allternit.shell.openSession` via the Electron preload bridge. There is no browser-tab fallback: outside the desktop shell the action is a no-op with a console warning.
+
+The new window loads `/platform` with query params:
 
 - `detachedSurface=code`
 - `detachedSessionId=<sessionId>`
 - `detachedWorkspaceId=<workspaceId>`
 
 `ShellApp.tsx` reads these params, sets Code mode active, restores the session/workspace, hides the mode switcher, and passes `sessionOnlyId` to `ShellRail.tsx`. The rail then renders only the current session entry instead of the full mode rail.
-
-The Electron main window's `setWindowOpenHandler` now recognizes the same detached-session URL and opens it in a new `BrowserWindow` rather than routing it to the external browser. This ensures the fallback path also produces an Electron window.
 
 ## File map
 
@@ -90,7 +90,8 @@ The Electron main window's `setWindowOpenHandler` now recognizes the same detach
 | Pane content shell | `surfaces/ai.allternit.com/src/views/code/CodeSessionSidePane.tsx` |
 | ACI viewport + controls | `surfaces/ai.allternit.com/src/views/code/CodeAciPane.tsx` |
 | Session transcript view | `surfaces/ai.allternit.com/src/views/code/CodeTranscriptPane.tsx` |
-| Terminal backend wiring | `surfaces/ai.allternit.com/src/components/workspace/UnifiedTerminal.tsx` |
+| Terminal frontend wiring | `surfaces/ai.allternit.com/src/components/workspace/UnifiedTerminal.tsx` |
+| Terminal backend wiring | `cmd/allternit-api/src/terminal_routes.rs` |
 | Diff backend wiring | `surfaces/ai.allternit.com/src/views/code/CodeDiffPanel.tsx` |
 | Files backend wiring | `surfaces/ai.allternit.com/src/views/code/ExplorerView.tsx` |
 | Artifacts UI | `surfaces/ai.allternit.com/src/views/code/ArtifactCenter.tsx` |
@@ -116,4 +117,5 @@ The Electron main window's `setWindowOpenHandler` now recognizes the same detach
 ## Known follow-ups
 
 - The dead quick-action state in `CodeCanvas.tsx` is unrelated to the launcher and can be removed separately.
-- The detached window relies on Electron IPC; the browser fallback opens a new tab but does not hide the full shell rail.
+- The detached window relies on Electron IPC; it is only available inside the Allternit Desktop shell.
+- The terminal backend requires `tmux` on the host. Future work can add a native PTY crate (`portable-pty` / `tokio-pty`) to remove that dependency and provide lower-latency streaming.

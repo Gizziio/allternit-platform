@@ -143,6 +143,12 @@ function EnvironmentPill() {
   const [open, setOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'local' | 'cloud' | null>(null);
   const [showSshDialog, setShowSshDialog] = useState(false);
+  const [environment, setEnvironment] = useState<{ id: 'local' | 'cloud'; name: string }>({ id: 'local', name: 'Local' });
+
+  const selectEnvironment = (id: 'local' | 'cloud', name: string) => {
+    setEnvironment({ id, name });
+    setOpen(false);
+  };
 
   return (
     <>
@@ -151,7 +157,7 @@ function EnvironmentPill() {
           <span>
             <Pill ariaLabel="Environment" testId="code-workspace-bar-environment" isOpen={open}>
               <IconWrapper><Desktop size={14} /></IconWrapper>
-              <span>Local</span>
+              <span>{environment.name}</span>
               <IconWrapper><CaretDown size={12} style={{ opacity: 0.7 }} /></IconWrapper>
             </Pill>
           </span>
@@ -165,9 +171,10 @@ function EnvironmentPill() {
         >
           <DropdownSection title="Environment">
             <DropdownItem
-              active
+              active={environment.id === 'local'}
               icon={<Desktop size={14} />}
               label="Local"
+              onClick={() => selectEnvironment('local', 'Local')}
               trailing={
                 <button
                   type="button"
@@ -205,8 +212,10 @@ function EnvironmentPill() {
           <DropdownDivider />
           <DropdownSection title="Cloud">
             <DropdownItem
+              active={environment.id === 'cloud'}
               icon={<Cloud size={14} />}
               label="Default"
+              onClick={() => selectEnvironment('cloud', 'Cloud')}
               trailing={
                 <button
                   type="button"
@@ -268,9 +277,10 @@ function EnvironmentPill() {
         mode={dialogMode ?? 'local'}
         onClose={() => setDialogMode(null)}
         onSave={(values) => {
-          // Persist environment settings when a backend store is available.
-          // For now the dialog is interactive and values are accepted.
-          void values;
+          if (values.name?.trim()) {
+            setEnvironment((prev) => ({ ...prev, name: values.name!.trim() }));
+          }
+          setDialogMode(null);
         }}
       />
 

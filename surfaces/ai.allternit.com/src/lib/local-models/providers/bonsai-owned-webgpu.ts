@@ -101,11 +101,14 @@ export class BonsaiOwnedWebGpuProvider implements LocalModelProvider {
     requireSessionEnable();
     if (request.model !== BONSAI_OWNED_WEBGPU_MODEL_ID) throw new Error(`Unsupported owned Bonsai model: ${request.model}`);
     request.signal?.throwIfAborted();
+    const width = request.width ?? 512;
+    const height = request.height ?? 512;
+    if (width > 1024 || height > 1024) throw new Error("Owned Bonsai WebGPU supports up to 1024px");
     const pipeline = await this.getPipeline();
     const blob = await pipeline.generate({
       prompt: request.prompt ?? "",
-      width: 1024,
-      height: 1024,
+      width,
+      height,
       numInferenceSteps: 4,
       seed: request.seed,
       signal: request.signal,

@@ -15,7 +15,7 @@ use axum::Router;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -76,7 +76,7 @@ use allternit_api::stream::stream_router;
 use allternit_api::swarm_routes::swarm_router;
 use allternit_api::task_routes;
 use allternit_api::team_skill_routes::team_skill_router;
-use allternit_api::terminal_routes::terminal_router;
+use allternit_api::terminal_routes::{terminal_router, TerminalSessionStore};
 use allternit_api::tool_routes;
 use allternit_api::v1_routes::{agent_chat_router, v1_router};
 use allternit_api::viz_routes::viz_router;
@@ -203,6 +203,7 @@ async fn main() {
         webhook_secret,
         office_runtime,
         design_skill_cache,
+        terminal_sessions: TerminalSessionStore::new(),
     });
 
     // ── Build V1 API routes (all merged, then nested under /api/v1) ───────────
@@ -290,8 +291,9 @@ async fn main() {
         // public: the curated-3 loopback callback (moved out of the protected
         // router) and the open-connector sidecar's `/oauth/callback` proxy.
         .merge(allternit_api::connector_routes::connector_public_router())
-        // Internal-only: the ACU Python gateway has no Clerk session, so
-        // these handlers authenticate with a dedicated service token.
+        // Internal-only: the ACU (computer-use) Python gateway has no Clerk
+        // session, so these are gated by internal_auth::require_internal_token
+        // per-handler instead of the Clerk auth_middleware layer above.
         .merge(allternit_api::internal_routes::internal_router());
 
     // Mount the offline platform UI at `/` when a static export is available.
@@ -321,10 +323,13 @@ async fn main() {
         app = app.merge(background_router(Arc::new(bstate)));
     }
 
-    // Apply CORS for local dev
+    // Apply CORS for local dev. Mirror the request origin and allow
+    // credentials: a wildcard origin is rejected by browsers whenever the
+    // client uses `credentials: 'include'`, which the local UIs do.
     let app = app.layer(
         CorsLayer::new()
-            .allow_origin(Any)
+            .allow_origin(AllowOrigin::mirror_request())
+            .allow_credentials(true)
             .allow_methods([
                 Method::GET,
                 Method::POST,

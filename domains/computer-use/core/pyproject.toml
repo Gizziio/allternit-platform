@@ -29,6 +29,9 @@ classifiers = [
 dependencies = [
     "pillow>=10.0.0",
     "numpy>=1.24.0",
+    # Already used repeatedly via lazy import (vision_providers.py,
+    # firecracker_sandbox.py, receipts/__init__.py, environment_backends.py's
+    # CustomerCloudBackend) but never actually declared -- drive-by fix.
     "httpx>=0.27.0",
 ]
 
@@ -60,6 +63,9 @@ desktop = [
     "pynput>=1.7.6",
     "Pillow>=10.0.0",
     "mss>=9.0.0",
+    # RFB/VNC client for VmGuiBackend (Firecracker guest display, tunneled
+    # over vsock) -- see research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md
+    "asyncvnc>=1.1.0",
 ]
 
 desktop-macos = [
@@ -95,8 +101,12 @@ operator = [
     "aiohttp>=3.8.0",
 ]
 
-# BYOC provider SDKs are opt-in because they are only needed when an
-# organization connects that cloud.
+# BYOC cloud provisioning SDKs -- not installed by default (they're heavy and
+# only needed once an org actually connects a cloud account). Imported lazily
+# inside cloud_provisioning.py's strategy methods, gated by an
+# importlib.util.find_spec check (same pattern CuaSandboxBackend already uses
+# for its own optional dependency) that raises a clear, actionable error
+# rather than an opaque ImportError if this extra isn't installed.
 byoc = [
     "boto3>=1.34.0",
     "google-cloud-compute>=1.19.0",

@@ -48,16 +48,21 @@ struct NormalizeDims { height: u32, width: u32, channels: u32, groups: u32, acti
 @group(0) @binding(4) var<storage, read_write> output_values: array<f32>;
 @group(0) @binding(5) var<uniform> dims: NormalizeDims;
 
+fn flat_index(id: vec3<u32>, counts: vec3<u32>) -> u32 {
+  return id.x + id.y * (counts.x * 256u);
+}
+
 @compute @workgroup_size(256, 1, 1)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) counts: vec3<u32>) {
   let count = dims.height * dims.width * dims.channels;
-  if (id.x >= count) { return; }
-  let channel = id.x % dims.channels;
+  let index = flat_index(id, counts);
+  if (index >= count) { return; }
+  let channel = index % dims.channels;
   let group = channel / (dims.channels / dims.groups);
-  var value = (input_values[id.x] - statistics[group]) * statistics[dims.groups + group];
+  var value = (input_values[index] - statistics[group]) * statistics[dims.groups + group];
   value = value * weights[channel] + biases[channel];
   if (dims.activate != 0u) { value = value / (1.0 + exp(-value)); }
-  output_values[id.x] = value;
+  output_values[index] = value;
 }
 `;
 
@@ -120,8 +125,14 @@ struct AddDims { count: u32 }
 @group(0) @binding(1) var<storage, read> right: array<f32>;
 @group(0) @binding(2) var<storage, read_write> output: array<f32>;
 @group(0) @binding(3) var<uniform> dims: AddDims;
+
+fn flat_index(id: vec3<u32>, counts: vec3<u32>) -> u32 {
+  return id.x + id.y * (counts.x * 256u);
+}
+
 @compute @workgroup_size(256, 1, 1)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  if (id.x < dims.count) { output[id.x] = left[id.x] + right[id.x]; }
+fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) counts: vec3<u32>) {
+  let index = flat_index(id, counts);
+  if (index < dims.count) { output[index] = left[index] + right[index]; }
 }
 `;

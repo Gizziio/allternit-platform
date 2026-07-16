@@ -75,6 +75,7 @@ export namespace SessionSandbox {
     return enable(sessionID, {
       allowWritePaths: extraWritePaths,
       allowNetwork: Flag.GIZZI_SANDBOX_ALLOW_NETWORK,
+      allowedDomains: Flag.GIZZI_SANDBOX_ALLOWED_DOMAINS,
     })
   }
 
@@ -144,6 +145,19 @@ export namespace SessionSandbox {
     if (!state) return
     state.policy.allowNetwork = allow
     // Invalidate the macOS profile so it gets regenerated with new rules
+    void Sandbox.cleanupProfile(sessionID)
+  }
+
+  /**
+   * Restrict network access (when allowed at all) to a domain allowlist,
+   * routed through the local proxy instead of a wholesale allow. Pass an
+   * empty array to go back to unrestricted network.
+   */
+  export function setAllowedDomains(sessionID: string, domains: string[]): void {
+    const state = states.get(sessionID)
+    if (!state) return
+    state.policy.allowedDomains = domains
+    // Invalidate the profile/proxy so they get regenerated with new rules
     void Sandbox.cleanupProfile(sessionID)
   }
 

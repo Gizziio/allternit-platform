@@ -90,8 +90,9 @@ export class VaeTiledFeatureOps {
       const source = input.bands[index], output = outputBands[index];
       const dims = arena.uniform([source.rows, input.width, input.channels, groups, activate ? 1 : 0]);
       const encoder = this.device.createCommandEncoder({ label: `bonsai-vae-normalize-band-${index}` });
+      const count = source.rows * input.width * input.channels;
       encode(this.device, this.normalize, encoder, [source.buffer, weights, biases, stats, output.buffer, dims],
-        [Math.ceil(source.rows * input.width * input.channels / 256)]);
+        dispatch1D(count));
       this.device.queue.submit([encoder.finish()]);
     }
     await this.device.queue.onSubmittedWorkDone();
@@ -138,7 +139,7 @@ export class VaeTiledFeatureOps {
       const dims = arena.uniform([count]);
       const encoder = this.device.createCommandEncoder({ label: `bonsai-vae-add-band-${index}` });
       encode(this.device, this.addPipeline, encoder,
-        [left.bands[index].buffer, right.bands[index].buffer, bands[index].buffer, dims], [Math.ceil(count / 256)]);
+        [left.bands[index].buffer, right.bands[index].buffer, bands[index].buffer, dims], dispatch1D(count));
       this.device.queue.submit([encoder.finish()]);
     }
     await this.device.queue.onSubmittedWorkDone();
@@ -192,6 +193,13 @@ function requireSameLayout(left: VaeTiledFeatureMap, right: VaeTiledFeatureMap):
 
 function createPipeline(device: GPUDevice, code: string, label: string): GPUComputePipeline {
   return device.createComputePipeline({ label, layout: "auto", compute: { module: device.createShaderModule({ code }), entryPoint: "main" } });
+}
+
+export function dispatch1D(elements: number): [number, number, number] {
+  const groups = Math.ceil(elements / 256);
+  if (groups <= 65535) return [groups, 1, 1];
+  const y = Math.ceil(groups / 65535);
+  return [Math.ceil(groups / y), y, 1];
 }
 
 function encode(device: GPUDevice, pipeline: GPUComputePipeline, encoder: GPUCommandEncoder,

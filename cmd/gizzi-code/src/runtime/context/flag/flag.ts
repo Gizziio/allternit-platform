@@ -81,6 +81,10 @@ export namespace Flag {
   // When sandbox is on, allow outbound network. Default: denied — agents that
   // need npm/pip/cargo must opt in explicitly (matches Claude Code's default-deny).
   export const GIZZI_SANDBOX_ALLOW_NETWORK = truthy("GIZZI_SANDBOX_ALLOW_NETWORK")
+  // Comma-separated hostname allowlist. When set (and network is allowed),
+  // outbound traffic is restricted to these domains via a local proxy instead
+  // of a wholesale allow — e.g. "registry.npmjs.org,pypi.org".
+  export const GIZZI_SANDBOX_ALLOWED_DOMAINS = list("GIZZI_SANDBOX_ALLOWED_DOMAINS")
 
   // Cowork VM runtime endpoint (allternit-api POST /sandbox/execute)
   export const GIZZI_SANDBOX_RUNTIME_URL = env("GIZZI_SANDBOX_RUNTIME_URL")
@@ -98,6 +102,16 @@ export namespace Flag {
     if (!value) return undefined
     const parsed = Number(value)
     return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+  }
+
+  function list(key: string): string[] | undefined {
+    const value = env(key)
+    if (!value) return undefined
+    const entries = value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+    return entries.length ? entries : undefined
   }
 }
 

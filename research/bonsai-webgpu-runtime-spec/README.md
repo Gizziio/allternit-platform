@@ -135,6 +135,34 @@ statistics `[3,5]`, global normalization `[-1,1]`, a cross-band 3x3 halo result
 of `[2,3]`, and residual addition `[11,22]`. The optimized 8x8x32 packed-affine
 tile returned `[528,528,528,32,32,32]` for a 2-row/3-output boundary case.
 
+## Companion-reference validation
+
+Phase A was blocked by the 8 GB disk ceiling, so validation pivoted to the native
+MLX companion installed at `~/Library/Application Support/Allternit/bonsai-local`
+(~4.5 GB). The companion generated a deterministic seed-42 512×512 reference in
+~154 s; two runs were byte-identical with PNG SHA-256
+`479c4336bc19fd2a622195adb84da6231381fbb2be0a62ff440bfa0466656e2e`
+(203,721 bytes).
+
+On 2026-07-16 an owned WebGPU run completed end-to-end before the
+group-normalization dispatch fix, finishing in 1,432,725 ms (~23.9 min) with PNG
+SHA-256 `9df7f9e9f29c47591d050a8ab4aff403dc1dfd94e5bb1ae18de02ec78238b2ea`
+(7,123 bytes). The hashes do not match, and the owned PNG is an order of
+magnitude smaller than the reference, indicating a numerical bug that collapses
+the output to a near-uniform image.
+
+After fixing the 1D workgroup-dispatch cap (tensor-layout, VAE normalization/add,
+tiled VAE normalize/add) and switching the 512px VAE decode to the tiled path,
+subsequent runs could not be validated end-to-end on the available 8 GB machine.
+Runs 7 and 8 lost the browser context after reaching transformer 1/6 and the text
+encoder stage, respectively. A 2026-07-16 harness run with the dispatch fix reached
+`transformer 3/6` without a context crash, but the tool timeout interrupted it after
+five minutes. During that run temporary disk growth reached ~3.6 GB as the browser
+cache absorbed the range-streamed weights, and system free RAM dropped to tens of
+megabytes, so the primary blocker is memory pressure rather than a code crash.
+The runtime is therefore dispatch/binding sound at 512px but not yet numerically
+or performance-equivalent to the companion.
+
 ## Storage safety
 
 Phase A installation and generation measure origin-storage growth every 250 ms.
@@ -206,3 +234,30 @@ the ceiling are:
 4. Export the capture and redact any URL query strings containing credentials.
 5. Record browser, GPU adapter, bundle hash, image dimensions, seed, and output
    PNG hash alongside the capture.
+
+## Phase B completion audit
+
+The remaining 512px end-to-end comparison is blocked on the current 8 GB machine
+by memory pressure: the owned runtime reaches `transformer 3/6` before the system
+runs out of free RAM. Final numerical validation and deterministic comparison to
+the companion reference will be performed on a 32 GB MacBook where the ~3.9 GB
+weight working set plus GPU allocations fit comfortably.
+
+Until that migration, the unblocked Phase B work is:
+
+- [x] Safetensors range loading and packed affine WebGPU foundations.
+- [x] Owned transformer, sampler, text encoder, and VAE graph.
+- [x] Experimental provider integration without changing the default.
+- [x] Bounded transformer row tiling for 1024px sequences.
+- [x] Tiled VAE feature maps, two-pass GroupNorm, and halo-aware 1024px decode.
+- [x] Compile the new tiled WGSL modules on a real WebGPU adapter.
+- [x] Numerically validate the tiled primitives with synthetic GPU oracles.
+- [x] Optimize the packed-affine matmul kernel with a shared-memory 8×8×32 tile.
+- [x] Optimize the dense-linear projection kernel with shared-memory tiling.
+- [ ] Optimize remaining hot WGSL kernels (VAE convolution, attention) if profiling on the 32 GB machine shows they are bottlenecks.
+- [ ] Run the 512px/1024px end-to-end comparison on the 32 GB machine.
+- [ ] Run the permitted completion audit and archive execution evidence.
+
+Next actions: finish the remaining kernel optimizations that can be validated
+with synthetic oracles, then hand off to the 32 GB machine for final end-to-end
+capture.

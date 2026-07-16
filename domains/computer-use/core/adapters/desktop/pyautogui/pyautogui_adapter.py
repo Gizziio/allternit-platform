@@ -701,12 +701,24 @@ class PyAutoGUIAdapter:
         return b""
 
     async def execute(self, req) -> "_DesktopResult":
-        """Duck-typed execute() for PlanningLoop compatibility."""
+        """Duck-typed execute() for PlanningLoop compatibility.
+
+        When `parameters.environment_id` is set, the action is redirected to
+        that environment's backend (e.g. CuaSandboxBackend, which wraps the
+        real trycua/cua SDK's screen/mouse/keyboard methods) instead of
+        running directly on this host's screen -- real isolation, not just
+        the audit gate HostAdapterGate provides for isolation="host".
+        """
         if not self._initialized:
             await self.initialize()
         action_type = getattr(req, "action_type", "screenshot")
         params = getattr(req, "parameters", {}) or {}
         session_id = getattr(req, "session_id", "")
+
+        environment_id = params.get("environment_id")
+        if environment_id:
+            return await self._execute_in_environment(environment_id, action_type, params)
+
         success = True
         error_msg = None
         try:
@@ -736,6 +748,63 @@ class PyAutoGUIAdapter:
             error_msg = str(e)
             success = False
         return _DesktopResult(success=success, action_type=action_type, error=error_msg)
+
+    @staticmethod
+    def _gui_operation(action_type: str, params: dict) -> tuple[str, tuple] | None:
+        """Map a pyautogui-style action to (operation, args) against a GUI
+        backend's screenshot/mouse_action/keyboard_action methods. Returns
+        None for actions with no environment-backed equivalent."""
+        if action_type == "screenshot":
+            return ("screenshot", ())
+        if action_type in ("click", "double_click", "right_click", "move", "down", "up", "scroll"):
+            arguments = {k: v for k, v in params.items() if k != "environment_id"}
+            return ("mouse_action", (action_type, arguments))
+        if action_type in ("type", "fill"):
+            return ("keyboard_action", ("type", {"text": params.get("text", "")}))
+        if action_type in ("key", "press"):
+            return ("keyboard_action", ("press", {"keys": params.get("keys", "")}))
+        return None
+
+    async def _execute_in_environment(self, environment_id: str, action_type: str, params: dict) -> "_DesktopResult":
+        """Route the action to a provisioned environment's GUI backend
+        instead of calling pyautogui against the host. Prefers whichever
+        backend already owns the environment (e.g. CuaSandboxBackend, which
+        wraps the real trycua/cua SDK); if that backend doesn't implement GUI
+        actions directly (e.g. a Firecracker-only AllternitSandboxBackend
+        environment, which is argv-only), attaches VmGuiBackend to the same
+        running sandbox and retries there. Fails honestly -- never silently
+        falls back to running on the host."""
+        from core.environment_backends import default_environment_backend_service
+
+        operation = self._gui_operation(action_type, params)
+        if operation is None:
+            return _DesktopResult(
+                success=False, action_type=action_type, error=f"Unsupported environment action: {action_type}"
+            )
+        method, args = operation
+        service = default_environment_backend_service()
+
+        try:
+            await service.provider_operation(environment_id, method, *args)
+            return _DesktopResult(success=True, action_type=action_type)
+        except Exception as primary_error:  # noqa: BLE001
+            try:
+                vm_gui = service.backend("allternit.vm-gui")
+                sandbox_backend = service.backend("allternit.local-sandbox")
+                sandbox = sandbox_backend.sandbox_instance(environment_id)  # type: ignore[attr-defined]
+                await vm_gui.attach(environment_id, sandbox)  # type: ignore[attr-defined]
+                handler = getattr(vm_gui, method)
+                await handler(environment_id, *args)
+                return _DesktopResult(success=True, action_type=action_type)
+            except Exception as fallback_error:  # noqa: BLE001
+                return _DesktopResult(
+                    success=False,
+                    action_type=action_type,
+                    error=(
+                        f"No GUI backend available for environment {environment_id}: "
+                        f"{primary_error}; vm-gui fallback: {fallback_error}"
+                    ),
+                )
 
 
 class _DesktopResult:

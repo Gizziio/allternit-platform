@@ -1,140 +1,212 @@
 import React from 'react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import {
-  Terminal,
-  Scroll,
-  ClockCounterClockwise,
-  Kanban,
-  Clock,
-  Target,
-  LockKey,
+  CaretDown,
+  CaretUp,
+  DotsSixVertical,
   GitDiff,
-  Users,
-  Shield,
-  Warning,
-  Gear,
-  ChartBar,
-  ChartLine,
-  Cpu,
   Package,
-  Robot,
+  RocketLaunch,
+  Terminal,
 } from '@phosphor-icons/react';
 
-export type DrawerTabId = 
-  | 'terminal' 
-  | 'logs' 
-  | 'executions' 
-  | 'problems' 
-  | 'queue' 
-  | 'agents' 
-  | 'automation'
-  | 'scheduler' 
-  | 'context'
+export type DrawerTabId =
+  | 'mission-control'
+  | 'terminal'
   | 'changes'
-  | 'receipts'
-  | 'dag-graph'
-  | 'trace'
-  | 'swarm'
-  | 'policy'
-  | 'security'
-  | 'board'      // NEW - Workspace Kanban board
-  | 'gantt'      // NEW - Gantt chart
-  | 'workload'   // NEW - Workload analysis
-  | 'inbox'      // NEW - Assignment inbox
-  | 'runtime'   // NEW - Agent Runtime dashboard
   | 'artifacts';
 
 interface DrawerTabsProps {
   activeTab: DrawerTabId;
+  isOpen: boolean;
   onTabChange: (id: DrawerTabId) => void;
+  onToggle: () => void;
+  onMouseDown?: (event: React.MouseEvent) => void;
+  onTouchStart?: (event: React.TouchEvent) => void;
 }
 
-export function DrawerTabs({ activeTab, onTabChange }: DrawerTabsProps) {
+interface TabDef {
+  id: DrawerTabId;
+  label: string;
+  icon: PhosphorIcon;
+}
+
+export const DRAWER_TABS: TabDef[] = [
+  { id: 'mission-control', label: 'Mission Control', icon: RocketLaunch },
+  { id: 'terminal', label: 'Terminal', icon: Terminal },
+  { id: 'changes', label: 'Changes', icon: GitDiff },
+  { id: 'artifacts', label: 'Artifacts', icon: Package },
+];
+
+export function DrawerTabs({
+  activeTab,
+  isOpen,
+  onTabChange,
+  onToggle,
+  onMouseDown,
+  onTouchStart,
+}: DrawerTabsProps) {
   return (
-    <div style={{ display: 'flex', gap: 2, padding: '0 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-hover)', flexWrap: 'wrap' }}>
-      {/* Primary Operations */}
-      <Tab id="queue" label="Queue" icon={Kanban} active={activeTab === 'queue'} onClick={onTabChange} />
-      <Tab id="terminal" label="Terminal" icon={Terminal} active={activeTab === 'terminal'} onClick={onTabChange} />
-      <Tab id="logs" label="Logs" icon={Scroll} active={activeTab === 'logs'} onClick={onTabChange} />
-      
-      {/* Context & Changes */}
-      <Tab id="context" label="Context" icon={Target} active={activeTab === 'context'} onClick={onTabChange} />
-      <Tab id="changes" label="Changes" icon={GitDiff} active={activeTab === 'changes'} onClick={onTabChange} />
-      
-      {/* Agents & Orchestration */}
-      <Tab id="automation" label="Automation" icon={Gear} active={activeTab === 'automation'} onClick={onTabChange} />
-      <Tab id="agents" label="Orchestrate" icon={Robot} active={activeTab === 'agents'} onClick={onTabChange} />
-      <Tab id="swarm" label="Swarm" icon={Users} active={activeTab === 'swarm'} onClick={onTabChange} />
-      
-      {/* Governance & Security */}
-      <Tab id="policy" label="Policy" icon={Shield} active={activeTab === 'policy'} onClick={onTabChange} />
-      <Tab id="security" label="Security" icon={Warning} active={activeTab === 'security'} onClick={onTabChange} />
-      
-      {/* Executions & Evidence */}
-      <Tab id="executions" label="Executions" icon={ClockCounterClockwise} active={activeTab === 'executions'} onClick={onTabChange} />
-      <Tab id="artifacts" label="Artifacts" icon={Package} active={activeTab === 'artifacts'} onClick={onTabChange} />
-      <Tab id="receipts" label="Receipts" icon={LockKey} active={activeTab === 'receipts'} onClick={onTabChange} />
-      
-      {/* Scheduling */}
-      <Tab id="scheduler" label="Scheduler" icon={Clock} active={activeTab === 'scheduler'} onClick={onTabChange} />
-      
-      {/* Board & Planning */}
-      <Tab id="board" label="Board" icon={Kanban} active={activeTab === 'board'} onClick={onTabChange} />
-      <Tab id="gantt" label="Gantt" icon={ChartBar} active={activeTab === 'gantt'} onClick={onTabChange} />
-      <Tab id="workload" label="Workload" icon={ChartLine} active={activeTab === 'workload'} onClick={onTabChange} />
-      <Tab id="inbox" label="Peers" icon={Users} active={activeTab === 'inbox'} onClick={onTabChange} />
-      <Tab id="runtime" label="Runtimes" icon={Cpu} active={activeTab === 'runtime'} onClick={onTabChange} />
-      
+    <div
+      data-testid="console-drawer-tabs"
+      onMouseDown={isOpen ? onMouseDown : undefined}
+      onTouchStart={isOpen ? onTouchStart : undefined}
+      style={{
+        minHeight: 38,
+        display: 'flex',
+        alignItems: 'stretch',
+        padding: '0 max(10px, env(safe-area-inset-left, 0px))',
+        borderTop: '1px solid var(--border-strong)',
+        borderBottom: isOpen ? '1px solid var(--border-subtle)' : 'none',
+        background: 'var(--surface-floating)',
+        backdropFilter: 'blur(20px) saturate(170%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(170%)',
+        boxShadow: isOpen ? 'var(--shadow-sm)' : 'var(--shadow-lg)',
+        overflow: 'hidden',
+        flexShrink: 0,
+        cursor: isOpen ? 'row-resize' : 'default',
+        userSelect: 'none',
+      }}
+    >
+      <div
+        style={{
+          height: 38,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '0 10px 0 4px',
+          color: 'var(--text-tertiary)',
+          flexShrink: 0,
+        }}
+      >
+        <DotsSixVertical size={13} weight="bold" />
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: '0.12em',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          CONSOLE
+        </span>
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="Console panels"
+        style={{
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'stretch',
+          gap: 2,
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+        }}
+      >
+        {DRAWER_TABS.map((tab) => (
+          <Tab
+            key={tab.id}
+            id={tab.id}
+            label={tab.label}
+            icon={tab.icon}
+            active={activeTab === tab.id}
+            isOpen={isOpen}
+            onClick={onTabChange}
+          />
+        ))}
+      </div>
+
+      <div style={{ flex: 1, minWidth: 12 }} />
+
+      <button
+        type="button"
+        aria-label={isOpen ? 'Collapse console' : 'Expand console'}
+        title={isOpen ? 'Collapse console' : 'Expand console'}
+        onMouseDown={(event) => event.stopPropagation()}
+        onTouchStart={(event) => event.stopPropagation()}
+        onClick={onToggle}
+        style={{
+          width: 34,
+          height: 30,
+          alignSelf: 'center',
+          display: 'grid',
+          placeItems: 'center',
+          border: '1px solid transparent',
+          borderRadius: 7,
+          background: 'transparent',
+          color: 'var(--text-tertiary)',
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}
+      >
+        {isOpen ? <CaretDown size={13} weight="bold" /> : <CaretUp size={13} weight="bold" />}
+      </button>
     </div>
   );
 }
 
-interface TabProps {
+function Tab({
+  id,
+  label,
+  icon: Icon,
+  active,
+  isOpen,
+  onClick,
+}: {
   id: DrawerTabId;
   label: string;
   icon: PhosphorIcon;
   active: boolean;
+  isOpen: boolean;
   onClick: (id: DrawerTabId) => void;
-  disabled?: boolean;
-  tooltip?: string;
-}
-
-function Tab({ id, label, icon: Icon, active, onClick, disabled = false, tooltip }: TabProps) {
+}) {
   return (
-    <button type="button"
-      onClick={() => !disabled && onClick(id)}
-      disabled={disabled}
-      title={tooltip}
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onMouseDown={(event) => event.stopPropagation()}
+      onTouchStart={(event) => event.stopPropagation()}
+      onClick={() => onClick(id)}
       style={{
+        height: 38,
+        position: 'relative',
         display: 'flex',
         alignItems: 'center',
         gap: 6,
-        padding: '8px 12px',
-        background: 'transparent',
+        padding: '0 11px',
+        background: active && isOpen ? 'var(--shell-mode-code-soft)' : 'transparent',
         border: 'none',
-        borderBottom: active ? '2px solid var(--accent-chat)' : '2px solid transparent',
-        color: active ? 'var(--text-primary)' : disabled ? 'var(--text-tertiary)' : 'var(--text-tertiary)',
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: active ? 1 : disabled ? 0.4 : 0.7,
-        transition: 'all 0.2s',
-        position: 'relative',
+        color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
+        fontSize: 11,
+        fontWeight: active ? 650 : 550,
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+        transition: 'color 140ms ease, background 140ms ease',
       }}
     >
-      <Icon size={14} weight={active ? 'fill' : 'regular'} />
+      <Icon
+        size={13}
+        weight={active ? 'fill' : 'regular'}
+        color={active ? 'var(--accent-code, #60a5fa)' : undefined}
+      />
       {label}
-      {disabled && (
-        <span style={{
-          fontSize: 12,
-          marginLeft: 4,
-          padding: '1px 4px',
-          background: 'var(--border-subtle)',
-          borderRadius: 3,
-          color: 'var(--text-tertiary)',
-        }}>
-          Soon
-        </span>
+      {active && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: 9,
+            right: 9,
+            bottom: 0,
+            height: 2,
+            borderRadius: '2px 2px 0 0',
+            background: 'var(--accent-code, #60a5fa)',
+            boxShadow: '0 0 10px color-mix(in srgb, var(--accent-code, #60a5fa) 45%, transparent)',
+          }}
+        />
       )}
     </button>
   );

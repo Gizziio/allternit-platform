@@ -102,6 +102,8 @@ export interface ModeSession {
     executionStatus?: 'pending' | 'running' | 'complete' | 'blocked' | 'invalid';
     validationErrors?: string[];
     isolation?: 'worktree' | 'none';
+    codePermissionMode?: 'default' | 'acceptEdits' | 'plan';
+    gizziPermissionModeApplied?: 'default' | 'acceptEdits' | 'plan';
   };
   // Runtime context pack (not persisted, rebuilt on load)
   _contextPack?: AgentContextPack;
@@ -655,19 +657,33 @@ async function streamLocalCodeMessageThroughGizzi(
   let gizziSessionId = typeof session.metadata.gizziSessionId === 'string'
     ? session.metadata.gizziSessionId
     : null;
+  const permissionMode = session.metadata.codePermissionMode ?? 'default';
+  const permission = codePermissionRules(permissionMode);
 
   if (!gizziSessionId) {
     const createResponse = await fetch(`${base}/v1/session`, {
       method: 'POST',
       headers,
       signal,
-      body: JSON.stringify({ title: session.name, surface: 'code' }),
+      body: JSON.stringify({ title: session.name, surface: 'code', permission }),
     });
     if (!createResponse.ok) throw new Error(`Gizzi session creation failed (${createResponse.status})`);
     const created = await createResponse.json() as { id?: string };
     if (!created.id) throw new Error('Gizzi runtime did not return a session ID');
     gizziSessionId = created.id;
     session.metadata.gizziSessionId = created.id;
+    session.metadata.gizziPermissionModeApplied = permissionMode;
+  } else if (session.metadata.gizziPermissionModeApplied !== permissionMode) {
+    const permissionResponse = await fetch(`${base}/v1/session/${encodeURIComponent(gizziSessionId)}`, {
+      method: 'PATCH',
+      headers,
+      signal,
+      body: JSON.stringify({ permission }),
+    });
+    if (!permissionResponse.ok) {
+      throw new Error(`Gizzi permission update failed (${permissionResponse.status})`);
+    }
+    session.metadata.gizziPermissionModeApplied = permissionMode;
   }
 
   const separator = modelId.indexOf('/');
@@ -692,6 +708,24 @@ async function streamLocalCodeMessageThroughGizzi(
     .trim();
   if (content) callbacks?.onChunk?.(content);
   callbacks?.onDone?.();
+}
+
+function codePermissionRules(mode: 'default' | 'acceptEdits' | 'plan') {
+  const allow = (permission: string) => ({ permission, pattern: '*', action: 'allow' as const });
+  const readPermissions = ['read', 'glob', 'grep', 'list', 'websearch', 'codesearch', 'question', 'todoread', 'lsp'];
+
+  if (mode === 'default') return [];
+  if (mode === 'acceptEdits') {
+    return [
+      ...readPermissions.map(allow),
+      ...['edit', 'write', 'patch', 'multiedit'].map(allow),
+    ];
+  }
+
+  return [
+    { permission: '*', pattern: '*', action: 'deny' as const },
+    ...readPermissions.map(allow),
+  ];
 }
 
 // ============================================================================
@@ -2026,8 +2060,10 @@ export function createModeSessionStore(config: StoreConfig) {
             // localStorage bloat (5-10MB limit) and stale state bugs.
             // Never persist optimistic temp sessions — if the backend create fails
             // or the tab reloads mid-create, they would linger as zombie rows.
+            // Local-only sessions retained after backend failure are the exception:
+            // they must survive reloads and detached windows.
             sessions: state.sessions
-              .filter((s) => !s.id.startsWith('temp-'))
+              .filter((s) => !s.id.startsWith('temp-') || s.metadata.executionPersistence === 'local')
               .map((s) => ({
                 id: s.id,
                 name: s.name,
@@ -2037,17 +2073,26 @@ export function createModeSessionStore(config: StoreConfig) {
                 messageCount: s.messageCount,
                 metadata: s.metadata,
                 tags: s.tags,
-                // Explicitly strip large/runtime fields
-                messages: [],
+                // Explicitly strip large/runtime fields for backend-synced sessions.
+                // Local-only sessions retain messages because they cannot be rebuilt
+                // from a backend and must render correctly in detached windows.
+                messages: s.metadata.executionPersistence === 'local' ? s.messages : [],
                 _contextPack: undefined,
               })),
-            activeSessionId: state.activeSessionId?.startsWith('temp-') ? null : state.activeSessionId,
+            activeSessionId: (() => {
+              if (!state.activeSessionId?.startsWith('temp-')) return state.activeSessionId;
+              const active = state.sessions.find((s) => s.id === state.activeSessionId);
+              return active?.metadata.executionPersistence === 'local' ? state.activeSessionId : null;
+            })(),
           }),
           // Sweep any zombie temp sessions persisted by older builds.
           onRehydrateStorage: () => (state) => {
             if (!state) return;
-            state.sessions = state.sessions.filter((s) => !s.id.startsWith('temp-'));
-            if (state.activeSessionId?.startsWith('temp-')) state.activeSessionId = null;
+            state.sessions = state.sessions.filter((s) => !s.id.startsWith('temp-') || s.metadata.executionPersistence === 'local');
+            if (state.activeSessionId?.startsWith('temp-')) {
+              const active = state.sessions.find((s) => s.id === state.activeSessionId);
+              if (!active) state.activeSessionId = null;
+            }
           },
         }
       ),

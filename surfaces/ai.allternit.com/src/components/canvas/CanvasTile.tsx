@@ -7,12 +7,14 @@ import { CodeCanvasTile } from "@/views/code/CodeModeStore";
 interface CanvasTileProps {
   tile: CodeCanvasTile;
   selected?: boolean;
+  zoom?: number;
   onMove: (updates: { x: number; y: number }) => void;
   onResize: (updates: { x?: number; y?: number; width: number; height: number }) => void;
   onFocus: () => void;
   onClose?: () => void;
   onBringToFront?: () => void;
-  onSelect?: () => void;
+  onInteractionStart?: () => void;
+  onSelect?: (additive: boolean) => void;
   children: React.ReactNode;
 }
 
@@ -42,11 +44,13 @@ const HANDLE_CURSORS: Record<ResizeHandle, string> = {
 export function CanvasTile({
   tile,
   selected,
+  zoom = 1,
   onMove,
   onResize,
   onFocus,
   onClose,
   onBringToFront,
+  onInteractionStart,
   onSelect,
   children,
 }: CanvasTileProps) {
@@ -58,27 +62,29 @@ export function CanvasTile({
   const handleHeaderPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
+      if ((e.target as HTMLElement).closest('button')) return;
       e.stopPropagation();
+      onInteractionStart?.();
       onBringToFront?.();
-      onSelect?.();
+      onSelect?.(e.shiftKey);
       setIsDragging(true);
       dragStart.current = { x: e.clientX, y: e.clientY, tileX: tile.x, tileY: tile.y };
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
-    [tile.x, tile.y, onBringToFront, onSelect],
+    [tile.x, tile.y, onBringToFront, onInteractionStart, onSelect],
   );
 
   const handleHeaderPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!isDragging) return;
-      const dx = e.clientX - dragStart.current.x;
-      const dy = e.clientY - dragStart.current.y;
+      const dx = (e.clientX - dragStart.current.x) / zoom;
+      const dy = (e.clientY - dragStart.current.y) / zoom;
       onMove({
         x: snap(dragStart.current.tileX + dx, SNAP),
         y: snap(dragStart.current.tileY + dy, SNAP),
       });
     },
-    [isDragging, onMove],
+    [isDragging, onMove, zoom],
   );
 
   const handleHeaderPointerUp = useCallback(() => {
@@ -89,7 +95,9 @@ export function CanvasTile({
     (e: React.PointerEvent, handle: ResizeHandle) => {
       e.stopPropagation();
       e.preventDefault();
-      onSelect?.();
+      onInteractionStart?.();
+      onBringToFront?.();
+      onSelect?.(e.shiftKey);
       setActiveHandle(handle);
       resizeStart.current = {
         x: e.clientX,
@@ -101,14 +109,14 @@ export function CanvasTile({
       };
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
-    [tile.x, tile.y, tile.width, tile.height, onSelect],
+    [tile.x, tile.y, tile.width, tile.height, onBringToFront, onInteractionStart, onSelect],
   );
 
   const handleResizePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!activeHandle) return;
-      const dx = e.clientX - resizeStart.current.x;
-      const dy = e.clientY - resizeStart.current.y;
+      const dx = (e.clientX - resizeStart.current.x) / zoom;
+      const dy = (e.clientY - resizeStart.current.y) / zoom;
 
       let newX = resizeStart.current.tileX;
       let newY = resizeStart.current.tileY;
@@ -136,7 +144,7 @@ export function CanvasTile({
 
       onResize({ x: newX, y: newY, width: newW, height: newH });
     },
-    [activeHandle, onResize],
+    [activeHandle, onResize, zoom],
   );
 
   const handleResizePointerUp = useCallback(() => {
@@ -149,7 +157,8 @@ export function CanvasTile({
       onPointerDown={(e) => handleResizePointerDown(e, handle)}
       onPointerMove={handleResizePointerMove}
       onPointerUp={handleResizePointerUp}
-      onPointerLeave={handleResizePointerUp}
+      onPointerCancel={handleResizePointerUp}
+      onClick={(e) => e.stopPropagation()}
       style={{
         position: 'absolute',
         zIndex: 10,
@@ -180,11 +189,13 @@ export function CanvasTile({
   );
 
   return (
-    <div role="button" tabIndex={0}
+    <div
+      role="group"
+      aria-label={`${tile.label || tile.type} canvas tile`}
       data-canvas-tile
       onClick={(e) => {
         e.stopPropagation();
-        onSelect?.();
+        onSelect?.(e.shiftKey);
       }}
       style={{
         position: 'absolute',
@@ -212,7 +223,8 @@ export function CanvasTile({
         onPointerDown={handleHeaderPointerDown}
         onPointerMove={handleHeaderPointerMove}
         onPointerUp={handleHeaderPointerUp}
-        onPointerLeave={handleHeaderPointerUp}
+        onPointerCancel={handleHeaderPointerUp}
+        onClick={(e) => e.stopPropagation()}
         onDoubleClick={onFocus}
         style={{
           height: 36,
@@ -267,6 +279,8 @@ export function CanvasTile({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
           <button type="button"
+            aria-label={`Focus ${tile.label || tile.type}`}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onFocus();
@@ -297,6 +311,8 @@ export function CanvasTile({
             <ArrowsOut size={13} />
           </button>
           <button type="button"
+            aria-label={`Close ${tile.label || tile.type}`}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onClose?.();
@@ -316,7 +332,7 @@ export function CanvasTile({
               transition: 'background 0.15s, color 0.15s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
+              e.currentTarget.style.background = 'var(--status-error-bg)';
               e.currentTarget.style.color = 'var(--status-error)';
             }}
             onMouseLeave={(e) => {

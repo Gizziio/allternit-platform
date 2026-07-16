@@ -74,6 +74,10 @@ interface CodeCanvasHistory {
   future: CodeCanvasTile[][];
 }
 
+interface CanvasMutationOptions {
+  recordHistory?: boolean;
+}
+
 export interface CodeWorkspaceRecord {
   workspace_id: string;
   root_path: string;
@@ -138,8 +142,15 @@ interface CodeModeState extends CodeModeStateShape {
   // Canvas layout actions
   setWorkspaceLayoutMode: (workspaceId: string, mode: CodeLayoutMode) => void;
   addCanvasTile: (workspaceId: string, tile: Omit<CodeCanvasTile, 'tileId'>) => string;
-  removeCanvasTile: (workspaceId: string, tileId: string) => void;
-  updateCanvasTile: (workspaceId: string, tileId: string, updates: Partial<CodeCanvasTile>) => void;
+  removeCanvasTile: (workspaceId: string, tileId: string, options?: CanvasMutationOptions) => void;
+  removeCanvasTiles: (workspaceId: string, tileIds: string[]) => void;
+  updateCanvasTile: (
+    workspaceId: string,
+    tileId: string,
+    updates: Partial<CodeCanvasTile>,
+    options?: CanvasMutationOptions,
+  ) => void;
+  snapshotCanvas: (workspaceId: string) => void;
   setCanvasViewport: (workspaceId: string, viewport: CodeCanvasViewport) => void;
   setCanvasFocusTile: (workspaceId: string, tileId: string | null) => void;
   autoArrangeCanvasTiles: (workspaceId: string) => void;
@@ -155,6 +166,18 @@ interface CodeModeState extends CodeModeStateShape {
 
 function nowIso(offsetMinutes = 0): string {
   return new Date(Date.now() - offsetMinutes * 60_000).toISOString();
+}
+
+const MAX_CANVAS_HISTORY = 50;
+
+function pushCanvasHistory(
+  history: CodeCanvasHistory | undefined,
+  tiles: CodeCanvasTile[],
+): CodeCanvasHistory {
+  return {
+    past: [...(history?.past ?? []), tiles].slice(-MAX_CANVAS_HISTORY),
+    future: [],
+  };
 }
 
 export function createInitialCodeModeState(): CodeModeStateShape {
@@ -519,15 +542,14 @@ export const useCodeModeStore = create<CodeModeState>()(
     const tileId = `tile-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     set((state) => {
       const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
-      const history = workspace?.canvasHistory;
-      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
+      if (!workspace) return state;
       return {
         workspaces: state.workspaces.map((w) =>
           w.workspace_id === workspaceId
             ? {
                 ...w,
                 canvasTiles: [...(w.canvasTiles ?? []), { ...tile, tileId }],
-                canvasHistory: { past, future: [] },
+                canvasHistory: pushCanvasHistory(w.canvasHistory, w.canvasTiles ?? []),
               }
             : w,
         ),
@@ -536,29 +558,62 @@ export const useCodeModeStore = create<CodeModeState>()(
     return tileId;
   },
 
-  removeCanvasTile: (workspaceId, tileId) =>
+  removeCanvasTile: (workspaceId, tileId, options) =>
     set((state) => {
       const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
-      const history = workspace?.canvasHistory;
-      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
+      if (!workspace || !(workspace.canvasTiles ?? []).some((tile) => tile.tileId === tileId)) {
+        return state;
+      }
       return {
         workspaces: state.workspaces.map((w) =>
           w.workspace_id === workspaceId
             ? {
                 ...w,
                 canvasTiles: (w.canvasTiles ?? []).filter((t) => t.tileId !== tileId),
-                canvasHistory: { past, future: [] },
+                canvasSelectedIds: (w.canvasSelectedIds ?? []).filter((id) => id !== tileId),
+                canvasFocusTileId: w.canvasFocusTileId === tileId ? null : w.canvasFocusTileId,
+                canvasHistory:
+                  options?.recordHistory === false
+                    ? w.canvasHistory
+                    : pushCanvasHistory(w.canvasHistory, w.canvasTiles ?? []),
               }
             : w,
         ),
       };
     }),
 
-  updateCanvasTile: (workspaceId, tileId, updates) =>
+  removeCanvasTiles: (workspaceId, tileIds) =>
+    set((state) => {
+      const ids = new Set(tileIds);
+      if (ids.size === 0) return state;
+      const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
+      if (!workspace || !(workspace.canvasTiles ?? []).some((tile) => ids.has(tile.tileId))) {
+        return state;
+      }
+      return {
+        workspaces: state.workspaces.map((w) =>
+          w.workspace_id === workspaceId
+            ? {
+                ...w,
+                canvasTiles: (w.canvasTiles ?? []).filter((tile) => !ids.has(tile.tileId)),
+                canvasSelectedIds: (w.canvasSelectedIds ?? []).filter((id) => !ids.has(id)),
+                canvasFocusTileId:
+                  w.canvasFocusTileId && ids.has(w.canvasFocusTileId)
+                    ? null
+                    : w.canvasFocusTileId,
+                canvasHistory: pushCanvasHistory(w.canvasHistory, w.canvasTiles ?? []),
+              }
+            : w,
+        ),
+      };
+    }),
+
+  updateCanvasTile: (workspaceId, tileId, updates, options) =>
     set((state) => {
       const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
-      const history = workspace?.canvasHistory;
-      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
+      if (!workspace || !(workspace.canvasTiles ?? []).some((tile) => tile.tileId === tileId)) {
+        return state;
+      }
       return {
         workspaces: state.workspaces.map((w) =>
           w.workspace_id === workspaceId
@@ -567,12 +622,27 @@ export const useCodeModeStore = create<CodeModeState>()(
                 canvasTiles: (w.canvasTiles ?? []).map((t) =>
                   t.tileId === tileId ? { ...t, ...updates } : t,
                 ),
-                canvasHistory: { past, future: [] },
+                canvasHistory:
+                  options?.recordHistory === false
+                    ? w.canvasHistory
+                    : pushCanvasHistory(w.canvasHistory, w.canvasTiles ?? []),
               }
             : w,
         ),
       };
     }),
+
+  snapshotCanvas: (workspaceId) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId
+          ? {
+              ...w,
+              canvasHistory: pushCanvasHistory(w.canvasHistory, w.canvasTiles ?? []),
+            }
+          : w,
+      ),
+    })),
 
   setCanvasViewport: (workspaceId, viewport) =>
     set((state) => ({
@@ -596,8 +666,6 @@ export const useCodeModeStore = create<CodeModeState>()(
       const gap = 24;
       const tileW = 480;
       const tileH = 360;
-      const history = workspace?.canvasHistory;
-      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
       return {
         workspaces: state.workspaces.map((w) =>
           w.workspace_id === workspaceId
@@ -611,7 +679,7 @@ export const useCodeModeStore = create<CodeModeState>()(
                   height: tileH,
                   zIndex: i + 1,
                 })),
-                canvasHistory: { past, future: [] },
+                canvasHistory: pushCanvasHistory(w.canvasHistory, w.canvasTiles ?? []),
               }
             : w,
         ),
@@ -621,12 +689,18 @@ export const useCodeModeStore = create<CodeModeState>()(
   importCanvasState: (workspaceId, tiles, viewport) =>
     set((state) => {
       const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
-      const history = workspace?.canvasHistory;
-      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
+      if (!workspace) return state;
       return {
         workspaces: state.workspaces.map((w) =>
           w.workspace_id === workspaceId
-            ? { ...w, canvasTiles: tiles, canvasViewport: viewport ?? w.canvasViewport, canvasHistory: { past, future: [] } }
+            ? {
+                ...w,
+                canvasTiles: tiles,
+                canvasViewport: viewport ?? w.canvasViewport,
+                canvasSelectedIds: [],
+                canvasFocusTileId: null,
+                canvasHistory: pushCanvasHistory(w.canvasHistory, w.canvasTiles ?? []),
+              }
             : w,
         ),
       };
@@ -640,10 +714,20 @@ export const useCodeModeStore = create<CodeModeState>()(
       const previous = history.past[history.past.length - 1];
       const newPast = history.past.slice(0, -1);
       const newFuture = [workspace?.canvasTiles ?? [], ...history.future];
+      const previousIds = new Set(previous.map((tile) => tile.tileId));
       return {
         workspaces: state.workspaces.map((w) =>
           w.workspace_id === workspaceId
-            ? { ...w, canvasTiles: previous, canvasHistory: { past: newPast, future: newFuture } }
+            ? {
+                ...w,
+                canvasTiles: previous,
+                canvasSelectedIds: (w.canvasSelectedIds ?? []).filter((id) => previousIds.has(id)),
+                canvasFocusTileId:
+                  w.canvasFocusTileId && previousIds.has(w.canvasFocusTileId)
+                    ? w.canvasFocusTileId
+                    : null,
+                canvasHistory: { past: newPast, future: newFuture },
+              }
             : w,
         ),
       };
@@ -657,10 +741,20 @@ export const useCodeModeStore = create<CodeModeState>()(
       const next = history.future[0];
       const newFuture = history.future.slice(1);
       const newPast = [...history.past, workspace?.canvasTiles ?? []];
+      const nextIds = new Set(next.map((tile) => tile.tileId));
       return {
         workspaces: state.workspaces.map((w) =>
           w.workspace_id === workspaceId
-            ? { ...w, canvasTiles: next, canvasHistory: { past: newPast, future: newFuture } }
+            ? {
+                ...w,
+                canvasTiles: next,
+                canvasSelectedIds: (w.canvasSelectedIds ?? []).filter((id) => nextIds.has(id)),
+                canvasFocusTileId:
+                  w.canvasFocusTileId && nextIds.has(w.canvasFocusTileId)
+                    ? w.canvasFocusTileId
+                    : null,
+                canvasHistory: { past: newPast, future: newFuture },
+              }
             : w,
         ),
       };

@@ -6,18 +6,47 @@ struct Dimensions { rows: u32, output_width: u32, input_width: u32, activate_inp
 @group(0) @binding(2) var<storage, read_write> output_values: array<f32>;
 @group(0) @binding(3) var<uniform> dimensions: Dimensions;
 
+const TILE: u32 = 8u;
+const INNER_TILE: u32 = 32u;
+var<workgroup> input_tile: array<f32, 256>;
+var<workgroup> weight_tile: array<f32, 256>;
+
 @compute @workgroup_size(8, 8, 1)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
-  let column = id.x;
-  let row = id.y;
-  if (row >= dimensions.rows || column >= dimensions.output_width) { return; }
+fn main(
+  @builtin(workgroup_id) workgroup: vec3<u32>,
+  @builtin(local_invocation_id) local: vec3<u32>,
+) {
+  let row = workgroup.y * TILE + local.y;
+  let column = workgroup.x * TILE + local.x;
+  let linear_lane = local.y * TILE + local.x;
   var sum = 0.0;
-  for (var inner = 0u; inner < dimensions.input_width; inner += 1u) {
-    var value = input_values[row * dimensions.input_width + inner];
-    if (dimensions.activate_input != 0u) { value = value / (1.0 + exp(-value)); }
-    sum += value * weights[column * dimensions.input_width + inner];
+  for (var inner_base = 0u; inner_base < dimensions.input_width; inner_base += INNER_TILE) {
+    for (var tile_index = linear_lane; tile_index < TILE * INNER_TILE; tile_index += 64u) {
+      let tile_row = tile_index / INNER_TILE;
+      let inner_offset = tile_index % INNER_TILE;
+      let inner = inner_base + inner_offset;
+      let input_row = workgroup.y * TILE + tile_row;
+      var value = select(0.0, input_values[input_row * dimensions.input_width + inner], input_row < dimensions.rows && inner < dimensions.input_width);
+      if (dimensions.activate_input != 0u && input_row < dimensions.rows && inner < dimensions.input_width) {
+        value = value / (1.0 + exp(-value));
+      }
+      input_tile[tile_index] = value;
+      let weight_row = workgroup.x * TILE + tile_row;
+      if (weight_row < dimensions.output_width && inner < dimensions.input_width) {
+        weight_tile[tile_index] = weights[weight_row * dimensions.input_width + inner];
+      } else {
+        weight_tile[tile_index] = 0.0;
+      }
+    }
+    workgroupBarrier();
+    for (var inner_offset = 0u; inner_offset < INNER_TILE; inner_offset += 1u) {
+      sum += input_tile[local.y * INNER_TILE + inner_offset] * weight_tile[local.x * INNER_TILE + inner_offset];
+    }
+    workgroupBarrier();
   }
-  output_values[row * dimensions.output_width + column] = sum;
+  if (row < dimensions.rows && column < dimensions.output_width) {
+    output_values[row * dimensions.output_width + column] = sum;
+  }
 }
 `;
 

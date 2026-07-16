@@ -19,6 +19,7 @@ import path from "path"
 import os from "os"
 import { writeFile, unlink } from "fs/promises"
 import { Log } from "@/shared/util/log"
+import { NetworkProxy, type NetworkProxyHandle } from "@/runtime/integrations/shell/network-proxy"
 
 const log = Log.create({ service: "shell-sandbox" })
 
@@ -31,6 +32,14 @@ export interface SandboxPolicy {
   allowWritePaths: string[]
   /** Allow outbound network. Default: false — deny unless explicitly opted in. */
   allowNetwork: boolean
+  /**
+   * When set (and allowNetwork is true), network is allowed ONLY to these
+   * hostnames (suffix-matched, e.g. "npmjs.org" also matches
+   * "registry.npmjs.org"), routed through a local allowlisting proxy instead
+   * of a wholesale network allow. Undefined/empty means: if allowNetwork is
+   * true, allow everything (unchanged prior behavior).
+   */
+  allowedDomains?: string[]
 }
 
 export type SandboxDriver = "bwrap" | "sandbox-exec" | "none"
@@ -117,7 +126,13 @@ export namespace Sandbox {
     })
   }
 
-  function bwrapArgs(command: string, shell: string, cwd: string, policy: SandboxPolicy): WrappedCommand {
+  function bwrapArgs(
+    command: string,
+    shell: string,
+    cwd: string,
+    policy: SandboxPolicy,
+    proxyHandle?: NetworkProxyHandle,
+  ): WrappedCommand {
     const args: string[] = []
 
     // ── Filesystem binds ──────────────────────────────────
@@ -158,13 +173,29 @@ export namespace Sandbox {
     // ── Process isolation ─────────────────────────────────
     args.push("--die-with-parent")
     // Don't unshare PID — child tool calls like `git` need to see the parent shell
-    // Don't unshare net by default (agents need npm/pip/etc.)
+
+    // ── Network ─────────────────────────────────────────────
+    // Full block, or domain-allowlisted (proxy-only): both fully isolate the
+    // network namespace. `--unshare-net` gives bwrap its own private loopback,
+    // so the only way out is the bind-mounted proxy socket bridged by socat
+    // below. Only a bare `allowNetwork: true` with no domain list skips this
+    // and leaves networking untouched (host's namespace, unrestricted).
+    let finalCommand = command
     if (!policy.allowNetwork) {
       args.push("--unshare-net")
+    } else if (proxyHandle?.mode === "unix") {
+      args.push("--unshare-net")
+      args.push("--bind-try", proxyHandle.socketPath!, proxyHandle.socketPath!)
+      finalCommand =
+        `socat TCP-LISTEN:${NetworkProxy.LINUX_BRIDGE_PORT},bind=127.0.0.1,reuseaddr,fork ` +
+        `UNIX-CONNECT:${proxyHandle.socketPath} >/dev/null 2>&1 & disown; ` +
+        `export HTTP_PROXY=http://127.0.0.1:${NetworkProxy.LINUX_BRIDGE_PORT} ` +
+        `HTTPS_PROXY=http://127.0.0.1:${NetworkProxy.LINUX_BRIDGE_PORT}; ` +
+        command
     }
 
     // ── The actual command ────────────────────────────────
-    args.push("--", shell, "-c", command)
+    args.push("--", shell, "-c", finalCommand)
 
     return { bin: "bwrap", args }
   }
@@ -173,14 +204,19 @@ export namespace Sandbox {
   // macOS: sandbox-exec + Seatbelt profile
   // ─────────────────────────────────────────────────────────
 
-  function buildSeatbeltProfile(writePaths: string[], allowNetwork: boolean): string {
+  function buildSeatbeltProfile(writePaths: string[], policy: SandboxPolicy, proxyHandle?: NetworkProxyHandle): string {
     const writeRules = writePaths
       .map((p) => `  (subpath "${p.replace(/"/g, '\\"')}")`)
       .join("\n")
 
-    const networkRule = allowNetwork
-      ? `(allow network*)`
-      : `; network blocked`
+    // Seatbelt doesn't isolate the network namespace, so a domain-allowlisted
+    // policy is enforced by only allowing outbound to the local proxy's port
+    // — direct connections everywhere else fall through to `(deny default)`.
+    const networkRule = !policy.allowNetwork
+      ? `; network blocked`
+      : proxyHandle?.mode === "tcp"
+        ? `(allow network-outbound (remote ip "localhost:${proxyHandle.port}"))`
+        : `(allow network*)`
 
     return `(version 1)
 (deny default)
@@ -223,11 +259,16 @@ ${networkRule}
   // Profile files are keyed by sessionID so concurrent sessions don't collide
   const profilePaths = new Map<string, string>()
 
-  export async function writeSeatbeltProfile(sessionID: string, policy: SandboxPolicy, cwd: string): Promise<string> {
+  export async function writeSeatbeltProfile(
+    sessionID: string,
+    policy: SandboxPolicy,
+    cwd: string,
+    proxyHandle?: NetworkProxyHandle,
+  ): Promise<string> {
     const existing = profilePaths.get(sessionID)
     if (existing) return existing
 
-    const profile = buildSeatbeltProfile(writeAllowlist(cwd, policy), policy.allowNetwork)
+    const profile = buildSeatbeltProfile(writeAllowlist(cwd, policy), policy, proxyHandle)
     const profilePath = path.join(os.tmpdir(), `gizzi-sandbox-${sessionID}.sb`)
     await writeFile(profilePath, profile, "utf8")
     profilePaths.set(sessionID, profilePath)
@@ -237,9 +278,11 @@ ${networkRule}
 
   export async function cleanupProfile(sessionID: string): Promise<void> {
     const p = profilePaths.get(sessionID)
-    if (!p) return
-    profilePaths.delete(sessionID)
-    await unlink(p).catch(() => {})
+    if (p) {
+      profilePaths.delete(sessionID)
+      await unlink(p).catch(() => {})
+    }
+    await NetworkProxy.stop(sessionID)
   }
 
   async function sandboxExecArgs(
@@ -248,11 +291,16 @@ ${networkRule}
     cwd: string,
     sessionID: string,
     policy: SandboxPolicy,
+    proxyHandle?: NetworkProxyHandle,
   ): Promise<WrappedCommand> {
-    const profilePath = await writeSeatbeltProfile(sessionID, policy, cwd)
+    const profilePath = await writeSeatbeltProfile(sessionID, policy, cwd, proxyHandle)
+    const finalCommand =
+      proxyHandle?.mode === "tcp"
+        ? `export HTTP_PROXY=http://127.0.0.1:${proxyHandle.port} HTTPS_PROXY=http://127.0.0.1:${proxyHandle.port}; ${command}`
+        : command
     return {
       bin: "sandbox-exec",
-      args: ["-f", profilePath, shell, "-c", command],
+      args: ["-f", profilePath, shell, "-c", finalCommand],
     }
   }
 
@@ -276,11 +324,23 @@ ${networkRule}
 
     log.info("wrapping command", { driver, sessionID: opts.sessionID, cwd: opts.cwd })
 
+    let proxyHandle: NetworkProxyHandle | undefined
+    if (opts.policy.allowNetwork && opts.policy.allowedDomains?.length) {
+      if (driver === "bwrap" && !NetworkProxy.hasSocat()) {
+        throw new Error(
+          "Domain-allowlisted network access requires `socat` on Linux (bridges the sandbox's " +
+            "isolated network namespace to the allowlisting proxy). Install it (e.g. `apt install socat`), " +
+            "or drop allowedDomains to fall back to a full network block/allow.",
+        )
+      }
+      proxyHandle = await NetworkProxy.start(opts.sessionID, opts.policy.allowedDomains)
+    }
+
     if (driver === "bwrap") {
-      return bwrapArgs(opts.command, opts.shell, opts.cwd, opts.policy)
+      return bwrapArgs(opts.command, opts.shell, opts.cwd, opts.policy, proxyHandle)
     }
 
     // sandbox-exec (macOS) — async because it writes a profile file
-    return sandboxExecArgs(opts.command, opts.shell, opts.cwd, opts.sessionID, opts.policy)
+    return sandboxExecArgs(opts.command, opts.shell, opts.cwd, opts.sessionID, opts.policy, proxyHandle)
   }
 }

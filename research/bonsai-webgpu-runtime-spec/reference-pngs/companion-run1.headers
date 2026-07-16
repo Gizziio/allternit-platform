@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+date: Thu, 16 Jul 2026 03:21:58 GMT
+server: uvicorn
+x-wall-seconds: 153.665
+x-peak-memory-mb: 2528.6
+content-length: 203721
+content-type: image/png
+

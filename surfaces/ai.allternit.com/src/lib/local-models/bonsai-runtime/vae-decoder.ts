@@ -1,6 +1,6 @@
 import { GpuBufferArena } from "./gpu-buffer-arena";
 import type { LoadedDenseTensor } from "./packed-affine-loader";
-import { VaeKernels } from "./vae-kernels";
+import { dispatch1D, VaeKernels } from "./vae-kernels";
 import { BonsaiVaeReader } from "./vae-loader";
 import { maximumBandRows, VaeTiledFeatureOps, type VaeTiledFeatureMap } from "./vae-tiled-feature-map";
 
@@ -28,7 +28,7 @@ export class BonsaiVaeDecoder {
           current = await this.replace(current, this.resnet(current, `decoder.up_blocks.${block}.resnets.${layer}`,
             channels[block], signal));
         }
-        if (block === 1 && (width > 512 || height > 512)) {
+        if (block === 1 && (width >= 512 || height >= 512)) {
           const nextOutputRows = maximumBandRows(current.width * 2, channels[block]);
           let tiled = await this.tiled.fromBuffer(current.buffer, current.height, current.width, current.channels,
             Math.max(1, Math.floor(nextOutputRows / 2)));
@@ -104,16 +104,15 @@ export class BonsaiVaeDecoder {
       const conv1Shape = arena.uniform([input.height, input.width, input.channels, outputChannels, 3, 1, 0, input.height]);
       const conv2Shape = arena.uniform([input.height, input.width, outputChannels, outputChannels, 3, 1, 0, input.height]);
       const encoder = this.device.createCommandEncoder({ label: `bonsai-owned-${prefix}` });
-      this.kernels.encodeNormalization("group_norm", encoder, [input.buffer, up(norm1w), up(norm1b), norm1, norm1Shape], 32);
+      this.kernels.encodeNormalization("group_norm", encoder, [input.buffer, up(norm1w), up(norm1b), norm1, norm1Shape], [32, 1]);
       this.kernels.encodeConvolution(encoder, [norm1, up(conv1w), up(conv1b), conv1, conv1Shape], input.width, input.height, outputChannels);
-      this.kernels.encodeNormalization("group_norm", encoder, [conv1, up(norm2w), up(norm2b), norm2, norm2Shape], 32);
+      this.kernels.encodeNormalization("group_norm", encoder, [conv1, up(norm2w), up(norm2b), norm2, norm2Shape], [32, 1]);
       this.kernels.encodeConvolution(encoder, [norm2, up(conv2w), up(conv2b), conv2, conv2Shape], input.width, input.height, outputChannels);
       if (shortcut) {
         const shape = arena.uniform([input.height, input.width, input.channels, outputChannels, 1, 0, 0, input.height]);
         this.kernels.encodeConvolution(encoder, [input.buffer, up(shortcutW!), up(shortcutB!), residual, shape], input.width, input.height, outputChannels);
       }
-      this.kernels.encodeNormalization("add", encoder, [conv2, residual, conv2, output, norm2Shape],
-        Math.ceil(elements * outputChannels / 256));
+      this.kernels.encodeNormalization("add", encoder, [conv2, residual, conv2, output, norm2Shape], dispatch1D(elements * outputChannels));
       this.device.queue.submit([encoder.finish()]); await this.device.queue.onSubmittedWorkDone();
       return { buffer: output, height: input.height, width: input.width, channels: outputChannels, arena };
     } catch (error) { arena.destroy(); throw error; }
@@ -132,13 +131,12 @@ export class BonsaiVaeDecoder {
       const convShape = arena.uniform([input.height, input.width, channels, channels, 1, 0, 0, input.height]);
       const attentionShape = arena.uniform([sequence, channels, 0, 0]);
       const encoder = this.device.createCommandEncoder({ label: "bonsai-owned-vae-mid-attention" });
-      this.kernels.encodeNormalization("group_norm", encoder, [input.buffer, up(nw), up(nb), norm, normShape], 32);
+      this.kernels.encodeNormalization("group_norm", encoder, [input.buffer, up(nw), up(nb), norm, normShape], [32, 1]);
       for (const [weight, bias, destination] of [[qw, qb, q], [kw, kb, k], [vw, vb, v]] as const)
         this.kernels.encodeConvolution(encoder, [norm, up(weight), up(bias), destination, convShape], input.width, input.height, channels);
       this.kernels.encodeAttention(encoder, [q, k, v, attended, attentionShape], sequence);
       this.kernels.encodeConvolution(encoder, [attended, up(ow), up(ob), projected, convShape], input.width, input.height, channels);
-      this.kernels.encodeNormalization("add", encoder, [input.buffer, projected, projected, output, normShape],
-        Math.ceil(sequence * channels / 256));
+      this.kernels.encodeNormalization("add", encoder, [input.buffer, projected, projected, output, normShape], dispatch1D(sequence * channels));
       this.device.queue.submit([encoder.finish()]); await this.device.queue.onSubmittedWorkDone();
       return { buffer: output, height: input.height, width: input.width, channels, arena };
     } catch (error) { arena.destroy(); throw error; }
@@ -167,7 +165,7 @@ export class BonsaiVaeDecoder {
       const normShape = arena.uniform([input.height, input.width, input.channels, 32, floatBits(1e-6), 1]);
       const convShape = arena.uniform([input.height, input.width, input.channels, 3, 3, 1, 0, input.height]);
       const encoder = this.device.createCommandEncoder({ label: "bonsai-owned-vae-output" });
-      this.kernels.encodeNormalization("group_norm", encoder, [input.buffer, arena.upload(nw.values), arena.upload(nb.values), normalized, normShape], 32);
+      this.kernels.encodeNormalization("group_norm", encoder, [input.buffer, arena.upload(nw.values), arena.upload(nb.values), normalized, normShape], [32, 1]);
       this.kernels.encodeConvolution(encoder, [normalized, arena.upload(weight.values), arena.upload(bias.values), output, convShape], input.width, input.height, 3);
       this.device.queue.submit([encoder.finish()]); await this.device.queue.onSubmittedWorkDone();
       return { pixels: output, width: input.width, height: input.height, arena };

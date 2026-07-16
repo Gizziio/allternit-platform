@@ -1,49 +1,42 @@
 import React, { useRef, useEffect, useMemo } from 'react';
-import { DrawerHandle } from './DrawerHandle';
 import { DrawerTabs } from './DrawerTabs';
-import { KanbanBoard } from '../KanbanBoard';
 import { UnifiedTerminal } from '../../../components/workspace/UnifiedTerminal';
-import { LogsView } from '../LogsView';
-import { RunInspector } from '../RunInspector';
 import { ArtifactCenter } from '../ArtifactCenter';
-import { ProblemsView } from '../ProblemsView';
-import { OrchestratorCenter } from '../OrchestratorCenter';
-import { SchedulerView } from '../SchedulerView';
-import { ContextView } from './ContextView';
-import { ChangeSetReview } from '../../../components/changeset-review/ChangeSetReview';
+import { CodeDiffPanel } from '../CodeDiffPanel';
+import { MissionControlPanel } from './MissionControlPanel';
 import { useDrawerStore } from '../../../drawers/drawer.store';
-import { SwarmMonitor } from '../../dag/SwarmMonitor';
-import { PolicyManager } from '../../dag/PolicyManager';
-import { SecurityDashboard } from '../../dag/SecurityDashboard';
-import { KanbanDAG } from '../KanbanDAG';
-import { RunTraceView } from '../runtime/RunTraceView';
-import { AutomationHub } from './AutomationHub';
-import { WorkspaceBoardView } from './WorkspaceBoardView';
-import { GanttChartView } from './GanttChartView';
-import { WorkloadPanel } from './WorkloadPanel';
-import { PeerCollaborationCenter } from '../PeerCollaborationCenter';
-import { AgentRuntimeDashboard } from '../../runtime/AgentRuntimeDashboard';
-import { ToastProvider } from '@/components/ui/toast-provider';
+import { useCodeSessionStore } from '../CodeSessionStore';
+import { useCodeModeStore } from '../CodeModeStore';
 
 export function DrawerRoot() {
   const consoleDrawer = useDrawerStore((state) => state.drawers.console);
-  const openDrawer = useDrawerStore((state) => state.openDrawer);
   const closeDrawer = useDrawerStore((state) => state.closeDrawer);
   const setConsoleHeight = useDrawerStore((state) => state.setConsoleHeight);
   const setConsoleTab = useDrawerStore((state) => state.setConsoleTab);
+  const activeCodeSessionId = useCodeSessionStore((state) => state.activeSessionId);
+  const activeCodeSession = useCodeSessionStore((state) =>
+    state.sessions.find((session) => session.id === state.activeSessionId)
+  );
+  const workspaces = useCodeModeStore((state) => state.workspaces);
+  const activeWorkspaceId = useCodeModeStore((state) => state.activeWorkspaceId);
+  const activeWorkspace = useMemo(
+    () => workspaces.find((workspace) => workspace.workspace_id === activeWorkspaceId),
+    [workspaces, activeWorkspaceId]
+  );
   const isDragging = useRef(false);
   const startY = useRef(0);
   const startHeight = useRef(0);
+  const currentHeight = useRef(consoleDrawer.height);
 
-  // Mock receipts data for demonstration
-  const receipts = useMemo(() => [], []);
   const { open: isOpen, height, activeTab } = consoleDrawer;
+  currentHeight.current = height;
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging.current) return;
       const delta = startY.current - e.clientY;
-      const newHeight = Math.min(Math.max(startHeight.current + delta, 100), window.innerHeight - 40);
+      const newHeight = Math.min(Math.max(startHeight.current + delta, 220), window.innerHeight - 72);
+      currentHeight.current = newHeight;
       setConsoleHeight(newHeight);
     };
 
@@ -52,16 +45,16 @@ export function DrawerRoot() {
         isDragging.current = false;
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
-        if (height < 150) closeDrawer('console');
+        if (currentHeight.current < 230) closeDrawer('console');
       }
     };
 
-    // Touch event handlers for mobile
     const handleTouchMove = (e: TouchEvent) => {
       if (!isDragging.current) return;
       const touch = e.touches[0];
       const delta = startY.current - touch.clientY;
-      const newHeight = Math.min(Math.max(startHeight.current + delta, 100), window.innerHeight - 40);
+      const newHeight = Math.min(Math.max(startHeight.current + delta, 220), window.innerHeight - 72);
+      currentHeight.current = newHeight;
       setConsoleHeight(newHeight);
     };
 
@@ -70,7 +63,7 @@ export function DrawerRoot() {
         isDragging.current = false;
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
-        if (height < 150) closeDrawer('console');
+        if (currentHeight.current < 230) closeDrawer('console');
       }
     };
 
@@ -84,7 +77,7 @@ export function DrawerRoot() {
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [closeDrawer, height, setConsoleHeight]);
+  }, [closeDrawer, setConsoleHeight]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
@@ -102,77 +95,84 @@ export function DrawerRoot() {
     document.body.style.userSelect = 'none';
   };
 
+  const handleTabChange = (tab: typeof activeTab) => {
+    setConsoleTab(tab);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
-      case 'terminal': return <UnifiedTerminal sessionId="allternit-session" />;
-      case 'queue': return <KanbanBoard />;
-      case 'changes': return <ChangeSetReview changeSetId="cs-legacy-patchgate" />;
-      case 'logs': return <LogsView />;
-      case 'executions': return <RunInspector />;
-      case 'artifacts': return <ArtifactCenter />;
-      case 'problems': return <ProblemsView />;
-      case 'agents': return <OrchestratorCenter />;
-      case 'automation': return <AutomationHub />;
-      case 'scheduler': return <SchedulerView />;
-      case 'context': return <ContextView />;
-      case 'receipts': return <div style={{ padding: 20 }}>Receipts View (Coming Soon)</div>;
-      case 'swarm': return <SwarmMonitor />;
-      case 'policy': return <PolicyManager />;
-      case 'security': return <SecurityDashboard />;
-      case 'dag-graph': return <KanbanDAG />;
-      case 'trace': return <RunTraceView />;
-      case 'board': return <WorkspaceBoardView />;
-      case 'gantt': return <GanttChartView />;
-      case 'workload': return <WorkloadPanel />;
-      case 'inbox': return <PeerCollaborationCenter />;
-      case 'runtime': return <ToastProvider><AgentRuntimeDashboard /></ToastProvider>;
-      default: return null;
+      case 'mission-control':
+        return (
+          <MissionControlPanel
+            sessionId={activeCodeSessionId ?? undefined}
+            sessionName={activeCodeSession?.name}
+            workspace={activeWorkspace}
+            onOpenTab={setConsoleTab}
+          />
+        );
+      case 'terminal':
+        return (
+          <UnifiedTerminal
+            sessionId={activeCodeSessionId ?? 'allternit-session'}
+            workingDir={activeWorkspace?.root_path}
+            terminalContext={{
+              repoName: activeWorkspace?.display_name,
+              branch: activeWorkspace?.repo_status?.branch,
+              shortSha: activeWorkspace?.repo_status?.last_commit?.slice(0, 7),
+            }}
+          />
+        );
+      case 'changes':
+        return <CodeDiffPanel workingDir={activeWorkspace?.root_path} />;
+      case 'artifacts':
+        return <ArtifactCenter />;
+      default:
+        return null;
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div 
+    <div
+      id="allternit-console-drawer"
+      data-testid="console-drawer"
+      data-state="open"
       style={{
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
         zIndex: 900,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
         pointerEvents: 'none',
       }}
     >
-      <DrawerHandle 
-        isOpen={isOpen} 
-        onToggle={() => (isOpen ? closeDrawer('console') : openDrawer('console'))} 
-        onMouseDown={handleMouseDown} 
-        onTouchStart={handleTouchStart}
-      />
-
-      <div 
+      <div
         style={{
-          height: isOpen ? height : 0,
+          height,
           width: '100%',
-          background: 'var(--bg-primary, #111827)',
-          borderTop: '1px solid var(--border-subtle, #374151)',
+          background: 'var(--surface-canvas)',
+          color: 'var(--text-primary)',
+          borderTop: '1px solid var(--border-subtle)',
           transition: isDragging.current ? 'none' : 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           pointerEvents: 'auto',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 -20px 40px var(--surface-hover)',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
-        {isOpen && (
-          <>
-            <DrawerTabs activeTab={activeTab} onTabChange={setConsoleTab} />
-            <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-              {renderContent()}
-            </div>
-          </>
-        )}
+        <DrawerTabs
+          activeTab={activeTab}
+          isOpen
+          onTabChange={handleTabChange}
+          onToggle={() => closeDrawer('console')}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+        />
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+          {renderContent()}
+        </div>
       </div>
     </div>
   );

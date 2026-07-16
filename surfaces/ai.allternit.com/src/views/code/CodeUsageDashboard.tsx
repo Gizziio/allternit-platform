@@ -321,7 +321,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
               label="Peak hour"
               value={metrics.peakHour === null ? "—" : `${metrics.peakHour % 12 || 12} ${metrics.peakHour >= 12 ? "PM" : "AM"}`}
             />
-            <MetricCard label="Favorite model" value={metrics.favoriteModel ?? "—"} />
+            <MetricCard label="Favorite model" value={metrics.favoriteModel ?? "—"} title={metrics.favoriteModel ?? undefined} />
           </div>
 
           {/* Heatmap */}
@@ -470,7 +470,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
     <div
       style={{
@@ -481,6 +481,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
+        minWidth: 0,
       }}
     >
       <div
@@ -496,6 +497,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div
+        title={title}
         style={{
           marginTop: 4,
           fontSize: "var(--text-lg, 16px)",
@@ -503,6 +505,9 @@ function MetricCard({ label, value }: { label: string; value: string }) {
           color: "var(--ui-text-primary, #2A1F16)",
           fontVariantNumeric: "tabular-nums",
           letterSpacing: "-0.01em",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
       >
         {value}

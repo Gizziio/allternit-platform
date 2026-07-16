@@ -188,7 +188,7 @@ export function SSHConnectionsList({
             {/* Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h4 className="font-medium text-white truncate m-0">{connection.name}</h4>
+                <h4 className="font-medium text-[var(--ui-text-primary)] truncate m-0">{connection.name}</h4>
                 {getStatusIcon(connection.status)}
               </div>
               <p className="text-sm truncate m-0 text-[var(--ui-text-secondary)]">
@@ -315,20 +315,20 @@ export function SSHConnectionsList({
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-[var(--ui-text-secondary)]">Host:</span>
-                    <span className="ml-2 font-mono text-white">{connection.host}</span>
+                    <span className="ml-2 font-mono text-[var(--ui-text-primary)]">{connection.host}</span>
                   </div>
                   <div>
                     <span className="text-[var(--ui-text-secondary)]">Port:</span>
-                    <span className="ml-2 font-mono text-white">{connection.port}</span>
+                    <span className="ml-2 font-mono text-[var(--ui-text-primary)]">{connection.port}</span>
                   </div>
                   <div>
                     <span className="text-[var(--ui-text-secondary)]">Username:</span>
-                    <span className="ml-2 font-mono text-white">{connection.username}</span>
+                    <span className="ml-2 font-mono text-[var(--ui-text-primary)]">{connection.username}</span>
                   </div>
                   {connection.lastConnected && (
                     <div>
                       <span className="text-[var(--ui-text-secondary)]">Last connected:</span>
-                      <span className="ml-2 text-white">
+                      <span className="ml-2 text-[var(--ui-text-primary)]">
                         {new Date(connection.lastConnected).toLocaleString()}
                       </span>
                     </div>
@@ -345,13 +345,13 @@ export function SSHConnectionsList({
                       {connection.os && (
                         <div>
                           <span className="text-[var(--ui-text-secondary)]">OS:</span>
-                          <span className="ml-2 text-white">{connection.os}</span>
+                          <span className="ml-2 text-[var(--ui-text-primary)]">{connection.os}</span>
                         </div>
                       )}
                       {connection.architecture && (
                         <div>
                           <span className="text-[var(--ui-text-secondary)]">Architecture:</span>
-                          <span className="ml-2 text-white">{connection.architecture}</span>
+                          <span className="ml-2 text-[var(--ui-text-primary)]">{connection.architecture}</span>
                         </div>
                       )}
                       {connection.dockerInstalled !== undefined && (
@@ -448,7 +448,7 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
         <Terminal size={36} className="text-[var(--accent-primary)] relative" weight="duotone" />
       </div>
       
-      <h3 className="text-xl font-semibold text-white mb-3">No VPS Connections</h3>
+      <h3 className="text-xl font-semibold text-[var(--ui-text-primary)] mb-3">No VPS Connections</h3>
       <p className="text-sm mb-8 max-w-md mx-auto leading-relaxed text-[var(--ui-text-secondary)]">
         Connect to your remote servers to deploy Allternit agents on your own infrastructure. 
         Works with any VPS provider.
@@ -464,7 +464,7 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
 
       {/* Quick Start Card */}
       <div className="mt-10 p-5 rounded-xl text-left max-w-md mx-auto bg-[var(--surface-panel)] border border-solid border-[var(--ui-border-muted)]">
-        <h4 className="text-sm font-semibold mb-4 flex items-center gap-2 text-white">
+        <h4 className="text-sm font-semibold mb-4 flex items-center gap-2 text-[var(--ui-text-primary)]">
           <div className="size-6 rounded-lg flex items-center justify-center bg-[var(--status-info-bg)]">
             <Warning size={14} className="text-[var(--status-info)]" weight="fill" />
           </div>

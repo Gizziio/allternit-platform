@@ -139,7 +139,7 @@ describe('CodeCanvas', () => {
   });
 
   it('renders the launchpad shell with header, shared composer and branding', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     expect(await screen.findByTestId('code-canvas-shell')).toBeInTheDocument();
     expect(screen.getByTestId('code-launchpad-greeting')).toBeInTheDocument();
@@ -150,14 +150,14 @@ describe('CodeCanvas', () => {
   });
 
   it('renders the workspace bar above the composer', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     expect(await screen.findByTestId('code-workspace-bar')).toBeInTheDocument();
     expect(screen.getByTestId('code-workspace-bar-workspace')).toHaveTextContent('Allternit Platform');
   });
 
   it('shows the connected top deck with environment, workspace, branch, worktree and sync pills', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     expect(await screen.findByTestId('code-workspace-bar')).toBeInTheDocument();
     expect(screen.getByTestId('code-workspace-bar-environment')).toHaveTextContent('Local');
@@ -168,21 +168,19 @@ describe('CodeCanvas', () => {
   });
 
   it('updates the active session permission mode from the bottom status bar', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     const modeButton = await screen.findByTestId('code-bottom-status-mode');
-    expect(modeButton).toHaveTextContent('Plan first');
+    expect(modeButton).toHaveValue('PLAN');
 
-    fireEvent.click(modeButton);
-    const autoOption = screen.getByText('Auto');
-    fireEvent.click(autoOption);
+    fireEvent.change(modeButton, { target: { value: 'AUTO' } });
 
     expect(useCodeModeStore.getState().sessions.find((s) => s.session_id === 'sess_code_ui')?.mode).toBe('AUTO');
-    expect(modeButton).toHaveTextContent('Accept edits');
+    expect(modeButton).toHaveValue('AUTO');
   });
 
   it('toggles worktree isolation from the top deck', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     const worktreePill = await screen.findByTestId('code-workspace-bar-worktree');
     expect(worktreePill).toHaveTextContent('worktree');
@@ -202,14 +200,14 @@ describe('CodeCanvas', () => {
       ),
     });
 
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     expect(await screen.findByTestId('code-canvas-shell')).toBeInTheDocument();
     expect(screen.getByTestId('code-workspace-bar-workspace')).toHaveTextContent('Allternit Platform');
   });
 
   it('renders a clickable workspace picker in the workspace bar', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     const workspacePill = await screen.findByTestId('code-workspace-bar-workspace');
 
@@ -217,24 +215,32 @@ describe('CodeCanvas', () => {
     expect(workspacePill).not.toBeDisabled();
   });
 
-  it('renders the bottom status bar with mode selector and plus menu', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+  it('renders only the permission mode and Console in the bottom status bar', async () => {
+    renderWithDropzone(<CodeCanvas />);
 
-    expect(await screen.findByTestId('code-bottom-status-bar')).toBeInTheDocument();
+    const statusBar = await screen.findByTestId('code-bottom-status-bar');
     expect(screen.getByTestId('code-bottom-status-mode')).toBeInTheDocument();
-    expect(screen.getByTestId('code-bottom-status-plus')).toBeInTheDocument();
-    expect(screen.getByTestId('code-composer-metadata')).toBeInTheDocument();
+    const consoleTab = screen.getByTestId('code-bottom-status-console');
+    expect(consoleTab).toBeInTheDocument();
+    expect(consoleTab).toHaveStyle({ borderRadius: '999px' });
+    expect(screen.queryByTestId('code-bottom-status-plus')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('code-composer-metadata')).not.toBeInTheDocument();
+    expect(statusBar).not.toHaveTextContent('Claude Code');
+    expect(statusBar).not.toHaveTextContent('High');
+
+    fireEvent.click(consoleTab);
+    expect(openDrawer).toHaveBeenCalledWith('console');
   });
 
   it('renders usage stats on the landing page', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     expect(await screen.findByTestId('code-usage-dashboard')).toBeInTheDocument();
     expect(screen.queryByTestId('code-launchpad-actions')).not.toBeInTheDocument();
   });
 
   it('replaces closed usage stats with a control that restores them', async () => {
-    renderWithDropzone(<CodeCanvas isPreviewCollapsed={false} />);
+    renderWithDropzone(<CodeCanvas />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Close usage' }));
     expect(screen.queryByTestId('code-usage-dashboard')).not.toBeInTheDocument();

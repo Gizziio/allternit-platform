@@ -199,7 +199,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
   ];
 
   const learnItems: MenuItem[] = [
-    { id: 'api', label: 'API Console', onClick: () => openExternal('https://api.allternit.com') },
+    { id: 'api', label: 'API Console', onClick: () => openExternal('https://allternit-cloud-api.fly.dev') },
     { id: 'about', label: 'About Allternit', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('about'); } },
     { id: 'tutorials', label: 'Tutorials', onClick: () => openExternal('https://docs.allternit.com/tutorials') },
     { id: 'courses', label: 'Courses', onClick: () => openExternal('https://allternit.com/labs') },

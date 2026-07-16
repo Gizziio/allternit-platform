@@ -74,4 +74,83 @@ describe('CodeModeStore', () => {
 
     expect(new Set(isolationPaths).size).toBe(workspaceSessions.length);
   });
+
+  it('treats a drag as one undoable canvas interaction', () => {
+    const store = useCodeModeStore.getState();
+    const tileId = store.addCanvasTile('ws_allternit', {
+      type: 'notes',
+      x: 0,
+      y: 0,
+      width: 480,
+      height: 360,
+      zIndex: 1,
+    });
+
+    useCodeModeStore.getState().snapshotCanvas('ws_allternit');
+    useCodeModeStore
+      .getState()
+      .updateCanvasTile('ws_allternit', tileId, { x: 80, y: 40 }, { recordHistory: false });
+    useCodeModeStore
+      .getState()
+      .updateCanvasTile('ws_allternit', tileId, { x: 160, y: 80 }, { recordHistory: false });
+
+    useCodeModeStore.getState().undoCanvas('ws_allternit');
+    let tile = useCodeModeStore
+      .getState()
+      .workspaces.find((workspace) => workspace.workspace_id === 'ws_allternit')
+      ?.canvasTiles?.find((item) => item.tileId === tileId);
+    expect(tile).toMatchObject({ x: 0, y: 0 });
+
+    useCodeModeStore.getState().redoCanvas('ws_allternit');
+    tile = useCodeModeStore
+      .getState()
+      .workspaces.find((workspace) => workspace.workspace_id === 'ws_allternit')
+      ?.canvasTiles?.find((item) => item.tileId === tileId);
+    expect(tile).toMatchObject({ x: 160, y: 80 });
+  });
+
+  it('removes a canvas selection atomically and restores it with one undo', () => {
+    const firstId = useCodeModeStore.getState().addCanvasTile('ws_allternit', {
+      type: 'notes',
+      x: 0,
+      y: 0,
+      width: 480,
+      height: 360,
+      zIndex: 1,
+    });
+    const secondId = useCodeModeStore.getState().addCanvasTile('ws_allternit', {
+      type: 'diff',
+      x: 500,
+      y: 0,
+      width: 480,
+      height: 360,
+      zIndex: 2,
+    });
+
+    useCodeModeStore.getState().selectCanvasTiles('ws_allternit', [firstId, secondId]);
+    useCodeModeStore.getState().removeCanvasTiles('ws_allternit', [firstId, secondId]);
+
+    let workspace = useCodeModeStore
+      .getState()
+      .workspaces.find((item) => item.workspace_id === 'ws_allternit');
+    expect(workspace?.canvasTiles).toEqual([]);
+    expect(workspace?.canvasSelectedIds).toEqual([]);
+
+    useCodeModeStore.getState().undoCanvas('ws_allternit');
+    workspace = useCodeModeStore
+      .getState()
+      .workspaces.find((item) => item.workspace_id === 'ws_allternit');
+    expect(workspace?.canvasTiles?.map((tile) => tile.tileId)).toEqual([firstId, secondId]);
+  });
+
+  it('caps persisted canvas history', () => {
+    for (let index = 0; index < 60; index += 1) {
+      useCodeModeStore.getState().snapshotCanvas('ws_allternit');
+    }
+
+    const workspace = useCodeModeStore
+      .getState()
+      .workspaces.find((item) => item.workspace_id === 'ws_allternit');
+    expect(workspace?.canvasHistory?.past).toHaveLength(50);
+  });
 });

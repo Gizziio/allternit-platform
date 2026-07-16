@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { PaperPlaneRight, Stop } from '@phosphor-icons/react';
 
 interface CompactChatComposerProps {
-  onSend: (text: string) => void;
+  onSend: (text: string) => void | Promise<void>;
   isLoading?: boolean;
   onStop?: () => void;
   placeholder?: string;
@@ -17,22 +17,30 @@ export function CompactChatComposer({
   placeholder = 'Ask anything...',
 }: CompactChatComposerProps) {
   const [text, setText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     const trimmed = text.trim();
-    if (!trimmed || isLoading) return;
-    onSend(trimmed);
-    setText('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+    if (!trimmed || isLoading || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSend(trimmed);
+      setText('');
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
+    } catch {
+      textareaRef.current?.focus();
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [text, isLoading, onSend]);
+  }, [text, isLoading, isSubmitting, onSend]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      void handleSubmit();
     }
   };
 
@@ -77,7 +85,7 @@ export function CompactChatComposer({
           fontFamily: 'inherit',
         }}
       />
-      {isLoading ? (
+      {isLoading || isSubmitting ? (
         <button type="button"
           onClick={onStop}
           style={{
@@ -98,7 +106,7 @@ export function CompactChatComposer({
         </button>
       ) : (
         <button type="button"
-          onClick={handleSubmit}
+          onClick={() => void handleSubmit()}
           disabled={!text.trim()}
           style={{
             width: 32,

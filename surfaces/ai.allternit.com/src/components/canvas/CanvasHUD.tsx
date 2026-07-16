@@ -12,6 +12,7 @@ export function CanvasHUD({ tiles }: CanvasHUDProps) {
   const streamingBySession = useCodeSessionStore((s) => s.streamingBySession);
 
   const sessionTiles = tiles.filter((t) => t.type === 'session' && t.sessionId);
+  const terminalTiles = tiles.filter((t) => t.type === 'terminal');
   const streamingCount = sessionTiles.filter(
     (t) => t.sessionId && streamingBySession[t.sessionId]?.isStreaming,
   ).length;
@@ -41,13 +42,18 @@ export function CanvasHUD({ tiles }: CanvasHUDProps) {
           width: 7,
           height: 7,
           borderRadius: '50%',
-          background: streamingCount > 0 ? 'var(--accent-secondary)' : 'var(--text-muted)',
-          boxShadow: streamingCount > 0 ? 'var(--shadow-glow)' : 'none',
+          background: streamingCount > 0 ? 'var(--accent-secondary)' : terminalTiles.length > 0 ? 'var(--accent-cowork)' : 'var(--text-muted)',
+          boxShadow: streamingCount > 0 || terminalTiles.length > 0 ? 'var(--shadow-glow)' : 'none',
         }}
       />
       <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
         {tiles.length} TILE{tiles.length !== 1 ? 'S' : ''}
       </span>
+      {terminalTiles.length > 0 && (
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
+          {terminalTiles.length} TERMINAL{terminalTiles.length !== 1 ? 'S' : ''}
+        </span>
+      )}
       {sessionTiles.length > 0 && (
         <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
           {sessionTiles.length} SESSION{sessionTiles.length !== 1 ? 'S' : ''}

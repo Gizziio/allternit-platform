@@ -27,10 +27,16 @@ export function CodeTranscriptPane({ sessionId }: CodeTranscriptPaneProps): Reac
 
   const copyToClipboard = () => {
     if (!transcriptText) return;
-    void navigator.clipboard.writeText(transcriptText).then(() => {
+    const write = navigator.clipboard?.writeText?.(transcriptText);
+    if (write && typeof write.then === 'function') {
+      void write.then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      });
+    } else {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
-    });
+    }
   };
 
   if (!session) {

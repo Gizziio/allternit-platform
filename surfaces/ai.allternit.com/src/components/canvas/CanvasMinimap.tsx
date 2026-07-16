@@ -6,21 +6,16 @@ import type { CodeCanvasTile, CodeCanvasViewport } from '@/views/code/CodeModeSt
 interface CanvasMinimapProps {
   tiles: CodeCanvasTile[];
   viewport: CodeCanvasViewport;
+  canvasSize: { width: number; height: number };
   onViewportChange: (viewport: CodeCanvasViewport) => void;
 }
 
 const MINIMAP_SIZE = 160;
 
-export function CanvasMinimap({ tiles, viewport, onViewportChange }: CanvasMinimapProps) {
-  const [windowSize, setWindowSize] = React.useState({ w: window.innerWidth, h: window.innerHeight });
+export function CanvasMinimap({ tiles, viewport, canvasSize, onViewportChange }: CanvasMinimapProps) {
   const isDragging = useRef(false);
+  const didDrag = useRef(false);
   const dragStart = useRef({ x: 0, y: 0, vpX: 0, vpY: 0 });
-
-  React.useEffect(() => {
-    const onResize = () => setWindowSize({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
 
   // Compute bounding box of all tiles
   const bounds = React.useMemo(() => {
@@ -56,21 +51,22 @@ export function CanvasMinimap({ tiles, viewport, onViewportChange }: CanvasMinim
   // Viewport rect in minimap coords
   const vpX = offsetX + (-viewport.x / viewport.zoom - bounds.minX) * scale;
   const vpY = offsetY + (-viewport.y / viewport.zoom - bounds.minY) * scale;
-  const vpW = (windowSize.w / viewport.zoom) * scale;
-  const vpH = (windowSize.h / viewport.zoom) * scale;
+  const vpW = (canvasSize.width / viewport.zoom) * scale;
+  const vpH = (canvasSize.height / viewport.zoom) * scale;
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
     isDragging.current = true;
+    didDrag.current = false;
     dragStart.current = { x: e.clientX, y: e.clientY, vpX: viewport.x, vpY: viewport.y };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, [viewport.x, viewport.y]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging.current) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const dx = e.clientX - dragStart.current.x;
     const dy = e.clientY - dragStart.current.y;
+    if (Math.hypot(dx, dy) > 2) didDrag.current = true;
     // Convert minimap pixels to world pixels
     const worldDx = -dx / scale * viewport.zoom;
     const worldDy = -dy / scale * viewport.zoom;
@@ -86,7 +82,10 @@ export function CanvasMinimap({ tiles, viewport, onViewportChange }: CanvasMinim
   }, []);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging.current) return;
+    if (isDragging.current || didDrag.current) {
+      didDrag.current = false;
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
@@ -97,8 +96,8 @@ export function CanvasMinimap({ tiles, viewport, onViewportChange }: CanvasMinim
 
     // Center viewport on click
     onViewportChange({
-      x: -(worldX * viewport.zoom) + windowSize.w / 2,
-      y: -(worldY * viewport.zoom) + windowSize.h / 2,
+      x: -(worldX * viewport.zoom) + canvasSize.width / 2,
+      y: -(worldY * viewport.zoom) + canvasSize.height / 2,
       zoom: viewport.zoom,
     });
   };
@@ -128,7 +127,7 @@ export function CanvasMinimap({ tiles, viewport, onViewportChange }: CanvasMinim
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         style={{
           width: MINIMAP_SIZE,
           height: MINIMAP_SIZE,

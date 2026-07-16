@@ -9,7 +9,26 @@ interface ChangeSetReviewProps {
 
 export function ChangeSetReview({ changeSetId }: ChangeSetReviewProps) {
   const changeSet = useChangeSetStore(s => s.changeSets[changeSetId]);
-  
+  const { acceptHunk, rejectHunk } = useChangeSetStore();
+
+  const handleRejectAll = () => {
+    if (!changeSet) return;
+    changeSet.changes.forEach((change) => {
+      change.hunks.forEach((hunk) => {
+        rejectHunk(changeSetId, change.id, hunk.id);
+      });
+    });
+  };
+
+  const handleApplyAll = () => {
+    if (!changeSet) return;
+    changeSet.changes.forEach((change) => {
+      change.hunks.forEach((hunk) => {
+        acceptHunk(changeSetId, change.id, hunk.id);
+      });
+    });
+  };
+
   if (!changeSet) {
     return (
       <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-tertiary)' }}>
@@ -37,10 +56,10 @@ export function ChangeSetReview({ changeSetId }: ChangeSetReviewProps) {
         </div>
         
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" style={{ 
-            padding: '6px 12px', 
-            borderRadius: 6, 
-            background: 'var(--bg-secondary)', 
+          <button type="button" onClick={handleRejectAll} style={{
+            padding: '6px 12px',
+            borderRadius: 6,
+            background: 'var(--bg-secondary)',
             border: '1px solid var(--border-subtle)',
             fontSize: 12,
             fontWeight: 600,
@@ -48,10 +67,10 @@ export function ChangeSetReview({ changeSetId }: ChangeSetReviewProps) {
           }}>
             Reject All
           </button>
-          <button type="button" style={{ 
-            padding: '6px 12px', 
-            borderRadius: 6, 
-            background: 'var(--accent-chat)', 
+          <button type="button" onClick={handleApplyAll} style={{
+            padding: '6px 12px',
+            borderRadius: 6,
+            background: 'var(--accent-chat)',
             color: 'white',
             border: 'none',
             fontSize: 12,

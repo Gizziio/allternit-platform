@@ -484,7 +484,10 @@ function createMainWindow(): BrowserWindow {
         };
       }
 
-      if (requestedUrl.pathname === '/platform' && requestedUrl.searchParams.get('detachedSurface')) {
+      if (
+        (requestedUrl.pathname === '/platform' || requestedUrl.pathname === '/shell') &&
+        requestedUrl.searchParams.get('detachedSurface') === 'code'
+      ) {
         return {
           action: 'allow',
           overrideBrowserWindowOptions: {
@@ -494,7 +497,7 @@ function createMainWindow(): BrowserWindow {
             minHeight: 560,
             backgroundColor: '#0F0C0A',
             autoHideMenuBar: true,
-            title: 'Allternit Session',
+            title: 'Allternit Code Session',
           },
         };
       }
@@ -1726,8 +1729,18 @@ ipcMain.handle('shell:open-design', () => {
   designWindow.on('closed', () => { designWindow = null; });
   void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
 });
+const codeSessionWindows = new Map<string, BrowserWindow>();
+
 ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; workspaceId?: string; title?: string }) => {
   if (!options?.sessionId) throw new Error('A session ID is required');
+
+  const existing = codeSessionWindows.get(options.sessionId);
+  if (existing && !existing.isDestroyed()) {
+    existing.show();
+    existing.focus();
+    return;
+  }
+
   const sessionWindow = new BrowserWindow({
     width: 1180,
     height: 820,
@@ -1746,11 +1759,18 @@ ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; work
       webviewTag: true,
     },
   });
-  const url = new URL('/platform', activePlatformUrl);
+
+  codeSessionWindows.set(options.sessionId, sessionWindow);
+
+  // Use /shell so the detached session query params are consumed by ShellApp.
+  // The old /platform path no longer exists as a routed page.
+  const url = new URL('/shell', activePlatformUrl);
   url.searchParams.set('detachedSurface', 'code');
   url.searchParams.set('detachedSessionId', options.sessionId);
   if (options.workspaceId) url.searchParams.set('detachedWorkspaceId', options.workspaceId);
+
   sessionWindow.once('ready-to-show', () => sessionWindow.show());
+  sessionWindow.on('closed', () => { codeSessionWindows.delete(options.sessionId); });
   sessionWindow.webContents.setWindowOpenHandler(({ url: target }) => {
     void shell.openExternal(target);
     return { action: 'deny' };

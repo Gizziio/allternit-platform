@@ -31,6 +31,7 @@ export class OwnedBonsaiPipeline {
     const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
     if (!adapter) throw new Error("No WebGPU adapter is available");
     const device = await adapter.requestDevice();
+    device.lost.then(info => console.warn("WebGPU device lost:", info));
     return new OwnedBonsaiPipeline(device);
   }
 

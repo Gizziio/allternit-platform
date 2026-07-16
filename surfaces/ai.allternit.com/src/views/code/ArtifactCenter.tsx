@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowSquareOut, File, FileCode, FileImage, FileText, Package, ShieldCheck } from '@phosphor-icons/react';
+import {
+  ArrowSquareOut,
+  Clock,
+  File,
+  FileCode,
+  FileImage,
+  FileText,
+  Link as LinkIcon,
+  Package,
+  ShieldCheck,
+} from '@phosphor-icons/react';
 import { execEvents } from '@/integration/execution/exec.events';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { artifactFromReference, type CodeArtifact, type CodeArtifactKind } from './artifacts';
@@ -11,13 +21,16 @@ export function ArtifactCenter(): React.ReactNode {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => { void fetchReceipts(); }, [fetchReceipts]);
-  useEffect(() => execEvents.subscribe('onRunComplete', (result) => {
-    if (!result.artifacts?.length) return;
-    setRunArtifacts((current) => {
-      const next = result.artifacts!.map((reference) => artifactFromReference(reference, result.runId));
-      return [...current.filter((item) => !next.some((candidate) => candidate.id === item.id)), ...next];
+  useEffect(() => {
+    const unsubscribe = execEvents.subscribe('onRunComplete', (result) => {
+      if (!result.artifacts?.length) return;
+      setRunArtifacts((current) => {
+        const next = result.artifacts!.map((reference) => artifactFromReference(reference, result.runId));
+        return [...current.filter((item) => !next.some((candidate) => candidate.id === item.id)), ...next];
+      });
     });
-  }), []);
+    return unsubscribe;
+  }, []);
 
   const receiptArtifacts = useMemo<CodeArtifact[]>(() => receipts.flatMap((receipt) => {
     const payload = receipt.payload;
@@ -34,32 +47,324 @@ export function ArtifactCenter(): React.ReactNode {
       metadata: { receipt_kind: receipt.kind },
     }));
   }), [receipts]);
-  const artifacts = useMemo(() => [...runArtifacts, ...receiptArtifacts].sort((a, b) => b.createdAt - a.createdAt), [receiptArtifacts, runArtifacts]);
+
+  const artifacts = useMemo(
+    () => [...runArtifacts, ...receiptArtifacts].sort((a, b) => b.createdAt - a.createdAt),
+    [receiptArtifacts, runArtifacts],
+  );
   const selected = artifacts.find((artifact) => artifact.id === selectedId) ?? artifacts[0];
 
-  if (artifacts.length === 0) {
-    return <div className="flex h-full min-h-0 items-center justify-center bg-[var(--surface-canvas)] px-8">
-      <div className="w-full max-w-[280px] text-center">
-        <div className="mx-auto grid size-10 place-items-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--text-secondary)] shadow-sm"><Package size={18} weight="duotone" /></div>
-        <h3 className="mt-3 text-[13px] font-semibold text-[var(--text-primary)]">No artifacts yet</h3>
-        <p className="mt-1 text-[11px] leading-5 text-[var(--text-tertiary)]">Files, previews, and reports created during this session will collect here automatically.</p>
-        <div className="mx-auto mt-4 h-px w-12 bg-[var(--border-subtle)]" />
-        <p className="mt-3 text-[10px] text-[var(--text-tertiary)]">Session outputs · receipts preserved</p>
-      </div>
-    </div>;
-  }
+  useEffect(() => {
+    if (!selectedId && artifacts[0]) setSelectedId(artifacts[0].id);
+    if (selectedId && !artifacts.some((artifact) => artifact.id === selectedId)) {
+      setSelectedId(artifacts[0]?.id ?? null);
+    }
+  }, [artifacts, selectedId]);
 
-  return <div className="flex h-full min-h-0 flex-col bg-[var(--surface-canvas)]">
-    <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3 py-2">
-      <span className="text-[11px] text-[var(--text-tertiary)]">{artifacts.length} session output{artifacts.length === 1 ? '' : 's'}</span>
-      <span className="inline-flex items-center gap-1 text-[10px] text-[var(--status-success)]"><ShieldCheck size={12} />Provenance on</span>
+  return (
+    <div
+      data-testid="artifact-center"
+      style={{
+        height: '100%',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--surface-canvas)',
+        color: 'var(--text-primary)',
+      }}
+    >
+      <div
+        style={{
+          minHeight: 42,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '6px 10px',
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--glass-bg-thick)',
+          backdropFilter: 'blur(16px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(16px) saturate(150%)',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            width: 28,
+            height: 28,
+            display: 'grid',
+            placeItems: 'center',
+            borderRadius: 7,
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--surface-panel)',
+            color: 'var(--accent-code)',
+          }}
+        >
+          <Package size={14} weight="duotone" />
+        </span>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700 }}>Session artifacts</div>
+          <div style={{ marginTop: 1, fontSize: 9, color: 'var(--text-tertiary)' }}>
+            Files, previews, and evidence produced by this run
+          </div>
+        </div>
+        <div style={{ flex: 1 }} />
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '4px 7px',
+            border: '1px solid color-mix(in srgb, var(--status-success) 24%, var(--border-subtle))',
+            borderRadius: 6,
+            background: 'var(--status-success-bg)',
+            color: 'var(--status-success)',
+            fontSize: 9,
+            fontWeight: 650,
+          }}
+        >
+          <ShieldCheck size={11} weight="fill" />
+          Provenance tracked
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+          {artifacts.length} output{artifacts.length === 1 ? '' : 's'}
+        </span>
+      </div>
+
+      {artifacts.length === 0 ? (
+        <ArtifactEmptyState />
+      ) : (
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'grid',
+            gridTemplateColumns: 'minmax(250px, 0.75fr) minmax(320px, 1.25fr)',
+            overflow: 'hidden',
+          }}
+        >
+          <div style={{ minWidth: 0, overflow: 'auto', padding: 7, borderRight: '1px solid var(--border-subtle)' }}>
+            {artifacts.map((artifact) => {
+              const active = artifact.id === selected?.id;
+              return (
+                <button
+                  type="button"
+                  key={artifact.id}
+                  onClick={() => setSelectedId(artifact.id)}
+                  style={{
+                    width: '100%',
+                    minHeight: 42,
+                    marginBottom: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 9,
+                    padding: '5px 7px',
+                    border: `1px solid ${active ? 'var(--border-strong)' : 'transparent'}`,
+                    borderRadius: 8,
+                    background: active ? 'var(--surface-active)' : 'transparent',
+                    color: 'var(--text-primary)',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    boxShadow: active ? 'inset 2px 0 0 var(--accent-code)' : 'none',
+                  }}
+                >
+                  <ArtifactIcon kind={artifact.kind} />
+                  <span style={{ minWidth: 0, flex: 1 }}>
+                    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 10, fontWeight: 650 }}>
+                      {artifact.name}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3, color: 'var(--text-tertiary)', fontSize: 9 }}>
+                      <span style={{ textTransform: 'capitalize' }}>{artifact.kind}</span>
+                      <span>·</span>
+                      <span>{artifact.source}</span>
+                      <span>·</span>
+                      <span>{new Date(artifact.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                    </span>
+                  </span>
+                  {artifact.uri && /^https?:\/\//.test(artifact.uri) ? (
+                    <ArrowSquareOut size={12} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {selected && <ArtifactInspector artifact={selected} />}
+        </div>
+      )}
     </div>
-    <div className="min-h-0 flex-1 overflow-auto p-2">
-      {artifacts.map((artifact) => <button type="button" key={artifact.id} onClick={() => setSelectedId(artifact.id)} className={`mb-1 flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${artifact.id === selected?.id ? 'border-[var(--border-strong)] bg-[var(--surface-active)]' : 'border-transparent hover:bg-[var(--surface-hover)]'}`}><ArtifactIcon kind={artifact.kind} /><div className="min-w-0 flex-1"><div className="truncate text-[11px] font-medium text-[var(--text-primary)]">{artifact.name}</div><div className="mt-0.5 truncate text-[10px] text-[var(--text-tertiary)]">{artifact.kind} · {artifact.source} · {new Date(artifact.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</div></div>{artifact.uri && /^https?:\/\//.test(artifact.uri) ? <ArrowSquareOut size={13} className="shrink-0 text-[var(--text-tertiary)]" /> : null}</button>)}
-    </div>
-    {selected ? <section className="border-t border-[var(--border-subtle)] bg-[var(--surface-panel)] p-3"><div className="truncate text-[11px] font-semibold text-[var(--text-primary)]">{selected.name}</div><div className="mt-2 grid grid-cols-2 gap-1.5"><Metadata label="Source" value={selected.source} /><Metadata label="Kind" value={selected.kind} /></div>{selected.uri && <div className="mt-2 flex items-center gap-2 rounded-md border border-[var(--border-subtle)] px-2 py-1.5"><span className="min-w-0 flex-1 truncate font-mono text-[10px] text-[var(--text-secondary)]">{selected.uri}</span>{/^https?:\/\//.test(selected.uri) && <a aria-label="Open artifact" href={selected.uri} target="_blank" rel="noreferrer" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"><ArrowSquareOut size={13} /></a>}</div>}</section> : null}
-  </div>;
+  );
 }
 
-function Metadata({ label, value }: { label: string; value: string }): React.ReactNode { return <div className="min-w-0 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-canvas)] px-2 py-1.5"><div className="text-[9px] uppercase tracking-wide text-[var(--text-tertiary)]">{label}</div><div className="mt-0.5 truncate text-[10px] font-medium capitalize text-[var(--text-primary)]">{value}</div></div>; }
-function ArtifactIcon({ kind }: { kind: CodeArtifactKind }): React.ReactNode { const Icon = kind === 'image' ? FileImage : kind === 'html' || kind === 'json' || kind === 'diff' ? FileCode : kind === 'markdown' || kind === 'report' ? FileText : File; return <span className="grid size-7 shrink-0 place-items-center rounded-md border border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--text-secondary)]"><Icon size={14} /></span>; }
+function ArtifactEmptyState(): React.ReactNode {
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: 'grid', placeItems: 'center', padding: 24 }}>
+      <div style={{ width: '100%', maxWidth: 330, textAlign: 'center' }}>
+        <span
+          style={{
+            width: 42,
+            height: 42,
+            margin: '0 auto',
+            display: 'grid',
+            placeItems: 'center',
+            borderRadius: 10,
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--surface-panel)',
+            color: 'var(--text-secondary)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <Package size={19} weight="duotone" />
+        </span>
+        <div style={{ marginTop: 10, fontSize: 12, fontWeight: 650 }}>No artifacts yet</div>
+        <div style={{ marginTop: 4, fontSize: 10, lineHeight: 1.55, color: 'var(--text-tertiary)' }}>
+          Generated files, previews, reports, and receipts will be indexed here without interrupting your session.
+        </div>
+        <div
+          style={{
+            width: 'fit-content',
+            margin: '10px auto 0',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            color: 'var(--text-tertiary)',
+            fontSize: 9,
+          }}
+        >
+          <ShieldCheck size={11} />
+          Provenance and receipts stay attached
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ArtifactInspector({ artifact }: { artifact: CodeArtifact }): React.ReactNode {
+  const isExternal = Boolean(artifact.uri && /^https?:\/\//.test(artifact.uri));
+  const detail = artifact.content || artifact.uri || 'No preview data is available for this artifact.';
+
+  return (
+    <section style={{ minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ minHeight: 52, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 11px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <ArtifactIcon kind={artifact.kind} large />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700 }}>
+            {artifact.name}
+          </div>
+          <div style={{ marginTop: 3, fontSize: 9, color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>
+            {artifact.kind} artifact · {artifact.source} source
+          </div>
+        </div>
+        {isExternal && (
+          <a
+            href={artifact.uri}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              height: 27,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '0 8px',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 6,
+              background: 'var(--surface-panel)',
+              color: 'var(--text-secondary)',
+              fontSize: 9,
+              fontWeight: 650,
+              textDecoration: 'none',
+            }}
+          >
+            Open
+            <ArrowSquareOut size={11} />
+          </a>
+        )}
+      </div>
+
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateRows: 'auto minmax(70px, 1fr)', gap: 8, padding: 9, overflow: 'auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(80px, 1fr))', gap: 6 }}>
+          <Metadata label="Type" value={artifact.kind} />
+          <Metadata label="Source" value={artifact.source} />
+          <Metadata label="Retention" value={artifact.retention || 'session'} />
+          <Metadata
+            label="Created"
+            value={new Date(artifact.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            icon={<Clock size={9} />}
+          />
+        </div>
+
+        <div
+          style={{
+            minHeight: 70,
+            overflow: 'auto',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 8,
+            background: 'var(--surface-panel-muted)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div style={{ height: 28, display: 'flex', alignItems: 'center', gap: 6, padding: '0 9px', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-tertiary)', fontSize: 9 }}>
+            {isExternal ? <LinkIcon size={10} /> : <FileText size={10} />}
+            {artifact.content ? 'Preview' : 'Location'}
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              padding: 10,
+              color: 'var(--text-secondary)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              lineHeight: 1.5,
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {detail}
+          </pre>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Metadata({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }): React.ReactNode {
+  return (
+    <div style={{ minWidth: 0, border: '1px solid var(--border-subtle)', borderRadius: 7, background: 'var(--surface-panel)', padding: '6px 7px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 8, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+        {icon}
+        {label}
+      </div>
+      <div style={{ marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 9, fontWeight: 650, textTransform: 'capitalize' }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ArtifactIcon({ kind, large = false }: { kind: CodeArtifactKind; large?: boolean }): React.ReactNode {
+  const Icon = kind === 'image'
+    ? FileImage
+    : kind === 'html' || kind === 'json' || kind === 'diff'
+      ? FileCode
+      : kind === 'markdown' || kind === 'report'
+        ? FileText
+        : kind === 'link'
+          ? LinkIcon
+          : File;
+  return (
+    <span
+      style={{
+        width: large ? 34 : 28,
+        height: large ? 34 : 28,
+        display: 'grid',
+        placeItems: 'center',
+        flexShrink: 0,
+        borderRadius: large ? 8 : 7,
+        border: '1px solid var(--border-subtle)',
+        background: 'var(--surface-panel)',
+        color: 'var(--text-secondary)',
+      }}
+    >
+      <Icon size={large ? 16 : 13} weight="duotone" />
+    </span>
+  );
+}

@@ -1315,6 +1315,95 @@ impl FirecrackerDriver {
         }
     }
 
+    /// Send a length-prefixed JSON request to the guest agent and return the
+    /// parsed response. Factored out of `exec_in_vm` so `start_display_in_vm`/
+    /// `stop_display_in_vm` don't duplicate the framing logic.
+    async fn guest_agent_request(
+        &self,
+        vm: &MicroVM,
+        request: &GuestAgentRequest,
+    ) -> Result<GuestAgentResponse, DriverError> {
+        let vsock_path = format!("/tmp/vsock-{}.sock", vm.id);
+
+        let mut stream =
+            UnixStream::connect(&vsock_path)
+                .await
+                .map_err(|e| DriverError::InternalError {
+                    message: format!("Failed to connect to guest agent: {}", e),
+                })?;
+
+        let request_json = serde_json::to_vec(request).map_err(|e| DriverError::InternalError {
+            message: format!("Failed to serialize request: {}", e),
+        })?;
+
+        let len_bytes = (request_json.len() as u32).to_be_bytes();
+        tokio::io::AsyncWriteExt::write_all(&mut stream, &len_bytes)
+            .await
+            .map_err(|e| DriverError::InternalError {
+                message: format!("Failed to write length: {}", e),
+            })?;
+        tokio::io::AsyncWriteExt::write_all(&mut stream, &request_json)
+            .await
+            .map_err(|e| DriverError::InternalError {
+                message: format!("Failed to write request: {}", e),
+            })?;
+
+        let mut len_buf = [0u8; 4];
+        tokio::io::AsyncReadExt::read_exact(&mut stream, &mut len_buf)
+            .await
+            .map_err(|e| DriverError::InternalError {
+                message: format!("Failed to read response length: {}", e),
+            })?;
+        let response_len = u32::from_be_bytes(len_buf) as usize;
+        let mut response_buf = vec![0u8; response_len];
+        tokio::io::AsyncReadExt::read_exact(&mut stream, &mut response_buf)
+            .await
+            .map_err(|e| DriverError::InternalError {
+                message: format!("Failed to read response: {}", e),
+            })?;
+
+        serde_json::from_slice(&response_buf).map_err(|e| DriverError::InternalError {
+            message: format!("Failed to parse response: {}", e),
+        })
+    }
+
+    /// Start a virtual display inside the guest and return the vsock port a
+    /// VNC client should tunnel to. See
+    /// research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md.
+    #[tracing::instrument(skip(self, vm), fields(vm_id = %vm.id))]
+    pub async fn start_display_in_vm(
+        &self,
+        vm: &MicroVM,
+        width: u32,
+        height: u32,
+    ) -> Result<u32, DriverError> {
+        let response = self
+            .guest_agent_request(vm, &GuestAgentRequest::StartDisplay { width, height })
+            .await?;
+        match response {
+            GuestAgentResponse::DisplayStarted { vnc_vsock_port } => Ok(vnc_vsock_port),
+            GuestAgentResponse::Error { message } => Err(DriverError::InternalError { message }),
+            _ => Err(DriverError::InternalError {
+                message: "Unexpected response type".to_string(),
+            }),
+        }
+    }
+
+    /// Stop the virtual display started by `start_display_in_vm`.
+    #[tracing::instrument(skip(self, vm), fields(vm_id = %vm.id))]
+    pub async fn stop_display_in_vm(&self, vm: &MicroVM) -> Result<(), DriverError> {
+        let response = self
+            .guest_agent_request(vm, &GuestAgentRequest::StopDisplay)
+            .await?;
+        match response {
+            GuestAgentResponse::DisplayStopped => Ok(()),
+            GuestAgentResponse::Error { message } => Err(DriverError::InternalError { message }),
+            _ => Err(DriverError::InternalError {
+                message: "Unexpected response type".to_string(),
+            }),
+        }
+    }
+
     /// Pause VM
     #[tracing::instrument(skip(self, vm), fields(vm_id = %vm.id))]
     async fn pause_vm_internal(&self, vm: &MicroVM) -> Result<(), DriverError> {
@@ -1371,6 +1460,13 @@ enum GuestAgentRequest {
     /// Ping for health check
     #[serde(rename = "ping")]
     Ping { version: String },
+    /// Start a virtual display (Xvnc) inside the guest, tunneled over a
+    /// second vsock port. See research/FIRECRACKER-GUEST-AGENT-VNC-SPEC.md.
+    #[serde(rename = "start_display")]
+    StartDisplay { width: u32, height: u32 },
+    /// Stop the virtual display and its vsock tunnel.
+    #[serde(rename = "stop_display")]
+    StopDisplay,
 }
 
 /// Guest agent response types
@@ -1399,6 +1495,12 @@ enum GuestAgentResponse {
     /// Pong response to ping
     #[serde(rename = "pong")]
     Pong { version: String, uptime_secs: u64 },
+    /// Display started -- the host should tunnel a VNC client to this vsock port.
+    #[serde(rename = "display_started")]
+    DisplayStarted { vnc_vsock_port: u32 },
+    /// Display stopped.
+    #[serde(rename = "display_stopped")]
+    DisplayStopped,
 }
 
 impl ResourceTracker {

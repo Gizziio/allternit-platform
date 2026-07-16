@@ -5,21 +5,54 @@
 //! - Log streaming
 //! - Artifact retrieval
 //! - Resource metrics
+//! - Virtual display (Xvnc) lifecycle, tunneled over a second vsock port
 //!
-//! Communicates with the host via VSOCK.
+//! Communicates with the host via VSOCK (AF_VSOCK, not a Unix socket path --
+//! see `main()` for why the original UnixListener-at-a-device-path approach
+//! here was wrong and has been replaced with the `vsock` crate's real
+//! AF_VSOCK bind).
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::os::unix::net::UnixListener;
-use std::process::{Command, Stdio};
+use std::net::TcpStream;
+use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, OnceLock};
 use std::time::Instant;
+use vsock::{VsockListener, VsockStream, VMADDR_CID_ANY};
 
 /// Agent version - matches the protocol version expected by the driver
 const AGENT_VERSION: &str = "1.0.0";
 
+/// Well-known vsock port this agent listens on for RPC. Matches the port
+/// the host driver's `exec_in_vm`/`GuestAgentMonitor` connect to (see
+/// `drivers/firecracker/src/lib.rs`'s `vsock_port_start = 10000`).
+const AGENT_VSOCK_PORT: u32 = 10000;
+
+/// Xvnc's local TCP port inside the guest (loopback-only; nothing needs
+/// guest networking since the vsock forwarding thread bridges this to the
+/// host, not a virtio-net device).
+const XVNC_LOCAL_PORT: u16 = 5900;
+
+/// Vsock port the display tunnel binds to. Fixed rather than dynamically
+/// allocated -- there is exactly one display session per VM, so there is
+/// nothing to disambiguate.
+const DISPLAY_VNC_VSOCK_PORT: u32 = 10001;
+
 /// Track agent start time for uptime calculation
-static START_TIME: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+static START_TIME: OnceLock<Instant> = OnceLock::new();
+
+/// Live display session (Xvnc + WM child processes, forwarding thread vsock
+/// port). None when no display is running. Guarded by a mutex since requests
+/// are handled on a per-connection thread (see `main()`).
+struct DisplaySession {
+    xvnc: Child,
+    window_manager: Option<Child>,
+    vnc_vsock_port: u32,
+    forward_thread: std::thread::JoinHandle<()>,
+}
+
+static DISPLAY: Mutex<Option<DisplaySession>> = Mutex::new(None);
 
 /// Request types from host
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +74,12 @@ enum HostRequest {
     /// Ping for health check
     #[serde(rename = "ping")]
     Ping { version: String },
+    /// Start a virtual display (Xvnc) and tunnel it over a new vsock port.
+    #[serde(rename = "start_display")]
+    StartDisplay { width: u32, height: u32 },
+    /// Stop the virtual display and its vsock tunnel.
+    #[serde(rename = "stop_display")]
+    StopDisplay,
 }
 
 /// Response types to host
@@ -69,6 +108,12 @@ enum GuestResponse {
     /// Pong response to ping
     #[serde(rename = "pong")]
     Pong { version: String, uptime_secs: u64 },
+    /// Display started -- the host should tunnel a VNC client to this vsock port.
+    #[serde(rename = "display_started")]
+    DisplayStarted { vnc_vsock_port: u32 },
+    /// Display stopped.
+    #[serde(rename = "display_stopped")]
+    DisplayStopped,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,37 +133,37 @@ struct ArtifactInfo {
 fn main() {
     // Record start time for uptime calculation
     let _ = START_TIME.set(Instant::now());
-    
+
     eprintln!("Allternit Guest Agent v{} starting...", AGENT_VERSION);
 
-    // VSOCK socket path (provided by Firecracker)
-    let vsock_path = std::env::var("Allternit_VSOCK_PATH")
-        .unwrap_or_else(|_| "/dev/vsock".to_string());
-
-    // CID 3 is the host
-    let listen_addr = format!("{}:52", vsock_path);
-
-    eprintln!("Listening on: {}", listen_addr);
-
-    // Remove old socket if exists
-    let _ = std::fs::remove_file(&listen_addr);
-
-    let listener = match UnixListener::bind(&listen_addr) {
+    // Real AF_VSOCK bind, not a UnixListener at a device path (the previous
+    // approach here -- `UnixListener::bind("/dev/vsock:52")` -- doesn't
+    // correspond to how Linux AF_VSOCK actually works; a guest binds
+    // (VMADDR_CID_ANY, port) via the vsock socket family directly).
+    let listener = match VsockListener::bind_with_cid_port(VMADDR_CID_ANY, AGENT_VSOCK_PORT) {
         Ok(l) => l,
         Err(e) => {
-            eprintln!("Failed to bind to {}: {}", listen_addr, e);
+            eprintln!("Failed to bind vsock port {}: {}", AGENT_VSOCK_PORT, e);
             std::process::exit(1);
         }
     };
 
+    eprintln!("Listening on vsock port {}", AGENT_VSOCK_PORT);
     eprintln!("Guest agent ready");
 
     for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
-                if let Err(e) = handle_connection(&mut stream) {
-                    eprintln!("Connection error: {}", e);
-                }
+                // One thread per connection: a StartDisplay session must not
+                // block subsequent Execute/StopDisplay requests on other
+                // connections, and each request here is one connection
+                // (matches how the host driver's exec_in_vm already dials a
+                // fresh connection per call).
+                std::thread::spawn(move || {
+                    if let Err(e) = handle_connection(&mut stream) {
+                        eprintln!("Connection error: {}", e);
+                    }
+                });
             }
             Err(e) => {
                 eprintln!("Connection failed: {}", e);
@@ -127,7 +172,7 @@ fn main() {
     }
 }
 
-fn handle_connection(stream: &mut std::os::unix::net::UnixStream) -> Result<(), Box<dyn std::error::Error>> {
+fn handle_connection(stream: &mut VsockStream) -> Result<(), Box<dyn std::error::Error>> {
     // Read message length (4 bytes, big-endian)
     let mut len_buf = [0u8; 4];
     stream.read_exact(&mut len_buf)?;
@@ -166,13 +211,19 @@ fn handle_connection(stream: &mut std::os::unix::net::UnixStream) -> Result<(), 
         HostRequest::Ping { version } => {
             handle_ping(version)
         }
+        HostRequest::StartDisplay { width, height } => {
+            handle_start_display(width, height)
+        }
+        HostRequest::StopDisplay => {
+            handle_stop_display()
+        }
     };
 
     send_response(stream, &response)?;
     Ok(())
 }
 
-fn send_response(stream: &mut std::os::unix::net::UnixStream, response: &GuestResponse) -> Result<(), Box<dyn std::error::Error>> {
+fn send_response(stream: &mut VsockStream, response: &GuestResponse) -> Result<(), Box<dyn std::error::Error>> {
     let response_json = serde_json::to_vec(response)?;
     let len = response_json.len() as u32;
     
@@ -356,4 +407,156 @@ fn handle_ping(driver_version: String) -> GuestResponse {
         version: AGENT_VERSION.to_string(),
         uptime_secs,
     }
+}
+
+/// Start Xvnc (both the X server and the VNC server in one process) plus a
+/// best-effort window manager, then bridge a dedicated vsock port to Xvnc's
+/// local RFB port. Idempotent -- a second StartDisplay while one is already
+/// running just returns the existing session's port.
+fn handle_start_display(width: u32, height: u32) -> GuestResponse {
+    let mut display = DISPLAY.lock().unwrap();
+    if let Some(session) = display.as_ref() {
+        return GuestResponse::DisplayStarted {
+            vnc_vsock_port: session.vnc_vsock_port,
+        };
+    }
+
+    let geometry = format!("{}x{}x24", width.max(640), height.max(480));
+    let mut xvnc = match Command::new("Xvnc")
+        .args([
+            ":0",
+            "-SecurityTypes",
+            "None",
+            "-rfbport",
+            &XVNC_LOCAL_PORT.to_string(),
+            "-localhost",
+            "-geometry",
+            &geometry,
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(e) => {
+            return GuestResponse::Error {
+                message: format!("Failed to start Xvnc: {e}"),
+            };
+        }
+    };
+
+    // Wait for Xvnc's RFB port to come up. Fail closed rather than report a
+    // display session nobody can actually reach.
+    let mut ready = false;
+    for _ in 0..50 {
+        if TcpStream::connect(("127.0.0.1", XVNC_LOCAL_PORT)).is_ok() {
+            ready = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    if !ready {
+        let _ = xvnc.kill();
+        return GuestResponse::Error {
+            message: "Xvnc did not become ready within 5s".to_string(),
+        };
+    }
+
+    // Best-effort window manager: a bare Xvnc with no WM still accepts input
+    // and shows whatever the driven application draws, so a missing WM
+    // binary is not fatal to the display session.
+    let window_manager = Command::new("fluxbox")
+        .env("DISPLAY", ":0")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok();
+
+    let vsock_listener =
+        match VsockListener::bind_with_cid_port(VMADDR_CID_ANY, DISPLAY_VNC_VSOCK_PORT) {
+            Ok(l) => l,
+            Err(e) => {
+                let _ = xvnc.kill();
+                return GuestResponse::Error {
+                    message: format!(
+                        "Failed to bind display vsock port {DISPLAY_VNC_VSOCK_PORT}: {e}"
+                    ),
+                };
+            }
+        };
+
+    let forward_thread = std::thread::spawn(move || {
+        // Exactly one VNC client is expected per environment (the host-side
+        // backend never opens more than one), so accepting serially is fine.
+        for stream in vsock_listener.incoming() {
+            match stream {
+                Ok(vsock_stream) => forward_vnc_connection(vsock_stream),
+                Err(e) => eprintln!("Display vsock accept failed: {e}"),
+            }
+        }
+    });
+
+    *display = Some(DisplaySession {
+        xvnc,
+        window_manager,
+        vnc_vsock_port: DISPLAY_VNC_VSOCK_PORT,
+        forward_thread,
+    });
+
+    GuestResponse::DisplayStarted {
+        vnc_vsock_port: DISPLAY_VNC_VSOCK_PORT,
+    }
+}
+
+/// Bidirectionally pipe raw bytes between a vsock connection (the tunnel to
+/// the host's VNC client) and a local TCP connection to Xvnc -- no RFB
+/// framing is parsed or altered here, so any standard RFB client library
+/// works unmodified against the vsock side.
+fn forward_vnc_connection(vsock_stream: VsockStream) {
+    let tcp_stream = match TcpStream::connect(("127.0.0.1", XVNC_LOCAL_PORT)) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Failed to connect to local Xvnc for forwarding: {e}");
+            return;
+        }
+    };
+
+    let (mut vsock_read, mut vsock_write) = match vsock_stream.try_clone() {
+        Ok(clone) => (clone, vsock_stream),
+        Err(e) => {
+            eprintln!("Failed to clone vsock stream: {e}");
+            return;
+        }
+    };
+    let (mut tcp_read, mut tcp_write) = match tcp_stream.try_clone() {
+        Ok(clone) => (clone, tcp_stream),
+        Err(e) => {
+            eprintln!("Failed to clone tcp stream: {e}");
+            return;
+        }
+    };
+
+    let to_guest = std::thread::spawn(move || {
+        let _ = std::io::copy(&mut vsock_read, &mut tcp_write);
+    });
+    let _ = std::io::copy(&mut tcp_read, &mut vsock_write);
+    let _ = to_guest.join();
+}
+
+/// Stop the display session and kill Xvnc/the window manager. The
+/// forwarding thread is not joined -- it's blocked in `incoming()`/
+/// `io::copy` with no cancellation channel in this first cut, and it exits
+/// on its own once killing Xvnc closes the TCP side it's copying to/from.
+/// Not joining means StopDisplay returns promptly instead of blocking on a
+/// possibly-hung client connection.
+fn handle_stop_display() -> GuestResponse {
+    let mut display = DISPLAY.lock().unwrap();
+    if let Some(mut session) = display.take() {
+        let _ = session.xvnc.kill();
+        if let Some(mut wm) = session.window_manager.take() {
+            let _ = wm.kill();
+        }
+        drop(session.forward_thread);
+    }
+    GuestResponse::DisplayStopped
 }

@@ -1,5 +1,4 @@
 import React from 'react';
-import { GlassSurface } from '../../../design/GlassSurface';
 import { CaretDoubleUp, CaretDoubleDown } from '@phosphor-icons/react';
 
 interface DrawerHandleProps {
@@ -11,12 +10,15 @@ interface DrawerHandleProps {
 
 export function DrawerHandle({ isOpen, onToggle, onMouseDown, onTouchStart }: DrawerHandleProps) {
   return (
-    <div role="button" tabIndex={0} 
+    <div
+      data-testid="console-drawer-handle"
+      role="button"
+      tabIndex={0}
       style={{
-        width: 'fit-content',
-        marginLeft: 'auto',
+        width: '100%',
         display: 'flex',
-        paddingRight: 'max(16px, calc(env(safe-area-inset-right, 0px) + 16px))',
+        justifyContent: 'center',
+        alignItems: 'flex-end',
         pointerEvents: 'auto',
         cursor: isOpen ? 'row-resize' : 'pointer',
         paddingBottom: isOpen ? 0 : 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
@@ -25,28 +27,49 @@ export function DrawerHandle({ isOpen, onToggle, onMouseDown, onTouchStart }: Dr
       onTouchStart={isOpen && onTouchStart ? onTouchStart : undefined}
       onClick={!isOpen ? onToggle : undefined}
     >
-      <GlassSurface
-        intensity="thick"
+      <div
         style={{
-          height: 18,
-          width: 40,
-          borderTopLeftRadius: 8,
-          borderTopRightRadius: 8,
-          borderBottomLeftRadius: isOpen ? 0 : 999,
-          borderBottomRightRadius: isOpen ? 0 : 999,
+          height: isOpen ? 22 : 32,
+          padding: isOpen ? '0 14px' : '0 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: 8,
           border: '1px solid var(--border-subtle)',
-          borderBottom: isOpen ? 'none' : '1px solid var(--border-subtle)',
-          background: 'var(--glass-bg-thick)',
-          boxShadow: isOpen ? '0 -2px 12px rgba(0,0,0,0.08)' : '0 4px 12px rgba(0,0,0,0.14)',
-          transition: 'transform 0.2s',
+          borderTopLeftRadius: 10,
+          borderTopRightRadius: 10,
+          borderBottomLeftRadius: isOpen ? 0 : 999,
+          borderBottomRightRadius: isOpen ? 0 : 999,
+          background: 'var(--surface-floating)',
+          backdropFilter: 'blur(18px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(18px) saturate(180%)',
+          boxShadow: isOpen ? 'var(--shadow-sm)' : 'var(--shadow-lg)',
+          transition: 'all 0.2s ease',
           transform: isOpen ? 'translateY(1px)' : 'translateY(0)',
         }}
       >
-        {isOpen ? <CaretDoubleDown size={10} color="var(--text-tertiary)" /> : <CaretDoubleUp size={10} color="var(--text-tertiary)" />}
-      </GlassSurface>
+        {!isOpen && (
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: 'var(--text-secondary)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            Mission Control
+          </span>
+        )}
+        <CaretDoubleUp
+          size={isOpen ? 12 : 14}
+          weight="bold"
+          color="var(--accent-mission, #ffb800)"
+          style={{
+            transform: isOpen ? 'rotate(180deg)' : 'none',
+            transition: 'transform 0.2s ease',
+          }}
+        />
+      </div>
     </div>
   );
 }

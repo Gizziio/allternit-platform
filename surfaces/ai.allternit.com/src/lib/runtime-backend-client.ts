@@ -119,7 +119,7 @@ function getRuntimeBackendSnapshotSync(): ClientRuntimeBackendSnapshot {
   return readStoredSnapshot() ?? buildDefaultSnapshot();
 }
 
-function getRuntimeGatewayBaseUrlSync(): string {
+export function getRuntimeGatewayBaseUrlSync(): string {
   return getRuntimeBackendSnapshotSync().resolved_gateway_url;
 }
 
@@ -127,7 +127,7 @@ function getRuntimeGatewayWsBaseUrlSync(): string {
   return getRuntimeBackendSnapshotSync().resolved_gateway_ws_url;
 }
 
-function getRuntimeGatewayTokenSync(): string | null {
+export function getRuntimeGatewayTokenSync(): string | null {
   if (!isBrowser()) return null;
   const win = window as unknown as Window & Record<string, unknown>;
   const winToken = win.__ALLTERNIT_GATEWAY_TOKEN__;

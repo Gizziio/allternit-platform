@@ -42,6 +42,10 @@ struct NormDimensions { height: u32, width: u32, channels: u32, groups: u32, eps
 var<workgroup> sums: array<f32, 256>;
 var<workgroup> squares: array<f32, 256>;
 
+fn flat_index(id: vec3<u32>, counts: vec3<u32>) -> u32 {
+  return id.x + id.y * (counts.x * 256u);
+}
+
 @compute @workgroup_size(256, 1, 1)
 fn group_norm(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocation_id) local: vec3<u32>) {
   let group = group_id.x; let lane = local.x;
@@ -68,9 +72,10 @@ fn group_norm(@builtin(workgroup_id) group_id: vec3<u32>, @builtin(local_invocat
 }
 
 @compute @workgroup_size(256, 1, 1)
-fn add(@builtin(global_invocation_id) id: vec3<u32>) {
+fn add(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) counts: vec3<u32>) {
   let count = dims.height * dims.width * dims.channels;
-  if (id.x < count) { output_values[id.x] = input_values[id.x] + weights[id.x]; }
+  let index = flat_index(id, counts);
+  if (index < count) { output_values[index] = input_values[index] + weights[index]; }
 }
 `;
 

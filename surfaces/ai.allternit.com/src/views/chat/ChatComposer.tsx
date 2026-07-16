@@ -2119,6 +2119,15 @@ export function ChatComposer({
             </div>
           ) : null}
 
+          {compact && bottomDockContent ? (
+            <div
+              data-testid="chat-composer-compact-bottom-dock"
+              className="flex w-full items-center px-3 pb-2 pt-1"
+            >
+              {bottomDockContent}
+            </div>
+          ) : null}
+
           {!compact && (<div className="flex items-center justify-between p-3">
             <div className="flex items-center gap-1 relative">
               <AttachmentButton

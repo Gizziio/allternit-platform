@@ -15,10 +15,12 @@
  *   - The project workspace at /workspace (cloned from git or bind-mounted)
  *   - Project dependencies auto-installed (bun install / cargo fetch / pip install)
  *
- * Falls back to local subprocess execution when:
+ * Falls back to local (still OS-sandboxed, see sandbox.ts) execution when:
  *   - GIZZI_VM_SESSIONS is not set
  *   - GIZZI_VM_API_URL is not configured
- *   - The allternit-api returns vm_backed: false (no driver available)
+ *   - Provisioning or exec throws (allternit-api fails closed — 503 — rather
+ *     than silently running the command unsandboxed on the API host when no
+ *     VM driver is available; see vm_session_routes.rs)
  */
 
 import { Log } from "@/shared/util/log"

@@ -12,7 +12,6 @@ interface InfiniteCanvasProps {
 
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3.0;
-const ZOOM_STEP = 0.1;
 const INERTIA_DECAY = 0.92;
 const INERTIA_THRESHOLD = 0.5;
 
@@ -32,14 +31,17 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
   const velocity = useRef({ x: 0, y: 0 });
   const lastPos = useRef({ x: 0, y: 0, t: 0 });
   const rafId = useRef<number>(0);
+  const viewportRef = useRef(viewport);
+  viewportRef.current = viewport;
 
   const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
-  const updateViewport = useCallback(
-    (updater: (v: CodeCanvasViewport) => CodeCanvasViewport) => {
-      onViewportChange(updater(viewport));
+  const emitViewport = useCallback(
+    (nextViewport: CodeCanvasViewport) => {
+      viewportRef.current = nextViewport;
+      onViewportChange(nextViewport);
     },
-    [onViewportChange, viewport],
+    [onViewportChange],
   );
 
   const stopInertia = useCallback(() => {
@@ -62,22 +64,26 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
         rafId.current = 0;
         return;
       }
-      onViewportChange({
-        ...viewport,
-        x: viewport.x + velocity.current.x,
-        y: viewport.y + velocity.current.y,
+      const current = viewportRef.current;
+      emitViewport({
+        ...current,
+        x: current.x + velocity.current.x,
+        y: current.y + velocity.current.y,
       });
       rafId.current = requestAnimationFrame(step);
     };
     rafId.current = requestAnimationFrame(step);
-  }, [onViewportChange, viewport]);
+  }, [emitViewport]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      // Only pan on middle mouse or when not clicking a tile
-      if (e.button !== 1 && (e.target as HTMLElement).closest('[data-canvas-tile]')) {
-        return;
-      }
+      const isPrimaryButton = e.button === 0;
+      const isMiddleButton = e.button === 1;
+      if (!isPrimaryButton && !isMiddleButton) return;
+      // Shift + primary drag belongs to the marquee selector in CodeCanvasView.
+      if (isPrimaryButton && e.shiftKey) return;
+      // Middle-drag pans from anywhere; primary-drag only pans empty canvas.
+      if (isPrimaryButton && (e.target as HTMLElement).closest('[data-canvas-tile]')) return;
       e.preventDefault();
       stopInertia();
       isPanning.current = true;
@@ -96,8 +102,8 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
       if (!isPanning.current) return;
       const dx = e.clientX - panStart.current.x;
       const dy = e.clientY - panStart.current.y;
-      onViewportChange({
-        ...viewport,
+      emitViewport({
+        ...viewportRef.current,
         x: viewportStart.current.x + dx,
         y: viewportStart.current.y + dy,
       });
@@ -111,7 +117,7 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
       }
       lastPos.current = { x: e.clientX, y: e.clientY, t: now };
     },
-    [onViewportChange, viewport],
+    [emitViewport],
   );
 
   const handlePointerUp = useCallback(() => {
@@ -125,8 +131,17 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
+      stopInertia();
+
       if (!e.ctrlKey && !e.metaKey) {
-        // Allow normal scroll if not zooming
+        e.preventDefault();
+        const lineScale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 120 : 1;
+        const deltaX = e.shiftKey && e.deltaX === 0 ? e.deltaY : e.deltaX;
+        emitViewport({
+          ...viewport,
+          x: viewport.x - deltaX * lineScale,
+          y: viewport.y - (e.shiftKey && e.deltaX === 0 ? 0 : e.deltaY * lineScale),
+        });
         return;
       }
       e.preventDefault();
@@ -145,9 +160,9 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
       const newX = mouseX - (mouseX - viewport.x) * scaleRatio;
       const newY = mouseY - (mouseY - viewport.y) * scaleRatio;
 
-      onViewportChange({ x: newX, y: newY, zoom: newZoom });
+      emitViewport({ x: newX, y: newY, zoom: newZoom });
     },
-    [onViewportChange, viewport],
+    [emitViewport, stopInertia, viewport],
   );
 
   // Touch pinch-to-zoom
@@ -187,10 +202,10 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
         const newX = centerX - (centerX - viewport.x) * scaleRatio;
         const newY = centerY - (centerY - viewport.y) * scaleRatio;
 
-        onViewportChange({ x: newX, y: newY, zoom: newZoom });
+        emitViewport({ x: newX, y: newY, zoom: newZoom });
       }
     },
-    [onViewportChange, viewport],
+    [emitViewport, viewport],
   );
 
   const handleTouchEnd = useCallback(() => {

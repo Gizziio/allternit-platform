@@ -118,6 +118,32 @@ export function KanbanBoard() {
 
   const selectedWih = wihs.find(w => w.wih_id === selectedWihId);
 
+  const handleStatusChange = async (targetStatus: string) => {
+    if (!selectedWih || selectedWih.status === targetStatus) return;
+
+    setIsUpdating(true);
+    try {
+      const wih = selectedWih;
+      if ((wih.status === 'open' || wih.status === 'ready') && targetStatus === 'signed') {
+        if (wih.dag_id) {
+          await pickupWih(wih.dag_id, wih.node_id, `agent_${Date.now()}`, 'builder');
+        }
+      } else if ((wih.status === 'signed' || wih.status === 'in_progress') && targetStatus === 'closed') {
+        await closeWih(wih.wih_id, 'completed');
+      } else if ((wih.status === 'signed' || wih.status === 'in_progress') && targetStatus === 'blocked') {
+        await closeWih(wih.wih_id, 'failed');
+      } else if (wih.status === 'blocked' && targetStatus === 'ready') {
+        await fetchWihs();
+      } else {
+        await fetchWihs();
+      }
+    } catch (err) {
+      logger.error({ err: err }, 'Failed to update WIH status from inspector:');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', position: 'relative' }}>
       {/* Header */}
@@ -324,10 +350,8 @@ export function KanbanBoard() {
             {COLUMNS.map(col => (
               <button type="button"
                 key={col.id}
-                onClick={() => {
-                  // Status change would go here via API
-                  console.debug('Change status to:', col.id);
-                }}
+                disabled={isUpdating}
+                onClick={() => handleStatusChange(col.id)}
                 style={{
                   padding: '4px 8px',
                   borderRadius: 6,

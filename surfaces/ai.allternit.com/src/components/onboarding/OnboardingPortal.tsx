@@ -9,11 +9,20 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { OnboardingFlow } from './OnboardingFlow';
+import { useOnboardingStore } from '@/stores/onboarding-store';
 
 export function OnboardingPortal(): React.ReactPortal | null {
   // Render onboarding at document.body level, outside any parent containers
   if (typeof document === 'undefined') return null;
-  
+  const hasCompletedOnboarding = useOnboardingStore((state) => state.hasCompletedOnboarding);
+
+  // If the user has already chosen a platform mode, they have used the app
+  // before and should not be blocked by the onboarding portal again.
+  const hasUsedAppBefore =
+    typeof window !== 'undefined' && Boolean(window.localStorage.getItem('allternit-platform-mode'));
+
+  if (hasCompletedOnboarding || hasUsedAppBefore) return null;
+
   return createPortal(
     <div
       style={{

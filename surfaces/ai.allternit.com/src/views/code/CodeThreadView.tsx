@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from 'react';
+import { SquaresFour } from '@phosphor-icons/react';
 import { CodeCanvas } from './CodeCanvas';
 import { CodeSessionSidePane } from './CodeSessionSidePane';
 import { CodeSessionLauncher, type CodePaneTarget } from './CodeSessionLauncher';
@@ -44,6 +45,8 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
   const activeCodeSessionId = useCodeSessionStore((s) => s.activeSessionId);
   const activeCodeSession = useCodeSessionStore((s) => s.sessions.find((session) => session.id === s.activeSessionId));
   const hasSession = Boolean(activeCodeSessionId);
+  const setWorkspaceLayoutMode = useCodeModeStore((s) => s.setWorkspaceLayoutMode);
+  const workspaceId = workspace?.workspace_id;
 
   const openSideTab = useCallback((tab: CodePaneTarget) => {
     setActiveSideTab(tab);
@@ -140,6 +143,51 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         />
       ) : null}
 
+      {workspaceId && (
+        <button
+          type="button"
+          data-testid="code-canvas-mode-toggle"
+          onClick={() => setWorkspaceLayoutMode(workspaceId, 'canvas')}
+          title="Switch to canvas mode"
+          aria-label="Switch to canvas mode"
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: hasSession && isPreviewCollapsed ? 160 : 18,
+            zIndex: 8,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 34,
+            height: 34,
+            padding: 0,
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 10,
+            background: 'var(--glass-bg-thick)',
+            boxShadow: 'var(--shadow-sm)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            color: 'var(--text-secondary)',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'background 120ms ease, color 120ms ease, transform 120ms ease',
+          }}
+          onMouseEnter={(event) => {
+            event.currentTarget.style.background = 'var(--surface-hover)';
+            event.currentTarget.style.color = 'var(--text-primary)';
+            event.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.background = 'var(--glass-bg-thick)';
+            event.currentTarget.style.color = 'var(--text-secondary)';
+            event.currentTarget.style.transform = 'none';
+          }}
+        >
+          <SquaresFour size={17} weight="bold" />
+        </button>
+      )}
+
       {/* Main layout: canvas fills all space */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 0, overflow: 'hidden', position: 'relative' }}>
         {/* Canvas — always full width */}
@@ -164,7 +212,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
                   <PromptInputProvider>
                     <ChatModelsProvider>
                       <ModelSelectionProvider defaultSelection={defaultSelection}>
-                        <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} />
+                        <CodeCanvas />
                       </ModelSelectionProvider>
                     </ChatModelsProvider>
                   </PromptInputProvider>

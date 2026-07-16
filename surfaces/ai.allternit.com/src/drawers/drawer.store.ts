@@ -17,7 +17,7 @@ export const useDrawerStore = create<DrawerState>()(
   persist(
     (set) => ({
       drawers: {
-        console: { open: false, height: 300, activeTab: 'queue' },
+        console: { open: false, height: 300, activeTab: 'mission-control' },
       },
       openDrawer: (id, options) => set((state) => ({
         drawers: {

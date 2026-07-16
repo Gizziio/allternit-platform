@@ -22,13 +22,19 @@ import {
 } from '@phosphor-icons/react';
 
 import { createModuleLogger } from '@/lib/logger';
-import { GATEWAY_BASE_URL } from '@/lib/agents/api-config';
+import {
+  getRuntimeGatewayBaseUrlSync,
+  subscribeRuntimeBackendSnapshot,
+} from '@/lib/runtime-backend-client';
+import {
+  createTerminalSession,
+  closeTerminalSession,
+  sendTerminalInput,
+  resizeTerminal,
+  subscribeTerminalStream,
+} from '@/lib/terminal-api';
 
 const logger = createModuleLogger('UnifiedTerminal');
-
-function terminalUrl(path: string): string {
-  return `${GATEWAY_BASE_URL}${path}`;
-}
 
 // Dynamically import xterm only on the client side.
 let Terminal: typeof import('xterm').Terminal | null = null;
@@ -76,77 +82,41 @@ interface TerminalSession {
   errorMsg: string;
 }
 
-interface TerminalCreateResponse {
-  sessionId?: string;
-  session_id?: string;
-  data?: { session_id?: string };
-}
-
-interface TerminalStreamMessage {
-  type: string;
-  data?: string;
-}
-
 function generateTabId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PTY service API
-// ─────────────────────────────────────────────────────────────────────────────
+export function terminalThemeFromElement(element: HTMLElement): import('xterm').ITheme {
+  const elementStyle = getComputedStyle(element);
+  const rootStyle = getComputedStyle(document.documentElement);
+  const token = (name: string, fallback: string) =>
+    rootStyle.getPropertyValue(name).trim() || fallback;
+  const foreground = elementStyle.color || token('--text-primary', '#2a1f16');
 
-function terminalHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const token = typeof window !== 'undefined' ? window.localStorage.getItem('allternit_token') : null;
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
-
-async function createTerminalSession(options: {
-  cwd?: string;
-  shell?: string;
-  cols?: number;
-  rows?: number;
-}): Promise<string> {
-  const response = await fetch(terminalUrl('/terminal/create'), {
-    method: 'POST',
-    headers: terminalHeaders(),
-    body: JSON.stringify({
-      shell: options.shell ?? '/bin/zsh',
-      cols: options.cols ?? 80,
-      rows: options.rows ?? 24,
-      cwd: options.cwd,
-    }),
-  });
-
-  const body = (await response.json().catch(() => ({}))) as TerminalCreateResponse & { success?: boolean; message?: string; details?: string };
-
-  if (!response.ok || body.success === false) {
-    throw new Error(body.message || body.details || `Failed to create terminal: ${response.status}`);
-  }
-
-  const sessionId = body.sessionId ?? body.session_id ?? body.data?.session_id;
-  if (!sessionId) {
-    throw new Error('Terminal service did not return a session id');
-  }
-  return sessionId;
-}
-
-async function sendTerminalInput(remoteSessionId: string, data: string): Promise<void> {
-  await fetch(terminalUrl(`/terminal/${remoteSessionId}/input`), {
-    method: 'POST',
-    headers: terminalHeaders(),
-    body: JSON.stringify({ session_id: remoteSessionId, content: data }),
-  });
-}
-
-async function closeTerminalSession(remoteSessionId: string): Promise<void> {
-  await fetch(terminalUrl(`/terminal/${remoteSessionId}/close`), {
-    method: 'POST',
-    headers: terminalHeaders(),
-    body: JSON.stringify({ session_id: remoteSessionId }),
-  }).catch(() => {});
+  return {
+    background: elementStyle.backgroundColor || token('--surface-panel', '#f7efe7'),
+    foreground,
+    cursor: foreground,
+    cursorAccent: elementStyle.backgroundColor || token('--surface-panel', '#f7efe7'),
+    selectionBackground: token('--surface-active', 'rgba(124, 92, 66, 0.2)'),
+    black: '#111827',
+    red: token('--status-error', '#ef4444'),
+    green: token('--status-success', '#10b981'),
+    yellow: token('--status-warning', '#f59e0b'),
+    blue: token('--status-info', '#3b82f6'),
+    magenta: '#8b5cf6',
+    cyan: token('--accent-code', '#0891b2'),
+    white: foreground,
+    brightBlack: token('--text-tertiary', '#6b7280'),
+    brightRed: '#f87171',
+    brightGreen: '#34d399',
+    brightYellow: '#fbbf24',
+    brightBlue: '#60a5fa',
+    brightMagenta: '#c084fc',
+    brightCyan: '#67e8f9',
+    brightWhite: foreground,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -165,39 +135,27 @@ export function TerminalSurface({
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<import('xterm').Terminal | null>(null);
   const fitAddonRef = useRef<import('xterm-addon-fit').FitAddon | null>(null);
-  const esRef = useRef<EventSource | null>(null);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const onStatusChangeRef = useRef(onStatusChange);
+  const resizeFrameRef = useRef<number | null>(null);
+  const lastSizeRef = useRef({ cols: 0, rows: 0 });
+
+  useEffect(() => {
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     let mounted = true;
+    let themeObserver: MutationObserver | null = null;
 
-    loadXterm().then((loaded) => {
+    void loadXterm().then((loaded) => {
       if (!loaded || !mounted || !containerRef.current) return;
 
       const term = new Terminal!({
         cursorBlink: true,
-        theme: {
-          background: 'rgba(11, 17, 32, 0.55)',
-          foreground: 'var(--text-primary, #f3f4f6)',
-          cursor: 'var(--text-primary, #f3f4f6)',
-          black: '#111827',
-          red: 'var(--status-error, #ef4444)',
-          green: 'var(--status-success, #10b981)',
-          yellow: '#f59e0b',
-          blue: 'var(--status-info, #3b82f6)',
-          magenta: '#8b5cf6',
-          cyan: '#22d3ee',
-          white: 'var(--text-primary, #f3f4f6)',
-          brightBlack: 'var(--text-tertiary, #6b7280)',
-          brightRed: '#f87171',
-          brightGreen: '#34d399',
-          brightYellow: '#fbbf24',
-          brightBlue: '#60a5fa',
-          brightMagenta: '#c084fc',
-          brightCyan: '#67e8f9',
-          brightWhite: '#f9fafb',
-        },
+        theme: terminalThemeFromElement(containerRef.current),
         fontSize: 13,
         fontFamily: 'var(--font-mono)',
         rows: 24,
@@ -213,65 +171,112 @@ export function TerminalSurface({
       termRef.current = term;
       fitAddonRef.current = fitAddon;
 
+      const syncTheme = () => {
+        if (!mounted || !containerRef.current) return;
+        term.options.theme = terminalThemeFromElement(containerRef.current);
+      };
+      themeObserver = new MutationObserver(syncTheme);
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'data-theme', 'data-color-scheme', 'style'],
+      });
+      if (document.body) {
+        themeObserver.observe(document.body, {
+          attributes: true,
+          attributeFilter: ['class', 'data-theme', 'data-color-scheme', 'style'],
+        });
+      }
+
       term.onData((data) => {
-        void sendTerminalInput(remoteSessionId, data);
+        void sendTerminalInput(remoteSessionId, data).catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : 'Terminal input failed';
+          onStatusChangeRef.current('error', message);
+        });
       });
 
-      const es = new EventSource(terminalUrl(`/terminal/${remoteSessionId}/stream`));
-      esRef.current = es;
-
-      es.onopen = () => {
-        if (!mounted) return;
-        onStatusChange('connected');
+      const fitAndResize = () => {
+        if (resizeFrameRef.current !== null) return;
+        resizeFrameRef.current = requestAnimationFrame(() => {
+          resizeFrameRef.current = null;
+          try {
+            fitAddon.fit();
+            const { cols, rows } = term;
+            if (lastSizeRef.current.cols === cols && lastSizeRef.current.rows === rows) return;
+            lastSizeRef.current = { cols, rows };
+            void resizeTerminal(remoteSessionId, cols, rows).catch((error: unknown) => {
+              logger.warn({ error }, 'Terminal resize request failed');
+            });
+          } catch (err) {
+            logger.warn({ err }, 'Terminal fit/resize failed');
+          }
+        });
       };
 
-      es.onmessage = (event) => {
-        if (!mounted) return;
-        try {
-          const msg = JSON.parse(event.data) as TerminalStreamMessage;
+      unsubscribeRef.current = subscribeTerminalStream(remoteSessionId, {
+        onOpen: () => {
+          if (!mounted) return;
+          onStatusChangeRef.current('connected');
+          fitAndResize();
+        },
+        onMessage: (msg) => {
+          if (!mounted) return;
           if (msg.type === 'data' && msg.data) {
             term.write(msg.data);
           }
-        } catch {
-          // Raw data fallback.
-          term.write(event.data);
-        }
-      };
-
-      es.onerror = () => {
-        if (!mounted) return;
-        onStatusChange('error', 'Terminal stream disconnected');
-      };
+        },
+        onError: (message) => {
+          if (!mounted) return;
+          onStatusChangeRef.current('error', message || 'Terminal stream disconnected');
+        },
+        onClose: () => {
+          if (!mounted) return;
+          onStatusChangeRef.current('error', 'Terminal stream ended');
+        },
+      });
 
       // Fit after mount.
-      requestAnimationFrame(() => {
-        try {
-          fitAddon.fit();
-        } catch (err) {
-          logger.warn({ err }, 'Initial fit failed');
-        }
-      });
+      requestAnimationFrame(fitAndResize);
+    }).catch((error: unknown) => {
+      if (!mounted) return;
+      const message = error instanceof Error ? error.message : 'Terminal renderer failed to load';
+      logger.error({ error }, 'Unable to initialize xterm');
+      onStatusChangeRef.current('error', message);
     });
 
     return () => {
       mounted = false;
-      esRef.current?.close();
-      esRef.current = null;
+      themeObserver?.disconnect();
+      themeObserver = null;
+      unsubscribeRef.current?.();
+      unsubscribeRef.current = null;
+      if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = null;
+      lastSizeRef.current = { cols: 0, rows: 0 };
       termRef.current?.dispose();
       termRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [remoteSessionId, onStatusChange]);
+  }, [remoteSessionId]);
 
   // Refit when the pane becomes active or its container resizes.
   useEffect(() => {
-    if (!isActive || !fitAddonRef.current || !containerRef.current) return;
+    if (!isActive || !fitAddonRef.current || !termRef.current || !containerRef.current) return;
     const fit = () => {
-      try {
-        fitAddonRef.current?.fit();
-      } catch {
-        // Ignore fit errors.
-      }
+      if (resizeFrameRef.current !== null) return;
+      resizeFrameRef.current = requestAnimationFrame(() => {
+        resizeFrameRef.current = null;
+        try {
+          fitAddonRef.current?.fit();
+          const { cols, rows } = termRef.current!;
+          if (lastSizeRef.current.cols === cols && lastSizeRef.current.rows === rows) return;
+          lastSizeRef.current = { cols, rows };
+          void resizeTerminal(remoteSessionId, cols, rows).catch((error: unknown) => {
+            logger.warn({ error }, 'Terminal resize request failed');
+          });
+        } catch {
+          // Ignore fit errors while the drawer is transitioning.
+        }
+      });
     };
     fit();
     const timeout = setTimeout(fit, 100);
@@ -285,8 +290,10 @@ export function TerminalSurface({
     return () => {
       clearTimeout(timeout);
       resizeObserver?.disconnect();
+      if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = null;
     };
-  }, [isActive]);
+  }, [isActive, remoteSessionId]);
 
   return (
     <div
@@ -296,6 +303,8 @@ export function TerminalSurface({
         height: '100%',
         minHeight: 80,
         padding: 8,
+        background: 'var(--surface-panel)',
+        color: 'var(--text-primary)',
       }}
     />
   );
@@ -317,11 +326,6 @@ const glassButton: React.CSSProperties = {
   color: 'var(--text-tertiary)',
   cursor: 'pointer',
   transition: 'all 0.15s ease',
-};
-
-const glassButtonHover = {
-  background: 'rgba(255,255,255,0.06)',
-  color: 'var(--text-primary)',
 };
 
 function StatusDot({ status }: { status: TerminalTabStatus }) {
@@ -357,15 +361,26 @@ export function UnifiedTerminal({
   const [tabs, setTabs] = useState<TerminalSession[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [reconnectingTabId, setReconnectingTabId] = useState<string | null>(null);
   const [serviceError, setServiceError] = useState<string | null>(null);
+  const [terminalEndpoint, setTerminalEndpoint] = useState(() => getRuntimeGatewayBaseUrlSync());
   const tabsRef = useRef<TerminalSession[]>([]);
   tabsRef.current = tabs;
+
+  useEffect(() => subscribeRuntimeBackendSnapshot((snapshot) => {
+    setTerminalEndpoint(snapshot.resolved_gateway_url);
+  }), []);
 
   // Create the first terminal tab on mount.
   useEffect(() => {
     let cancelled = false;
 
     const init = async () => {
+      setIsInitializing(true);
+      setServiceError(null);
+      setTabs([]);
+      setActiveTabId(null);
       try {
         const remoteSessionId = await createTerminalSession({ cwd: workingDir });
         if (cancelled) {
@@ -378,6 +393,8 @@ export function UnifiedTerminal({
       } catch (err) {
         if (cancelled) return;
         setServiceError(err instanceof Error ? err.message : 'Terminal service unavailable');
+      } finally {
+        if (!cancelled) setIsInitializing(false);
       }
     };
 
@@ -389,7 +406,7 @@ export function UnifiedTerminal({
         if (tab.remoteSessionId) void closeTerminalSession(tab.remoteSessionId);
       });
     };
-  }, [sessionId, workingDir]);
+  }, [sessionId, terminalEndpoint, workingDir]);
 
   const handleCreateTab = useCallback(async () => {
     setIsLoading(true);
@@ -431,9 +448,53 @@ export function UnifiedTerminal({
     );
   }, []);
 
+  const handleReconnectTab = useCallback(async (tabId: string) => {
+    const target = tabsRef.current.find((tab) => tab.id === tabId);
+    if (!target || reconnectingTabId) return;
+
+    setReconnectingTabId(tabId);
+    setTabs((prev) => prev.map((tab) => (
+      tab.id === tabId
+        ? { ...tab, remoteSessionId: null, status: 'connecting', errorMsg: '' }
+        : tab
+    )));
+
+    if (target.remoteSessionId) void closeTerminalSession(target.remoteSessionId);
+
+    try {
+      const remoteSessionId = await createTerminalSession({ cwd: workingDir });
+      setTabs((prev) => prev.map((tab) => (
+        tab.id === tabId ? { ...tab, remoteSessionId, status: 'connecting', errorMsg: '' } : tab
+      )));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to reconnect terminal';
+      setTabs((prev) => prev.map((tab) => (
+        tab.id === tabId ? { ...tab, status: 'error', errorMsg: message } : tab
+      )));
+    } finally {
+      setReconnectingTabId(null);
+    }
+  }, [reconnectingTabId, workingDir]);
+
   const activeTab = tabs.find((t) => t.id === activeTabId) ?? tabs[0];
   const anyConnecting = tabs.some((t) => t.status === 'connecting');
   const allConnected = tabs.length > 0 && tabs.every((t) => t.status === 'connected');
+  const anyConnected = tabs.some((t) => t.status === 'connected');
+  const anyErrored = tabs.some((t) => t.status === 'error');
+  const connectionState: TerminalTabStatus = isInitializing || isLoading || anyConnecting
+    ? 'connecting'
+    : anyConnected
+      ? 'connected'
+      : 'error';
+  const connectionLabel = isInitializing
+    ? 'STARTING'
+    : isLoading || anyConnecting
+      ? 'CONNECTING'
+      : allConnected
+        ? 'ONLINE'
+        : anyConnected && anyErrored
+          ? 'PARTIAL'
+          : 'OFFLINE';
 
   return (
     <div
@@ -536,13 +597,13 @@ export function UnifiedTerminal({
               alignItems: 'center',
               gap: 6,
               fontSize: 11,
-              color: allConnected ? 'var(--status-success)' : anyConnecting ? 'var(--status-warning)' : 'var(--status-error)',
+              color: connectionState === 'connected' ? 'var(--status-success)' : connectionState === 'connecting' ? 'var(--status-warning)' : 'var(--status-error)',
               whiteSpace: 'nowrap',
               fontFamily: 'var(--font-mono)',
             }}
           >
-            <StatusDot status={allConnected ? 'connected' : anyConnecting ? 'connecting' : 'error'} />
-            {allConnected ? 'ONLINE' : anyConnecting ? 'SYNC' : 'OFFLINE'}
+            <StatusDot status={connectionState} />
+            {connectionLabel}
           </span>
         </div>
 
@@ -646,8 +707,8 @@ export function UnifiedTerminal({
         <div
           style={{
             padding: '8px 12px',
-            background: 'rgba(239,68,68,0.08)',
-            borderBottom: '1px solid rgba(239,68,68,0.25)',
+            background: 'var(--status-error-bg)',
+            borderBottom: '1px solid color-mix(in srgb, var(--status-error) 28%, var(--border-subtle))',
             color: 'var(--status-error)',
             fontSize: 12,
             display: 'flex',
@@ -670,7 +731,7 @@ export function UnifiedTerminal({
               padding: '4px 10px',
               borderRadius: 999,
               border: '1px solid var(--border-subtle)',
-              background: 'rgba(255,255,255,0.06)',
+              background: 'var(--surface-hover)',
               color: 'var(--text-secondary)',
               fontSize: 11,
               cursor: 'pointer',
@@ -678,6 +739,53 @@ export function UnifiedTerminal({
           >
             <ArrowsClockwise size={12} />
             Retry
+          </button>
+        </div>
+      )}
+
+      {!serviceError && activeTab?.status === 'error' && (
+        <div
+          role="alert"
+          style={{
+            minHeight: 34,
+            padding: '6px 12px',
+            background: 'var(--status-error-bg)',
+            borderBottom: '1px solid color-mix(in srgb, var(--status-error) 24%, var(--border-subtle))',
+            color: 'var(--status-error)',
+            fontSize: 11,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+            <Warning size={13} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {activeTab.errorMsg || 'Terminal connection was interrupted'}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleReconnectTab(activeTab.id)}
+            disabled={reconnectingTabId === activeTab.id}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 9px',
+              borderRadius: 6,
+              border: '1px solid color-mix(in srgb, var(--status-error) 28%, var(--border-subtle))',
+              background: 'var(--status-error-bg)',
+              color: 'var(--text-secondary)',
+              fontSize: 10,
+              fontWeight: 650,
+              cursor: reconnectingTabId === activeTab.id ? 'wait' : 'pointer',
+            }}
+          >
+            <ArrowsClockwise size={11} />
+            {reconnectingTabId === activeTab.id ? 'Reconnecting…' : 'Reconnect'}
           </button>
         </div>
       )}
@@ -710,7 +818,7 @@ export function UnifiedTerminal({
                 borderTopRightRadius: 8,
                 border: '1px solid var(--border-subtle)',
                 borderBottom: 'none',
-                background: tab.id === activeTabId ? 'var(--surface-floating)' : 'rgba(255,255,255,0.02)',
+                background: tab.id === activeTabId ? 'var(--surface-floating)' : 'var(--surface-panel)',
                 color: tab.id === activeTabId ? 'var(--text-primary)' : 'var(--text-tertiary)',
                 fontSize: 11,
                 fontWeight: 600,
@@ -743,7 +851,7 @@ export function UnifiedTerminal({
                     padding: 0,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
+                    e.currentTarget.style.background = 'var(--status-error-bg)';
                     e.currentTarget.style.color = 'var(--status-error)';
                   }}
                   onMouseLeave={(e) => {
@@ -776,23 +884,25 @@ export function UnifiedTerminal({
             }}
           >
             <TerminalIcon size={28} weight="duotone" />
-            <span style={{ fontSize: 13 }}>No terminals yet</span>
-            <button
-              type="button"
-              onClick={handleCreateTab}
-              style={{
-                padding: '7px 14px',
-                borderRadius: 999,
-                border: '1px solid var(--border-subtle)',
-                background: 'rgba(255,255,255,0.06)',
-                color: 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              Create First Terminal
-            </button>
+            <span style={{ fontSize: 13 }}>{isInitializing ? 'Starting terminal…' : 'No terminal session'}</span>
+            {!isInitializing && !serviceError && (
+              <button
+                type="button"
+                onClick={handleCreateTab}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 7,
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--surface-panel)',
+                  color: 'var(--text-secondary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Create terminal
+              </button>
+            )}
           </div>
         ) : mode === 'single' ? (
           <div
@@ -814,7 +924,7 @@ export function UnifiedTerminal({
                 backdropFilter: 'blur(14px) saturate(160%)',
                 WebkitBackdropFilter: 'blur(14px) saturate(160%)',
                 overflow: 'hidden',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.28)',
+                boxShadow: 'var(--shadow-lg)',
               }}
             >
               {activeTab?.remoteSessionId && (
@@ -856,8 +966,8 @@ export function UnifiedTerminal({
                   overflow: 'hidden',
                   minHeight: 120,
                   boxShadow: tab.id === activeTabId
-                    ? 'inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px var(--accent-code)22, 0 8px 24px rgba(0,0,0,0.28)'
-                    : 'inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.28)',
+                    ? '0 0 0 1px color-mix(in srgb, var(--accent-code) 24%, transparent), var(--shadow-lg)'
+                    : 'var(--shadow-lg)',
                 }}
               >
                 <div
@@ -867,7 +977,7 @@ export function UnifiedTerminal({
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     borderBottom: '1px solid var(--border-subtle)',
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'var(--surface-panel-muted)',
                     flexShrink: 0,
                   }}
                 >
@@ -901,7 +1011,7 @@ export function UnifiedTerminal({
                       cursor: 'pointer',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(239,68,68,0.12)';
+                      e.currentTarget.style.background = 'var(--status-error-bg)';
                       e.currentTarget.style.color = 'var(--status-error)';
                     }}
                     onMouseLeave={(e) => {

@@ -15,13 +15,13 @@ describe('CodeDiffPanel', () => {
     render(<CodeDiffPanel />);
 
     expect(screen.getByTestId('code-diff-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('code-diff-panel-input')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Paste unified diff here…')).toBeInTheDocument();
   });
 
   it('renders pasted unified diff content', () => {
     render(<CodeDiffPanel />);
 
-    const input = screen.getByTestId('code-diff-panel-input');
+    const input = screen.getByPlaceholderText('Paste unified diff here…');
     fireEvent.change(input, { target: { value: SAMPLE_DIFF } });
 
     expect(screen.getByText('src/App.tsx')).toBeInTheDocument();

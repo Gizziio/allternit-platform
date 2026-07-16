@@ -91,6 +91,7 @@ use db::DbHandle;
 use design_connector_routes::DesignSkillCache;
 use rails::RailsState;
 use std::sync::Arc;
+use terminal_routes::TerminalSessionStore;
 use tokio::sync::RwLock;
 use vm_session_routes::VmSessionStore;
 
@@ -137,6 +138,8 @@ pub struct AppState {
     pub office_runtime: OfficeRuntimeState,
     /// Daemon-side Open Design skill cache with hot-reload semantics.
     pub design_skill_cache: DesignSkillCache,
+    /// Local tmux-backed terminal sessions for Code Mode.
+    pub terminal_sessions: TerminalSessionStore,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

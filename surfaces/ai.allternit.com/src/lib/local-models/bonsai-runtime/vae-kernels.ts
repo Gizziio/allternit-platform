@@ -32,11 +32,12 @@ export class VaeKernels {
     encodeAuto(this.device, this.attention, encoder, buffers, [sequence]);
   }
   encodeNormalization(entryPoint: "group_norm" | "add", encoder: GPUCommandEncoder, buffers: GPUBuffer[],
-    dispatch: number): void {
+    dispatch: [number, number]): void {
     const p = this.normalization.get(entryPoint)!;
     const group = this.device.createBindGroup({ layout: this.normLayout,
       entries: buffers.map((buffer, binding) => ({ binding, resource: { buffer } })) });
-    const pass = encoder.beginComputePass(); pass.setPipeline(p); pass.setBindGroup(0, group); pass.dispatchWorkgroups(dispatch); pass.end();
+    const pass = encoder.beginComputePass(); pass.setPipeline(p); pass.setBindGroup(0, group);
+    pass.dispatchWorkgroups(dispatch[0], dispatch[1]); pass.end();
   }
 }
 function pipeline(device: GPUDevice, code: string, entryPoint: string, label: string): GPUComputePipeline {
@@ -47,4 +48,11 @@ function encodeAuto(device: GPUDevice, pipeline: GPUComputePipeline, encoder: GP
     entries: buffers.map((buffer, binding) => ({ binding, resource: { buffer } })) });
   const pass = encoder.beginComputePass(); pass.setPipeline(pipeline); pass.setBindGroup(0, group);
   pass.dispatchWorkgroups(dispatch[0], dispatch[1] ?? 1, dispatch[2] ?? 1); pass.end();
+}
+
+export function dispatch1D(elements: number): [number, number] {
+  const groups = Math.ceil(elements / 256);
+  if (groups <= 65535) return [groups, 1];
+  const y = Math.ceil(groups / 65535);
+  return [Math.ceil(groups / y), y];
 }

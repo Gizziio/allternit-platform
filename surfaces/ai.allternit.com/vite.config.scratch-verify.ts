@@ -1,0 +1,185 @@
+import { defineConfig, type Plugin } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+import os from 'os'
+import { createRequire } from 'node:module'
+import { visualizer } from 'rollup-plugin-visualizer'
+import pkg from './package.json'
+
+const require = createRequire(import.meta.url)
+const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
+
+/**
+ * Development-only dispatch handoff endpoints.
+ *
+ * Production builds must replace this with a real backend implementation
+ * (e.g. /api/v1/dispatch/claim and /api/v1/dispatch/status backed by Redis/SQLite).
+ */
+function dispatchHandoffPlugin(): Plugin {
+  const claims = new Map<string, { claimedAt: number; device?: string }>();
+
+  function getLanAddress(port: number): string | null {
+    const interfaces = os.networkInterfaces();
+    for (const list of Object.values(interfaces)) {
+      for (const iface of list ?? []) {
+        if (iface.family === 'IPv4' && !iface.internal && iface.address) {
+          return `http://${iface.address}:${port}`;
+        }
+      }
+    }
+    return null;
+  }
+
+  return {
+    name: 'allternit-dispatch-handoff',
+    configureServer(server) {
+      server.middlewares.use('/dispatch/handoff/claim', (req, res, next) => {
+        if (req.method !== 'POST') return next();
+        let body = '';
+        req.on('data', (chunk) => (body += chunk));
+        req.on('end', () => {
+          try {
+            const { token } = JSON.parse(body || '{}') as { token?: string };
+            if (typeof token !== 'string' || !token) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: 'token required' }));
+              return;
+            }
+            claims.set(token, { claimedAt: Date.now(), device: req.headers['user-agent'] });
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ ok: true }));
+          } catch {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: 'invalid body' }));
+          }
+        });
+      });
+
+      server.middlewares.use('/dispatch/handoff/status', (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const url = new URL(req.url || '/', `http://localhost`);
+        const token = url.searchParams.get('token');
+        if (!token) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'token required' }));
+          return;
+        }
+        const claim = claims.get(token);
+        res.setHeader('Content-Type', 'application/json');
+        res.end(
+          JSON.stringify({
+            claimed: Boolean(claim),
+            claimedAt: claim?.claimedAt,
+            device: claim?.device,
+          })
+        );
+      });
+
+      server.middlewares.use('/dispatch/handoff/address', (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const url = getLanAddress(server.config.server.port ?? 3013);
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ url: url || `http://localhost:${server.config.server.port ?? 3013}` }));
+      });
+    },
+  };
+}
+
+export default defineConfig({
+  plugins: [
+    react(),
+    dispatchHandoffPlugin(),
+    process.env.ANALYZE === '1' && visualizer({
+      open: true,
+      gzipSize: true,
+      brotliSize: true,
+      filename: 'dist/stats.html',
+    }),
+  ].filter(Boolean as any),
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
+  // This surface was migrated from Next.js and intentionally keeps its
+  // NEXT_PUBLIC_* deployment contract. Expose only public prefixes; never
+  // broaden this to arbitrary process environment variables.
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      // @blocksuite/data-view@0.19.5 imports a misspelled icon name that was
+      // removed from @blocksuite/icons. Keep the workaround in source so a
+      // clean frozen-lockfile CI install behaves exactly like local builds.
+      '@blocksuite/icons/lit': path.resolve(__dirname, './src/shims/blocksuite-icons-lit.ts'),
+      'virtual:allternit-blocksuite-icons-lit-original': blocksuiteIconsLit,
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: process.env.SOURCEMAP === '1',
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      external: [
+        /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,
+        'better-sqlite3',
+        /^better-sqlite3(\/.+)?$/,
+      ],
+      output: {
+        manualChunks(id) {
+          if (id.includes('tldraw')) return 'tldraw'
+          if (id.includes('cytoscape')) return 'cytoscape'
+          if (id.includes('pdfjs-dist')) return 'pdfjs'
+          if (id.includes('pptxgenjs')) return 'pptxgen'
+          if (id.includes('recharts')) return 'recharts'
+          if (id.includes('leaflet')) return 'leaflet'
+        },
+      },
+    },
+  },
+  server: {
+    port: 3113,
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/viz': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/sandbox': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/vm-session': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/rails': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/stream': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/terminal': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/mcp': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/status': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://127.0.0.1:8113',
+        changeOrigin: true,
+      },
+    },
+  },
+})

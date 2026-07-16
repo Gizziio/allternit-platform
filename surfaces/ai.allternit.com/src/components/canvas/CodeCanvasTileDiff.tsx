@@ -33,7 +33,7 @@ function getFileExtension(path: string): string {
   return match ? match[1].toLowerCase() : '';
 }
 
-function parseUnifiedDiff(diffText: string): ParsedDiffFile[] {
+function parseUnifiedDiff(diffText: string, fallbackPath = 'Working diff'): ParsedDiffFile[] {
   const files: ParsedDiffFile[] = [];
   const lines = diffText.split('\n');
   let currentFile: ParsedDiffFile | null = null;
@@ -65,9 +65,29 @@ function parseUnifiedDiff(diffText: string): ParsedDiffFile[] {
       continue;
     }
 
-    if (!currentFile) continue;
+    if (rawLine.startsWith('--- ') && !currentFile) {
+      const oldPath = rawLine.slice(4).trim().replace(/^a\//, '');
+      const resolvedPath = oldPath === '/dev/null' ? fallbackPath : oldPath;
+      currentFile = { filePath: resolvedPath || fallbackPath, extension: getFileExtension(resolvedPath), hunks: [] };
+      continue;
+    }
+
+    if (rawLine.startsWith('+++ ')) {
+      const nextPath = rawLine.slice(4).trim().replace(/^b\//, '');
+      if (!currentFile) {
+        const resolvedPath = nextPath === '/dev/null' ? fallbackPath : nextPath;
+        currentFile = { filePath: resolvedPath || fallbackPath, extension: getFileExtension(resolvedPath), hunks: [] };
+      } else if (nextPath !== '/dev/null') {
+        currentFile.filePath = nextPath || currentFile.filePath;
+        currentFile.extension = getFileExtension(currentFile.filePath);
+      }
+      continue;
+    }
 
     if (rawLine.startsWith('@@')) {
+      if (!currentFile) {
+        currentFile = { filePath: fallbackPath, extension: getFileExtension(fallbackPath), hunks: [] };
+      }
       pushHunk();
       const match = rawLine.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
       if (match) {
@@ -77,6 +97,8 @@ function parseUnifiedDiff(diffText: string): ParsedDiffFile[] {
       currentHunk = { header: rawLine, lines: [{ type: 'hunk-header', content: rawLine }] };
       continue;
     }
+
+    if (!currentFile) continue;
 
     if (!currentHunk) continue;
 
@@ -93,11 +115,12 @@ function parseUnifiedDiff(diffText: string): ParsedDiffFile[] {
         content: rawLine.slice(1),
       });
     } else {
+      if (rawLine.startsWith('\\ No newline at end of file')) continue;
       currentHunk.lines.push({
         type: 'context',
         oldLineNumber: oldLine,
         newLineNumber: newLine,
-        content: rawLine,
+        content: rawLine.startsWith(' ') ? rawLine.slice(1) : rawLine,
       });
       oldLine++;
       newLine++;
@@ -117,6 +140,7 @@ function HunkActions({
   onNext,
   onApply,
   onReject,
+  canDecide,
 }: {
   filePath: string;
   hunkIndex: number;
@@ -126,6 +150,7 @@ function HunkActions({
   onNext: () => void;
   onApply: () => void;
   onReject: () => void;
+  canDecide: boolean;
 }) {
   return (
     <div
@@ -162,7 +187,7 @@ function HunkActions({
           <CaretRight size={12} />
         </button>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {canDecide && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button
           type="button"
           data-testid={`code-diff-hunk-reject-${filePath}`}
@@ -205,7 +230,7 @@ function HunkActions({
           <Check size={12} />
           Apply
         </button>
-      </div>
+      </div>}
     </div>
   );
 }
@@ -236,7 +261,10 @@ export function CodeCanvasTileDiff({
   const [hunkIndexByFile, setHunkIndexByFile] = useState<Record<string, number>>({});
   const activeDiff = diffText || pastedDiff;
 
-  const files = useMemo(() => (activeDiff ? parseUnifiedDiff(activeDiff) : []), [activeDiff]);
+  const files = useMemo(
+    () => (activeDiff ? parseUnifiedDiff(activeDiff, filePath || 'Working diff') : []),
+    [activeDiff, filePath],
+  );
 
   const setHunkIndex = (filePath: string, index: number) => {
     setHunkIndexByFile((prev) => ({ ...prev, [filePath]: index }));
@@ -252,13 +280,18 @@ export function CodeCanvasTileDiff({
           alignItems: 'center',
           justifyContent: 'center',
           color: 'var(--ui-text-muted)',
-          fontSize: 13,
-          gap: 12,
+          fontSize: 12,
+          gap: 10,
           padding: 24,
         }}
       >
-        <FileCode size={24} opacity={0.3} />
-        <span>No diff content</span>
+        <span style={{ width: 38, height: 38, display: 'grid', placeItems: 'center', border: '1px solid var(--border-subtle)', borderRadius: 9, background: 'var(--surface-panel)' }}>
+          <FileCode size={18} opacity={0.55} />
+        </span>
+        <span style={{ fontWeight: 650, color: 'var(--text-secondary)' }}>No diff selected</span>
+        <span style={{ fontSize: 10, lineHeight: 1.5, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+          Select a workspace to load the working tree diff, or paste a unified diff below.
+        </span>
         <textarea
           aria-label="Text Area"
           value={pastedDiff}
@@ -266,10 +299,10 @@ export function CodeCanvasTileDiff({
           placeholder="Paste unified diff here…"
           style={{
             width: '100%',
-            maxWidth: 400,
-            height: 120,
+            maxWidth: 460,
+            height: 96,
             background: 'var(--surface-panel)',
-            border: '1px solid var(--ui-border-default)',
+            border: '1px solid var(--border-subtle)',
             borderRadius: 8,
             padding: 10,
             color: 'var(--ui-text-secondary)',
@@ -289,8 +322,9 @@ export function CodeCanvasTileDiff({
         height: '100%',
         overflow: 'auto',
         fontFamily: 'var(--font-mono)',
-        fontSize: 12,
-        lineHeight: 1.6,
+        fontSize: 11,
+        lineHeight: 1.55,
+        background: 'rgba(0,0,0,0.08)',
       }}
     >
       {files.map((file) => {
@@ -303,8 +337,9 @@ export function CodeCanvasTileDiff({
           <div key={`codecanvastilediff-${displayPath}`}>
             <div
               style={{
-                padding: '6px 12px',
-                background: 'var(--surface-hover)',
+                minHeight: 32,
+                padding: '5px 10px',
+                background: 'var(--surface-panel)',
                 borderBottom: '1px solid var(--ui-border-muted)',
                 fontSize: 12,
                 fontWeight: 600,
@@ -331,6 +366,7 @@ export function CodeCanvasTileDiff({
                 onNext={() => setHunkIndex(displayPath, Math.min(totalHunks - 1, activeHunk + 1))}
                 onApply={() => onApplyHunk?.(displayPath, activeHunk)}
                 onReject={() => onRejectHunk?.(displayPath, activeHunk)}
+                canDecide={Boolean(onApplyHunk || onRejectHunk)}
               />
             )}
 
@@ -349,16 +385,23 @@ export function CodeCanvasTileDiff({
                           : line.type === 'hunk-header'
                             ? 'rgba(255, 255, 255, 0.04)'
                             : 'transparent',
-                    padding: '0 12px',
+                    minHeight: 18,
+                    padding: '0 10px 0 0',
+                    borderLeft: line.type === 'addition'
+                      ? '2px solid rgba(52,199,89,0.55)'
+                      : line.type === 'deletion'
+                        ? '2px solid rgba(255,59,48,0.55)'
+                        : '2px solid transparent',
                   }}
                 >
                   <div
                     style={{
-                      width: 36,
+                      width: 34,
                       opacity: line.type === 'hunk-header' ? 0 : 0.25,
                       userSelect: 'none',
                       textAlign: 'right',
-                      paddingRight: 8,
+                      paddingRight: 7,
+                      background: 'rgba(0,0,0,0.08)',
                       flexShrink: 0,
                     }}
                   >
@@ -366,11 +409,12 @@ export function CodeCanvasTileDiff({
                   </div>
                   <div
                     style={{
-                      width: 36,
+                      width: 34,
                       opacity: line.type === 'hunk-header' ? 0 : 0.25,
                       userSelect: 'none',
                       textAlign: 'right',
-                      paddingRight: 8,
+                      paddingRight: 7,
+                      background: 'rgba(0,0,0,0.08)',
                       flexShrink: 0,
                     }}
                   >
@@ -388,8 +432,7 @@ export function CodeCanvasTileDiff({
                               : 'inherit',
                       paddingLeft: 4,
                       whiteSpace: 'pre',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      minWidth: 'max-content',
                       fontWeight: line.type === 'hunk-header' ? 600 : 400,
                     }}
                   >

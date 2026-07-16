@@ -196,64 +196,77 @@ export const BashTool = Tool.define("bash", async () => {
       }
       const vmState = VmSession.get(ctx.sessionID)
       if (vmState) {
-        log.info("routing through VM session", {
-          sessionID: ctx.sessionID,
-          vmSessionId: vmState.sessionId,
-          vmBacked: vmState.vmBacked,
-          command: params.command.slice(0, 100),
-        })
+        try {
+          log.info("routing through VM session", {
+            sessionID: ctx.sessionID,
+            vmSessionId: vmState.sessionId,
+            vmBacked: vmState.vmBacked,
+            command: params.command.slice(0, 100),
+          })
 
-        ctx.metadata({ metadata: { output: "", description: params.description } })
+          ctx.metadata({ metadata: { output: "", description: params.description } })
 
-        // Translate the host absolute cwd to a VM-relative path inside /workspace.
-        // git-cloned: /host/project/src  →  /workspace/src
-        // bind-mounted: path is the same inside the VM
-        const vmWorkdir = params.workdir
-          ? (() => {
-              const rel = path.relative(vmState.workdir, params.workdir)
-              // If relative escapes the workdir root, fall back to workspace root
-              return rel.startsWith("..") ? vmState.workspacePath : path.join(vmState.workspacePath, rel)
-            })()
-          : undefined
+          // Translate the host absolute cwd to a VM-relative path inside /workspace.
+          // git-cloned: /host/project/src  →  /workspace/src
+          // bind-mounted: path is the same inside the VM
+          const vmWorkdir = params.workdir
+            ? (() => {
+                const rel = path.relative(vmState.workdir, params.workdir)
+                // If relative escapes the workdir root, fall back to workspace root
+                return rel.startsWith("..") ? vmState.workspacePath : path.join(vmState.workspacePath, rel)
+              })()
+            : undefined
 
-        const vmResult = await VmSession.exec(
-          ctx.sessionID,
-          params.command,
-          {
-            env: shellEnv.env as Record<string, string>,
-            timeoutSecs: Math.ceil(timeout / 1000),
-            workdir: vmWorkdir,
-          },
-          ctx.abort,
-        )
+          const vmResult = await VmSession.exec(
+            ctx.sessionID,
+            params.command,
+            {
+              env: shellEnv.env as Record<string, string>,
+              timeoutSecs: Math.ceil(timeout / 1000),
+              workdir: vmWorkdir,
+            },
+            ctx.abort,
+          )
 
-        const combinedOutput = vmResult.stderr
-          ? `${vmResult.stdout}\n[STDERR]\n${vmResult.stderr}`
-          : vmResult.stdout
+          const combinedOutput = vmResult.stderr
+            ? `${vmResult.stdout}\n[STDERR]\n${vmResult.stderr}`
+            : vmResult.stdout
 
-        ctx.metadata({
-          metadata: {
-            output:
-              combinedOutput.length > MAX_METADATA_LENGTH
-                ? combinedOutput.slice(0, MAX_METADATA_LENGTH) + "\n\n..."
-                : combinedOutput,
-            exit: vmResult.exitCode,
-            description: params.description,
-            vm_backed: vmResult.vmBacked,
-          },
-        })
+          ctx.metadata({
+            metadata: {
+              output:
+                combinedOutput.length > MAX_METADATA_LENGTH
+                  ? combinedOutput.slice(0, MAX_METADATA_LENGTH) + "\n\n..."
+                  : combinedOutput,
+              exit: vmResult.exitCode,
+              description: params.description,
+              vm_backed: vmResult.vmBacked,
+            },
+          })
 
-        return {
-          title: params.description,
-          metadata: {
-            output:
-              combinedOutput.length > MAX_METADATA_LENGTH
-                ? combinedOutput.slice(0, MAX_METADATA_LENGTH) + "\n\n..."
-                : combinedOutput,
-            exit: vmResult.exitCode,
-            description: params.description,
-          },
-          output: combinedOutput,
+          return {
+            title: params.description,
+            metadata: {
+              output:
+                combinedOutput.length > MAX_METADATA_LENGTH
+                  ? combinedOutput.slice(0, MAX_METADATA_LENGTH) + "\n\n..."
+                  : combinedOutput,
+              exit: vmResult.exitCode,
+              description: params.description,
+            },
+            output: combinedOutput,
+          }
+        } catch (err) {
+          // The API host may now be refusing to execute unsandboxed (see
+          // vm_session_routes.rs's fail-closed change) if its VM driver died
+          // mid-session, or the request failed outright. Never treat this as
+          // "ran fine" — fall through to the local, OS-sandboxed path below
+          // rather than surfacing a bare crash or (worse) trusting a result
+          // that might have run unsandboxed on a shared host.
+          log.warn("VM session exec failed, falling back to local sandboxed execution", {
+            error: err instanceof Error ? err.message : String(err),
+            sessionID: ctx.sessionID,
+          })
         }
       }
       // ── End VM Session execution ───────────────────────────────────────────

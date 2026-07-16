@@ -16,6 +16,7 @@ members = [
     "domains/kernel/drivers/system-law",
     "drivers/apple-vf",
     "drivers/firecracker",
+    "drivers/firecracker-guest-agent",
     "services/session-manager",
     "services/vm-executor",
     "mcp/core",

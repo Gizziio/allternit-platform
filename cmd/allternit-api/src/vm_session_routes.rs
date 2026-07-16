@@ -389,16 +389,23 @@ async fn create_session_handler(
                 "vm-driver feature not enabled; running in local process mode".to_string();
         }
     } else {
-        // No VM driver — run bootstrap locally so tools are verified present
-        vm_backed = false;
+        // No VM driver available on this API host. Previously this proceeded
+        // anyway with a local, unsandboxed bootstrap and returned 200 with
+        // vm_backed:false, so callers could easily miss that every command in
+        // "this session" would actually run unsandboxed on the API server.
+        // Fail closed at provision time instead -- the caller should fall
+        // back to its own local sandboxed execution rather than get a session
+        // handle that silently means "no isolation."
         warn!(
             session_id = %session_id,
-            "No VM driver — session will use local process fallback"
+            "No VM driver available — refusing to provision an unsandboxed session"
         );
-        bootstrap_log = run_local_bootstrap(&request, &workspace_path).await;
-        if request.git_remote.is_some() {
-            git_cloned = true; // may have cloned locally
-        }
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "No VM driver is available on this API host; refusing to provision an unsandboxed \
+             session. Fall back to local sandboxed execution instead."
+                .to_string(),
+        ));
     }
 
     let now = Utc::now();
@@ -1051,55 +1058,6 @@ echo "[gizzi-bootstrap] ============================================"
     script
 }
 
-/// Run a lightweight bootstrap for the process-fallback path (no real VM).
-/// Mostly just verifies the workspace and git state.
-async fn run_local_bootstrap(request: &CreateVmSessionRequest, workspace_path: &str) -> String {
-    let mut log = format!(
-        "[gizzi-local] Process fallback mode — workdir: {}\n",
-        request.workdir
-    );
-
-    // If git remote provided, clone locally
-    if let Some(remote) = &request.git_remote {
-        let branch_args: Vec<&str> = if let Some(b) = &request.git_branch {
-            vec!["--branch", b]
-        } else {
-            vec![]
-        };
-
-        let dir = workspace_path;
-        let mut args = vec!["clone", "--depth", "1"];
-        args.extend(branch_args.iter().copied());
-        args.push(remote.as_str());
-        args.push(dir);
-
-        match tokio::process::Command::new("git")
-            .args(&args)
-            .kill_on_drop(true)
-            .output()
-            .await
-        {
-            Ok(out) => {
-                log.push_str(&String::from_utf8_lossy(&out.stdout));
-                log.push_str(&String::from_utf8_lossy(&out.stderr));
-                if out.status.success() {
-                    log.push_str(&format!("[gizzi-local] Cloned {remote} → {dir}\n"));
-                }
-            }
-            Err(e) => {
-                log.push_str(&format!("[gizzi-local] git clone failed: {e}\n"));
-            }
-        }
-    } else {
-        log.push_str(&format!(
-            "[gizzi-local] Using host workdir as workspace: {}\n",
-            request.workdir
-        ));
-    }
-
-    log
-}
-
 /// GET /vm-session/:session_id
 async fn get_session_handler(
     State(state): State<Arc<AppState>>,
@@ -1203,8 +1161,20 @@ async fn exec_in_session_handler(
             local_exec(&request, &session).await?
         }
     } else {
-        // ── Local process fallback ────────────────────────────────────
-        local_exec(&request, &session).await?
+        // No VM driver available for this session. Previously this silently
+        // ran the command unsandboxed on the API host itself (via local_exec)
+        // and still returned 200 with vm_backed:false -- worse blast radius
+        // than any other fallback in this codebase, since the API host may be
+        // shared across users. Fail closed instead: the caller (gizzi-code's
+        // bash.ts) already has its own local, OS-sandboxed fallback path and
+        // should use that rather than trust output produced unsandboxed here.
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            format!(
+                "VM session {session_id} has no available VM driver on this API host; \
+                 refusing to execute unsandboxed. Fall back to local sandboxed execution instead."
+            ),
+        ));
     };
 
     // Update last_used timestamp

@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Minus,
   Plus,
@@ -19,6 +19,7 @@ import {
   Plugs,
   DownloadSimple,
   UploadSimple,
+  DotsThree,
 } from '@phosphor-icons/react';
 import {
   useCodeModeStore,
@@ -34,6 +35,7 @@ const logger = createModuleLogger('CanvasToolbar');
 interface CanvasToolbarProps {
   workspaceId: string;
   viewport: CodeCanvasViewport;
+  canvasSize: { width: number; height: number };
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetZoom: () => void;
@@ -51,6 +53,7 @@ interface CanvasToolbarProps {
 export function CanvasToolbar({
   workspaceId,
   viewport,
+  canvasSize,
   onZoomIn,
   onZoomOut,
   onResetZoom,
@@ -66,12 +69,12 @@ export function CanvasToolbar({
 }: CanvasToolbarProps) {
   const addCanvasTile = useCodeModeStore((s) => s.addCanvasTile);
   const autoArrange = useCodeModeStore((s) => s.autoArrangeCanvasTiles);
-  const setWorkspaceLayoutMode = useCodeModeStore((s) => s.setWorkspaceLayoutMode);
   const createCodeSession = useCodeSessionStore((s) => s.createSession);
 
   const spawnTile = async (type: CodeCanvasTile['type']) => {
-    const centerX = -viewport.x / viewport.zoom + (window.innerWidth / 2 / viewport.zoom) - 240;
-    const centerY = -viewport.y / viewport.zoom + (window.innerHeight / 2 / viewport.zoom) - 180;
+    if (!workspaceId) return;
+    const centerX = (canvasSize.width / 2 - viewport.x) / viewport.zoom - 240;
+    const centerY = (canvasSize.height / 2 - viewport.y) / viewport.zoom - 180;
 
     let sessionId: string | undefined;
     if (type === 'session') {
@@ -101,161 +104,362 @@ export function CanvasToolbar({
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    height: 32,
-    padding: '0 12px',
-    borderRadius: 10,
-    border: '1px solid var(--glass-border)',
-    background: 'var(--glass-bg)',
+    width: 34,
+    height: 34,
+    padding: 0,
+    borderRadius: 9,
+    border: '1px solid transparent',
+    background: 'transparent',
     color: 'var(--text-secondary)',
-    fontSize: 12,
-    fontWeight: 600,
     cursor: 'pointer',
-    backdropFilter: 'blur(14px)',
-    WebkitBackdropFilter: 'blur(14px)',
-    whiteSpace: 'nowrap',
+    transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease',
   };
 
   return (
     <div
+      role="toolbar"
+      aria-label="Canvas tools"
       style={{
         position: 'absolute',
-        top: 12,
-        left: '50%',
-        transform: 'translateX(-50%)',
+        top: '50%',
+        left: 14,
+        transform: 'translateY(-50%)',
         zIndex: 100,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        gap: 8,
-        padding: '6px 10px',
-        borderRadius: 14,
+        gap: 3,
+        padding: 5,
+        borderRadius: 13,
         border: '1px solid var(--glass-border)',
-        background: 'var(--glass-bg)',
+        background: 'var(--surface-floating)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         boxShadow: 'var(--shadow-md)',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        maxWidth: 'calc(100% - 32px)',
+        maxHeight: 'calc(100% - 112px)',
       }}
     >
-      {/* Zoom controls */}
-      <button type="button" onClick={onZoomOut} style={{ ...buttonStyle, padding: '0 8px', width: 32 }}>
-        <Minus size={14} />
-      </button>
-      <button type="button" onClick={onResetZoom} style={{ ...buttonStyle, minWidth: 52, fontVariantNumeric: 'tabular-nums' }}>
-        {Math.round(viewport.zoom * 100)}%
-      </button>
-      <button type="button" onClick={onZoomIn} style={{ ...buttonStyle, padding: '0 8px', width: 32 }}>
-        <Plus size={14} />
-      </button>
+      <SpawnMenu onSpawn={spawnTile} buttonStyle={buttonStyle} />
+      <ToolbarButton label="Arrange tiles" onClick={() => autoArrange(workspaceId)} style={buttonStyle}>
+        <SquaresFour size={16} />
+      </ToolbarButton>
       {onFitView && (
-        <button type="button" onClick={onFitView} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Fit all tiles">
-          <ArrowsOutSimple size={14} />
-        </button>
+        <ToolbarButton label="Fit all tiles" onClick={onFitView} style={buttonStyle}>
+          <ArrowsOutSimple size={16} />
+        </ToolbarButton>
       )}
 
-      <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
-
-      {/* Spawn tiles */}
-      <button type="button" onClick={() => void spawnTile('session')} style={buttonStyle}>
-        <ChatTeardropText size={14} />
-        Session
-      </button>
-      <button type="button" onClick={() => void spawnTile('preview')} style={buttonStyle}>
-        <Browser size={14} />
-        Preview
-      </button>
-      <button type="button" onClick={() => void spawnTile('diff')} style={buttonStyle}>
-        <GitDiff size={14} />
-        Diff
-      </button>
-      <button type="button" onClick={() => void spawnTile('terminal')} style={buttonStyle}>
-        <TerminalIcon size={14} />
-        Terminal
-      </button>
-      <button type="button" onClick={() => void spawnTile('notes')} style={buttonStyle}>
-        <NotePencil size={14} />
-        Notes
-      </button>
-      <button type="button" onClick={() => void spawnTile('knowledge')} style={buttonStyle}>
-        <BookBookmark size={14} />
-        Knowledge
-      </button>
-      <button type="button" onClick={() => void spawnTile('knowledge-graph')} style={buttonStyle}>
-        <Graph size={14} />
-        Graph
-      </button>
-
-      <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
-
-      <button type="button" onClick={() => autoArrange(workspaceId)} style={buttonStyle}>
-        <SquaresFour size={14} />
-        Arrange
-      </button>
-
-      <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
-
-      <button type="button" onClick={() => setWorkspaceLayoutMode(workspaceId, 'thread')} style={buttonStyle}>
-        Thread View
-      </button>
-
-      {onAudit && (
+      {(onAudit || onCommit || onDiff || onDashboard || onHooks || onMcp) && (
         <>
-          <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
-          <button type="button" onClick={onAudit} style={buttonStyle} title="Workspace Audit">
-            <Shield size={14} />
-            Audit
-          </button>
+          <ToolbarSeparator />
+          <CanvasActionsMenu
+            buttonStyle={buttonStyle}
+            items={[
+              ...(onAudit ? [{ label: 'Workspace audit', icon: <Shield size={15} />, onClick: onAudit }] : []),
+              ...(onCommit ? [{ label: 'Commit with provenance', icon: <GitCommit size={15} />, onClick: onCommit }] : []),
+              ...(onDiff ? [{ label: 'Reasoning diff', icon: <GitDiff size={15} />, onClick: onDiff }] : []),
+              ...(onDashboard ? [{ label: 'Open dashboard', icon: <Monitor size={15} />, onClick: onDashboard }] : []),
+              ...(onHooks ? [{ label: 'Agent hooks', icon: <Plugs size={15} />, onClick: onHooks }] : []),
+              ...(onMcp ? [{ label: 'MCP server settings', icon: <Graph size={15} />, onClick: onMcp }] : []),
+            ]}
+          />
         </>
       )}
 
-      {onCommit && (
-        <button type="button" onClick={onCommit} style={buttonStyle} title="Commit with Provenance">
-          <GitCommit size={14} />
-          Commit
-        </button>
-      )}
-
-      {onDiff && (
-        <button type="button" onClick={onDiff} style={buttonStyle} title="Reasoning Diff">
-          <GitDiff size={14} />
-          Diff
-        </button>
-      )}
-
-      {onDashboard && (
-        <button type="button" onClick={onDashboard} style={buttonStyle} title="h5i Dashboard">
-          <Monitor size={14} />
-          Dashboard
-        </button>
-      )}
-
-      {onHooks && (
-        <button type="button" onClick={onHooks} style={buttonStyle} title="Install Agent Hooks">
-          <Plugs size={14} />
-          Hooks
-        </button>
-      )}
-
-      {onMcp && (
-        <button type="button" onClick={onMcp} style={buttonStyle} title="MCP Server Config">
-          <Plugs size={14} />
-          MCP
-        </button>
-      )}
-
-      <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />
+      <ToolbarSeparator />
 
       {onExport && (
-        <button type="button" onClick={onExport} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Export layout">
-          <DownloadSimple size={14} />
-        </button>
+        <ToolbarButton label="Export canvas" onClick={onExport} style={buttonStyle}>
+          <DownloadSimple size={16} />
+        </ToolbarButton>
       )}
       {onImport && (
-        <button type="button" onClick={onImport} style={{ ...buttonStyle, padding: '0 8px', width: 32 }} title="Import layout">
-          <UploadSimple size={14} />
-        </button>
+        <ToolbarButton label="Import canvas" onClick={onImport} style={buttonStyle}>
+          <UploadSimple size={16} />
+        </ToolbarButton>
+      )}
+
+      <ToolbarSeparator />
+      <ToolbarButton label="Zoom in" onClick={onZoomIn} style={buttonStyle}>
+        <Plus size={16} />
+      </ToolbarButton>
+      <ToolbarButton
+        label={`Reset zoom (${Math.round(viewport.zoom * 100)}%)`}
+        onClick={onResetZoom}
+        style={buttonStyle}
+      >
+        <span style={{ fontSize: 9, fontWeight: 750, fontVariantNumeric: 'tabular-nums' }}>
+          {Math.round(viewport.zoom * 100)}
+        </span>
+      </ToolbarButton>
+      <ToolbarButton label="Zoom out" onClick={onZoomOut} style={buttonStyle}>
+        <Minus size={16} />
+      </ToolbarButton>
+    </div>
+  );
+}
+
+function ToolbarSeparator() {
+  return <div aria-hidden="true" style={{ width: 22, height: 1, margin: '3px 0', background: 'var(--border-subtle)' }} />;
+}
+
+function ToolbarButton({
+  label,
+  onClick,
+  style,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  style: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      style={style}
+      onMouseEnter={(event) => {
+        event.currentTarget.style.background = 'var(--surface-hover)';
+        event.currentTarget.style.color = 'var(--text-primary)';
+        event.currentTarget.style.borderColor = 'var(--border-subtle)';
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.background = 'transparent';
+        event.currentTarget.style.color = 'var(--text-secondary)';
+        event.currentTarget.style.borderColor = 'transparent';
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function CanvasActionsMenu({
+  items,
+  buttonStyle,
+}: {
+  items: Array<{ label: string; icon: React.ReactNode; onClick: () => void }>;
+  buttonStyle: React.CSSProperties;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  return (
+    <div ref={rootRef} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        aria-label="More canvas actions"
+        title="More canvas actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        style={{
+          ...buttonStyle,
+          ...(open
+            ? {
+                background: 'var(--surface-hover)',
+                color: 'var(--text-primary)',
+                borderColor: 'var(--border-subtle)',
+              }
+            : {}),
+        }}
+      >
+        <DotsThree size={18} weight="bold" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 42,
+            zIndex: 110,
+            width: 210,
+            padding: 6,
+            borderRadius: 12,
+            border: '1px solid var(--glass-border)',
+            background: 'var(--surface-floating)',
+            boxShadow: 'var(--shadow-lg)',
+          }}
+        >
+          {items.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                item.onClick();
+              }}
+              style={{
+                width: '100%',
+                minHeight: 32,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 9,
+                padding: '0 9px',
+                border: 'none',
+                borderRadius: 7,
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+                textAlign: 'left',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.background = 'var(--surface-hover)';
+                event.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.background = 'transparent';
+                event.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface SpawnMenuProps {
+  onSpawn: (type: CodeCanvasTile['type']) => void | Promise<void>;
+  buttonStyle: React.CSSProperties;
+}
+
+const SPAWN_ITEMS: Array<{ type: CodeCanvasTile['type']; label: string; icon: typeof Plus }> = [
+  { type: 'session', label: 'Session', icon: ChatTeardropText },
+  { type: 'terminal', label: 'Terminal', icon: TerminalIcon },
+  { type: 'diff', label: 'Diff', icon: GitDiff },
+  { type: 'preview', label: 'Preview', icon: Browser },
+  { type: 'notes', label: 'Notes', icon: NotePencil },
+  { type: 'knowledge', label: 'Knowledge', icon: BookBookmark },
+  { type: 'knowledge-graph', label: 'Graph', icon: Graph },
+];
+
+function SpawnMenu({ onSpawn, buttonStyle }: SpawnMenuProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  const menuButtonStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+    padding: '7px 10px',
+    border: 'none',
+    borderRadius: 7,
+    background: 'transparent',
+    color: 'var(--text-primary)',
+    fontSize: 12,
+    fontWeight: 600,
+    textAlign: 'left',
+    cursor: 'pointer',
+  };
+
+  return (
+    <div ref={rootRef} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        style={{
+          ...buttonStyle,
+          ...(open
+            ? {
+                background: 'var(--surface-hover)',
+                color: 'var(--text-primary)',
+                borderColor: 'var(--border-subtle)',
+              }
+            : {}),
+        }}
+        aria-label="Add canvas tile"
+        title="Add canvas tile"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onMouseEnter={(event) => {
+          event.currentTarget.style.background = 'var(--surface-hover)';
+          event.currentTarget.style.color = 'var(--text-primary)';
+          event.currentTarget.style.borderColor = 'var(--border-subtle)';
+        }}
+        onMouseLeave={(event) => {
+          if (open) return;
+          event.currentTarget.style.background = 'transparent';
+          event.currentTarget.style.color = 'var(--text-secondary)';
+          event.currentTarget.style.borderColor = 'transparent';
+        }}
+      >
+        <Plus size={17} weight="bold" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 42,
+            zIndex: 110,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            minWidth: 160,
+            padding: 6,
+            borderRadius: 12,
+            border: '1px solid var(--glass-border)',
+            background: 'var(--surface-floating)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: 'var(--shadow-md)',
+          }}
+        >
+          {SPAWN_ITEMS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.type}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  void onSpawn(item.type);
+                }}
+                style={menuButtonStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--surface-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <Icon size={14} />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );
