@@ -25,6 +25,7 @@ import {
 import { VPSConnectionsPanel } from './VPSConnectionsPanel';
 import { ComputeBillingPanel } from '@/components/settings/ComputeBillingPanel';
 import { EnterpriseByocPanel } from '@/components/settings/EnterpriseByocPanel';
+import { OrganizationAccessPanel } from '@/components/settings/OrganizationAccessPanel';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { usePlatformAuth, usePlatformUser, usePlatformSignOut, usePlatformHardSignOut, usePlatformSessions, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
 import { env } from '@/lib/env';
@@ -1411,6 +1412,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'agents': return <AgentOpsPanel />;
       case 'about': return renderAboutPanel();
       case 'signin': return <ClerkAuthPanel />;
+      case 'organization': return <OrganizationAccessPanel />;
       case 'skills': return renderSkillsPanel();
       case 'connectors': return renderConnectorsPanel();
       case 'plugins': return renderPluginsPanel();

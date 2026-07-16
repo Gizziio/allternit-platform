@@ -4,10 +4,12 @@ import React, { ReactNode, createContext, useContext, useEffect, useMemo, useSta
 import { useLocation } from "react-router-dom"
 import {
   ClerkProvider,
+  OrganizationSwitcher,
   SignIn,
   SignUp,
   useAuth,
   useClerk as useClerkReact,
+  useOrganization,
   useSignIn,
   useUser,
 } from "@clerk/clerk-react"
@@ -46,6 +48,17 @@ export interface PlatformUser {
   primaryEmailAddress?: { emailAddress: string } | null;
   emailAddresses?: Array<{ emailAddress: string }>;
   imageUrl?: string | null;
+}
+
+export interface PlatformOrganization {
+  id: string;
+  name: string;
+  slug?: string | null;
+  imageUrl?: string | null;
+}
+
+export interface PlatformOrganizationMembership {
+  role?: string | null;
 }
 
 type PlatformAuthShape = ReturnType<typeof buildDisabledAuthValue>
@@ -272,6 +285,44 @@ export function usePlatformSessions() {
   return sessions
 }
 
+export function usePlatformOrganization(): {
+  isLoaded: boolean;
+  organization: PlatformOrganization | null;
+  membership: PlatformOrganizationMembership | null;
+} {
+  return usePlatformAuthContext().organization
+}
+
+/**
+ * Clerk's organization picker, kept behind the platform-auth boundary so the
+ * desktop and self-hosted shells never render a Clerk component without a
+ * ClerkProvider. Selecting an organization refreshes the active session token
+ * and therefore the org-scoped BYOC/billing permissions used by Settings.
+ */
+export function PlatformOrganizationSwitcher() {
+  const { clerk } = usePlatformAuthContext()
+  if (!clerk) return null
+  return (
+    <OrganizationSwitcher
+      appearance={{
+        elements: {
+          rootBox: { width: "100%" },
+          organizationSwitcherTrigger: {
+            width: "100%",
+            justifyContent: "space-between",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "10px",
+            padding: "9px 11px",
+            background: "var(--bg-secondary)",
+            color: "var(--text-primary)",
+            boxShadow: "none",
+          },
+        },
+      }}
+    />
+  )
+}
+
 export function useClerk() {
   return usePlatformAuthContext().clerk
 }
@@ -309,6 +360,11 @@ function buildDisabledAuthValue() {
       isLoaded: true as boolean,
       sessions: [] as any[],
     },
+    organization: {
+      isLoaded: true as boolean,
+      organization: null as PlatformOrganization | null,
+      membership: null as PlatformOrganizationMembership | null,
+    },
     auth: {
       isLoaded: true as boolean,
       isSignedIn: false as boolean | undefined,
@@ -336,6 +392,16 @@ function buildDesktopAuthValue(session: DesktopSession | null, isLoaded: boolean
     sessions: {
       isLoaded,
       sessions: [] as any[],
+    },
+    organization: {
+      isLoaded,
+      organization: session?.organizationId ? {
+        id: session.organizationId,
+        name: "Active organization",
+      } : null,
+      membership: session?.organizationRole ? {
+        role: session.organizationRole,
+      } : null,
     },
     auth: {
       isLoaded,
@@ -366,6 +432,7 @@ function buildDesktopAuthValue(session: DesktopSession | null, isLoaded: boolean
 function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
   const clerkUser = useUser()
   const clerkAuth = useAuth()
+  const clerkOrganization = useOrganization()
   const clerk = useClerkReact()
   const [sessions, setSessions] = useState<any[]>([])
 
@@ -387,13 +454,25 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
       isLoaded: clerkAuth.isLoaded,
       sessions,
     },
+    organization: {
+      isLoaded: clerkOrganization.isLoaded,
+      organization: clerkOrganization.organization ? {
+        id: clerkOrganization.organization.id,
+        name: clerkOrganization.organization.name,
+        slug: clerkOrganization.organization.slug,
+        imageUrl: clerkOrganization.organization.imageUrl,
+      } : null,
+      membership: clerkOrganization.membership ? {
+        role: clerkOrganization.membership.role,
+      } : null,
+    },
     auth: clerkAuth,
     signOut: clerk.signOut,
     hardSignOut: async (options?: unknown) => {
       await clerk.signOut(options as never)
     },
     clerk,
-  }), [clerk, clerkAuth, clerkUser, sessions])
+  }), [clerk, clerkAuth, clerkOrganization, clerkUser, sessions])
 
   return <PlatformAuthContext.Provider value={value}>{children}</PlatformAuthContext.Provider>
 }

@@ -13,10 +13,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowClockwise, Plus, Warning } from '@phosphor-icons/react';
-import { STATUS, TEXT } from '@/design/allternit.tokens';
+import { ArrowClockwise, Cloud, Plus, ShieldCheck, Warning } from '@phosphor-icons/react';
 import { SectionHeading } from '@/components/settings/SectionHeading';
 import { QUIET_BUTTON_CLASS } from '@/components/settings/buttonStyles';
+import { Badge } from '@/components/settings/Badge';
 import { CloudCredentialsList, AddCloudCredentialForm } from '@/components/cloud';
 import {
   listCloudCredentials,
@@ -64,81 +64,50 @@ export function CloudCredentialsPanel() {
   }, []);
 
   return (
-    <div style={{ maxWidth: '900px' }}>
-      {/* Header Card */}
-      <div
-        style={{
-          marginBottom: '24px',
-          padding: '24px',
-          borderRadius: '12px',
-          background: 'linear-gradient(135deg, rgba(37,37,37,0.6) 0%, rgba(37,37,37,0.3) 100%)',
-          border: '1px solid var(--ui-border-muted)',
-        }}
-      >
-        <SectionHeading className="mb-2">Cloud credentials</SectionHeading>
-        <p style={{
-          fontSize: '14px',
-          color: TEXT.secondary,
-          margin: 0,
-          lineHeight: '1.5',
-        }}>
-          Connect your own AWS, Google Cloud, or Azure account so Tier-3 sandboxes provision
-          into your cloud instead of allternit's. Your provider bills you directly for compute;
-          allternit charges a platform fee on top.
-        </p>
+    <div className="space-y-4">
+      <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/45 p-4">
+        <div className="flex items-start gap-3">
+          <div className="size-9 rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center shrink-0">
+            <Cloud size={18} weight="duotone" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <SectionHeading className="m-0">Cloud accounts</SectionHeading>
+              <Badge>{credentials.filter((credential) => credential.status === 'active').length} active</Badge>
+            </div>
+            <p className="text-[11px] text-[var(--text-secondary)] mt-1 mb-0 leading-relaxed">
+              Connect a least-privilege AWS role, Google Cloud service account, or Azure service principal.
+              Secrets are sealed before storage and never returned to the browser.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Error Display */}
       {error && (
-        <div
-          style={{
-            marginBottom: '20px',
-            padding: '14px 18px',
-            borderRadius: '10px',
-            background: 'var(--status-error-bg)',
-            border: '1px solid rgba(239,68,68,0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            color: STATUS.error,
-            fontSize: '13px',
-          }}
-        >
+        <div className="flex items-start gap-2 rounded-lg border border-solid border-[rgba(239,68,68,0.25)] bg-[var(--status-error-bg)] px-3 py-2.5 text-[12px] text-[var(--status-error)]">
           <Warning size={18} weight="fill" />
-          <span style={{ flex: 1 }}>{error}</span>
+          <span className="flex-1 leading-relaxed">{error}</span>
           <button type="button" onClick={() => setError(null)} className={QUIET_BUTTON_CLASS}>
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Action Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '24px',
-          padding: '16px 20px',
-          borderRadius: '10px',
-          background: 'rgba(37,37,37,0.4)',
-          border: '1px solid var(--ui-border-muted)',
-        }}
-      >
+      <div className="flex items-center gap-2">
         <button type="button" onClick={() => setIsModalOpen(true)} className={QUIET_BUTTON_CLASS}>
-          <Plus size={18} weight="bold" />
-          Connect Cloud Account
+          <Plus size={15} weight="bold" />
+          Connect account
         </button>
-
-        <div style={{ flex: 1 }} />
-
+        <div className="flex-1" />
+        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
+          <ShieldCheck size={12} /> Organization scoped
+        </span>
         <button type="button" onClick={() => void loadCredentials()} disabled={isLoading} className={QUIET_BUTTON_CLASS}>
-          <ArrowClockwise size={16} className={isLoading ? 'animate-spin' : ''} />
+          <ArrowClockwise size={13} className={isLoading ? 'animate-spin' : ''} />
           Refresh
         </button>
       </div>
 
-      {/* Credentials List */}
       <CloudCredentialsList
         credentials={credentials}
         onAddCredential={() => setIsModalOpen(true)}
@@ -146,7 +115,6 @@ export function CloudCredentialsPanel() {
         isLoading={isLoading}
       />
 
-      {/* Add Credential Modal */}
       <AddCloudCredentialForm
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

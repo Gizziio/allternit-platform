@@ -92,6 +92,7 @@ struct HostedRuntimeEntitlementResponse {
     estimated_cost_usd_monthly: f64,
     active_instances: i64,
     idle_timeout_minutes: i64,
+    allowed_regions: Vec<String>,
     upgrade_url: String,
     billing_portal_url: String,
 }
@@ -512,10 +513,11 @@ async fn hosted_runtime_entitlement(
         estimated_cost_usd_monthly: usage.estimated_cost_usd,
         active_instances,
         idle_timeout_minutes: hosted_idle_timeout_minutes(),
+        allowed_regions: hosted_allowed_regions(),
         upgrade_url: std::env::var("ALLTERNIT_HOSTED_UPGRADE_URL")
-            .unwrap_or_else(|_| "https://billing.allternit.com/hosted-compute".to_string()),
+            .unwrap_or_else(|_| "https://allternit.com/pricing".to_string()),
         billing_portal_url: std::env::var("ALLTERNIT_BILLING_PORTAL_URL")
-            .unwrap_or_else(|_| "https://billing.allternit.com".to_string()),
+            .unwrap_or_default(),
     }))
 }
 
@@ -554,13 +556,7 @@ fn hosted_idle_timeout_minutes() -> i64 {
 }
 
 fn validate_region(region: &str) -> Result<(), ApiError> {
-    let allowed = std::env::var("FLY_HOSTED_ALLOWED_REGIONS")
-        .unwrap_or_else(|_| default_region())
-        .split(',')
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_string)
-        .collect::<Vec<_>>();
+    let allowed = hosted_allowed_regions();
     if !allowed
         .iter()
         .any(|allowed_region| allowed_region == region)
@@ -571,6 +567,16 @@ fn validate_region(region: &str) -> Result<(), ApiError> {
         )));
     }
     Ok(())
+}
+
+fn hosted_allowed_regions() -> Vec<String> {
+    std::env::var("FLY_HOSTED_ALLOWED_REGIONS")
+        .unwrap_or_else(|_| default_region())
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 fn sha256_hex(value: &[u8]) -> String {

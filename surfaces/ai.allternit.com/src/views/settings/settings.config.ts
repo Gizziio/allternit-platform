@@ -33,6 +33,7 @@ import {
   PlugsConnected,
   Package,
   DeviceMobile,
+  Buildings,
 } from '@phosphor-icons/react';
 
 export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'customize' | 'about';
@@ -46,6 +47,7 @@ export interface SettingsNavItem {
 
 export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'signin', label: 'Account', icon: React.createElement(User, { size: 18 }), group: 'account' },
+  { id: 'organization', label: 'Organization & access', icon: React.createElement(Buildings, { size: 18 }), group: 'account' },
   { id: 'usage', label: 'Usage', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
   { id: 'billing', label: 'Plans & compute', icon: React.createElement(CreditCard, { size: 18 }), group: 'account' },
   { id: 'privacy', label: 'Privacy', icon: React.createElement(Lock, { size: 18 }), group: 'account' },

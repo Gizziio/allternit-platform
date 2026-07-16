@@ -18,6 +18,17 @@ vi.mock('@/lib/platform-auth-client', () => ({
       primaryEmailAddress: { emailAddress: 'test@example.com' },
     },
   }),
+  usePlatformAuth: () => ({
+    getToken: async () => 'test-token',
+    orgId: 'org-test',
+    orgRole: 'org:admin',
+  }),
+  usePlatformOrganization: () => ({
+    isLoaded: true,
+    organization: { id: 'org-test', name: 'Test Organization', slug: 'test' },
+    membership: { role: 'org:admin' },
+  }),
+  PlatformOrganizationSwitcher: () => <button type="button">Organization</button>,
   usePlatformSignOut: () => async () => {},
   usePlatformHardSignOut: () => async () => {},
   usePlatformSessions: () => ({ sessions: [] }),

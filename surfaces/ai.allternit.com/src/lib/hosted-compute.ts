@@ -12,6 +12,7 @@ export interface HostedRuntimeEntitlement {
   estimatedCostUsdMonthly: number;
   activeInstances: number;
   idleTimeoutMinutes: number;
+  allowedRegions: string[];
   upgradeUrl: string;
   billingPortalUrl: string;
 }

@@ -182,26 +182,26 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
 
   return createPortal(
     <div
-      role="button"
-      tabIndex={0}
+      role="presentation"
       className="fixed inset-0 bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm flex items-center justify-center z-[1001] p-5 outline-none"
       onClick={handleClose}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClose(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') handleClose(); }}
     >
       <div
-        role="button"
-        tabIndex={0}
-        className="w-full max-w-[520px] max-h-[90vh] bg-[rgba(20,20,20,0.95)] border border-solid border-[#333] rounded-2xl overflow-hidden shadow-[0_24px_80px_var(--shell-overlay-backdrop)] flex flex-col outline-none"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="connect-cloud-account-title"
+        className="w-full max-w-[520px] max-h-[90vh] bg-[var(--surface-canvas)] border border-solid border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-[0_24px_80px_var(--shell-overlay-backdrop)] flex flex-col outline-none"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') handleClose(); }}
       >
-        <div className="flex items-center justify-between p-4 px-6 border-b border-solid border-[#333]">
+        <div className="flex items-center justify-between p-4 px-6 border-b border-solid border-[var(--border-subtle)]">
           <div className="flex items-center gap-3">
             <div className="size-10 rounded-xl bg-gradient-to-br from-[var(--status-info)]/20 to-purple-500/20 border border-solid border-[var(--status-info)]/30 flex items-center justify-center">
               <Cloud size={20} className="text-[var(--status-info)]" />
             </div>
             <div>
-              <h2 className="text-[16px] font-semibold text-[var(--ui-text-primary)] m-0">Connect cloud account</h2>
+              <h2 id="connect-cloud-account-title" className="text-[16px] font-semibold text-[var(--ui-text-primary)] m-0">Connect cloud account</h2>
               <p className="text-[12px] text-[var(--ui-text-secondary)] m-0">BYOC sandboxing for your organization</p>
             </div>
           </div>
@@ -215,7 +215,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
             {/* Provider */}
             <div className="mb-5">
               <div className="text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Provider</div>
-              <div className="flex gap-2 p-1 bg-[var(--surface-panel)] rounded-lg border border-solid border-[#333]">
+              <div className="flex gap-2 p-1 bg-[var(--surface-panel)] rounded-lg border border-solid border-[var(--border-subtle)]">
                 {(['aws', 'gcp', 'azure'] as const).map((provider) => (
                   <button
                     key={provider}
@@ -239,7 +239,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                 type="text"
                 className={cn(
                   'w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none focus:border-[var(--accent-primary)]',
-                  errors.label ? 'border-[var(--status-error)]' : 'border-[#444]',
+                  errors.label ? 'border-[var(--status-error)]' : 'border-[var(--border-subtle)]',
                 )}
                 value={form.label}
                 onChange={(e) => update('label', e.target.value)}
@@ -253,7 +253,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
               <div className="text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Region (optional)</div>
               <input
                 type="text"
-                className="w-full p-[10px_12px] rounded-lg border border-solid border-[#444] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none focus:border-[var(--accent-primary)]"
+                className="w-full p-[10px_12px] rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] outline-none focus:border-[var(--accent-primary)]"
                 value={form.region}
                 onChange={(e) => update('region', e.target.value)}
                 placeholder="us-east-1"
@@ -269,7 +269,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                     type="text"
                     className={cn(
                       'w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]',
-                      errors.roleArn ? 'border-[var(--status-error)]' : 'border-[#444]',
+                      errors.roleArn ? 'border-[var(--status-error)]' : 'border-[var(--border-subtle)]',
                     )}
                     value={form.roleArn}
                     onChange={(e) => update('roleArn', e.target.value)}
@@ -284,7 +284,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                   <div className="text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">External ID (optional)</div>
                   <input
                     type="text"
-                    className="w-full p-[10px_12px] rounded-lg border border-solid border-[#444] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]"
+                    className="w-full p-[10px_12px] rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]"
                     value={form.externalId}
                     onChange={(e) => update('externalId', e.target.value)}
                     placeholder="Used in your role's trust policy"
@@ -304,7 +304,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                 <textarea
                   className={cn(
                     'w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[12px] font-mono outline-none resize-none min-h-[120px] focus:border-[var(--accent-primary)] transition-[filter]',
-                    errors.serviceAccountJson ? 'border-[var(--status-error)]' : 'border-[#444]',
+                    errors.serviceAccountJson ? 'border-[var(--status-error)]' : 'border-[var(--border-subtle)]',
                     !showSecret && 'blur-[4px] focus:blur-none',
                   )}
                   value={form.serviceAccountJson}
@@ -322,7 +322,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                   <div className="text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Tenant ID</div>
                   <input
                     type="text"
-                    className={cn('w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]', errors.tenantId ? 'border-[var(--status-error)]' : 'border-[#444]')}
+                    className={cn('w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]', errors.tenantId ? 'border-[var(--status-error)]' : 'border-[var(--border-subtle)]')}
                     value={form.tenantId}
                     onChange={(e) => update('tenantId', e.target.value)}
                   />
@@ -332,7 +332,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                   <div className="text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Client ID</div>
                   <input
                     type="text"
-                    className={cn('w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]', errors.clientId ? 'border-[var(--status-error)]' : 'border-[#444]')}
+                    className={cn('w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]', errors.clientId ? 'border-[var(--status-error)]' : 'border-[var(--border-subtle)]')}
                     value={form.clientId}
                     onChange={(e) => update('clientId', e.target.value)}
                   />
@@ -347,7 +347,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                   </div>
                   <input
                     type={showSecret ? 'text' : 'password'}
-                    className={cn('w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]', errors.clientSecret ? 'border-[var(--status-error)]' : 'border-[#444]')}
+                    className={cn('w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]', errors.clientSecret ? 'border-[var(--status-error)]' : 'border-[var(--border-subtle)]')}
                     value={form.clientSecret}
                     onChange={(e) => update('clientSecret', e.target.value)}
                   />
@@ -357,7 +357,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                   <div className="text-[13px] font-medium mb-1.5 text-[var(--ui-text-primary)]">Subscription ID</div>
                   <input
                     type="text"
-                    className={cn('w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]', errors.subscriptionId ? 'border-[var(--status-error)]' : 'border-[#444]')}
+                    className={cn('w-full p-[10px_12px] rounded-lg border border-solid bg-[var(--surface-panel)] text-[var(--ui-text-primary)] text-[13px] font-mono outline-none focus:border-[var(--accent-primary)]', errors.subscriptionId ? 'border-[var(--status-error)]' : 'border-[var(--border-subtle)]')}
                     value={form.subscriptionId}
                     onChange={(e) => update('subscriptionId', e.target.value)}
                   />
@@ -407,7 +407,7 @@ export function AddCloudCredentialForm({ isOpen, onClose, onSubmit }: AddCloudCr
                 type="button"
                 onClick={() => void handleTest()}
                 disabled={isTesting || isSubmitting}
-                className="flex-1 p-[10px_16px] rounded-lg border border-solid border-[#444] bg-transparent text-[var(--ui-text-primary)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:bg-[var(--surface-panel)] disabled:opacity-50"
+                className="flex-1 p-[10px_16px] rounded-lg border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--ui-text-primary)] text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5 transition-all hover:bg-[var(--surface-panel)] disabled:opacity-50"
               >
                 {isTesting ? <CircleNotch size={16} className="animate-spin" /> : null}
                 Test connection

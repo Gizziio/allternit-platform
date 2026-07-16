@@ -119,7 +119,7 @@ export function CloudCredentialsList({
             <div className="size-3 rounded-full animate-pulse bg-[var(--surface-hover)]" />
             <div className="size-10 rounded-lg animate-pulse bg-[var(--surface-hover)]" />
             <div className="flex-1 space-y-2">
-              <div className="size-40 rounded animate-pulse bg-[var(--surface-active)]" />
+              <div className="h-4 w-40 rounded animate-pulse bg-[var(--surface-active)]" />
               <div className="h-3 w-56 rounded animate-pulse bg-[var(--surface-hover)]" />
             </div>
             <div className="h-6 w-24 rounded-full animate-pulse bg-[var(--surface-hover)]" />
