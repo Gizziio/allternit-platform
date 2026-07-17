@@ -15,6 +15,8 @@ interface CanvasTileProps {
   onBringToFront?: () => void;
   onInteractionStart?: () => void;
   onSelect?: (additive: boolean) => void;
+  /** Optional status badge rendered next to the label (e.g. executor state). */
+  badge?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -52,6 +54,7 @@ export function CanvasTile({
   onBringToFront,
   onInteractionStart,
   onSelect,
+  badge,
   children,
 }: CanvasTileProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -210,7 +213,7 @@ export function CanvasTile({
         border: selected
           ? '2px solid var(--accent-primary)'
           : '1px solid var(--glass-border)',
-        borderRadius: 14,
+        borderRadius: 12,
         boxShadow: selected ? '0 0 0 4px rgba(176,141,110,0.15), var(--shadow-lg)' : 'var(--shadow-lg)',
         overflow: 'hidden',
         backdropFilter: 'blur(20px)',
@@ -259,7 +262,9 @@ export function CanvasTile({
                             ? 'var(--accent-primary)'
                             : tile.type === 'knowledge-graph'
                               ? '#8b5cf6'
-                              : 'var(--text-muted)',
+                              : tile.type === 'executor'
+                                ? 'var(--status-info)'
+                                : 'var(--text-muted)',
               flexShrink: 0,
             }}
           />
@@ -275,6 +280,7 @@ export function CanvasTile({
           >
             {tile.label || tile.type}
           </span>
+          {badge}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
@@ -286,26 +292,10 @@ export function CanvasTile({
               onFocus();
             }}
             title="Focus"
+            className="flex items-center justify-center rounded-md border-0 bg-transparent text-[var(--text-muted)] cursor-pointer transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)]"
             style={{
               width: 24,
               height: 24,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 6,
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              transition: 'background 0.15s, color 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--surface-hover)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--text-muted)';
             }}
           >
             <ArrowsOut size={13} />
@@ -318,26 +308,10 @@ export function CanvasTile({
               onClose?.();
             }}
             title="Close"
+            className="flex items-center justify-center rounded-md border-0 bg-transparent text-[var(--text-muted)] cursor-pointer transition-colors hover:bg-[var(--status-error-bg)] hover:text-[var(--status-error)]"
             style={{
               width: 24,
               height: 24,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 6,
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              transition: 'background 0.15s, color 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--status-error-bg)';
-              e.currentTarget.style.color = 'var(--status-error)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--text-muted)';
             }}
           >
             <X size={13} />

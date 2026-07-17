@@ -5,7 +5,15 @@
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      webview: React.DetailedHTMLProps<React.WebViewHTMLAttributes<HTMLWebViewElement>, HTMLWebViewElement>;
+      // allowpopups is widened to `boolean | string`: React warns at runtime
+      // when a non-boolean DOM attribute receives a boolean true, so call
+      // sites pass the string form allowpopups="true" (React's own suggestion).
+      webview: React.DetailedHTMLProps<
+        Omit<React.WebViewHTMLAttributes<HTMLWebViewElement>, 'allowpopups'> & {
+          allowpopups?: boolean | string;
+        },
+        HTMLWebViewElement
+      >;
     }
   }
 

@@ -54,6 +54,7 @@ import {
 } from '@phosphor-icons/react';
 import { useFileSystem, type FileSystemAPI } from '../../plugins/fileSystem';
 import type { FileNode, MarketplacePlugin } from '../../plugins/capability.types';
+import { WorkspaceChatEditor } from '@/components/agent-workspace/WorkspaceChatEditor';
 import { AddCapabilityForm, type CapabilityFormPayload } from './AddCapabilityForms';
 import { useCliToolsApi } from '../../plugins/useCliToolsApi';
 import { useKeyboardShortcuts, useDebouncedValue, useFocusManager } from './useKeyboardShortcuts';
@@ -927,7 +928,17 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings, initialTab }: P
       });
     }
 
-    return Array.from(mergedByName.values()).sort((a, b) => a.name.localeCompare(b.name));
+    // The two sources (filesystem scan, CLI-tools API) can produce different
+    // entries that still share an id — React keys on item.id, so collapse id
+    // duplicates (first wins) to avoid duplicate-key warnings.
+    const seenIds = new Set<string>();
+    return Array.from(mergedByName.values())
+      .filter((tool) => {
+        if (seenIds.has(tool.id)) return false;
+        seenIds.add(tool.id);
+        return true;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [apiCliToolsAsCapabilities, scannedCliTools]);
 
   const installedPluginVersions = useMemo<Record<string, string>>(() => {
@@ -3211,16 +3222,32 @@ function RightPane({
           </>
         ) : (
           /* Editor or FileContent (Shown when file is selected or isEditing) */
-          <div className="min-h-0 flex-1 overflow-auto bg-transparent border-t border-solid border-[var(--ui-border-muted)] pt-4">
-            {isEditing && editingContent !== null ? (
-              <textarea aria-label="Text Area" value={editingContent}
-                onChange={(e) => onEditingContentChange(e.target.value)}
-                className="size-full min-h-[300px] p-4 bg-transparent border-none text-[var(--ui-text-primary)] font-mono text-[12px] leading-[1.6] resize-none outline-none"
+          <>
+            <div className="min-h-0 flex-1 overflow-auto bg-transparent border-t border-solid border-[var(--ui-border-muted)] pt-4">
+              {isEditing && editingContent !== null ? (
+                <textarea aria-label="Text Area" value={editingContent}
+                  onChange={(e) => onEditingContentChange(e.target.value)}
+                  className="size-full min-h-[300px] p-4 bg-transparent border-none text-[var(--ui-text-primary)] font-mono text-[12px] leading-[1.6] resize-none outline-none"
+                />
+              ) : (
+                <FileContent file={selectedFile!} viewMode={viewMode} />
+              )}
+            </div>
+            {/* Chat-to-edit alongside the direct text editor: the assistant
+                reads the open file and proposes a full revision (streamed
+                preview); Apply loads it into the textarea above, Save persists.
+                Mirrors the agent-workspace Edit-with-chat panel. */}
+            {isEditing && editingContent !== null && (
+              <WorkspaceChatEditor
+                agentId={`capability-${item.id}`}
+                agentName="the assistant"
+                filePath={selectedFile?.path || item.name}
+                content={editingContent}
+                onApply={onEditingContentChange}
+                subject={`a file of the "${item.name}" ${itemType.replace(/s$/, '')} capability`}
               />
-            ) : (
-              <FileContent file={selectedFile!} viewMode={viewMode} />
             )}
-          </div>
+          </>
         )}
       </div>
     </main>

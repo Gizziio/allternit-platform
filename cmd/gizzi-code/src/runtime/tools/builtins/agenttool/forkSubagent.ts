@@ -7,7 +7,7 @@ import {
   FORK_BOILERPLATE_TAG,
   FORK_DIRECTIVE_PREFIX,
 } from '@/constants/xml.js'
-import { isCoordinatorMode } from '../../coordinator/coordinatorMode.js'
+import { isCoordinatorMode } from '../../../../coordinator/coordinatorMode.js'
 import type {
   AssistantMessage,
   Message as MessageType,

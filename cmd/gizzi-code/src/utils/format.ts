@@ -104,3 +104,8 @@ export default {
   padLeft,
   padRight,
 }
+
+/** Byte-size formatter used by memdir/budget messages. */
+export function formatFileSize(bytes: number): string {
+  return formatBytes(bytes)
+}

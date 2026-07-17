@@ -72,6 +72,8 @@ interface UnifiedTerminalProps {
   /** Working directory the shell should start in. */
   workingDir?: string;
   terminalContext?: TerminalContext;
+  /** Command sent to the first tab's shell once it connects (e.g. launch an agent CLI). */
+  startupCommand?: string;
 }
 
 interface TerminalSession {
@@ -356,6 +358,7 @@ export function UnifiedTerminal({
   sessionId = 'allternit-session',
   workingDir,
   terminalContext,
+  startupCommand,
 }: UnifiedTerminalProps) {
   const [mode, setMode] = useState<TerminalMode>('single');
   const [tabs, setTabs] = useState<TerminalSession[]>([]);
@@ -367,6 +370,10 @@ export function UnifiedTerminal({
   const [terminalEndpoint, setTerminalEndpoint] = useState(() => getRuntimeGatewayBaseUrlSync());
   const tabsRef = useRef<TerminalSession[]>([]);
   tabsRef.current = tabs;
+  const startupTabIdRef = useRef<string | null>(null);
+  const startupInjectedForRef = useRef<string | null>(null);
+  const startupCommandRef = useRef(startupCommand);
+  startupCommandRef.current = startupCommand;
 
   useEffect(() => subscribeRuntimeBackendSnapshot((snapshot) => {
     setTerminalEndpoint(snapshot.resolved_gateway_url);
@@ -390,6 +397,8 @@ export function UnifiedTerminal({
         const id = generateTabId();
         setTabs([{ id, name: 'Terminal 1', remoteSessionId, status: 'connecting', errorMsg: '' }]);
         setActiveTabId(id);
+        startupTabIdRef.current = id;
+        startupInjectedForRef.current = null;
       } catch (err) {
         if (cancelled) return;
         setServiceError(err instanceof Error ? err.message : 'Terminal service unavailable');
@@ -446,6 +455,20 @@ export function UnifiedTerminal({
     setTabs((prev) =>
       prev.map((t) => (t.id === tabId ? { ...t, status, errorMsg: errorMsg || '' } : t))
     );
+    if (status !== 'connected') return;
+    const command = startupCommandRef.current;
+    const tab = tabsRef.current.find((t) => t.id === tabId);
+    if (!command || !tab?.remoteSessionId) return;
+    if (tabId !== startupTabIdRef.current) return;
+    if (startupInjectedForRef.current === tab.remoteSessionId) return;
+    startupInjectedForRef.current = tab.remoteSessionId;
+    const remoteSessionId = tab.remoteSessionId;
+    // Give the shell a beat to finish its rc startup before typing the command.
+    setTimeout(() => {
+      void sendTerminalInput(remoteSessionId, `${command}\n`).catch((error: unknown) => {
+        logger.warn({ error }, 'Startup command injection failed');
+      });
+    }, 250);
   }, []);
 
   const handleReconnectTab = useCallback(async (tabId: string) => {

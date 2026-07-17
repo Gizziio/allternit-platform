@@ -9,14 +9,9 @@ import { errorMessage } from '../utils/errors.js';
 import { gracefulShutdown } from '../utils/gracefulShutdown.js';
 import { flushSessionStorage } from '../utils/sessionStorage.js';
 import { LoadingState } from './design-system/LoadingState.js';
-const DESKTOP_DOCS_URL = 'https://clau.de/desktop';
+const DESKTOP_DOCS_URL = 'https://docs.allternit.com/desktop';
 export function getDownloadUrl(): string {
-  switch (process.platform) {
-    case 'win32':
-      return 'https://claude.ai/api/desktop/win32/x64/exe/latest/redirect';
-    default:
-      return 'https://claude.ai/api/desktop/darwin/universal/dmg/latest/redirect';
-  }
+  return 'https://github.com/Gizziio/desktop/releases';
 }
 type DesktopHandoffState = 'checking' | 'prompt-download' | 'flushing' | 'opening' | 'success' | 'error';
 type Props = {
@@ -72,12 +67,12 @@ export function DesktopHandoff(t0) {
         setState("checking");
         const installStatus = await getDesktopInstallStatus();
         if (installStatus.status === "not-installed") {
-          setDownloadMessage("Claude Desktop is not installed.");
+          setDownloadMessage("Allternit Desktop is not installed.");
           setState("prompt-download");
           return;
         }
         if (installStatus.status === "version-too-old") {
-          setDownloadMessage(`Claude Desktop needs to be updated (found v${installStatus.version}, need v1.1.2396+).`);
+          setDownloadMessage(`Allternit Desktop needs to be updated (found v${installStatus.version}, need v1.1.2396+).`);
           setState("prompt-download");
           return;
         }
@@ -86,7 +81,7 @@ export function DesktopHandoff(t0) {
         setState("opening");
         const result = await openCurrentSessionInDesktop();
         if (!result.success) {
-          setError(result.error ?? "Failed to open Claude Desktop");
+          setError(result.error ?? "Failed to open Allternit Desktop");
           setState("error");
           return;
         }
@@ -162,10 +157,10 @@ export function DesktopHandoff(t0) {
   let t4;
   if ($[17] === Symbol.for("react.memo_cache_sentinel")) {
     t4 = {
-      checking: "Checking for Claude Desktop\u2026",
+      checking: "Checking for Allternit Desktop\u2026",
       flushing: "Saving session\u2026",
-      opening: "Opening Claude Desktop\u2026",
-      success: "Opening in Claude Desktop\u2026"
+      opening: "Opening Allternit Desktop\u2026",
+      success: "Opening in Allternit Desktop\u2026"
     };
     $[17] = t4;
   } else {
@@ -184,7 +179,7 @@ export function DesktopHandoff(t0) {
   return t6;
 }
 async function _temp2(onDone_0) {
-  onDone_0("Session transferred to Claude Desktop", {
+  onDone_0("Session transferred to Allternit Desktop", {
     display: "system"
   });
   await gracefulShutdown(0, "other");

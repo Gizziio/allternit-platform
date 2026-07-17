@@ -31,10 +31,9 @@ export function getCwd(): string {
     return getOriginalCwd()
   }
 }
-
-// Default export for compatibility
+// Rebuilt default export (merge-rot repair): real named exports only.
 export default {
+  runWithCwdOverride,
+  pwd,
   getCwd,
-  setCwd,
-  resolveCwd,
 }

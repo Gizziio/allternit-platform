@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   BarChart,
   Bar,
@@ -21,6 +21,28 @@ import { gizziBaseUrl } from '@/lib/agents/api-config';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('ResourceUsageDashboard');
+
+/**
+ * True once the referenced element has a measurable box. ResponsiveContainer
+ * warns ("width(-1) and height(-1) should be greater than 0") whenever a chart
+ * mounts while its parent has no size — e.g. while the Settings modal that
+ * hosts this dashboard is still animating in — so gate charts on real layout.
+ */
+function useHasSize(ref: React.RefObject<HTMLElement | null>): boolean {
+  const [hasSize, setHasSize] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setHasSize(entry.contentRect.width > 0 && entry.contentRect.height > 0);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+  return hasSize;
+}
 
 // ── Gizzi usage summary (matches SessionUsage.UsageSummary from cmd/gizzi-code) ──
 
@@ -86,6 +108,10 @@ export function ResourceUsageDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [timeRange, setTimeRange] = useState<'all' | '30d' | '7d'>('30d');
+  const dailyChartRef = useRef<HTMLDivElement>(null);
+  const modelsChartRef = useRef<HTMLDivElement>(null);
+  const dailyChartSized = useHasSize(dailyChartRef);
+  const modelsChartSized = useHasSize(modelsChartRef);
 
   const fetchUsage = useCallback(async (range: 'all' | '30d' | '7d') => {
     setRefreshing(true);
@@ -248,7 +274,8 @@ export function ResourceUsageDashboard() {
         {derived.dailyAsc.length === 0 ? (
           <div className="text-[12px] text-[var(--text-tertiary)] py-6 text-center">No usage recorded in this range yet.</div>
         ) : (
-          <div className="h-[140px]">
+          <div ref={dailyChartRef} className="h-[140px]">
+            {dailyChartSized && (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={derived.dailyAsc.map((d) => ({ date: d.date.slice(5), tokens: d.total.tokens }))} margin={{ left: -20, right: 0, top: 0, bottom: 0 }}>
                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} interval="preserveStartEnd" />
@@ -257,6 +284,7 @@ export function ResourceUsageDashboard() {
                 <Bar dataKey="tokens" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} barSize={10} />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </div>
         )}
       </div>
@@ -265,10 +293,10 @@ export function ResourceUsageDashboard() {
         {/* Top Models — real, replaces "Top Tools" tool-distribution fabrication */}
         <div className="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-4 rounded-xl">
           <h3 className="text-[var(--text-tertiary)] text-sm font-medium mb-4">Top models by tokens</h3>
-          <div className="h-[150px]">
+          <div ref={modelsChartRef} className="h-[150px]">
             {derived.modelRows.length === 0 ? (
               <div className="text-[12px] text-[var(--text-tertiary)] py-6 text-center">No model usage yet.</div>
-            ) : (
+            ) : !modelsChartSized ? null : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={derived.modelRows.slice(0, 6)} layout="vertical" margin={{ left: -20, right: 0, top: 0, bottom: 0 }}>
                   <XAxis type="number" hide />

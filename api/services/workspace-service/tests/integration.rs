@@ -8,6 +8,9 @@ fn app() -> axum::Router {
     build_router(AppState::new())
 }
 
+/// Serializes tests that mutate ALLTERNIT_MUX_SOCKET (process-global env).
+static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[tokio::test]
 async fn health_returns_ok() {
     let response = app()
@@ -76,6 +79,9 @@ async fn create_and_get_session() {
 
 #[tokio::test]
 async fn create_pane_and_capture_output() {
+    let _guard = ENV_LOCK.lock().unwrap();
+    // Force the metadata-only fallback: no mux at this path.
+    std::env::set_var("ALLTERNIT_MUX_SOCKET", "/nonexistent/mux.sock");
     let app = app();
 
     let session_response = app

@@ -30,6 +30,7 @@ import {
   ChartBar,
   Code,
   Robot,
+  Folder,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/logger';
@@ -39,13 +40,14 @@ import { Toggle } from '@/components/settings/Toggle';
 import { SettingsCard } from '@/components/settings/SettingsCard';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS } from '@/components/settings/buttonStyles';
 import { AgentView } from '../AgentView';
+import { AgentWorkspacePanel } from '@/components/agent-workspace/AgentWorkspacePanel';
 import { useAgentStore } from '@/lib/agents/agent.store';
 
 const logger = createModuleLogger('AgentOpsPanel');
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type AgentOpsTab = 'setup' | 'evaluation' | 'factory' | 'gc';
+type AgentOpsTab = 'setup' | 'evaluation' | 'factory' | 'gc' | 'workspace';
 
 interface GcIssue {
   id: string;
@@ -998,6 +1000,7 @@ export function AgentOpsPanel() {
       <div className="flex gap-1 p-1 bg-[var(--bg-secondary)] rounded-xl border border-solid border-[var(--border-subtle)] mb-6">
         {[
           { id: 'setup', label: 'My Agents', icon: <Robot size={16} /> },
+          { id: 'workspace', label: 'Workspace', icon: <Folder size={16} /> },
           { id: 'evaluation', label: 'Evaluation Harness', icon: <ChartBar size={16} /> },
           { id: 'factory', label: 'Code Factory', icon: <Code size={16} /> },
           { id: 'gc', label: 'GC Agents', icon: <Recycle size={16} /> },
@@ -1024,6 +1027,11 @@ export function AgentOpsPanel() {
             </button>
           </PanelHeader>
           <AgentView title="Agents" hideHeader showLandingOnEntry={false} compactGrid />
+        </div>
+      )}
+      {agentOpsTab === 'workspace' && (
+        <div className="flex flex-col min-h-[520px] border border-solid border-[var(--border-subtle)] rounded-xl overflow-hidden">
+          <AgentWorkspacePanel />
         </div>
       )}
       {agentOpsTab === 'evaluation' && renderEvaluationTab()}

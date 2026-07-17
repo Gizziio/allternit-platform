@@ -70,18 +70,18 @@ async function main(): Promise<void> {
     console.log(prompt.join('\n'));
     return;
   }
-  if (process.argv[2] === '--claude-in-chrome-mcp') {
+  if (process.argv[2] === '--allternit-in-chrome-mcp') {
     profileCheckpoint('cli_claude_in_chrome_mcp_path');
     const {
-      runClaudeInChromeMcpServer
-    } = await import('../utils/claudeInChrome/mcpServer.js');
-    await runClaudeInChromeMcpServer();
+      runAllternitInChromeMcpServer
+    } = await import('../utils/allternitInChrome/mcpServer.js');
+    await runAllternitInChromeMcpServer();
     return;
   } else if (process.argv[2] === '--chrome-native-host') {
     profileCheckpoint('cli_chrome_native_host_path');
     const {
       runChromeNativeHost
-    } = await import('../utils/claudeInChrome/chromeNativeHost.js');
+    } = await import('../utils/allternitInChrome/chromeNativeHost.js');
     await runChromeNativeHost();
     return;
   } else if (feature('CHICAGO_MCP') && process.argv[2] === '--computer-use-mcp') {

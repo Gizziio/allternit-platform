@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { Text } from '../../core/ink';
 import { isClaudeAISubscriber } from '../../vendor/utils/auth';
-import { isChromeExtensionInstalled, shouldEnableClaudeInChrome } from '../../vendor/utils/claudeInChrome/setup';
+import { isChromeExtensionInstalled, shouldEnableAllternitInChrome } from '../../vendor/utils/allternitInChrome/setup';
 import { isRunningOnHomespace } from '../../vendor/utils/envUtils';
 import { useStartupNotification } from './notifs/useStartupNotification';
 
@@ -19,13 +19,13 @@ function getChromeFlag(): boolean | undefined {
 export function useChromeExtensionNotification() {
   useStartupNotification(async () => {
     const chromeFlag = getChromeFlag();
-    if (!shouldEnableClaudeInChrome(chromeFlag)) {
+    if (!shouldEnableAllternitInChrome(chromeFlag)) {
       return null;
     }
     if (!isClaudeAISubscriber()) {
       return {
         key: "chrome-requires-subscription",
-        jsx: <Text color="error">Claude in Chrome requires a claude.ai subscription</Text>,
+        jsx: <Text color="error">Allternit in Chrome requires a claude.ai subscription</Text>,
         priority: "immediate",
         timeoutMs: 5000
       };
@@ -41,8 +41,8 @@ export function useChromeExtensionNotification() {
     }
     if (chromeFlag === undefined) {
       return {
-        key: "claude-in-chrome-default-enabled",
-        text: "Claude in Chrome enabled · /chrome",
+        key: "allternit-in-chrome-default-enabled",
+        text: "Allternit in Chrome enabled · /chrome",
         priority: "low"
       };
     }

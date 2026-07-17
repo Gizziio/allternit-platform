@@ -24,3 +24,12 @@ export function countToolCalls(messages: Message[]): number {
 export const SYNTHETIC_MESSAGES = {
   compact: 'COMPACT',
 } as const
+
+/** Extract the contents of the first <tag>…</tag> block in a string. */
+export function extractTag(text: string, tag: string): string | undefined {
+  const match = text.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))
+  return match?.[1]
+}
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../shared/utils/messages.js'

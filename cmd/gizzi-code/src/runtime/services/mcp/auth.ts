@@ -1,7 +1,7 @@
 // @ts-nocheck
 import {
   discoverAuthorizationServerMetadata,
-  discoverOAuthServerInfo,
+  discoverOAuthProtectedResourceMetadata,
   type OAuthClientProvider,
   type OAuthDiscoveryState,
   auth as sdkAuth,
@@ -254,6 +254,36 @@ function createAuthFetch(): FetchLike {
  * URL itself). The HTTPS requirement here is defense-in-depth beyond schema validation
  * — RFC 8414 mandates OAuth metadata retrieval over TLS.
  */
+// MCP SDK 1.25.2 does not export discoverOAuthServerInfo (added in a later
+// release). Local composition of the RFC 9728 → RFC 8414 chain from the
+// helpers this version does export; same return shape.
+async function discoverOAuthServerInfo(
+  serverUrl: string,
+  opts: { fetchFn?: FetchLike; resourceMetadataUrl?: URL } = {},
+): Promise<{
+  authorizationServerMetadata: AuthorizationServerMetadata | undefined
+}> {
+  let authorizationServerUrl: string | URL = serverUrl
+  const resourceMetadata = await discoverOAuthProtectedResourceMetadata(
+    serverUrl,
+    {
+      ...(opts.resourceMetadataUrl && {
+        resourceMetadataUrl: opts.resourceMetadataUrl,
+      }),
+    },
+    opts.fetchFn,
+  ).catch(() => undefined)
+  const authServer = resourceMetadata?.authorization_servers?.[0]
+  if (authServer) {
+    authorizationServerUrl = authServer
+  }
+  const authorizationServerMetadata = await discoverAuthorizationServerMetadata(
+    authorizationServerUrl,
+    { ...(opts.fetchFn && { fetchFn: opts.fetchFn }) },
+  )
+  return { authorizationServerMetadata }
+}
+
 async function fetchAuthServerMetadata(
   serverName: string,
   serverUrl: string,

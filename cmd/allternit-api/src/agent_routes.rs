@@ -6,7 +6,10 @@ use axum::extract::Extension;
 use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{
+        sse::{Event, KeepAlive, Sse},
+        IntoResponse,
+    },
     routing::{get, post},
     Json, Router,
 };
@@ -22,6 +25,7 @@ use tracing::warn;
 use crate::auth::get_user;
 use crate::auth::AuthUser;
 use crate::AppState;
+use allternit_agent_system_rails::LedgerQuery;
 
 fn unauthorized() -> axum::response::Response {
     (
@@ -41,6 +45,7 @@ pub fn agent_router() -> Router<Arc<AppState>> {
             get(get_agent).put(update_agent).delete(delete_agent),
         )
         .route("/agents/:id/runs", post(run_agent))
+        .route("/agents/:id/events", get(stream_agent_events))
         .route(
             "/agents/:id/subagents",
             get(list_subagents).post(create_subagent),
@@ -60,6 +65,62 @@ pub fn agent_router() -> Router<Arc<AppState>> {
             get(list_test_suites).post(create_test_suite),
         )
         .route("/agents/test", post(run_agent_test))
+}
+
+/// SSE stream of Rails ledger events scoped to one agent
+/// (`GET /api/v1/agents/:id/events`). The UI's agent surfaces subscribe per
+/// selected agent; without this route they fell into a 501 + retry loop.
+/// Replays up to 50 recent matching events on connect, then polls the ledger
+/// for new ones every 2s. The ledger is a local append-only store, so a poll
+/// loop is sufficient — there is no in-process broadcast bus to hook into.
+async fn stream_agent_events(
+    State(state): State<Arc<AppState>>,
+    Path(agent_id): Path<String>,
+) -> impl IntoResponse {
+    let stream = async_stream::stream! {
+        let mut sent: std::collections::HashSet<String> = std::collections::HashSet::new();
+        loop {
+            match state.rails.ledger.query(LedgerQuery::default()).await {
+                Ok(events) => {
+                    let mut fresh: Vec<_> = events
+                        .into_iter()
+                        .filter(|e| {
+                            e.payload.get("agent_id").and_then(|v| v.as_str())
+                                == Some(agent_id.as_str())
+                        })
+                        .filter(|e| !sent.contains(&e.event_id))
+                        .collect();
+                    // On connect, replay only the most recent events as history.
+                    if sent.is_empty() && fresh.len() > 50 {
+                        fresh = fresh.split_off(fresh.len() - 50);
+                    }
+                    for event in fresh {
+                        sent.insert(event.event_id.clone());
+                        let frame = json!({
+                            "event_type": event.r#type,
+                            "agent_id": agent_id,
+                            "run_id": event.scope.as_ref().and_then(|s| s.run_id.clone()),
+                            "timestamp": event.ts,
+                            "data": event.payload,
+                        });
+                        yield Ok::<Event, std::convert::Infallible>(
+                            Event::default().data(frame.to_string()),
+                        );
+                    }
+                }
+                Err(err) => {
+                    warn!(error = %err, agent_id = %agent_id, "agent events poll failed");
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(2)).await;
+        }
+    };
+
+    Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("keepalive"),
+    )
 }
 
 // ─── Data models ──────────────────────────────────────────────────────────────

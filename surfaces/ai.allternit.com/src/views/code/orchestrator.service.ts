@@ -13,6 +13,8 @@ export interface ExecutorSession {
   transcriptPath?: string;
   createdAt: string;
   endedAt?: string;
+  /** Discovered from a host tmux session rather than the managed registry. */
+  external?: boolean;
   review?: { status: 'pending' | 'accepted' | 'rejected'; reason?: string; decidedAt?: string };
 }
 
@@ -70,6 +72,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const getOrchestratorDoctor = () => request<DoctorReport>('/doctor');
 export const listExecutorSessions = async () => (await request<{ sessions: ExecutorSession[] }>('/sessions')).sessions;
+export const listDiscoveredExecutors = async () => (await request<{ sessions: ExecutorSession[] }>('/sessions/discovered')).sessions;
 export const assignExecutor = async (input: AssignExecutorInput) => (await request<{ session: ExecutorSession }>('/assign', { method: 'POST', body: JSON.stringify(input) })).session;
 export const getExecutorStatus = (slug: string) => request<{ session: ExecutorSession; state: ExecutorState }>(`/sessions/${encodeURIComponent(slug)}`);
 export const tailExecutor = async (slug: string, lines = 80) => (await request<{ output: string }>(`/sessions/${encodeURIComponent(slug)}/tail?lines=${lines}`)).output;

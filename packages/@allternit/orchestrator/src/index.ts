@@ -10,6 +10,8 @@ export { LocalTerminalBackend, probeLocalTerminal } from './backends/local-termi
 export type { LocalTerminalOptions } from './backends/local-terminal.backend.js';
 export { TerminalControlBackend, probeTerminalControl } from './backends/terminal-control.backend.js';
 export type { TerminalControlOptions } from './backends/terminal-control.backend.js';
+export { MuxBackend, probeMux } from './backends/mux.backend.js';
+export type { MuxBackendOptions } from './backends/mux.backend.js';
 export { AcuExecutorBackend, CloudExecutorBackend, DelegatedExecutorBackend, KernelExecutorBackend } from './backends/delegated.backend.js';
 export type { DelegatedBackendKind, ExecutorBackendDriver } from './backends/delegated.backend.js';
 export { SessionRegistry } from './session-registry.js';

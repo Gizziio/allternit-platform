@@ -179,13 +179,19 @@ export function getVertexRegionForModel(
   return getDefaultVertexRegion()
 }
 
-// Default export for compatibility
+// Rebuilt default export (merge-rot repair): real named exports only.
 export default {
-  getEnv,
-  getEnvBool,
-  getEnvNumber,
-  requireEnv,
-  isDevelopment,
-  isProduction,
-  isTest,
+  getClaudeConfigHomeDir,
+  getTeamsDir,
+  hasNodeOption,
+  isEnvTruthy,
+  isEnvDefinedFalsy,
+  isBareMode,
+  parseEnvVars,
+  getAWSRegion,
+  getDefaultVertexRegion,
+  shouldMaintainProjectWorkingDir,
+  isRunningOnHomespace,
+  isInProtectedNamespace,
+  getVertexRegionForModel,
 }

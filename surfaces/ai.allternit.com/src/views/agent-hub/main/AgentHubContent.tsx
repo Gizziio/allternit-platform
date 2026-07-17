@@ -2,6 +2,7 @@ import React from "react";
 import { AgentView } from "../../AgentView";
 import { PerformanceAnalyticsView } from "@/components/agents/PerformanceAnalyticsView";
 import { AgentSessionsTab } from "./AgentSessionsTab";
+import { AgentWorkspacePanel } from "@/components/agent-workspace/AgentWorkspacePanel";
 import type { AgentTab } from "./AgentHub.constants";
 
 interface AgentHubContentProps {
@@ -28,6 +29,12 @@ export const AgentHubContent: React.FC<AgentHubContentProps> = ({ activeTab }) =
           <div className="mx-auto w-full max-w-6xl px-8 pb-12 pt-8">
             <PerformanceAnalyticsView />
           </div>
+        </div>
+      );
+    case 'workspace':
+      return (
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <AgentWorkspacePanel />
         </div>
       );
     default:

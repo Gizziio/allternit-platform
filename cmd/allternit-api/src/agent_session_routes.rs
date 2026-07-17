@@ -33,7 +33,7 @@ fn gizzi_base() -> String {
         .to_string()
 }
 
-fn gizzi_client(headers: &HeaderMap) -> Client {
+pub(crate) fn gizzi_client(headers: &HeaderMap) -> Client {
     let mut builder = Client::builder();
     let mut default_headers = reqwest::header::HeaderMap::new();
 

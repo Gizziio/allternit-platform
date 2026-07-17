@@ -6,23 +6,31 @@ import {
   Plus,
   ArrowsOutSimple,
   ChatTeardropText,
-  Browser,
-  GitDiff,
   SquaresFour,
   Terminal as TerminalIcon,
   NotePencil,
   Shield,
-  BookBookmark,
-  Graph,
   GitCommit,
+  GitDiff,
   Monitor,
   Plugs,
   DownloadSimple,
   UploadSimple,
   DotsThree,
+  Robot,
+  CaretLeft,
+  CaretRight,
+  Rocket,
 } from '@phosphor-icons/react';
+import { AGENT_VENDORS, type AgentVendor } from '@/components/canvas/agentVendors';
+import {
+  assignExecutor,
+  type ExecutorVendor,
+  type ExecutorMode,
+} from '@/views/code/orchestrator.service';
 import {
   useCodeModeStore,
+  CANVAS_TILE_DEFAULT_SIZE,
   type CodeCanvasTile,
   type CodeCanvasViewport,
 } from '@/views/code/CodeModeStore';
@@ -31,6 +39,11 @@ import { useCodeSessionStore } from '@/views/code/CodeSessionStore';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('CanvasToolbar');
+
+const TOOLBAR_BUTTON_CLASS =
+  'cursor-pointer border border-transparent bg-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] hover:border-[var(--border-subtle)]';
+
+const MENU_ITEM_CLASS = 'cursor-pointer bg-transparent hover:bg-[var(--surface-hover)]';
 
 interface CanvasToolbarProps {
   workspaceId: string;
@@ -70,11 +83,19 @@ export function CanvasToolbar({
   const addCanvasTile = useCodeModeStore((s) => s.addCanvasTile);
   const autoArrange = useCodeModeStore((s) => s.autoArrangeCanvasTiles);
   const createCodeSession = useCodeSessionStore((s) => s.createSession);
+  const workspacePath = useCodeModeStore(
+    (s) => s.workspaces.find((w) => w.workspace_id === workspaceId)?.root_path,
+  );
+  const [orchestratorDialogOpen, setOrchestratorDialogOpen] = useState(false);
 
-  const spawnTile = async (type: CodeCanvasTile['type']) => {
+  const spawnTile = async (
+    type: CodeCanvasTile['type'],
+    opts?: { startupCommand?: string; label?: string },
+  ) => {
     if (!workspaceId) return;
-    const centerX = (canvasSize.width / 2 - viewport.x) / viewport.zoom - 240;
-    const centerY = (canvasSize.height / 2 - viewport.y) / viewport.zoom - 180;
+    const size = CANVAS_TILE_DEFAULT_SIZE[type];
+    const centerX = (canvasSize.width / 2 - viewport.x) / viewport.zoom - size.width / 2;
+    const centerY = (canvasSize.height / 2 - viewport.y) / viewport.zoom - size.height / 2;
 
     let sessionId: string | undefined;
     if (type === 'session') {
@@ -93,12 +114,17 @@ export function CanvasToolbar({
       sessionId,
       x: Math.round(centerX),
       y: Math.round(centerY),
-      width: 480,
-      height: 360,
+      width: size.width,
+      height: size.height,
       zIndex: Date.now(),
-      label: type === 'session' ? 'New Session' : type,
+      label: opts?.label ?? (type === 'session' ? 'New Session' : type === 'notes' ? 'Shared context' : type),
+      startupCommand: opts?.startupCommand,
+      shared: type === 'notes' ? true : undefined,
     });
   };
+
+  const spawnAgent = (vendor: AgentVendor) =>
+    spawnTile('terminal', { startupCommand: vendor.command, label: vendor.label });
 
   const buttonStyle: React.CSSProperties = {
     display: 'inline-flex',
@@ -108,10 +134,6 @@ export function CanvasToolbar({
     height: 34,
     padding: 0,
     borderRadius: 9,
-    border: '1px solid transparent',
-    background: 'transparent',
-    color: 'var(--text-secondary)',
-    cursor: 'pointer',
     transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease',
   };
 
@@ -130,7 +152,7 @@ export function CanvasToolbar({
         alignItems: 'center',
         gap: 3,
         padding: 5,
-        borderRadius: 13,
+        borderRadius: 12,
         border: '1px solid var(--glass-border)',
         background: 'var(--surface-floating)',
         backdropFilter: 'blur(20px)',
@@ -139,7 +161,12 @@ export function CanvasToolbar({
         maxHeight: 'calc(100% - 112px)',
       }}
     >
-      <SpawnMenu onSpawn={spawnTile} buttonStyle={buttonStyle} />
+      <SpawnMenu
+        onSpawn={spawnTile}
+        onSpawnAgent={spawnAgent}
+        onOrchestrate={() => setOrchestratorDialogOpen(true)}
+        buttonStyle={buttonStyle}
+      />
       <ToolbarButton label="Arrange tiles" onClick={() => autoArrange(workspaceId)} style={buttonStyle}>
         <SquaresFour size={16} />
       </ToolbarButton>
@@ -195,6 +222,13 @@ export function CanvasToolbar({
       <ToolbarButton label="Zoom out" onClick={onZoomOut} style={buttonStyle}>
         <Minus size={16} />
       </ToolbarButton>
+
+      {orchestratorDialogOpen && (
+        <OrchestratedAgentDialog
+          workspacePath={workspacePath}
+          onClose={() => setOrchestratorDialogOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -221,16 +255,7 @@ function ToolbarButton({
       title={label}
       onClick={onClick}
       style={style}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = 'var(--surface-hover)';
-        event.currentTarget.style.color = 'var(--text-primary)';
-        event.currentTarget.style.borderColor = 'var(--border-subtle)';
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = 'transparent';
-        event.currentTarget.style.color = 'var(--text-secondary)';
-        event.currentTarget.style.borderColor = 'transparent';
-      }}
+      className={TOOLBAR_BUTTON_CLASS}
     >
       {children}
     </button>
@@ -265,6 +290,7 @@ function CanvasActionsMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
+        className={TOOLBAR_BUTTON_CLASS}
         style={{
           ...buttonStyle,
           ...(open
@@ -312,20 +338,10 @@ function CanvasActionsMenu({
                 padding: '0 9px',
                 border: 'none',
                 borderRadius: 7,
-                background: 'transparent',
-                color: 'var(--text-secondary)',
                 fontSize: 12,
                 textAlign: 'left',
-                cursor: 'pointer',
               }}
-              onMouseEnter={(event) => {
-                event.currentTarget.style.background = 'var(--surface-hover)';
-                event.currentTarget.style.color = 'var(--text-primary)';
-              }}
-              onMouseLeave={(event) => {
-                event.currentTarget.style.background = 'transparent';
-                event.currentTarget.style.color = 'var(--text-secondary)';
-              }}
+              className={`${MENU_ITEM_CLASS} text-[var(--text-secondary)] hover:text-[var(--text-primary)]`}
             >
               {item.icon}
               {item.label}
@@ -339,21 +355,20 @@ function CanvasActionsMenu({
 
 interface SpawnMenuProps {
   onSpawn: (type: CodeCanvasTile['type']) => void | Promise<void>;
+  onSpawnAgent: (vendor: AgentVendor) => void | Promise<void>;
+  onOrchestrate: () => void;
   buttonStyle: React.CSSProperties;
 }
 
 const SPAWN_ITEMS: Array<{ type: CodeCanvasTile['type']; label: string; icon: typeof Plus }> = [
   { type: 'session', label: 'Session', icon: ChatTeardropText },
   { type: 'terminal', label: 'Terminal', icon: TerminalIcon },
-  { type: 'diff', label: 'Diff', icon: GitDiff },
-  { type: 'preview', label: 'Preview', icon: Browser },
   { type: 'notes', label: 'Notes', icon: NotePencil },
-  { type: 'knowledge', label: 'Knowledge', icon: BookBookmark },
-  { type: 'knowledge-graph', label: 'Graph', icon: Graph },
 ];
 
-function SpawnMenu({ onSpawn, buttonStyle }: SpawnMenuProps) {
+function SpawnMenu({ onSpawn, onSpawnAgent, onOrchestrate, buttonStyle }: SpawnMenuProps) {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<'root' | 'agents'>('root');
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -365,6 +380,10 @@ function SpawnMenu({ onSpawn, buttonStyle }: SpawnMenuProps) {
     return () => document.removeEventListener('mousedown', close);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) setView('root');
+  }, [open]);
+
   const menuButtonStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -373,12 +392,9 @@ function SpawnMenu({ onSpawn, buttonStyle }: SpawnMenuProps) {
     padding: '7px 10px',
     border: 'none',
     borderRadius: 7,
-    background: 'transparent',
-    color: 'var(--text-primary)',
     fontSize: 12,
     fontWeight: 600,
     textAlign: 'left',
-    cursor: 'pointer',
   };
 
   return (
@@ -400,17 +416,7 @@ function SpawnMenu({ onSpawn, buttonStyle }: SpawnMenuProps) {
         title="Add canvas tile"
         aria-haspopup="menu"
         aria-expanded={open}
-        onMouseEnter={(event) => {
-          event.currentTarget.style.background = 'var(--surface-hover)';
-          event.currentTarget.style.color = 'var(--text-primary)';
-          event.currentTarget.style.borderColor = 'var(--border-subtle)';
-        }}
-        onMouseLeave={(event) => {
-          if (open) return;
-          event.currentTarget.style.background = 'transparent';
-          event.currentTarget.style.color = 'var(--text-secondary)';
-          event.currentTarget.style.borderColor = 'transparent';
-        }}
+        className={TOOLBAR_BUTTON_CLASS}
       >
         <Plus size={17} weight="bold" />
       </button>
@@ -435,32 +441,262 @@ function SpawnMenu({ onSpawn, buttonStyle }: SpawnMenuProps) {
             boxShadow: 'var(--shadow-md)',
           }}
         >
-          {SPAWN_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
+          {view === 'root' ? (
+            <>
+              {SPAWN_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.type}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpen(false);
+                      void onSpawn(item.type);
+                    }}
+                    style={menuButtonStyle}
+                    className={`${MENU_ITEM_CLASS} text-[var(--text-primary)]`}
+                  >
+                    <Icon size={14} />
+                    {item.label}
+                  </button>
+                );
+              })}
               <button
-                key={item.type}
                 type="button"
                 role="menuitem"
+                onClick={() => setView('agents')}
+                style={{ ...menuButtonStyle, justifyContent: 'space-between' }}
+                className={`${MENU_ITEM_CLASS} text-[var(--text-primary)]`}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Robot size={14} />
+                  Agent CLI
+                </span>
+                <CaretRight size={12} style={{ opacity: 0.6 }} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => setView('root')}
+                style={menuButtonStyle}
+                className={`${MENU_ITEM_CLASS} text-[var(--text-secondary)]`}
+              >
+                <CaretLeft size={14} />
+                Back
+              </button>
+              {AGENT_VENDORS.map((vendor) => (
+                <button
+                  key={vendor.id}
+                  type="button"
+                  role="menuitem"
+                  title={vendor.command}
+                  onClick={() => {
+                    setOpen(false);
+                    void onSpawnAgent(vendor);
+                  }}
+                  style={menuButtonStyle}
+                  className={`${MENU_ITEM_CLASS} text-[var(--text-primary)]`}
+                >
+                  <Robot size={14} />
+                  {vendor.label}
+                </button>
+              ))}
+              <div
+                aria-hidden="true"
+                style={{ height: 1, margin: '3px 4px', background: 'var(--border-subtle)' }}
+              />
+              <button
+                type="button"
+                role="menuitem"
+                title="Assign a background orchestrator executor"
                 onClick={() => {
                   setOpen(false);
-                  void onSpawn(item.type);
+                  onOrchestrate();
                 }}
                 style={menuButtonStyle}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--surface-hover)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
+                className={`${MENU_ITEM_CLASS} text-[var(--text-primary)]`}
               >
-                <Icon size={14} />
-                {item.label}
+                <Rocket size={14} />
+                Orchestrated agent…
               </button>
-            );
-          })}
+            </>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+interface OrchestratedAgentDialogProps {
+  workspacePath?: string;
+  onClose: () => void;
+}
+
+function OrchestratedAgentDialog({ workspacePath, onClose }: OrchestratedAgentDialogProps) {
+  const [vendor, setVendor] = useState<ExecutorVendor>('kimi');
+  const [mode, setMode] = useState<ExecutorMode>('interactive');
+  const [worktree, setWorktree] = useState(true);
+  const [slug, setSlug] = useState(() => `run-${Date.now().toString(36)}`);
+  const [taskFile, setTaskFile] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const chipStyle = (active: boolean): React.CSSProperties => ({
+    padding: '4px 12px',
+    borderRadius: 999,
+    border: `1px solid ${active ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
+    background: active ? 'var(--surface-active)' : 'transparent',
+    color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: 'pointer',
+  });
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '6px 10px',
+    borderRadius: 7,
+    border: '1px solid var(--border-subtle)',
+    background: 'var(--surface-panel)',
+    color: 'var(--text-primary)',
+    fontSize: 12,
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const submit = async () => {
+    if (!workspacePath || busy) return;
+    const trimmedSlug = slug.trim();
+    if (!trimmedSlug) {
+      setError('Slug is required');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await assignExecutor({
+        slug: trimmedSlug,
+        workdir: workspacePath,
+        vendor,
+        mode,
+        isolation: worktree ? 'worktree' : 'none',
+        taskFile: taskFile.trim() || undefined,
+        notesFile: `docs/${trimmedSlug}_NOTES.md`,
+      });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to assign executor');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 220,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'color-mix(in srgb, var(--shell-overlay-backdrop) 55%, transparent)',
+      }}
+    >
+      <div
+        role="dialog"
+        aria-label="Orchestrated agent"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 340,
+          padding: 16,
+          borderRadius: 12,
+          border: '1px solid var(--glass-border)',
+          background: 'var(--surface-floating)',
+          boxShadow: 'var(--shadow-lg)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+            <Rocket size={15} />
+            Orchestrated agent
+          </div>
+          <div style={{ marginTop: 3, fontSize: 11, color: 'var(--text-muted)' }}>
+            Background executor on tmux via the orchestrator. Its tile appears on this canvas.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {AGENT_VENDORS.map((v) => (
+            <button key={v.id} type="button" style={chipStyle(vendor === v.id)} onClick={() => setVendor(v.id)}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" style={chipStyle(mode === 'interactive')} onClick={() => setMode('interactive')}>
+            Interactive
+          </button>
+          <button type="button" style={chipStyle(mode === 'headless')} onClick={() => setMode('headless')}>
+            Headless
+          </button>
+          <label style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={worktree} onChange={(e) => setWorktree(e.target.checked)} />
+            Worktree
+          </label>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Slug</div>
+          <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} style={inputStyle} />
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
+            Task spec file (optional, relative to workdir)
+          </div>
+          <input
+            type="text"
+            value={taskFile}
+            onChange={(e) => setTaskFile(e.target.value)}
+            placeholder="docs/TASK.md"
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ fontSize: 11, color: workspacePath ? 'var(--text-muted)' : 'var(--status-error)' }}>
+          {workspacePath ? `workdir: ${workspacePath}` : 'Workspace has no root path — cannot launch.'}
+        </div>
+
+        {error && <div style={{ fontSize: 11, color: 'var(--status-error)' }}>{error}</div>}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ ...chipStyle(false), padding: '6px 14px' }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={!workspacePath || busy}
+            style={{ ...chipStyle(true), padding: '6px 14px', opacity: !workspacePath || busy ? 0.5 : 1 }}
+          >
+            {busy ? 'Launching…' : 'Launch'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

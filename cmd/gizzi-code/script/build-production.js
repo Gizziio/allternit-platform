@@ -144,20 +144,53 @@ const wasmEmbedPlugin = {
 const solidPlugin = {
     name: "solid-jsx-transform",
     setup(build) {
-        // Resolve @/ and @tui/ aliases manually for the transform
+        // Resolve @/ and @tui/ aliases manually for the transform.
+        // Mirrors the tsconfig path rules: specific subtrees point at the tree
+        // that actually contains the modules (ink-app has the complete trees),
+        // with existence-checked candidates in priority order.
+        const probe = (candidates) => {
+            for (const base of candidates) {
+                for (const ext of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
+                    const path = base + ext;
+                    if (Bun.file(path).size > 0) return path;
+                }
+            }
+            return null;
+        };
+        const subtreeBases = (subtree, rel) => [
+            resolve("src/cli/ui/ink-app", subtree, rel),
+            resolve("src/runtime", subtree, rel),
+            resolve("src", subtree, rel),
+        ];
         build.onResolve({ filter: /^(@\/|@tui\/)/ }, (args) => {
-            let relativePath = args.path.substring(args.path.startsWith("@/") ? 2 : 5);
-            if (args.path.startsWith("@tui/")) {
+            const isTui = args.path.startsWith("@tui/");
+            let relativePath = args.path.substring(isTui ? 5 : 2);
+            if (isTui) {
                 relativePath = "cli/ui/tui/" + relativePath;
             }
             relativePath = relativePath.replace(/\.(js|jsx|ts|tsx)$/, "");
-            const base = resolve("src", relativePath);
-            for (const ext of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
-                const path = base + ext;
-                if (Bun.file(path).size > 0)
-                    return { path };
+            const [head, ...rest] = relativePath.split("/");
+            const rel = rest.join("/");
+            let candidates;
+            if (isTui) {
+                candidates = [resolve("src", relativePath)];
+            } else if (["services", "state", "hooks", "commands"].includes(head)) {
+                candidates = subtreeBases(head, rel);
+            } else if (head === "shared") {
+                candidates = [resolve("src/shared", rel)];
+            } else if (head === "runtime") {
+                candidates = [resolve("src/runtime", rel)];
+            } else if (head === "cli") {
+                candidates = [resolve("src/cli", rel)];
+            } else {
+                candidates = [
+                    resolve("src", relativePath),
+                    resolve("src/runtime", relativePath),
+                    resolve("src/cli/ui/ink-app", relativePath),
+                ];
             }
-            return { path: base };
+            const found = probe(candidates);
+            return { path: found ?? candidates[0] };
         });
         // Resolve @allternit workspace packages to their source or dist
         build.onResolve({ filter: /^@allternit\/(plugin|script|sdk|util|gizzi-util)/ }, (args) => {
@@ -199,10 +232,11 @@ const solidPlugin = {
         }));
         // Transform .tsx files with babel-preset-solid before Bun bundles them
         build.onLoad({ filter: /\.tsx$/ }, async (args) => {
-            const [{ transformAsync: transform }, solidMod, tsMod] = await Promise.all([
+            const [{ transformAsync: transform }, solidMod, tsMod, syntaxJsxMod] = await Promise.all([
                 import("@babel/core"),
                 import("babel-preset-solid"),
                 import("@babel/preset-typescript"),
+                import("@babel/plugin-syntax-jsx"),
             ]);
             const solid = solidMod.default || solidMod;
             const ts = tsMod.default || tsMod;
@@ -215,6 +249,10 @@ const solidPlugin = {
                         [solid, { moduleName: "@opentui/solid", generate: "universal" }],
                         [ts],
                     ],
+                    // Babel 8: TS preset alone mis-parses JSX fragments (`<>`)
+                    // as empty type-parameter lists — enable the JSX syntax
+                    // plugin so fragments parse as JSX.
+                    plugins: [syntaxJsxMod.default || syntaxJsxMod],
                 });
                 if (args.path.endsWith("app.tsx")) {
                     await Bun.write("./.build/app-transformed.js", result?.code ?? "");
@@ -374,6 +412,40 @@ if (successful.length === 1) {
     console.log("");
     console.log("To run the binary:");
     console.log(`  ${simpleName} --help`);
+}
+
+// Vendor allternit-mux and ripgrep next to the built binaries (Claude Code
+// layout): dist/vendor/{allternit-mux,ripgrep}/... so the runtime resolves
+// them from the executable's directory.
+for (const r of successful) {
+    try {
+        const pa = `${r.target.platform}-${r.target.arch}`;
+        const ap = `${r.target.arch}-${r.target.platform}`;
+        const suffix = r.target.suffix || "";
+        const vendoredMux = `vendor/allternit-mux/${pa}/allternit-mux${suffix}`;
+        if (await Bun.file(vendoredMux).exists()) {
+            const dest = `${OUTDIR}/vendor/allternit-mux/${pa}`;
+            await mkdir(dest, { recursive: true });
+            await $ `cp ${vendoredMux} ${dest}/allternit-mux${suffix}`;
+            console.log(`✓ vendored allternit-mux -> ${dest}/allternit-mux${suffix}`);
+        }
+        else {
+            console.log(`ℹ no vendored allternit-mux for ${pa} (run script/vendor-mux.sh)`);
+        }
+        const vendoredRg = `vendor/ripgrep/${ap}/rg${suffix}`;
+        if (await Bun.file(vendoredRg).exists()) {
+            const dest = `${OUTDIR}/vendor/ripgrep/${ap}`;
+            await mkdir(dest, { recursive: true });
+            await $ `cp ${vendoredRg} ${dest}/rg${suffix}`;
+            console.log(`✓ vendored ripgrep -> ${dest}/rg${suffix}`);
+        }
+        else {
+            console.log(`ℹ no vendored ripgrep for ${ap} (run script/vendor-ripgrep.sh)`);
+        }
+    }
+    catch (e) {
+        console.log(`⚠ vendoring skipped: ${e?.message || e}`);
+    }
 }
 console.log("");
 console.log("To run in dev mode:");

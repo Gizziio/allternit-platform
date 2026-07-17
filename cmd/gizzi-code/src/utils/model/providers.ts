@@ -20,3 +20,8 @@ export function isFirstPartyAnthropicBaseUrl(): boolean {
   const url = process.env.ANTHROPIC_BASE_URL || ''
   return url === '' || url.includes('api.anthropic.com')
 }
+
+/** Provider name string for telemetry/statsig tagging. */
+export function getAPIProviderForStatsig(): ModelProvider {
+  return getAPIProvider()
+}

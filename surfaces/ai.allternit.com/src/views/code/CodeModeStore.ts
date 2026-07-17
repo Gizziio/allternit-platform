@@ -36,7 +36,7 @@ export interface CodeWorkspaceFile {
 
 export interface CodeCanvasTile {
   tileId: string;
-  type: 'session' | 'preview' | 'diff' | 'terminal' | 'notes' | 'knowledge' | 'knowledge-graph';
+  type: 'session' | 'preview' | 'diff' | 'terminal' | 'notes' | 'knowledge' | 'knowledge-graph' | 'executor';
   sessionId?: string;
   x: number;
   y: number;
@@ -48,6 +48,14 @@ export interface CodeCanvasTile {
   diffText?: string;
   filePath?: string;
   content?: string;
+  /** Command injected into the terminal once it connects (agent CLI tiles). */
+  startupCommand?: string;
+  /** Notes tile bound to the workspace shared-context file. */
+  shared?: boolean;
+  /** Orchestrator executor this tile mirrors. */
+  executorSlug?: string;
+  /** Tile that spawned this one (orchestrator parent). */
+  parentTileId?: string;
 }
 
 export interface CodeCanvasViewport {
@@ -55,6 +63,17 @@ export interface CodeCanvasViewport {
   y: number;
   zoom: number;
 }
+
+export const CANVAS_TILE_DEFAULT_SIZE: Record<CodeCanvasTile['type'], { width: number; height: number }> = {
+  session: { width: 480, height: 360 },
+  preview: { width: 480, height: 360 },
+  diff: { width: 480, height: 360 },
+  terminal: { width: 720, height: 480 },
+  notes: { width: 480, height: 360 },
+  knowledge: { width: 480, height: 360 },
+  'knowledge-graph': { width: 480, height: 360 },
+  executor: { width: 560, height: 420 },
+};
 
 interface RepoStatusSnapshot {
   branch: string;

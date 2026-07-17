@@ -29,3 +29,10 @@ export async function mkdirSafe(path: string): Promise<boolean> {
     return false
   }
 }
+
+import * as fsPromises from 'fs/promises'
+
+/** Pluggable fs surface used by plugin loaders; the real fs in this build. */
+export function getFsImplementation(): typeof fsPromises {
+  return fsPromises
+}

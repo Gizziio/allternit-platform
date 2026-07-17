@@ -15,8 +15,8 @@ import type {
 } from '../../entrypoints/agentSdkTypes.js'
 import type { Message } from '@/types/message.js'
 import type { PermissionResult } from '../../utils/permissions/PermissionResult.js'
-import { permissionBehaviorSchema } from '../../utils/permissions/PermissionRule.js'
-import { permissionUpdateSchema } from '../../utils/permissions/PermissionUpdateSchema.js'
+import { permissionBehaviorSchema } from '../shared/utils/permissions/PermissionRule.js'
+import { permissionUpdateSchema } from '../shared/utils/permissions/PermissionUpdateSchema.js'
 import type { AppState } from '@/state/AppState.js'
 import type { AttributionState } from '../utils/commitAttribution.js'
 

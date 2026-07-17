@@ -31,7 +31,7 @@
 - utils/shell/*.ts (shellToolUtils)
 - utils/model/*.ts (providers)
 - utils/computerUse/*.ts (common, mcpServer)
-- utils/claudeInChrome/*.ts (mcpServer, chromeNativeHost, common)
+- utils/allternitInChrome/*.ts (mcpServer, chromeNativeHost, common)
 - utils/teleport/*.ts (api)
 - utils/{startupProfiler, sinks, process, earlyInput, worktreeModeEnabled, ...}.ts
 

@@ -88,7 +88,7 @@
   - `src/tools/FileWriteTool/UI.tsx`
   - `src/memdir/findRelevantMemories.ts`
   - `src/utils/sideQuestion.ts`
-  - `src/utils/claudeInChrome/mcpServer.ts`
+  - `src/utils/allternitInChrome/mcpServer.ts`
 
 ### 5. Iterator errors on unknown types (12 errors) ✅
 - **Issue**: `Type 'unknown' must have a '[Symbol.iterator]()' method`

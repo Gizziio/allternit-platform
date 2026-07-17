@@ -16,3 +16,6 @@ export interface PluginHookMatcher {
 export interface HooksSettings {
   [hook: string]: unknown
 }
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../shared/utils/settings/types.js'

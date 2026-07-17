@@ -1,2 +1,2 @@
 // @ts-nocheck
-export * from '../../screens/REPL.tsx.js'
+export * from '../../screens/REPL.tsx'

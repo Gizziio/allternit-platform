@@ -103,6 +103,8 @@ export interface SimulationConfig {
   rounds: number;
   /** Max characters of the previous round's summary carried into each turn's prompt. */
   maxSummaryChars?: number;
+  /** Registry model id to run every stage with; defaults to the registry's default plugin model. */
+  modelId?: string;
 }
 
 /** What `MemoryStore` stores per agent per round. */

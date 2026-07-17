@@ -202,3 +202,11 @@ export default {
   KeyCodes,
   SPINNER_FRAMES,
 }
+
+// ─── Merge-rot repair ────────────────────────────────────────────────────────
+// This file carried the custom helpers (stringWidth, useTerminalSize, KeyCodes,
+// SPINNER_FRAMES, InkColor, ...) but not the full ink component surface. The
+// complete module lives in the runtime tree; re-export it underneath — local
+// exports take precedence on conflicts, and the missing ones (Link, etc.)
+// come through.
+export * from './runtime/claude-core/ink.js'

@@ -728,10 +728,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Cowork
   const [dispatchEnabled, setDispatchEnabled] = useSettingsState('cowork.dispatchEnabled', false);
 
-  // Usage
-  const [usageUpdatedLabel, setUsageUpdatedLabel] = useState('just now');
-  const [usageRefreshing, setUsageRefreshing] = useState(false);
-
   // Customize list panels
   const [connectors, setConnectors] = useState<OwnedConnector[]>([]);
   const [connectorsLoading, setConnectorsLoading] = useState(false);
@@ -1146,25 +1142,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const renderBillingPanel = () => <ComputeBillingPanel />;
 
   const renderUsagePanel = () => {
-    const handleUsageRefresh = () => {
-      setUsageRefreshing(true);
-      setTimeout(() => {
-        setUsageUpdatedLabel('just now');
-        setUsageRefreshing(false);
-      }, 600);
-    };
-
     return (
       <div>
-        <EmptyState
-          icon={<ArrowsClockwise size={40} weight="thin" />}
-          caption="Real-time usage breakdown is not available yet. Refresh to check again."
-          ctaLabel={usageRefreshing ? 'Refreshing…' : 'Refresh'}
-          onCtaClick={handleUsageRefresh}
-        />
-        <div className="flex items-center justify-end py-3">
-          <span className="text-[12px] text-[var(--text-tertiary)]">Last updated: {usageUpdatedLabel}</span>
-        </div>
         <SectionHeading>Usage details</SectionHeading>
         <ResourceUsageDashboard />
       </div>

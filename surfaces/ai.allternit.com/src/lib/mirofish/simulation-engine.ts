@@ -16,7 +16,7 @@
 
 import { generateText } from "ai";
 
-import { getDefaultPluginModel } from "@/lib/ai/providers";
+import { getPluginModel } from "@/lib/ai/providers";
 import { createModuleLogger } from '@/lib/logger';
 
 import { LocalSwarmProvider } from "@/lib/sandbox/swarm/local-provider";
@@ -77,7 +77,7 @@ export async function buildInitialWorldState(
   const { onProgress, signal } = options;
 
   onProgress?.({ stage: "graph", completed: 0, total: 1 });
-  const seedGraph = await extractSeedGraph(seed, { signal });
+  const seedGraph = await extractSeedGraph(seed, { signal, modelId: config.modelId });
   onProgress?.({ stage: "graph", completed: 1, total: 1 });
 
   onProgress?.({ stage: "personas", completed: 0, total: config.populationSize });
@@ -85,6 +85,7 @@ export async function buildInitialWorldState(
     concurrency: options.concurrency,
     signal,
     seedGraph,
+    modelId: config.modelId,
     onProgress: (completed, total) =>
       onProgress?.({ stage: "personas", completed, total }),
   });
@@ -142,6 +143,7 @@ async function runRound(
   memoryStore: MemoryStore,
   maxSummaryChars: number,
   options: RunSimulationOptions,
+  modelId: string | undefined,
   onTurnSettled: (completed: number, total: number) => void
 ): Promise<AgentTurnResult[]> {
   const provider = new LocalSwarmProvider({ concurrency: options.concurrency });
@@ -155,7 +157,7 @@ async function runRound(
   const personaByUnitId = new Map(units.map((unit, index) => [unit.id, world.personas[index]]));
 
   const previousSummary = world.roundSummaries[world.roundSummaries.length - 1];
-  const model = await getDefaultPluginModel();
+  const model = await getPluginModel(modelId as never);
   let settled = 0;
 
   const results = await provider.runBatch(units, async (unit) => {
@@ -249,8 +251,14 @@ export async function runSimulation(
       rounds: config.rounds,
     });
 
-    const turns = await runRound(world, memoryStore, maxSummaryChars, options, (completed, total) =>
-      onProgress?.({ stage: "rounds", completed, total, round, rounds: config.rounds })
+    const turns = await runRound(
+      world,
+      memoryStore,
+      maxSummaryChars,
+      options,
+      config.modelId,
+      (completed, total) =>
+        onProgress?.({ stage: "rounds", completed, total, round, rounds: config.rounds })
     );
 
     const summary: RoundSummary = {
@@ -269,7 +277,7 @@ export async function runSimulation(
 
   throwIfAborted(signal);
   onProgress?.({ stage: "report", completed: 0, total: 1 });
-  const report = await generateSimulationReport(world, { signal });
+  const report = await generateSimulationReport(world, { signal, modelId: config.modelId });
   onProgress?.({ stage: "report", completed: 1, total: 1 });
   if (report) {
     world = { ...world, report };

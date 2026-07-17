@@ -176,6 +176,94 @@ struct ProviderRow {
     status: String,
 }
 
+/// Static specs for ENV-key providers: (id, display name, api-key env var, models).
+/// Shared by env_provider_rows() and available_model_catalog() so the two never drift.
+static ENV_PROVIDER_SPECS: &[(&str, &str, &str, &[&str])] = &[
+    (
+        "openai",
+        "OpenAI",
+        "OPENAI_API_KEY",
+        &["gpt-5-mini", "gpt-5-nano", "gpt-4o", "dall-e-3"],
+    ),
+    (
+        "anthropic",
+        "Anthropic",
+        "ANTHROPIC_API_KEY",
+        &["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-6"],
+    ),
+    (
+        "google",
+        "Google AI",
+        "GOOGLE_GENERATIVE_AI_API_KEY",
+        &["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+    ),
+    ("alibaba", "Alibaba", "ALIBABA_API_KEY", &["qwen-3"]),
+    (
+        "amazon-bedrock",
+        "Amazon Bedrock",
+        "AWS_SECRET_ACCESS_KEY",
+        &["nova-pro"],
+    ),
+    ("groq", "Groq", "GROQ_API_KEY", &["llama-3-70b"]),
+    ("mistral", "Mistral", "MISTRAL_API_KEY", &["mistral-large"]),
+    ("cohere", "Cohere", "COHERE_API_KEY", &["command-r-plus"]),
+    (
+        "deepseek",
+        "DeepSeek",
+        "DEEPSEEK_API_KEY",
+        &["deepseek-chat"],
+    ),
+    ("xai", "xAI", "XAI_API_KEY", &["grok-3"]),
+    (
+        "togetherai",
+        "Together AI",
+        "TOGETHER_API_KEY",
+        &["llama-3-70b"],
+    ),
+    (
+        "perplexity",
+        "Perplexity",
+        "PERPLEXITY_API_KEY",
+        &["sonar-pro"],
+    ),
+];
+
+/// Static specs for CLI/subprocess brains: (id, display name, binary, default model).
+/// IDs and default models must match what the gizzi runtime registers
+/// (cmd/gizzi-code src/runtime/providers/discovery/subprocess.ts).
+static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
+    ("claude-cli", "Claude CLI", "claude", "claude-sonnet-4-6"),
+    ("codex-cli", "Codex CLI", "codex", "codex-mini-latest"),
+    ("qwen-cli", "Qwen CLI", "qwen", "qwen-plus"),
+    ("kimi-cli", "Kimi CLI", "kimi", "kimi-k2"),
+    ("antigravity", "Antigravity", "agy", "antigravity"),
+];
+
+/// Flattened `{id, name, provider}` catalog for the agent-creation wizard's model
+/// picker (GET /api/v1/models). Derived from the same provider specs used by the
+/// /providers endpoints so both stay in sync. `id` uses the `provider/model`
+/// convention the runtime harness resolves.
+pub fn available_model_catalog() -> Vec<serde_json::Value> {
+    let mut out = Vec::new();
+    for &(id, name, _binary, model) in CLI_PROVIDER_SPECS {
+        out.push(json!({
+            "id": format!("{}/{}", id, model),
+            "name": format!("{} ({})", model, name),
+            "provider": id,
+        }));
+    }
+    for &(id, name, _env, models) in ENV_PROVIDER_SPECS {
+        for model in models {
+            out.push(json!({
+                "id": format!("{}/{}", id, model),
+                "name": format!("{} ({})", model, name),
+                "provider": id,
+            }));
+        }
+    }
+    out
+}
+
 #[derive(Serialize)]
 struct ProviderAuthStatusRow {
     provider_id: String,
@@ -310,57 +398,7 @@ fn read_gizzi_providers(connected: &HashSet<String>) -> Vec<ProviderRow> {
 /// present. This lets users add a brain by setting a single env var and having
 /// it route through the Gizzi harness without touching a database.
 fn env_provider_rows() -> Vec<ProviderRow> {
-    const ENV_PROVIDERS: &[(&str, &str, &str, &[&str])] = &[
-        (
-            "openai",
-            "OpenAI",
-            "OPENAI_API_KEY",
-            &["gpt-5-mini", "gpt-5-nano", "gpt-4o", "dall-e-3"],
-        ),
-        (
-            "anthropic",
-            "Anthropic",
-            "ANTHROPIC_API_KEY",
-            &["claude-sonnet-4-6", "claude-haiku-4-5", "claude-opus-4-6"],
-        ),
-        (
-            "google",
-            "Google AI",
-            "GOOGLE_GENERATIVE_AI_API_KEY",
-            &["gemini-2.5-flash-lite", "gemini-2.5-pro"],
-        ),
-        ("alibaba", "Alibaba", "ALIBABA_API_KEY", &["qwen-3"]),
-        (
-            "amazon-bedrock",
-            "Amazon Bedrock",
-            "AWS_SECRET_ACCESS_KEY",
-            &["nova-pro"],
-        ),
-        ("groq", "Groq", "GROQ_API_KEY", &["llama-3-70b"]),
-        ("mistral", "Mistral", "MISTRAL_API_KEY", &["mistral-large"]),
-        ("cohere", "Cohere", "COHERE_API_KEY", &["command-r-plus"]),
-        (
-            "deepseek",
-            "DeepSeek",
-            "DEEPSEEK_API_KEY",
-            &["deepseek-chat"],
-        ),
-        ("xai", "xAI", "XAI_API_KEY", &["grok-3"]),
-        (
-            "togetherai",
-            "Together AI",
-            "TOGETHER_API_KEY",
-            &["llama-3-70b"],
-        ),
-        (
-            "perplexity",
-            "Perplexity",
-            "PERPLEXITY_API_KEY",
-            &["sonar-pro"],
-        ),
-    ];
-
-    ENV_PROVIDERS
+    ENV_PROVIDER_SPECS
         .iter()
         .map(|(id, name, env_var, models)| {
             let key_set = std::env::var(env_var).is_ok();
@@ -405,17 +443,7 @@ fn subprocess_provider_rows(connected: &HashSet<String>) -> Vec<ProviderRow> {
     // the token itself) or, for Claude/Codex, a stored API key. We reuse the same
     // detection as the one-click connect flow so the merged status never reports a
     // signed-in CLI as "missing key" (root-cause correctness, not a fallback).
-    // IDs and default models must match what the gizzi runtime actually registers
-    // (cmd/gizzi-code src/runtime/providers/discovery/subprocess.ts), otherwise a
-    // platform-created agent with the default model fails to resolve in gizzi.
-    let cli = [
-        ("claude-cli", "Claude CLI", "claude", "claude-sonnet-4-6"),
-        ("codex-cli", "Codex CLI", "codex", "codex-mini-latest"),
-        ("qwen-cli", "Qwen CLI", "qwen", "qwen-plus"),
-        ("kimi-cli", "Kimi CLI", "kimi", "kimi-k2"),
-        ("antigravity", "Antigravity", "agy", "antigravity"),
-    ];
-    for (id, name, binary, model) in cli {
+    for &(id, name, binary, model) in CLI_PROVIDER_SPECS {
         let available = command_on_path(binary).is_some();
         let authed = connected.contains(id)
             || subscription_auth_check(id, binary)

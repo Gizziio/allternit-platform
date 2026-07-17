@@ -267,11 +267,17 @@ export function logAntError(context: string, error: unknown): void {
     })
   }
 }
-
-// Default export for compatibility
+// Rebuilt default export (merge-rot repair): real named exports only.
 export default {
-  logForDebugging,
-  setDebugMode,
   isDebugMode,
-  debugLog,
+  enableDebugLogging,
+  logForDebugging,
+  flushDebugLogs,
+  getDebugLogPath,
+  getMinDebugLogLevel,
+  getDebugFilter,
+  isDebugToStdErr,
+  getDebugFilePath,
+  setHasFormattedOutput,
+  getHasFormattedOutput,
 }

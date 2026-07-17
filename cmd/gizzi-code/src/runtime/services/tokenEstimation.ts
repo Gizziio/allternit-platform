@@ -273,3 +273,9 @@ export const countMessagesTokensWithAPI: any = {}
 
 // Auto-added export
 export const countTokensViaHaikuFallback: any = {}
+
+// ─── Merge-rot repair ────────────────────────────────────────────────────────
+// The complete token-estimation module (including
+// roughTokenCountEstimationForMessages) lives in the ink-app tree; re-export
+// it underneath — local exports above take precedence on conflicts.
+export * from '../../cli/ui/ink-app/services/tokenEstimation.js'

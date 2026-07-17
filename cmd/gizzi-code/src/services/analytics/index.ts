@@ -213,3 +213,6 @@ export default {
   unregisterProvider,
   createFileAnalyticsProvider,
 }
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../cli/ui/ink-app/services/analytics/index.js'

@@ -229,19 +229,18 @@ function getMcpToolTimeoutMs(): number {
   )
 }
 
-import { isClaudeInChromeMCPServer } from '../../utils/claudeInChrome/common.js'
+import { isAllternitInChromeMCPServer } from '../../utils/allternitInChrome/common.js'
 
-// Lazy: toolRendering.tsx pulls React/ink; only needed when Claude-in-Chrome MCP server is connected
-/* eslint-disable @typescript-eslint/no-require-imports */
-const claudeInChromeToolRendering =
-  (): typeof import('../../utils/claudeInChrome/toolRendering.js') =>
-    require('../../utils/claudeInChrome/toolRendering.js')
+// Lazy: toolRendering.tsx pulls React/ink (whose reconciler uses top-level
+// await); only needed when Allternit-in-Chrome MCP server is connected.
+// Dynamic import — Bun's bundler cannot include a require() of a TLA graph.
+const loadAllternitInChromeToolRendering = () =>
+  import('../../utils/allternitInChrome/toolRendering.js')
 // Lazy: wrapper.tsx → hostAdapter.ts → executor.ts pulls both native modules
 // (@ant/computer-use-input + @ant/computer-use-swift). Runtime-gated by
 // GrowthBook tengu_malort_pedway (see gates.ts).
-const computerUseWrapper = feature('CHICAGO_MCP')
-  ? (): typeof import('../../utils/computerUse/wrapper.js') =>
-      require('../../utils/computerUse/wrapper.js')
+const loadComputerUseWrapper = feature('CHICAGO_MCP')
+  ? () => import('../../utils/computerUse/wrapper.js')
   : undefined
 const isComputerUseMCPServer = feature('CHICAGO_MCP')
   ? (
@@ -905,11 +904,11 @@ export const connectToServer = memoize(
         logMCPDebug(name, `claude.ai proxy transport created successfully`)
       } else if (
         (serverRef.type === 'stdio' || !serverRef.type) &&
-        isClaudeInChromeMCPServer(name)
+        isAllternitInChromeMCPServer(name)
       ) {
         // Run the Chrome MCP server in-process to avoid spawning a ~325 MB subprocess
         const { createChromeContext } = await import(
-          '../../utils/claudeInChrome/mcpServer.js'
+          '../../utils/allternitInChrome/mcpServer.js'
         )
         const { createClaudeForChromeMcpServer } = await import(
           '@allternit/extension'
@@ -1764,8 +1763,9 @@ export const fetchToolsForClient = memoizeWithLRU(
         isEnvTruthy(process.env.CLAUDE_AGENT_SDK_MCP_NO_PREFIX)
 
       // Convert MCP tools to our Tool format
-      return toolsToProcess
-        .map((tool): Tool => {
+      return (
+        await Promise.all(
+          toolsToProcess.map(async (tool): Promise<Tool> => {
           const fullyQualifiedName = buildMcpToolName(client.name, tool.name)
           return {
             ...MCPTool,
@@ -1975,20 +1975,21 @@ export const fetchToolsForClient = memoizeWithLRU(
               const displayName = tool.annotations?.title || tool.name
               return `${client.name} - ${displayName} (MCP)`
             },
-            ...(isClaudeInChromeMCPServer(client.name) &&
+            ...(isAllternitInChromeMCPServer(client.name) &&
             (client.config.type === 'stdio' || !client.config.type)
-              ? claudeInChromeToolRendering().getClaudeInChromeMCPToolOverrides(
+              ? (await loadAllternitInChromeToolRendering()).getAllternitInChromeMCPToolOverrides(
                   tool.name,
                 )
               : {}),
             ...(feature('CHICAGO_MCP') &&
             (client.config.type === 'stdio' || !client.config.type) &&
             isComputerUseMCPServer!(client.name)
-              ? computerUseWrapper!().getComputerUseMCPToolOverrides(tool.name)
+              ? (await loadComputerUseWrapper!()).getComputerUseMCPToolOverrides(tool.name)
               : {}),
           }
-        })
-        .filter(isIncludedMcpTool)
+          }),
+        )
+      ).filter(isIncludedMcpTool)
     } catch (error) {
       logMCPError(client.name, `Failed to fetch tools: ${errorMessage(error)}`)
       return []

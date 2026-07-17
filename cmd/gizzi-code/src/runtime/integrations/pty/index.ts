@@ -1,20 +1,24 @@
 // @ts-nocheck
+// Mux-backed PTY integration (phase 3 of the terminal consolidation plan).
+// Same namespace surface as the old bun-pty implementation, but sessions are
+// real PTYs owned by the allternit-mux daemon: they survive `gizzi serve`
+// restarts, keep persistent scrollback, and `connect` streams live output via
+// mux event subscriptions instead of an in-process fan-out.
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
-import { type IPty } from "bun-pty"
 import z from "zod/v4"
 import { Identifier } from "@/shared/id/id"
 import { Log } from "@/shared/util/log"
 import { Instance } from "@/runtime/context/project/instance"
-import { lazy } from "@allternit/gizzi-util/lazy.js"
 import { Shell } from "@/runtime/integrations/shell/shell"
 import { Plugin } from "@/runtime/integrations/plugin"
+import { connect as netConnect } from "node:net"
+import { homedir } from "node:os"
+import { dirname, join } from "node:path"
 
 export namespace Pty {
   const log = Log.create({ service: "pty" })
 
-  const BUFFER_LIMIT = 1024 * 1024 * 2
-  const BUFFER_CHUNK = 64 * 1024
   const encoder = new TextEncoder()
 
   type Socket = {
@@ -24,86 +28,168 @@ export namespace Pty {
     close: (code?: number, reason?: string) => void
   }
 
-  type Subscriber = {
-    id: number
-    token: unknown
+  // ── mux NDJSON client ──────────────────────────────────────────────────────
+
+  function muxSocketPath(): string {
+    if (process.env.ALLTERNIT_MUX_SOCKET) return process.env.ALLTERNIT_MUX_SOCKET
+    const stateDir = process.env.ALLTERNIT_MUX_STATE_DIR ?? join(homedir(), ".allternit", "mux")
+    return join(stateDir, "mux.sock")
   }
 
-  const sockets = new WeakMap<object, number>()
-  const owners = new WeakMap<object, string>()
-  let socketCounter = 0
-
-  const tagSocket = (ws: Socket) => {
-    if (!ws || typeof ws !== "object") return
-    const next = (socketCounter = (socketCounter + 1) % Number.MAX_SAFE_INTEGER)
-    sockets.set(ws, next)
-    return next
+  function muxStateDir(): string {
+    return process.env.ALLTERNIT_MUX_STATE_DIR ?? join(homedir(), ".allternit", "mux")
   }
 
-  const token = (ws: Socket) => {
-    const data = ws.data
-    if (data === undefined) return
-    if (data === null) return
-    if (typeof data !== "object") return data
-
-    const id = (data as { connId?: unknown }).connId
-    if (typeof id === "number" || typeof id === "string") return id
-
-    const href = (data as { href?: unknown }).href
-    if (typeof href === "string") return href
-
-    const url = (data as { url?: unknown }).url
-    if (typeof url === "string") return url
-    if (url && typeof url === "object") {
-      const href = (url as { href?: unknown }).href
-      if (typeof href === "string") return href
-      return url
-    }
-
-    const events = (data as { events?: unknown }).events
-    if (typeof events === "number" || typeof events === "string") return events
-    if (events && typeof events === "object") {
-      const id = (events as { connId?: unknown }).connId
-      if (typeof id === "number" || typeof id === "string") return id
-
-      const id2 = (events as { connection?: unknown }).connection
-      if (typeof id2 === "number" || typeof id2 === "string") return id2
-
-      const id3 = (events as { id?: unknown }).id
-      if (typeof id3 === "number" || typeof id3 === "string") return id3
-
-      return events
-    }
-
-    return data
-  }
-
-  // WebSocket control frame: 0x00 + UTF-8 JSON.
-  const meta = (cursor: number) => {
-    const json = JSON.stringify({ cursor })
-    const bytes = encoder.encode(json)
-    const out = new Uint8Array(bytes.length + 1)
-    out[0] = 0
-    out.set(bytes, 1)
-    return out
-  }
-
-  const pty = lazy(async () => {
-    const { spawn } = await import("bun-pty")
-    return spawn
-  })
-
-  export const Info = z
-    .object({
-      id: Identifier.schema("pty"),
-      title: z.string(),
-      command: z.string(),
-      args: z.array(z.string()),
-      cwd: z.string(),
-      status: z.enum(["running", "exited"]),
-      pid: z.number(),
+  // gizzi is a self-contained binary (Claude Code parity): if no mux daemon is
+  // running, spawn one instead of failing. Resolution order for the binary:
+  // ALLTERNIT_MUX_BIN → PATH → repo target/debug (dev).
+  let spawnAttempt: Promise<void> | undefined
+  async function ensureMuxDaemon(): Promise<void> {
+    const socket = muxSocketPath()
+    const { existsSync } = await import("node:fs")
+    // NB: unix sockets are not regular files — Bun.file().exists() misses them.
+    if (existsSync(socket)) return
+    spawnAttempt ??= (async () => {
+      const { spawn } = await import("node:child_process")
+      const { mkdirSync } = await import("node:fs")
+      const execDir = dirname(process.execPath)
+      const platformArch = `${process.platform}-${process.arch}`
+      const candidates = [
+        // 1. Explicit override.
+        process.env.ALLTERNIT_MUX_BIN,
+        // 2. Vendored sibling (desktop resources/bin, dist output).
+        join(execDir, "allternit-mux"),
+        // 3. npm-style vendor tree (Claude Code ripgrep layout).
+        join(execDir, "vendor", "allternit-mux", platformArch, "allternit-mux"),
+        // 4. PATH.
+        Bun.which("allternit-mux") ?? undefined,
+        // 5. Dev monorepo builds.
+        join(process.cwd(), "..", "..", "target", "release", "allternit-mux"),
+        join(process.cwd(), "..", "..", "target", "debug", "allternit-mux"),
+      ].filter(Boolean) as string[]
+      mkdirSync(muxStateDir(), { recursive: true })
+      let spawned = false
+      for (const bin of candidates) {
+        if (!(await Bun.file(bin).exists())) continue
+        try {
+          const child = spawn(bin, ["serve"], {
+            env: {
+              ...process.env,
+              ALLTERNIT_MUX_STATE_DIR: muxStateDir(),
+              ALLTERNIT_MUX_SOCKET: muxSocketPath(),
+            },
+            detached: true,
+            stdio: "ignore",
+          })
+          // Bun reports a failed exec on the child's error event, not sync.
+          const failed = await new Promise<boolean>((resolve) => {
+            child.once("error", () => resolve(true))
+            setTimeout(() => resolve(false), 300)
+          })
+          if (failed) continue
+          child.unref()
+          spawned = true
+          log.info("auto-spawned allternit-mux", { bin })
+          break
+        } catch {
+          continue
+        }
+      }
+      if (!spawned) throw new Error("allternit-mux binary not found (set ALLTERNIT_MUX_BIN)")
+      // Wait for the socket to appear.
+      const deadline = Date.now() + 10_000
+      while (!existsSync(socket)) {
+        if (Date.now() > deadline) throw new Error("allternit-mux did not start in time")
+        await new Promise((r) => setTimeout(r, 100))
+      }
+    })().catch((e) => {
+      spawnAttempt = undefined
+      throw e
     })
-    
+    await spawnAttempt
+  }
+
+  class MuxConn {
+    constructor(private sock: any, private pending: string[]) {}
+
+    static connect(path: string): Promise<MuxConn> {
+      return new Promise((resolve, reject) => {
+        const pending: string[] = []
+        const conn = new MuxConn(null as any, pending)
+        const sock = netConnect(path)
+        let buffer = ""
+        sock.on("connect", () => resolve(conn))
+        sock.on("error", reject)
+        sock.on("data", (chunk: Buffer) => {
+          buffer += chunk.toString("utf8")
+          let idx
+          while ((idx = buffer.indexOf("\n")) >= 0) {
+            const line = buffer.slice(0, idx)
+            buffer = buffer.slice(idx + 1)
+            if (line.trim()) pending.push(line)
+          }
+        })
+        conn.sock = sock
+      })
+    }
+
+    nextLine(): Promise<string> {
+      if (this.pending.length) return Promise.resolve(this.pending.shift()!)
+      return new Promise((resolve, reject) => {
+        const onData = () => {
+          if (this.pending.length) {
+            this.sock.off("data", onData)
+            resolve(this.pending.shift()!)
+          }
+        }
+        this.sock.on("data", onData)
+        this.sock.once("error", reject)
+        this.sock.once("close", () => reject(new Error("mux socket closed")))
+      })
+    }
+
+    async request(method: string, params: Record<string, unknown> = {}): Promise<any> {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      this.sock.write(JSON.stringify({ id, method, params }) + "\n")
+      for (;;) {
+        const line = await this.nextLine()
+        const frame = JSON.parse(line)
+        if (frame.id !== id) continue
+        if (frame.error) throw new Error(`${frame.error.code}: ${frame.error.message}`)
+        return frame.result
+      }
+    }
+
+    close(): void {
+      try {
+        this.sock.destroy()
+      } catch {
+        /* already closed */
+      }
+    }
+  }
+
+  async function mux<T = any>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+    await ensureMuxDaemon()
+    const conn = await MuxConn.connect(muxSocketPath())
+    try {
+      return await conn.request(method, params)
+    } finally {
+      conn.close()
+    }
+  }
+
+  // ── types (unchanged surface) ──────────────────────────────────────────────
+
+  export const Info = z.object({
+    id: Identifier.schema("pty"),
+    title: z.string(),
+    command: z.string(),
+    args: z.array(z.string()),
+    cwd: z.string(),
+    status: z.enum(["running", "exited"]),
+    pid: z.number(),
+  })
 
   export type Info = z.infer<typeof Info>
 
@@ -136,40 +222,72 @@ export namespace Pty {
     Deleted: BusEvent.define("pty.deleted", z.object({ id: Identifier.schema("pty") })),
   }
 
-  interface ActiveSession {
+  // ── state: gizzi pty id -> mux session/pane mapping ───────────────────────
+
+  interface Mapping {
     info: Info
-    process: IPty
-    buffer: string
-    bufferCursor: number
-    cursor: number
-    subscribers: Map<Socket, Subscriber>
+    muxSessionId: string
+    muxPaneId: string
   }
 
+  const LABEL_PREFIX = "gizzi-pty-"
+
   const state = Instance.state(
-    () => new Map<string, ActiveSession>(),
+    () => new Map<string, Mapping>(),
     async (sessions) => {
-      for (const session of sessions.values()) {
+      for (const mapping of sessions.values()) {
         try {
-          session.process.kill()
-        } catch {}
-        for (const ws of session.subscribers.keys()) {
-          try {
-            ws.close()
-          } catch {
-            // ignore
-          }
+          await mux("session.close", { session_id: mapping.muxSessionId })
+        } catch {
+          // mux may be down; sessions are daemon-owned and outlive us anyway
         }
       }
       sessions.clear()
     },
   )
 
-  export function list() {
-    return Array.from(state().values()).map((s) => s.info)
+  function toInfo(muxSession: any, id: string, title: string, command: string, args: string[], cwd: string): Info {
+    const pane = (muxSession.panes ?? [])[0] ?? {}
+    return {
+      id,
+      title,
+      command,
+      args,
+      cwd,
+      status: pane.process_running ? "running" : "exited",
+      pid: pane.pid ?? 0,
+    } as Info
   }
 
-  export function get(id: string) {
-    return state().get(id)?.info
+  async function findByLabel(id: string): Promise<any | undefined> {
+    const list = await mux("session.list")
+    return (list.sessions ?? []).find((s: any) => s.label === `${LABEL_PREFIX}${id}`)
+  }
+
+  // ── public API (parity with the bun-pty implementation) ────────────────────
+
+  export async function list(): Promise<Info[]> {
+    const out: Info[] = []
+    for (const mapping of state().values()) {
+      const session = await findByLabel(mapping.info.id).catch(() => undefined)
+      if (!session) {
+        out.push({ ...mapping.info, status: "exited" })
+        continue
+      }
+      const info = toInfo(session, mapping.info.id, mapping.info.title, mapping.info.command, mapping.info.args, mapping.info.cwd)
+      mapping.info = info
+      out.push(info)
+    }
+    return out
+  }
+
+  export async function get(id: string): Promise<Info | undefined> {
+    const mapping = state().get(id)
+    if (!mapping) return undefined
+    const session = await findByLabel(id).catch(() => undefined)
+    if (!session) return { ...mapping.info, status: "exited" }
+    mapping.info = toInfo(session, mapping.info.id, mapping.info.title, mapping.info.command, mapping.info.args, mapping.info.cwd)
+    return mapping.info
   }
 
   export async function create(input: CreateInput) {
@@ -183,208 +301,193 @@ export namespace Pty {
     const cwd = input.cwd || Instance.directory
     const shellEnv = await Plugin.trigger("shell.env", { cwd }, { env: {} })
     const env = {
-      ...process.env,
       ...input.env,
       ...shellEnv.env,
       TERM: "xterm-256color",
       GIZZI_TERMINAL: "1",
     } as Record<string, string>
 
-    if (process.platform === "win32") {
-      env.LC_ALL = "C.UTF-8"
-      env.LC_CTYPE = "C.UTF-8"
-      env.LANG = "C.UTF-8"
-    }
-    log.info("creating session", { id, cmd: command, args, cwd })
+    log.info("creating mux-backed session", { id, cmd: command, args, cwd })
 
-    const spawn = await pty()
-    const ptyProcess = spawn(command, args, {
-      name: "xterm-256color",
+    const { session } = await mux("session.create", {
+      label: `${LABEL_PREFIX}${id}`,
       cwd,
+    })
+    const { pane } = await mux("pane.create", {
+      session_id: session.session_id,
+      cols: 80,
+      rows: 24,
+      command: [command, ...args],
       env,
     })
 
-    const info = {
+    const info: Info = {
       id,
       title: input.title || `Terminal ${id.slice(-4)}`,
       command,
       args,
       cwd,
       status: "running",
-      pid: ptyProcess.pid,
-    } as const
-    const session: ActiveSession = {
-      info,
-      process: ptyProcess,
-      buffer: "",
-      bufferCursor: 0,
-      cursor: 0,
-      subscribers: new Map(),
+      pid: pane.pid ?? 0,
     }
-    state().set(id, session)
-    ptyProcess.onData((chunk) => {
-      session.cursor += chunk.length
-
-      for (const [ws, sub] of session.subscribers) {
-        if (ws.readyState !== 1) {
-          session.subscribers.delete(ws)
-          continue
-        }
-
-        if (typeof ws === "object" && sockets.get(ws) !== sub.id) {
-          session.subscribers.delete(ws)
-          continue
-        }
-
-        if (token(ws) !== sub.token) {
-          session.subscribers.delete(ws)
-          continue
-        }
-
-        try {
-          ws.send(chunk)
-        } catch {
-          session.subscribers.delete(ws)
-        }
-      }
-
-      session.buffer += chunk
-      if (session.buffer.length <= BUFFER_LIMIT) return
-      const excess = session.buffer.length - BUFFER_LIMIT
-      session.buffer = session.buffer.slice(excess)
-      session.bufferCursor += excess
+    state().set(id, {
+      info,
+      muxSessionId: session.session_id,
+      muxPaneId: pane.pane_id,
     })
-    ptyProcess.onExit(({ exitCode }) => {
-      log.info("session exited", { id, exitCode })
-      session.info.status = "exited"
-      for (const ws of session.subscribers.keys()) {
-        try {
-          ws.close()
-        } catch {
-          // ignore
-        }
-      }
-      session.subscribers.clear()
-      Bus.publish(Event.Exited, { id, exitCode })
-      state().delete(id)
-    })
+
+    // Watch for exit so Event.Exited fires like the bun-pty version.
+    void watchExit(id, pane.pane_id)
+
     Bus.publish(Event.Created, { info })
     return info
   }
 
+  async function watchExit(id: string, paneId: string): Promise<void> {
+    try {
+      const conn = await MuxConn.connect(muxSocketPath())
+      await conn.request("events.subscribe", { types: ["pane.exited"] })
+      for (;;) {
+        const frame = JSON.parse(await conn.nextLine())
+        if (frame.type === "pane.exited" && frame.pane_id === paneId) {
+          const exitCode = frame.data?.exit_code ?? -1
+          const mapping = state().get(id)
+          if (mapping) mapping.info = { ...mapping.info, status: "exited" }
+          Bus.publish(Event.Exited, { id, exitCode })
+          conn.close()
+          return
+        }
+      }
+    } catch {
+      // mux unreachable — exit state will be reflected on next list/get
+    }
+  }
+
   export async function update(id: string, input: UpdateInput) {
-    const session = state().get(id)
-    if (!session) return
+    const mapping = state().get(id)
+    if (!mapping) return
     if (input.title) {
-      session.info.title = input.title
+      mapping.info = { ...mapping.info, title: input.title }
     }
     if (input.size) {
-      session.process.resize(input.size.cols, input.size.rows)
+      await mux("pane.resize", {
+        pane_id: mapping.muxPaneId,
+        cols: input.size.cols,
+        rows: input.size.rows,
+      }).catch(() => undefined)
     }
-    Bus.publish(Event.Updated, { info: session.info })
-    return session.info
+    Bus.publish(Event.Updated, { info: mapping.info })
+    return mapping.info
   }
 
   export async function remove(id: string) {
-    const session = state().get(id)
-    if (!session) return
-    log.info("removing session", { id })
+    const mapping = state().get(id)
+    if (!mapping) return
+    log.info("removing mux-backed session", { id })
     try {
-      session.process.kill()
-    } catch {}
-    for (const ws of session.subscribers.keys()) {
-      try {
-        ws.close()
-      } catch {
-        // ignore
-      }
+      await mux("session.close", { session_id: mapping.muxSessionId })
+    } catch {
+      // already gone
     }
-    session.subscribers.clear()
     state().delete(id)
     Bus.publish(Event.Deleted, { id })
   }
 
-  export function resize(id: string, cols: number, rows: number) {
-    const session = state().get(id)
-    if (session && session.info.status === "running") {
-      session.process.resize(cols, rows)
-    }
+  export async function resize(id: string, cols: number, rows: number) {
+    const mapping = state().get(id)
+    if (!mapping || mapping.info.status !== "running") return
+    await mux("pane.resize", { pane_id: mapping.muxPaneId, cols, rows }).catch(() => undefined)
   }
 
-  export function write(id: string, data: string) {
-    const session = state().get(id)
-    if (session && session.info.status === "running") {
-      session.process.write(data)
-    }
+  export async function write(id: string, data: string) {
+    const mapping = state().get(id)
+    if (!mapping || mapping.info.status !== "running") return
+    await mux("pane.send_input", { pane_id: mapping.muxPaneId, data }).catch(() => undefined)
   }
 
-  export function connect(id: string, ws: Socket, cursor?: number) {
-    const session = state().get(id)
-    if (!session) {
+  // WebSocket control frame: 0x00 + UTF-8 JSON (kept for protocol parity).
+  const meta = (cursor: number) => {
+    const json = JSON.stringify({ cursor })
+    const bytes = encoder.encode(json)
+    const out = new Uint8Array(bytes.length + 1)
+    out[0] = 0
+    out.set(bytes, 1)
+    return out
+  }
+
+  export async function connect(id: string, ws: Socket, _cursor?: number) {
+    const mapping = state().get(id)
+    if (!mapping) {
       ws.close()
       return
     }
-    log.info("client connected to session", { id })
+    await ensureMuxDaemon()
+    log.info("client connected to mux-backed session", { id })
 
-    const socketId = tagSocket(ws)
-    if (socketId === undefined) {
-      ws.close()
-      return
-    }
-
-    const previous = owners.get(ws)
-    if (previous && previous !== id) {
-      state().get(previous)?.subscribers.delete(ws)
-    }
-
-    owners.set(ws, id)
-    session.subscribers.set(ws, { id: socketId, token: token(ws) })
-
-    const cleanup = () => {
-      session.subscribers.delete(ws)
-      if (owners.get(ws) === id) owners.delete(ws)
-    }
-
-    const start = session.bufferCursor
-    const end = session.cursor
-
-    const from =
-      cursor === -1 ? end : typeof cursor === "number" && Number.isSafeInteger(cursor) ? Math.max(0, cursor) : 0
-
-    const data = (() => {
-      if (!session.buffer) return ""
-      if (from >= end) return ""
-      const offset = Math.max(0, from - start)
-      if (offset >= session.buffer.length) return ""
-      return session.buffer.slice(offset)
-    })()
-
+    // Replay the persistent scrollback (survives server restarts, unlike the
+    // old in-memory buffer).
+    const replay = await mux("pane.read", { pane_id: mapping.muxPaneId, source: "scrollback" }).catch(() => undefined)
+    const data: string = replay?.output ?? ""
     if (data) {
       try {
-        for (let i = 0; i < data.length; i += BUFFER_CHUNK) {
-          ws.send(data.slice(i, i + BUFFER_CHUNK))
+        for (let i = 0; i < data.length; i += 64 * 1024) {
+          ws.send(data.slice(i, i + 64 * 1024))
         }
       } catch {
-        cleanup()
         ws.close()
         return
       }
     }
-
     try {
-      ws.send(meta(end))
+      ws.send(meta(data.length))
     } catch {
-      cleanup()
       ws.close()
       return
     }
+
+    // Live output via mux event subscription on a dedicated connection.
+    const conn = await MuxConn.connect(muxSocketPath()).catch(() => undefined)
+    if (!conn) {
+      ws.close()
+      return
+    }
+    await conn.request("events.subscribe", { types: ["pane.output", "pane.exited"] })
+    const pump = (async () => {
+      try {
+        for (;;) {
+          const frame = JSON.parse(await conn.nextLine())
+          if (frame.pane_id !== mapping.muxPaneId) continue
+          if (frame.type === "pane.output") {
+            const chunk = frame.data?.data ?? ""
+            if (chunk) {
+              try {
+                ws.send(chunk)
+              } catch {
+                break
+              }
+            }
+          } else if (frame.type === "pane.exited") {
+            try {
+              ws.close()
+            } catch {
+              // ignore
+            }
+            break
+          }
+        }
+      } catch {
+        // mux went away
+      }
+    })()
+    void pump
+
     return {
       onMessage: (message: string | ArrayBuffer) => {
-        session.process.write(String(message))
+        void mux("pane.send_input", { pane_id: mapping.muxPaneId, data: String(message) }).catch(() => undefined)
       },
       onClose: () => {
-        log.info("client disconnected from session", { id })
-        cleanup()
+        log.info("client disconnected from mux-backed session", { id })
+        conn.close()
       },
     }
   }

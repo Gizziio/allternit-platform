@@ -64,6 +64,16 @@ function isLocalOperatorApiUrl(value: string): boolean {
   }
 }
 
+/**
+ * True when the UI itself is served from a loopback origin (the Vite dev
+ * server, or the API's own static host). Such a UI is a local operator UI:
+ * its same-origin/relative API calls are answered by the local backend
+ * (directly or via the dev proxy), never by a cloud-paired runtime.
+ */
+function isLocalOperatorUi(): boolean {
+  return window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (let offset = 0; offset < bytes.length; offset += 0x8000) {
@@ -372,7 +382,7 @@ function installWebSocketInterceptor(): void {
     url: string | URL,
     protocols?: string | string[],
   ): WebSocket {
-    if (!isDesktopShell() && isRuntimeApiUrl(String(url)) && !isLocalOperatorApiUrl(String(url))) {
+    if (!isDesktopShell() && isRuntimeApiUrl(String(url)) && !isLocalOperatorApiUrl(String(url)) && !isLocalOperatorUi()) {
       return new RuntimeRelayWebSocket(url) as unknown as WebSocket;
     }
     return protocols === undefined ? new NativeWebSocket(url) : new NativeWebSocket(url, protocols);
@@ -418,8 +428,10 @@ export function installFetchInterceptor(getToken?: TokenGetter): void {
     // main injects them only while brokering requests to the loopback API.
 
     // Local operator API: an absolute loopback URL names this machine's own
-    // backend, so skip the cloud relay and the paired-runtime guard entirely.
-    if (isLocalOperatorApiUrl(url)) {
+    // backend, and a UI served from a loopback origin makes its same-origin
+    // calls against that same local backend — in both cases skip the cloud
+    // relay and the paired-runtime guard entirely.
+    if (isLocalOperatorApiUrl(url) || isLocalOperatorUi()) {
       return originalFetch(input, {
         ...init,
         headers,

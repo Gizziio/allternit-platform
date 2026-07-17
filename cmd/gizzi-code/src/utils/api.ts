@@ -27,3 +27,6 @@ export function prependUserContext(messages: unknown[], context: string): unknow
 export function appendSystemContext(messages: unknown[], context: string): unknown[] {
   return messages
 }
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../shared/utils/api.js'

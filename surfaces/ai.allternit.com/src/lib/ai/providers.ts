@@ -24,19 +24,18 @@ const _telemetryConfig = {
 };
 
 /**
- * Dev-only escape hatch: when VITE_LOCAL_AI_BASE_URL is set (see .env.local),
- * every language-model request is served by a local OpenAI-compatible server
- * (Ollama) through the vite `/local-ai` proxy instead of the Vercel AI
- * gateway — which the browser cannot reach directly (CORS) and which has no
- * credential in local dev. The requested gateway id is ignored and
- * VITE_LOCAL_AI_MODEL is used for every call; production builds without the
- * env var are unaffected.
+ * Dev-mode model access: when VITE_LOCAL_AI_BASE_URL is set (see .env.local),
+ * every language-model request goes to the local model-proxy sidecar
+ * (scripts/model-proxy.mjs) instead of the Vercel AI gateway — which the
+ * browser cannot reach directly (CORS) and which has no credential in local
+ * dev. The requested registry model id passes through untouched; the sidecar
+ * routes it to the right backend (kimi/* → kimi coding API, anthropic/* →
+ * claude CLI, anything else → local Ollama) with credentials that never
+ * reach the browser. Production builds without the env var are unaffected.
  */
 const LOCAL_AI_BASE_URL = import.meta.env.VITE_LOCAL_AI_BASE_URL as
   | string
   | undefined;
-const LOCAL_AI_MODEL =
-  (import.meta.env.VITE_LOCAL_AI_MODEL as string | undefined) ?? "qwen2.5:0.5b";
 
 /**
  * Reused keep-alive sockets to a local model server can silently die between
@@ -60,11 +59,11 @@ const getLocalLanguageModel = (requestedId: string) => {
   // absolute base URL.
   const baseURL = new URL(LOCAL_AI_BASE_URL!, globalThis.location.origin).href;
   logger.debug(
-    { requestedId, localModel: LOCAL_AI_MODEL, baseURL },
-    "Local AI override active — serving request with local model"
+    { requestedId, baseURL },
+    "Local AI override active — routing via model-proxy sidecar"
   );
   return createOpenAI({ baseURL, apiKey: "local-dev", fetch: localAiFetch }).chat(
-    LOCAL_AI_MODEL
+    requestedId
   );
 };
 
@@ -107,6 +106,14 @@ const getMultimodalImageModel = (modelId: MultimodalImageModelId) =>
  */
 export const getDefaultPluginModel = async () =>
   getLanguageModel(getLatestAgentModel('anthropic').id as ModelId);
+
+/**
+ * Resolve a plugin's model: the caller's explicit registry id when given,
+ * otherwise the registry default. This is the seam features use to honor a
+ * user-selected model instead of pinning the default.
+ */
+export const getPluginModel = async (modelId?: ModelId) =>
+  modelId ? getLanguageModel(modelId) : getDefaultPluginModel();
 
 const getModelProviderOptions = async (
   providerModelId: AppModelId

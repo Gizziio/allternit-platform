@@ -113,11 +113,11 @@ export interface BrowserElement {
 
 export const ALLTERNIT_EXTENSION_MCP_SERVER_NAME = 'allternit-extension';
 
-export const DEFAULT_EXTENSION_ID = 'fcoeoabgfenejglbffodgkkbkcdhcgfn';
+export const DEFAULT_EXTENSION_ID = 'chheieepkpbhkiimdmbdjmnhcooclpok';
 export const DEV_EXTENSION_ID = 'dihbgbndebgnbjfmelmegjepbnkhlgni';
 export const ANT_EXTENSION_ID = 'dngcpimnedloihjnnfngkgjoidhnaolf';
 
-export const NATIVE_HOST_IDENTIFIER = 'com.allternit.gizzi_browser_extension';
+export const NATIVE_HOST_IDENTIFIER = 'com.allternit.desktop';
 
 // ============================================================================
 // Platform Detection

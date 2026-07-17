@@ -4,3 +4,8 @@
 
 export const REPL_TOOL_NAME = 'REPLTool'
 export const REPL_TOOL_DESCRIPTION = 'Interactive REPL environment'
+
+/** Whether the embedded REPL mode is enabled for this session. */
+export function isReplModeEnabled(): boolean {
+  return false
+}

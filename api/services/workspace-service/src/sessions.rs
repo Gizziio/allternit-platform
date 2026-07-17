@@ -20,6 +20,9 @@ pub struct SessionRecord {
     pub metadata: SessionMetadata,
     pub pane_ids: Vec<String>,
     pub created_at: DateTime<Utc>,
+    /// Backing mux session id (real PTYs), created lazily with the first pane.
+    #[serde(default)]
+    pub mux_session_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -51,6 +54,9 @@ pub struct PaneRecord {
     pub metadata: PaneMetadata,
     pub output_buffer: Vec<String>,
     pub created_at: DateTime<Utc>,
+    /// Backing mux pane id (a real PTY); None until mux provisioning succeeds.
+    #[serde(default)]
+    pub mux_pane_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -86,6 +92,7 @@ impl SessionStore {
             metadata,
             pane_ids: vec![],
             created_at: Utc::now(),
+            mux_session_id: None,
         };
         self.sessions.write().unwrap().insert(record.id.clone(), record.clone());
         record
@@ -109,16 +116,30 @@ impl SessionStore {
         }).cloned().collect()
     }
 
-    pub fn delete_session(&self, id: &str) -> bool {
+    pub fn delete_session(&self, id: &str) -> Option<SessionRecord> {
         let mut sessions = self.sessions.write().unwrap();
         if let Some(session) = sessions.remove(id) {
             let mut panes = self.panes.write().unwrap();
             for pane_id in &session.pane_ids {
                 panes.remove(pane_id);
             }
-            true
+            Some(session)
         } else {
-            false
+            None
+        }
+    }
+
+    /// Record the backing mux session id (created lazily with the first pane).
+    pub fn set_mux_session_id(&self, id: &str, mux_session_id: String) {
+        if let Some(session) = self.sessions.write().unwrap().get_mut(id) {
+            session.mux_session_id = Some(mux_session_id);
+        }
+    }
+
+    /// Record the backing mux pane id on a pane record.
+    pub fn set_mux_pane_id(&self, id: &str, mux_pane_id: String) {
+        if let Some(pane) = self.panes.write().unwrap().get_mut(id) {
+            pane.mux_pane_id = Some(mux_pane_id);
         }
     }
 
@@ -130,6 +151,7 @@ impl SessionStore {
             metadata,
             output_buffer: vec![],
             created_at: Utc::now(),
+            mux_pane_id: None,
         };
 
         let mut sessions = self.sessions.write().unwrap();

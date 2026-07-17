@@ -583,14 +583,19 @@ export function normalizePathForComparison(filePath: string): string {
 export function pathsEqual(path1: string, path2: string): boolean {
   return normalizePathForComparison(path1) === normalizePathForComparison(path2)
 }
-
-// Default export for compatibility
+// Rebuilt default export (merge-rot repair): real named exports only.
 export default {
-  readFile,
-  writeFile,
-  fileExists,
-  ensureDir,
-  removeFile,
+  pathExists,
+  readFileSafe,
+  getFileModificationTime,
+  getFileModificationTimeAsync,
+  writeTextContent,
+  detectFileEncoding,
+  detectLineEndings,
+  convertLeadingTabsToSpaces,
+  getAbsoluteAndRelativePaths,
+  getDisplayPath,
+  pathsEqual,
 }
 
 // Auto-added export

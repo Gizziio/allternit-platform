@@ -15,6 +15,7 @@ use std::{collections::HashMap, convert::Infallible, sync::Arc, sync::Mutex};
 use tracing::{info, warn};
 use uuid::Uuid;
 
+use crate::agent_session_routes::gizzi_client;
 use crate::config::build_gizzi_harness_for_provider;
 use crate::gizzi_chat_stream::configure_harness_on_gizzi;
 use crate::{default_model, AppState};
@@ -94,14 +95,31 @@ pub fn v1_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/ai/chat", post(agent_chat_bridge))
         .route("/health", get(health))
-}
-
-pub fn agent_chat_router() -> Router<Arc<AppState>> {
-    Router::new().route("/agent-chat", any(agent_chat_bridge))
+        .route("/models", get(list_available_models))
+        .route("/voice/voices", get(list_voice_presets))
 }
 
 async fn health() -> impl IntoResponse {
     Json(json!({ "status": "ok" }))
+}
+
+/// GET /api/v1/models — flattened `{id, name, provider}` catalog for the
+/// agent-creation wizard's model picker. Sourced from the same provider specs
+/// as the /providers endpoints; previously fell through to the 501 fallback.
+async fn list_available_models() -> impl IntoResponse {
+    Json(crate::provider_routes::available_model_catalog())
+}
+
+/// GET /api/v1/voice/voices — voice presets are served by the optional desktop
+/// voice service; with none configured there are no presets. Answer 200 with an
+/// empty list instead of the 501 fallback so the wizard's voice dropdown and
+/// the console stay quiet.
+async fn list_voice_presets() -> impl IntoResponse {
+    Json(json!({ "voices": [] }))
+}
+
+pub fn agent_chat_router() -> Router<Arc<AppState>> {
+    Router::new().route("/agent-chat", any(agent_chat_bridge))
 }
 
 /// Bridge /api/agent-chat → gizzi session/event architecture.
@@ -182,10 +200,12 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     let assistant_message_id = format!("msg_{}", Uuid::new_v4().simple());
     let model_label = format!("{}/{}", provider_id, model_id);
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(120))
-        .build()
-        .unwrap_or_default();
+    // Auth-aware client: password-protected Gizzi daemons expect Basic auth
+    // (GIZZI_PASSWORD/GIZZI_SERVER_PASSWORD env, or a Basic header forwarded by
+    // the desktop shell). Sharing agent_session_routes::gizzi_client keeps the
+    // auth boundary rules in one place. Note it carries no overall timeout on
+    // purpose — the /event SSE stream below is long-lived.
+    let client = gizzi_client(&_headers);
 
     // For non-cloud harness modes (subprocess, local, BYOK), push credentials
     // and config to Gizzi before creating the session so the chosen brain is

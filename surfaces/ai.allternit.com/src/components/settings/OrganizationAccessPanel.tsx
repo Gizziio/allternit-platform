@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Buildings,
   CheckCircle,
@@ -11,10 +11,16 @@ import {
 } from "@phosphor-icons/react";
 import {
   PlatformOrganizationSwitcher,
+  isPlatformAuthDisabled,
   usePlatformAuth,
   usePlatformOrganization,
   usePlatformUser,
 } from "@/lib/platform-auth-client";
+import {
+  createPersonalOrganization,
+  getCurrentUserProfile,
+  type CurrentUserProfile,
+} from "@/lib/design/current-user";
 import { Badge } from "@/components/settings/Badge";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { MonoChip } from "@/components/settings/MonoChip";
@@ -38,6 +44,54 @@ function openSettings(section: string) {
   );
 }
 
+/** Self-hosted / local-dev builds ship with no Clerk key at all, so Clerk's
+ * own hooks correctly report isSignedIn: false there -- there is no Clerk
+ * session and never will be. auth_middleware deliberately does not
+ * auto-synthesize an organization for them either (real Clerk deployments
+ * get org scope from Clerk's own org-creation flow, via
+ * PlatformOrganizationSwitcher below). So this reads the backend-resolved
+ * organization instead of showing a permanent Clerk "sign in" wall, and
+ * exposes a `create` action (POST /me/organization) since that's otherwise
+ * unreachable in a build with no Clerk key at all. */
+function useFallbackOrganization(enabled: boolean) {
+  const [profile, setProfile] = useState<CurrentUserProfile | null>(null);
+  const [loaded, setLoaded] = useState(!enabled);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!enabled) return;
+    try {
+      const result = await getCurrentUserProfile();
+      setProfile(result);
+    } catch {
+      setProfile(null);
+    } finally {
+      setLoaded(true);
+    }
+  }, [enabled]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const create = useCallback(async () => {
+    if (creating) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await createPersonalOrganization();
+      await refresh();
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create organization");
+    } finally {
+      setCreating(false);
+    }
+  }, [creating, refresh]);
+
+  return { profile, loaded, creating, createError, create };
+}
+
 export function OrganizationAccessPanel({ compact = false }: { compact?: boolean }) {
   const auth = usePlatformAuth();
   const { isLoaded: userLoaded, isSignedIn } = usePlatformUser();
@@ -46,8 +100,72 @@ export function OrganizationAccessPanel({ compact = false }: { compact?: boolean
     organization,
     membership,
   } = usePlatformOrganization();
+  const authDisabled = isPlatformAuthDisabled();
+  const {
+    profile: fallbackProfile,
+    loaded: fallbackLoaded,
+    creating: fallbackCreating,
+    createError: fallbackCreateError,
+    create: createFallbackOrganization,
+  } = useFallbackOrganization(authDisabled);
   const role = normalizeRole(auth.orgRole ?? membership?.role);
   const canManage = hasOrganizationAdminAccess(role);
+
+  if (authDisabled) {
+    if (!fallbackLoaded) return <SkeletonRow lines={compact ? 2 : 4} />;
+
+    if (!fallbackProfile?.organization_id) {
+      return (
+        <EmptyState
+          icon={<Buildings size={32} weight="thin" />}
+          title="No organization yet"
+          caption={
+            fallbackCreateError ??
+            "This self-hosted build has no Clerk organization configured. Create a personal one to manage BYOC cloud credentials and metered billing."
+          }
+          ctaLabel={fallbackCreating ? "Creating…" : "Create organization"}
+          onCtaClick={() => void createFallbackOrganization()}
+        />
+      );
+    }
+
+    const fallbackRole = normalizeRole(fallbackProfile.organization_role);
+    const fallbackCanManage = hasOrganizationAdminAccess(fallbackRole);
+    return (
+      <div className={cn("space-y-4", compact && "space-y-3")}>
+        {!compact && (
+          <div>
+            <SectionHeading className="mb-1">Organization & access</SectionHeading>
+            <p className="text-[12px] text-[var(--text-secondary)] m-0 leading-relaxed">
+              This self-hosted build has no Clerk organization configured, so your account
+              is scoped to a personal organization instead.
+            </p>
+          </div>
+        )}
+        <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)]/45 p-4">
+          <div className="flex items-start gap-3">
+            <div className="size-10 rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] flex items-center justify-center shrink-0">
+              <Buildings size={20} weight="duotone" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[14px] font-semibold text-[var(--text-primary)]">
+                  Personal organization
+                </span>
+                <Badge className={fallbackCanManage ? "text-[var(--status-success)] bg-[var(--status-success)]/10" : undefined}>
+                  {fallbackRole}
+                </Badge>
+              </div>
+              <div className="mt-3">
+                <div className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)] mb-1">Organization ID</div>
+                <MonoChip className="max-w-full break-all">{fallbackProfile.organization_id}</MonoChip>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!userLoaded || !organizationLoaded) {
     return <SkeletonRow lines={compact ? 2 : 4} />;

@@ -7,6 +7,7 @@ interface CodeCanvasTileTerminalProps {
   terminalId: string;
   sessionId?: string;
   workspacePath?: string;
+  startupCommand?: string;
 }
 
 /**
@@ -20,12 +21,14 @@ export function CodeCanvasTileTerminal({
   terminalId,
   sessionId,
   workspacePath,
+  startupCommand,
 }: CodeCanvasTileTerminalProps) {
   return (
     <div style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
       <UnifiedTerminal
         sessionId={`canvas:${terminalId}:${sessionId || 'workspace'}`}
         workingDir={workspacePath}
+        startupCommand={startupCommand}
       />
     </div>
   );

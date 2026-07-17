@@ -77,10 +77,14 @@ const DEFAULT_GIZZI_URL = 'http://127.0.0.1:4096';
 
 // Base URL for the gizzi-code runtime (brain) server. Honors the runtime-injected
 // __TERMINAL_SERVER_URL__ (used by the desktop shell) and falls back to the local default.
+// In the desktop shell, direct loopback calls to the gizzi daemon are blocked by
+// CORS (the daemon emits no CORS headers), so route through Electron's
+// allternit-gizzi broker protocol, which proxies to the daemon and adds CORS headers.
 export function gizziBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const g = (window as any).__TERMINAL_SERVER_URL__ || (globalThis as any).__TERMINAL_SERVER_URL__;
     if (g) return stripTrailingSlash(String(g));
+    if (Boolean((window as any).allternitSidecar)) return 'allternit-gizzi://localhost';
   }
   const env = (import.meta as any).env?.VITE_GIZZI_URL;
   return env ? stripTrailingSlash(String(env)) : DEFAULT_GIZZI_URL;

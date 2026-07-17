@@ -12,7 +12,7 @@
 
 import { generateText } from "ai";
 
-import { getDefaultPluginModel } from "@/lib/ai/providers";
+import { getPluginModel } from "@/lib/ai/providers";
 import { createModuleLogger } from '@/lib/logger';
 
 import { modelCallSignal } from "./model-call";
@@ -90,6 +90,8 @@ export interface AskPersonaOptions {
   /** Prior exchanges in this persona's chat — included in the prompt. */
   history?: AskExchange[];
   signal?: AbortSignal;
+  /** Registry model id; defaults to the registry default. */
+  modelId?: string;
 }
 
 /**
@@ -104,7 +106,7 @@ export async function askPersona(
   options: AskPersonaOptions = {}
 ): Promise<string> {
   const recentMemory = await memoryStore.retrieve(persona.id, { limit: DEFAULT_MEMORY_LIMIT });
-  const model = await getDefaultPluginModel();
+  const model = await getPluginModel(options.modelId as never);
   const prompt = buildAskPrompt(world, persona, recentMemory, question, options.history ?? []);
 
   logger.debug({ worldId: world.id, personaId: persona.id }, "Asking persona a post-hoc question");

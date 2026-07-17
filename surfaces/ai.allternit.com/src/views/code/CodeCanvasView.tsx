@@ -4,10 +4,16 @@ import React, { useCallback, useRef } from 'react';
 import { ChatTeardropText } from '@phosphor-icons/react';
 import {
   useCodeModeStore,
+  CANVAS_TILE_DEFAULT_SIZE,
   type CodeWorkspaceRecord,
   type CodeCanvasTile,
   type CodeCanvasViewport,
 } from './CodeModeStore';
+import { useOrchestratorCanvasSync } from './useOrchestratorCanvasSync';
+import {
+  CodeCanvasTileExecutor,
+  executorBadgeFor,
+} from '@/components/canvas/CodeCanvasTileExecutor';
 import {
   InfiniteCanvas,
   MAX_ZOOM,
@@ -81,6 +87,7 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
 
   // h5i Tier 1: Track files touched for the active session (SSE)
   useFilesTouched(workspace?.root_path, activeLegacySessionId || undefined);
+  const executors = useOrchestratorCanvasSync(workspaceId, workspace?.root_path);
 
   const tiles = workspace?.canvasTiles ?? [];
   const viewport = workspace?.canvasViewport ?? { x: 0, y: 0, zoom: 1 };
@@ -332,8 +339,9 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
       const screenY = screenPoint
         ? screenPoint.y - (canvasRect?.top ?? 0)
         : canvasSize.height / 2;
-      const centerX = (screenX - viewport.x) / viewport.zoom - 240;
-      const centerY = (screenY - viewport.y) / viewport.zoom - 180;
+      const size = CANVAS_TILE_DEFAULT_SIZE[type];
+      const centerX = (screenX - viewport.x) / viewport.zoom - size.width / 2;
+      const centerY = (screenY - viewport.y) / viewport.zoom - size.height / 2;
 
       let newSessionId: string | undefined = sessionId;
       if (type === 'session' && !sessionId) {
@@ -353,8 +361,8 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
         sessionId: newSessionId,
         x: Math.round(centerX),
         y: Math.round(centerY),
-        width: 480,
-        height: 360,
+        width: size.width,
+        height: size.height,
         zIndex: Date.now(),
         label: type === 'session' ? (sessionId ? 'Session' : 'New Session') : type === 'preview' && url ? 'Dashboard' : type,
         url: type === 'preview' ? (url || 'http://localhost:3000') : undefined,
@@ -582,6 +590,11 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
             onBringToFront={() => handleBringToFront(tile.tileId)}
             onInteractionStart={handleInteractionStart}
             onSelect={(additive) => handleTileSelect(tile.tileId, additive)}
+            badge={
+              tile.type === 'executor'
+                ? executorBadgeFor(executors.get(tile.executorSlug ?? ''))
+                : undefined
+            }
           >
             <TileContent
               tile={tile}
@@ -740,6 +753,7 @@ function TileContent({
           terminalId={tile.tileId}
           sessionId={tile.sessionId}
           workspacePath={workspacePath}
+          startupCommand={tile.startupCommand}
         />
       );
     case 'notes':
@@ -749,12 +763,16 @@ function TileContent({
           onChange={(content) =>
             updateTile(workspaceId, tile.tileId, { content }, { recordHistory: false })
           }
+          shared={tile.shared}
+          workspacePath={workspacePath}
         />
       );
     case 'knowledge':
       return workspacePath ? <CodeCanvasTileKnowledge workspacePath={workspacePath} /> : null;
     case 'knowledge-graph':
       return <CodeCanvasTileKnowledgeGraph workspacePath={workspacePath} />;
+    case 'executor':
+      return <CodeCanvasTileExecutor tile={tile} workspaceId={workspaceId} />;
     default:
       return (
         <div

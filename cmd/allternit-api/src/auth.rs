@@ -451,6 +451,24 @@ pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<Option<String
         .connect()
         .map_err(|e| AuthError::DbError(e.to_string()))?;
 
+    // A user row may already exist under a different id with the same email
+    // (e.g. `dev-user` vs `local-dev-user`, both seeded with dev@allternit.local).
+    // ON CONFLICT(id) can't resolve that — the email update would violate
+    // UNIQUE(email) — so adopt the existing row's id for all writes here.
+    let mut effective_user_id = user.user_id.clone();
+    if let Some(email) = user.email.as_deref() {
+        let prior: Result<String, _> = conn.query_row(
+            "SELECT id FROM users WHERE email = ?1",
+            [email],
+            |row| row.get(0),
+        );
+        if let Ok(prior_id) = prior {
+            if prior_id != user.user_id {
+                effective_user_id = prior_id;
+            }
+        }
+    }
+
     conn.execute(
         "INSERT INTO users (id, email, name, avatar_url, created_at, updated_at)
          VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -460,7 +478,7 @@ pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<Option<String
             avatar_url = COALESCE(excluded.avatar_url, users.avatar_url),
             updated_at = CURRENT_TIMESTAMP",
         rusqlite::params![
-            &user.user_id,
+            &effective_user_id,
             user.email.as_deref(),
             user.name.as_deref(),
             user.avatar_url.as_deref(),
@@ -471,7 +489,7 @@ pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<Option<String
     let Some(organization_id) = user.organization_id.as_deref() else {
         conn.execute(
             "UPDATE users SET organization_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?1",
-            [&user.user_id],
+            [&effective_user_id],
         )
         .map_err(|e| AuthError::DbError(e.to_string()))?;
         return Ok(None);
@@ -489,7 +507,7 @@ pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<Option<String
         .unwrap_or_else(|| user.organization_role.as_deref().unwrap_or("member"))
         .to_string();
 
-    let member_id = format!("{organization_id}:{}", user.user_id);
+    let member_id = format!("{organization_id}:{}", effective_user_id);
 
     conn.execute(
         "INSERT INTO organizations (id, name, billing_email, created_at, updated_at)
@@ -506,13 +524,13 @@ pub fn ensure_user_in_db(db: &DbHandle, user: &AuthUser) -> Result<Option<String
         "INSERT INTO organization_members (id, organization_id, user_id, role, joined_at)
          VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP)
          ON CONFLICT(organization_id, user_id) DO UPDATE SET role = excluded.role",
-        rusqlite::params![member_id, organization_id, &user.user_id, role],
+        rusqlite::params![member_id, organization_id, &effective_user_id, role],
     )
     .map_err(|e| AuthError::DbError(e.to_string()))?;
 
     conn.execute(
         "UPDATE users SET organization_id = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2",
-        rusqlite::params![organization_id, &user.user_id],
+        rusqlite::params![organization_id, &effective_user_id],
     )
     .map_err(|e| AuthError::DbError(e.to_string()))?;
 

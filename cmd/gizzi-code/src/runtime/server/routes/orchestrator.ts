@@ -2,15 +2,19 @@ import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
 import { lazy } from "@/shared/util/lazy"
 import { describeRoute, resolver, validator } from "@/runtime/server/openapi"
+import { bridgeOrchestrationEvent } from "@/runtime/server/rails-bridge"
 import {
   LocalTerminalBackend,
+  MuxBackend,
   SessionRegistry,
   TerminalControlBackend,
   doctor,
   probeLocalTerminal,
+  probeMux,
   probeTerminalControl,
   selectVendor,
   type ExecutorMode,
+  type ExecutorSession,
   type SessionSpec,
   type OrchestrationEvent,
   type SessionRecord,
@@ -20,9 +24,11 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 
+const localTerminalBackend = new LocalTerminalBackend()
 const registries = {
-  tmux: new SessionRegistry(new LocalTerminalBackend()),
+  tmux: new SessionRegistry(localTerminalBackend),
   'terminal-control': new SessionRegistry(new TerminalControlBackend()),
+  mux: new SessionRegistry(new MuxBackend()),
 }
 const statePath = process.env.GIZZI_ORCHESTRATOR_STATE_PATH ?? join(homedir(), ".allternit", "orchestrator-sessions.json")
 const subscribers = new Set<(event: OrchestrationEvent) => void>()
@@ -42,14 +48,23 @@ function persist(): void {
 }
 
 for (const registry of Object.values(registries)) {
-  registry.onEvent((event) => { for (const subscriber of subscribers) subscriber(event); persist() })
+  registry.onEvent((event) => {
+    for (const subscriber of subscribers) subscriber(event)
+    persist()
+    const workdir = Object.values(registries).map((r) => r.get(event.slug)).find(Boolean)?.workdir
+    void bridgeOrchestrationEvent(event, workdir)
+  })
 }
 
 const ready = readFile(statePath, "utf8").then((content) => {
   const data = JSON.parse(content) as { version?: number; sessions?: SessionRecord[] }
   if (data.version !== 1 || !Array.isArray(data.sessions)) return
   for (const record of data.sessions) {
-    const registry = record.session.backend === "local-pty" ? registries["terminal-control"] : registries.tmux
+    const registry = record.session.backend === "local-pty"
+      ? registries["terminal-control"]
+      : record.session.backend === "mux"
+        ? registries.mux
+        : registries.tmux
     registry.restore(record)
   }
 }).catch(() => undefined)
@@ -60,7 +75,7 @@ const SessionInputSchema = z.object({
   workdir: z.string().min(1),
   vendor: z.enum(["claude", "kimi", "codex", "agy"]),
   mode: z.enum(["interactive", "headless"]),
-  backend: z.enum(["tmux", "terminal-control"]).default("tmux"),
+  backend: z.enum(["tmux", "terminal-control", "mux"]).default("tmux"),
   isolation: z.enum(["worktree", "none"]).optional(),
   taskFile: z.string().min(1).optional(),
   notesFile: z.string().min(1),
@@ -103,6 +118,25 @@ function registryForSlug(slug: string): SessionRegistry {
   return registry
 }
 
+function registryOrNull(slug: string): SessionRegistry | null {
+  return Object.values(registries).find((candidate) => candidate.get(slug)) ?? null
+}
+
+/** Transient record for a slug that only exists as an external ao-* tmux session. */
+function externalSessionRecord(slug: string): ExecutorSession {
+  return {
+    sessionId: `external-${slug}`,
+    slug,
+    backend: "local-terminal",
+    external: true,
+    vendor: "kimi",
+    mode: "interactive",
+    state: "running",
+    workdir: "",
+    createdAt: new Date(0).toISOString(),
+  }
+}
+
 function assertSlugAvailable(slug: string): void {
   if (Object.values(registries).some((registry) => registry.get(slug))) throw new Error(`slug '${slug}' is already registered`)
 }
@@ -132,12 +166,17 @@ export const OrchestratorRoutes = lazy(() =>
     .get(
       "/doctor",
       describeRoute({ summary: "Probe executor runtimes", operationId: "orchestrator.doctor", responses: response("Executor runtime report") }),
-      async (c) => c.json({ ...await doctor(), backends: { tmux: await probeLocalTerminal(), terminalControl: await probeTerminalControl() } }),
+      async (c) => c.json({ ...await doctor(), backends: { tmux: await probeLocalTerminal(), terminalControl: await probeTerminalControl(), mux: await probeMux() } }),
     )
     .get(
       "/sessions",
       describeRoute({ summary: "List executor sessions", operationId: "orchestrator.sessions.list", responses: response("Registered executor sessions") }),
       (c) => c.json({ sessions: Object.values(registries).flatMap((registry) => registry.list()) }),
+    )
+    .get(
+      "/sessions/discovered",
+      describeRoute({ summary: "Discover externally spawned ao-* tmux sessions", operationId: "orchestrator.sessions.discovered", responses: response("External executor sessions") }),
+      async (c) => c.json({ sessions: await localTerminalBackend.discover() }),
     )
     .post(
       "/assign",
@@ -177,8 +216,18 @@ export const OrchestratorRoutes = lazy(() =>
       validator("param", SlugSchema),
       async (c) => {
         const { slug } = c.req.valid("param")
+        const registry = registryOrNull(slug)
+        if (!registry) {
+          try {
+            const session = externalSessionRecord(slug)
+            const state = await localTerminalBackend.status(session)
+            if (state === "dead") throw new Error(`no session registered for slug '${slug}'`)
+            return c.json({ session: { ...session, state }, state })
+          } catch (error) {
+            return errorResponse(c, error, 404)
+          }
+        }
         try {
-          const registry = registryForSlug(slug)
           return c.json({ session: registry.get(slug), state: await registry.status(slug) })
         } catch (error) {
           return errorResponse(c, error, 404)
@@ -194,7 +243,11 @@ export const OrchestratorRoutes = lazy(() =>
         const { slug } = c.req.valid("param")
         const { lines } = c.req.valid("query")
         try {
-          return c.json({ slug, output: await registryForSlug(slug).tail(slug, lines) })
+          const registry = registryOrNull(slug)
+          const output = registry
+            ? await registry.tail(slug, lines)
+            : await localTerminalBackend.tail(externalSessionRecord(slug), lines)
+          return c.json({ slug, output })
         } catch (error) {
           return errorResponse(c, error, 404)
         }
@@ -209,7 +262,12 @@ export const OrchestratorRoutes = lazy(() =>
         const { slug } = c.req.valid("param")
         const { prompt } = c.req.valid("json")
         try {
-          return c.json(await registryForSlug(slug).sendMessage(slug, prompt))
+          const registry = registryOrNull(slug)
+          return c.json(
+            registry
+              ? await registry.sendMessage(slug, prompt)
+              : await localTerminalBackend.send(externalSessionRecord(slug), prompt),
+          )
         } catch (error) {
           return errorResponse(c, error, 404)
         }
@@ -249,7 +307,9 @@ export const OrchestratorRoutes = lazy(() =>
         const { slug } = c.req.valid("param")
         const { removeWorktree } = c.req.valid("query")
         try {
-          await registryForSlug(slug).kill(slug, { removeWorktree })
+          const registry = registryOrNull(slug)
+          if (registry) await registry.kill(slug, { removeWorktree })
+          else await localTerminalBackend.kill(externalSessionRecord(slug))
           return c.json({ success: true, slug })
         } catch (error) {
           return errorResponse(c, error, 404)

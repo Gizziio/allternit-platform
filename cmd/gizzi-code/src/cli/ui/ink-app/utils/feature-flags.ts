@@ -102,7 +102,7 @@ const FEATURE_FLAG_REGISTRY: FeatureFlag<any>[] = [
   // Browser Integration
   {
     name: 'browser.enabled',
-    description: 'Enable browser integration (Claude in Chrome)',
+    description: 'Enable browser integration (Allternit in Chrome)',
     type: 'boolean',
     defaultValue: true,
     envVar: 'GIZZI_BROWSER_ENABLED',

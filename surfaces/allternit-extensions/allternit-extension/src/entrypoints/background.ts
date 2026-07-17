@@ -38,6 +38,25 @@ export default defineBackground(() => {
   // Side panel behavior
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {})
 
+  // Open the post-install onboarding click-through on first install
+  chrome.runtime.onInstalled.addListener((details) => {
+    if (details.reason !== 'install') return
+    chrome.tabs.create({
+      url: 'https://platform.allternit.com/extension/installed?source=install',
+    })
+  })
+
+  // Page↔extension pairing: platform pages (whitelisted via externally_connectable)
+  // request the bridge token; the content script activates the page-API bridge
+  // when the page's localStorage token matches this value.
+  chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse): true | undefined => {
+    if (message?.type !== 'ALLTERNIT_PAIR_REQUEST') return undefined
+    chrome.storage.local.get('AllternitExtUserAuthToken').then((result) => {
+      sendResponse({ ok: true, token: result.AllternitExtUserAuthToken ?? null })
+    })
+    return true
+  })
+
   // Remote task execution via com.allternit.desktop native messaging
   remoteTaskHandler.start()
   remoteTaskHandler.onPlatformTaskState((state) => {

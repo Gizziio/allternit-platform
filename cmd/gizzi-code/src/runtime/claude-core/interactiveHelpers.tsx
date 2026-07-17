@@ -102,7 +102,7 @@ export async function renderAndRun(root: Root, element: React.ReactNode): Promis
   await root.waitUntilExit();
   await gracefulShutdown(0);
 }
-export async function showSetupScreens(root: Root, permissionMode: PermissionMode, allowDangerouslySkipPermissions: boolean, commands?: Command[], claudeInChrome?: boolean, devChannels?: ChannelEntry[]): Promise<boolean> {
+export async function showSetupScreens(root: Root, permissionMode: PermissionMode, allowDangerouslySkipPermissions: boolean, commands?: Command[], allternitInChrome?: boolean, devChannels?: ChannelEntry[]): Promise<boolean> {
   // @ts-ignore Build-time check
   if ("production" === 'test' || isEnvTruthy(false) || process.env.IS_DEMO // Skip onboarding in demo mode
   ) {
@@ -289,12 +289,12 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
     }
   }
 
-  // Show Chrome onboarding for first-time Claude in Chrome users
-  if (claudeInChrome && !getGlobalConfig().hasCompletedClaudeInChromeOnboarding) {
+  // Show Chrome onboarding for first-time Allternit in Chrome users
+  if (allternitInChrome && !getGlobalConfig().hasCompletedAllternitInChromeOnboarding) {
     const {
-      ClaudeInChromeOnboarding
-    } = await import('./components/ClaudeInChromeOnboarding.js');
-    await showSetupDialog(root, done => <ClaudeInChromeOnboarding onDone={done} />);
+      AllternitInChromeOnboarding
+    } = await import('./components/AllternitInChromeOnboarding.js');
+    await showSetupDialog(root, done => <AllternitInChromeOnboarding onDone={done} />);
   }
   return onboardingShown;
 }

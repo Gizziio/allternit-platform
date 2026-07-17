@@ -4,38 +4,137 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "@opentui/solid",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["bun", "node", "react"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "bun",
+      "node",
+      "react"
+    ],
     "noUncheckedIndexedAccess": false,
     "strict": false,
     "verbatimModuleSyntax": false,
-
     "paths": {
-      "@/*": ["./src/*"],
-      "src/*": ["./src/*", "./src/cli/ui/ink-app/*"],
-      "@tui/*": ["./src/cli/ui/tui/*"],
-      "@/commands/*": ["./src/cli/ui/ink-app/commands/*", "./src/commands/*"],
-      "@/services/*": ["./src/cli/ui/ink-app/services/*", "./src/services/*"],
-      "@/hooks/*": ["./src/cli/ui/ink-app/hooks/*", "./src/hooks/*"],
-      "@/utils/*": ["./src/cli/ui/ink-app/utils/*", "./src/utils/*"],
-      "@/types/*": ["./src/cli/ui/ink-app/types/*", "./src/types/*"],
-      "@/components/*": ["./src/cli/ui/ink-app/components/*", "./src/components/*"],
-      "@/state/*": ["./src/cli/ui/ink-app/state/*", "./src/state/*"],
-      "@/bootstrap/*": ["./src/cli/ui/ink-app/bootstrap/*", "./src/bootstrap/*"],
-      "@/tools/*": ["./src/cli/ui/ink-app/tools/*", "./src/tools/*"],
-      "@/constants/*": ["./src/cli/ui/ink-app/constants/*", "./src/constants/*"],
-      "@/core/*": ["./src/cli/ui/ink-app/core/*", "./src/core/*"],
-      "@/runtime/*": ["./src/cli/ui/ink-app/runtime/*", "./src/runtime/*"],
-      "@/entrypoints/*": ["./src/cli/ui/ink-app/entrypoints/*", "./src/entrypoints/*"],
-      "@allternit/util": ["../../packages/@allternit/util/src"],
-      "@allternit/remote-control": ["./packages/remote-control/src/index"],
-      "@allternit/remote-control/*": ["./packages/remote-control/src/*"],
-      "@allternit/sdk": ["./packages/sdk/src"],
-      "@allternit/sdk/*": ["./packages/sdk/src/*"],
-      "@allternit/sdk/providers/anthropic/error": ["./packages/sdk/src/providers/anthropic/error.ts"],
-      "@allternit/sdk/providers/anthropic/resources/index.mjs": ["./packages/sdk/src/providers/anthropic/resources/index.ts"],
-      "@allternit/sdk/providers/anthropic/resources/messages.mjs": ["./packages/sdk/src/providers/anthropic/resources/messages/index.ts"],
-      "@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs": ["./packages/sdk/src/providers/anthropic/resources/beta/messages/index.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "src/*": [
+        "./src/*",
+        "./src/cli/ui/ink-app/*"
+      ],
+      "@tui/*": [
+        "./src/cli/ui/tui/*"
+      ],
+      "@/commands/*": [
+        "./src/cli/ui/ink-app/commands/*",
+        "./src/commands/*",
+        "./src/runtime/commands/*"
+      ],
+      "@/services/*": [
+        "./src/cli/ui/ink-app/services/*",
+        "./src/services/*",
+        "./src/runtime/services/*"
+      ],
+      "@/hooks/*": [
+        "./src/cli/ui/ink-app/hooks/*",
+        "./src/hooks/*",
+        "./src/runtime/hooks/*"
+      ],
+      "@/utils/*": [
+        "./src/cli/ui/ink-app/utils/*",
+        "./src/utils/*",
+        "./src/runtime/utils/*"
+      ],
+      "@/types/*": [
+        "./src/cli/ui/ink-app/types/*",
+        "./src/types/*",
+        "./src/runtime/types/*"
+      ],
+      "@/components/*": [
+        "./src/cli/ui/ink-app/components/*",
+        "./src/components/*"
+      ],
+      "@/state/*": [
+        "./src/cli/ui/ink-app/state/*",
+        "./src/state/*",
+        "./src/runtime/state/*"
+      ],
+      "@/bootstrap/*": [
+        "./src/cli/ui/ink-app/bootstrap/*",
+        "./src/bootstrap/*"
+      ],
+      "@/tools/*": [
+        "./src/cli/ui/ink-app/tools/*",
+        "./src/tools/*",
+        "./src/runtime/tools/*"
+      ],
+      "@/constants/*": [
+        "./src/cli/ui/ink-app/constants/*",
+        "./src/constants/*"
+      ],
+      "@/core/*": [
+        "./src/cli/ui/ink-app/core/*",
+        "./src/core/*"
+      ],
+      "@/runtime/*": [
+        "./src/cli/ui/ink-app/runtime/*",
+        "./src/runtime/*"
+      ],
+      "@/entrypoints/*": [
+        "./src/cli/ui/ink-app/entrypoints/*",
+        "./src/entrypoints/*"
+      ],
+      "@allternit/util": [
+        "../../packages/@allternit/util/src"
+      ],
+      "@allternit/remote-control": [
+        "./packages/remote-control/src/index"
+      ],
+      "@allternit/remote-control/*": [
+        "./packages/remote-control/src/*"
+      ],
+      "@allternit/sdk": [
+        "./packages/sdk/src"
+      ],
+      "@allternit/sdk/*": [
+        "./packages/sdk/src/*"
+      ],
+      "@allternit/sdk/providers/anthropic/error": [
+        "./packages/sdk/src/providers/anthropic/error.ts"
+      ],
+      "@allternit/sdk/providers/anthropic/resources/index.mjs": [
+        "./packages/sdk/src/providers/anthropic/resources/index.ts"
+      ],
+      "@allternit/sdk/providers/anthropic/resources/messages.mjs": [
+        "./packages/sdk/src/providers/anthropic/resources/messages/index.ts"
+      ],
+      "@allternit/sdk/providers/anthropic/resources/beta/messages/messages.mjs": [
+        "./packages/sdk/src/providers/anthropic/resources/beta/messages/index.ts"
+      ],
+      "@anthropic-ai/sandbox-runtime": [
+        "./src/vendor/anthropic-stubs/sandbox-runtime.ts"
+      ],
+      "@anthropic-ai/bedrock-sdk": [
+        "./src/vendor/anthropic-stubs/bedrock-sdk.ts"
+      ],
+      "@anthropic-ai/foundry-sdk": [
+        "./src/vendor/anthropic-stubs/foundry-sdk.ts"
+      ],
+      "@anthropic-ai/vertex-sdk": [
+        "./src/vendor/anthropic-stubs/vertex-sdk.ts"
+      ],
+      "@allternit/extension": [
+        "./src/vendor/anthropic-stubs/allternit-extension.ts"
+      ],
+      "audio-capture-napi": [
+        "./src/vendor/anthropic-stubs/audio-capture-napi.ts"
+      ],
+      "react/compiler-runtime": [
+        "./src/vendor/anthropic-stubs/react-compiler-runtime.ts"
+      ]
     }
   },
   "include": [

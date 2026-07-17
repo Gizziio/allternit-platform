@@ -52,6 +52,7 @@ import {
 } from '../lib/agents/session-metadata';
 import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 
+import { getCurrentUserProfile } from '@/lib/design/current-user';
 import { SettingsDrilldown } from './SettingsDrilldown';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
@@ -148,6 +149,25 @@ export function ShellRail({
   
   const isAgentActive = useSurfaceAgentModeEnabled(currentSurface);
   const surfaceTheme = isAgentActive ? getAgentModeSurfaceTheme(currentSurface) : null;
+
+  // The account footer used to show a hardcoded "Joe · Pro" placeholder that
+  // never reflected a real signed-in identity. /api/v1/me is backend-resolved
+  // and accurate in every auth mode (real Clerk session, desktop bootstrap,
+  // or local-dev-bypass), unlike the Clerk-only hooks used elsewhere in
+  // Settings, which report signed-out in self-hosted/no-Clerk-key builds.
+  const [currentUserDisplayName, setCurrentUserDisplayName] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void getCurrentUserProfile()
+      .then((profile) => {
+        if (!cancelled) setCurrentUserDisplayName(profile.name || profile.email || null);
+      })
+      .catch(() => {
+        if (!cancelled) setCurrentUserDisplayName(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
+  const accountInitial = (currentUserDisplayName ?? '?').trim().charAt(0).toUpperCase() || '?';
 
   // Chat Store
   const chatStore = useChatStore();
@@ -1248,12 +1268,11 @@ export function ShellRail({
               className="flex-1 flex items-center gap-3 border-none bg-transparent cursor-pointer text-left hover:bg-[var(--shell-item-hover)] transition-colors rounded-lg p-[6px_8px] -ml-2"
             >
               <div className="size-8 rounded-full bg-gradient-to-br from-[var(--accent-chat)] to-[var(--accent-primary)] shrink-0 flex items-center justify-center text-[var(--bg-primary)] text-[14px] font-bold">
-                J
+                {accountInitial}
               </div>
               <div className="flex-1 min-w-0 flex items-center gap-1.5 text-[var(--shell-item-fg)] text-[13px] font-semibold">
-                <span>Joe</span>
-                <span className="text-[var(--shell-item-muted)] font-normal">· Pro</span>
-                <CaretDown size={12} className="text-[var(--shell-item-muted)]" />
+                <span className="truncate">{currentUserDisplayName ?? 'Account'}</span>
+                <CaretDown size={12} className="text-[var(--shell-item-muted)] shrink-0" />
               </div>
             </button>
           </SettingsDrilldown>

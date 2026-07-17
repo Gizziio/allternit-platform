@@ -2,7 +2,7 @@ use axum::{
     extract::Query,
     http::{header::CONTENT_TYPE, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::{delete, get, head, post},
+    routing::{delete, get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ pub fn file_router() -> Router<Arc<AppState>> {
         .route("/files/list", get(list_files))
         .route("/files/read", get(read_file))
         .route("/files/raw", get(raw_file))
-        .route("/files/exists", head(file_exists))
+        .route("/files/exists", get(file_exists_json).head(file_exists))
         .route("/files/mkdir", post(mkdir))
         .route("/files/delete", delete(delete_file))
         .route("/files/write", post(write_file))
@@ -44,6 +44,12 @@ struct PathQuery {
     path: String,
 }
 
+#[derive(Deserialize)]
+struct ListQuery {
+    path: String,
+    recursive: Option<String>,
+}
+
 #[derive(Serialize)]
 struct FileEntry {
     name: String,
@@ -54,53 +60,75 @@ struct FileEntry {
     modified_at: Option<String>,
 }
 
-async fn list_files(headers: HeaderMap, Query(params): Query<PathQuery>) -> impl IntoResponse {
+/// Caps for recursive listings: agent workspaces are tiny, but `/files/list`
+/// is a general endpoint and must not walk $HOME or node_modules forever.
+const MAX_LIST_DEPTH: usize = 8;
+const MAX_LIST_ENTRIES: usize = 1000;
+
+async fn file_entry_for(path: &std::path::Path, name: String) -> FileEntry {
+    let entry_type = if tokio::fs::metadata(path)
+        .await
+        .map(|m| m.is_dir())
+        .unwrap_or(false)
+    {
+        "directory"
+    } else {
+        "file"
+    };
+    let (size, modified_at) = match tokio::fs::metadata(path).await {
+        Ok(m) => (
+            Some(m.len()),
+            m.modified()
+                .ok()
+                .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()),
+        ),
+        Err(_) => (None, None),
+    };
+    FileEntry {
+        name,
+        path: path.to_string_lossy().to_string(),
+        entry_type: entry_type.to_string(),
+        size,
+        modified_at,
+    }
+}
+
+async fn list_files(headers: HeaderMap, Query(params): Query<ListQuery>) -> impl IntoResponse {
     let resolved = resolve_path(&params.path, &caller_id(&headers));
+    let recursive = params.recursive.as_deref() == Some("true");
     let _meta = match tokio::fs::metadata(&resolved).await {
         Ok(m) if m.is_dir() => m,
         _ => {
+            // A missing/unreadable candidate dir is a normal outcome for the
+            // capability scanner (it probes many optional locations). Answer
+            // 200 with an empty listing — a 404 adds nothing but console noise.
             return (
-                StatusCode::NOT_FOUND,
-                Json(json!({"error": "Cannot list directory"})),
-            )
+                StatusCode::OK,
+                Json(json!({"path": resolved.to_string_lossy().to_string(), "entries": []})),
+            );
         }
     };
 
     let mut entries = vec![];
-    let mut read_dir = match tokio::fs::read_dir(&resolved).await {
-        Ok(d) => d,
-        Err(_) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(json!({"error": "Cannot list directory"})),
-            )
+    // (dir, depth) work stack; iterative so recursion depth stays bounded.
+    let mut stack = vec![(resolved.clone(), 0usize)];
+    while let Some((dir, depth)) = stack.pop() {
+        let mut read_dir = match tokio::fs::read_dir(&dir).await {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+        while let Ok(Some(entry)) = read_dir.next_entry().await {
+            if entries.len() >= MAX_LIST_ENTRIES {
+                break;
+            }
+            let name = entry.file_name().to_string_lossy().to_string();
+            let path = entry.path();
+            let is_dir = entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false);
+            entries.push(file_entry_for(&path, name).await);
+            if recursive && is_dir && depth + 1 < MAX_LIST_DEPTH {
+                stack.push((path, depth + 1));
+            }
         }
-    };
-
-    while let Ok(Some(entry)) = read_dir.next_entry().await {
-        let name = entry.file_name().to_string_lossy().to_string();
-        let path = entry.path().to_string_lossy().to_string();
-        let entry_type = if entry.file_type().await.map(|t| t.is_dir()).unwrap_or(false) {
-            "directory"
-        } else {
-            "file"
-        };
-        let (size, modified_at) = match tokio::fs::metadata(&entry.path()).await {
-            Ok(m) => (
-                Some(m.len()),
-                m.modified()
-                    .ok()
-                    .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339()),
-            ),
-            Err(_) => (None, None),
-        };
-        entries.push(FileEntry {
-            name,
-            path,
-            entry_type: entry_type.to_string(),
-            size,
-            modified_at,
-        });
     }
 
     (
@@ -147,6 +175,15 @@ async fn file_exists(headers: HeaderMap, Query(params): Query<PathQuery>) -> Res
     }
 }
 
+/// JSON variant of the existence probe. A HEAD 404 is the only way to signal
+/// "missing" over HEAD, and every such 404 shows up as a console error in the
+/// browser — which made routine probe-then-create flows (agent bootstrap)
+/// look broken. GET always answers 200 and carries the answer in the body.
+async fn file_exists_json(headers: HeaderMap, Query(params): Query<PathQuery>) -> impl IntoResponse {
+    let resolved = resolve_path(&params.path, &caller_id(&headers));
+    Json(json!({"exists": resolved.exists()}))
+}
+
 async fn mkdir(headers: HeaderMap, Query(params): Query<PathQuery>) -> impl IntoResponse {
     let resolved = resolve_path(&params.path, &caller_id(&headers));
     match tokio::fs::create_dir_all(&resolved).await {
@@ -180,6 +217,11 @@ async fn delete_file(headers: HeaderMap, Query(params): Query<PathQuery>) -> imp
 }
 
 #[derive(Deserialize)]
+struct WriteQuery {
+    path: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct WriteBody {
     path: Option<String>,
     content: String,
@@ -187,18 +229,35 @@ struct WriteBody {
 
 async fn write_file(
     headers: HeaderMap,
-    Query(params): Query<PathQuery>,
+    Query(params): Query<WriteQuery>,
     Json(body): Json<WriteBody>,
 ) -> impl IntoResponse {
-    let target = body.path.unwrap_or(params.path);
+    let target = match body.path.or(params.path) {
+        Some(path) => path,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "Missing path"})),
+            )
+        }
+    };
     let resolved = resolve_path(&target, &caller_id(&headers));
 
     if let Some(parent) = resolved.parent() {
         let _ = tokio::fs::create_dir_all(parent).await;
     }
 
+    let bytes_written = body.content.len();
     match tokio::fs::write(&resolved, body.content).await {
-        Ok(_) => (StatusCode::OK, Json(json!({"ok": true}))),
+        Ok(_) => (
+            StatusCode::OK,
+            Json(json!({
+                "ok": true,
+                "path": resolved.to_string_lossy().to_string(),
+                "bytesWritten": bytes_written,
+                "operation": "write",
+            })),
+        ),
         Err(_) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": "Cannot write file"})),

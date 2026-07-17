@@ -10,7 +10,7 @@
 
 import { generateText } from "ai";
 
-import { getDefaultPluginModel } from "@/lib/ai/providers";
+import { getPluginModel } from "@/lib/ai/providers";
 import { createModuleLogger } from '@/lib/logger';
 
 import { modelCallSignal } from "./model-call";
@@ -88,6 +88,8 @@ function parseReport(text: string): SimulationReport | null {
 
 export interface GenerateReportOptions {
   signal?: AbortSignal;
+  /** Registry model id; defaults to the registry default. */
+  modelId?: string;
 }
 
 /**
@@ -100,7 +102,7 @@ export async function generateSimulationReport(
   options: GenerateReportOptions = {}
 ): Promise<SimulationReport | null> {
   try {
-    const model = await getDefaultPluginModel();
+    const model = await getPluginModel(options.modelId as never);
     const { text } = await generateText({
       model,
       prompt: buildReportPrompt(world),

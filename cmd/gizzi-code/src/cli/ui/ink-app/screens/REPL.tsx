@@ -338,7 +338,7 @@ import { useInstallMessages } from './../hooks/notifs/useInstallMessages.tsx';
 import { useAwaySummary } from './../hooks/useAwaySummary.ts';
 import { useChromeExtensionNotification } from './../hooks/useChromeExtensionNotification.tsx';
 import { useOfficialMarketplaceNotification } from './../hooks/useOfficialMarketplaceNotification.tsx';
-import { usePromptsFromClaudeInChrome } from './../hooks/usePromptsFromClaudeInChrome.tsx';
+import { usePromptsFromAllternitInChrome } from './../hooks/usePromptsFromAllternitInChrome.tsx';
 import { getTipToShowOnSpinner, recordShownTip } from './../services/tips/tipScheduler.ts';
 import type { Theme } from './../utils/theme.ts';
 import { checkAndDisableBypassPermissionsIfNeeded, checkAndDisableAutoModeIfNeeded, useKickOffCheckAndDisableBypassPermissionsIfNeeded, useKickOffCheckAndDisableAutoModeIfNeeded } from './../utils/permissions/bypassPermissionsKillswitch.ts';
@@ -952,9 +952,9 @@ export function REPL({
     void performStartupChecks(setAppState);
   }, [setAppState, isRemoteSession]);
 
-  // Allow Claude in Chrome MCP to send prompts through MCP notifications
+  // Allow Allternit in Chrome MCP to send prompts through MCP notifications
   // and sync permission mode changes to the Chrome extension
-  usePromptsFromClaudeInChrome(isRemoteSession ? EMPTY_MCP_CLIENTS : mcpClients, toolPermissionContext.mode);
+  usePromptsFromAllternitInChrome(isRemoteSession ? EMPTY_MCP_CLIENTS : mcpClients, toolPermissionContext.mode);
 
   // Initialize swarm features: teammate hooks and context
   // Handles both fresh spawns and resumed teammate sessions

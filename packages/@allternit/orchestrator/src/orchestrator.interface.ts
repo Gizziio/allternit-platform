@@ -3,7 +3,7 @@
 
 export type AgentVendor = 'claude' | 'kimi' | 'codex' | 'agy' | (string & {});
 
-export type ExecutorBackendKind = 'local-terminal' | 'local-pty' | 'kernel' | 'cloud' | 'acu';
+export type ExecutorBackendKind = 'local-terminal' | 'local-pty' | 'mux' | 'kernel' | 'cloud' | 'acu';
 
 export type ExecutorMode = 'interactive' | 'headless';
 
@@ -31,6 +31,8 @@ export interface ExecutorSession {
   sessionId: string;
   slug: string;
   backend: ExecutorBackendKind;
+  /** True when discovered on the host (spawned externally, e.g. via ao-spawn) instead of through an ExecutorBackend. */
+  external?: boolean;
   vendor: AgentVendor;
   mode: ExecutorMode;
   state: SessionState;

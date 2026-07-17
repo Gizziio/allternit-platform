@@ -20,10 +20,12 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::AppState;
+use allternit_agent_system_rails::receipts::ReceiptQuery;
 use allternit_agent_system_rails::{
     project_dag, ContextPackSeal, ContextPackStore, ContextPackStoreOptions, DagMutation, Gate,
     GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger, LedgerOptions, LedgerQuery,
-    Mail, MailOptions, ReceiptStore, ReceiptStoreOptions, Vault, VaultOptions, WorkOps,
+    Mail, MailOptions, ReceiptRecord, ReceiptStore, ReceiptStoreOptions, Vault, VaultOptions,
+    WorkOps,
 };
 
 // ============================================================================
@@ -151,6 +153,16 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/health", get(health_check))
         // Ledger
         .route("/ledger/events", get(query_ledger))
+        .route("/ledger/tail", post(tail_ledger))
+        // Receipts
+        .route("/receipts", post(query_receipts))
+        .route("/receipts/write", post(write_receipt))
+        // Mail (orchestrator bridge / CLI agent access)
+        .route("/mail/send", post(mail_send))
+        .route("/mail/threads", get(list_mail_threads))
+        .route("/mail/thread/:thread_id", get(read_mail_thread))
+        .route("/mail/share", post(mail_share))
+        .route("/mail/decide", post(mail_decide))
         // WIHs (compatibility surface used by platform cowork/chat views)
         .route("/wihs", get(list_wihs_get).post(list_wihs))
         .route("/wihs/pickup", post(pickup_wih))
@@ -176,6 +188,9 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         )
         // Gate / Policy
         .route("/gate/evaluate", post(evaluate_policy))
+        // Vault
+        .route("/vault/status", get(vault_status))
+        .route("/vault/archive", post(vault_archive))
 }
 
 // ============================================================================
@@ -328,6 +343,468 @@ async fn query_ledger(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// Request body for the UI's ledger tail surface (`rails.service.ts` ledger.tail).
+#[derive(Debug, Deserialize)]
+struct LedgerTailRequest {
+    count: Option<usize>,
+}
+
+/// Ledger event shape the web surfaces render (`rails.service.ts` LedgerEvent).
+#[derive(Debug, Serialize)]
+struct UiLedgerEvent {
+    event_id: String,
+    event_type: String,
+    timestamp: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scope: Option<UiLedgerEventScope>,
+    payload: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+struct UiLedgerEventScope {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    dag_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    node_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    wih_id: Option<String>,
+}
+
+async fn tail_ledger(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<LedgerTailRequest>,
+) -> impl IntoResponse {
+    let count = req.count.unwrap_or(50);
+    debug!(count, "Tailing ledger");
+
+    match state.rails.ledger.tail(count).await {
+        Ok(events) => {
+            let response: Vec<UiLedgerEvent> = events
+                .into_iter()
+                .map(|e| UiLedgerEvent {
+                    event_id: e.event_id,
+                    event_type: e.r#type,
+                    timestamp: e.ts,
+                    scope: e.scope.map(|s| UiLedgerEventScope {
+                        dag_id: s.dag_id,
+                        node_id: s.node_id,
+                        wih_id: s.wih_id,
+                    }),
+                    payload: e.payload,
+                })
+                .collect();
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "Failed to tail ledger");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// Request body for the UI's receipts surface (`rails.service.ts` ReceiptQueryRequest).
+#[derive(Debug, Deserialize)]
+struct ReceiptsUiQueryRequest {
+    dag_id: Option<String>,
+    node_id: Option<String>,
+    wih_id: Option<String>,
+    kinds: Option<Vec<String>>,
+    since: Option<String>,
+    until: Option<String>,
+    limit: Option<usize>,
+}
+
+async fn query_receipts(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<ReceiptsUiQueryRequest>,
+) -> impl IntoResponse {
+    debug!(limit = ?req.limit, "Querying receipts");
+
+    // Records carry only run_id/tool; the orchestrator bridge tags executor
+    // receipts with run_id = executor slug, so dag/node filters map to run_id.
+    const TOOL_CALL_KIND: &str = "tool_call_post";
+    if let Some(kinds) = &req.kinds {
+        if !kinds.iter().any(|k| k == TOOL_CALL_KIND) {
+            return (StatusCode::OK, Json(json!({ "receipts": [] }))).into_response();
+        }
+    }
+
+    let since_ts = req.since.as_deref().and_then(parse_rfc3339);
+    let until_ts = req.until.as_deref().and_then(parse_rfc3339);
+
+    let store_query = ReceiptQuery {
+        run_id: req
+            .node_id
+            .clone()
+            .or_else(|| req.dag_id.clone())
+            .or_else(|| req.wih_id.clone()),
+        limit: req.limit,
+        ..Default::default()
+    };
+
+    let records = match state.rails.receipts.query_receipts(&store_query) {
+        Ok(records) => records,
+        Err(e) => {
+            error!(error = %e, "Failed to query receipts");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let receipts: Vec<serde_json::Value> = records
+        .into_iter()
+        .filter_map(|record| {
+            let written_at = receipt_written_at(&state.rails, &record.receipt_id);
+            if let Some(since) = since_ts {
+                if written_at < since {
+                    return None;
+                }
+            }
+            if let Some(until) = until_ts {
+                if written_at > until {
+                    return None;
+                }
+            }
+            let outputs_ref = record.outputs_ref.clone();
+            let run_id = record.run_id.clone();
+            let mut payload = serde_json::to_value(&record).unwrap_or_else(|_| json!({}));
+            // Artifact scanners (ArtifactCenter, executor tiles) look for a
+            // `path` key in the payload — alias outputs_ref to it.
+            if let (Some(obj), Some(reference)) = (payload.as_object_mut(), outputs_ref) {
+                obj.insert("path".to_string(), json!(reference));
+            }
+            Some(json!({
+                "receipt_id": record.receipt_id,
+                "kind": TOOL_CALL_KIND,
+                "run_id": run_id.clone(),
+                "dag_id": "",
+                "node_id": run_id,
+                "wih_id": "",
+                "timestamp": written_at.to_rfc3339(),
+                "payload": payload,
+            }))
+        })
+        .collect();
+
+    (StatusCode::OK, Json(json!({ "receipts": receipts }))).into_response()
+}
+
+fn parse_rfc3339(value: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+    chrono::DateTime::parse_from_rfc3339(value)
+        .ok()
+        .map(|d| d.with_timezone(&chrono::Utc))
+}
+
+/// Receipts have no timestamp field; the receipt file's mtime is when it was
+/// written. Falls back to the epoch if the file cannot be stat'ed.
+fn receipt_written_at(rails: &RailsState, receipt_id: &str) -> chrono::DateTime<chrono::Utc> {
+    let path = rails.receipts.receipt_path(receipt_id);
+    std::fs::metadata(&path)
+        .and_then(|m| m.modified())
+        .map(chrono::DateTime::<chrono::Utc>::from)
+        .unwrap_or_else(|_| chrono::DateTime::<chrono::Utc>::from(std::time::SystemTime::UNIX_EPOCH))
+}
+
+// ---------------------------------------------------------------------------
+// Mail + receipt write routes (orchestrator bridge / CLI agent access)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct MailWriteRequest {
+    thread: Option<String>,
+    body_ref: Option<String>,
+    body: Option<String>,
+    attachments: Option<Vec<String>>,
+}
+
+async fn ensure_mail_thread(state: &AppState, topic: &str) -> Result<String, axum::response::Response> {
+    state.rails.mail.ensure_thread(topic).await.map_err(|e| {
+        error!(error = %e, "mail: ensure_thread failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response()
+    })
+}
+
+async fn mail_send(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<MailWriteRequest>,
+) -> impl IntoResponse {
+    let topic = req.thread.unwrap_or_else(|| "default".to_string());
+    let thread_id = match ensure_mail_thread(&state, &topic).await {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let body = req.body_ref.or(req.body).unwrap_or_default();
+    match state
+        .rails
+        .mail
+        .send_message(&thread_id, &body, req.attachments.unwrap_or_default())
+        .await
+    {
+        Ok(_) => (StatusCode::OK, Json(json!({ "sent": true, "thread_id": thread_id }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: send_message failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn list_mail_threads(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.mail.list_messages(None, 5000).await {
+        Ok(events) => {
+            // Events arrive sorted by ts ascending; overwriting keeps the latest.
+            let mut threads: std::collections::HashMap<String, (usize, String)> =
+                std::collections::HashMap::new();
+            for evt in &events {
+                if let Some(thread_id) = evt.payload.get("thread_id").and_then(|v| v.as_str()) {
+                    let entry = threads
+                        .entry(thread_id.to_string())
+                        .or_insert((0, evt.ts.clone()));
+                    entry.0 += 1;
+                    entry.1 = evt.ts.clone();
+                }
+            }
+            let rows: Vec<serde_json::Value> = threads
+                .into_iter()
+                .map(|(thread_id, (messages, last_ts))| {
+                    json!({ "thread_id": thread_id, "messages": messages, "last_ts": last_ts })
+                })
+                .collect();
+            (StatusCode::OK, Json(json!({ "threads": rows }))).into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "mail: list threads failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn read_mail_thread(
+    State(state): State<Arc<AppState>>,
+    Path(thread_id): Path<String>,
+) -> impl IntoResponse {
+    match state.rails.mail.list_messages(Some(&thread_id), 500).await {
+        Ok(events) => {
+            let messages: Vec<serde_json::Value> = events
+                .into_iter()
+                .map(|evt| {
+                    let body = evt
+                        .payload
+                        .get("body_ref")
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
+                    json!({
+                        "message_id": evt.event_id,
+                        "thread_id": thread_id.clone(),
+                        "from_agent": evt.actor.id,
+                        "body": body,
+                        "event_type": evt.r#type,
+                        "timestamp": evt.ts,
+                    })
+                })
+                .collect();
+            (StatusCode::OK, Json(json!({ "messages": messages }))).into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "mail: read thread failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailShareRequest {
+    thread: Option<String>,
+    asset_ref: Option<String>,
+    path: Option<String>,
+    note: Option<String>,
+}
+
+async fn mail_share(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<MailShareRequest>,
+) -> impl IntoResponse {
+    let asset = match req.asset_ref.or(req.path) {
+        Some(asset) => asset,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "asset_ref or path required" })),
+            )
+                .into_response();
+        }
+    };
+    let topic = req.thread.unwrap_or_else(|| "default".to_string());
+    let thread_id = match ensure_mail_thread(&state, &topic).await {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    match state
+        .rails
+        .mail
+        .share_asset(&thread_id, &asset, req.note.as_deref())
+        .await
+    {
+        Ok(share_id) => {
+            // Self-announced assets become receipts so artifact surfaces
+            // (ArtifactCenter, executor tiles) pick them up via one channel.
+            let run_id = thread_id
+                .strip_prefix("wih:executor-")
+                .or_else(|| thread_id.strip_prefix("executor:"))
+                .unwrap_or(&thread_id)
+                .to_string();
+            let receipt = ReceiptRecord {
+                receipt_id: allternit_agent_system_rails::core::ids::create_receipt_id(),
+                run_id,
+                step: None,
+                tool: "executor".to_string(),
+                tool_version: None,
+                inputs_ref: None,
+                outputs_ref: Some(asset.clone()),
+                exit: None,
+                input_tokens: None,
+                output_tokens: None,
+                total_tokens: None,
+            };
+            if let Err(e) = state.rails.receipts.write_receipt(&receipt) {
+                error!(error = %e, "receipt write for shared asset failed");
+            }
+            (
+                StatusCode::OK,
+                Json(json!({ "shared": true, "share_id": share_id, "thread_id": thread_id })),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "mail: share_asset failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailDecideRequest {
+    thread: Option<String>,
+    decision: Option<String>,
+    approve: Option<bool>,
+    notes_ref: Option<String>,
+}
+
+async fn mail_decide(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<MailDecideRequest>,
+) -> impl IntoResponse {
+    let decision = match req.decision.or_else(|| {
+        req.approve
+            .map(|approve| if approve { "accepted".to_string() } else { "rejected".to_string() })
+    }) {
+        Some(decision) => decision,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "decision or approve required" })),
+            )
+                .into_response();
+        }
+    };
+    let topic = req.thread.unwrap_or_else(|| "default".to_string());
+    let thread_id = match ensure_mail_thread(&state, &topic).await {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    match state
+        .rails
+        .mail
+        .decide_review(&thread_id, &decision, req.notes_ref)
+        .await
+    {
+        Ok(_) => (StatusCode::OK, Json(json!({ "decided": true, "thread_id": thread_id }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: decide_review failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct ReceiptWriteRequest {
+    tool: Option<String>,
+    run_id: Option<String>,
+    inputs_ref: Option<String>,
+    outputs_ref: Option<String>,
+    exit_code: Option<i32>,
+    summary: Option<String>,
+}
+
+async fn write_receipt(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<ReceiptWriteRequest>,
+) -> impl IntoResponse {
+    let exit = if req.exit_code.is_some() || req.summary.is_some() {
+        Some(allternit_agent_system_rails::core::types::ReceiptExit {
+            code: req.exit_code,
+            summary: req.summary,
+        })
+    } else {
+        None
+    };
+    let receipt = ReceiptRecord {
+        receipt_id: allternit_agent_system_rails::core::ids::create_receipt_id(),
+        run_id: req.run_id.unwrap_or_else(|| "run_orchestrator".to_string()),
+        step: None,
+        tool: req.tool.unwrap_or_else(|| "executor".to_string()),
+        tool_version: None,
+        inputs_ref: req.inputs_ref,
+        outputs_ref: req.outputs_ref,
+        exit,
+        input_tokens: None,
+        output_tokens: None,
+        total_tokens: None,
+    };
+    let receipt_id = receipt.receipt_id.clone();
+    match state.rails.receipts.write_receipt(&receipt) {
+        Ok(_) => (StatusCode::CREATED, Json(json!({ "receipt_id": receipt_id }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "Failed to write receipt");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
             )
                 .into_response()
         }
@@ -763,6 +1240,74 @@ async fn evaluate_policy(
         })),
     )
         .into_response()
+}
+
+/// Vault jobs are recorded in the ledger as `VaultJobCompleted` events (see
+/// `Vault::archive_wih`). Status maps them to the shape the UI polls.
+async fn vault_status(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let jobs: Vec<serde_json::Value> = events
+                .into_iter()
+                .filter(|e| e.r#type == "VaultJobCompleted")
+                .map(|e| {
+                    let wih_id = e
+                        .payload
+                        .get("wih_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    json!({
+                        "wih_id": wih_id,
+                        "status": "completed",
+                        "created_at": e.ts,
+                        "completed_at": e.ts,
+                    })
+                })
+                .collect();
+            (StatusCode::OK, Json(json!({ "jobs": jobs }))).into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "Failed to query vault jobs");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct VaultArchiveRequest {
+    wih_id: String,
+}
+
+async fn vault_archive(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<VaultArchiveRequest>,
+) -> impl IntoResponse {
+    info!(wih_id = %req.wih_id, "Archiving WIH to vault");
+
+    match state.rails.vault.archive_wih(&req.wih_id).await {
+        Ok(path) => (
+            StatusCode::OK,
+            Json(json!({
+                "archived": true,
+                "path": path.to_string_lossy().to_string(),
+            })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, wih_id = %req.wih_id, "Failed to archive WIH");
+            let status = if e.to_string().contains("not found") {
+                StatusCode::NOT_FOUND
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            };
+            (status, Json(json!({ "error": e.to_string() }))).into_response()
+        }
+    }
 }
 
 // ============================================================================

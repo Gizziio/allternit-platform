@@ -17,3 +17,6 @@ export async function storeToolResult(entry: ToolResultEntry): Promise<void> {
 export async function getToolResults(tool: string): Promise<ToolResultEntry[]> {
   return []
 }
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../shared/utils/toolResultStorage.js'

@@ -78,13 +78,8 @@ function getWorkspacePath(agentId: string): string {
  * Check if a workspace exists for an agent
  */
 async function workspaceExists(agentId: string): Promise<boolean> {
-  try {
-    const path = getWorkspacePath(agentId);
-    await filesApi.readFile({ path: `${path}/.allternit/manifest.json` });
-    return true;
-  } catch {
-    return false;
-  }
+  const path = getWorkspacePath(agentId);
+  return filesApi.fileExists(`${path}/.allternit/manifest.json`);
 }
 
 /**
@@ -102,7 +97,7 @@ async function loadWorkspace(agentId: string): Promise<AgentWorkspace> {
   const [agent, manifestRes, fileTreeRes] = await Promise.all([
     getAgent(agentId),
     filesApi.readFile({ path: `${path}/.allternit/manifest.json` }).catch(() => null),
-    filesApi.listDirectory({ path }).catch(() => null),
+    filesApi.listDirectory({ path, recursive: true }).catch(() => null),
   ]);
   
   if (!agent) {
@@ -218,11 +213,8 @@ async function createWorkspace(
     const fullPath = `${workspacePath}/${filePath}`;
     
     // Skip if already exists (for non-Gizzi templates)
-    try {
-      await filesApi.readFile({ path: fullPath });
+    if (await filesApi.fileExists(fullPath)) {
       continue;
-    } catch {
-      // File doesn't exist, create it
     }
 
     let content = '';

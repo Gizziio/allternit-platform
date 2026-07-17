@@ -361,12 +361,19 @@ export function _resetErrorLogForTesting(): void {
   errorQueue.length = 0
   inMemoryErrorLog = []
 }
-
-// Default export for compatibility
+// Rebuilt default export (merge-rot repair): consumers call
+// `logger.log/info/warn/debug`; map them to console, keep the real logError.
+const _log = (...args: unknown[]) => console.log(...args)
+const _warn = (...args: unknown[]) => console.warn(...args)
 export default {
-  log,
-  logInfo,
+  log: _log,
+  logInfo: _log,
+  logWarn: _warn,
+  logDebug: _log,
   logError,
-  logWarn,
-  logDebug,
+  logMCPError,
+  logMCPDebug,
+  getInMemoryErrors,
+  loadErrorLogs,
+  getLogDisplayTitle,
 }

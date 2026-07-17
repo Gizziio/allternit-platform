@@ -386,7 +386,16 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
           setApiModels(models);
         }
       } catch (err) {
-        logger.error({ err: err }, 'Failed to fetch models:');
+        // 501 means the runtime API doesn't implement /api/v1/models — the
+        // RuntimeStep falls back to the static AGENT_MODELS list, so this is
+        // informational only; anything else is a genuine fetch failure.
+        const status = (err as { statusCode?: number; status?: number })?.statusCode
+          ?? (err as { status?: number })?.status;
+        if (status === 501) {
+          logger.debug('Models endpoint unavailable (501); using built-in model list');
+        } else {
+          logger.error({ err: err }, 'Failed to fetch models:');
+        }
       } finally {
         setIsModelsLoading(false);
       }
@@ -403,6 +412,12 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
     voiceService
       .listVoices()
       .then((v) => setVoices(v))
+      .catch((err) => {
+        // Voice service is optional (501 when the runtime API doesn't
+        // implement it) — keep the wizard usable with an empty voice list.
+        logger.debug({ err: err }, 'Voice service unavailable; continuing without voices');
+        setVoices([]);
+      })
       .finally(() => setVoiceLoading(false));
   }, []);
 
@@ -650,6 +665,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
+            className="pb-24"
           >
             {activeStep === "identity" && (
               <IdentityStep
@@ -709,7 +725,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
         </AnimatePresence>
 
         {/* Navigation Footer */}
-        <div className="sticky bottom-0 z-10 flex items-center justify-between p-4 px-5 bg-[var(--bg-card)]/94 backdrop-blur-md rounded-xl border border-solid border-[var(--border-subtle)] mt-6 gap-3 shadow-lg">
+        <div className="sticky bottom-0 z-10 flex items-center justify-between p-4 px-5 bg-[var(--bg-card)] rounded-xl border border-solid border-[var(--border-subtle)] mt-6 gap-3 shadow-lg">
           <button
             type="button"
             onClick={activeStepIndex === 0 ? onClose : () => setActiveStep(CREATE_FLOW_STEPS[activeStepIndex - 1].id)}

@@ -350,10 +350,17 @@ class ApiFileSystem implements FileSystemAPI {
 
   async exists(path: string): Promise<boolean> {
     try {
-      const response = await this.request(this.buildFilesUrl('exists', path), { method: 'HEAD' });
-      if (response.ok) return true;
+      // GET (not HEAD): the API answers 200 with { exists } — a HEAD probe
+      // returns 404 for missing paths, and every 404 lands in the console as a
+      // red "Failed to load resource" plus two more 404s from the fallback
+      // probes below, which made routine capability scans look like failures.
+      const response = await this.request(this.buildFilesUrl('exists', path));
+      if (response.ok) {
+        const data = await response.json().catch(() => null) as { exists?: boolean } | null;
+        if (data && typeof data.exists === 'boolean') return data.exists;
+      }
     } catch {
-      // Fall back to read/list probes.
+      // API unreachable — fall back to read/list probes.
     }
 
     try {

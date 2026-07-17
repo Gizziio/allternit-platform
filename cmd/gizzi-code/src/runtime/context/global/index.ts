@@ -80,3 +80,17 @@ export async function init() {
     await Filesystem.write(path.join(Global.Path.cache, "version"), CACHE_VERSION)
   }
 }
+
+export interface GlobalContext {
+  debug: boolean
+  [key: string]: unknown
+}
+
+const context: GlobalContext = {
+  debug: process.env.GIZZI_DEBUG === 'true' || process.env.GIZZI_DEBUG === '1',
+}
+
+/** Process-wide context flags (debug, feature toggles). */
+export function getGlobalContext(): GlobalContext {
+  return context
+}

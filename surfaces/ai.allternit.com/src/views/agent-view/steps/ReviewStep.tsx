@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   CheckCircle,
   Robot,
+  FolderOpen,
 } from "@phosphor-icons/react";
 import type { CreateAgentInput, AgentSetup, CreationTemperament } from "@/lib/agents/agent.types";
+import { generateEnhancedWorkspaceDocuments } from "@/lib/agents";
 
 interface ProjectedStats {
   class: string;
@@ -37,6 +39,34 @@ interface ReviewStepProps {
 }
 
 export function ReviewStep({ formData, blueprint, cardSeed, projectedStats }: ReviewStepProps) {
+  // The exact document set the submit path POSTs to /workspace/initialize —
+  // computed with the same generator so the preview cannot drift from what
+  // actually lands on disk.
+  const workspaceDocs = useMemo(() => {
+    try {
+      return generateEnhancedWorkspaceDocuments(formData.config, {
+        name: formData.name,
+        description: formData.description,
+        model: formData.model,
+        provider: formData.provider,
+        type: formData.type,
+        trustTier: formData.trustTier,
+        writeScope: formData.writeScope,
+        dataClassification: formData.dataClassification,
+        allowedSurfaces: formData.allowedSurfaces,
+        allowedSkills: formData.allowedSkills,
+        allowedTools: formData.allowedTools,
+        harness: formData.harness as unknown as Record<string, unknown>,
+        category: formData.category,
+        tags: formData.tags,
+        tools: formData.tools,
+        capabilities: formData.capabilities,
+      });
+    } catch {
+      return [];
+    }
+  }, [formData]);
+
   return (
     <section className="flex flex-col gap-6">
       <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card)] p-6">
@@ -97,6 +127,28 @@ export function ReviewStep({ formData, blueprint, cardSeed, projectedStats }: Re
               </div>
             </div>
           </div>
+
+          {workspaceDocs.length > 0 && (
+            <div className="p-4 rounded-xl border border-solid border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
+              <div className="flex items-center gap-2 mb-3">
+                <FolderOpen size={18} className="text-[var(--accent-primary)]" />
+                <span className="font-semibold text-[14px]">Workspace Bootstrap</span>
+                <span className="text-[12px] text-[var(--text-muted)]">
+                  {workspaceDocs.length} files will be created
+                </span>
+              </div>
+              <div className="max-h-40 overflow-auto flex flex-col gap-1">
+                {workspaceDocs.map((doc) => (
+                  <div key={doc.path} className="text-[12px] font-mono text-[var(--text-secondary)]">
+                    {doc.path}
+                  </div>
+                ))}
+              </div>
+              <p className="text-[12px] text-[var(--text-muted)] mt-2.5 mb-0">
+                View and edit these after creation in Agent Hub → Workspace or Settings → Agents → Workspace.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="p-3 rounded-lg bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)]">

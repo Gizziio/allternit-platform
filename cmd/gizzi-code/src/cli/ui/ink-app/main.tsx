@@ -102,8 +102,8 @@ import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides, isBuiltInAge
 import type { LogOption } from './types/logs';
 import type { Message as MessageType } from './types/message';
 import { assertMinVersion } from './utils/autoUpdater';
-import { CLAUDE_IN_CHROME_SKILL_HINT, CLAUDE_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER } from './utils/claudeInChrome/prompt';
-import { setupClaudeInChrome, shouldAutoEnableClaudeInChrome, shouldEnableClaudeInChrome } from './utils/claudeInChrome/setup';
+import { ALLTERNIT_IN_CHROME_SKILL_HINT, ALLTERNIT_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER } from './utils/allternitInChrome/prompt';
+import { setupAllternitInChrome, shouldAutoEnableAllternitInChrome, shouldEnableAllternitInChrome } from './utils/allternitInChrome/setup';
 import { getContextWindowForModel } from './utils/context';
 import { loadConversationForResume } from './utils/conversationRecovery';
 import { buildDeepLinkBanner } from './utils/deepLink/banner';
@@ -149,7 +149,7 @@ import { excludeCommandsByServer, excludeResourcesByServer } from './services/mc
 import { isXaaEnabled } from './services/mcp/xaaIdpLogin.ts';
 import { getRelevantTips } from './services/tips/tipRegistry.ts';
 import { logContextMetrics } from './utils/api.ts';
-import { CLAUDE_IN_CHROME_MCP_SERVER_NAME, isClaudeInChromeMCPServer } from './utils/claudeInChrome/common.ts';
+import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME, isAllternitInChromeMCPServer } from './utils/allternitInChrome/common.ts';
 import { registerCleanup } from './utils/cleanupRegistry.ts';
 import { eagerParseCliFlag } from './utils/cliArgs.ts';
 import { createEmptyAttributionState } from './utils/commitAttribution.ts';
@@ -1004,7 +1004,7 @@ async function run(): Promise<CommanderCommand> {
   // `mcp` and `add` as paths, then choked on --transport as an unknown
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
-  .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').action(async (prompt, options) => {
+  .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Allternit in Chrome integration').option('--no-chrome', 'Disable Allternit in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)').action(async (prompt, options) => {
     profileCheckpoint('action_handler_start');
 
     // --bare = one-switch minimal mode. Sets SIMPLE so all the existing
@@ -1473,8 +1473,8 @@ async function run(): Promise<CommanderCommand> {
         // built-in names — skip reserved-name checks for type:'sdk'.
         const nonSdkConfigNames = Object.entries(allConfigs).filter(([, config]) => config.type !== 'sdk').map(([name]) => name);
         let reservedNameError: string | null = null;
-        if (nonSdkConfigNames.some(isClaudeInChromeMCPServer)) {
-          reservedNameError = `Invalid MCP configuration: "${CLAUDE_IN_CHROME_MCP_SERVER_NAME}" is a reserved MCP name.`;
+        if (nonSdkConfigNames.some(isAllternitInChromeMCPServer)) {
+          reservedNameError = `Invalid MCP configuration: "${ALLTERNIT_IN_CHROME_MCP_SERVER_NAME}" is a reserved MCP name.`;
         } else if (feature('CHICAGO_MCP')) {
           const {
             isComputerUseMCPServer,
@@ -1523,15 +1523,15 @@ async function run(): Promise<CommanderCommand> {
       }
     }
 
-    // Extract Claude in Chrome option and enforce claude.ai subscriber check (unless user is ant)
+    // Extract Allternit in Chrome option and enforce claude.ai subscriber check (unless user is ant)
     const chromeOpts = options as {
       chrome?: boolean;
     };
     // Store the explicit CLI flag so teammates can inherit it
     setChromeFlagOverride(chromeOpts.chrome);
-    const enableClaudeInChrome = shouldEnableClaudeInChrome(chromeOpts.chrome) && ("external" === 'ant' || isClaudeAISubscriber());
-    const autoEnableClaudeInChrome = !enableClaudeInChrome && shouldAutoEnableClaudeInChrome();
-    if (enableClaudeInChrome) {
+    const enableAllternitInChrome = shouldEnableAllternitInChrome(chromeOpts.chrome);
+    const autoEnableAllternitInChrome = !enableAllternitInChrome && shouldAutoEnableAllternitInChrome();
+    if (enableAllternitInChrome) {
       const platform = getPlatform();
       try {
         logEvent('tengu_claude_in_chrome_setup', {
@@ -1541,7 +1541,7 @@ async function run(): Promise<CommanderCommand> {
           mcpConfig: chromeMcpConfig,
           allowedTools: chromeMcpTools,
           systemPrompt: chromeSystemPrompt
-        } = setupClaudeInChrome();
+        } = setupAllternitInChrome();
         dynamicMcpConfig = {
           ...dynamicMcpConfig,
           ...chromeMcpConfig
@@ -1554,26 +1554,26 @@ async function run(): Promise<CommanderCommand> {
         logEvent('tengu_claude_in_chrome_setup_failed', {
           platform: platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
         });
-        logForDebugging(`[Claude in Chrome] Error: ${error}`);
+        logForDebugging(`[Allternit in Chrome] Error: ${error}`);
         logError(error);
         // biome-ignore lint/suspicious/noConsole:: intentional console output
-        console.error(`Error: Failed to run with Claude in Chrome.`);
+        console.error(`Error: Failed to run with Allternit in Chrome.`);
         process.exit(1);
       }
-    } else if (autoEnableClaudeInChrome) {
+    } else if (autoEnableAllternitInChrome) {
       try {
         const {
           mcpConfig: chromeMcpConfig
-        } = setupClaudeInChrome();
+        } = setupAllternitInChrome();
         dynamicMcpConfig = {
           ...dynamicMcpConfig,
           ...chromeMcpConfig
         };
-        const hint = feature('WEB_BROWSER_TOOL') && typeof Bun !== 'undefined' && 'WebView' in Bun ? CLAUDE_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER : CLAUDE_IN_CHROME_SKILL_HINT;
+        const hint = feature('WEB_BROWSER_TOOL') && typeof Bun !== 'undefined' && 'WebView' in Bun ? ALLTERNIT_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER : ALLTERNIT_IN_CHROME_SKILL_HINT;
         appendSystemPrompt = appendSystemPrompt ? `${appendSystemPrompt}\n\n${hint}` : hint;
       } catch (error) {
         // Silently skip any errors for the auto-enable
-        logForDebugging(`[Claude in Chrome] Error (auto-enable): ${error}`);
+        logForDebugging(`[Allternit in Chrome] Error (auto-enable): ${error}`);
       }
     }
 
@@ -2239,7 +2239,7 @@ async function run(): Promise<CommanderCommand> {
       });
       logForDebugging('[STARTUP] Running showSetupScreens()...');
       const setupScreensStart = Date.now();
-      const onboardingShown = await showSetupScreens(root, permissionMode, allowDangerouslySkipPermissions, commands, enableClaudeInChrome, devChannels);
+      const onboardingShown = await showSetupScreens(root, permissionMode, allowDangerouslySkipPermissions, commands, enableAllternitInChrome, devChannels);
       logForDebugging(`[STARTUP] showSetupScreens() completed in ${Date.now() - setupScreensStart}ms`);
 
       // Now that trust is established and GrowthBook has auth headers,

@@ -508,8 +508,8 @@ export const railsApi = {
 
     /** Write a new receipt */
     write: (receipt: Omit<Receipt, 'receipt_id'>) => apiRequestWithError<{ receipt_id: string }>(
-      `${RAILS_BASE}/receipts`,
-      { method: "PUT", body: JSON.stringify(receipt) }
+      `${RAILS_BASE}/receipts/write`,
+      { method: "POST", body: JSON.stringify(receipt) }
     ),
 
     /** Get receipt by ID */

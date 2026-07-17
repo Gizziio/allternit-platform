@@ -35,3 +35,12 @@ export function getGlobalConfig(): GlobalConfig {
 export function setGlobalConfig(config: GlobalConfig): void {
   globalConfig = { ...globalConfig, ...config }
 }
+
+export function saveGlobalConfig(
+  updater: GlobalConfig | ((current: GlobalConfig) => GlobalConfig),
+): void {
+  globalConfig = typeof updater === 'function' ? updater(globalConfig) : { ...globalConfig, ...updater }
+}
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../shared/utils/config.js'

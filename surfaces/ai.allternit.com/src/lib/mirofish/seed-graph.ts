@@ -11,7 +11,7 @@
 
 import { generateText } from "ai";
 
-import { getDefaultPluginModel } from "@/lib/ai/providers";
+import { getPluginModel } from "@/lib/ai/providers";
 import { createModuleLogger } from '@/lib/logger';
 
 import { modelCallSignal } from "./model-call";
@@ -98,6 +98,8 @@ function parseSeedGraph(text: string): SeedGraph | null {
 
 export interface ExtractSeedGraphOptions {
   signal?: AbortSignal;
+  /** Registry model id; defaults to the registry default. */
+  modelId?: string;
 }
 
 /**
@@ -110,7 +112,7 @@ export async function extractSeedGraph(
   options: ExtractSeedGraphOptions = {}
 ): Promise<SeedGraph | null> {
   try {
-    const model = await getDefaultPluginModel();
+    const model = await getPluginModel(options.modelId as never);
     const { text } = await generateText({
       model,
       prompt: buildExtractionPrompt(seed),

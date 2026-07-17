@@ -229,13 +229,13 @@ function getMcpToolTimeoutMs(): number {
   )
 }
 
-import { isClaudeInChromeMCPServer } from '../../utils/claudeInChrome/common.js'
+import { isAllternitInChromeMCPServer } from '../../utils/allternitInChrome/common.js'
 
 // Lazy: toolRendering.tsx pulls React/ink; only needed when Claude-in-Chrome MCP server is connected
 /* eslint-disable @typescript-eslint/no-require-imports */
-const claudeInChromeToolRendering =
-  (): typeof import('../../utils/claudeInChrome/toolRendering.js') =>
-    require('../../utils/claudeInChrome/toolRendering.js')
+const allternitInChromeToolRendering =
+  (): typeof import('../../utils/allternitInChrome/toolRendering.js') =>
+    require('../../utils/allternitInChrome/toolRendering.js')
 // Lazy: wrapper.tsx → hostAdapter.ts → executor.ts pulls both native modules
 // (@ant/computer-use-input + @ant/computer-use-swift). Runtime-gated by
 // GrowthBook tengu_malort_pedway (see gates.ts).
@@ -905,11 +905,11 @@ export const connectToServer = memoize(
         logMCPDebug(name, `claude.ai proxy transport created successfully`)
       } else if (
         ((serverRef as any).type === 'stdio' || !(serverRef as any).type) &&
-        isClaudeInChromeMCPServer(name)
+        isAllternitInChromeMCPServer(name)
       ) {
         // Run the Chrome MCP server in-process to avoid spawning a ~325 MB subprocess
         const { createChromeContext } = await import(
-          '../../utils/claudeInChrome/mcpServer.js'
+          '../../utils/allternitInChrome/mcpServer.js'
         )
         const { createClaudeForChromeMcpServer } = await import(
           '@ant/claude-for-chrome-mcp'
@@ -1975,9 +1975,9 @@ export const fetchToolsForClient = memoizeWithLRU(
               const displayName = tool.annotations?.title || tool.name
               return `${client.name} - ${displayName} (MCP)`
             },
-            ...(isClaudeInChromeMCPServer(client.name) &&
+            ...(isAllternitInChromeMCPServer(client.name) &&
             (client.config.type === 'stdio' || !client.config.type)
-              ? claudeInChromeToolRendering().getClaudeInChromeMCPToolOverrides(
+              ? allternitInChromeToolRendering().getAllternitInChromeMCPToolOverrides(
                   tool.name,
                 )
               : {}),

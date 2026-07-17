@@ -225,7 +225,11 @@ export const filesApi = {
 
   /**
    * Check if file exists
-   * HEAD /api/v1/files/exists?path={path}
+   * GET /api/v1/files/exists?path={path}
+   *
+   * Uses the JSON GET variant (always 200) rather than HEAD: a HEAD 404 is
+   * logged by the browser as a console error, which made probe-then-create
+   * flows (agent bootstrap) look broken.
    */
   async fileExists(path: string): Promise<boolean> {
     const params = new URLSearchParams();
@@ -233,9 +237,11 @@ export const filesApi = {
 
     try {
       const response = await fetch(`${FILES_API_BASE}/exists?${params}`, {
-        method: "HEAD",
+        headers: { "Accept": "application/json" },
       });
-      return response.ok;
+      if (!response.ok) return false;
+      const data = (await response.json()) as { exists?: boolean };
+      return data.exists === true;
     } catch {
       return false;
     }

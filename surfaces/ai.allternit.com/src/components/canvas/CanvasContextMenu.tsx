@@ -220,6 +220,11 @@ export function CanvasContextMenu({
               key={item.id}
               onClick={item.onClick}
               disabled={item.disabled}
+              className={`bg-transparent ${
+                item.disabled
+                  ? 'text-[var(--text-muted)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
+              }`}
               style={{
                 width: '100%',
                 display: 'flex',
@@ -228,19 +233,11 @@ export function CanvasContextMenu({
                 padding: '6px 8px',
                 borderRadius: 8,
                 border: 'none',
-                background: 'transparent',
-                color: item.disabled ? 'var(--text-muted)' : 'var(--text-secondary)',
                 fontSize: 13,
                 textAlign: 'left',
                 cursor: item.disabled ? 'default' : 'pointer',
                 opacity: item.disabled ? 0.5 : 1,
                 transition: 'background 0.1s',
-              }}
-              onMouseEnter={(e) => {
-                if (!item.disabled) e.currentTarget.style.background = 'var(--surface-hover)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
               }}
             >
               {item.icon && <span style={{ opacity: 0.7 }}>{item.icon}</span>}

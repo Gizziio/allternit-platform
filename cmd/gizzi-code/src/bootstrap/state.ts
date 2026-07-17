@@ -212,3 +212,11 @@ export default {
   isDebugMode,
   initializeBootstrapState,
 }
+
+// ─── Merge-rot repair ────────────────────────────────────────────────────────
+// This file was a partial merge of the bootstrap state module; the complete
+// implementation lives in the ink-app tree. Re-export everything it provides
+// — local exports above take precedence on name conflicts (ES `export *`
+// semantics), so the session/model/permission management unique to this file
+// keeps its behavior while the ~200 missing accessors come through.
+export * from '../cli/ui/ink-app/bootstrap/state.js'

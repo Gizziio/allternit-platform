@@ -14,7 +14,7 @@
 
 import { generateText } from "ai";
 
-import { getDefaultPluginModel } from "@/lib/ai/providers";
+import { getPluginModel } from "@/lib/ai/providers";
 import { createModuleLogger } from '@/lib/logger';
 
 import { LocalSwarmProvider } from "@/lib/sandbox/swarm/local-provider";
@@ -73,18 +73,6 @@ function tryParsePersona(text: string, id: string): Persona | null {
   };
 }
 
-/** Last-resort persona when both generation attempts were unparseable. */
-function fallbackPersona(id: string, index: number, text: string): Persona {
-  // Never surface raw JSON fragments or internal unit ids in the UI.
-  const cleaned = text.replace(/[{}"[\]]/g, " ").replace(/\s+/g, " ").trim();
-  return {
-    id,
-    name: `Persona ${index + 1}`,
-    bio: cleaned ? truncate(cleaned, 300) : "No description was generated for this persona.",
-    traits: {},
-  };
-}
-
 function buildPersonaPrompt(
   seed: SeedMaterial,
   index: number,
@@ -120,6 +108,8 @@ export interface PersonaBuilderOptions {
   onProgress?: (completed: number, total: number) => void;
   /** Grounding graph from seed extraction; null/undefined = ungrounded. */
   seedGraph?: SeedGraph | null;
+  /** Registry model id; defaults to the registry default. */
+  modelId?: string;
 }
 
 /** Build `populationSize` personas from `seed`, one LLM call per persona, fanned out concurrently. */
@@ -145,7 +135,7 @@ export async function buildPersonas(
     logger.warn({ failed: createFailures.length }, "Some persona units failed to create");
   }
 
-  const model = await getDefaultPluginModel();
+  const model = await getPluginModel(options.modelId as never);
   let completed = 0;
 
   const results = await provider.runBatch(units, async (unit) => {

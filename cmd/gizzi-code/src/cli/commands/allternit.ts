@@ -1,56 +1,184 @@
-import { cmd } from "@/cli/commands/cmd"
-import { UI } from "@/cli/ui"
+import type { Argv } from "yargs"
+import { cmd } from "@/cli/commands/cmd.js"
+import { UI } from "@/cli/ui/index.js"
+import * as prompts from "@clack/prompts"
+import { existsSync, readdirSync, mkdirSync, rmSync } from "fs"
+import path from "path"
+import os from "os"
+import { execSync } from "child_process"
+
+function findExistingApp(): string | null {
+  const candidates = [
+    "/Applications/Allternit Desktop.app",
+    path.join(os.homedir(), "Applications", "Allternit Desktop.app"),
+    "/Applications/Allternit.app",
+    path.join(os.homedir(), "Applications", "Allternit.app"),
+  ]
+  for (const c of candidates) {
+    if (existsSync(c)) return c
+  }
+  return null
+}
 
 export const AllternitCommand = cmd({
-  command: "remote",
-  describe: "Remote architecture commands",
-  builder: (yargs) =>
-    yargs
-      .command("vms", "Manage virtual machines", (yargs) =>
-        yargs
-          .positional("action", {
-            type: "string",
-            choices: ["list", "start", "stop", "restart", "logs", "connect"],
-          })
-          .positional("name", { type: "string" }),
-      )
-      .command("capsules", "Manage capsules", (yargs) =>
-        yargs
-          .positional("action", {
-            type: "string",
-            choices: ["list", "start", "stop", "restart", "logs", "exec"],
-          })
-          .positional("name", { type: "string" }),
-      )
-      .command("plugins", "Manage plugins", (yargs) =>
-        yargs
-          .positional("action", {
-            type: "string",
-            choices: ["list", "install", "uninstall", "enable", "disable", "update"],
-          })
-          .positional("name", { type: "string" }),
-      )
-      .command("sessions", "Manage remote sessions", (yargs) =>
-        yargs
-          .positional("action", {
-            type: "string",
-            choices: ["list", "connect", "disconnect", "disconnect-all"],
-          })
-          .positional("id", { type: "string" }),
-      )
-      .demandCommand(1, "Please specify a subcommand"),
-  handler: async (args) => {
+  command: "allternit [path]",
+  describe: "launch Allternit Desktop app, downloading/installing it if missing",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("path", {
+        describe: "workspace path to open in Allternit Desktop",
+        type: "string",
+        default: ".",
+      })
+      .option("download-url", {
+        describe: "custom download URL for the macOS DMG installer",
+        type: "string",
+      })
+  },
+  handler: async (args: { path: string; "download-url"?: string }) => {
     UI.empty()
-    UI.println(UI.Style.TEXT_INFO_BOLD + "Remote Control")
+    UI.println(UI.logo("  "))
     UI.empty()
-    UI.println("Usage: gizzi remote <command> [options]")
-    UI.empty()
-    UI.println("Commands:")
-    UI.println("  vms        Manage virtual machines")
-    UI.println("  capsules   Manage capsules")
-    UI.println("  plugins    Manage plugins")
-    UI.println("  sessions   Manage remote sessions")
-    UI.empty()
-    UI.println(UI.Style.TEXT_DIM + "Run 'gizzi remote <command> --help' for more information on a command.")
+    prompts.intro("Allternit Desktop Launcher")
+
+    if (process.platform !== "darwin") {
+      prompts.log.error("The allternit command is currently only supported on macOS.")
+      prompts.outro("Done")
+      return
+    }
+
+    const targetPath = path.resolve(args.path)
+    const existingApp = findExistingApp()
+
+    if (existingApp) {
+      prompts.log.info(`Found Allternit Desktop installed at: ${existingApp}`)
+      const spinner = prompts.spinner()
+      spinner.start(`Opening workspace in Allternit Desktop...`)
+      try {
+        execSync(`open -a "${existingApp}" "${targetPath}"`)
+        spinner.stop("Launched successfully")
+      } catch (err: any) {
+        spinner.stop("Failed to launch", 1)
+        prompts.log.error(err.message || String(err))
+      }
+      prompts.outro("Done")
+      return
+    }
+
+    prompts.log.warn("Allternit Desktop not found on this machine.")
+
+    const arch = process.arch === "arm64" ? "arm64" : "x64"
+    const defaultUrl = `https://github.com/Gizziio/desktop/releases/download/v1.0.0/Allternit-Desktop-1.0.0-${arch}.dmg`
+    const downloadUrl = args["download-url"] || defaultUrl
+
+    const shouldDownload = await prompts.confirm({
+      message: `Would you like to download and install Allternit Desktop from ${downloadUrl}?`,
+      initialValue: true,
+    })
+
+    if (!shouldDownload) {
+      prompts.outro("Installation cancelled")
+      return
+    }
+
+    const tempDir = path.join(os.tmpdir(), `allternit-desktop-install-${Date.now()}`)
+    mkdirSync(tempDir, { recursive: true })
+    const dmgPath = path.join(tempDir, "Allternit-Desktop.dmg")
+
+    const spinner = prompts.spinner()
+    spinner.start("Downloading Allternit Desktop installer...")
+    try {
+      execSync(`curl -fL --retry 3 --retry-delay 1 -o "${dmgPath}" "${downloadUrl}"`)
+      spinner.stop("Downloaded successfully")
+    } catch (err: any) {
+      spinner.stop("Download failed", 1)
+      prompts.log.error(err.message || String(err))
+      try { rmSync(tempDir, { recursive: true, force: true }) } catch {}
+      prompts.outro("Failed")
+      return
+    }
+
+    spinner.start("Mounting installer DMG...")
+    let mountPoint = ""
+    try {
+      const mountOutput = execSync(`hdiutil attach -nobrowse -readonly "${dmgPath}"`).toString()
+      const lines = mountOutput.split("\n")
+      for (const line of lines) {
+        if (line.includes("/Volumes/")) {
+          const parts = line.split("\t")
+          if (parts.length > 1) {
+            mountPoint = parts[parts.length - 1].trim()
+            break
+          }
+          const match = line.split(/\s+/).find(p => p.startsWith("/Volumes/"))
+          if (match) {
+            mountPoint = match
+            break
+          }
+        }
+      }
+      if (!mountPoint) {
+        throw new Error("Could not determine mount point from hdiutil output")
+      }
+      spinner.stop(`Mounted at: ${mountPoint}`)
+    } catch (err: any) {
+      spinner.stop("Mount failed", 1)
+      prompts.log.error(err.message || String(err))
+      try { rmSync(tempDir, { recursive: true, force: true }) } catch {}
+      prompts.outro("Failed")
+      return
+    }
+
+    spinner.start("Installing app bundle...")
+    let destApp = ""
+    try {
+      const entries = readdirSync(mountPoint)
+      const appEntry = entries.find(e => e.endsWith(".app"))
+      if (!appEntry) {
+        throw new Error("No .app bundle found inside the mounted DMG")
+      }
+
+      // Check if /Applications is writable, otherwise install to user Applications
+      let destDir = "/Applications"
+      try {
+        const testFile = "/Applications/.allternit-test-write"
+        execSync(`touch "${testFile}" && rm "${testFile}"`, { stdio: "ignore" })
+      } catch {
+        destDir = path.join(os.homedir(), "Applications")
+        mkdirSync(destDir, { recursive: true })
+      }
+
+      destApp = path.join(destDir, appEntry)
+      prompts.log.info(`Copying ${appEntry} to ${destDir}...`)
+      execSync(`ditto "${path.join(mountPoint, appEntry)}" "${destApp}"`)
+      spinner.stop("Installed successfully")
+    } catch (err: any) {
+      spinner.stop("Installation failed", 1)
+      prompts.log.error(err.message || String(err))
+    }
+
+    spinner.start("Detaching installer...")
+    try {
+      execSync(`hdiutil detach "${mountPoint}"`)
+      spinner.stop("Detached successfully")
+    } catch (err: any) {
+      spinner.stop("Failed to detach DMG", 1)
+      prompts.log.error(err.message || String(err))
+    }
+
+    try { rmSync(tempDir, { recursive: true, force: true }) } catch {}
+
+    if (destApp && existsSync(destApp)) {
+      spinner.start(`Launching ${destApp}...`)
+      try {
+        execSync(`open -a "${destApp}" "${targetPath}"`)
+        spinner.stop("Launched successfully")
+      } catch (err: any) {
+        spinner.stop("Failed to launch app", 1)
+        prompts.log.error(err.message || String(err))
+      }
+    }
+
+    prompts.outro("Done")
   },
 })

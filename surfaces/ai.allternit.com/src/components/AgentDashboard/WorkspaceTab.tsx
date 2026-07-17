@@ -17,6 +17,7 @@ import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { SkillBuilderWizard, HeartbeatScheduler, PackageManager } from '@/components/agent-workspace';
+import { WorkspaceChatEditor } from '@/components/agent-workspace/WorkspaceChatEditor';
 import type { Agent, AgentWorkspaceLayers } from '@/lib/agents/agent.types';
 
 import { createModuleLogger } from '@/lib/logger';
@@ -44,6 +45,11 @@ const getFileLayer = (path: string): keyof AgentWorkspaceLayers => {
   if (normalized.includes('business') || normalized.includes('api') || normalized.includes('integration')) return 'business';
   return 'skills'; // default
 };
+
+// The file tree carries workspace-rooted paths that may be relative
+// (`agents/<id>/…`) or absolute (`/Users/<u>/agents/<id>/…`). Strip everything
+// up to the first `agents/<id>/` segment so labels show workspace-relative paths.
+const workspaceRelativePath = (p: string) => p.replace(/^.*?agents\/[^/]+\//, '');
 
 export function WorkspaceTab({ agent }: WorkspaceTabProps) {
   const [files, setFiles] = useState<Array<{ name: string; path: string; type: 'file' | 'directory' }>>([]);
@@ -142,7 +148,8 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
   const groupedFiles = useMemo(() => {
     const groups: Record<string, typeof filteredFiles> = {};
     filteredFiles.forEach(file => {
-      const dir = file.path.split('/').slice(0, -1).join('/') || 'Root';
+      const rel = workspaceRelativePath(file.path);
+      const dir = rel.split('/').slice(0, -1).join('/') || 'Root';
       if (!groups[dir]) groups[dir] = [];
       groups[dir].push(file);
     });
@@ -205,8 +212,8 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
           {filteredFiles.length > 0 ? (
             Object.entries(groupedFiles).map(([dir, dirFiles]) => (
               <div key={dir} className="mb-4">
-                <div className="text-[12px] font-semibold text-studio-text-muted uppercase tracking-wider mb-2 pl-2">
-                  {dir.replace(/^agents\/[^/]+/, '').replace(/^\//, '') || 'Root'}
+                <div className="text-[12px] font-semibold text-studio-text-muted tracking-wider mb-2 pl-2 font-mono">
+                  {dir}
                 </div>
                 {dirFiles.map(file => (
                   <button type="button"
@@ -226,7 +233,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                       <FileText size={14} className="shrink-0" />
                     )}
                     <span className="truncate">
-                      {file.path.replace(/^agents\/[^/]+\//, '')}
+                      {workspaceRelativePath(file.path).split('/').pop()}
                     </span>
                   </button>
                 ))}
@@ -289,7 +296,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <FileText size={16} className="text-[var(--accent-primary)] shrink-0" />
                 <span className="text-[13px] font-mono text-studio-text-primary truncate">
-                  {selectedFile.replace(/^agents\/[^/]+\//, '')}
+                  {workspaceRelativePath(selectedFile)}
                 </span>
               </div>
               <Button
@@ -315,6 +322,16 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
               onChange={(e) => setFileContent(e.target.value)}
               className="flex-1 border-none rounded-none bg-studio-bg text-studio-text-primary font-mono text-[13px] leading-relaxed resize-none p-4 focus:ring-0"
               spellCheck={false}
+            />
+
+            {/* Chat-to-edit: proposes revised content; Apply loads it above,
+                Save persists — the chat never writes to disk itself. */}
+            <WorkspaceChatEditor
+              agentId={agent.id}
+              agentName={agent.name}
+              filePath={workspaceRelativePath(selectedFile)}
+              content={fileContent}
+              onApply={setFileContent}
             />
           </>
         ) : (

@@ -261,3 +261,75 @@ Until that migration, the unblocked Phase B work is:
 Next actions: finish the remaining kernel optimizations that can be validated
 with synthetic oracles, then hand off to the 32 GB machine for final end-to-end
 capture.
+
+## 32 GB validation runbook
+
+This runbook is self-contained. Copy the repository to the 32 GB machine and run
+the commands below from the project root
+(`Desktop/allternit-workspace/allternit`).
+
+### Prerequisites
+
+- macOS with `/Applications/Google Chrome.app` installed.
+- Node.js and the project's `node_modules` installed (including `playwright` and
+  `esbuild`).
+- Network access to Hugging Face for the pinned model revision (the runtime
+  range-streams weights; no manual download required).
+
+### Run the owned 512px harness
+
+```bash
+cd research/bonsai-webgpu-runtime-spec
+node owned-runtime-harness.mjs
+```
+
+The harness:
+- Bundles `owned-runtime-entry.ts` with esbuild.
+- Launches Chrome in a disposable profile with WebGPU enabled.
+- Generates a deterministic 512×512 PNG for prompt `"a red cube"`, seed `42`,
+  4 inference steps.
+- Writes the result to `owned-runtime-result.json` in the same directory.
+- Aborts if filesystem free space falls by 8 GB.
+- Deletes the disposable profile on success; leaves it for inspection on failure.
+
+### Expected 512px reference
+
+Native MLX companion reference (already generated on the 8 GB machine):
+- SHA-256: `479c4336bc19fd2a622195adb84da6231381fbb2be0a62ff440bfa0466656e2e`
+- Size: 203,721 bytes
+
+A successful owned run must match this hash byte-for-byte. If it does not, the
+mismatch is a numerical bug in the owned path, not a memory issue.
+
+### After the harness runs
+
+1. Read `owned-runtime-result.json` and compare `pngSha256` to the reference.
+2. If the hashes match, run the 1024px tiled path:
+   ```bash
+   # Edit owned-runtime-entry.ts to request 1024x1024, then re-run the harness.
+   ```
+   The provider and pipeline already accept 1024px; only the harness entry point
+   hardcodes 512px.
+3. If the 512px hashes do not match, capture the browser console logs and the
+   result JSON, then debug the first divergent layer (text encoder, a specific
+   transformer step, or VAE).
+4. Once 512px and 1024px both match, run the completion audit below and archive
+   the evidence.
+
+### Completion audit checklist
+
+Record these values for the final evidence archive:
+
+- [ ] Chrome version and GPU adapter name (from `chrome://gpu` or the probe).
+- [ ] macOS version.
+- [ ] Bundle hash of `owned-runtime-bundle.js` (SHA-256).
+- [ ] Model revision and `BONSAI_PINNED_ARTIFACT_BYTES` from `model-spec.ts`.
+- [ ] 512px prompt, seed, steps, duration, PNG byte length, and SHA-256.
+- [ ] 1024px prompt, seed, steps, duration, PNG byte length, and SHA-256.
+- [ ] Companion reference SHA-256 and byte length.
+- [ ] Confirmation that both runs stayed within the 8 GB disk guard.
+- [ ] Confirmation that the disposable browser profile and temp directories were
+      deleted after the runs.
+
+Update this README with the captured hashes and any fixes applied, then remove
+this runbook once the migration is complete.

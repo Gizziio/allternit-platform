@@ -17,3 +17,6 @@ export function getContext(): Context {
 export function setContext(ctx: Partial<Context>): void {
   currentContext = { ...currentContext, ...ctx }
 }
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../shared/utils/context.js'

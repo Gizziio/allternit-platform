@@ -31,3 +31,11 @@ export function parseFrontmatter(content: string): { frontmatter: Frontmatter; b
   
   return { frontmatter, body }
 }
+
+/** Scalar-coerce a frontmatter description; drops arrays/objects at runtime. */
+export function coerceDescriptionToString(value: unknown, context: string): string | undefined {
+  if (typeof value === 'string') return value
+  if (value === undefined || value === null) return undefined
+  console.warn(`[frontmatter] dropping non-string description for ${context}`)
+  return undefined
+}

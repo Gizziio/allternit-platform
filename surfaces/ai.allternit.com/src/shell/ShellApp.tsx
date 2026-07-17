@@ -492,6 +492,12 @@ function ShellAppInner(): React.ReactNode {
     }
   }, [active.viewType, activeMode, setActiveMode]);
 
+  // Apps & Extensions wants the full canvas width: collapse the rail when the
+  // view opens (the user can re-expand or peek it back at any time).
+  useEffect(() => {
+    if (active.viewType === 'apps-extensions') setIsRailCollapsed(true);
+  }, [active.viewType]);
+
   const [session, setSession] = useState(null);
   useEffect(() => { void getSession().then(setSession); }, []);
 

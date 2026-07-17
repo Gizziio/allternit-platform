@@ -4,10 +4,14 @@
     "baseUrl": ".",
     "paths": {
       "~/*": [
-        "./*"
+        "./*",
+        "../../../../src/*",
+        "../../../../src/runtime/*"
       ],
       "@/*": [
-        "./*"
+        "./*",
+        "../../../../src/*",
+        "../../../../src/runtime/*"
       ],
       "src/*": [
         "./*"
@@ -15,8 +19,50 @@
       "@modelcontextprotocol/sdk/*": [
         "./vendor/@modelcontextprotocol/sdk/dist/esm/*"
       ],
-      "@allternit/sdk": ["../../../../packages/sdk/src"],
-      "@allternit/sdk/*": ["../../../../packages/sdk/src/*"]
+      "@allternit/sdk": [
+        "../../../../packages/sdk/src"
+      ],
+      "@allternit/sdk/*": [
+        "../../../../packages/sdk/src/*"
+      ],
+      "@/services/*": [
+        "./*",
+        "../../../../src/services/*",
+        "../../../../src/runtime/services/*"
+      ],
+      "@/state/*": [
+        "./*",
+        "../../../../src/state/*",
+        "../../../../src/runtime/state/*"
+      ],
+      "@/hooks/*": [
+        "./*",
+        "../../../../src/hooks/*",
+        "../../../../src/runtime/hooks/*"
+      ],
+      "@/commands/*": [
+        "./*",
+        "../../../../src/commands/*",
+        "../../../../src/runtime/commands/*"
+      ],
+      "@/utils/*": [
+        "./*",
+        "../../../../src/utils/*",
+        "../../../../src/shared/utils/*",
+        "../../../../src/runtime/utils/*"
+      ],
+      "@/tools/*": [
+        "./*",
+        "../../../../src/tools/*",
+        "../../../../src/shared/tools/*",
+        "../../../../src/runtime/tools/*"
+      ],
+      "@/runtime/*": [
+        "../../../../src/runtime/*"
+      ],
+      "react/compiler-runtime": [
+        "../../../../src/vendor/anthropic-stubs/react-compiler-runtime.ts"
+      ]
     }
   },
   "include": [

@@ -323,3 +323,12 @@ export default {
   setSessionItem,
   removeSessionItem,
 }
+
+/** Per-project transcript directory, keyed by a slugified cwd. */
+export function getProjectDir(cwd: string): string {
+  const slug = cwd.replace(/[^a-zA-Z0-9]/g, '-')
+  return join(homedir(), '.config', 'gizzi', 'projects', slug)
+}
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../shared/utils/sessionStorage.js'

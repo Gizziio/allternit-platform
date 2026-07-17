@@ -238,10 +238,22 @@ export function classifyAxiosError(e: unknown): {
   return { kind: 'http', status, message }
 }
 
-// Default export for compatibility
+// Rebuilt default export (merge-rot repair): real named exports only.
 export default {
-  GizziError,
-  isGizziError,
-  createError,
-  wrapError,
+  ClaudeError,
+  MalformedCommandError,
+  AbortError,
+  isAbortError,
+  ConfigParseError,
+  ShellError,
+  TeleportOperationError,
+  hasExactErrorMessage,
+  toError,
+  errorMessage,
+  getErrnoCode,
+  isENOENT,
+  getErrnoPath,
+  shortErrorStack,
+  isFsInaccessible,
+  classifyAxiosError,
 }

@@ -9,14 +9,51 @@
     "incremental": true,
     "jsx": "preserve",
     "jsxImportSource": "@opentui/solid",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "moduleResolution": "bundler",
     "noUncheckedIndexedAccess": false,
     "verbatimModuleSyntax": false,
-    "customConditions": ["browser"],
+    "customConditions": [
+      "browser"
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@tui/*": ["./src/cli/ui/tui/*"]
+      "@/*": [
+        "./src/*",
+        "./src/runtime/*",
+        "./src/cli/ui/ink-app/*"
+      ],
+      "@tui/*": [
+        "./src/cli/ui/tui/*"
+      ],
+      "src/*": [
+        "./src/*",
+        "./src/cli/ui/ink-app/*"
+      ],
+      "@anthropic-ai/sandbox-runtime": [
+        "./src/vendor/anthropic-stubs/sandbox-runtime.ts"
+      ],
+      "@anthropic-ai/bedrock-sdk": [
+        "./src/vendor/anthropic-stubs/bedrock-sdk.ts"
+      ],
+      "@anthropic-ai/foundry-sdk": [
+        "./src/vendor/anthropic-stubs/foundry-sdk.ts"
+      ],
+      "@anthropic-ai/vertex-sdk": [
+        "./src/vendor/anthropic-stubs/vertex-sdk.ts"
+      ],
+      "@allternit/extension": [
+        "./src/vendor/anthropic-stubs/allternit-extension.ts"
+      ],
+      "audio-capture-napi": [
+        "./src/vendor/anthropic-stubs/audio-capture-napi.ts"
+      ],
+      "react/compiler-runtime": [
+        "./src/vendor/anthropic-stubs/react-compiler-runtime.ts"
+      ]
     }
   }
 }

@@ -1,3 +1,3 @@
 pub mod store;
 
-pub use store::{ReceiptStore, ReceiptStoreOptions};
+pub use store::{ReceiptQuery, ReceiptStore, ReceiptStoreOptions};

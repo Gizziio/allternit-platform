@@ -333,7 +333,15 @@ export const useAgentStore = create<AgentState & AgentActions>()(
               .join(', ');
             throw new Error(`Agent creation checklist incomplete: ${failed}`);
           }
-          const agent = await agentService.createAgent(input);
+          // Guard against a wedged request leaving the wizard on "Creating…"
+          // forever: surface a real error instead (retryable on next submit).
+          const CREATE_TIMEOUT_MS = 45_000;
+          const agent = await Promise.race([
+            agentService.createAgent(input),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Agent creation timed out — the runtime API did not respond. Please try again.')), CREATE_TIMEOUT_MS)
+            ),
+          ]);
           set(state => ({ 
             agents: [agent, ...state.agents],
             isCreating: false,

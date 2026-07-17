@@ -10,6 +10,7 @@ import { CodeCanvasTileTerminal } from '@/components/canvas/CodeCanvasTileTermin
 import { CodeCanvasTileNotes } from '@/components/canvas/CodeCanvasTileNotes';
 import { CodeCanvasTileKnowledge } from '@/components/canvas/CodeCanvasTileKnowledge';
 import { CodeCanvasTileKnowledgeGraph } from '@/components/canvas/CodeCanvasTileKnowledgeGraph';
+import { CodeCanvasTileExecutor } from '@/components/canvas/CodeCanvasTileExecutor';
 
 interface CodeFocusViewProps {
   tile: CodeCanvasTile;
@@ -175,6 +176,7 @@ function FocusTileContent({
           terminalId={tile.tileId}
           sessionId={tile.sessionId}
           workspacePath={workspacePath}
+          startupCommand={tile.startupCommand}
         />
       );
     case 'notes':
@@ -189,12 +191,16 @@ function FocusTileContent({
               { recordHistory: false },
             )
           }
+          shared={tile.shared}
+          workspacePath={workspacePath}
         />
       );
     case 'knowledge':
       return workspacePath ? <CodeCanvasTileKnowledge workspacePath={workspacePath} /> : null;
     case 'knowledge-graph':
       return <CodeCanvasTileKnowledgeGraph workspacePath={workspacePath} />;
+    case 'executor':
+      return <CodeCanvasTileExecutor tile={tile} workspaceId={workspaceId} />;
     default:
       return (
         <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ui-text-muted)', fontSize: 13 }}>

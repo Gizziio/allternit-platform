@@ -42,6 +42,7 @@ import { CoworkTeamCommand } from "@/cli/commands/cowork-team"
 import { AgentCommand } from "@/cli/commands/agent"
 import { ProviderCommand } from "@/cli/commands/provider"
 import { RuntimeCommand } from "@/cli/commands/runtime"
+import { AllternitCommand } from "@/cli/commands/allternit"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -158,6 +159,7 @@ const cli = yargs(hideBin(process.argv))
   .command(AgentCommand)
   .command(ProviderCommand)
   .command(RuntimeCommand)
+  .command(AllternitCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

@@ -73,6 +73,27 @@ cp "$GIZZI_BIN" "$RESOURCES_DIR/bin/gizzi-code"
 chmod +x "$RESOURCES_DIR/bin/gizzi-code"
 ok "gizzi-code → $RESOURCES_DIR/bin/gizzi-code"
 
+# ── 2a. Vendor allternit-mux (PTY daemon gizzi auto-spawns for /pty) ────────
+step "Vendoring allternit-mux…"
+(cd "$WORKSPACE_ROOT" && cargo build --release -p allternit-mux)
+MUX_BIN="$WORKSPACE_ROOT/target/release/allternit-mux"
+[ -f "$MUX_BIN" ] || die "allternit-mux build failed — binary not found at $MUX_BIN"
+cp "$MUX_BIN" "$RESOURCES_DIR/bin/allternit-mux"
+chmod +x "$RESOURCES_DIR/bin/allternit-mux"
+ok "allternit-mux → $RESOURCES_DIR/bin/allternit-mux"
+
+# ── 2b. Vendor ripgrep (GrepTool backend, Claude Code layout) ───────────────
+step "Vendoring ripgrep…"
+RG_LAYOUT="$(uname -m | sed 's/x86_64/x64/')-$(uname | tr '[:upper:]' '[:lower:]' | sed 's/darwin/darwin/')"
+RG_SRC="$GIZZI_DIR/vendor/ripgrep/$RG_LAYOUT/rg"
+if [ ! -f "$RG_SRC" ]; then
+  "$GIZZI_DIR/script/vendor-ripgrep.sh" || die "ripgrep vendor download failed"
+fi
+mkdir -p "$RESOURCES_DIR/bin/vendor/ripgrep/$RG_LAYOUT"
+cp "$RG_SRC" "$RESOURCES_DIR/bin/vendor/ripgrep/$RG_LAYOUT/rg"
+chmod +x "$RESOURCES_DIR/bin/vendor/ripgrep/$RG_LAYOUT/rg"
+ok "ripgrep → $RESOURCES_DIR/bin/vendor/ripgrep/$RG_LAYOUT/rg"
+
 # ── 2b. Build Voice Service Sidecar ─────────────────────────────────────────
 step "Building bundled voice service…"
 VOICE_VENV="$VOICE_DIR/.packaging-venv"

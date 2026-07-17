@@ -13,3 +13,6 @@ export function getEffortLevel(): EffortLevel {
 export function setEffortLevel(level: EffortLevel): void {
   // Implementation
 }
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../shared/utils/effort.js'

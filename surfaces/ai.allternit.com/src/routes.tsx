@@ -70,6 +70,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
 const StatusPage = lazy(() => import('./pages/StatusPage'))
 const ConnectPage = lazy(() => import('./pages/ConnectPage'))
+const ExtensionInstalledPage = lazy(() => import('./pages/ExtensionInstalledPage'))
 const DebugModePage = lazy(() => import('./pages/DebugModePage'))
 const GalleryTestPage = lazy(() => import('./pages/GalleryTestPage'))
 const SwarmPreviewPage = lazy(() => import('./pages/SwarmPreviewPage'))
@@ -105,6 +106,7 @@ export default function AppRoutes() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/status" element={<StatusPage />} />
         <Route path="/connect" element={<ConnectPage />} />
+        <Route path="/extension/installed" element={<ExtensionInstalledPage />} />
         <Route path="/debug-mode" element={<DebugModePage />} />
         <Route path="/gallery-test" element={<GalleryTestPage />} />
         <Route path="/swarm-preview" element={<SwarmPreviewPage />} />

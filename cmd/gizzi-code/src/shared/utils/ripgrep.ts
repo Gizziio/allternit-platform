@@ -1,5 +1,6 @@
 import type { ChildProcess, ExecFileException } from 'child_process'
 import { execFile, spawn } from 'child_process'
+import { existsSync } from 'fs'
 import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import * as path from 'path'
@@ -44,8 +45,18 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
     }
   }
 
+  // Vendored ripgrep (Claude Code layout): resolved relative to the running
+  // executable when compiled, and relative to this module in dev.
+  const vendored = vendoredRipgrepPath()
+  if (vendored) {
+    return { mode: 'builtin', command: vendored, args: [] }
+  }
+
   // In bundled (native) mode, ripgrep is statically compiled into bun-internal
   // and dispatches based on argv[0]. We spawn ourselves with argv0='rg'.
+  // NOTE: only valid for builds that statically link ripgrep (Claude Code's
+  // custom build); plain `bun build --compile` binaries must use the vendored
+  // binary above, which is why the vendored check comes first.
   if (isInBundledMode()) {
     return {
       mode: 'embedded',
@@ -63,6 +74,38 @@ const getRipgrepConfig = memoize((): RipgrepConfig => {
 
   return { mode: 'builtin', command, args: [] }
 })
+
+/**
+ * Vendored ripgrep binary if present on disk. Checks, in order:
+ * 1. <execDir>/vendor/ripgrep/<arch>-<platform>/rg (compiled binary layout)
+ * 2. <moduleDir>/vendor/ripgrep/<arch>-<platform>/rg (bundled-module layout)
+ * 3. <pkgRoot>/vendor/ripgrep/<arch>-<platform>/rg (dev/source tree)
+ */
+function vendoredRipgrepPath(): string | null {
+  const file = process.platform === 'win32' ? 'rg.exe' : 'rg'
+  const layoutDir = `${process.arch}-${process.platform}`
+  const moduleDir = path.dirname(__filename)
+  const candidates = [
+    path.resolve(
+      path.dirname(process.execPath),
+      'vendor',
+      'ripgrep',
+      layoutDir,
+      file,
+    ),
+    path.resolve(moduleDir, 'vendor', 'ripgrep', layoutDir, file),
+    // src/shared/utils -> package root
+    path.resolve(moduleDir, '..', '..', '..', 'vendor', 'ripgrep', layoutDir, file),
+  ]
+  for (const candidate of candidates) {
+    try {
+      if (existsSync(candidate)) return candidate
+    } catch {
+      // keep looking
+    }
+  }
+  return null
+}
 
 export function ripgrepCommand(): {
   rgPath: string

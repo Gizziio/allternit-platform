@@ -154,17 +154,14 @@ export function normalizePathForConfigKey(path: string): string {
   // This is safe because forward slashes work in Windows paths for most operations
   return normalized.replace(/\\/g, '/')
 }
-
-// Default export for compatibility
+// Rebuilt default export (merge-rot repair): real named exports only.
 export default {
+  expandPath,
+  toRelativePath,
+  getDirectoryForPath,
+  containsPathTraversal,
+  normalizePathForConfigKey,
   normalizePath,
-  joinPath,
-  resolvePath,
-  relativePath,
-  dirname,
-  basename,
-  extname,
-  isAbsolutePath,
 }
 
 // Auto-added export

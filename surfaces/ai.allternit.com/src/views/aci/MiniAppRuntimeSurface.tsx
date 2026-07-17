@@ -43,7 +43,7 @@ export function MiniAppRuntimeSurface({
         <webview
           src={presentation.uiUrl}
           className="size-full border-0 bg-white"
-          allowpopups={true}
+          allowpopups="true"
           partition={
             presentation.electronPartition || `persist:allternit-${app.id}`
           }

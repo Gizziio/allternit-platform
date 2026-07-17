@@ -13,10 +13,12 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import {
+  isPlatformAuthDisabled,
   usePlatformAuth,
   usePlatformOrganization,
   usePlatformUser,
 } from "@/lib/platform-auth-client";
+import { getCurrentUserProfile } from "@/lib/design/current-user";
 import {
   getEnterpriseUsageSummary,
   type EnterpriseUsageSummary,
@@ -126,8 +128,42 @@ export function EnterpriseByocPanel() {
   const auth = usePlatformAuth();
   const { isLoaded: userLoaded, isSignedIn } = usePlatformUser();
   const { isLoaded: orgLoaded, organization, membership } = usePlatformOrganization();
-  const organizationId = auth.orgId ?? organization?.id ?? null;
-  const organizationRole = auth.orgRole ?? membership?.role ?? null;
+  const authDisabled = isPlatformAuthDisabled();
+
+  // Self-hosted / local-dev builds have no Clerk key, so isSignedIn/organization
+  // never resolve via Clerk's own hooks -- read the backend-resolved
+  // organization instead (auth_middleware always resolves one, synthesizing
+  // a personal org when Clerk reports none). See OrganizationAccessPanel.tsx
+  // for the fuller explanation; same fallback, needed here too since this
+  // component computes its own organizationId/role for tab gating.
+  const [fallbackOrgId, setFallbackOrgId] = useState<string | null>(null);
+  const [fallbackOrgRole, setFallbackOrgRole] = useState<string | null>(null);
+  const [fallbackLoaded, setFallbackLoaded] = useState(!authDisabled);
+
+  useEffect(() => {
+    if (!authDisabled) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = await getCurrentUserProfile();
+        if (cancelled) return;
+        setFallbackOrgId(profile.organization_id ?? null);
+        setFallbackOrgRole(profile.organization_role ?? null);
+      } catch {
+        if (!cancelled) {
+          setFallbackOrgId(null);
+          setFallbackOrgRole(null);
+        }
+      } finally {
+        if (!cancelled) setFallbackLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [authDisabled]);
+
+  const resolvedIsSignedIn = authDisabled ? Boolean(fallbackOrgId) : isSignedIn;
+  const organizationId = authDisabled ? fallbackOrgId : (auth.orgId ?? organization?.id ?? null);
+  const organizationRole = authDisabled ? fallbackOrgRole : (auth.orgRole ?? membership?.role ?? null);
   const canManageBilling = hasOrganizationAdminAccess(organizationRole);
   const period = useMemo(currentBillingPeriod, []);
   const [activeTab, setActiveTab] = useState<EnterpriseTab>("overview");
@@ -197,9 +233,11 @@ export function EnterpriseByocPanel() {
     };
   }, [activeTab, canManageBilling, organizationId, runtimeAvailable]);
 
-  if (!userLoaded || !orgLoaded) return <SkeletonRow lines={5} />;
+  if (authDisabled ? !fallbackLoaded : (!userLoaded || !orgLoaded)) {
+    return <SkeletonRow lines={5} />;
+  }
 
-  if (!isSignedIn || !organizationId || !organization) {
+  if (!resolvedIsSignedIn || !organizationId || (!authDisabled && !organization)) {
     return (
       <div className="space-y-5">
         <div>
@@ -262,7 +300,11 @@ export function EnterpriseByocPanel() {
         <EmptyState
           icon={<ShieldCheck size={32} weight="thin" />}
           title="Owner or admin access required"
-          caption="Only organization owners and admins can manage cloud credentials or view metered billing. Ask an admin to update your Clerk organization role."
+          caption={
+            authDisabled
+              ? "Only organization owners and admins can manage cloud credentials or view metered billing."
+              : "Only organization owners and admins can manage cloud credentials or view metered billing. Ask an admin to update your Clerk organization role."
+          }
         />
       ) : activeTab === "overview" ? (
         <div className="space-y-4">
@@ -270,12 +312,16 @@ export function EnterpriseByocPanel() {
             <Requirement
               ready={Boolean(organizationId)}
               title="Organization selected"
-              detail={`${organization.name} is the active security and billing boundary.`}
+              detail={`${authDisabled ? "Your personal organization" : organization?.name} is the active security and billing boundary.`}
             />
             <Requirement
               ready={canManageBilling}
               title="Admin billing permission"
-              detail="Your signed Clerk role can manage credentials and metered usage."
+              detail={
+                authDisabled
+                  ? "Your organization role can manage credentials and metered usage."
+                  : "Your signed Clerk role can manage credentials and metered usage."
+              }
             />
             <Requirement
               ready={runtimeAvailable}

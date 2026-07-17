@@ -93,7 +93,9 @@ export function useAgentBootstrap({ enabled = true }: UseAgentBootstrapOptions =
       if (gizziAgents.length === 0) {
         try {
           const gizziInput = defineAgent(GIZZI_SEED);
-          await createAgent(gizziInput);
+          // agentWorkspaceService.create() registers the agent record itself
+          // and scaffolds its workspace; calling createAgent() here as well
+          // would persist a duplicate, orphaned Gizzi row.
           await agentWorkspaceService.create(gizziInput, 'allternit-standard');
         } catch (e) {
           logger.error({ err: e }, 'Gizzi creation failed');

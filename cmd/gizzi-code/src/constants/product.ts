@@ -74,3 +74,6 @@ export function getRemoteSessionUrl(
   const baseUrl = getGizziBaseUrl(compatId, ingressUrl)
   return `${baseUrl}/code/${compatId}`
 }
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../cli/ui/ink-app/constants/product.js'

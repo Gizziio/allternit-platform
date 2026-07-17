@@ -1,6 +1,6 @@
 # ALLTERNIT-MUX — Unified Agent Terminal Multiplexer
 
-> **STATUS:** In implementation
+> **STATUS:** v1 implemented and verified (build + 15 tests + full-lifecycle smoke pass, 2026-07-17)
 > **CREATED:** 2026-07-16
 > **GOAL:** Close the terminal-layer gaps vs. Herdr identified in the 2026-07-16 gap analysis.
 

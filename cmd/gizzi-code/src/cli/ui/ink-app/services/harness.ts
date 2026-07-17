@@ -306,6 +306,115 @@ export function validateHarnessConfig(config: unknown): HarnessConfig {
   return harnessConfig
 }
 
+/**
+ * Screen-facing harness service facade (merge-rot repair: the ink screens
+ * were written against this API but it was never merged). Lazily backed by
+ * createAgentHarness(); reports unavailable until a harness config exists.
+ * sendMessage throws loudly when invoked while no harness is available.
+ */
+export interface HarnessServiceCallbacks {
+  onText?: (text: string) => void
+  onToolUse?: (toolUse: { id: string; name: string; arguments?: string }) => void
+  onToolResult?: (result: unknown) => void
+  onError?: (err: Error) => void
+  onComplete?: () => void
+}
+
+export interface HarnessService {
+  isAvailable(): boolean
+  cancel(): void
+  sendMessage(input: string, callbacks: HarnessServiceCallbacks): Promise<void>
+}
+
+let harnessServiceSingleton: HarnessService | undefined
+
+export function getHarnessService(): HarnessService {
+  if (harnessServiceSingleton) {
+    return harnessServiceSingleton
+  }
+  let harness: AllternitHarness | undefined
+  let harnessConfig: HarnessConfig | undefined
+  let initPromise: Promise<void> | undefined
+  let cancelled = false
+
+  const ensureHarness = (): Promise<void> => {
+    if (!initPromise) {
+      initPromise = (async () => {
+        harness = await createAgentHarness().catch(() => undefined)
+        if (harness) {
+          harnessConfig = await getAgentHarnessConfig().catch(() => undefined)
+        }
+      })()
+    }
+    return initPromise
+  }
+
+  const defaultProvider = (): string => {
+    const keys = harnessConfig?.byok ? Object.keys(harnessConfig.byok) : []
+    return keys[0] ?? 'anthropic'
+  }
+
+  harnessServiceSingleton = {
+    isAvailable: () => harness !== undefined,
+    cancel: () => {
+      cancelled = true
+    },
+    sendMessage: async (input, callbacks) => {
+      await ensureHarness()
+      if (!harness) {
+        throw new Error(
+          'Harness service unavailable: no harness configuration found',
+        )
+      }
+      cancelled = false
+      try {
+        for await (const chunk of harness.stream({
+          provider: defaultProvider(),
+          model: 'claude-3-5-haiku',
+          messages: [{ role: 'user', content: input }],
+          stream: true,
+        })) {
+          if (cancelled) {
+            break
+          }
+          switch (chunk.type) {
+            case 'text':
+              callbacks.onText?.(chunk.text)
+              break
+            case 'tool_call':
+            case 'tool_call_complete':
+              callbacks.onToolUse?.({
+                id: chunk.id,
+                name: chunk.name,
+                arguments:
+                  typeof chunk.arguments === 'string'
+                    ? chunk.arguments
+                    : JSON.stringify(chunk.arguments),
+              })
+              break
+            case 'tool_result':
+              callbacks.onToolResult?.(chunk)
+              break
+            case 'error':
+              callbacks.onError?.(
+                chunk.error instanceof Error
+                  ? chunk.error
+                  : new Error(String(chunk.error)),
+              )
+              break
+            case 'done':
+              callbacks.onComplete?.()
+              break
+          }
+        }
+      } catch (err) {
+        callbacks.onError?.(err instanceof Error ? err : new Error(String(err)))
+      }
+    },
+  }
+  return harnessServiceSingleton
+}
+
 export default {
   getAgentHarnessConfig,
   createAgentHarness,
@@ -313,4 +422,5 @@ export default {
   getGlobalHarnessConfig: getGlobalHarnessConfigSdk,
   setGlobalHarnessConfig: setGlobalHarnessConfigSdk,
   validateHarnessConfig,
+  getHarnessService,
 }
