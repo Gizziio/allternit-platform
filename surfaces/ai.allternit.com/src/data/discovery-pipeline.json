@@ -1,5 +1,137 @@
 [
   {
+    "id": "signal-2026-07-17-daily-brief",
+    "slug": "daily-brief-2026-07-17",
+    "type": "blog",
+    "contentType": "signal",
+    "status": "published",
+    "title": "Daily AI Brief: July 17, 2026",
+    "subtitle": "Allternit Signal · Curated Intelligence",
+    "abstract": "Security agent evaluation is moving past simple CTF success rates toward cost-aware metrics that weigh attacker spend against defender mitigation cost, while a new prompting strategy uses statistical self-consistency to improve few-shot reliability and uncertainty calibration in language models.",
+    "authors": [
+      "Allternit Signal"
+    ],
+    "teams": [
+      "research"
+    ],
+    "tags": [
+      "agentic-ai",
+      "safety-governance",
+      "research-frontier",
+      "product-engineering"
+    ],
+    "keywords": [
+      "cost-aware evaluation",
+      "security agents",
+      "offensive security",
+      "defensive security",
+      "statistical self-consistency",
+      "in-context learning",
+      "prompt aggregation",
+      "conditional expectation estimation"
+    ],
+    "createdAt": "2026-07-17T13:50:35.879Z",
+    "updatedAt": "2026-07-17T13:50:35.879Z",
+    "publishedAt": "2026-07-17T13:50:35.879Z",
+    "content": {
+      "markdown": "# Allternit Signal — 17 July 2026\n\n## Signal\n\nSecurity agent evaluation is finally shifting from CTF success-rate leaderboards to cost-aware tradeoffs. Kassianik et al. make the case that measuring peak offensive capability under generous inference budgets ignores the economics of real attacks and defenses, so production teams should evaluate agents by cost per compromise and defender mitigation cost, not just exploit completion.\n\n## Research\n\n- **[Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models](http://arxiv.org/abs/2607.15277v1)**  \n  Wolf et al. treat in-context learning as conditional expectation estimation and propose splitting the prompt into subsets, eliciting model outputs from each, and aggregating the results. This produces a more consistent estimator of the target conditional distribution and reduces dependence on any single prompt ordering or phrasing. For production teams, it offers a way to improve few-shot reliability and uncertainty calibration without fine-tuning or larger models — though it trades extra inference calls for stability.\n\n- **[Beyond Success Rate: Cost-Aware Evaluation of Offensive and Defensive Security Agents](http://arxiv.org/abs/2607.15263v1)**  \n  Kassianik, Nelson, and Singer argue that security-agent benchmarks overstate capability by granting unlimited inference budget for vulnerability discovery, exploit development, and CTF completion. They propose evaluating agents under realistic cost constraints, accounting for both attacker spend and defender mitigation cost. If you are building, buying, or hardening autonomous red-team tools, this reframes the buying decision: a lower success rate at a dramatically lower cost can still be a viable attack vector, and your defensive ROI should be measured accordingly.\n\n## Industry\n\nNo qualifying company blog posts, product launches, or policy updates in today’s source list.\n\n## Code\n\n- **[Nutlope/hallmark](https://github.com/Nutlope/hallmark)**  \n  A design skill/ruleset for AI coding assistants such as Claude Code, Cursor, and Codex, aimed at countering generic “AI slop” UI patterns. Use it if your frontend team is generating large volumes of agent-written code and the interfaces are converging on the same bland defaults.\n\n## Numbers\n\n| Source | Top item | Metric |\n|---|---|---|\n| GitHub Trending | [Nutlope/hallmark](https://github.com/Nutlope/hallmark) | 11,664 stars |\n\n*arXiv engagement metrics were not provided in today’s sources.*",
+      "sources": [
+        {
+          "source": "arxiv",
+          "title": "Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models",
+          "url": "http://arxiv.org/abs/2607.15277v1",
+          "engagement": {},
+          "relevanceScore": 0.5833333333333334,
+          "focusAreas": [
+            "infrastructure",
+            "local-inference"
+          ]
+        },
+        {
+          "source": "github",
+          "title": "Nutlope / hallmark (CSS)",
+          "url": "https://github.com/Nutlope/hallmark",
+          "engagement": {
+            "stars": 11664,
+            "forks": 579
+          },
+          "relevanceScore": 0.5,
+          "focusAreas": []
+        },
+        {
+          "source": "arxiv",
+          "title": "Beyond Success Rate: Cost-Aware Evaluation of Offensive and Defensive Security Agents",
+          "url": "http://arxiv.org/abs/2607.15263v1",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "infrastructure",
+            "research-frontier"
+          ]
+        }
+      ]
+    },
+    "readingTime": 3,
+    "featured": false,
+    "series": "Daily AI Brief",
+    "issueNumber": "2026-07-17",
+    "metrics": {
+      "views": 0,
+      "uniqueVisitors": 0,
+      "downloads": 11664,
+      "citationCount": 0
+    },
+    "license": "CC BY 4.0",
+    "accessLevel": "public"
+  },
+  {
+    "id": "bookmark-twitter-0",
+    "slug": "bookmark-0",
+    "type": "blog",
+    "contentType": "signal",
+    "status": "published",
+    "title": "Example: Add your real Twitter bookmarks here",
+    "subtitle": "twitter · Curated Bookmark",
+    "abstract": "Replace this file with your actual curated bookmarks. Curated from twitter.",
+    "authors": [
+      "@example"
+    ],
+    "teams": [
+      "research"
+    ],
+    "tags": [
+      "example"
+    ],
+    "keywords": [
+      "example"
+    ],
+    "createdAt": "2026-07-17T13:50:35.828Z",
+    "updatedAt": "2026-07-17T13:50:35.828Z",
+    "publishedAt": "2026-07-17T13:50:35.828Z",
+    "content": {
+      "markdown": "**Example: Add your real Twitter bookmarks here**\n\nBy @example\n\nhttps://x.com/karpathy/status/1850000000000000000",
+      "sources": [
+        {
+          "source": "twitter",
+          "title": "Example: Add your real Twitter bookmarks here",
+          "url": "https://x.com/karpathy/status/1850000000000000000"
+        }
+      ]
+    },
+    "readingTime": 1,
+    "featured": false,
+    "series": "Curated Bookmarks",
+    "metrics": {
+      "views": 0,
+      "uniqueVisitors": 0,
+      "downloads": 0,
+      "citationCount": 0
+    },
+    "license": "CC BY 4.0",
+    "accessLevel": "public"
+  },
+  {
     "id": "signal-2026-04-27-daily-brief",
     "slug": "daily-brief-2026-04-27",
     "type": "blog",
