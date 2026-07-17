@@ -13,6 +13,12 @@ export type {
   RoundSummary,
   WorldState,
   SimulationConfig,
+  SimulationProgressEvent,
+  SimulationStage,
+  SimulationReport,
+  SeedGraph,
+  SeedEntity,
+  SeedRelationship,
   AgentMemoryEvent,
 } from "./types";
 
@@ -25,4 +31,10 @@ export type { PersonaBuilderOptions } from "./persona-builder";
 export { buildInitialWorldState, runSimulation } from "./simulation-engine";
 export type { RunSimulationOptions } from "./simulation-engine";
 
+export { extractSeedGraph } from "./seed-graph";
+export { generateSimulationReport } from "./report";
+
 export { askPersona } from "./agent-chat";
+export type { AskExchange, AskPersonaOptions } from "./agent-chat";
+
+export { isAbortError } from "./model-call";

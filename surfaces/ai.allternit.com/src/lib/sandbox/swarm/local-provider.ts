@@ -14,6 +14,7 @@
 import { createModuleLogger } from '@/lib/logger';
 
 import { mapWithConcurrency } from "./concurrency";
+import { DEFAULT_CONCURRENCY } from "./scheduler";
 import type {
   SwarmBatchCreateResult,
   SwarmBatchDestroyResult,
@@ -27,7 +28,7 @@ import type {
 const logger = createModuleLogger('SwarmSandbox');
 
 /** Internal fan-out cap used if this provider is called directly, without `SwarmScheduler` in front. */
-const DEFAULT_INTERNAL_CONCURRENCY = 20;
+const DEFAULT_INTERNAL_CONCURRENCY = DEFAULT_CONCURRENCY;
 
 export interface LocalSwarmProviderOptions {
   /** Internal fan-out cap for this provider's own concurrency (see above). */

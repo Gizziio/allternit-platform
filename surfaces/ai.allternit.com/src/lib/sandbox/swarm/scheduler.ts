@@ -28,9 +28,11 @@ const logger = createModuleLogger('SwarmSandbox');
 /**
  * Sane default: bounded enough to stay well under typical provider
  * concurrency/rate limits without extra configuration. Tune via
- * `SwarmSchedulerOptions.concurrency` for your plan/quota.
+ * `SwarmSchedulerOptions.concurrency` for your plan/quota. Shared with
+ * `LocalSwarmProvider`'s internal fan-out so the scheduler and provider
+ * never disagree about how hard to hit a model backend.
  */
-export const DEFAULT_CONCURRENCY = 10;
+export const DEFAULT_CONCURRENCY = 5;
 
 export interface SwarmSchedulerOptions {
   /** Max in-flight create/destroy calls against the provider at once. */

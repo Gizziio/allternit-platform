@@ -18,8 +18,30 @@ vi.mock("@/lib/ai/providers", () => ({
 import { InMemoryMemoryStore } from "./memory-store";
 import { runSimulation } from "./simulation-engine";
 
-/** Persona-builder prompts ask for a JSON persona; turn prompts ask for plain text. */
+/**
+ * The staged pipeline makes four kinds of calls, each with a distinctive
+ * prompt: seed-graph extraction, persona JSON, plain-text turns, and the
+ * final report.
+ */
 function mockGenerateTextImpl(prompt: string, callIndex: number): { text: string } {
+  if (prompt.includes('"entities"')) {
+    return {
+      text: JSON.stringify({
+        entities: [{ name: "City Council", type: "organization", stance: "proposing" }],
+        relationships: [{ from: "City Council", to: "Retailers", relation: "regulates" }],
+      }),
+    };
+  }
+  if (prompt.includes('"executiveSummary"')) {
+    return {
+      text: JSON.stringify({
+        executiveSummary: "The crowd was mixed.",
+        riskSignals: ["backlash"],
+        narrativePaths: ["acceptance"],
+        confidence: "medium",
+      }),
+    };
+  }
   if (prompt.includes('"name":')) {
     return {
       text: JSON.stringify({
@@ -56,6 +78,13 @@ describe("runSimulation", () => {
     expect(world.currentRound).toBe(2);
     expect(world.roundSummaries).toHaveLength(2);
     expect(world.roundSummaries.map((s) => s.round)).toEqual([1, 2]);
+    // Full participation is recorded per round.
+    expect(world.roundSummaries.map((s) => `${s.agentsActed}/${s.agentsTotal}`)).toEqual(["3/3", "3/3"]);
+    // Graph and report stages ran.
+    expect(world.seedGraph?.entities[0]?.name).toBe("City Council");
+    expect(world.report?.confidence).toBe("medium");
+    // Round summaries use persona names, not internal unit ids.
+    expect(world.roundSummaries[0].summary).not.toContain("local-");
 
     for (const persona of world.personas) {
       const events = await memoryStore.retrieve(persona.id, { limit: 10 });
@@ -86,6 +115,47 @@ describe("runSimulation", () => {
 
     expect(world.personas).toHaveLength(3);
     // Every persona still exists in world state even though one turn failed.
+    expect(world.roundSummaries).toHaveLength(1);
+    // The degraded participation is recorded, not hidden.
+    expect(world.roundSummaries[0].agentsActed).toBe(2);
+    expect(world.roundSummaries[0].agentsTotal).toBe(3);
+  });
+
+  it("rejects with an abort error when cancelled mid-run", async () => {
+    const controller = new AbortController();
+
+    await expect(
+      runSimulation(
+        { kind: "news" as const, text: "Seed." },
+        { populationSize: 2, rounds: 3 },
+        {
+          signal: controller.signal,
+          onProgress: (event) => {
+            if (event.stage === "personas" && event.completed >= 1) controller.abort();
+          },
+        }
+      )
+    ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("still returns a world when graph extraction and report generation fail", async () => {
+    let callIndex = 0;
+    generateText.mockImplementation(async ({ prompt }: { prompt: string }) => {
+      callIndex += 1;
+      if (prompt.includes('"entities"') || prompt.includes('"executiveSummary"')) {
+        throw new Error("stage model down");
+      }
+      return mockGenerateTextImpl(prompt, callIndex);
+    });
+
+    const world = await runSimulation(
+      { kind: "news" as const, text: "Seed." },
+      { populationSize: 2, rounds: 1 }
+    );
+
+    expect(world.personas).toHaveLength(2);
+    expect(world.seedGraph).toBeNull();
+    expect(world.report).toBeUndefined();
     expect(world.roundSummaries).toHaveLength(1);
   });
 

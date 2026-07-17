@@ -30,6 +30,56 @@ export interface Persona {
 export interface RoundSummary {
   round: number;
   summary: string;
+  /** How many agents produced a turn this round vs. the population size. */
+  agentsActed: number;
+  agentsTotal: number;
+}
+
+/** One entity extracted from the seed material (graph-lite ingestion). */
+export interface SeedEntity {
+  name: string;
+  type: "person" | "organization" | "group" | "place" | "policy" | "event" | "other";
+  /** Short stance/attitude toward the seed material, if inferable. */
+  stance?: string;
+}
+
+/** One relationship between extracted entities. */
+export interface SeedRelationship {
+  from: string;
+  to: string;
+  relation: string;
+}
+
+/**
+ * Lightweight knowledge graph extracted from the seed in one model call —
+ * the "graph-lite" version of upstream MiroFish's GraphRAG stage. Personas
+ * are grounded in these entities instead of raw seed text alone.
+ */
+export interface SeedGraph {
+  entities: SeedEntity[];
+  relationships: SeedRelationship[];
+}
+
+/** Post-simulation synthesis produced by one model call over the round data. */
+export interface SimulationReport {
+  executiveSummary: string;
+  riskSignals: string[];
+  narrativePaths: string[];
+  confidence: "low" | "medium" | "high";
+}
+
+/** Progress events emitted while a simulation runs (staged-pipeline model). */
+export type SimulationStage = "graph" | "personas" | "rounds" | "report";
+
+export interface SimulationProgressEvent {
+  stage: SimulationStage;
+  /** Completed units within the stage (personas built, turns finished, …). */
+  completed: number;
+  total: number;
+  /** Current round number — rounds stage only. */
+  round?: number;
+  /** Total rounds — rounds stage only. */
+  rounds?: number;
 }
 
 /** The running state of one simulation. */
@@ -39,6 +89,10 @@ export interface WorldState {
   personas: Persona[];
   currentRound: number;
   roundSummaries: RoundSummary[];
+  /** Entities/relationships the personas were grounded in (null if extraction failed). */
+  seedGraph?: SeedGraph | null;
+  /** Final synthesis — absent if report generation failed (run still succeeds). */
+  report?: SimulationReport;
 }
 
 /** What's genuinely needed to run one simulation — kept minimal. */
