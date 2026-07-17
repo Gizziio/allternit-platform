@@ -146,6 +146,7 @@
     "docx": "^9.3.0",
     "dompurify": "^3.3.2",
     "drizzle-orm": "^0.40.0",
+    "e2b": "^2.34.0",
     "embla-carousel-react": "^8.6.0",
     "flexlayout-react": "^0.8.0",
     "ioredis": "^5.10.0",

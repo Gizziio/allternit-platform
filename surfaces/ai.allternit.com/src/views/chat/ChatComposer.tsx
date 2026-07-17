@@ -79,6 +79,8 @@ import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { TaskBar } from './components/TaskBar';
 import { ModeDock } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
+import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
+import { MiroFishPanel } from './panels/MiroFishPanel';
 import { BottomDock } from './components/BottomDock';
 import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
@@ -573,6 +575,10 @@ export function ChatComposer({
     agentModeSurface ? state.selectedModeBySurface[agentModeSurface] : null,
   );
   const setSelectedMode = useAgentSurfaceModeStore((state) => state.setSelectedMode);
+  const selectedSwarmSubMode = useAgentSurfaceModeStore((state) =>
+    agentModeSurface ? state.swarmSubModeBySurface[agentModeSurface] : 'specialist-team',
+  );
+  const setSwarmSubMode = useAgentSurfaceModeStore((state) => state.setSwarmSubMode);
   const agents = useAgentsWithSwarms();
 
   const selectedMentionAgent = useMemo(() => {
@@ -2524,16 +2530,32 @@ export function ChatComposer({
               selectedSurfaceAgent={selectedSurfaceAgent}
             />
           </div>
-          {selectedModeId && (
-            <div className="w-full mt-8 pb-4">
-              <TemplateGallery
-                modeId={selectedModeId}
-                onSelectTemplate={(prompt, template) => {
-                  setInput(prompt);
-                  setSelectedTemplateTitle(template.title);
-                  window.requestAnimationFrame(() => textareaRef.current?.focus());
+          {selectedModeId === 'swarms' && (
+            <div className="w-full mt-8">
+              <SwarmSubModeTabs
+                selectedSubMode={selectedSwarmSubMode}
+                onSelectSubMode={(subModeId) => {
+                  if (agentModeSurface) {
+                    setSwarmSubMode(agentModeSurface, subModeId);
+                  }
                 }}
               />
+            </div>
+          )}
+          {selectedModeId && (
+            <div className="w-full mt-8 pb-4">
+              {selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation' ? (
+                <MiroFishPanel />
+              ) : (
+                <TemplateGallery
+                  modeId={selectedModeId}
+                  onSelectTemplate={(prompt, template) => {
+                    setInput(prompt);
+                    setSelectedTemplateTitle(template.title);
+                    window.requestAnimationFrame(() => textareaRef.current?.focus());
+                  }}
+                />
+              )}
             </div>
           )}
         </div>
