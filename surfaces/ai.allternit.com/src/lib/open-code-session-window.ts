@@ -18,9 +18,9 @@ export function openCodeSessionWindow(options: {
   const isElectron = Boolean(window.allternit?.shell?.openSession);
 
   if (isElectron) {
-    void window.allternit.shell
-      .openSession(options)
-      .catch((err: unknown) => {
+    void window.allternit?.shell
+      ?.openSession(options)
+      ?.catch((err: unknown) => {
         // eslint-disable-next-line no-console
         console.error('[openCodeSessionWindow] Electron bridge failed:', err);
         openDetachedCodeSessionPopup(options);

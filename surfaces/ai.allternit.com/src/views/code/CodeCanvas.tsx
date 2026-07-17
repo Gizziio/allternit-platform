@@ -750,7 +750,7 @@ function CodeSessionSurface({
     if (isEmbeddedAgentSession && embeddedAgentSession?.sessionId) {
       const nextIsolation = codeSession?.metadata?.isolation === 'worktree' ? 'none' : 'worktree';
       void useCodeSessionStore.getState().updateSession(embeddedAgentSession.sessionId, {
-        metadata: { ...codeSession?.metadata, isolation: nextIsolation },
+        metadata: { ...codeSession?.metadata, originSurface: 'code', isolation: nextIsolation },
       });
       return;
     }
@@ -1430,6 +1430,7 @@ function ConversationStage({
 }) {
   const codeSessions = useCodeSessionStore((s) => s.sessions ?? []);
   const activeCodeSessionId = useCodeSessionStore((s) => s.activeSessionId);
+  const setActiveCodeSession = useCodeSessionStore((state) => state.setActiveSession);
   const activeCodeSession = useMemo(
     () => codeSessions.find((s) => s.id === activeCodeSessionId) ?? null,
     [activeCodeSessionId, codeSessions],

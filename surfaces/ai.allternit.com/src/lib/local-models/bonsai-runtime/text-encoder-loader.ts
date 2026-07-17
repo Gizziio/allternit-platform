@@ -77,12 +77,13 @@ export class BonsaiTextEncoderReader {
   }
 
   async loadEmbeddingRows(tokenIds: Uint32Array, signal?: AbortSignal): Promise<LoadedQwenEmbeddingRows> {
-    const vocabularyRows = Uint32Array.from(new Set(tokenIds));
-    const rowMap = new Map([...vocabularyRows].map((row, index) => [row, index]));
+    const vocabularyRowList = [...new Set(tokenIds)];
+    const vocabularyRows = Uint32Array.from(vocabularyRowList);
+    const rowMap = new Map(vocabularyRowList.map((row, index) => [row, index]));
     const [weight, scales, biases] = await Promise.all([
-      this.tensors.readRows(`${QWEN_EMBEDDING_KEY}.weight`, vocabularyRows, signal),
-      this.tensors.readRows(`${QWEN_EMBEDDING_KEY}.scales`, vocabularyRows, signal),
-      this.tensors.readRows(`${QWEN_EMBEDDING_KEY}.biases`, vocabularyRows, signal),
+      this.tensors.readRows(`${QWEN_EMBEDDING_KEY}.weight`, vocabularyRowList, signal),
+      this.tensors.readRows(`${QWEN_EMBEDDING_KEY}.scales`, vocabularyRowList, signal),
+      this.tensors.readRows(`${QWEN_EMBEDDING_KEY}.biases`, vocabularyRowList, signal),
     ]);
     const columns = weight.info.shape[1] * (32 / BONSAI_TEXT_ENCODER.bits);
     if (columns !== BONSAI_TEXT_ENCODER.hiddenDimensions) throw new Error("Qwen embedding width mismatch");

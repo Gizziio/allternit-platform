@@ -137,7 +137,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
           onOpenPane={openSideTab}
           onRename={renameSession}
           onFork={forkSession}
-          onArchive={() => activeCodeSessionId && void useCodeSessionStore.getState().updateSession(activeCodeSessionId, { isActive: false, metadata: { ...activeCodeSession?.metadata, archived: true } })}
+          onArchive={() => activeCodeSessionId && void useCodeSessionStore.getState().updateSession(activeCodeSessionId, { isActive: false, metadata: { ...activeCodeSession?.metadata, originSurface: 'code', archived: true } })}
           onDelete={() => activeCodeSessionId && window.confirm('Delete this session?') && void useCodeSessionStore.getState().deleteSession(activeCodeSessionId)}
           onOpenIn={openIn}
         />

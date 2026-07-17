@@ -17,8 +17,8 @@ use uuid::Uuid;
 /// Run service trait - defines the interface for run lifecycle management
 #[async_trait]
 pub trait RunService: Send + Sync + ApprovalHook {
-    /// Create a new run
-    async fn create(&self, request: CreateRunRequest) -> Result<Run, ApiError>;
+    /// Create a new run, optionally owned by a tenant (the authenticated user)
+    async fn create(&self, request: CreateRunRequest, tenant_id: Option<String>) -> Result<Run, ApiError>;
 
     /// Get a run by ID
     async fn get(&self, run_id: &str) -> Result<Run, ApiError>;
@@ -372,7 +372,7 @@ impl RunServiceImpl {
 
 #[async_trait]
 impl RunService for RunServiceImpl {
-    async fn create(&self, request: CreateRunRequest) -> Result<Run, ApiError> {
+    async fn create(&self, request: CreateRunRequest, tenant_id: Option<String>) -> Result<Run, ApiError> {
         let run_id = Uuid::new_v4().to_string();
         let now = Utc::now();
 
@@ -399,7 +399,7 @@ impl RunService for RunServiceImpl {
         .bind(0i32)
         .bind(sqlx::types::Json(request.config))
         .bind(None::<String>) // owner_id
-        .bind(None::<String>) // tenant_id
+        .bind(tenant_id) // tenant_id from authenticated user
         .bind(None::<String>) // runtime_id
         .bind(None::<String>) // runtime_type
         .bind(None::<String>) // schedule_id

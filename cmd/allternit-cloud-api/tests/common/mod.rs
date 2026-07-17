@@ -4,7 +4,7 @@
 //! with in-memory database and HTTP client.
 
 use allternit_cloud_api::{
-    create_router, ApiState,
+    create_rate_limiter, create_router, runtime, services, ApiState, RateLimitConfig,
     db::cowork_models::*,
 };
 use axum::{body::Body, http::Request, http::StatusCode, response::Response};
@@ -36,11 +36,41 @@ impl TestApp {
         // Create broadcast channel for events
         let (event_tx, _event_rx) = broadcast::channel::<allternit_cloud_api::DeploymentEvent>(100);
 
+        // Run tests in development mode so the auth middleware lets requests
+        // through without tokens.
+        std::env::set_var("Allternit_API_DEVELOPMENT_MODE", "true");
+
+        // Create shared services (mirrors the wiring in main.rs)
+        let event_store: Arc<dyn services::EventStore> =
+            Arc::new(services::EventStoreImpl::new(db.clone()));
+        let session_manager = Arc::new(runtime::session_manager::SessionManager::new(db.clone()));
+        let run_service: Arc<dyn services::RunService> =
+            Arc::new(services::RunServiceImpl::new(db.clone()).with_event_store(event_store.clone()));
+        let cost_service: Arc<dyn services::CostService> =
+            Arc::new(services::CostServiceImpl::new(db.clone()));
+        let quota_service = Arc::new(services::QuotaService::new(db.clone()));
+
+        // Generous rate limits so test traffic is never throttled
+        let rate_limit_config = RateLimitConfig {
+            requests_per_minute: 100_000,
+            window: std::time::Duration::from_secs(60),
+        };
+        let rate_limiter = create_rate_limiter(rate_limit_config.clone());
+        let public_rate_limiter = create_rate_limiter(rate_limit_config);
+
         // Create API state
         let state = Arc::new(ApiState {
             db: db.clone(),
             ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
             event_tx: event_tx.clone(),
+            event_store,
+            run_service,
+            session_manager,
+            rate_limiter,
+            public_rate_limiter,
+            cost_service,
+            quota_service,
+            fly_runtime_service: None,
         });
 
         // Create router
@@ -56,7 +86,14 @@ impl TestApp {
 
     /// Initialize test database with migrations
     async fn init_test_db(database_url: &str) -> SqlitePool {
-        let pool = sqlx::SqlitePool::connect(database_url)
+        use sqlx::sqlite::SqliteConnectOptions;
+        use std::str::FromStr;
+
+        let options = SqliteConnectOptions::from_str(database_url)
+            .expect("Invalid test database URL")
+            .create_if_missing(true);
+
+        let pool = sqlx::SqlitePool::connect_with(options)
             .await
             .expect("Failed to connect to test database");
 
@@ -172,6 +209,7 @@ impl TestApp {
                 ..Default::default()
             },
             auto_start: false,
+            region_id: None,
         };
 
         let response = self.post("/api/v1/runs", request).await;
@@ -293,9 +331,9 @@ impl TestApp {
             "job_template": {
                 "command": "echo".to_string(),
                 "args": Some(vec!["scheduled".to_string()]),
-                "env": None,
-                "working_dir": None,
-                "timeout_seconds": None,
+                "env": None::<serde_json::Value>,
+                "working_dir": None::<String>,
+                "timeout_seconds": None::<u64>,
             },
             "enabled": true,
         });
@@ -366,9 +404,9 @@ impl TestApp {
             "config": {
                 "command": "echo".to_string(),
                 "args": Some(vec!["job".to_string()]),
-                "env": None,
-                "working_dir": None,
-                "timeout_seconds": None,
+                "env": None::<serde_json::Value>,
+                "working_dir": None::<String>,
+                "timeout_seconds": None::<u64>,
             },
         });
 
@@ -400,20 +438,8 @@ impl TestApp {
 }
 
 /// Test context that cleans up after tests
-drop_impl! {
-    impl Drop for TestApp {
-        fn drop(&mut self) {
-            // Database is cleaned up automatically when temp_dir is dropped
-        }
+impl Drop for TestApp {
+    fn drop(&mut self) {
+        // Database is cleaned up automatically when temp_dir is dropped
     }
-}
-
-// Helper macro for implementing Drop
-#[macro_export]
-macro_rules! drop_impl {
-    (impl Drop for $type:ty { fn drop(&mut self) $body:block }) => {
-        impl Drop for $type {
-            fn drop(&mut self) $body
-        }
-    };
 }

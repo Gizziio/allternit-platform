@@ -116,6 +116,8 @@ export interface LocalGenerationRequest {
   tools?: LocalBrainTool[];
   temperature?: number;
   seed?: number;
+  width?: number;
+  height?: number;
   format?: "json" | Record<string, unknown>;
   signal?: AbortSignal;
 }

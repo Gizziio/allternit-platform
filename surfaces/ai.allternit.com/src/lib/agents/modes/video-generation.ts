@@ -82,7 +82,7 @@ export async function generateVideo(
       return payload;
     }
     case 'runway': {
-      const key = apiKeys?.runway ?? (typeof process !== 'undefined' ? process.env.RUNWAY_API_KEY : undefined);
+      const key = typeof process !== 'undefined' ? process.env.RUNWAY_API_KEY : undefined;
       if (!key) {
         throw new Error('Video generation requires a Runway API key. Add RUNWAY_API_KEY to your environment or provide it in settings.');
       }

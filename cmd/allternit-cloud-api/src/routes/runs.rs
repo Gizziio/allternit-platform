@@ -34,6 +34,7 @@ pub struct EventQuery {
 /// Create a new run
 pub async fn create_run(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Json(request): Json<CreateRunRequest>,
 ) -> Result<Json<Run>, ApiError> {
     tracing::info!("Creating run: {}", request.name);
@@ -56,8 +57,11 @@ pub async fn create_run(
         }
     }
 
-    // Use shared run service from state
-    let run = state.run_service.create(request).await?;
+    // Use shared run service from state; stamp the run with the caller's tenant
+    let run = state
+        .run_service
+        .create(request, Some(auth_context.user.user_id))
+        .await?;
 
     tracing::info!("Run created: {}", run.id);
     Ok(Json(run))

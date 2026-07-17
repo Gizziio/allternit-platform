@@ -7,7 +7,7 @@ export interface Extension {
   version: string;
   icon: string;
   author: string;
-  category: ExtensionCategory;
+  category: Exclude<ExtensionCategory, 'all'>;
   isInstalled: boolean;
   isEnabled: boolean;
   permissions: string[];

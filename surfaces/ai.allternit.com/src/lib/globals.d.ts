@@ -103,7 +103,7 @@ declare global {
         getStatus: (id: string) => Promise<{ managed: boolean; running: boolean; port: number | null }>;
         launchDesktop: (id: string) => Promise<{ success: boolean; error?: string }>;
         getApproval: (id: string, registration?: { id: string; name: string; version?: string; installCommand?: string; startCommand?: string; stopCommand?: string; healthUrl?: string; permissions?: { network?: string[]; filesystem?: string[]; secrets?: string[]; processes?: boolean } }) => Promise<{ approved: boolean; fingerprint?: string; approvedAt?: string }>;
-        reviewAndApprove: (registration: { id: string; name: string; version?: string; installCommand?: string; startCommand?: string; stopCommand?: string; healthUrl?: string; permissions?: { network?: string[]; filesystem?: string[]; secrets?: string[]; processes?: boolean } }) => Promise<{ success: boolean; approved: boolean; fingerprint?: string; error?: string }>;
+        reviewAndApprove: (registration: { id: string; name: string; version?: string; installCommand?: string; startCommand?: string; stopCommand?: string; healthUrl?: string; permissions?: { network?: string[]; filesystem?: string[]; secrets?: string[]; processes?: boolean }; oauth?: Record<string, unknown> }) => Promise<{ success: boolean; approved: boolean; fingerprint?: string; error?: string }>;
         revokeApproval: (id: string) => Promise<{ success: boolean }>;
         setSecret: (id: string, name: string, value: string) => Promise<{ success: boolean; error?: string }>;
         listSecrets: (id: string) => Promise<string[]>;
@@ -111,7 +111,7 @@ declare global {
         removeRuntime: (id: string) => Promise<{ success: boolean; error?: string }>;
         rollbackRuntime: (id: string) => Promise<{ success: boolean; error?: string }>;
         onProgress: (handler: (p: { id: string; line: string; type: 'stdout' | 'stderr' | 'info' }) => void) => () => void;
-        oauthStart?: (appId: string, providerId: string, provider: { authorizationUrl: string; tokenUrl: string; revocationUrl?: string; clientId: string; scopes: string[]; additionalAuthParams?: Record<string, string> }) => Promise<{ flowId?: string; error?: string }>;
+        oauthStart?: (appId: string, providerId: string, provider: { authorizationUrl: string; tokenUrl: string; revocationUrl?: string; clientId: string; scopes: string[]; additionalAuthParams?: Record<string, string> }, accountId: string) => Promise<{ flowId?: string; error?: string }>;
         oauthCancel?: (flowId: string) => Promise<{ success: boolean }>;
         oauthAccounts?: (appId: string) => Promise<Array<{ appId: string; providerId: string; accountId: string; scopes: string[]; expiresAt?: string; createdAt: string; lastRefreshedAt?: string; needsReauth: boolean }>>;
         oauthDisconnect?: (appId: string, providerId: string, accountId: string) => Promise<{ success: boolean; error?: string }>;

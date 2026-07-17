@@ -3,6 +3,7 @@ import { BONSAI_TEXT_ENCODER } from "./model-spec";
 import { PackedAffineMatmul, type PackedAffineMatrix } from "./packed-affine-matmul";
 import { QwenKernels } from "./qwen-kernels";
 import type { LoadedQwenLayer } from "./text-encoder-loader";
+import type { LoadedPackedAffineMatrix } from "./packed-affine-loader";
 import { TensorLayout } from "./tensor-layout";
 import { TransformerPrimitives } from "./transformer-primitives";
 
@@ -119,7 +120,7 @@ export class QwenLayerExecutor {
 
   private validate(layer: LoadedQwenLayer): void {
     const s = BONSAI_TEXT_ENCODER;
-    const shapes: Array<[PackedAffineMatrix, number, number]> = [
+    const shapes: Array<[LoadedPackedAffineMatrix, number, number]> = [
       [layer.query, s.attentionHeads * s.headDimensions, s.hiddenDimensions],
       [layer.key, s.keyValueHeads * s.headDimensions, s.hiddenDimensions],
       [layer.value, s.keyValueHeads * s.headDimensions, s.hiddenDimensions],

@@ -195,7 +195,7 @@ function createPipeline(device: GPUDevice, code: string, label: string): GPUComp
   return device.createComputePipeline({ label, layout: "auto", compute: { module: device.createShaderModule({ code }), entryPoint: "main" } });
 }
 
-export function dispatch1D(elements: number): [number, number, number] {
+function dispatch1D(elements: number): [number, number, number] {
   const groups = Math.ceil(elements / 256);
   if (groups <= 65535) return [groups, 1, 1];
   const y = Math.ceil(groups / 65535);

@@ -1006,8 +1006,8 @@ pub async fn finalize_run_cost_tracking(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_calculate_instance_cost() {
+    #[tokio::test]
+    async fn test_calculate_instance_cost() {
         let service = CostServiceImpl::new(SqlitePool::connect_lazy(":memory:").unwrap());
 
         // Test 1 hour at $0.01/hour
@@ -1020,8 +1020,8 @@ mod tests {
         assert_eq!(service.calculate_instance_cost(7200, 0.05), 0.10);
     }
 
-    #[test]
-    fn test_calculate_storage_cost() {
+    #[tokio::test]
+    async fn test_calculate_storage_cost() {
         let service = CostServiceImpl::new(SqlitePool::connect_lazy(":memory:").unwrap());
 
         // Test 100GB for 15 days at $0.10/GB/month
@@ -1030,12 +1030,12 @@ mod tests {
         assert!(cost < 10.0); // Should be roughly $0.50
     }
 
-    #[test]
-    fn test_calculate_transfer_cost() {
+    #[tokio::test]
+    async fn test_calculate_transfer_cost() {
         let service = CostServiceImpl::new(SqlitePool::connect_lazy(":memory:").unwrap());
 
         // Test 10GB at $0.09/GB
-        assert_eq!(service.calculate_transfer_cost(10.0, 0.09), 0.9);
+        assert!((service.calculate_transfer_cost(10.0, 0.09) - 0.9).abs() < 1e-9);
 
         // Test 0GB
         assert_eq!(service.calculate_transfer_cost(0.0, 0.09), 0.0);

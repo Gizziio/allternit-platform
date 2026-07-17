@@ -30,7 +30,7 @@ function encodeBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function decodeBase64(value: string): Uint8Array {
+function decodeBase64(value: string): Uint8Array<ArrayBuffer> {
   const binary = atob(value.replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }

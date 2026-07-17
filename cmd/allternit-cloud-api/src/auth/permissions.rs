@@ -201,7 +201,7 @@ impl PermissionChecker {
 /// Macro to require a specific permission in a route handler
 ///
 /// Usage:
-/// ```rust
+/// ```rust,ignore
 /// async fn handler(
 ///     auth: AuthContext,
 /// ) -> Result<Json<...>, ApiError> {

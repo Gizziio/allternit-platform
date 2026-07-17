@@ -92,7 +92,7 @@ export function useMiniAppCatalog(localCatalog: InstalledMiniApp[]) {
       })
       .then((payload) => {
         const records = Array.isArray(payload?.servers) ? payload.servers : [];
-        setRegistryApps(records.map(registryEntryToMiniApp).filter((app): app is InstalledMiniApp => app !== null));
+        setRegistryApps(records.map(registryEntryToMiniApp).filter((app: InstalledMiniApp | null): app is InstalledMiniApp => app !== null));
         setError(null);
       })
       .catch((reason) => {
