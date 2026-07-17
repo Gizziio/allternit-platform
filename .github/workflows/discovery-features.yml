@@ -24,6 +24,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install script dependencies
+        run: npm install --prefix .github/scripts --no-audit --no-fund agent-twitter-client
+
       - name: Import bookmarks
         run: node .github/scripts/import-bookmarks.cjs
 
@@ -31,6 +34,10 @@ jobs:
         env:
           KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          TWITTER_COOKIES: ${{ secrets.TWITTER_COOKIES }}
+          TWITTER_USERNAME: ${{ secrets.TWITTER_USERNAME }}
+          TWITTER_PASSWORD: ${{ secrets.TWITTER_PASSWORD }}
+          TWITTER_EMAIL: ${{ secrets.TWITTER_EMAIL }}
         run: node .github/scripts/generate-feature.cjs
 
       - name: Commit and push if changed

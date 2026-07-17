@@ -1,0 +1,28 @@
+[
+  { "handle": "_akhaliq", "category": "papers" },
+  { "handle": "arankomatsuzaki", "category": "papers" },
+  { "handle": "hardmaru", "category": "papers" },
+
+  { "handle": "AnthropicAI", "category": "labs" },
+  { "handle": "OpenAI", "category": "labs" },
+  { "handle": "GoogleDeepMind", "category": "labs" },
+  { "handle": "xai", "category": "labs" },
+  { "handle": "MetaAI", "category": "labs" },
+  { "handle": "huggingface", "category": "labs" },
+
+  { "handle": "Figure_robot", "category": "robotics" },
+  { "handle": "UnitreeRobotics", "category": "robotics" },
+  { "handle": "BostonDynamics", "category": "robotics" },
+  { "handle": "1x_tech", "category": "robotics" },
+
+  { "handle": "hackerfantastic", "category": "security" },
+  { "handle": "LiveOverflow", "category": "security" },
+  { "handle": "TheHackersNews", "category": "security" },
+  { "handle": "GossiTheDog", "category": "security" },
+
+  { "handle": "sama", "category": "industry" },
+  { "handle": "karpathy", "category": "industry" },
+  { "handle": "ylecun", "category": "industry" },
+  { "handle": "DrJimFan", "category": "industry" },
+  { "handle": "AndrewYNg", "category": "industry" }
+]

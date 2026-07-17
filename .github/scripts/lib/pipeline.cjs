@@ -8,6 +8,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { fetchXCurated } = require('./x-curated.cjs');
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -555,6 +556,10 @@ async function fetchAllSources(opts = {}) {
     ],
     blogLimit = 4,
     twitterLimit = 6,
+    includeXCurated = true,
+    xCuratedPerAccount = 10,
+    xCuratedTotalLimit = 120,
+    xCuratedDelayMs = 1500,
     includeBluesky = true,
     blueskyQueries = ['AI agents', 'LLM', 'robotics', 'foundation model'],
     blueskyLimit = 25,
@@ -570,6 +575,7 @@ async function fetchAllSources(opts = {}) {
     arxiv,
     github,
     twitter,
+    xcurated,
     bluesky,
     mastodon,
     ...blogResults
@@ -579,6 +585,13 @@ async function fetchAllSources(opts = {}) {
     fetchArxiv(arxivCats, arxivLimit),
     fetchGitHubTrending(githubLanguages, githubLimit),
     fetchTwitter(twitterLimit),
+    includeXCurated
+      ? fetchXCurated({
+          perAccountLimit: xCuratedPerAccount,
+          totalLimit: xCuratedTotalLimit,
+          delayMs: xCuratedDelayMs,
+        })
+      : Promise.resolve([]),
     includeBluesky ? fetchBluesky(blueskyQueries, blueskyLimit) : Promise.resolve([]),
     includeMastodon ? fetchMastodon(mastodonAccounts, mastodonLimit) : Promise.resolve([]),
     ...blogs.map((b) => fetchCompanyBlog(b.url, b.label, blogLimit)),
@@ -587,16 +600,16 @@ async function fetchAllSources(opts = {}) {
   const blogsFlat = blogResults.flat();
 
   console.log(
-    `Sources: ${hn.length} HN, ${reddit.length} Reddit, ${arxiv.length} arXiv, ${github.length} GitHub, ${twitter.length} Twitter, ${bluesky.length} Bluesky, ${mastodon.length} Mastodon, ${blogsFlat.length} blogs`,
+    `Sources: ${hn.length} HN, ${reddit.length} Reddit, ${arxiv.length} arXiv, ${github.length} GitHub, ${twitter.length} Twitter, ${xcurated.length} X (curated), ${bluesky.length} Bluesky, ${mastodon.length} Mastodon, ${blogsFlat.length} blogs`,
   );
 
-  const all = [...hn, ...reddit, ...arxiv, ...github, ...twitter, ...bluesky, ...mastodon, ...blogsFlat];
+  const all = [...hn, ...reddit, ...arxiv, ...github, ...twitter, ...xcurated, ...bluesky, ...mastodon, ...blogsFlat];
   const deduped = deduplicateSources(all);
   const filtered = filterSources(deduped);
 
   console.log(`After dedup + relevance filter: ${filtered.length} items`);
 
-  return { hn, reddit, arxiv, github, twitter, bluesky, mastodon, blogs: blogsFlat, filtered };
+  return { hn, reddit, arxiv, github, twitter, xcurated, bluesky, mastodon, blogs: blogsFlat, filtered };
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -643,7 +656,7 @@ function formatSourcesForPrompt(sources) {
 
   const lines = [];
   const sourceOrder = [
-    'arxiv', 'hackernews', 'reddit', 'twitter', 'bluesky', 'mastodon', 'github', 'bookmark',
+    'arxiv', 'hackernews', 'reddit', 'twitter', 'x', 'bluesky', 'mastodon', 'github', 'bookmark',
     'anthropic', 'openai', 'google-ai',
     'techcrunch-ai', 'techcrunch-robotics', 'wired', 'arstechnica', 'theverge',
     'mit-tech-review', 'venturebeat-ai', 'ieee-spectrum-ai', 'ieee-spectrum-robotics',
@@ -654,6 +667,7 @@ function formatSourcesForPrompt(sources) {
     hackernews: 'Hacker News',
     reddit: 'Reddit',
     twitter: 'X / Twitter',
+    x: 'X (curated)',
     bluesky: 'Bluesky',
     mastodon: 'Mastodon',
     github: 'GitHub Trending',
@@ -890,6 +904,7 @@ module.exports = {
   fetchArxiv,
   fetchGitHubTrending,
   fetchTwitter,
+  fetchXCurated,
   fetchBluesky,
   fetchMastodon,
   fetchCompanyBlog,
