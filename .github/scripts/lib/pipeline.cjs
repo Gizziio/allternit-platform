@@ -20,7 +20,7 @@ const BROWSER_UA =
 
 const DATA_FILE = path.resolve(
   __dirname,
-  '../../surfaces/ai.allternit.com/src/data/discovery-pipeline.json',
+  '../../../surfaces/ai.allternit.com/src/data/discovery-pipeline.json',
 );
 
 // ─── Brand Voice & Taxonomy ─────────────────────────────────────────────────
