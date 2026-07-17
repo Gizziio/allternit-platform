@@ -13,6 +13,7 @@ const {
   formatSourcesForPrompt,
   estimateReadingTime,
   callKimi,
+  KimiApiError,
   loadPipeline,
   savePipeline,
   buildPublication,
@@ -127,6 +128,7 @@ async function main() {
   const pipeline = loadPipeline();
   if (pipeline.some((p) => p.id === featureId)) {
     console.log(`Feature ${featureId} already exists. Skipping.`);
+    console.log('No new items added to discovery-pipeline.json.');
     return;
   }
 
@@ -137,13 +139,14 @@ async function main() {
     redditLimit: 6,
     arxivCats: ['cs.AI', 'cs.LG', 'cs.CL'],
     arxivLimit: 6,
-    githubTopics: ['ai', 'machine-learning', 'llm'],
+    githubLanguages: [''],
     githubLimit: 6,
     blogLimit: 4,
   });
 
   if (!filtered.length) {
     console.log('No relevant sources available. Skipping.');
+    console.log('No new items added to discovery-pipeline.json.');
     return;
   }
 
@@ -152,16 +155,17 @@ async function main() {
   // Step 1: Select trending topic
   console.log('Selecting trending topic...');
   const topicPrompt = buildTopicSelectionPrompt(sourcesText);
-  const topic = await callKimi([{ role: 'user', content: topicPrompt }], 200, 0.3);
+  const topic = await callKimi([{ role: 'user', content: topicPrompt }], 200);
   console.log('Topic:', topic);
 
   // Step 2: Generate feature article
   console.log('Generating feature article...');
   const featurePrompt = buildFeaturePrompt(topic, sourcesText);
-  const markdown = await callKimi([{ role: 'user', content: featurePrompt }], 4000, 0.4);
+  const markdown = await callKimi([{ role: 'user', content: featurePrompt }], 4000);
 
   if (!markdown) {
     console.error('Empty feature response. Skipping.');
+    console.log('No new items added to discovery-pipeline.json.');
     return;
   }
 
@@ -170,7 +174,7 @@ async function main() {
   let meta = {};
   try {
     const metaPrompt = buildMetadataPrompt(markdown);
-    const metaRaw = await callKimi([{ role: 'user', content: metaPrompt }], 1000, 0.1);
+    const metaRaw = await callKimi([{ role: 'user', content: metaPrompt }], 1000);
     meta = JSON.parse(metaRaw.replace(/^```json\s*|\s*```$/g, ''));
   } catch (err) {
     console.warn('[Metadata] LLM extraction failed, falling back:', err.message);
@@ -249,6 +253,13 @@ async function main() {
 }
 
 main().catch((err) => {
+  if (err instanceof KimiApiError && err.status === 403) {
+    // Subscription quota exhausted — transient, not a pipeline bug. Exit 0 so
+    // the workflow succeeds; the commit step finds no changes and skips.
+    console.error('Kimi API quota exhausted (403 usage limit). Skipping this run without failing the workflow.');
+    console.log('No new items added to discovery-pipeline.json.');
+    process.exit(0);
+  }
   console.error('Fatal error:', err);
   process.exit(1);
 });

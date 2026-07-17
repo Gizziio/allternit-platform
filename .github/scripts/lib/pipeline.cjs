@@ -271,11 +271,15 @@ async function fetchArxiv(categories = ['cs.AI', 'cs.LG', 'cs.CL'], limit = 6) {
   return all;
 }
 
-async function fetchGitHubTrending(topics = ['ai', 'machine-learning', 'llm'], limit = 5) {
+// NOTE: GitHub Trending only supports *language* filters in the URL path
+// (e.g. /trending/python). Topic paths like /trending/ai return an empty
+// "blankslate" page with no repo articles, so we scrape the global daily
+// page and rely on the relevance filter to keep AI-related repos.
+async function fetchGitHubTrending(languages = [''], limit = 8) {
   const all = [];
-  for (const topic of topics) {
+  for (const lang of languages) {
     try {
-      const url = `https://github.com/trending/${topic}?since=daily`;
+      const url = `https://github.com/trending${lang ? `/${encodeURIComponent(lang)}` : ''}?since=daily`;
       const r = await fetch(url, {
         headers: {
           'User-Agent': BROWSER_UA,
@@ -291,12 +295,15 @@ async function fetchGitHubTrending(topics = ['ai', 'machine-learning', 'llm'], l
         const titleMatch = block.match(/<h2[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>\s*<\/h2>/);
         const descMatch = block.match(/<p[^>]*class="[^"]*col-9[^"]*"[^>]*>([\s\S]*?)<\/p>/);
         const langMatch = block.match(/itemprop="programmingLanguage">([^<]+)</);
-        const starsMatch = block.match(/(\d+[KM]?) stars?/i);
-        const forksMatch = block.match(/(\d+[KM]?) forks?/i);
+        // Star/fork counts sit in links to /stargazers and /forks, after an
+        // inline SVG, formatted with thousands separators (e.g. "526,859").
+        const starsMatch = block.match(/href="\/[^"]+\/stargazers"[\s\S]*?<\/svg>\s*([\d,.]+[kKmM]?)\s*<\/a>/);
+        const forksMatch = block.match(/href="\/[^"]+\/forks"[\s\S]*?<\/svg>\s*([\d,.]+[kKmM]?)\s*<\/a>/);
 
-        const rawTitle = titleMatch ? titleMatch[2].replace(/\s+/g, ' ').trim() : '';
         const href = titleMatch ? titleMatch[1] : '';
-        const title = rawTitle.replace(/\//g, ' / ').trim();
+        // Derive "owner / repo" from the href — the link body contains an
+        // inline SVG icon that pollutes any text extraction.
+        const title = href.split('/').filter(Boolean).join(' / ');
 
         return {
           id: `github-${href.replace(/\//g, '-')}`,
@@ -314,7 +321,7 @@ async function fetchGitHubTrending(topics = ['ai', 'machine-learning', 'llm'], l
 
       all.push(...items.filter((i) => i.title));
     } catch (err) {
-      console.error(`[GitHub ${topic}] Failed:`, err.message);
+      console.error(`[GitHub ${lang || 'all'}] Failed:`, err.message);
     }
   }
   return all;
@@ -323,8 +330,8 @@ async function fetchGitHubTrending(topics = ['ai', 'machine-learning', 'llm'], l
 function parseCount(str) {
   if (!str) return 0;
   const num = parseFloat(str.replace(/,/g, ''));
-  if (str.endsWith('K')) return num * 1000;
-  if (str.endsWith('M')) return num * 1000000;
+  if (/k$/i.test(str)) return num * 1000;
+  if (/m$/i.test(str)) return num * 1000000;
   return num;
 }
 
@@ -417,8 +424,8 @@ async function fetchAllSources(opts = {}) {
     redditLimit = 5,
     arxivCats = ['cs.AI', 'cs.LG', 'cs.CL'],
     arxivLimit = 6,
-    githubTopics = ['ai', 'machine-learning', 'llm'],
-    githubLimit = 5,
+    githubLanguages = [''],
+    githubLimit = 8,
     blogs = [
       { url: 'https://www.anthropic.com/rss.xml', label: 'anthropic' },
       { url: 'https://openai.com/blog/rss.xml', label: 'openai' },
@@ -440,7 +447,7 @@ async function fetchAllSources(opts = {}) {
     fetchHN(hnLimit),
     fetchReddit(redditSubs, redditLimit),
     fetchArxiv(arxivCats, arxivLimit),
-    fetchGitHubTrending(githubTopics, githubLimit),
+    fetchGitHubTrending(githubLanguages, githubLimit),
     fetchTwitter(twitterLimit),
     ...blogs.map((b) => fetchCompanyBlog(b.url, b.label, blogLimit)),
   ]);
@@ -530,10 +537,24 @@ function estimateReadingTime(text) {
 
 // ─── LLM Call ───────────────────────────────────────────────────────────────
 
-async function callKimi(messages, maxTokens = 4000, temperature = 0.3) {
+class KimiApiError extends Error {
+  constructor(status, body) {
+    super(`Kimi API error ${status}: ${body}`);
+    this.name = 'KimiApiError';
+    this.status = status;
+  }
+}
+
+async function callKimi(messages, maxTokens = 4000) {
   if (!KIMI_API_KEY) {
     throw new Error('KIMI_API_KEY not set');
   }
+
+  // The kimi-for-coding endpoint rejects any temperature other than 1
+  // (HTTP 400: "invalid temperature: only 1 is allowed for this model").
+  // KIMI_TEMPERATURE overrides this if the endpoint policy ever changes.
+  const envTemp = Number(process.env.KIMI_TEMPERATURE);
+  const temperature = Number.isFinite(envTemp) ? envTemp : 1;
 
   const res = await fetch(KIMI_URL, {
     method: 'POST',
@@ -552,7 +573,7 @@ async function callKimi(messages, maxTokens = 4000, temperature = 0.3) {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Kimi API error ${res.status}: ${text}`);
+    throw new KimiApiError(res.status, text);
   }
 
   const data = await res.json();
@@ -703,6 +724,7 @@ module.exports = {
 
   // LLM
   callKimi,
+  KimiApiError,
   extractResponse,
 
   // IO
