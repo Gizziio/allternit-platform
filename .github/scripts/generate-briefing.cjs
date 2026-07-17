@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Allternit Signal — Daily Briefing Generator
+ * Allternit News — Daily Briefing Generator
  *
  * Fetches live sources, filters by relevance, calls Kimi API for
  * structured briefing generation with Allternit editorial voice.
@@ -21,30 +21,32 @@ const {
 
 // ─── Prompt Templates ───────────────────────────────────────────────────────
 
-function buildBriefingPrompt(sourcesText, dateStr) {
+function buildBriefingPrompt(sourcesText, dateStr, hasRobotics) {
   return `${EDITORIAL_VOICE.signal}
 
-Your task: write today's Allternit Signal briefing for ${dateStr}.
+Your task: write today's Allternit News briefing for ${dateStr}.
 
 STRUCTURE (strict markdown):
-## Signal
-1-2 sentences on the single most important development today. What should a production AI team actually care about?
+## Top Stories
+The 2-4 stories that matter most today. For each:
+- **Title** — link the URL
+- 2-3 sentences: what happened, and why a production AI team should care
 
-## Research
-arXiv papers that matter. For each:
+## AI
+Model releases, research papers, and AI tooling. For each:
 - **Title** — link the URL
 - 2-3 sentence summary with the actual technical contribution
 - "Why it matters" — connect to production implications
-
+${hasRobotics ? `
+## Robotics
+Humanoids, robot platforms, manipulation, autonomy. For each:
+- **Title** — link the URL
+- What was shipped or demonstrated, and the technical significance
+` : ''}
 ## Industry
-Company blog posts, product launches, policy news. For each:
+Company moves, product launches, policy news. For each:
 - **Title** — link the URL
 - What happened and why it changes the landscape
-
-## Code
-GitHub repos/tools trending today. For each:
-- **Name** — link the URL
-- What it does and who should use it
 
 ## Numbers
  engagement stats table (source, top item, score/comments/stars)
@@ -65,7 +67,7 @@ function buildMetadataPrompt(markdown, sources) {
     .map(([k, v]) => `${k}: ${v.keywords.slice(0, 4).join(', ')}`)
     .join('\n');
 
-  return `Given this Allternit Signal briefing, output ONLY a JSON object with these keys:
+  return `Given this Allternit News briefing, output ONLY a JSON object with these keys:
 - abstract: 2-sentence summary of the briefing (not source counts)
 - tags: array of 3-5 tags from this taxonomy [${Object.keys(TAXONOMY).join(', ')}]
 - keywords: array of 5-8 specific technical keywords
@@ -118,7 +120,7 @@ async function main() {
     arxivLimit: 5,
     githubLanguages: [''],
     githubLimit: 5,
-    blogLimit: 3,
+    blogLimit: 5,
   });
 
   if (!filtered.length) {
@@ -128,10 +130,12 @@ async function main() {
   }
 
   const sourcesText = formatSourcesForPrompt(filtered);
+  // Include the Robotics desk only when robotics items actually made the pool
+  const hasRobotics = filtered.some((s) => s.relevance?.focusAreas?.includes('robotics'));
 
   // Step 1: Generate briefing markdown
   console.log('Generating briefing with Kimi...');
-  const prompt = buildBriefingPrompt(sourcesText, friendlyDate);
+  const prompt = buildBriefingPrompt(sourcesText, friendlyDate, hasRobotics);
   const markdown = await callKimi([{ role: 'user', content: prompt }], 4000);
 
   if (!markdown) {
@@ -189,9 +193,9 @@ async function main() {
     slug,
     contentType: 'signal',
     title: `Daily AI Brief: ${friendlyDate}`,
-    subtitle: 'Allternit Signal · Curated Intelligence',
+    subtitle: 'Allternit News · Daily Brief',
     abstract: meta.abstract,
-    authors: ['Allternit Signal'],
+    authors: ['Allternit News'],
     teams: ['research'],
     tags: meta.tags || ['daily-brief', 'ai-news', 'curated'],
     keywords: meta.keywords || ['briefing', 'curated', 'intelligence'],
@@ -204,7 +208,7 @@ async function main() {
     },
     readingTime: meta.readingTime || estimateReadingTime(markdown),
     featured: false,
-    series: 'Daily AI Brief',
+    series: 'Allternit News',
     issueNumber: dateStr,
     metrics: totalEngagement,
   });

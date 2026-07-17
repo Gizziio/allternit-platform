@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Allternit Research — Weekly Feature Generator
+ * A://ternit Reality — Weekly Magazine Generator
  *
- * Generates a deep-dive feature article on a trending AI topic,
- * with Allternit Research editorial voice and structured analysis.
+ * Generates a cover-story deep-dive on a trending AI/robotics topic,
+ * with magazine departments and Allternit editorial voice.
  */
 
 const {
@@ -24,7 +24,7 @@ const {
 function buildTopicSelectionPrompt(sourcesText) {
   return `${EDITORIAL_VOICE.research}
 
-From these sources, identify the single most important trending topic in AI/ML for this week.
+From these sources, identify the single most important trending topic in AI/ML or robotics — this week's A://ternit Reality cover story.
 
 Criteria:
 - Has technical depth (not just a product launch)
@@ -41,15 +41,15 @@ ${sourcesText}`;
 function buildFeaturePrompt(topic, sourcesText) {
   return `${EDITORIAL_VOICE.research}
 
-Write a comprehensive weekly feature article on: "${topic}"
+Write this week's A://ternit Reality cover story on: "${topic}"
 
 TARGET AUDIENCE: Senior engineers and tech leads building production AI systems. They care about what works, what doesn't, and what to watch.
 
 STRUCTURE (strict markdown):
 # ${topic}
 
-## The Big Picture
-What is happening and why it matters now? 200-300 words. No fluff. Lead with the stakes.
+## Cover Story
+What is happening and why it matters now? 250-350 words. No fluff. Lead with the stakes.
 
 ## Technical Breakdown
 The core technical details an engineer needs to understand. 400-600 words.
@@ -58,10 +58,16 @@ The core technical details an engineer needs to understand. 400-600 words.
 - Limitations and edge cases
 
 ## Production Implications
-What does this mean for teams shipping AI? 300-400 words.
+What does this mean for teams shipping AI? 250-350 words.
 - When should you adopt it? When should you wait?
 - Integration complexity and operational concerns
 - Cost and performance tradeoffs
+
+## Departments
+2-3 short magazine departments, 60-120 words each, chosen from:
+### Research Desk — papers worth reading this week
+### Industry Wire — company and market moves that matter
+### Tooling Corner — repos and releases worth a look
 
 ## What We're Watching
 3-5 specific things to track over the next month. Be concrete: benchmarks, releases, papers, or code commits.
@@ -86,7 +92,7 @@ function buildMetadataPrompt(markdown) {
     .map(([k, v]) => `${k}: ${v.keywords.slice(0, 4).join(', ')}`)
     .join('\n');
 
-  return `Given this Allternit Research feature article, output ONLY a JSON object with these keys:
+  return `Given this A://ternit Reality magazine article, output ONLY a JSON object with these keys:
 - abstract: 3-sentence summary of the article's thesis and key takeaway
 - tags: array of 3-5 tags from this taxonomy [${Object.keys(TAXONOMY).join(', ')}]
 - keywords: array of 6-10 specific technical keywords
@@ -141,7 +147,7 @@ async function main() {
     arxivLimit: 6,
     githubLanguages: [''],
     githubLimit: 6,
-    blogLimit: 4,
+    blogLimit: 6,
   });
 
   if (!filtered.length) {
@@ -218,9 +224,9 @@ async function main() {
     slug,
     contentType: 'feature',
     title: topic,
-    subtitle: `Allternit Research · Weekly Feature · ${friendlyDate}`,
+    subtitle: `A://ternit Reality · Weekly Magazine · ${friendlyDate}`,
     abstract: meta.abstract,
-    authors: ['Allternit Research'],
+    authors: ['A://ternit Reality'],
     teams: ['research'],
     tags: meta.tags || ['weekly-feature', 'ai-research', 'deep-dive'],
     keywords: meta.keywords || ['feature', 'analysis', 'trends'],
@@ -233,7 +239,7 @@ async function main() {
     },
     readingTime: meta.readingTime || estimateReadingTime(markdown),
     featured: true,
-    series: 'Weekly Feature',
+    series: 'A://ternit Reality',
     issueNumber: `${now.getFullYear()}-W${weekNum}`,
     metrics: totalEngagement,
   });

@@ -27,11 +27,11 @@ const DATA_FILE = path.resolve(
 
 const EDITORIAL_VOICE = {
   signal:
-    'You are Allternit Signal — a concise, production-focused intelligence digest. ' +
+    'You are Allternit News — a concise, production-focused intelligence digest. ' +
     'Tone: sharp, skeptical of hype, focused on what matters for shipping AI systems. ' +
     'Avoid marketing language. Use specifics over superlatives.',
   research:
-    'You are Allternit Research — an analytical deep-dive publication. ' +
+    'You are A://ternit Reality — a weekly magazine built around an analytical cover story. ' +
     'Tone: rigorous but accessible, connecting technical details to industry impact. ' +
     'Explain the "so what" for engineering teams building production AI.',
 };
@@ -61,6 +61,10 @@ const TAXONOMY = {
     label: 'Product & Engineering',
     keywords: ['api', 'sdk', 'integration', 'developer experience', 'notebook', 'canvas', 'plugin', 'extension'],
   },
+  robotics: {
+    label: 'Robotics',
+    keywords: ['humanoid', 'humanoid robot', 'robotics', 'robot', 'cobot', 'ros', 'slam', 'lidar', 'actuator', 'dexterous manipulation', 'drones', 'autonomous vehicle', 'self-driving'],
+  },
 };
 
 const ALL_TAXONOMY_KEYWORDS = Object.values(TAXONOMY).flatMap((t) => t.keywords);
@@ -82,7 +86,7 @@ function scoreRelevance(item) {
   }
 
   // Bonus for direct AI/ML terms
-  const directTerms = ['llm', 'language model', 'foundation model', 'gpt', 'claude', 'gemini', 'openai', 'anthropic', 'deepmind', 'meta ai', 'hugging face'];
+  const directTerms = ['llm', 'language model', 'foundation model', 'gpt', 'claude', 'gemini', 'openai', 'anthropic', 'deepmind', 'meta ai', 'hugging face', 'figure ai', 'unitree', 'boston dynamics', 'agility robotics', 'tesla optimus'];
   for (const term of directTerms) {
     if (text.includes(term)) score += 2;
   }
@@ -345,10 +349,16 @@ async function fetchCompanyBlog(rssUrl, label, limit = 3) {
     const xml = await r.text();
     const entries = xml.match(/<item>[\s\S]*?<\/item>/g) || xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
     return entries.slice(0, limit).map((entry) => {
-      const titleMatch = entry.match(/<title>([\s\S]*?)<\/title>/);
-      const linkMatch = entry.match(/<link>([\s\S]*?)<\/link>/) || entry.match(/<link[^>]*href="([^"]+)"/);
-      const descMatch = entry.match(/<description>([\s\S]*?)<\/description>/) || entry.match(/<summary>([\s\S]*?)<\/summary>/);
-      const dateMatch = entry.match(/<pubDate>([\s\S]*?)<\/pubDate>/) || entry.match(/<published>([\s\S]*?)<\/published>/);
+      // Strip CDATA wrappers first so the field regexes below see raw text —
+      // many feeds (TechCrunch, Robot Report, ...) wrap every field in
+      // <![CDATA[...]]>.
+      const clean = stripCdata(entry);
+      // Tag matchers tolerate attributes (e.g. Atom's <title type="html">).
+      const titleMatch = clean.match(/<title[^>]*>([\s\S]*?)<\/title>/);
+      const linkMatch = clean.match(/<link[^>]*>([\s\S]*?)<\/link>/) || clean.match(/<link[^>]*href="([^"]+)"/);
+      const descMatch = clean.match(/<description[^>]*>([\s\S]*?)<\/description>/) || clean.match(/<summary[^>]*>([\s\S]*?)<\/summary>/);
+      const dateMatch = clean.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/) || clean.match(/<published[^>]*>([\s\S]*?)<\/published>/) || clean.match(/<updated[^>]*>([\s\S]*?)<\/updated>/);
+      const parsedDate = dateMatch ? new Date(dateMatch[1].trim()) : null;
       return {
         id: `${label}-${Math.random().toString(36).slice(2, 8)}`,
         title: titleMatch ? unescapeXml(titleMatch[1].trim()) : '',
@@ -356,7 +366,7 @@ async function fetchCompanyBlog(rssUrl, label, limit = 3) {
         author: label,
         text: descMatch ? decodeHtmlEntities(descMatch[1]).slice(0, 400) : '',
         source: label,
-        publishedAt: dateMatch ? new Date(dateMatch[1]).toISOString() : new Date().toISOString(),
+        publishedAt: parsedDate && !isNaN(parsedDate) ? parsedDate.toISOString() : new Date().toISOString(),
       };
     }).filter((i) => i.title && i.url);
   } catch (err) {
@@ -417,6 +427,106 @@ async function fetchTwitter(limit = 8) {
   }
 }
 
+// NOTE: public.api.bsky.app is the unauthenticated public instance, but from
+// some networks it answers 403 (Bunny CDN block page). api.bsky.app serves the
+// same searchPosts XRPC without auth, so we try the public host first and
+// fall back per query.
+const BSKY_ENDPOINTS = ['https://public.api.bsky.app', 'https://api.bsky.app'];
+
+async function fetchBluesky(
+  queries = ['AI agents', 'LLM', 'robotics', 'foundation model'],
+  limit = 25,
+) {
+  const all = [];
+  const seen = new Set();
+  for (const q of queries) {
+    let posts = null;
+    for (const base of BSKY_ENDPOINTS) {
+      try {
+        const url = `${base}/xrpc/app.bsky.feed.searchPosts?q=${encodeURIComponent(q)}&limit=${limit}&sort=latest`;
+        const r = await fetch(url, {
+          headers: { 'User-Agent': BROWSER_UA, Accept: 'application/json' },
+          signal: AbortSignal.timeout(10000),
+        });
+        if (!r.ok) {
+          console.error(`[Bluesky] ${base} query "${q}" -> HTTP ${r.status}`);
+          continue;
+        }
+        posts = (await r.json()).posts || [];
+        break;
+      } catch (err) {
+        console.error(`[Bluesky] ${base} query "${q}" failed:`, err.message);
+      }
+    }
+    if (!posts) continue;
+    for (const p of posts) {
+      const uri = p.uri || '';
+      const rkey = uri.split('/').pop();
+      const did = p.author?.did || uri.split('/')[2] || '';
+      const text = (p.record?.text || '').trim();
+      if (!text || !rkey || !did || seen.has(uri)) continue;
+      seen.add(uri);
+      all.push({
+        id: `bluesky-${rkey}`,
+        title: text.slice(0, 200) + (text.length > 200 ? '…' : ''),
+        url: `https://bsky.app/profile/${did}/post/${rkey}`,
+        author: `@${p.author?.handle || did}`,
+        text,
+        source: 'bluesky',
+        score: (p.likeCount || 0) + (p.repostCount || 0),
+        commentCount: p.replyCount || 0,
+        publishedAt: p.record?.createdAt || p.indexedAt || new Date().toISOString(),
+      });
+    }
+  }
+  return all;
+}
+
+async function fetchMastodon(accounts = ['arstechnica', 'verge', 'ieeespectrum'], limitPerAccount = 5) {
+  const all = [];
+  for (const acct of accounts) {
+    try {
+      const url = `https://mastodon.social/@${acct}.rss`;
+      const r = await fetch(url, {
+        headers: { 'User-Agent': BROWSER_UA },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!r.ok) {
+        console.warn(`[Mastodon @${acct}] HTTP ${r.status} — skipping account`);
+        continue;
+      }
+      const xml = await r.text();
+      const entries = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+      const items = entries.slice(0, limitPerAccount).map((entry) => {
+        const clean = stripCdata(entry);
+        const titleMatch = clean.match(/<title[^>]*>([\s\S]*?)<\/title>/);
+        const linkMatch = clean.match(/<link[^>]*>([\s\S]*?)<\/link>/);
+        const descMatch = clean.match(/<description[^>]*>([\s\S]*?)<\/description>/);
+        const dateMatch = clean.match(/<pubDate[^>]*>([\s\S]*?)<\/pubDate>/);
+        const guidMatch = clean.match(/<guid[^>]*>([\s\S]*?)<\/guid>/);
+        // Mastodon RSS items have no <title> — the toot text lives in
+        // <description> (HTML-escaped), so it backs both title and summary.
+        const descText = descMatch ? decodeHtmlEntities(descMatch[1]).replace(/\s+/g, ' ').trim() : '';
+        const raw = (titleMatch ? decodeHtmlEntities(titleMatch[1]).replace(/\s+/g, ' ').trim() : '') || descText;
+        const parsedDate = dateMatch ? new Date(dateMatch[1].trim()) : null;
+        return {
+          id: `mastodon-${acct}-${guidMatch ? guidMatch[1].trim().split('/').pop() : Math.random().toString(36).slice(2, 8)}`,
+          title: raw.slice(0, 200) + (raw.length > 200 ? '…' : ''),
+          url: linkMatch ? linkMatch[1].trim() : '',
+          author: `@${acct}@mastodon.social`,
+          text: (descText || raw).slice(0, 400),
+          source: 'mastodon',
+          publishedAt: parsedDate && !isNaN(parsedDate) ? parsedDate.toISOString() : new Date().toISOString(),
+        };
+      }).filter((i) => i.title && i.url);
+      all.push(...items);
+    } catch (err) {
+      console.warn(`[Mastodon @${acct}] Failed: ${err.message} — skipping account`);
+    }
+  }
+  return all;
+}
+
 async function fetchAllSources(opts = {}) {
   const {
     hnLimit = 8,
@@ -430,9 +540,27 @@ async function fetchAllSources(opts = {}) {
       { url: 'https://www.anthropic.com/rss.xml', label: 'anthropic' },
       { url: 'https://openai.com/blog/rss.xml', label: 'openai' },
       { url: 'https://blog.google/technology/ai/rss/', label: 'google-ai' },
+      { url: 'https://techcrunch.com/category/artificial-intelligence/feed/', label: 'techcrunch-ai' },
+      { url: 'https://techcrunch.com/category/robotics/feed/', label: 'techcrunch-robotics' },
+      { url: 'https://www.wired.com/feed/rss', label: 'wired' },
+      { url: 'https://feeds.arstechnica.com/arstechnica/technology-lab', label: 'arstechnica' },
+      { url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed/', label: 'mit-tech-review' },
+      { url: 'https://www.theverge.com/rss/index.xml', label: 'theverge' },
+      { url: 'https://venturebeat.com/category/ai/feed/', label: 'venturebeat-ai' },
+      { url: 'https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss', label: 'ieee-spectrum-ai' },
+      { url: 'https://spectrum.ieee.org/feeds/topic/robotics.rss', label: 'ieee-spectrum-robotics' },
+      { url: 'https://www.nature.com/subjects/machine-learning.rss', label: 'nature-ml' },
+      { url: 'https://www.therobotreport.com/feed/', label: 'robot-report' },
+      { url: 'https://robohub.org/feed/', label: 'robohub' },
     ],
-    blogLimit = 3,
+    blogLimit = 4,
     twitterLimit = 6,
+    includeBluesky = true,
+    blueskyQueries = ['AI agents', 'LLM', 'robotics', 'foundation model'],
+    blueskyLimit = 25,
+    includeMastodon = true,
+    mastodonAccounts = ['arstechnica', 'verge', 'ieeespectrum'],
+    mastodonLimit = 5,
   } = opts;
 
   console.log('Fetching sources...');
@@ -442,6 +570,8 @@ async function fetchAllSources(opts = {}) {
     arxiv,
     github,
     twitter,
+    bluesky,
+    mastodon,
     ...blogResults
   ] = await Promise.all([
     fetchHN(hnLimit),
@@ -449,25 +579,35 @@ async function fetchAllSources(opts = {}) {
     fetchArxiv(arxivCats, arxivLimit),
     fetchGitHubTrending(githubLanguages, githubLimit),
     fetchTwitter(twitterLimit),
+    includeBluesky ? fetchBluesky(blueskyQueries, blueskyLimit) : Promise.resolve([]),
+    includeMastodon ? fetchMastodon(mastodonAccounts, mastodonLimit) : Promise.resolve([]),
     ...blogs.map((b) => fetchCompanyBlog(b.url, b.label, blogLimit)),
   ]);
 
   const blogsFlat = blogResults.flat();
 
   console.log(
-    `Sources: ${hn.length} HN, ${reddit.length} Reddit, ${arxiv.length} arXiv, ${github.length} GitHub, ${twitter.length} Twitter, ${blogsFlat.length} blogs`,
+    `Sources: ${hn.length} HN, ${reddit.length} Reddit, ${arxiv.length} arXiv, ${github.length} GitHub, ${twitter.length} Twitter, ${bluesky.length} Bluesky, ${mastodon.length} Mastodon, ${blogsFlat.length} blogs`,
   );
 
-  const all = [...hn, ...reddit, ...arxiv, ...github, ...twitter, ...blogsFlat];
+  const all = [...hn, ...reddit, ...arxiv, ...github, ...twitter, ...bluesky, ...mastodon, ...blogsFlat];
   const deduped = deduplicateSources(all);
   const filtered = filterSources(deduped);
 
   console.log(`After dedup + relevance filter: ${filtered.length} items`);
 
-  return { hn, reddit, arxiv, github, twitter, blogs: blogsFlat, filtered };
+  return { hn, reddit, arxiv, github, twitter, bluesky, mastodon, blogs: blogsFlat, filtered };
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+function stripCdata(str) {
+  return str.replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '');
+}
+
+function decodeCodePoint(n) {
+  return Number.isInteger(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : '';
+}
 
 function unescapeXml(str) {
   return str
@@ -475,7 +615,9 @@ function unescapeXml(str) {
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, h) => decodeCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (m, d) => decodeCodePoint(Number(d)));
 }
 
 function decodeHtmlEntities(str) {
@@ -486,6 +628,8 @@ function decodeHtmlEntities(str) {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, ' ')
+    .replace(/&#x([0-9a-fA-F]+);/g, (m, h) => decodeCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (m, d) => decodeCodePoint(Number(d)))
     .replace(/<[^>]+>/g, ' ');
 }
 
@@ -498,17 +642,37 @@ function formatSourcesForPrompt(sources) {
   }
 
   const lines = [];
-  const sourceOrder = ['arxiv', 'hackernews', 'reddit', 'twitter', 'github', 'bookmark', 'anthropic', 'openai', 'google-ai'];
+  const sourceOrder = [
+    'arxiv', 'hackernews', 'reddit', 'twitter', 'bluesky', 'mastodon', 'github', 'bookmark',
+    'anthropic', 'openai', 'google-ai',
+    'techcrunch-ai', 'techcrunch-robotics', 'wired', 'arstechnica', 'theverge',
+    'mit-tech-review', 'venturebeat-ai', 'ieee-spectrum-ai', 'ieee-spectrum-robotics',
+    'nature-ml', 'robot-report', 'robohub',
+  ];
   const sourceLabels = {
     arxiv: 'arXiv Papers',
     hackernews: 'Hacker News',
     reddit: 'Reddit',
     twitter: 'X / Twitter',
+    bluesky: 'Bluesky',
+    mastodon: 'Mastodon',
     github: 'GitHub Trending',
     bookmark: 'Curated Bookmarks',
     anthropic: 'Anthropic Blog',
     openai: 'OpenAI Blog',
     'google-ai': 'Google AI Blog',
+    'techcrunch-ai': 'TechCrunch — AI',
+    'techcrunch-robotics': 'TechCrunch — Robotics',
+    wired: 'Wired',
+    arstechnica: 'Ars Technica',
+    theverge: 'The Verge',
+    'mit-tech-review': 'MIT Technology Review',
+    'venturebeat-ai': 'VentureBeat — AI',
+    'ieee-spectrum-ai': 'IEEE Spectrum — AI',
+    'ieee-spectrum-robotics': 'IEEE Spectrum — Robotics',
+    'nature-ml': 'Nature — Machine Learning',
+    'robot-report': 'The Robot Report',
+    robohub: 'Robohub',
   };
 
   for (const key of sourceOrder) {
@@ -713,10 +877,13 @@ module.exports = {
   fetchArxiv,
   fetchGitHubTrending,
   fetchTwitter,
+  fetchBluesky,
+  fetchMastodon,
   fetchCompanyBlog,
   fetchAllSources,
 
   // Helpers
+  stripCdata,
   unescapeXml,
   decodeHtmlEntities,
   formatSourcesForPrompt,
