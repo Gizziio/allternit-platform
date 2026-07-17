@@ -5,7 +5,7 @@
  * security, industry voices). See ../data/x-accounts.json for the list.
  *
  * Unlike fetchTwitter() in pipeline.cjs (paid X API v2 behind a bearer token),
- * this source uses `agent-twitter-client`, which authenticates as a REAL X
+ * this source uses `@the-convocation/twitter-scraper`, which authenticates as a REAL X
  * ACCOUNT (password login or session cookies) and scrapes public timelines —
  * no paid API required. The dependency is lazy-loaded via dynamic import(), so
  * the pipeline still runs without `npm install` whenever this source is not
@@ -22,7 +22,7 @@
  *                       (e.g. ["auth_token=…; Domain=.twitter.com; Path=/", …])
  *                       OR a JSON object {"auth_token": "…", "ct0": "…"},
  *                       which is converted to twitter.com cookie strings.
- *                       Note: agent-twitter-client stores cookies against
+ *                       Note: @the-convocation/twitter-scraper stores cookies against
  *                       https://twitter.com, so Domain must be .twitter.com.
  *   - TWITTER_USERNAME  login username (fallback auth)
  *   - TWITTER_PASSWORD  login password (fallback auth)
@@ -129,7 +129,7 @@ function mapTweet(tweet, account) {
  *   totalLimit       max items returned overall (default 120)
  *   delayMs          pause between accounts (default 1500)
  *   accountsFile     path to the accounts JSON (default ../data/x-accounts.json)
- *   loadClient       test seam — () => Promise<agent-twitter-client module>;
+ *   loadClient       test seam — () => Promise<@the-convocation/twitter-scraper module>;
  *                    defaults to a lazy dynamic import() of the real package.
  */
 async function fetchXCurated(opts = {}) {
@@ -138,7 +138,7 @@ async function fetchXCurated(opts = {}) {
     totalLimit = DEFAULT_TOTAL_LIMIT,
     delayMs = DEFAULT_DELAY_MS,
     accountsFile = ACCOUNTS_FILE,
-    loadClient = () => import('agent-twitter-client'),
+    loadClient = () => import('@the-convocation/twitter-scraper'),
   } = opts;
 
   try {

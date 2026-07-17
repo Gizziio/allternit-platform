@@ -4,6 +4,6 @@
   "version": "1.0.0",
   "description": "Dependencies for the Allternit discovery pipeline GitHub Actions scripts.",
   "dependencies": {
-    "agent-twitter-client": "^0.0.18"
+    "@the-convocation/twitter-scraper": "^0.22.3"
   }
 }

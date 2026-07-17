@@ -25,7 +25,7 @@ jobs:
           node-version: '20'
 
       - name: Install script dependencies
-        run: npm install --prefix .github/scripts --no-audit --no-fund agent-twitter-client
+        run: npm install --prefix .github/scripts --no-audit --no-fund @the-convocation/twitter-scraper
 
       - name: Import bookmarks
         run: node .github/scripts/import-bookmarks.cjs
