@@ -58,7 +58,7 @@ Run it back: follow-ups, corrections, and second-look updates to stories covered
 
 RULES:
 - Write ALL FIVE departments. Only omit one if its source material is literally zero (e.g. no security stories exist at all). A short department beats a missing one.
-- `git push` is MANDATORY whenever GitHub Trending sources appear below — never skip it.
+- The git push department is MANDATORY whenever GitHub Trending sources appear below — never skip it.
 - Budget: ls -la gets at most ~40% of the edition; each other department gets 100-150 words with 3-5 items.
 - Skip meta threads, hiring posts, pure VC/funding news
 - No hype words: "groundbreaking", "revolutionary", "game-changing"
