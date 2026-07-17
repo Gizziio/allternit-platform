@@ -4,4 +4,7 @@ export * from '../../integrations/types.js'
 export const FileEdit: any = {}
 
 // Auto-added export
-export const inputSchema: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../cli/ui/ink-app/tools/FileEditTool/types.js'

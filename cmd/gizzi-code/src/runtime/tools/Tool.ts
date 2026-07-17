@@ -71,22 +71,8 @@ export function buildTool<TParams, TResult>(
   }
 }
 
-// Tool matching utility
-export function toolMatchesName(tool: { name: string } | string, name: string): boolean {
-  const toolName = typeof tool === 'string' ? tool : tool.name
-  return toolName === name
-}
-
 // Tools collection type
 export type Tools = Tool[] | Map<string, Tool>
-
-// Find tool by name
-export function findToolByName(tools: Tools, name: string): Tool | undefined {
-  if (Array.isArray(tools)) {
-    return tools.find(t => toolMatchesName(t, name))
-  }
-  return tools.get(name)
-}
 
 // Auto-added export
 export const QueryChainTracking: any = {}

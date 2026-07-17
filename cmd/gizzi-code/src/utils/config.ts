@@ -2,6 +2,8 @@
  * Config Utilities
  */
 
+import { saveGlobalConfig as saveRealGlobalConfig } from '../shared/utils/config.js'
+
 export type { PastedContent } from '../shared/utils/config.js'
 
 export interface Config {
@@ -26,20 +28,10 @@ export interface GlobalConfig {
   [key: string]: unknown
 }
 
-let globalConfig: GlobalConfig = {}
-
-export function getGlobalConfig(): GlobalConfig {
-  return globalConfig
-}
-
+// Delegates to the real config store; the merge-by-re-export below provides
+// the canonical getGlobalConfig/saveGlobalConfig from the complete counterpart.
 export function setGlobalConfig(config: GlobalConfig): void {
-  globalConfig = { ...globalConfig, ...config }
-}
-
-export function saveGlobalConfig(
-  updater: GlobalConfig | ((current: GlobalConfig) => GlobalConfig),
-): void {
-  globalConfig = typeof updater === 'function' ? updater(globalConfig) : { ...globalConfig, ...updater }
+  saveRealGlobalConfig((current: GlobalConfig) => ({ ...current, ...config }))
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)

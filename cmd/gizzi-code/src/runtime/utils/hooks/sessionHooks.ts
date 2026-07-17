@@ -1,2 +1,4 @@
 // Auto-generated shim to satisfy TypeScript imports
-export const clearSessionHooks: any = {}
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../shared/utils/hooks/sessionHooks.js'

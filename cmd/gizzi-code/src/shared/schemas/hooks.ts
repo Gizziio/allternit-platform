@@ -1,7 +1,6 @@
 export * from '../utils/hooks.js'
 
 // Auto-added export
-export const HooksSchema: any = {}
 
 // Auto-added export
 export const AgentHook: any = {}
@@ -13,13 +12,11 @@ export const BashCommandHook: any = {}
 export const HookCommand: any = {}
 
 // Auto-added export
-export const HookCommandSchema: any = {}
 
 // Auto-added export
 export const HookMatcher: any = {}
 
 // Auto-added export
-export const HookMatcherSchema: any = {}
 
 
 // Auto-added export
@@ -32,3 +29,7 @@ export const HttpHook: any = {}
 export const PromptHook: any = {}
 
 
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../cli/ui/ink-app/schemas/hooks.js'

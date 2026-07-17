@@ -1,2 +1,5 @@
 // Auto-generated shim to satisfy TypeScript imports
-export const EXIT_PLAN_MODE_TOOL_NAME: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'

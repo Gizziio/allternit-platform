@@ -269,10 +269,8 @@ export default {
 }
 
 // Auto-added export
-export const countMessagesTokensWithAPI: any = {}
 
 // Auto-added export
-export const countTokensViaHaikuFallback: any = {}
 
 // ─── Merge-rot repair ────────────────────────────────────────────────────────
 // The complete token-estimation module (including

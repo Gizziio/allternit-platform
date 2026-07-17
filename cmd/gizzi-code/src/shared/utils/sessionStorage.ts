@@ -31,7 +31,7 @@ import {
   isSessionPersistenceDisabled,
   switchSession,
 } from '@/bootstrap/state.js'
-import { builtInCommandNames } from '../../runtime/verification/cli/commands.js'
+import { builtInCommandNames } from '../../cli/ui/ink-app/commands.js'
 import { COMMAND_NAME_TAG, TICK_TAG } from '@/constants/xml.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
 import * as sessionIngress from '../../runtime/services/api/sessionIngress.js'

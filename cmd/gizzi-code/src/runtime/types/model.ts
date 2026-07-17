@@ -33,3 +33,6 @@ export interface ModelSetting {
 }
 
 export type NullableModelSetting = ModelSetting | null | undefined
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../shared/utils/model/model.js'

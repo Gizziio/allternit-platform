@@ -89,6 +89,9 @@ export namespace Tool {
 }
 
 // Auto-added export
-export const ToolDef: any = {}
 
 
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../tool.js'

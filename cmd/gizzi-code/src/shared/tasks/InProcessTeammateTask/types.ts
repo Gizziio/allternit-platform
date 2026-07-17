@@ -4,13 +4,15 @@ export * from '../../../runtime/integrations/types.js'
 export const InProcessTeammateTaskState: any = {}
 
 // Auto-added export
-export const isInProcessTeammateTask: any = {}
 
 
 // Auto-added export
 export const TeammateIdentity: any = {}
 
 // Auto-added export
-export const appendCappedMessage: any = {}
 
 
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../cli/ui/ink-app/tasks/InProcessTeammateTask/types.js'

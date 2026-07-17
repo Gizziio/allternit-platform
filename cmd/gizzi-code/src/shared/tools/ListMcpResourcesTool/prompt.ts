@@ -1,4 +1,7 @@
 export * from '../../../cli/ui/ink-app/context/prompt.js'
 
 // Auto-added export
-export const LIST_MCP_RESOURCES_TOOL_NAME: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../cli/ui/ink-app/tools/ListMcpResourcesTool/prompt.js'

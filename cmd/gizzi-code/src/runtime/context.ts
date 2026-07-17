@@ -1,7 +1,9 @@
 export * from '../shared/utils/context.js'
 
 // Auto-added export
-export const getSystemContext: any = {}
 
 // Auto-added export
-export const getUserContext: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../cli/ui/ink-app/context.js'

@@ -2,13 +2,16 @@
  * Tool - central re-export entry point for tool types and utilities.
  */
 export {
-  ToolUseContext,
-  ToolPermissionContext,
-  ToolDef,
   buildTool,
   toolMatchesName,
   findToolByName,
-  type Tools,
+} from './runtime/tools/Tool.js'
+
+export type {
+  ToolUseContext,
+  ToolPermissionContext,
+  ToolDef,
+  Tools,
 } from './runtime/tools/Tool.js'
 
 export type { Tool } from './runtime/tools/Tool.js'

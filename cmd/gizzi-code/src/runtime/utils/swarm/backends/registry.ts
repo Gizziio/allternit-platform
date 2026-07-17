@@ -1,2 +1,5 @@
 // Auto-generated shim to satisfy TypeScript imports
-export const getResolvedTeammateMode: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../../cli/ui/ink-app/utils/swarm/backends/registry.js'

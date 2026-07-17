@@ -10,10 +10,6 @@ export function getSettings(): Settings {
   return cachedSettings
 }
 
-export function getInitialSettings(): Settings {
-  return {}
-}
-
 export function updateSettings(settings: Partial<Settings>): void {
   cachedSettings = { ...cachedSettings, ...settings }
 }

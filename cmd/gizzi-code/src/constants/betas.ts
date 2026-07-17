@@ -26,3 +26,6 @@ export const CLI_INTERNAL_BETA_HEADER =
   process.env.USER_TYPE === 'ant' ? 'cli-internal-2026-02-09' : ''
 export const ADVISOR_BETA_HEADER = 'advisor-tool-2026-03-01'
 export const CACHE_EDITING_BETA_HEADER = 'cache-editing-2026-01-01'
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../cli/ui/ink-app/constants/betas.js'

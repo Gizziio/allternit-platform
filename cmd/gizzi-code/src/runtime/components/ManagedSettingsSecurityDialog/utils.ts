@@ -1,10 +1,11 @@
 export * from '../../../cli/ui/ink-app/tools/utils.js'
 
 // Auto-added export
-export const extractDangerousSettings: any = {}
 
 // Auto-added export
-export const hasDangerousSettings: any = {}
 
 // Auto-added export
-export const hasDangerousSettingsChanged: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../cli/ui/ink-app/components/ManagedSettingsSecurityDialog/utils.js'

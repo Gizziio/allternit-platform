@@ -1,7 +1,9 @@
 export * from '../../../cli/ui/ink-app/context/prompt.js'
 
 // Auto-added export
-export const clearPromptCache: any = {}
 
 // Auto-added export
-export const getCharBudget: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../cli/ui/ink-app/tools/SkillTool/prompt.js'

@@ -1,7 +1,9 @@
 export * from '../cli/ui/ink-app/components/cost-tracker.js'
 
 // Auto-added export
-export const addToTotalLinesChanged: any = {}
 
 // Auto-added export
-export const restoreCostStateForSession: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../runtime/claude-core/cost-tracker.js'

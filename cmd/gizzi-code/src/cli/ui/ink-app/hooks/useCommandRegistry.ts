@@ -8,6 +8,10 @@ import { useCallback, useState } from 'react'
  */
 export function useCommandRegistry() {
   const [providers, setProviders] = useState<Array<() => any[]>>([])
+  // Palette visibility for consumers that delegate it to the registry.
+  // (MainScreen/MainScreenEnhanced own their own palette state and never
+  // call trigger; both patterns are supported.)
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
   // Returns an unregister function, matching the screens' useEffect cleanup.
   const register = useCallback((provider: () => any[]) => {
@@ -24,15 +28,12 @@ export function useCommandRegistry() {
   })
   const suggestedOptions = visibleOptions.filter(o => o?.suggested)
 
-  const trigger = useCallback(() => {
-    // Palette visibility is owned by the screens; kept for API shape.
+  // Toggles the registry-owned palette (or forces it with a boolean arg).
+  const trigger = useCallback((open?: boolean) => {
+    setPaletteOpen(prev => (typeof open === 'boolean' ? open : !prev))
   }, [])
 
-  return { register, visibleOptions, suggestedOptions, trigger }
-}
-
-export function useCommandRegistry_ts(): void {
-  // Not yet implemented
+  return { register, visibleOptions, suggestedOptions, trigger, paletteOpen }
 }
 
 export default useCommandRegistry

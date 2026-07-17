@@ -5,12 +5,13 @@
 export { checkReadPermissionForTool, checkWritePermissionForTool } from '../../shared/utils/permissions/filesystem.js'
 
 // Auto-added export
-export const matchingRuleForInput: any = {}
 
 
 
 // Auto-added export
-export const getFileReadIgnorePatterns: any = {}
 
 // Auto-added export
-export const normalizePatternsToPath: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../../cli/ui/ink-app/utils/permissions/filesystem.js'

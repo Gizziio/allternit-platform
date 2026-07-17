@@ -13,3 +13,6 @@ export async function teleportRequest<T>(
 ): Promise<T> {
   return {} as T
 }
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../shared/utils/teleport/api.js'

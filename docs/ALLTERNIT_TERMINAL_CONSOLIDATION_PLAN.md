@@ -345,3 +345,136 @@ arm64/x64 darwin + linux and x64-win32; wrapper resolution vendored-first;
 class at a time (datadog import just fixed, unverified). Finish the driver
 loop, then one full production build, then the verification contract in the
 handoff doc.
+
+### Completion record (2026-07-17, second session)
+
+Driver loop finished: `SUCCESS: true`, then one full
+`script/build-production.js --target=darwin-arm64` run — green
+(worker 26.8 MB, main bundle 28.6 MB, binary 95.7 MB +
+`dist/vendor/{allternit-mux,ripgrep}`). Verification contract all green:
+`bun test test/ripgrep/vendor.test.ts test/pty/mux.test.ts` (2 pass),
+`cargo test -p allternit-mux` (19 pass), boot smoke
+`serve --port 4099` → `GET /pty/list` 200 `[]`, `git diff --stat`:
+87 files changed, +296/−198, zero file deletions.
+
+**Merge-by-re-export wiring (this session, ~40 modules)**: partial modules
+completed from their real counterparts in `src/cli/ui/ink-app/*` or
+`src/shared/*` — shared/tools.ts, services/analytics/{growthbook,index}.ts,
+runtime/tools/components/shell/OutputLine.ts,
+shared/tools/AgentTool/agentMemory.ts, shared/plugins/builtinPlugins.ts,
+utils/{allternitInChrome/common,config,settings/{constants,types,settings},
+sinks,execFileNoThrow,ide,imageResizer,toolResultStorage,model/model,
+messages,attachments,context,sessionStorage,tokens,memory/types,api,effort,
+fingerprint,advisor,thinking,allternitInChrome/prompt,teleport/api}.ts,
+runtime/claude-core/bootstrap/state.ts,
+cli/utils/allternitInChrome/{setup,common}.ts, constants/{product,betas}.ts,
+runtime/tools/{REPLTool/constants,FileReadTool/FileReadTool,
+AgentTool/{loadAgentsDir,agentMemory,agentColorManager},Tool}.ts,
+shared/{Task,tasks/{LocalAgentTask/LocalAgentTask,
+InProcessTeammateTask/InProcessTeammateTask},
+tools/BashTool/bashPermissions,tools/AgentTool/agentColorManager}.ts,
+tools/FileEditTool/utils.ts, cli/ui/{tasks/{types,InProcessTeammateTask/types},
+tools/AgentTool/agentColorManager,utils/model/model,context/voice}.ts,
+src/{context,tools,cost-tracker}.ts, runtime/utils/{model/model,
+hooks/{hooksConfigSnapshot,sessionHooks}}.ts, runtime/types/model.ts,
+utils/secureStorage/index.ts.
+
+**Wrong-path import repairs**: shared/utils/analyzeContext.ts and
+shared/utils/sessionStorage.ts imported `getCommandName` /
+`builtInCommandNames` from the gizzi verification CLI module
+(`runtime/verification/cli/commands.ts`) — repointed to
+`cli/ui/ink-app/commands.js`, mirroring the ink-app siblings.
+
+**MCP SDK 1.25.2 compat** (runtime/services/mcp/auth.ts):
+`discoverOAuthServerInfo` does not exist in the pinned SDK — composed
+locally from `discoverOAuthProtectedResourceMetadata` +
+`discoverAuthorizationServerMetadata` (same RFC 9728 → 8414 chain and
+return shape; existing try/catch fallback preserved).
+
+**Real implementations written (not shims)**:
+- `cli/ui/ink-app/hooks/useCommandRegistry.ts` — was a placeholder
+  (`useCommandRegistry_ts`); implemented the real hook (provider
+  register/unregister, flattened `visibleOptions`, `suggested` filter,
+  `trigger` kept as documented no-op — palette visibility is screen-owned).
+- `cli/ui/ink-app/services/harness.ts` — added `getHarnessService()`,
+  the facade the ink screens were written against but which was never
+  merged. Lazily backed by the real `createAgentHarness()` +
+  `AllternitHarness.stream()` (chunks dispatched to
+  onText/onToolUse/onToolResult/onError/onComplete); `isAvailable()`
+  false when unconfigured (screens' demo fallback), `sendMessage` throws
+  loudly if invoked unconfigured.
+
+**Production-readiness sweep (64 files, scripted)**: removed bogus
+`export const X: any = {}` stub exports that SHADOWED the real
+implementations pulled in by the re-exports (local exports win over
+`export *` — these would have built green and crashed/misbehaved at
+runtime): all `*_TOOL_NAME` constants, tool UI renderers, hooks/schemas,
+claude-core task classes, components, `generateTaskId`,
+`clearAgentDefinitionsCache`, `shouldUseSandbox`,
+`awaitClassifierAutoApproval`, `clearSessionHooks`,
+`updateHooksConfigSnapshot`, `isAgentMemoryPath`, `FileReadTool`,
+`OutputLine`, etc. Hand-purged additional fake implementations that
+shadowed the real systems: `utils/config.ts` (fake
+getGlobalConfig/saveGlobalConfig returning `{}` — now real;
+`setGlobalConfig` delegates to the real store), `utils/api.ts`
+(pass-through prepend/appendUserContext that silently dropped context),
+`utils/model/model.ts` + `runtime/utils/model/model.ts`
+(`getSmallFastModel`/`getMainLoopModel` returning the string
+`'default'`), `utils/messages.ts` (simplified `extractTag`,
+`SYNTHETIC_MESSAGES`, `countToolCalls`), `utils/settings/settings.ts`
+(fake `getInitialSettings`), `runtime/tools/Tool.ts`
+(`toolMatchesName`/`findToolByName` without alias support — local
+`buildTool` kept: different signature), `utils/execFileNoThrow.ts`
+(wrong return shape `{exitCode}` vs real `{code}`).
+
+**Never-implemented surface (documented, loud-throw)**:
+`UserMessage`/`AssistantMessage`/`ToolUseMessage`/`ToolResultMessage`/
+`MessageList` re-exported by `cli/ui/ink-app/components/index.ts` —
+verified via full git history that these gizzi components were only ever
+placeholders (initial commit → HEAD) and nothing in the tree consumes
+them. They now throw loudly on render (typed-stub pattern) instead of
+silently rendering wrong UI; the dir barrel
+`components/messages/index.ts` was repaired to match the placeholder
+default exports.
+
+**Star-star ambiguity fixes**: `shared/Task.ts` and
+`cli/ui/utils/model/model.ts` each had two `export *` legs providing the
+same names after wiring — collapsed to the single ink-app leg.
+
+### Stub/placeholder purge (2026-07-17, third session)
+
+Second sweep with a generalized tree mapping (the first sweep missed the
+whole `runtime/*` tree — its subpath mapping was wrong for anything outside
+`runtime/claude-core` and `runtime/tools/builtins`). 73 more files had
+`export const X: any = {}` stubs shadowing real counterparts; all removed
+and wired (one counterpart per file, most-coverage wins, preference
+ink-app > shared > claude-core > src; existing re-export legs checked first
+to avoid star-star ambiguity). Includes every `runtime/tools/*Tool/*` tool
+object (BashTool, FileReadTool already done, FileEditTool, GlobTool,
+GrepTool, AgentTool, SkillTool, TodoWriteTool, TaskStopTool, TaskOutputTool,
+WebFetchTool, WebSearchTool, NotebookEditTool, AskUserQuestionTool,
+ConfigTool, LSPTool, BriefTool, TungstenTool, EnterPlanModeTool,
+ExitPlanModeV2Tool, EnterWorktreeTool, ExitWorktreeTool, ToolSearchTool,
+ReadMcpResourceTool, ListMcpResourcesTool, TestingPermissionTool),
+`runtime/utils/{file,errors,path,permissions/*,model/*,swarm/*,hooks/*,
+todo/types,settings/validateEditTool,shell/shellToolUtils,messages/mappers,
+secureStorage/index}.ts`, `runtime/{context,tools}.ts`,
+`runtime/cli/transports/*`, `runtime/components/{Markdown,
+ManagedSettingsSecurityDialog/*,messages/UserToolResultMessage/
+RejectedPlanMessage}.ts`, `runtime/plugins/builtinPlugins.ts`,
+`runtime/memdir/paths.ts`, `runtime/services/{tokenEstimation,lsp/manager}.ts`.
+
+Placeholders replaced with real implementations:
+- `cli/ui/ink-app/components/messages/{UserMessage,AssistantMessage,
+  ToolUseMessage,ToolResultMessage,MessageList}.tsx` — real ink components
+  mirroring the screens' OutputItem model (the moduleExport placeholders
+  dated back to the initial commit). `components/messages.tsx` now
+  re-exports them for the barrel instead of the previous loud-throw stubs.
+- `useCommandRegistry.trigger` — now a real registry-owned palette toggle
+  (`paletteOpen` state; screens that own palette state are unaffected).
+  Vestigial `useCommandRegistry_ts` placeholder removed (no importers).
+
+Driver: `SUCCESS: true`. Remaining `: any = {}` stubs have NO real
+counterpart anywhere (gizzi-original surface: oauth providers,
+verification CLI, integrations, session continuity, bus, api) — left as-is
+by design; implementing them would be fabrication, not repair.

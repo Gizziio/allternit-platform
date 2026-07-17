@@ -4,4 +4,7 @@
 export { expandPath, toRelativePath, normalizePath } from '../../shared/utils/path.js'
 
 // Auto-added export
-export const sanitizePath: any = {}
+
+
+// Merge-by-re-export: complete counterpart (local exports win on conflict)
+export * from '../../cli/ui/ink-app/utils/path.js'
