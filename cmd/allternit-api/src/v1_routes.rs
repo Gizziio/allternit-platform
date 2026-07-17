@@ -97,6 +97,8 @@ pub fn v1_router() -> Router<Arc<AppState>> {
         .route("/health", get(health))
         .route("/models", get(list_available_models))
         .route("/voice/voices", get(list_voice_presets))
+        .route("/cli-tools", get(list_cli_tools_stub))
+        .route("/cli-tools/installed", get(list_cli_tools_stub))
 }
 
 async fn health() -> impl IntoResponse {
@@ -116,6 +118,15 @@ async fn list_available_models() -> impl IntoResponse {
 /// the console stay quiet.
 async fn list_voice_presets() -> impl IntoResponse {
     Json(json!({ "voices": [] }))
+}
+
+/// GET /api/v1/cli-tools (+ /cli-tools/installed) — the unified backend does
+/// not manage CLI tools yet; the desktop UI's filesystem scanner is the real
+/// source and its client already falls back to it on 501. Answer 200 with the
+/// same empty-list shape the fallback produces so the console stays quiet,
+/// mirroring /voice/voices.
+async fn list_cli_tools_stub() -> impl IntoResponse {
+    Json(json!({ "tools": [], "total": 0 }))
 }
 
 pub fn agent_chat_router() -> Router<Arc<AppState>> {

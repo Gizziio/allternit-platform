@@ -11,7 +11,7 @@ Make the code canvas the single place to run many coding agents: backend code-mo
 
 - `allternit-api` — restarted 2026-07-17 ~21:50Z with FRESH debug binary (`target/debug/allternit-api`), cwd repo root, env `GIZZI_PASSWORD=testpass123`, NO `ALLTERNIT_DATA_DIR` → canonical data dir `~/Library/Application Support/allternit`. Health: `{"status":"healthy","gizzi":true}`. **User may need to re-login** (old process ran on a `/private/tmp/claude-501/...` scratchpad data dir — that state is abandoned on purpose).
 - **Rails routes live + verified by curl**: `POST /api/rails/mail/send|share|decide`, `GET /api/rails/mail/threads`, `GET /api/rails/mail/thread/:id`, `POST /api/rails/receipts/write`, `POST /api/rails/receipts` (query). Receipt query maps `node_id`→`run_id` filter and aliases `outputs_ref`→`path` in payload (what ArtifactCenter + executor tiles scan).
-- `gizzi-code` — **still the OLD Jul-12 dist binary (pid 67901)**. `/v1/orchestrator` works, but `/sessions/discovered` and the rails bridge are **NOT live** (see Pending).
+- `gizzi-code` — **NEW binary live since 2026-07-17 ~22:57Z** (pid 59202, dist built 17:52 CDT by the other agent). `/v1/orchestrator/sessions/discovered`, external status/tail/kill fallbacks, and the SSE `/events` stream all verified live via a zero-token `ao-spawn` + `sleep` probe (both direct :4096 and via gateway :8013). Rails bridge wiring confirmed in the running build; its first live mail fire still needs a native `/assign` (real vendor CLI) or canvas assignment.
 - `rails` CLI built (`target/debug/rails`), workspace init'd at canonical dir, MCP handshake verified, registered in repo `.mcp.json` (command + args `--root "/Users/macbook/Library/Application Support/allternit" mcp`).
 - A smoke thread `wih:executor-smoke` + two smoke receipts exist in the canonical rails stores (test data, harmless).
 
@@ -34,11 +34,10 @@ Make the code canvas the single place to run many coding agents: backend code-mo
 
 ## Pending (in order)
 
-1. **Finish gizzi rebuild** — `cd cmd/gizzi-code && bun run build --target=darwin-arm64`. Status: I fixed ~17 merge-rot errors (missing shim exports + `ink-renderer/global.d.ts` created + `state.ts` relative path + `imageProcessor` path/shim) — the last run got past all "No matching export" rounds and died OOM (exit 143, RAM). NOTE: **another agent is actively editing this tree** (fixed `state.ts`/`src/ink/components/Box.ts` while I worked) — coordinate via `git status` before continuing. User constraint: **no RAM-hog builds** — consider `NODE_OPTIONS=--max-old-space-size=4096`, closing electron first, or building on another machine.
-   - Source-run alternative ALSO fails: `bun run --conditions=browser ./src/cli/main.ts serve` dies on broken `@opentui/solid` `jsx-runtime.d.ts` in node_modules (`Export named 'jsxDEV' not found`) — needs dependency repair (`pnpm install` state), not code.
-2. **Restart gizzi** once built: kill old pid, start `cmd/gizzi-code/dist/gizzi-code serve --hostname 127.0.0.1 --port 4096 --print-logs` with env `GIZZI_SERVER_PASSWORD=testpass123 ALLTERNIT_API_URL=http://127.0.0.1:8013`. Daemons are detached (PPID 1) — plain `kill` + `nohup … & disown` works.
-3. **Verify discovery + bridge live**: `ao-spawn smoke ~/some-repo "kimi --yolo"` → `curl :8013/api/v1/orchestrator/sessions/discovered` (or :4096/v1/...) shows it → canvas shows EXT tile; assign via canvas dialog → rails thread `wih:executor-<slug>` gets lifecycle messages → `sqlite3`/`rails` ledger or `curl :8013/api/rails/mail/threads`.
-4. **UI runtime verification** (I only syntax-gated): spawn each tile type on :3013 canvas; agent tile injects command; shared notes sync both directions; executor tile controls.
+1. ~~Finish gizzi rebuild~~ — **DONE 2026-07-17** by the other agent (dist built 17:52 CDT, ~100MB).
+2. ~~Restart gizzi~~ — **DONE 2026-07-17 ~22:57Z** (old pid killed, new binary detached with handoff env; logs `/tmp/gizzi-code-serve.log`).
+3. ~~Verify discovery + bridge live~~ — **DONE 2026-07-17** (zero-token probe: discover/status/tail/kill/SSE all pass; bridge live-fire deferred — needs a real native assign).
+4. **UI runtime verification** (previous session only syntax-gated): spawn each tile type on :3013 canvas; agent tile injects command; shared notes sync both directions; executor tile controls + assignment → first live bridge mail (`wih:executor-<slug>`).
 5. Deferred by design: argv shell in `terminal_routes.rs`; mux convergence for executors (Option B); orphaned `src/views/rails/` UI; swarm view executor visibility.
 
 ## Gotchas

@@ -115,6 +115,19 @@ const INTERNAL_ALLTERNIT_CLI_SWITCH_FILE_CANDIDATES = [
 ];
 const HOME_DIR_STORAGE_KEY = 'allternit:plugin-manager:home-dir:v1';
 
+// Extensions whose contents are never useful as text in the capability file
+// tree. The files API's /files/read answers 404 for binary files, so reading
+// them only floods the console with "Failed to load resource" errors.
+const BINARY_FILE_EXTENSIONS = new Set([
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'ico', 'icns', 'bmp', 'tiff',
+  'pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'odt', 'odp', 'ods',
+  'zip', 'gz', 'tgz', 'bz2', 'xz', 'tar', 'rar', '7z',
+  'mp3', 'mp4', 'm4a', 'mov', 'avi', 'mkv', 'wav', 'flac', 'ogg', 'webm',
+  'ttf', 'otf', 'woff', 'woff2', 'eot',
+  'bin', 'dat', 'db', 'sqlite', 'sqlite3', 'wasm', 'exe', 'dll', 'so', 'dylib',
+  'jar', 'class', 'pyc', 'pyo', 'ds_store',
+]);
+
 const OH_MY_OPENCODE_BUILTIN_COMMANDS = [
   'init-deep',
   'ralph-loop',
@@ -562,15 +575,21 @@ class CapabilityScanner {
       let config: any = {};
       let content = '';
       
+      // Optional files: probe with exists() (200, quiet) before reading so a
+      // missing config.json/SKILL.md doesn't log a 404 per scanned directory.
       try {
-        const configContent = await this.fs.readFile(configPath);
-        config = safeJSONParse(configContent, {});
+        if (await this.fs.exists(configPath)) {
+          const configContent = await this.fs.readFile(configPath);
+          config = safeJSONParse(configContent, {});
+        }
       } catch (e) {
         // No config, use defaults
       }
 
       try {
-        content = await this.fs.readFile(skillMdPath);
+        if (await this.fs.exists(skillMdPath)) {
+          content = await this.fs.readFile(skillMdPath);
+        }
       } catch (e) {
         // No SKILL.md
       }
@@ -1147,6 +1166,9 @@ class CapabilityScanner {
       
       for (const candidatePath of pluginManifestCandidates) {
         try {
+          // exists() first (200, quiet): most candidates don't exist, and each
+          // blind readFile of a missing manifest logs a 404 in the console.
+          if (!(await this.fs.exists(candidatePath))) continue;
           const content = await this.fs.readFile(candidatePath);
           config = safeJSONParse(content, {});
           if (config && typeof config === 'object' && Object.keys(config).length > 0) {
@@ -1854,15 +1876,18 @@ class CapabilityScanner {
           
           await this.scanDirectoryRecursive(entry.path, dirNode, basePath);
         } else {
-          // Read file content
+          // Read file content (text only — binary files 404 on /files/read and
+          // their bytes are useless as text content anyway)
           let content = '';
           let language: string | undefined;
+          const ext = entry.name.split('.').pop()?.toLowerCase();
           
           try {
-            content = await this.fs.readFile(entry.path);
+            if (!BINARY_FILE_EXTENSIONS.has(ext || '')) {
+              content = await this.fs.readFile(entry.path);
+            }
             
             // Detect language from extension
-            const ext = entry.name.split('.').pop()?.toLowerCase();
             const langMap: Record<string, string> = {
               'md': 'markdown',
               'json': 'json',
