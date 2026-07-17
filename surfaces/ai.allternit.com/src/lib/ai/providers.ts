@@ -1,5 +1,6 @@
 import type { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { gateway } from "@ai-sdk/gateway";
+import { createOpenAI } from "@ai-sdk/openai";
 import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { extractReasoningMiddleware, wrapLanguageModel } from "ai";
@@ -22,7 +23,56 @@ const _telemetryConfig = {
   },
 };
 
+/**
+ * Dev-only escape hatch: when VITE_LOCAL_AI_BASE_URL is set (see .env.local),
+ * every language-model request is served by a local OpenAI-compatible server
+ * (Ollama) through the vite `/local-ai` proxy instead of the Vercel AI
+ * gateway — which the browser cannot reach directly (CORS) and which has no
+ * credential in local dev. The requested gateway id is ignored and
+ * VITE_LOCAL_AI_MODEL is used for every call; production builds without the
+ * env var are unaffected.
+ */
+const LOCAL_AI_BASE_URL = import.meta.env.VITE_LOCAL_AI_BASE_URL as
+  | string
+  | undefined;
+const LOCAL_AI_MODEL =
+  (import.meta.env.VITE_LOCAL_AI_MODEL as string | undefined) ?? "qwen2.5:0.5b";
+
+/**
+ * Reused keep-alive sockets to a local model server can silently die between
+ * bursts of concurrent calls; a fetch on a dead socket never settles, which
+ * wedges the whole run (observed live: a round's 5 requests all invoked, zero
+ * responses). A per-request timeout turns the wedge into an abort, and the AI
+ * SDK's built-in retry then reissues the call on a fresh connection.
+ */
+const LOCAL_AI_REQUEST_TIMEOUT_MS = 60_000;
+
+const localAiFetch: typeof fetch = (input, init) => {
+  const timeout = AbortSignal.timeout(LOCAL_AI_REQUEST_TIMEOUT_MS);
+  const signal = init?.signal
+    ? AbortSignal.any([init.signal, timeout])
+    : timeout;
+  return fetch(input, { ...init, signal });
+};
+
+const getLocalLanguageModel = (requestedId: string) => {
+  // The env var may be an origin-relative path; the OpenAI provider needs an
+  // absolute base URL.
+  const baseURL = new URL(LOCAL_AI_BASE_URL!, globalThis.location.origin).href;
+  logger.debug(
+    { requestedId, localModel: LOCAL_AI_MODEL, baseURL },
+    "Local AI override active — serving request with local model"
+  );
+  return createOpenAI({ baseURL, apiKey: "local-dev", fetch: localAiFetch }).chat(
+    LOCAL_AI_MODEL
+  );
+};
+
 export const getLanguageModel = async (modelId: ModelId) => {
+  if (LOCAL_AI_BASE_URL) {
+    return getLocalLanguageModel(modelId);
+  }
+
   const model = await getAppModelDefinition(modelId);
   const languageProvider = gateway(model.id);
 

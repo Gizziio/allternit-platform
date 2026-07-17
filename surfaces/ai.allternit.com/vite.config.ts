@@ -140,6 +140,15 @@ export default defineConfig({
     port: 3013,
     host: true,
     proxy: {
+      // Dev-only model access: same-origin path to a local OpenAI-compatible
+      // server (Ollama). Browser-direct calls to ai-gateway.vercel.sh are
+      // CORS-blocked, so getLanguageModel routes here when
+      // VITE_LOCAL_AI_BASE_URL is set (see src/lib/ai/providers.ts).
+      '/local-ai': {
+        target: 'http://127.0.0.1:11434',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/local-ai/, ''),
+      },
       '/api': {
         target: 'http://127.0.0.1:8013',
         changeOrigin: true,

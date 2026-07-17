@@ -1,4 +1,3 @@
-import { unstable_cache as cache } from "next/cache";
 import { config } from "@/lib/config";
 import type { AnyImageModelId } from "@/lib/models/image-model-id";
 import type { AppModelId, ModelId } from "./app-model-id";
@@ -52,7 +51,6 @@ export type AppModelDefinition = Omit<ModelData, "id"> & {
 };
 
 const DISABLED_MODELS = new Set(config.models.disabledModels);
-const PROVIDER_ORDER = config.models.providerOrder;
 
 function buildAppModels(models: ModelData[]): AppModelDefinition[] {
   return models
@@ -94,45 +92,15 @@ function buildAppModels(models: ModelData[]): AppModelDefinition[] {
     ) as AppModelDefinition[];
 }
 
-function buildChatModels(
-  appModels: AppModelDefinition[]
-): AppModelDefinition[] {
-  return appModels
-    .filter((model) => model.output.text === true)
-    .sort((a, b) => {
-      const aProviderIndex = PROVIDER_ORDER.indexOf(a.owned_by);
-      const bProviderIndex = PROVIDER_ORDER.indexOf(b.owned_by);
+// This surface is a Vite SPA — next/cache's unstable_cache throws outside a
+// Next server, and the data here is a static in-memory snapshot anyway, so a
+// module-level memo is all the caching this needs.
+let allAppModelsPromise: Promise<AppModelDefinition[]> | undefined;
 
-      const aIndex =
-        aProviderIndex === -1 ? PROVIDER_ORDER.length : aProviderIndex;
-      const bIndex =
-        bProviderIndex === -1 ? PROVIDER_ORDER.length : bProviderIndex;
-
-      if (aIndex !== bIndex) {
-        return aIndex - bIndex;
-      }
-
-      return 0;
-    });
+function fetchAllAppModels(): Promise<AppModelDefinition[]> {
+  allAppModelsPromise ??= fetchModels().then(buildAppModels);
+  return allAppModelsPromise;
 }
-
-const fetchAllAppModels = cache(
-  async (): Promise<AppModelDefinition[]> => {
-    const models = await fetchModels();
-    return buildAppModels(models);
-  },
-  ["all-app-models"],
-  { revalidate: 3600, tags: ["ai-gateway-models"] }
-);
-
-const fetchChatModels = cache(
-  async (): Promise<AppModelDefinition[]> => {
-    const appModels = await fetchAllAppModels();
-    return buildChatModels(appModels);
-  },
-  ["chat-models"],
-  { revalidate: 3600, tags: ["ai-gateway-models"] }
-);
 
 export async function getAppModelDefinition(
   modelId: AppModelId

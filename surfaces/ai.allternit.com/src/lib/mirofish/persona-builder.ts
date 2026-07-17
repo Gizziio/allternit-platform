@@ -114,15 +114,27 @@ export async function buildPersonas(
   await scheduler.destroyBatch(units.map((unit) => unit.id));
 
   const personas: Persona[] = [];
+  const failures: unknown[] = [];
   for (const result of results) {
     if (result.status === "fulfilled") {
       personas.push(result.value);
     } else {
+      failures.push(result.error);
       logger.warn(
         { unitId: result.unitId, error: result.error },
         "Persona generation turn failed"
       );
     }
+  }
+
+  // Partial failures are tolerated — the simulation runs with the survivors.
+  // But if every generation failed there is no population to simulate, and
+  // silently returning [] would make the run "complete" with nothing to show;
+  // surface the underlying cause (usually a model-access problem) instead.
+  if (personas.length === 0) {
+    throw new Error(
+      `All ${populationSize} persona generations failed — cannot run a simulation with an empty population. First error: ${String(failures[0])}`
+    );
   }
 
   return personas;
