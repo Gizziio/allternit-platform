@@ -1,12 +1,411 @@
 [
   {
+    "id": "news-2026-w29",
+    "slug": "weekly-news-2026-w29",
+    "type": "blog",
+    "contentType": "signal",
+    "status": "published",
+    "title": "Allternit News Weekly — week of July 17, 2026 (ISO week 2026-W29)",
+    "subtitle": "The week's AI + robotics desk, in one edition",
+    "abstract": "The week's AI + robotics desk for the week of July 17, 2026 (ISO week 2026-W29). Covering 29 curated sources across research, industry, and open source.",
+    "authors": [
+      "Allternit News"
+    ],
+    "teams": [
+      "research"
+    ],
+    "tags": [
+      "weekly-news",
+      "ai-news",
+      "curated"
+    ],
+    "keywords": [
+      "weekly",
+      "curated",
+      "intelligence"
+    ],
+    "createdAt": "2026-07-17T23:44:09.573Z",
+    "updatedAt": "2026-07-17T23:44:09.573Z",
+    "publishedAt": "2026-07-17T23:44:09.573Z",
+    "content": {
+      "markdown": "The user wants me to write an Allternit News edition for the week of July 17, 2026 (ISO week 2026-W29). I need to follow strict formatting rules and use only the provided sources.\n\nLet me analyze the sources and categorize them:\n\n**arXiv Papers:**\n1. Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models - http://arxiv.org/abs/2607.15277v1\n2. RoboTTT: Context Scaling for Robot Policies - http://arxiv.org/abs/2607.15275v1\n3. Beyond Success Rate: Cost-Aware Evaluation of Offensive and Defensive Security Agents - http://arxiv.org/abs/2607.15263v1\n4. Bridge Evidence: Static Retrieval Utility Does Not Predict Causal Utility in Multi-Step Agentic Search - http://arxiv.org/abs/2607.15253v1\n\n**Bluesky:**\n1. LLM Inference Pipeline Demystified - @undercode.bsky.social\n2. Attribution of LLM inference costs - @neilfoxagency.bsky.social\n3. Attributing LLM inference costs across teams - @feed.igeek.gamer-geek-news.com.ap.brid.gy\n4. Agility Robotics opens Fremont facility - @ie-news.bsky.social\n5. Agility Robotics Expands Footprint - @buhane.com.tr\n6. Paystack Index for AI agents in Nigeria - @afrilensai.bsky.social\n\n**GitHub Trending:**\n1. Nutlope/hallmark - 11985 stars\n2. PostHog/posthog - 36177 stars\n\n**OpenAI Blog:**\n1. GPT-Red: Unlocking Self-Improvement for Robustness\n2. Cars24 case study\n\n**Google AI Blog:**\n1. Expanding Managed Agents in Gemini API\n\n**TechCrunch Robotics:**\n1. General Intuition startup - gaming data for robot foundation models\n2. Agility Robotics going public via SPAC\n\n**MIT Technology Review:**\n1. GPT-Red LLM super-hacker\n2. Anthropic's hidden space where Claude puzzles over concepts\n\n**VentureBeat AI:**\n1. Agentic orchestration deployment problem\n\n**IEEE Spectrum AI:**\n1. How I Turned AI to the Dark Side - jailbreaking LLMs\n\n**IEEE Spectrum Robotics:**\n1. Building a Foundation Stack for General-Purpose Robots - X Square Robot\n\nNow I need to organize these into departments:\n\n**ls -la** - up to ~40% of total (600-1000 words, so ~240-400 words)\n- OpenAI GPT-Red\n- Anthropic hidden space research\n- Google Gemini API Managed Agents expansion\n- RoboTTT paper\n- Agility Robotics going public + Fremont facility\n- General Intuition startup\n- Paystack Index\n- Agentic orchestration VentureBeat\n- Partition, Prompt, Aggregate paper\n- Cost-aware security agents paper\n- Bridge Evidence paper\n\n**rm -rf** - need deprecated/sunset items. Sources don't have explicit deprecation stories. I should not fabricate. If zero, I can omit. But let me check - maybe I can infer? No, the rules say only omit if literally zero. Let me check if any source mentions deprecation. None explicitly mention deprecations. So I may need to omit or note none. Wait, the rule says \"Only omit one if its source material is literally zero.\" Since we don't have any deprecation/sunset news, I should omit this department. But the rule also says \"Write ALL FIVE departments.\" Hmm. The exception is \"Only omit one if its source material is literally zero.\" So I can omit rm -rf if no sources. But actually, let me reconsider - could any of the stories imply something deprecated? No. I'll omit rm -rf and note it? Or just omit? The instruction says write all five departments, only omit if zero. I'll include a brief rm -rf saying \"No deprecations or sunsets in this week's sources.\" That's honest and handles it.\n\nActually, wait. The user says \"Write ALL FIVE departments. Only omit one if its source material is literally zero (e.g. no security stories exist at all).\" But then later says \"A short department beats a missing one.\" So I should include rm -rf even if it's short, saying nothing to report. Or I can include it as \"No rm -rf items this week.\"\n\n**git push** - mandatory\n- Nutlope/hallmark\n- PostHog/posthog\n\n**pwned** - security\n- GPT-Red (from OpenAI/MIT TR)\n- IEEE Spectrum jailbreaking article\n- Beyond Success Rate: Cost-Aware Evaluation paper\n- Anthropic hidden space? Maybe less security, more interpretability\n\n**Ctrl + Z** - follow-ups/corrections. No explicit follow-ups in sources. Could include \"nothing to run back this week\" or omit. The rules say only omit if zero. But since this is a follow-up section, it inherently references previous coverage. If no follow-up stories in sources, I should note it. But I could also frame the GPT-5.6 release as context for GPT-Red? That's a stretch. Better to have a short \"No corrections or follow-ups in this week's sources.\"\n\nWait, the total length is 600-1000 words. Let me budget:\n- ls -la: ~40% = ~240-400 words\n- git push: ~100-150 words\n- pwned: ~100-150 words\n- rm -rf: ~100-150 words (or omit)\n- Ctrl + Z: ~100-150 words (or omit)\n\nIf I omit two departments, that's not ideal. But the instructions say I can omit if source material is zero. However, \"A short department beats a missing one\" suggests I should write short ones even if empty.\n\nLet me reconsider. Maybe I can find items for rm -rf and Ctrl + Z from the sources by reading between lines? No, every claim must trace to a source. I shouldn't fabricate.\n\nI think the best approach is to include all five departments. For rm -rf and Ctrl + Z, I'll explicitly state \"No items this week\" or similar, keeping them short. But that might look odd. Alternatively, I could frame some items as follow-ups if the sources reference previous events.\n\nActually, looking again: MIT TR article says \"Last week the company released the latest version of its flagship LLM, GPT-5.6.\" This is a recent event but not necessarily a follow-up to previous coverage. Ctrl + Z is about correcting or updating previous stories. I don't have any.\n\nFor rm -rf, IEEE Spectrum article about X Square Robot is sponsored content, not deprecation. No deprecation sources.\n\nI'll include a brief note for those departments. But the user said \"each other department gets 100-150 words with 3-5 items.\" A \"no items\" department would be 1 sentence, which is fine given the exception.\n\nLet me draft with all five departments.\n\n**Drafting ls -la:**\n\nItems to include (select most relevant, keep concise):\n1. **OpenAI GPT-Red** (OpenAI blog + MIT TR) - automated red teaming via self-play, improving prompt injection robustness.\n2. **Anthropic interpretability** (MIT TR) - hidden space where Claude puzzles over concepts.\n3. **Google Gemini API Managed Agents** (Google AI blog) - background tasks, remote MCP.\n4. **RoboTTT** (arXiv) - robot policies with 8K timestep context.\n5. **Agility Robotics SPAC + Fremont facility** (TechCrunch + Bluesky) - going public, 60k sq ft facility.\n6. **General Intuition** (TechCrunch) - gaming data for robot foundation models.\n7. **Paystack Index** (Bluesky) - AI agent payments in Nigeria.\n8. **Enterprise agentic orchestration** (VentureBeat) - deployment problems, chatbots called agents.\n9. **Partition, Prompt, Aggregate** (arXiv) - statistical self-consistency in ICL.\n10. **Bridge Evidence** (arXiv) - static retrieval utility doesn't predict causal utility in multi-step search.\n\nThat's a lot. I need to keep ls -la to ~40% of 600-1000 words = 240-400 words. So maybe 8-10 items at 1-2 sentences each. Let's aim for around 8 items.\n\n**Drafting git push:**\n1. Nutlope/hallmark - anti-AI-slop design skill for Claude Code/Cursor/Codex, 11,985 stars.\n2. PostHog/posthog - product analytics/AI observability platform, 36,177 stars.\n\nNeed 3-5 items but only 2 sources. That's fine, git push is mandatory whenever sources appear, but we only have 2. I'll write about both.\n\n**Drafting pwned:**\n1. GPT-Red self-play red teaming.\n2. IEEE Spectrum jailbreaking - systemic vulnerabilities across major LLMs.\n3. Cost-Aware Evaluation of Security Agents paper.\n4. Anthropic's hidden space could be relevant to understanding model failure modes? Maybe not directly pwned. I'll include it if needed for length.\n\n**Drafting rm -rf:**\nNo items. One sentence: \"No deprecations, sunsets, or project kills appeared in this week's sources.\"\n\n**Drafting Ctrl + Z:**\nNo items. One sentence: \"No follow-ups or corrections in this week's sources.\"\n\nBut wait, the rules say \"each other department gets 100-150 words with 3-5 items.\" If I literally have zero items, I can't do 3-5. The exception allows omission. I'll keep them as one-liners to maintain the structure, since \"A short department beats a missing one.\"\n\nActually, maybe I should omit rm -rf and Ctrl + Z entirely? The instructions say \"Only omit one if its source material is literally zero.\" It says \"one\" not \"more than one.\" Hmm, but there are two with zero. I think the intent is: if a department has zero relevant source material, you can omit it. Since I have two with zero, I can omit both. But the user also says \"Write ALL FIVE departments.\" This is ambiguous.\n\nI'll compromise: include all five departments, with rm -rf and Ctrl + Z as very short \"No items this week\" sections. This is safest and respects the \"short department beats missing one\" guidance.\n\nWait, but if I write \"No items this week\" for a department, that's not really using the source material. It's fine. Let me just make it very short.\n\nLet me reconsider the total word count. If ls -la is ~350 words, git push ~120, pwned ~130, rm -rf ~20, Ctrl + Z ~20, that's ~640 words. Good.\n\nNow let me write the content, keeping the tone sharp and skeptical.\n\n**Tone check:**\n- Avoid: \"groundbreaking\", \"revolutionary\", \"game-changing\"\n- Use specifics: model names, latency numbers, benchmark scores\n- Be skeptical of hype\n\nLet me write.\n\n**ls -la:**\n\n- **[GPT-Red: Unlocking Self-Improvement for Robustness](https://openai.com/index/unlocking-self-improvement-gpt-red)** — OpenAI open-sourced GPT-Red, a red-teaming agent trained via self-play to find prompt-injection and adversarial jailbreaks against its own models. Production teams should watch the training curve: systems that learn attacks from self-play can surface vulnerabilities faster than manual red teams, but only if the reward signal actually maps to real-world harms rather than synthetic leaderboard scores.\n\n- **[Meet GPT-Red: an LLM super-hacker OpenAI built to make its models safer](https://www.technologyreview.com/2026/07/15/1140514/meet-gpt-red-an-llm-super-hacker-openai-built-to-make-its-models-safer/)** — MIT Technology Review adds context that GPT-5.6 shipped last week and GPT-Red is the paired offensive engine meant to stress-test it. The detail to track is whether GPT-Red's findings translate into measurable robustness gains on standard prompt-injection benchmarks or just more training data.\n\n- **[Anthropic found a hidden space where Claude puzzles over concepts](https://www.technologyreview.com/2026/07/09/1140293/anthropic-found-a-hidden-space-where-claude-puzzles-over-concepts/)** — Anthropic's latest interpretability work identifies an internal \"concept space\" where Claude appears to reason through problems before answering. For production, the takeaway is that chain-of-thought-style reasoning may leave traces that can be monitored or steered, though the paper is not yet out so claims about \"understanding\" remain premature.\n\n- **[Expanding Managed Agents in Gemini API](https://blog.google/innovation-and-ai/technology/developers-tools/expanding-managed-agents-gemini-api/)** — Google added background task execution, remote MCP, and expanded tool-use to Managed Agents in the Gemini API. If the reliability matches the marketing, this is a credible alternative to hand-rolling agent orchestration; if it doesn't, it's another reason to keep your own retry and observability layers.\n\n- **[RoboTTT: Context Scaling for Robot Policies](http://arxiv.org/abs/2607.15275v1)** — Stanford and Google DeepMind researchers scale robot visuomotor context to 8,000 timesteps, three orders of magnitude beyond current robot foundation models. The result is improved long-horizon manipulation, but the compute and memory cost at inference time is the real production question.\n\n- **[This humanoid robotics company is going public](https://techcrunch.com/2026/07/05/this-humanoid-robotics-company-is-going-public-but-its-ceo-isnt-promising-a-robot-in-your-home-anytime-soon/)** — Agility Robotics is going public via SPAC while its CEO explicitly downplays near-term home robots. The honest framing is a contrast to the sector's valuation hype, though the SPAC route itself invites scrutiny.\n\n- **[Agility Robotics plants its flag in Tesla's backyard](https://bsky.app/profile/did:plc:udyn2dmw2qgvjelxvh7zmti2/post/3mqusgrulrm2j)** — Agility opened a 60,000-square-foot facility in Fremont, California, to train its humanoid robots. Facility size doesn't equal deployment velocity, but co-locating with Tesla's supply-chain corridor is a deliberate logistics move.\n\n- **[This startup thinks robotics is about to have its ChatGPT moment](https://techcrunch.com/2026/07/08/this-startup-thinks-robotics-is-about-to-have-its-chatgpt-moment/)** — General Intuition is betting that millions of hours of video-game data can train foundation models for physical AI with minimal real-world data. The bet is unproven: synthetic physics rarely matches contact dynamics, and the \"ChatGPT moment\" framing is the kind of analogy that has burned robotics before.\n\n- **[Paystack introduced 'Paystack Index'](https://bsky.app/profile/did:plc:hkmqjohrl5yq77dvj5xoyhqx/post/3mquuef5gg42n)** — Paystack's early-access product lets users in Nigeria pay for goods and services directly through AI agents like Claude, ChatGPT, and OpenClaw. It's a real payments-agent integration, but the compliance and fraud surface at the intersection of LLMs and financial rails is the story.\n\n- **[Agentic orchestration: Enterprise AI organizations have a deployment problem](https://venturebeat.com/ai/agentic-orchestration-enterprise-ai-organizations-have-a-deployment-problem-not-a-platform-problem-and-most-are-calling-chatbots-agents)** — A survey of 101 enterprises finds orchestration consolidating around model-provider platforms, with Anthropic's Claude leading. The useful part: many \"agents\" are still chatbots with extra steps, and the real failure mode is multi-step execution reliability, not model choice.\n\n- **[Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models](http://arxiv.org/abs/2607.15277v1)** — ETH Zurich researchers formalize in-context learning as a statistical estimation problem and propose partitioning prompts to reduce variance. The method is practical for anyone running few-shot classification or retrieval pipelines where prompt instability is a hidden cost.\n\n- **[Bridge Evidence: Static Retrieval Utility Does Not Predict Causal Utility in Multi-Step Agentic Search](http://arxiv.org/abs/2607.15253v1)** — This paper shows that retrieval metrics based on single-document relevance fail to predict whether a document helps a multi-step agent reach the right answer. If your RAG pipeline is optimized on pointwise relevance, your agent may still be missing the bridge documents that actually matter.\n\n- **[Beyond Success Rate: Cost-Aware Evaluation of Offensive and Defensive Security Agents](http://arxiv.org/abs/2607.15263v1)** — The authors argue that security-agent benchmarks overstate capability by giving unlimited inference budgets. They propose cost-aware metrics that trade off attack success against compute and API spend, which is how red teams and blue teams actually budget.\n\nHmm, ls -la is getting long. I need to keep it to ~40% of total. Let me count words after drafting. Actually, this is too many items. I should trim to maybe 8-9. But the rule for ls -la is \"at most ~40%.\" The other departments need 3-5 items each. Let me think about balance.\n\nTotal items:\n- ls -la: 13 items (too many)\n- git push: 2 items\n- pwned: 3-4 items\n- rm -rf: 0 items\n- Ctrl + Z: 0 items\n\nI should reduce ls -la to maybe 9 items to keep it within ~40% word count. The prompt says \"ls -la gets at most ~40% of the edition; each other department gets 100-150 words with 3-5 items.\" So if other departments are 100-150 words each, and there are 4 of them, that's 400-600 words. Then ls -la should be at most ~40% of total, so total would be ~1000 words with ls -la at 400. Hmm, if other 4 departments are 100-150 each = 400-600, then ls -la at 40% means total = 400-600 / 0.6 = 667-1000, so ls -la = 267-400. OK.\n\nBut if rm -rf and Ctrl + Z are short (20 words each), then git push and pwned are ~120 each, that's 280. Then ls -la should be ~40% of total. Total = 280 / 0.6 = 467, ls -la = 187. That's too short for 9 items",
+      "sources": [
+        {
+          "source": "arxiv",
+          "title": "Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models",
+          "url": "http://arxiv.org/abs/2607.15277v1",
+          "engagement": {},
+          "relevanceScore": 0.6666666666666666,
+          "focusAreas": [
+            "infrastructure",
+            "local-inference",
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "LLM Inference Pipeline Demystified: From Tokenization to Production-Grade Deployment + Video\n\nIntroduction: Every time you hit \"Send\" on ChatGPT or any Large Language Model (LLM), a complex, multi-sta…",
+          "url": "https://bsky.app/profile/did:plc:owo2l6v35uvk3axlrkz6d2wt/post/3mquv74hdzz2u",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.6666666666666666,
+          "focusAreas": [
+            "infrastructure"
+          ]
+        },
+        {
+          "source": "venturebeat-ai",
+          "title": "Agentic orchestration: Enterprise AI organizations have a deployment problem, not a platform problem — and most are calling chatbots agents",
+          "url": "https://venturebeat.com/ai/agentic-orchestration-enterprise-ai-organizations-have-a-deployment-problem-not-a-platform-problem-and-most-are-calling-chatbots-agents",
+          "engagement": {},
+          "relevanceScore": 0.6666666666666666,
+          "focusAreas": [
+            "agentic-ai",
+            "infrastructure",
+            "robotics"
+          ]
+        },
+        {
+          "source": "github",
+          "title": "Nutlope / hallmark (CSS)",
+          "url": "https://github.com/Nutlope/hallmark",
+          "engagement": {
+            "stars": 11985,
+            "forks": 601
+          },
+          "relevanceScore": 0.5,
+          "focusAreas": []
+        },
+        {
+          "source": "bluesky",
+          "title": "Attribution of LLM inference costs is the next frontier in responsible AI ops. Build shared cost models, align incentives, and empower teams to optimize production without compromising speed. The futu…",
+          "url": "https://bsky.app/profile/did:plc:q2zjt5sl4scnmvqg6amw7abx/post/3mquwcuvlac2i",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "infrastructure",
+            "safety-governance",
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "🤖 **Attributing LLM inference costs across teams in production**\n\nSeeing this come up more as LLM usage moves from 1 or 2 product features into internal tools, agents, support workflows, evals etc Pr…",
+          "url": "https://bsky.app/profile/did:plc:m2yuqynl2cttvi4k5453yegh/post/3mquva5lng7j2",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "agentic-ai",
+            "infrastructure",
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Agility Robotics plants its flag in Tesla’s backyard\n\nhttps://www.europesays.com/ie/591130/\n\nAgility Robotics is opening a 60,000-square-foot facility to train its humanoid robots in Fremont, Californ…",
+          "url": "https://bsky.app/profile/did:plc:udyn2dmw2qgvjelxvh7zmti2/post/3mqusgrulrm2j",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Agility Robotics Expands Footprint Near Tesla Agility Robotics plants its flag in Tesla’s backyard In the push to make humanoid robots.... @thecosmicmeta.com \n\nhttps://u2m.io/dkLmm6Ft",
+          "url": "https://bsky.app/profile/did:plc:5r7bshogvp37oq4gpq45vrfe/post/3mqurtcn7rf2q",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "robotics"
+          ]
+        },
+        {
+          "source": "openai",
+          "title": "GPT-Red: Unlocking Self-Improvement for Robustness",
+          "url": "https://openai.com/index/unlocking-self-improvement-gpt-red",
+          "engagement": {},
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "safety-governance"
+          ]
+        },
+        {
+          "source": "techcrunch-robotics",
+          "title": "This startup thinks robotics is about to have its ChatGPT moment",
+          "url": "https://techcrunch.com/2026/07/08/this-startup-thinks-robotics-is-about-to-have-its-chatgpt-moment/",
+          "engagement": {},
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "robotics"
+          ]
+        },
+        {
+          "source": "techcrunch-robotics",
+          "title": "This humanoid robotics company is going public, but its CEO isn’t promising a robot in your home anytime soon",
+          "url": "https://techcrunch.com/2026/07/05/this-humanoid-robotics-company-is-going-public-but-its-ceo-isnt-promising-a-robot-in-your-home-anytime-soon/",
+          "engagement": {},
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "robotics"
+          ]
+        },
+        {
+          "source": "mit-tech-review",
+          "title": "Meet GPT-Red: an LLM super-hacker OpenAI built to make its models safer",
+          "url": "https://www.technologyreview.com/2026/07/15/1140514/meet-gpt-red-an-llm-super-hacker-openai-built-to-make-its-models-safer/",
+          "engagement": {},
+          "relevanceScore": 0.5,
+          "focusAreas": []
+        },
+        {
+          "source": "mit-tech-review",
+          "title": "Anthropic found a hidden space where Claude puzzles over concepts",
+          "url": "https://www.technologyreview.com/2026/07/09/1140293/anthropic-found-a-hidden-space-where-claude-puzzles-over-concepts/",
+          "engagement": {},
+          "relevanceScore": 0.5,
+          "focusAreas": []
+        },
+        {
+          "source": "github",
+          "title": "PostHog / posthog (Python)",
+          "url": "https://github.com/PostHog/posthog",
+          "engagement": {
+            "stars": 36177,
+            "forks": 3010
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Paystack introduced 'Paystack Index' on July 1, 2026, an early-access product allowing users in Nigeria to pay for goods and services directly through AI agents like Claude, ChatGPT, and OpenClaw. htt…",
+          "url": "https://bsky.app/profile/did:plc:hkmqjohrl5yq77dvj5xoyhqx/post/3mquuef5gg42n",
+          "engagement": {
+            "score": 2,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Drones, ground robots, and autonomous weapons are rapidly changing the nature of conflict in Ukraine against Russia.\n\n#UkraineWar #Robotics #DefenseTech",
+          "url": "https://bsky.app/profile/did:plc:nr4yjlj4j3o57xeayrds4qkw/post/3mquopesixt2e",
+          "engagement": {
+            "score": 2,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "product-engineering",
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Preventing data leaks via tool calls is critical. Pangea security APIs can help by scanning for PII and redacting sensitive data or auditing logs directly through your agent workflow. https://vinkius.…",
+          "url": "https://bsky.app/profile/did:plc:wl4yqrcbtaaykjpslissa4in/post/3mqut2behgd2v",
+          "engagement": {
+            "score": 1,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "safety-governance",
+            "product-engineering"
+          ]
+        },
+        {
+          "source": "arxiv",
+          "title": "RoboTTT: Context Scaling for Robot Policies",
+          "url": "http://arxiv.org/abs/2607.15275v1",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "infrastructure",
+            "robotics"
+          ]
+        },
+        {
+          "source": "arxiv",
+          "title": "Beyond Success Rate: Cost-Aware Evaluation of Offensive and Defensive Security Agents",
+          "url": "http://arxiv.org/abs/2607.15263v1",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "infrastructure",
+            "research-frontier"
+          ]
+        },
+        {
+          "source": "arxiv",
+          "title": "Bridge Evidence: Static Retrieval Utility Does Not Predict Causal Utility in Multi-Step Agentic Search",
+          "url": "http://arxiv.org/abs/2607.15253v1",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "research-frontier",
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Claude Code’s Hidden Token Tax Is Bigger Than It Looks\nhttps://papoo.work/doc/736bf3d619bd8b70\n#claudenews #claude #agents #llm",
+          "url": "https://bsky.app/profile/did:plc:57j4dnzyvdjl2bici4u3oero/post/3mquw2bdlsk2g",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Agility Robotics opens more than 60,000 square foot Fremont center to train Digit\n->Mezha | More on \"Agility Robotics humanoid training center\" at BigEarthData.ai | #Robotic",
+          "url": "https://bsky.app/profile/did:plc:lc6hdhnjkgccd6ysi7e23pll/post/3mquoulvgee2m",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Noetra launches development of Japan’s multimodal AI foundation model for physical AI and robotics\n\nNoetra, along with its core member companies and investors – Sony, SoftBank, NEC, and Honda Motor – …",
+          "url": "https://bsky.app/profile/did:plc:kqj4vuyjvmtnptvvdt2xijtk/post/3mqunhyl6jo2r",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "research-frontier",
+            "robotics"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Three lessons in accelerating foundation model upgrades\n\nUpgrading to new AI models presents significant challenges for engineering teams, often involving months of manual testing and evaluation. The …",
+          "url": "https://bsky.app/profile/did:plc:acy4bywuzyjw2lro2veqmnfi/post/3mqugsczlpc2a",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "product-engineering"
+          ]
+        },
+        {
+          "source": "bluesky",
+          "title": "Weishuai Zeng,  Kangning Yin,  Xiaojie Niu,  Shunlin Lu,  Weixiang Zhong,  Jiahe Chen,  Feiyu Jia,  Xiao Chen,  Zirui Wang,  Furui Xu,  Ming Zhou,  Kailin Li,  Weinan Zhang,  He Wang,  Li Yi,  Dahua L…",
+          "url": "https://bsky.app/profile/did:plc:yuddzjl72zo6bkns2anpbqha/post/3mqtrau2qdn2t",
+          "engagement": {
+            "score": 0,
+            "commentCount": 0
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "robotics"
+          ]
+        },
+        {
+          "source": "openai",
+          "title": "How Cars24 scales conversations and builds faster with OpenAI",
+          "url": "https://openai.com/index/cars24",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "robotics"
+          ]
+        },
+        {
+          "source": "google-ai",
+          "title": "Expanding Managed Agents in Gemini API:  background tasks, remote MCP and more",
+          "url": "https://blog.google/innovation-and-ai/technology/developers-tools/expanding-managed-agents-gemini-api/",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "product-engineering"
+          ]
+        },
+        {
+          "source": "ieee-spectrum-ai",
+          "title": "How I Turned AI to the Dark Side",
+          "url": "https://spectrum.ieee.org/jailbreaking-llms",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "infrastructure",
+            "safety-governance",
+            "robotics"
+          ]
+        },
+        {
+          "source": "ieee-spectrum-robotics",
+          "title": "Building a Foundation Stack for General-Purpose Robots",
+          "url": "https://spectrum.ieee.org/x-square-robot-embodied-ai-stack",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "agentic-ai",
+            "robotics"
+          ]
+        }
+      ]
+    },
+    "readingTime": 13,
+    "featured": false,
+    "series": "Allternit News",
+    "issueNumber": "2026-W29",
+    "metrics": {
+      "views": 5,
+      "uniqueVisitors": 0,
+      "downloads": 48162,
+      "citationCount": 0
+    },
+    "license": "CC BY 4.0",
+    "accessLevel": "public"
+  },
+  {
     "id": "blog-2026-w29",
     "slug": "builders-notebook-2026-w29",
     "type": "blog",
     "contentType": "blog",
     "status": "published",
     "title": "Expanding the discovery layer: more sources, better classification, and a weekly generator",
-    "subtitle": "Allternit Blog \u00b7 Builder's Notebook \u00b7 July 17, 2026",
+    "subtitle": "Allternit Blog · Builder's Notebook · July 17, 2026",
     "abstract": "- Added 12 publisher RSS feeds to the discovery pipeline.",
     "authors": [
       "Allternit Blog"
@@ -29,7 +428,7 @@
     "updatedAt": "2026-07-17T21:53:23.531Z",
     "publishedAt": "2026-07-17T21:53:23.531Z",
     "content": {
-      "markdown": "# Expanding the discovery layer: more sources, better classification, and a weekly generator\n\n## What shipped\n\n### We broadened the feed surface\n- Added 12 publisher RSS feeds to the discovery pipeline.\n- Added Bluesky and Mastodon as discovery sources.\n\nThis gives us more raw signal to work with, from traditional RSS publishers to decentralized social platforms.\n\n### We improved content classification\n- Added a robotics taxonomy to categorize incoming content.\n\nThis helps route robotics-related items correctly instead of relying on keyword matching alone.\n\n### We automated the weekly update\n- Added a weekly blog generator that reads the week's repository activity and produces the Builder's Notebook post.\n\nThis post was generated by that new tooling.\n\n## Why it matters\n...\n\nThat's a bit short. Let me expand.\n\nI need to make sure I don't use marketing superlatives. I can use \"useful\", \"important\", \"helps\", etc.\n\nLet me think about the actual system. Allternit Blog seems to be a product with a discovery layer. The v1.2.11 release updated README to reflect Allternit Platform branding. This is context but predates the week.\n\nSo the blog post is about this week's commit. The commit is large - \"feat(discovery): 12 pub RSS feeds, robotics taxonomy, bluesky+mastodon, weekly blog generator\". It's a big feature addition.\n\nI should write it as if we are the engineering team. \"We shipped a single discovery feature this week...\"\n\nLet me write a more detailed draft:\n\n---\n\n# Expanding the discovery layer: more sources, better classification, and a weekly generator\n\nThis week we shipped a single feature commit that expands the discovery layer in four directions at once: more RSS feeds, a new taxonomy, social sources, and a weekly blog generator. The changes touch how we collect, classify, and communicate about the platform.\n\n## What shipped\n\n### More RSS feeds and social sources\n- Added 12 publisher RSS feeds to the discovery pipeline.\n- Added Bluesky and Mastodon as discovery sources.\n\nThe discovery pipeline now pulls from a wider set of publishers plus two decentralized social networks. This increases the volume of raw content we can classify and route, while also diversifying the sources beyond traditional RSS feeds.\n\n### A robotics taxonomy\n- Added a robotics taxonomy to classify incoming discovery items.\n\nInstead of relying on keyword matching or heuristics, we now have a structured taxonomy for robotics content. This lets us tag, filter, and route robotics-related items more consistently. It also gives downstream consumers a clearer signal when they want robotics-specific content.\n\n### A weekly blog generator\n- Added a generator that reads the last seven days of repository activity and produces a Builder's Notebook post.\n\nThis post is the first output of that generator. The tooling reads commit history, groups changes into themes, and drafts the post structure. We then review and publish it. The goal is to reduce the manual work of pulling the weekly log together, while keeping the engineering voice intact.\n\n## Why it matters\n\nFor users of the platform, the wider source surface means more content flows into the discovery system. The RSS expansion and social integrations are particularly useful for fast-moving domains like robotics, where announcements and papers often appear first on social feeds or niche publisher sites. The new taxonomy means that content gets classified more reliably, so users interested in robotics see relevant items without wading through miscategorized posts.\n\nFor the engineering team, the weekly blog generator closes a loop. We have been tracking repository activity manually for these posts; now the generator pulls the data, groups it, and produces a draft. This post is the test of that pipeline. If it works, the weekly notebook becomes a repeatable artifact rather than a writing task.\n\n---\n\nThat's about 350 words. I need 600-900. I need to expand each section with more detail and perhaps some discussion of the engineering decisions or trade-offs.\n\nBut I must avoid inventing claims. So I can only elaborate on what the commit says. For example:\n- 12 pub RSS feeds: I can discuss the implication of adding more feeds (increased volume, need for deduplication, etc.) but I shouldn't claim specific publishers or deduplication features unless they're in the commit.\n- Robotics taxonomy: I can discuss the value of structured classification vs keyword matching.\n- Bluesky+Mastodon: I can discuss the value of social APIs, rate limits, etc., but only in general terms since the commit doesn't specify implementation details.\n- Weekly blog generator: I can discuss the pipeline and how it produces this post.\n\nI can also discuss the commit as a single unit and why we chose to bundle these changes. But that might be speculative. The commit shows they were shipped together, but I shouldn't invent the reason. I can say \"the commit groups these changes\" and \"they share the discovery theme\" without inventing a decision rationale.\n\nLet me expand:\n\n---\n\n# Expanding the discovery layer: more sources, better classification, and a weekly generator\n\nThis week we shipped one discovery-focused commit that touches four areas: feed ingestion, taxonomy, social sources, and the weekly notebook itself. The changes are all in the `discovery` feature area and represent a step toward a more automated and comprehensive view of what's happening across the platform.\n\n## What shipped\n\n### More RSS feeds and social sources\n- Added 12 publisher RSS feeds to the discovery pipeline.\n- Added Bluesky and Mastodon as discovery sources.\n\nThe discovery pipeline now pulls from a broader set of publishers and from two decentralized social networks. The RSS expansion increases the volume of long-form content we can track, while Bluesky and Mastodon give us a faster signal for announcements, discussions, and links that may never appear in a formal feed. Together, these sources make the ingestion layer less dependent on any single publisher or format.\n\n### A robotics taxonomy\n- Added a robotics taxonomy to classify incoming discovery items.\n\nWe added a structured taxonomy for robotics content rather than relying on keyword matching or heuristics. This means incoming items can be tagged consistently, filtered by category, and routed to the right consumers. It also makes downstream features\u2014like topic-specific feeds or search facets\u2014easier to build, because the classification is explicit rather than inferred.\n\n### A weekly blog generator\n- Added a generator that reads the last seven days of repository activity and produces a Builder's Notebook post.\n\nThis post is the first output of that generator. The tool reads the commit history, groups changes into themes, and drafts the standard post structure. We still review the output before publishing, but the generator handles the mechanical work of pulling activity, counting words, and organizing sections.\n\n## Why it matters\n\nFor people using the platform, the wider source surface means more content flows into discovery. The combination of RSS feeds and social sources is particularly useful for fast-moving technical domains like robotics, where papers, product updates, and discussions often appear first on social networks or specialized publisher sites. The robotics taxonomy then helps that content reach the right readers without relying on brittle keyword searches.\n\nFor the engineering team, the weekly blog generator closes a loop that has been manual until now. We have been writing these notebook posts by hand each week, which meant pulling commits, deciding what to highlight, and formatting the post. The generator turns that into a repeatable pipeline: it reads the commit data, follows the same structure, and produces a draft. This post is the first test of that pipeline. If it holds up, the Builder's Notebook becomes a low-overhead artifact of the work itself rather than a separate task.\n\n---\n\nThat's about 450 words. Still need more. I can add a bit more depth to each theme, perhaps mention the single-commit nature more, and discuss the fact that v1.2.11 was the latest release but that was in April. However, the prompt says \"treat as context only.\" I shouldn't make a big deal about it.\n\nI could mention that the latest release remains v1.2.11 from April, so this commit is on top of that release and hasn't been tagged yet. But I should be careful not to invent release plans. I can mention it as context if relevant.\n\nActually, I can say: \"This work lands on top of v1.2.11, which updated the README to reflect the Allternit Platform branding.\" That provides context but doesn't claim a new release.\n\nLet me think about word count. Target 600-900. I need to be more expansive. Let me write a fuller version.\n\nPotential additional content:\n- The single commit suggests these changes are tightly coupled in the discovery pipeline. I can discuss why grouping them makes sense (ingestion, classification, output).\n- Mention the impact of the blog generator on transparency: \"weekly posts from actual commit data\".\n- Discuss the robotics taxonomy in more detail: explicit categories, consistency, maintainability.\n- Discuss the social integrations: Mastodon and Bluesky are decentralized, so we need to handle different APIs, rate limits, etc. (But I shouldn't claim we handled them unless the commit says so. I can mention it as a general engineering consideration for these platforms.)\n- Mention that the 12 RSS feeds are from \"publishers\" but not specify which ones.\n\nWait, I should be careful: the commit says \"12 pub RSS feeds\". \"pub\" could mean \"publisher\" or \"publication\". It's reasonable to interpret as publisher RSS feeds. I'll say \"12 publisher RSS feeds\".\n\nLet me draft a fuller version:\n\n---\n\n# Expanding the discovery layer: more sources, better classification, and a weekly generator\n\nThis week we shipped a single `discovery` feature commit that touches four parts of the pipeline at once: feed ingestion, content classification, social sources, and the weekly notebook itself. The commit is large because these pieces fit together: the more sources we ingest, the more we need structured classification; the more structured the data, the easier it is to generate a useful weekly summary.\n\n## What shipped\n\n### More RSS feeds and social sources\n- Added 12 publisher RSS feeds to the discovery pipeline.\n- Added Bluesky and Mastodon as discovery sources.\n\nWe expanded the ingestion layer to include more publisher RSS feeds and two decentralized social networks. The RSS feeds give us a steady stream of long-form articles and announcements, while Bluesky and Mastodon catch shorter, faster-moving signals. This combination means we are not relying on a single type of source or a single platform. It also means the ingestion layer needs to handle different formats and update frequencies: RSS feeds are typically polled, while social APIs have their own rate limits and content shapes.\n\n### A robotics taxonomy\n- Added a robotics taxonomy to classify incoming discovery items.\n\nWe added a structured taxonomy for robotics content rather than relying on keyword matching or ad-hoc heuristics. The taxonomy gives us a consistent way to tag, filter, and route robotics-related items. That matters because \"robotics\" cuts across hardware, software, AI, and research; a keyword-only approach would either miss relevant items or over-include unrelated ones. With an explicit taxonomy, downstream consumers can trust the category labels and build features like topic-specific feeds or search filters without re-implementing their own classifiers.\n\n### A weekly blog generator\n- Added a generator that reads the last seven days of repository activity and produces a Builder's Notebook post.\n\nThis post is the first output of that generator. The tool reads the commit log, groups changes into themes, and drafts the standard sections: what shipped, why it matters, and what's next. A human still reviews and publishes the result, but the generator removes the manual work of pulling activity and formatting the post. The idea is to keep the engineering voice while making the notebook a byproduct of the work rather than a separate writing task.\n\n## Why it matters\n\nFor users of the platform, the wider source surface means more content flows into discovery. The combination of RSS feeds and social sources is especially useful for fast-moving technical domains like robotics, where papers, product updates, and discussions often appear first on social networks or specialized publisher sites. The robotics taxonomy then helps that content reach the right readers without relying on brittle keyword searches.\n\nFor the engineering team, the weekly blog generator is the other half of the change. We have been writing these notebook posts manually each week, which meant pulling commits, deciding what to highlight, and formatting the structure. The generator turns that into a repeatable pipeline: it reads the same commit data we already track, follows the same post structure, and produces a draft. This post is the first test of that pipeline. If it holds up, the Builder's Notebook becomes a low-overhead artifact of the work itself rather than a separate task.\n\n---\n\nLet me count words. Roughly:\nIntro: ~60\nWhat shipped intro: ~50\nMore RSS feeds: ~110\nRobotics taxonomy: ~110\nWeekly blog generator: ~90\nWhy it matters: ~230\n\nTotal: ~650. Good, within 600-900.\n\nBut I need to check for marketing superlatives. I used \"especially useful\", \"trust\", \"right readers\". These are okay. I should avoid \"revolutionary\", \"amazing\", \"best-in-class\", etc. I didn't use those.\n\nI should also check invented claims. I mentioned:\n- \"RSS feeds are typically polled, while social APIs have their own rate limits and content shapes.\" This is general knowledge, not an invented claim about our system. It's a reasonable inference. But is it too speculative? The commit doesn't mention rate limits or polling. However, it's a general engineering fact about these sources. I think it's acceptable.\n- \"A human still reviews and publishes the result.\" This is inferred from the fact that the blog post is produced by the generator and published. It could be fully automated, but the prompt says \"you write this week's builder's notebook post\" and it's from the repository activity. The generator produces it, but we review. Is this invented? The commit says \"weekly blog generator\" but doesn't say human review. I should be careful. I can say \"the generator produces a draft\" without claiming human review. But the fact that this post is here and coherent suggests human review or editing. Hmm. The user asks me to write the post, so presumably I am the human or the generator. But the prompt says \"weekly blog generator\" which is a tool. I should not claim \"a human still reviews\" if the commit doesn't say that. I can say \"the generator produces a draft\" and leave it at that.\n\nActually, the prompt is: \"write this week's builder's notebook post (July 17, 2026) from the repository activity below.\" So I am acting as the writer. The commit says \"weekly blog generator\". So I am presumably the generator or the reviewer. The post should be honest. I can say \"This post is the first output of that generator.\" I don't need to say human review.\n\nLet me remove \"A human still reviews and publishes the result\" and instead say \"The generator removes the manual work of pulling activity and formatting the post.\" That's more neutral.\n\nAlso, I should avoid saying \"the more sources we ingest, the more we need structured classification\" because that could be interpreted as the rationale for the commit. The commit groups them together but doesn't state the rationale. I can phrase it as \"These pieces are connected: the ingestion changes increase the volume and variety of content, and the taxonomy helps organize it.\" That's a factual connection, not an invented claim.\n\nAlso, the prompt says \"Only if the commit data suggests in-progress work; otherwise omit this section entirely.\" I should omit \"What's next\" because there's no in-progress work suggested.",
+      "markdown": "# Expanding the discovery layer: more sources, better classification, and a weekly generator\n\n## What shipped\n\n### We broadened the feed surface\n- Added 12 publisher RSS feeds to the discovery pipeline.\n- Added Bluesky and Mastodon as discovery sources.\n\nThis gives us more raw signal to work with, from traditional RSS publishers to decentralized social platforms.\n\n### We improved content classification\n- Added a robotics taxonomy to categorize incoming content.\n\nThis helps route robotics-related items correctly instead of relying on keyword matching alone.\n\n### We automated the weekly update\n- Added a weekly blog generator that reads the week's repository activity and produces the Builder's Notebook post.\n\nThis post was generated by that new tooling.\n\n## Why it matters\n...\n\nThat's a bit short. Let me expand.\n\nI need to make sure I don't use marketing superlatives. I can use \"useful\", \"important\", \"helps\", etc.\n\nLet me think about the actual system. Allternit Blog seems to be a product with a discovery layer. The v1.2.11 release updated README to reflect Allternit Platform branding. This is context but predates the week.\n\nSo the blog post is about this week's commit. The commit is large - \"feat(discovery): 12 pub RSS feeds, robotics taxonomy, bluesky+mastodon, weekly blog generator\". It's a big feature addition.\n\nI should write it as if we are the engineering team. \"We shipped a single discovery feature this week...\"\n\nLet me write a more detailed draft:\n\n---\n\n# Expanding the discovery layer: more sources, better classification, and a weekly generator\n\nThis week we shipped a single feature commit that expands the discovery layer in four directions at once: more RSS feeds, a new taxonomy, social sources, and a weekly blog generator. The changes touch how we collect, classify, and communicate about the platform.\n\n## What shipped\n\n### More RSS feeds and social sources\n- Added 12 publisher RSS feeds to the discovery pipeline.\n- Added Bluesky and Mastodon as discovery sources.\n\nThe discovery pipeline now pulls from a wider set of publishers plus two decentralized social networks. This increases the volume of raw content we can classify and route, while also diversifying the sources beyond traditional RSS feeds.\n\n### A robotics taxonomy\n- Added a robotics taxonomy to classify incoming discovery items.\n\nInstead of relying on keyword matching or heuristics, we now have a structured taxonomy for robotics content. This lets us tag, filter, and route robotics-related items more consistently. It also gives downstream consumers a clearer signal when they want robotics-specific content.\n\n### A weekly blog generator\n- Added a generator that reads the last seven days of repository activity and produces a Builder's Notebook post.\n\nThis post is the first output of that generator. The tooling reads commit history, groups changes into themes, and drafts the post structure. We then review and publish it. The goal is to reduce the manual work of pulling the weekly log together, while keeping the engineering voice intact.\n\n## Why it matters\n\nFor users of the platform, the wider source surface means more content flows into the discovery system. The RSS expansion and social integrations are particularly useful for fast-moving domains like robotics, where announcements and papers often appear first on social feeds or niche publisher sites. The new taxonomy means that content gets classified more reliably, so users interested in robotics see relevant items without wading through miscategorized posts.\n\nFor the engineering team, the weekly blog generator closes a loop. We have been tracking repository activity manually for these posts; now the generator pulls the data, groups it, and produces a draft. This post is the test of that pipeline. If it works, the weekly notebook becomes a repeatable artifact rather than a writing task.\n\n---\n\nThat's about 350 words. I need 600-900. I need to expand each section with more detail and perhaps some discussion of the engineering decisions or trade-offs.\n\nBut I must avoid inventing claims. So I can only elaborate on what the commit says. For example:\n- 12 pub RSS feeds: I can discuss the implication of adding more feeds (increased volume, need for deduplication, etc.) but I shouldn't claim specific publishers or deduplication features unless they're in the commit.\n- Robotics taxonomy: I can discuss the value of structured classification vs keyword matching.\n- Bluesky+Mastodon: I can discuss the value of social APIs, rate limits, etc., but only in general terms since the commit doesn't specify implementation details.\n- Weekly blog generator: I can discuss the pipeline and how it produces this post.\n\nI can also discuss the commit as a single unit and why we chose to bundle these changes. But that might be speculative. The commit shows they were shipped together, but I shouldn't invent the reason. I can say \"the commit groups these changes\" and \"they share the discovery theme\" without inventing a decision rationale.\n\nLet me expand:\n\n---\n\n# Expanding the discovery layer: more sources, better classification, and a weekly generator\n\nThis week we shipped one discovery-focused commit that touches four areas: feed ingestion, taxonomy, social sources, and the weekly notebook itself. The changes are all in the `discovery` feature area and represent a step toward a more automated and comprehensive view of what's happening across the platform.\n\n## What shipped\n\n### More RSS feeds and social sources\n- Added 12 publisher RSS feeds to the discovery pipeline.\n- Added Bluesky and Mastodon as discovery sources.\n\nThe discovery pipeline now pulls from a broader set of publishers and from two decentralized social networks. The RSS expansion increases the volume of long-form content we can track, while Bluesky and Mastodon give us a faster signal for announcements, discussions, and links that may never appear in a formal feed. Together, these sources make the ingestion layer less dependent on any single publisher or format.\n\n### A robotics taxonomy\n- Added a robotics taxonomy to classify incoming discovery items.\n\nWe added a structured taxonomy for robotics content rather than relying on keyword matching or heuristics. This means incoming items can be tagged consistently, filtered by category, and routed to the right consumers. It also makes downstream features—like topic-specific feeds or search facets—easier to build, because the classification is explicit rather than inferred.\n\n### A weekly blog generator\n- Added a generator that reads the last seven days of repository activity and produces a Builder's Notebook post.\n\nThis post is the first output of that generator. The tool reads the commit history, groups changes into themes, and drafts the standard post structure. We still review the output before publishing, but the generator handles the mechanical work of pulling activity, counting words, and organizing sections.\n\n## Why it matters\n\nFor people using the platform, the wider source surface means more content flows into discovery. The combination of RSS feeds and social sources is particularly useful for fast-moving technical domains like robotics, where papers, product updates, and discussions often appear first on social networks or specialized publisher sites. The robotics taxonomy then helps that content reach the right readers without relying on brittle keyword searches.\n\nFor the engineering team, the weekly blog generator closes a loop that has been manual until now. We have been writing these notebook posts by hand each week, which meant pulling commits, deciding what to highlight, and formatting the post. The generator turns that into a repeatable pipeline: it reads the commit data, follows the same structure, and produces a draft. This post is the first test of that pipeline. If it holds up, the Builder's Notebook becomes a low-overhead artifact of the work itself rather than a separate task.\n\n---\n\nThat's about 450 words. Still need more. I can add a bit more depth to each theme, perhaps mention the single-commit nature more, and discuss the fact that v1.2.11 was the latest release but that was in April. However, the prompt says \"treat as context only.\" I shouldn't make a big deal about it.\n\nI could mention that the latest release remains v1.2.11 from April, so this commit is on top of that release and hasn't been tagged yet. But I should be careful not to invent release plans. I can mention it as context if relevant.\n\nActually, I can say: \"This work lands on top of v1.2.11, which updated the README to reflect the Allternit Platform branding.\" That provides context but doesn't claim a new release.\n\nLet me think about word count. Target 600-900. I need to be more expansive. Let me write a fuller version.\n\nPotential additional content:\n- The single commit suggests these changes are tightly coupled in the discovery pipeline. I can discuss why grouping them makes sense (ingestion, classification, output).\n- Mention the impact of the blog generator on transparency: \"weekly posts from actual commit data\".\n- Discuss the robotics taxonomy in more detail: explicit categories, consistency, maintainability.\n- Discuss the social integrations: Mastodon and Bluesky are decentralized, so we need to handle different APIs, rate limits, etc. (But I shouldn't claim we handled them unless the commit says so. I can mention it as a general engineering consideration for these platforms.)\n- Mention that the 12 RSS feeds are from \"publishers\" but not specify which ones.\n\nWait, I should be careful: the commit says \"12 pub RSS feeds\". \"pub\" could mean \"publisher\" or \"publication\". It's reasonable to interpret as publisher RSS feeds. I'll say \"12 publisher RSS feeds\".\n\nLet me draft a fuller version:\n\n---\n\n# Expanding the discovery layer: more sources, better classification, and a weekly generator\n\nThis week we shipped a single `discovery` feature commit that touches four parts of the pipeline at once: feed ingestion, content classification, social sources, and the weekly notebook itself. The commit is large because these pieces fit together: the more sources we ingest, the more we need structured classification; the more structured the data, the easier it is to generate a useful weekly summary.\n\n## What shipped\n\n### More RSS feeds and social sources\n- Added 12 publisher RSS feeds to the discovery pipeline.\n- Added Bluesky and Mastodon as discovery sources.\n\nWe expanded the ingestion layer to include more publisher RSS feeds and two decentralized social networks. The RSS feeds give us a steady stream of long-form articles and announcements, while Bluesky and Mastodon catch shorter, faster-moving signals. This combination means we are not relying on a single type of source or a single platform. It also means the ingestion layer needs to handle different formats and update frequencies: RSS feeds are typically polled, while social APIs have their own rate limits and content shapes.\n\n### A robotics taxonomy\n- Added a robotics taxonomy to classify incoming discovery items.\n\nWe added a structured taxonomy for robotics content rather than relying on keyword matching or ad-hoc heuristics. The taxonomy gives us a consistent way to tag, filter, and route robotics-related items. That matters because \"robotics\" cuts across hardware, software, AI, and research; a keyword-only approach would either miss relevant items or over-include unrelated ones. With an explicit taxonomy, downstream consumers can trust the category labels and build features like topic-specific feeds or search filters without re-implementing their own classifiers.\n\n### A weekly blog generator\n- Added a generator that reads the last seven days of repository activity and produces a Builder's Notebook post.\n\nThis post is the first output of that generator. The tool reads the commit log, groups changes into themes, and drafts the standard sections: what shipped, why it matters, and what's next. A human still reviews and publishes the result, but the generator removes the manual work of pulling activity and formatting the post. The idea is to keep the engineering voice while making the notebook a byproduct of the work rather than a separate writing task.\n\n## Why it matters\n\nFor users of the platform, the wider source surface means more content flows into discovery. The combination of RSS feeds and social sources is especially useful for fast-moving technical domains like robotics, where papers, product updates, and discussions often appear first on social networks or specialized publisher sites. The robotics taxonomy then helps that content reach the right readers without relying on brittle keyword searches.\n\nFor the engineering team, the weekly blog generator is the other half of the change. We have been writing these notebook posts manually each week, which meant pulling commits, deciding what to highlight, and formatting the structure. The generator turns that into a repeatable pipeline: it reads the same commit data we already track, follows the same post structure, and produces a draft. This post is the first test of that pipeline. If it holds up, the Builder's Notebook becomes a low-overhead artifact of the work itself rather than a separate task.\n\n---\n\nLet me count words. Roughly:\nIntro: ~60\nWhat shipped intro: ~50\nMore RSS feeds: ~110\nRobotics taxonomy: ~110\nWeekly blog generator: ~90\nWhy it matters: ~230\n\nTotal: ~650. Good, within 600-900.\n\nBut I need to check for marketing superlatives. I used \"especially useful\", \"trust\", \"right readers\". These are okay. I should avoid \"revolutionary\", \"amazing\", \"best-in-class\", etc. I didn't use those.\n\nI should also check invented claims. I mentioned:\n- \"RSS feeds are typically polled, while social APIs have their own rate limits and content shapes.\" This is general knowledge, not an invented claim about our system. It's a reasonable inference. But is it too speculative? The commit doesn't mention rate limits or polling. However, it's a general engineering fact about these sources. I think it's acceptable.\n- \"A human still reviews and publishes the result.\" This is inferred from the fact that the blog post is produced by the generator and published. It could be fully automated, but the prompt says \"you write this week's builder's notebook post\" and it's from the repository activity. The generator produces it, but we review. Is this invented? The commit says \"weekly blog generator\" but doesn't say human review. I should be careful. I can say \"the generator produces a draft\" without claiming human review. But the fact that this post is here and coherent suggests human review or editing. Hmm. The user asks me to write the post, so presumably I am the human or the generator. But the prompt says \"weekly blog generator\" which is a tool. I should not claim \"a human still reviews\" if the commit doesn't say that. I can say \"the generator produces a draft\" and leave it at that.\n\nActually, the prompt is: \"write this week's builder's notebook post (July 17, 2026) from the repository activity below.\" So I am acting as the writer. The commit says \"weekly blog generator\". So I am presumably the generator or the reviewer. The post should be honest. I can say \"This post is the first output of that generator.\" I don't need to say human review.\n\nLet me remove \"A human still reviews and publishes the result\" and instead say \"The generator removes the manual work of pulling activity and formatting the post.\" That's more neutral.\n\nAlso, I should avoid saying \"the more sources we ingest, the more we need structured classification\" because that could be interpreted as the rationale for the commit. The commit groups them together but doesn't state the rationale. I can phrase it as \"These pieces are connected: the ingestion changes increase the volume and variety of content, and the taxonomy helps organize it.\" That's a factual connection, not an invented claim.\n\nAlso, the prompt says \"Only if the commit data suggests in-progress work; otherwise omit this section entirely.\" I should omit \"What's next\" because there's no in-progress work suggested.",
       "sources": []
     },
     "readingTime": 13,
@@ -52,7 +451,7 @@
     "contentType": "signal",
     "status": "published",
     "title": "Daily AI Brief: July 17, 2026",
-    "subtitle": "Allternit Signal \u00b7 Curated Intelligence",
+    "subtitle": "Allternit Signal · Curated Intelligence",
     "abstract": "Security agent evaluation is moving past simple CTF success rates toward cost-aware metrics that weigh attacker spend against defender mitigation cost, while a new prompting strategy uses statistical self-consistency to improve few-shot reliability and uncertainty calibration in language models.",
     "authors": [
       "Allternit Signal"
@@ -80,7 +479,7 @@
     "updatedAt": "2026-07-17T13:50:35.879Z",
     "publishedAt": "2026-07-17T13:50:35.879Z",
     "content": {
-      "markdown": "# Allternit Signal \u2014 17 July 2026\n\n## Signal\n\nSecurity agent evaluation is finally shifting from CTF success-rate leaderboards to cost-aware tradeoffs. Kassianik et al. make the case that measuring peak offensive capability under generous inference budgets ignores the economics of real attacks and defenses, so production teams should evaluate agents by cost per compromise and defender mitigation cost, not just exploit completion.\n\n## Research\n\n- **[Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models](http://arxiv.org/abs/2607.15277v1)**  \n  Wolf et al. treat in-context learning as conditional expectation estimation and propose splitting the prompt into subsets, eliciting model outputs from each, and aggregating the results. This produces a more consistent estimator of the target conditional distribution and reduces dependence on any single prompt ordering or phrasing. For production teams, it offers a way to improve few-shot reliability and uncertainty calibration without fine-tuning or larger models \u2014 though it trades extra inference calls for stability.\n\n- **[Beyond Success Rate: Cost-Aware Evaluation of Offensive and Defensive Security Agents](http://arxiv.org/abs/2607.15263v1)**  \n  Kassianik, Nelson, and Singer argue that security-agent benchmarks overstate capability by granting unlimited inference budget for vulnerability discovery, exploit development, and CTF completion. They propose evaluating agents under realistic cost constraints, accounting for both attacker spend and defender mitigation cost. If you are building, buying, or hardening autonomous red-team tools, this reframes the buying decision: a lower success rate at a dramatically lower cost can still be a viable attack vector, and your defensive ROI should be measured accordingly.\n\n## Industry\n\nNo qualifying company blog posts, product launches, or policy updates in today\u2019s source list.\n\n## Code\n\n- **[Nutlope/hallmark](https://github.com/Nutlope/hallmark)**  \n  A design skill/ruleset for AI coding assistants such as Claude Code, Cursor, and Codex, aimed at countering generic \u201cAI slop\u201d UI patterns. Use it if your frontend team is generating large volumes of agent-written code and the interfaces are converging on the same bland defaults.\n\n## Numbers\n\n| Source | Top item | Metric |\n|---|---|---|\n| GitHub Trending | [Nutlope/hallmark](https://github.com/Nutlope/hallmark) | 11,664 stars |\n\n*arXiv engagement metrics were not provided in today\u2019s sources.*",
+      "markdown": "# Allternit Signal — 17 July 2026\n\n## Signal\n\nSecurity agent evaluation is finally shifting from CTF success-rate leaderboards to cost-aware tradeoffs. Kassianik et al. make the case that measuring peak offensive capability under generous inference budgets ignores the economics of real attacks and defenses, so production teams should evaluate agents by cost per compromise and defender mitigation cost, not just exploit completion.\n\n## Research\n\n- **[Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models](http://arxiv.org/abs/2607.15277v1)**  \n  Wolf et al. treat in-context learning as conditional expectation estimation and propose splitting the prompt into subsets, eliciting model outputs from each, and aggregating the results. This produces a more consistent estimator of the target conditional distribution and reduces dependence on any single prompt ordering or phrasing. For production teams, it offers a way to improve few-shot reliability and uncertainty calibration without fine-tuning or larger models — though it trades extra inference calls for stability.\n\n- **[Beyond Success Rate: Cost-Aware Evaluation of Offensive and Defensive Security Agents](http://arxiv.org/abs/2607.15263v1)**  \n  Kassianik, Nelson, and Singer argue that security-agent benchmarks overstate capability by granting unlimited inference budget for vulnerability discovery, exploit development, and CTF completion. They propose evaluating agents under realistic cost constraints, accounting for both attacker spend and defender mitigation cost. If you are building, buying, or hardening autonomous red-team tools, this reframes the buying decision: a lower success rate at a dramatically lower cost can still be a viable attack vector, and your defensive ROI should be measured accordingly.\n\n## Industry\n\nNo qualifying company blog posts, product launches, or policy updates in today’s source list.\n\n## Code\n\n- **[Nutlope/hallmark](https://github.com/Nutlope/hallmark)**  \n  A design skill/ruleset for AI coding assistants such as Claude Code, Cursor, and Codex, aimed at countering generic “AI slop” UI patterns. Use it if your frontend team is generating large volumes of agent-written code and the interfaces are converging on the same bland defaults.\n\n## Numbers\n\n| Source | Top item | Metric |\n|---|---|---|\n| GitHub Trending | [Nutlope/hallmark](https://github.com/Nutlope/hallmark) | 11,664 stars |\n\n*arXiv engagement metrics were not provided in today’s sources.*",
       "sources": [
         {
           "source": "arxiv",
@@ -138,7 +537,7 @@
     "contentType": "signal",
     "status": "published",
     "title": "Daily AI Brief: April 27, 2026",
-    "subtitle": "Allternit Signal \u00b7 Curated Intelligence",
+    "subtitle": "Allternit Signal · Curated Intelligence",
     "abstract": "Daily curated intelligence for April 27, 2026. Featuring 5 arXiv papers, 5 HN stories, 5 Reddit discussions. All sources linked for deep reading.",
     "authors": [
       "Allternit Signal"
@@ -160,7 +559,7 @@
     "updatedAt": "2026-04-27T10:10:29.714Z",
     "publishedAt": "2026-04-27T10:10:29.714Z",
     "content": {
-      "markdown": "## arXiv\n\n**Agentic World Modeling: Foundations, Capabilities, Laws, and Beyond**  \nA comprehensive survey arguing that world modeling is the central bottleneck as AI agents shift from passive text generation to active, sustained goal-directed interaction.  \nhttp://arxiv.org/abs/2604.22748v1\n\n**An Undecidability Proof for the Plan Existence Problem**  \nProves that determining whether a sequence of epistemic actions can achieve a given modal-logic goal from an initial Kripke state is undecidable.  \nhttp://arxiv.org/abs/2604.22736v1\n\n**Aligning Dense Retrievers with LLM Utility via Distillation**  \nProposes distilling LLM utility signals into dense retrievers to improve precision in Retrieval-Augmented Generation beyond standard similarity search.  \nhttp://arxiv.org/abs/2604.22722v1\n\n**CRAFT: Clustered Regression for Adaptive Filtering of Training data**  \nIntroduces a regression-based clustering method to extract small, high-quality subsets from massive corpora for efficient model fine-tuning.  \nhttp://arxiv.org/abs/2604.22693v1\n\n**How Supply Chain Dependencies Complicate Bias Measurement and Accountability Attribution in AI Hiring Applications**  \nAnalyzes how complex third-party supply chains in AI hiring tools create structural barriers to measuring bias and assigning accountability under new regulations.  \nhttp://arxiv.org/abs/2604.22679v1\n\n## Hacker News\n\n**Flipdiscs**  \nAn open-source platform and hardware toolkit for building kinetic interfaces with electromechanical flip-disc displays.  \nhttps://flipdisc.io\n\n**I bought Friendster for $30k \u2013 Here's what I'm doing with it**  \nThe founder recounts acquiring the defunct social network's assets and his plans to revive or repurpose the legacy platform.  \nhttps://ca98am79.medium.com/i-bought-friendster-for-30k-heres-what-i-m-doing-with-it-d5e8ddb3991d\n\n**Bob Odenkirk would like to remind you that life is a meaningless farce**  \nA profile of the comedian reflecting on mortality, creativity, and finding meaning in absurdity after his 2021 heart attack.  \nhttps://www.nytimes.com/2026/04/25/magazine/bob-odenkirk-interview.html\n\n**It's OK to abandon your side-project (2024)**  \nA developer's reflection on why abandoning unfinished side projects is a healthy and necessary part of the creative process.  \nhttps://robbowen.digital/wrote-about/abandoned-side-projects/\n\n**AI should elevate your thinking, not replace it**  \nAn essay arguing that AI tools are most valuable when they augment human reasoning rather than automating it away entirely.  \nhttps://www.koshyjohn.com/blog/ai-should-elevate-your-thinking-not-replace-it/\n\n## Reddit r/MachineLearning\n\n**I did 15 AI Engineer interviews in the last 6 months**  \nA candidate's retrospective on the current AI engineering interview landscape, noting a shift away from deep math proofs toward practical system design.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swxcvo/i_did_15_ai_engineer_interviews_in_the_last_6/\n\n**Submitting to top ML Conferences without Sharing code**  \nResearchers debate whether code submission should remain mandatory for venues like NeurIPS as AI-assisted coding blurs reproducibility lines.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swtk3h/submitting_to_top_ml_conferences_without_sharing/\n\n**Value of top conference workshop papers for PhD admissios**  \nAn undergraduate asks how much first-author workshop papers at major ML conferences weigh in PhD admissions compared to full papers.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swwsin/value_of_top_conference_workshop_papers_for_phd/\n\n**Can Geometric Deep Learning lead eliminate the need of \"Brute Force\" pre-training**  \nDiscussion on whether geometric priors (grids, graphs, groups, manifolds) could reduce reliance on massive-scale pre-training.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swkxx1/can_geometric_deep_learning_lead_eliminate_the/\n\n**freshman in ML: how do you identify actually open research problems?**  \nAdvice thread for early-stage researchers on distinguishing tractable, novel problems from already-solved or ill-defined ones.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swuw9g/freshman_in_ml_how_do_you_identify_actually_open/"
+      "markdown": "## arXiv\n\n**Agentic World Modeling: Foundations, Capabilities, Laws, and Beyond**  \nA comprehensive survey arguing that world modeling is the central bottleneck as AI agents shift from passive text generation to active, sustained goal-directed interaction.  \nhttp://arxiv.org/abs/2604.22748v1\n\n**An Undecidability Proof for the Plan Existence Problem**  \nProves that determining whether a sequence of epistemic actions can achieve a given modal-logic goal from an initial Kripke state is undecidable.  \nhttp://arxiv.org/abs/2604.22736v1\n\n**Aligning Dense Retrievers with LLM Utility via Distillation**  \nProposes distilling LLM utility signals into dense retrievers to improve precision in Retrieval-Augmented Generation beyond standard similarity search.  \nhttp://arxiv.org/abs/2604.22722v1\n\n**CRAFT: Clustered Regression for Adaptive Filtering of Training data**  \nIntroduces a regression-based clustering method to extract small, high-quality subsets from massive corpora for efficient model fine-tuning.  \nhttp://arxiv.org/abs/2604.22693v1\n\n**How Supply Chain Dependencies Complicate Bias Measurement and Accountability Attribution in AI Hiring Applications**  \nAnalyzes how complex third-party supply chains in AI hiring tools create structural barriers to measuring bias and assigning accountability under new regulations.  \nhttp://arxiv.org/abs/2604.22679v1\n\n## Hacker News\n\n**Flipdiscs**  \nAn open-source platform and hardware toolkit for building kinetic interfaces with electromechanical flip-disc displays.  \nhttps://flipdisc.io\n\n**I bought Friendster for $30k – Here's what I'm doing with it**  \nThe founder recounts acquiring the defunct social network's assets and his plans to revive or repurpose the legacy platform.  \nhttps://ca98am79.medium.com/i-bought-friendster-for-30k-heres-what-i-m-doing-with-it-d5e8ddb3991d\n\n**Bob Odenkirk would like to remind you that life is a meaningless farce**  \nA profile of the comedian reflecting on mortality, creativity, and finding meaning in absurdity after his 2021 heart attack.  \nhttps://www.nytimes.com/2026/04/25/magazine/bob-odenkirk-interview.html\n\n**It's OK to abandon your side-project (2024)**  \nA developer's reflection on why abandoning unfinished side projects is a healthy and necessary part of the creative process.  \nhttps://robbowen.digital/wrote-about/abandoned-side-projects/\n\n**AI should elevate your thinking, not replace it**  \nAn essay arguing that AI tools are most valuable when they augment human reasoning rather than automating it away entirely.  \nhttps://www.koshyjohn.com/blog/ai-should-elevate-your-thinking-not-replace-it/\n\n## Reddit r/MachineLearning\n\n**I did 15 AI Engineer interviews in the last 6 months**  \nA candidate's retrospective on the current AI engineering interview landscape, noting a shift away from deep math proofs toward practical system design.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swxcvo/i_did_15_ai_engineer_interviews_in_the_last_6/\n\n**Submitting to top ML Conferences without Sharing code**  \nResearchers debate whether code submission should remain mandatory for venues like NeurIPS as AI-assisted coding blurs reproducibility lines.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swtk3h/submitting_to_top_ml_conferences_without_sharing/\n\n**Value of top conference workshop papers for PhD admissios**  \nAn undergraduate asks how much first-author workshop papers at major ML conferences weigh in PhD admissions compared to full papers.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swwsin/value_of_top_conference_workshop_papers_for_phd/\n\n**Can Geometric Deep Learning lead eliminate the need of \"Brute Force\" pre-training**  \nDiscussion on whether geometric priors (grids, graphs, groups, manifolds) could reduce reliance on massive-scale pre-training.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swkxx1/can_geometric_deep_learning_lead_eliminate_the/\n\n**freshman in ML: how do you identify actually open research problems?**  \nAdvice thread for early-stage researchers on distinguishing tractable, novel problems from already-solved or ill-defined ones.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swuw9g/freshman_in_ml_how_do_you_identify_actually_open/"
     },
     "readingTime": 3,
     "featured": false,
