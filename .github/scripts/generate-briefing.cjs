@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Allternit News — Daily Briefing Generator
+ * Allternit News — Weekly News Edition Generator
  *
  * Fetches live sources, filters by relevance, calls Kimi API for
- * structured briefing generation with Allternit editorial voice.
+ * structured news generation with Allternit editorial voice.
+ * Organized into five "CLI departments": ls -la, rm -rf, git push,
+ * pwned, Ctrl + Z.
  */
 
 const {
@@ -12,6 +14,7 @@ const {
   fetchAllSources,
   formatSourcesForPrompt,
   estimateReadingTime,
+  isoWeekKey,
   callKimi,
   KimiApiError,
   loadPipeline,
@@ -21,42 +24,45 @@ const {
 
 // ─── Prompt Templates ───────────────────────────────────────────────────────
 
-function buildBriefingPrompt(sourcesText, dateStr, hasRobotics) {
+function buildBriefingPrompt(sourcesText, weekLabel) {
   return `${EDITORIAL_VOICE.signal}
 
-Your task: write today's Allternit News briefing for ${dateStr}.
+Your task: write this week's Allternit News edition — ${weekLabel}.
 
-STRUCTURE (strict markdown):
-## Top Stories
-The 2-4 stories that matter most today. For each:
-- **Title** — link the URL
-- 2-3 sentences: what happened, and why a production AI team should care
+DEPARTMENTS (strict markdown — use these exact headings, in this order):
 
-## AI
-Model releases, research papers, and AI tooling. For each:
+## ls -la
+The full listing: the week's events in the AI/robotics space, organized by category and relevance. This is the comprehensive section. For each item:
 - **Title** — link the URL
-- 2-3 sentence summary with the actual technical contribution
-- "Why it matters" — connect to production implications
-${hasRobotics ? `
-## Robotics
-Humanoids, robot platforms, manipulation, autonomy. For each:
-- **Title** — link the URL
-- What was shipped or demonstrated, and the technical significance
-` : ''}
-## Industry
-Company moves, product launches, policy news. For each:
-- **Title** — link the URL
-- What happened and why it changes the landscape
+- 1-2 sentences: what happened, and why a production AI team should care
 
-## Numbers
- engagement stats table (source, top item, score/comments/stars)
+## rm -rf
+What got deleted this week: deprecated APIs, sunset products, dead startups/projects, abandoned models, layoffs, removed features. For each:
+- **Title** — link the URL
+- What was killed, and what replaces it (if anything)
+
+## git push
+Trending GitHub projects, drawn from the GitHub Trending sources below. For each:
+- **owner / repo** — link the URL
+- What it does, star/fork momentum, and why it's worth a look
+
+## pwned
+Security: jailbreaks, exploits, breaches, espionage, model distillation/theft, adversarial research. For each:
+- **Title** — link the URL
+- The attack surface or exposure, and who needs to patch or pay attention
+
+## Ctrl + Z
+Run it back: follow-ups, corrections, and second-look updates to stories covered previously. For each:
+- **Title** — link the URL
+- What changed since the original coverage
 
 RULES:
+- If a department has zero relevant items in the sources, OMIT that department entirely — do not pad with weak items
 - Skip meta threads, hiring posts, pure VC/funding news
 - No hype words: "groundbreaking", "revolutionary", "game-changing"
 - Use specifics: model names, latency numbers, benchmark scores
 - Every claim must trace to a source below
-- Total length: 400-800 words
+- Total length: 600-1000 words
 
 SOURCES:
 ${sourcesText}`;
@@ -67,17 +73,17 @@ function buildMetadataPrompt(markdown, sources) {
     .map(([k, v]) => `${k}: ${v.keywords.slice(0, 4).join(', ')}`)
     .join('\n');
 
-  return `Given this Allternit News briefing, output ONLY a JSON object with these keys:
-- abstract: 2-sentence summary of the briefing (not source counts)
+  return `Given this Allternit News weekly edition (departments: ls -la, rm -rf, git push, pwned, Ctrl + Z), output ONLY a JSON object with these keys:
+- abstract: 2-sentence summary of the edition (not source counts)
 - tags: array of 3-5 tags from this taxonomy [${Object.keys(TAXONOMY).join(', ')}]
 - keywords: array of 5-8 specific technical keywords
-- focusAreas: array of focus areas this briefing covers
+- focusAreas: array of focus areas this edition covers
 - readingTime: estimated minutes (integer)
 
 TAXONOMY:
 ${taxonomyList}
 
-BRIEFING:
+EDITION:
 ${markdown.slice(0, 2000)}
 
 OUTPUT ONLY VALID JSON. No markdown fences.`;
@@ -92,21 +98,22 @@ async function main() {
   }
 
   const now = new Date();
-  const dateStr = now.toISOString().slice(0, 10);
+  const weekKey = isoWeekKey(now); // e.g. "2026-w29"
   const friendlyDate = now.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   });
+  const weekLabel = `week of ${friendlyDate} (ISO week ${weekKey.replace('-w', '-W')})`;
   const isoDate = now.toISOString();
 
-  const briefingId = `signal-${dateStr}-daily-brief`;
-  const slug = `daily-brief-${dateStr}`;
+  const briefingId = `news-${weekKey}`;
+  const slug = `weekly-news-${weekKey}`;
 
-  // Check if today's briefing already exists
+  // Check if this week's edition already exists
   const pipeline = loadPipeline();
   if (pipeline.some((p) => p.id === briefingId)) {
-    console.log(`Briefing ${briefingId} already exists. Skipping.`);
+    console.log(`News edition ${briefingId} already exists. Skipping.`);
     console.log('No new items added to discovery-pipeline.json.');
     return;
   }
@@ -130,12 +137,10 @@ async function main() {
   }
 
   const sourcesText = formatSourcesForPrompt(filtered);
-  // Include the Robotics desk only when robotics items actually made the pool
-  const hasRobotics = filtered.some((s) => s.relevance?.focusAreas?.includes('robotics'));
 
-  // Step 1: Generate briefing markdown
-  console.log('Generating briefing with Kimi...');
-  const prompt = buildBriefingPrompt(sourcesText, friendlyDate, hasRobotics);
+  // Step 1: Generate news edition markdown
+  console.log('Generating news edition with Kimi...');
+  const prompt = buildBriefingPrompt(sourcesText, weekLabel);
   const markdown = await callKimi([{ role: 'user', content: prompt }], 4000);
 
   if (!markdown) {
@@ -154,9 +159,9 @@ async function main() {
   } catch (err) {
     console.warn('[Metadata] LLM extraction failed, falling back:', err.message);
     meta = {
-      abstract: `Daily intelligence for ${friendlyDate}. Covering ${filtered.length} curated sources across research, industry, and open source.`,
-      tags: ['daily-brief', 'ai-news', 'curated'],
-      keywords: ['briefing', 'curated', 'intelligence'],
+      abstract: `The week's AI + robotics desk for the ${weekLabel}. Covering ${filtered.length} curated sources across research, industry, and open source.`,
+      tags: ['weekly-news', 'ai-news', 'curated'],
+      keywords: ['weekly', 'curated', 'intelligence'],
       focusAreas: [],
       readingTime: estimateReadingTime(markdown),
     };
@@ -192,13 +197,13 @@ async function main() {
     id: briefingId,
     slug,
     contentType: 'signal',
-    title: `Daily AI Brief: ${friendlyDate}`,
-    subtitle: 'Allternit News · Daily Brief',
+    title: `Allternit News Weekly — ${weekLabel}`,
+    subtitle: "The week's AI + robotics desk, in one edition",
     abstract: meta.abstract,
     authors: ['Allternit News'],
     teams: ['research'],
-    tags: meta.tags || ['daily-brief', 'ai-news', 'curated'],
-    keywords: meta.keywords || ['briefing', 'curated', 'intelligence'],
+    tags: meta.tags || ['weekly-news', 'ai-news', 'curated'],
+    keywords: meta.keywords || ['weekly', 'curated', 'intelligence'],
     createdAt: isoDate,
     updatedAt: isoDate,
     publishedAt: isoDate,
@@ -209,7 +214,7 @@ async function main() {
     readingTime: meta.readingTime || estimateReadingTime(markdown),
     featured: false,
     series: 'Allternit News',
-    issueNumber: dateStr,
+    issueNumber: weekKey.replace('-w', '-W'),
     metrics: totalEngagement,
   });
 
@@ -223,19 +228,23 @@ async function main() {
   const trimmed = pipeline.slice(0, 100);
 
   savePipeline(trimmed);
-  console.log(`Saved briefing ${briefingId} to pipeline (${trimmed.length} total items)`);
+  console.log(`Saved news edition ${briefingId} to pipeline (${trimmed.length} total items)`);
   console.log(`  Focus areas: ${meta.focusAreas?.join(', ') || 'none detected'}`);
   console.log(`  Sources: ${filtered.length} items`);
 }
 
-main().catch((err) => {
-  if (err instanceof KimiApiError && err.status === 403) {
-    // Subscription quota exhausted — transient, not a pipeline bug. Exit 0 so
-    // the workflow succeeds; the commit step finds no changes and skips.
-    console.error('Kimi API quota exhausted (403 usage limit). Skipping this run without failing the workflow.');
-    console.log('No new items added to discovery-pipeline.json.');
-    process.exit(0);
-  }
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    if (err instanceof KimiApiError && err.status === 403) {
+      // Subscription quota exhausted — transient, not a pipeline bug. Exit 0 so
+      // the workflow succeeds; the commit step finds no changes and skips.
+      console.error('Kimi API quota exhausted (403 usage limit). Skipping this run without failing the workflow.');
+      console.log('No new items added to discovery-pipeline.json.');
+      process.exit(0);
+    }
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { buildBriefingPrompt, buildMetadataPrompt };

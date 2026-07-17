@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * A://ternit Reality — Weekly Magazine Generator
+ * A://SUDO Reality — Weekly Magazine Generator
  *
  * Generates a cover-story deep-dive on a trending AI/robotics topic,
- * with magazine departments and Allternit editorial voice.
+ * plus "This Week" departments (ls -la, rm -rf, git push, pwned, Ctrl + Z)
+ * that bundle the current week's Allternit News edition when available.
  */
 
 const {
@@ -12,6 +13,7 @@ const {
   fetchAllSources,
   formatSourcesForPrompt,
   estimateReadingTime,
+  isoWeekKey,
   callKimi,
   KimiApiError,
   loadPipeline,
@@ -24,7 +26,7 @@ const {
 function buildTopicSelectionPrompt(sourcesText) {
   return `${EDITORIAL_VOICE.research}
 
-From these sources, identify the single most important trending topic in AI/ML or robotics — this week's A://ternit Reality cover story.
+From these sources, identify the single most important trending topic in AI/ML or robotics — this week's A://SUDO Reality cover story.
 
 Criteria:
 - Has technical depth (not just a product launch)
@@ -38,10 +40,10 @@ SOURCES:
 ${sourcesText}`;
 }
 
-function buildFeaturePrompt(topic, sourcesText) {
+function buildFeaturePrompt(topic, sourcesText, newsHighlights) {
   return `${EDITORIAL_VOICE.research}
 
-Write this week's A://ternit Reality cover story on: "${topic}"
+Write this week's A://SUDO Reality cover story on: "${topic}"
 
 TARGET AUDIENCE: Senior engineers and tech leads building production AI systems. They care about what works, what doesn't, and what to watch.
 
@@ -63,11 +65,17 @@ What does this mean for teams shipping AI? 250-350 words.
 - Integration complexity and operational concerns
 - Cost and performance tradeoffs
 
-## Departments
-2-3 short magazine departments, 60-120 words each, chosen from:
-### Research Desk — papers worth reading this week
-### Industry Wire — company and market moves that matter
-### Tooling Corner — repos and releases worth a look
+## This Week
+Compact magazine versions of this week's Allternit News departments — 60-120 words each, using these exact headings, in this order:
+### ls -la — the full listing: the week's AI/robotics events, by category and relevance
+### rm -rf — what got deleted this week: deprecated APIs, sunset products, dead projects, layoffs, removed features
+### git push — trending GitHub projects worth a look
+### pwned — security: jailbreaks, exploits, breaches, espionage, model distillation/theft, adversarial research
+### Ctrl + Z — run it back: follow-ups, corrections, and second-look updates to previous stories
+${newsHighlights
+    ? "This week's Allternit News edition is provided below — condense its department highlights. "
+    : "No Allternit News edition is available for this week — compile these departments from the fresh sources below. "}
+If a department has zero relevant items, OMIT it entirely rather than padding.
 
 ## What We're Watching
 3-5 specific things to track over the next month. Be concrete: benchmarks, releases, papers, or code commits.
@@ -82,7 +90,10 @@ RULES:
 - Every technical claim must trace to a source below
 - If the sources don't support a strong claim, say "unclear" or "unverified"
 - Include the "so what" — why an engineer should care
-
+${newsHighlights ? `
+THIS WEEK'S NEWS (Allternit News edition — department highlights to bundle):
+${newsHighlights}
+` : ''}
 SOURCES:
 ${sourcesText}`;
 }
@@ -92,7 +103,7 @@ function buildMetadataPrompt(markdown) {
     .map(([k, v]) => `${k}: ${v.keywords.slice(0, 4).join(', ')}`)
     .join('\n');
 
-  return `Given this A://ternit Reality magazine article, output ONLY a JSON object with these keys:
+  return `Given this A://SUDO Reality magazine article (cover story plus "This Week" departments: ls -la, rm -rf, git push, pwned, Ctrl + Z), output ONLY a JSON object with these keys:
 - abstract: 3-sentence summary of the article's thesis and key takeaway
 - tags: array of 3-5 tags from this taxonomy [${Object.keys(TAXONOMY).join(', ')}]
 - keywords: array of 6-10 specific technical keywords
@@ -110,6 +121,13 @@ OUTPUT ONLY VALID JSON. No markdown fences.`;
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 
+// Locate the current week's Allternit News edition (id `news-<isoYear>-w<WW>`)
+// so the magazine can bundle its department highlights.
+function findWeeklyNews(pipeline, date = new Date()) {
+  const newsId = `news-${isoWeekKey(date)}`;
+  return pipeline.find((p) => p.id === newsId && p.contentType === 'signal') || null;
+}
+
 async function main() {
   if (!process.env.KIMI_API_KEY) {
     console.error('Error: KIMI_API_KEY environment variable is required');
@@ -119,7 +137,6 @@ async function main() {
   const now = new Date();
   const startOfYear = new Date(now.getFullYear(), 0, 1);
   const weekNum = Math.ceil(((now - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
-  const dateStr = now.toISOString().slice(0, 10);
   const friendlyDate = now.toLocaleDateString('en-US', {
     month: 'long',
     day: 'numeric',
@@ -136,6 +153,17 @@ async function main() {
     console.log(`Feature ${featureId} already exists. Skipping.`);
     console.log('No new items added to discovery-pipeline.json.');
     return;
+  }
+
+  // Load this week's Allternit News edition (if the news workflow already ran)
+  // so the magazine can bundle its department highlights.
+  const weeklyNews = findWeeklyNews(pipeline, now);
+  let newsHighlights = null;
+  if (weeklyNews?.content?.markdown) {
+    newsHighlights = weeklyNews.content.markdown.slice(0, 3000);
+    console.log(`Bundling this week's news edition: ${weeklyNews.id}`);
+  } else {
+    console.log(`No news edition found for this week (news-${isoWeekKey(now)}) — departments compile from fresh sources.`);
   }
 
   // Fetch and filter sources
@@ -166,7 +194,7 @@ async function main() {
 
   // Step 2: Generate feature article
   console.log('Generating feature article...');
-  const featurePrompt = buildFeaturePrompt(topic, sourcesText);
+  const featurePrompt = buildFeaturePrompt(topic, sourcesText, newsHighlights);
   const markdown = await callKimi([{ role: 'user', content: featurePrompt }], 4000);
 
   if (!markdown) {
@@ -224,9 +252,9 @@ async function main() {
     slug,
     contentType: 'feature',
     title: topic,
-    subtitle: `A://ternit Reality · Weekly Magazine · ${friendlyDate}`,
+    subtitle: `A://SUDO Reality · Weekly Magazine · ${friendlyDate}`,
     abstract: meta.abstract,
-    authors: ['A://ternit Reality'],
+    authors: ['A://SUDO Reality'],
     teams: ['research'],
     tags: meta.tags || ['weekly-feature', 'ai-research', 'deep-dive'],
     keywords: meta.keywords || ['feature', 'analysis', 'trends'],
@@ -239,7 +267,7 @@ async function main() {
     },
     readingTime: meta.readingTime || estimateReadingTime(markdown),
     featured: true,
-    series: 'A://ternit Reality',
+    series: 'A://SUDO Reality',
     issueNumber: `${now.getFullYear()}-W${weekNum}`,
     metrics: totalEngagement,
   });
@@ -258,14 +286,18 @@ async function main() {
   console.log(`  Sources: ${filtered.length} items`);
 }
 
-main().catch((err) => {
-  if (err instanceof KimiApiError && err.status === 403) {
-    // Subscription quota exhausted — transient, not a pipeline bug. Exit 0 so
-    // the workflow succeeds; the commit step finds no changes and skips.
-    console.error('Kimi API quota exhausted (403 usage limit). Skipping this run without failing the workflow.');
-    console.log('No new items added to discovery-pipeline.json.');
-    process.exit(0);
-  }
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    if (err instanceof KimiApiError && err.status === 403) {
+      // Subscription quota exhausted — transient, not a pipeline bug. Exit 0 so
+      // the workflow succeeds; the commit step finds no changes and skips.
+      console.error('Kimi API quota exhausted (403 usage limit). Skipping this run without failing the workflow.');
+      console.log('No new items added to discovery-pipeline.json.');
+      process.exit(0);
+    }
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { buildTopicSelectionPrompt, buildFeaturePrompt, buildMetadataPrompt, findWeeklyNews };

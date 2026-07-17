@@ -31,7 +31,7 @@ const EDITORIAL_VOICE = {
     'Tone: sharp, skeptical of hype, focused on what matters for shipping AI systems. ' +
     'Avoid marketing language. Use specifics over superlatives.',
   research:
-    'You are A://ternit Reality — a weekly magazine built around an analytical cover story. ' +
+    'You are A://SUDO Reality — a weekly magazine built around an analytical cover story. ' +
     'Tone: rigorous but accessible, connecting technical details to industry impact. ' +
     'Explain the "so what" for engineering teams building production AI.',
 };
@@ -699,6 +699,19 @@ function estimateReadingTime(text) {
   return Math.max(1, Math.ceil(words / 200));
 }
 
+// ISO 8601 week date: week 1 is the week containing the year's first Thursday.
+// Returns "<isoYear>-w<WW>" (zero-padded), e.g. "2026-w29". Used for the weekly
+// publication ids so the briefing and feature generators agree on "this week".
+function isoWeekKey(date = new Date()) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7; // Mon=1 … Sun=7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum); // shift to this week's Thursday
+  const isoYear = d.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const week = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${isoYear}-w${String(week).padStart(2, '0')}`;
+}
+
 // ─── LLM Call ───────────────────────────────────────────────────────────────
 
 class KimiApiError extends Error {
@@ -888,6 +901,7 @@ module.exports = {
   decodeHtmlEntities,
   formatSourcesForPrompt,
   estimateReadingTime,
+  isoWeekKey,
 
   // LLM
   callKimi,

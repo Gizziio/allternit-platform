@@ -2,8 +2,8 @@ name: Discovery Features
 
 on:
   schedule:
-    # Every Monday at 08:00 UTC
-    - cron: '0 8 * * 1'
+    # Every Wednesday at 09:00 UTC (after the weekly news, so it can bundle it)
+    - cron: '0 9 * * 3'
   workflow_dispatch:
 
 permissions:
