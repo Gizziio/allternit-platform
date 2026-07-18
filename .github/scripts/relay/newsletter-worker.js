@@ -40,12 +40,13 @@ function notConfigured() {
   return json({ ok: false, error: 'newsletter not configured' }, 503);
 }
 
-function buttondown(env, path, payload) {
+function buttondown(env, path, payload, extraHeaders = {}) {
   return fetch(`${BUTTONDOWN_API}${path}`, {
     method: 'POST',
     headers: {
       Authorization: `Token ${env.BUTTONDOWN_API_KEY}`,
       'Content-Type': 'application/json',
+      ...extraHeaders,
     },
     body: JSON.stringify(payload),
   });
@@ -93,7 +94,13 @@ async function handleSend(request, env) {
 
   let res;
   try {
-    res = await buttondown(env, '/emails', { subject, body: html, status: 'about_to_send' });
+    res = await buttondown(
+      env,
+      '/emails',
+      { subject, body: html, status: 'about_to_send' },
+      // Buttondown requires this opt-in header for immediate sends.
+      { 'X-Buttondown-Live-Dangerously': 'true' },
+    );
   } catch (err) {
     return json({ ok: false, error: `upstream fetch failed: ${err.message}` }, 502);
   }
