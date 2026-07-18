@@ -290,6 +290,10 @@ async function main() {
   console.log(`Saved feature ${featureId} to pipeline (${trimmed.length} total items)`);
   console.log(`  Focus areas: ${meta.focusAreas?.join(', ') || 'none detected'}`);
   console.log(`  Sources: ${filtered.length} items`);
+
+  // Newsletter send (clean-skip when NEWSLETTER_SEND_TOKEN is unset).
+  const { sendNewsletter } = require('./lib/newsletter.cjs');
+  await sendNewsletter(publication);
 }
 
 if (require.main === module) {

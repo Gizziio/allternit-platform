@@ -192,6 +192,10 @@ async function main() {
 
   savePipeline(trimmed);
   console.log(`Saved blog post ${blogId} to pipeline (${trimmed.length} total items)`);
+
+  // Newsletter send (clean-skip when NEWSLETTER_SEND_TOKEN is unset).
+  const { sendNewsletter } = require('./lib/newsletter.cjs');
+  await sendNewsletter(publication);
 }
 
 main().catch((err) => {
