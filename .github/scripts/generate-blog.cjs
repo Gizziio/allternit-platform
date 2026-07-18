@@ -18,6 +18,7 @@ const {
   buildPublication,
 } = require('./lib/pipeline.cjs');
 const { writeCover } = require('./lib/cover.cjs');
+const { writeEditionArtifact } = require('./lib/edition-artifact.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
@@ -179,6 +180,7 @@ async function main() {
 
   // Generate the cover image and attach its public URL before persisting
   publication.imageUrl = writeCover(publication);
+  publication.artifactUrl = writeEditionArtifact(publication);
 
   pipeline.push(publication);
   pipeline.sort(

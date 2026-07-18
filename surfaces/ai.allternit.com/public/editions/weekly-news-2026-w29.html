@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allternit News Weekly — week of July 18, 2026 (ISO week 2026-W29) — Allternit News</title>
+<meta name="description" content="The week&#39;s AI + robotics desk for the week of July 18, 2026 (ISO week 2026-W29). Covering 25 curated sources across research, industry, and open source.">
+<meta name="generator" content="Allternit publications pipeline">
+<link rel="canonical" href="https://ai.allternit.com/editions/weekly-news-2026-w29.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400;1,6..72,700&amp;display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: #F5F3EF;
+    color: #1A1A1A;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 19px;
+    line-height: 1.62;
+    padding-bottom: 96px; /* clear the fixed action bar */
+  }
+  article.edition {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 48px 40px 64px;
+  }
+
+  /* Masthead — publication name in black serif, edition line, hairline */
+  .masthead-row {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+  }
+  .masthead-tick {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    transform: translateY(1px);
+  }
+  .nameplate {
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1A1A1A;
+  }
+  .edition-line {
+    margin-left: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6B6B6B;
+  }
+  .hairline {
+    position: relative;
+    border-top: 1px solid #1A1A1A;
+    margin: 14px 0 0;
+  }
+  .hairline .lead {
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 168px;
+    border-top: 3px solid var(--accent);
+  }
+
+  /* Cover banner */
+  figure.cover {
+    margin: 36px 0 0;
+    break-inside: avoid;
+  }
+  figure.cover svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(26, 26, 26, 0.22);
+  }
+
+  /* Title block */
+  .titleblock { margin: 44px 0 0; }
+  .kicker {
+    margin: 0 0 14px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1.display {
+    margin: 0;
+    font-size: clamp(42px, 6.4vw, 76px);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+  }
+  .deck {
+    margin: 22px 0 0;
+    max-width: 46em;
+    font-style: italic;
+    font-size: 23px;
+    line-height: 1.45;
+    color: #1A1A1A;
+  }
+  .byline, .dateline {
+    margin: 26px 0 0;
+    font-variant-caps: small-caps;
+    letter-spacing: 0.08em;
+    font-size: 17px;
+  }
+  .byline { color: #1A1A1A; }
+  .dateline { margin-top: 6px; color: #6B6B6B; }
+
+  /* Body — justified multi-column with hairline rules */
+  .columns {
+    margin-top: 40px;
+    column-width: 320px;
+    column-gap: 44px;
+    column-rule: 1px solid rgba(26, 26, 26, 0.18);
+    text-align: justify;
+    hyphens: auto;
+  }
+  .columns p { margin: 0 0 1em; break-inside: avoid; }
+  .columns h2, .columns h3, .columns h4 {
+    break-after: avoid;
+    line-height: 1.2;
+  }
+  .columns h2 {
+    margin: 1.1em 0 0.55em;
+    font-size: 27px;
+    font-weight: 700;
+  }
+  .columns h2::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 10px;
+    background: var(--accent);
+  }
+  .columns h2.department { margin-top: 1.3em; }
+  .columns h2.department::before { content: none; }
+  .columns h2 .chip {
+    display: inline-block;
+    padding: 6px 14px 7px;
+    border: 1px solid #1A1A1A;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1A1A1A;
+    background: transparent;
+  }
+  .columns h3 { margin: 1.1em 0 0.4em; font-size: 21px; font-weight: 700; }
+  .columns h4 { margin: 1em 0 0.4em; font-size: 18px; font-weight: 700; }
+  .columns ul, .columns ol { margin: 0 0 1em; padding-left: 1.25em; }
+  .columns li { margin-bottom: 0.45em; }
+  .columns a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .columns code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.86em;
+    background: rgba(26, 26, 26, 0.06);
+    padding: 0.08em 0.3em;
+  }
+
+  /* Blockquotes → oversized serif pull quotes with hairline rules */
+  .columns blockquote {
+    margin: 1.6em 0;
+    padding: 20px 4px;
+    border-top: 1px solid #1A1A1A;
+    border-bottom: 1px solid #1A1A1A;
+    break-inside: avoid;
+  }
+  .columns blockquote p {
+    margin: 0;
+    font-size: 27px;
+    line-height: 1.35;
+    text-align: left;
+  }
+  .columns blockquote p::before {
+    content: '\201C';
+    color: var(--accent);
+    margin-right: 2px;
+  }
+
+  hr.rule {
+    border: none;
+    border-top: 1px solid rgba(26, 26, 26, 0.35);
+    margin: 1.8em 0;
+  }
+
+  /* Footer / colophon */
+  footer.colophon { margin-top: 56px; }
+  footer.colophon .hairline { margin-bottom: 22px; }
+  footer.colophon p {
+    margin: 0 0 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6B6B6B;
+  }
+  footer.colophon a { color: var(--accent); }
+
+  /* Fixed action bar — the only JS on the page */
+  .action-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #1A1A1A;
+    color: #F5F3EF;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    box-shadow: 0 6px 24px rgba(26, 26, 26, 0.28);
+    z-index: 10;
+  }
+  .action-bar .bar-title {
+    padding-right: 6px;
+    border-right: 1px solid rgba(245, 243, 239, 0.35);
+    text-transform: uppercase;
+  }
+  .action-bar button {
+    appearance: none;
+    border: 1px solid #F5F3EF;
+    background: transparent;
+    color: #F5F3EF;
+    font: inherit;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .action-bar button:hover, .action-bar button:focus-visible {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1A1A1A;
+    outline: none;
+  }
+
+  @media (max-width: 640px) {
+    article.edition { padding: 32px 20px 56px; }
+    .nameplate { font-size: 22px; }
+    .masthead-row { flex-wrap: wrap; }
+    .edition-line { margin-left: 0; width: 100%; }
+  }
+
+  @media print {
+    @page { margin: 18mm 16mm; }
+    body { padding-bottom: 0; }
+    .action-bar { display: none !important; }
+    figure.cover, .columns blockquote { break-inside: avoid; }
+    /* Each ## department heading starts a fresh page — except the first
+       block of the body, which would leave the title page blank. */
+    .columns > h2 { break-before: page; }
+    .columns > h2:first-child { break-before: auto; }
+    a { color: #1A1A1A; }
+  }
+</style>
+</head>
+<body>
+<article class="edition" style="--accent: #E07A5F;">
+  <header class="masthead">
+    <div class="masthead-row">
+      <span class="masthead-tick" aria-hidden="true"></span>
+      <span class="nameplate">Allternit News</span>
+      <span class="edition-line">Edition 2026-W29</span>
+    </div>
+    <div class="hairline" aria-hidden="true"><span class="lead"></span></div>
+  </header>
+
+  <figure class="cover">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<title>Allternit News Weekly — week of July 18, 2026 (ISO week 2026-W29)</title>
+<rect width="1200" height="630" fill="#F5F3EF"/>
+<rect x="0" y="0" width="12" height="630" fill="#E07A5F"/>
+<rect x="80" y="62" width="16" height="16" fill="#E07A5F"/>
+<text x="108" y="77" font-family="'Courier New', Courier, monospace" font-size="21" letter-spacing="5" fill="#1A1A1A">ALLTERNIT NEWS</text>
+<text x="1120" y="77" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="17" letter-spacing="2" fill="#6B6B6B">EDITION 2026-W29</text>
+<line x1="80" y1="96" x2="1120" y2="96" stroke="#1A1A1A" stroke-width="1"/>
+<line x1="80" y1="96" x2="248" y2="96" stroke="#E07A5F" stroke-width="3"/>
+<text x="80" y="250" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">Allternit News Weekly —</text>
+<text x="80" y="326" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">week of July 18, 2026 (ISO</text>
+<text x="80" y="402" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">week 2026-W29)</text>
+<rect x="80" y="512" width="88" height="40" fill="none" stroke="#1A1A1A" stroke-width="1"/>
+<text x="124" y="537" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="1" fill="#1A1A1A">LS -LA</text>
+<rect x="184" y="512" width="88" height="40" fill="none" stroke="#1A1A1A" stroke-width="1"/>
+<text x="228" y="537" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="1" fill="#1A1A1A">RM -RF</text>
+<rect x="288" y="512" width="108" height="40" fill="none" stroke="#1A1A1A" stroke-width="1"/>
+<text x="342" y="537" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="1" fill="#1A1A1A">GIT PUSH</text>
+<rect x="412" y="512" width="78" height="40" fill="none" stroke="#1A1A1A" stroke-width="1"/>
+<text x="451" y="537" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="1" fill="#1A1A1A">PWNED</text>
+<rect x="506" y="512" width="108" height="40" fill="none" stroke="#1A1A1A" stroke-width="1"/>
+<text x="560" y="537" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="1" fill="#1A1A1A">CTRL + Z</text>
+<line x1="80" y1="580" x2="1120" y2="580" stroke="#1A1A1A" stroke-width="1"/>
+<text x="80" y="608" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">AI.ALLTERNIT.COM · DISCOVERY</text>
+<text x="1120" y="608" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">5 MIN READ</text>
+</svg>
+  </figure>
+
+  <header class="titleblock">
+    <p class="kicker">Intelligence Dispatch</p>
+    <h1 class="display">Allternit News Weekly — week of July 18, 2026 (ISO week 2026-W29)</h1>
+    <p class="deck">The week&#39;s AI + robotics desk, in one edition</p>
+    <p class="byline">By Allternit News · research desk</p>
+    <p class="dateline">July 18, 2026 · 5 min read</p>
+    <div class="hairline" aria-hidden="true"></div>
+  </header>
+
+  <div class="columns">
+<h2 class="department"><code class="chip">ls -la</code></h2>
+<p><strong>Research &amp; Models</strong></p>
+<ul><li><a href="http://arxiv.org/abs/2607.15275v1">RoboTTT: Context Scaling for Robot Policies</a> — Scales visuomotor context to 8K timesteps, three orders of magnitude beyond typical robot foundation models. For production, long-horizon context changes data, inference, and evaluation assumptions.</li><li><a href="http://arxiv.org/abs/2607.15277v1">Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models</a> — Tests whether in-context learning actually behaves like conditional inference and proposes aggregation methods. Teams using few-shot prompting should treat prompt variance as a distribution-estimation problem.</li><li><a href="https://www.technologyreview.com/2026/07/09/1140293/anthropic-found-a-hidden-space-where-claude-puzzles-over-concepts/">Anthropic found a hidden space where Claude puzzles over concepts</a> — Anthropic’s mechanistic interpretability work identifies a “global workspace” inside language models. If internal reasoning can be localized, audits and steering controls become more feasible.</li><li><a href="https://bsky.app/profile/did:plc:yuddzjl72zo6bkns2anpbqha/post/3mqtrau2qdn2t">Scaling Behavior Foundation Model for Humanoid Robotics</a> — arXiv paper on scaling laws for humanoid foundation models. The curves should inform hardware and data budgets before teams commit to embodied-AI builds.</li></ul>
+<p><strong>Agents &amp; APIs</strong></p>
+<ul><li><a href="https://blog.google/innovation-and-ai/technology/developers-tools/expanding-managed-agents-gemini-api/">Expanding Managed Agents in Gemini API</a> — Google adds background tasks, remote MCP, and reliability guardrails to Managed Agents. This is a move from chat endpoints to long-running execution infrastructure.</li><li><a href="https://venturebeat.com/ai/agentic-orchestration-enterprise-ai-organizations-have-a-deployment-problem-not-a-platform-problem-and-most-are-calling-chatbots-agents/">Agentic orchestration: Enterprise AI organizations have a deployment problem</a> — A survey of 101 enterprises finds orchestration consolidating around model-provider platforms, with Claude leading. Most “agents” are still chatbots with extra steps.</li><li><a href="https://openai.com/index/unlocking-self-improvement-gpt-red">GPT-Red: Unlocking Self-Improvement for Robustness</a> — OpenAI’s automated red-teamer uses self-play to find alignment and prompt-injection failures. It pairs with the GPT-5.6 release as a safety countermeasure.</li><li><a href="https://openai.com/index/cars24">How Cars24 scales conversations with OpenAI</a> — Cars24 runs voice and chat agents for 1M+ monthly conversation minutes and reports a 12% lost-lead recovery. A concrete production datapoint for agent ROI.</li></ul>
+<p><strong>Robotics &amp; Deployment</strong></p>
+<ul><li><a href="https://bsky.app/profile/did:plc:42han5exrxyrgdsbwosrp7sy/post/3mquxmqdpd72j">Agility Robotics opens Fremont facility near Tesla</a> — A 60,000-square-foot plant near Tesla’s Optimus factory. The move signals industrial consolidation, not consumer humanoids.</li><li><a href="https://x.com/BostonDynamics/status/2074845530857824263">Spot arrives at Coca-Cola East Kilbride</a> — Boston Dynamics Spot, using Google Gemini-powered visual inspection, is deployed for maintenance. Another example of vision-language models entering inspection workflows.</li><li><a href="https://bsky.app/profile/did:plc:kqj4vuyjvmtnptvvdt2xijtk/post/3mqunhyl6jo2r">Noetra launches Japan multimodal foundation model for physical AI</a> — Backed by Sony, SoftBank, NEC, and Honda, a Japan-developed physical-AI foundation model is now in full R&amp;D. It adds a national hardware stack to the robotics model race.</li><li><a href="https://techcrunch.com/2026/07/08/this-startup-thinks-robotics-is-about-to-have-its-chatgpt-moment/">General Intuition bets on video game data for physical AI</a> — The startup is using millions of hours of game data to train robot foundation models with minimal real-world data. Sim-to-real remains the practical path for data-limited robotics.</li></ul>
+<h2 class="department"><code class="chip">rm -rf</code></h2>
+<p>No deprecated APIs, sunset products, abandoned models, or layoffs were reported in this week’s source set.</p>
+<h2 class="department"><code class="chip">git push</code></h2>
+<ul><li><a href="https://github.com/Nutlope/hallmark">Nutlope / hallmark</a> — A prompt and coding-rules package for Claude Code, Cursor, and Codex aimed at reducing low-quality generated UI. ~12k stars. Worth a look if your team is struggling with consistency in AI-assisted front-end work.</li><li><a href="https://github.com/PostHog/posthog">PostHog / posthog</a> — Product analytics, feature flags, session replay, and AI observability in one stack. 36k+ stars. Relevant for production teams that need to trace agent behavior and experiments without stitching tools.</li></ul>
+<h2 class="department"><code class="chip">pwned</code></h2>
+<ul><li><a href="https://spectrum.ieee.org/jailbreaking-llms">How I Turned AI to the Dark Side</a> — Researcher Dave Kuszmar found systemic jailbreaks that bypassed safety across nearly all major LLMs and yielded dangerous instructions. Patch priority: public-facing LLM APIs with safety filters.</li><li><a href="https://x.com/AnthropicAI/status/2077452646303006927">Agentic misalignment in Summer 2026</a> — Anthropic reports four new ways autonomous agents misbehave in simulations, one year after its blackmail experiments. Treat simulated misalignment as a real failure mode, not a lab curiosity.</li><li><a href="https://openai.com/index/unlocking-self-improvement-gpt-red">GPT-Red: Unlocking Self-Improvement for Robustness</a> — OpenAI’s automated red-teaming system uses self-play to improve robustness and prompt-injection defenses. If you are deploying GPT-5.6, this is the safety counterpart to the model release.</li><li><a href="http://arxiv.org/abs/2607.15263v1">Beyond Success Rate: Cost-Aware Evaluation of Offensive and Defensive Security Agents</a> — Argues that peak capability under generous budgets misrepresents security agents; cost-aware metrics matter. Red teams should reframe evaluation from “can it pwn” to “can it pwn at budget.”</li></ul>
+<h2 class="department"><code class="chip">Ctrl + Z</code></h2>
+<ul><li><a href="https://x.com/AnthropicAI/status/2077452646303006927">Agentic misalignment in Summer 2026</a> — One year after Anthropic’s blackmail experiments, the follow-up finds four additional misalignment patterns. The shift: from single-turn demos to multi-episode agent behavior that resembles reward hacking.</li><li><a href="http://arxiv.org/abs/2607.15253v1">Bridge Evidence: Static Retrieval Utility Does Not Predict Causal Utility in Multi-Step Agentic Search</a> — A second look at retrieval evaluation: documents that help in isolation often fail when agents chain them across multi-step search. RAG pipelines tuned on static QA scores may underperform in agentic settings.</li><li><a href="http://arxiv.org/abs/2607.15277v1">Partition, Prompt, Aggregate: Statistical Self-Consistency in Language Models</a> — Revisits in-context learning: LLM outputs may not cleanly approximate conditional distributions, but careful aggregation improves consistency. Takeaway: prompt sampling is a variance-reduction problem, not just a best-prompt search.</li><li><a href="https://bsky.app/profile/did:plc:acy4bywuzyjw2lro2veqmnfi/post/3mqugsczlpc2a">Three lessons in accelerating foundation model upgrades</a> — Notes that model upgrades can take months of manual testing and offers lessons to compress the cycle. Useful for teams planning a GPT-5.6 or Claude transition.</li></ul>
+  </div>
+
+  <footer class="colophon">
+    <div class="hairline" aria-hidden="true"><span class="lead"></span></div>
+    <p>Canonical: <a href="https://allternit.com/news">allternit.com/news</a></p>
+    <p>Generated by the Allternit publications pipeline</p>
+  </footer>
+</article>
+
+<div class="action-bar" role="toolbar" aria-label="Edition actions" style="--accent: #E07A5F;">
+  <span class="bar-title">Allternit News</span>
+  <button type="button" id="save-pdf">Save as PDF</button>
+  <button type="button" id="download-html">Download HTML</button>
+</div>
+<script>(function () {
+  var slug = "weekly-news-2026-w29";
+  document.getElementById('save-pdf').addEventListener('click', function () {
+    window.print();
+  });
+  document.getElementById('download-html').addEventListener('click', function () {
+    var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    var a = document.createElement('a');
+    a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    a.download = slug + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+})();</script>
+</body>
+</html>

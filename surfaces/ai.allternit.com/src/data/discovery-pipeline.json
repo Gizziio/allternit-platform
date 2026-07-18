@@ -332,7 +332,9 @@
       "citationCount": 0
     },
     "license": "CC BY 4.0",
-    "accessLevel": "public"
+    "accessLevel": "public",
+    "artifactUrl": "https://ai.allternit.com/editions/weekly-news-2026-w29.html",
+    "imageUrl": "https://ai.allternit.com/images/discovery/weekly-news-2026-w29.svg"
   },
   {
     "id": "blog-2026-w29",
@@ -379,7 +381,8 @@
     },
     "license": "CC BY 4.0",
     "accessLevel": "public",
-    "imageUrl": "https://ai.allternit.com/images/discovery/builders-notebook-2026-w29.svg"
+    "imageUrl": "https://ai.allternit.com/images/discovery/builders-notebook-2026-w29.svg",
+    "artifactUrl": "https://ai.allternit.com/editions/builders-notebook-2026-w29.html"
   },
   {
     "id": "signal-2026-07-17-daily-brief",
@@ -466,7 +469,8 @@
     },
     "license": "CC BY 4.0",
     "accessLevel": "public",
-    "imageUrl": "https://ai.allternit.com/images/discovery/daily-brief-2026-07-17.svg"
+    "imageUrl": "https://ai.allternit.com/images/discovery/daily-brief-2026-07-17.svg",
+    "artifactUrl": "https://ai.allternit.com/editions/daily-brief-2026-07-17.html"
   },
   {
     "id": "signal-2026-04-27-daily-brief",
@@ -510,6 +514,7 @@
     },
     "license": "CC BY 4.0",
     "accessLevel": "public",
-    "imageUrl": "https://ai.allternit.com/images/discovery/daily-brief-2026-04-27.svg"
+    "imageUrl": "https://ai.allternit.com/images/discovery/daily-brief-2026-04-27.svg",
+    "artifactUrl": "https://ai.allternit.com/editions/daily-brief-2026-04-27.html"
   }
 ]
