@@ -17,7 +17,11 @@
  * is the dev-mode stand-in for the platform's server-side provider adapter;
  * the same routing belongs in allternit-api once its /v1 LLM routes exist.
  *
- * Run: node scripts/model-proxy.mjs   (PORT=8090 by default)
+ * Run: bun scripts/model-proxy.mjs   (PORT=8090 by default)
+ *
+ * Bun also enables the /mirofish/* server-side simulation routes (the
+ * engine is TS with tsconfig paths — see mirofish-server-runs.mjs). Under
+ * plain node those routes 501 while /v1 model routing still works.
  */
 
 import { execFile } from 'node:child_process';
@@ -25,6 +29,8 @@ import { readFile, writeFile, rename } from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
+
+import { handleMiroFishRoute } from './mirofish-server-runs.mjs';
 
 const PORT = Number(process.env.PORT || 8090);
 const KIMI_CRED_PATH = path.join(os.homedir(), '.kimi-code/credentials/kimi-code.json');
@@ -34,8 +40,8 @@ const KIMI_CLIENT_ID = '17e5f671-d194-4dfb-9706-5516cb48c098';
 /** Verified accepted by the coding endpoint; registry ids map onto it. */
 const KIMI_UPSTREAM_MODEL = 'kimi-k2';
 const OLLAMA_BASE = 'http://127.0.0.1:11434';
-const CLAUDE_CONCURRENCY = 2;
-const CLAUDE_TIMEOUT_MS = 120_000;
+const CLAUDE_CONCURRENCY = 3;
+const CLAUDE_TIMEOUT_MS = 150_000;
 
 const log = (...args) => process.stderr.write(`[model-proxy] ${args.join(' ')}\n`);
 
@@ -233,6 +239,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   const url = new URL(req.url ?? '/', `http://127.0.0.1:${PORT}`);
+
+  if (url.pathname.startsWith('/mirofish/')) {
+    try {
+      if (await handleMiroFishRoute(req, res, url, cors)) return;
+    } catch (error) {
+      log('mirofish route error:', String(error));
+      res.writeHead(500, { 'Content-Type': 'application/json', ...cors });
+      return res.end(JSON.stringify({ error: String(error) }));
+    }
+  }
 
   if (req.method === 'GET' && url.pathname === '/v1/models') {
     res.writeHead(200, { 'Content-Type': 'application/json', ...cors });

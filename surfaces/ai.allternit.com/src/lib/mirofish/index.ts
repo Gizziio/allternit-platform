@@ -34,6 +34,9 @@ export type { RunSimulationOptions } from "./simulation-engine";
 export { extractSeedGraph } from "./seed-graph";
 export { generateSimulationReport } from "./report";
 
+export { interpretRunRequest, DEFAULT_POPULATION, DEFAULT_ROUNDS } from "./run-request";
+export type { InterpretedRunRequest, InterpretRunRequestOptions } from "./run-request";
+
 export { askPersona } from "./agent-chat";
 export type { AskExchange, AskPersonaOptions } from "./agent-chat";
 

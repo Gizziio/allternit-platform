@@ -23,6 +23,7 @@
 import {
   askPersona,
   InMemoryMemoryStore,
+  interpretRunRequest,
   isAbortError,
   runSimulation,
 } from "@/lib/mirofish";
@@ -35,9 +36,16 @@ import type {
   SimulationProgressEvent,
   WorldState,
 } from "@/lib/mirofish";
+import { listAppModels } from "@/lib/ai/app-models";
+import type { AppModelDefinition } from "@/lib/ai/app-models";
 
 export { isAbortError };
 export type { SimulationProgressEvent };
+
+/** Registry-derived model list for the panel's model chip (never hardcoded ids). */
+export async function listMiroFishModels(): Promise<AppModelDefinition[]> {
+  return listAppModels();
+}
 
 /**
  * One MemoryStore per world, kept alive for as long as this lazy chunk stays
@@ -52,6 +60,77 @@ const memoryStoresByWorldId = new Map<string, MemoryStore>();
 export interface RunMiroFishOptions {
   signal?: AbortSignal;
   onProgress?: (event: SimulationProgressEvent) => void;
+}
+
+export interface RunMiroFishFromPromptOptions extends RunMiroFishOptions {
+  /** Registry model id for every stage; defaults to the registry default. */
+  modelId?: string;
+  /** Explicit overrides that beat whatever the prompt stated (re-run chips). */
+  overrides?: { populationSize?: number; rounds?: number };
+}
+
+export interface MiroFishPromptRunResult {
+  world: WorldState;
+  /** What the interpretation resolved — drives the panel's detected-config chips. */
+  resolved: {
+    kind: SeedMaterial["kind"];
+    populationSize: number;
+    rounds: number;
+    statedPopulation: boolean;
+    statedRounds: boolean;
+    modelId?: string;
+  };
+}
+
+/**
+ * The composer entry point: one natural-language prompt in, a finished world
+ * out. Interpretation (seed/kind/counts/entities) happens in a single model
+ * call surfaced as the pipeline's "graph" stage; the extracted graph is
+ * passed into the engine so nothing is extracted twice.
+ */
+export async function runMiroFishFromPrompt(
+  prompt: string,
+  options: RunMiroFishFromPromptOptions = {}
+): Promise<MiroFishPromptRunResult> {
+  options.onProgress?.({ stage: "graph", completed: 0, total: 1 });
+  const request = await interpretRunRequest(prompt, {
+    signal: options.signal,
+    modelId: options.modelId,
+  });
+
+  const populationSize = options.overrides?.populationSize ?? request.populationSize;
+  const rounds = options.overrides?.rounds ?? request.rounds;
+
+  const memoryStore = new InMemoryMemoryStore();
+  const world = await runSimulation(
+    request.seed,
+    { populationSize, rounds, modelId: options.modelId },
+    {
+      memoryStore,
+      signal: options.signal,
+      onProgress: options.onProgress,
+      seedGraph: request.seedGraph,
+    }
+  );
+
+  memoryStoresByWorldId.set(world.id, memoryStore);
+  while (memoryStoresByWorldId.size > MAX_RETAINED_WORLDS) {
+    const oldest = memoryStoresByWorldId.keys().next().value;
+    if (oldest === undefined) break;
+    memoryStoresByWorldId.delete(oldest);
+  }
+
+  return {
+    world,
+    resolved: {
+      kind: request.seed.kind,
+      populationSize,
+      rounds,
+      statedPopulation: request.statedPopulation || options.overrides?.populationSize !== undefined,
+      statedRounds: request.statedRounds || options.overrides?.rounds !== undefined,
+      modelId: options.modelId,
+    },
+  };
 }
 
 export async function runMiroFishSimulation(
@@ -78,6 +157,8 @@ export interface AskMiroFishOptions {
   /** Prior Q&A exchanges with this persona, for conversational context. */
   history?: AskExchange[];
   signal?: AbortSignal;
+  /** Registry model id; defaults to the registry default. */
+  modelId?: string;
 }
 
 export async function askMiroFishPersona(
@@ -90,5 +171,6 @@ export async function askMiroFishPersona(
   return askPersona(world, persona, memoryStore, question, {
     history: options.history,
     signal: options.signal,
+    modelId: options.modelId,
   });
 }

@@ -7,8 +7,13 @@
  * caller's cancel signal, on every provider path (not just local dev).
  */
 
-/** Generous per-model-call ceiling — a stuck call aborts and the AI SDK retries. */
-export const MODEL_CALL_TIMEOUT_MS = 90_000;
+/**
+ * Generous per-model-call ceiling — a stuck call aborts and the AI SDK
+ * retries. Must absorb backend QUEUE time too: with a population fanned out
+ * wider than the backend's concurrency (e.g. subprocess-backed claude), tail
+ * calls legitimately wait through several waves before running.
+ */
+export const MODEL_CALL_TIMEOUT_MS = 180_000;
 
 /** Merge an optional caller cancel signal with the per-call timeout. */
 export function modelCallSignal(signal?: AbortSignal): AbortSignal {

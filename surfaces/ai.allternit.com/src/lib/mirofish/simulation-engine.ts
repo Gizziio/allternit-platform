@@ -21,7 +21,7 @@ import { createModuleLogger } from '@/lib/logger';
 
 import { LocalSwarmProvider } from "@/lib/sandbox/swarm/local-provider";
 import { SwarmScheduler } from "@/lib/sandbox/swarm/scheduler";
-import type { SwarmUnitSpec } from "@/lib/sandbox/swarm/types";
+import type { SwarmProvider, SwarmUnitSpec } from "@/lib/sandbox/swarm/types";
 
 import { InMemoryMemoryStore } from "./memory-store";
 import type { MemoryStore } from "./memory-store";
@@ -33,6 +33,7 @@ import type {
   AgentMemoryEvent,
   Persona,
   RoundSummary,
+  SeedGraph,
   SeedMaterial,
   SimulationConfig,
   SimulationProgressEvent,
@@ -66,6 +67,14 @@ export interface RunSimulationOptions {
   signal?: AbortSignal;
   /** Stage-level progress: graph → personas → rounds → report. */
   onProgress?: (event: SimulationProgressEvent) => void;
+  /**
+   * Pre-extracted seed graph (e.g. from run-request interpretation, which
+   * extracts it in the same call). Pass `null` for "extraction already
+   * failed, run ungrounded"; leave undefined to extract here.
+   */
+  seedGraph?: SeedGraph | null;
+  /** Swarm provider for persona/turn fan-out (e.g. E2BSwarmProvider); defaults to in-process. */
+  provider?: SwarmProvider;
 }
 
 /** Build the initial WorldState from seed material + config (personas via persona-builder). */
@@ -77,7 +86,10 @@ export async function buildInitialWorldState(
   const { onProgress, signal } = options;
 
   onProgress?.({ stage: "graph", completed: 0, total: 1 });
-  const seedGraph = await extractSeedGraph(seed, { signal, modelId: config.modelId });
+  const seedGraph =
+    options.seedGraph !== undefined
+      ? options.seedGraph
+      : await extractSeedGraph(seed, { signal, modelId: config.modelId });
   onProgress?.({ stage: "graph", completed: 1, total: 1 });
 
   onProgress?.({ stage: "personas", completed: 0, total: config.populationSize });
@@ -86,6 +98,7 @@ export async function buildInitialWorldState(
     signal,
     seedGraph,
     modelId: config.modelId,
+    provider: options.provider,
     onProgress: (completed, total) =>
       onProgress?.({ stage: "personas", completed, total }),
   });
@@ -146,7 +159,7 @@ async function runRound(
   modelId: string | undefined,
   onTurnSettled: (completed: number, total: number) => void
 ): Promise<AgentTurnResult[]> {
-  const provider = new LocalSwarmProvider({ concurrency: options.concurrency });
+  const provider = options.provider ?? new LocalSwarmProvider({ concurrency: options.concurrency });
   const scheduler = new SwarmScheduler(provider, { concurrency: options.concurrency });
 
   const specs: SwarmUnitSpec[] = world.personas.map((persona) => ({

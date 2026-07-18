@@ -12,6 +12,7 @@ const { generateText } = vi.hoisted(() => ({ generateText: vi.fn() }));
 vi.mock("ai", () => ({ generateText }));
 vi.mock("@/lib/ai/providers", () => ({
   getDefaultPluginModel: vi.fn().mockResolvedValue({ modelId: "mock-model" }),
+  getPluginModel: vi.fn().mockResolvedValue({ modelId: "mock-model" }),
 }));
 
 import { buildPersonas } from "./persona-builder";
@@ -38,18 +39,29 @@ describe("buildPersonas", () => {
     expect(personas[0].name).toBe("Ada");
   });
 
-  it("falls back without leaking unit ids or raw JSON when both attempts are unparseable", async () => {
-    generateText.mockResolvedValue({ text: '{"name": "Lucas", "bio": "truncated…' });
+  it("counts unparseable-after-retry as a failure instead of fabricating a persona", async () => {
+    let calls = 0;
+    generateText.mockImplementation(async () => {
+      calls += 1;
+      // Unit 1: both attempts malformed. Unit 2: valid on first attempt.
+      if (calls <= 2) return { text: '{"name": "Lucas", "bio": "truncated…' };
+      return { text: JSON.stringify({ name: "Vera", bio: "A retailer.", traits: {} }) };
+    });
 
-    const personas = await buildPersonas(SEED, 2);
+    const personas = await buildPersonas(SEED, 2, { concurrency: 1 });
 
-    expect(personas).toHaveLength(2);
-    for (const persona of personas) {
-      expect(persona.name).toMatch(/^Persona \d+$/);
-      expect(persona.name).not.toContain("local-");
-      expect(persona.bio).not.toContain("{");
-      expect(persona.bio).not.toContain('"');
-    }
+    // Only the real persona survives — no placeholder cards.
+    expect(personas).toHaveLength(1);
+    expect(personas[0].name).toBe("Vera");
+    expect(calls).toBe(3); // 2 attempts for the failed unit + 1 for the good one
+  });
+
+  it("throws when every persona is unparseable after retries", async () => {
+    generateText.mockResolvedValue({ text: "not json at all" });
+
+    await expect(buildPersonas(SEED, 2)).rejects.toThrow(
+      /All 2 persona generations failed.*not valid JSON after retry/
+    );
   });
 
   it("throws with the underlying cause when every generation fails", async () => {

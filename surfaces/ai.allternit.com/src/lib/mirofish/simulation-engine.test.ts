@@ -13,6 +13,7 @@ const { generateText } = vi.hoisted(() => ({ generateText: vi.fn() }));
 vi.mock("ai", () => ({ generateText }));
 vi.mock("@/lib/ai/providers", () => ({
   getDefaultPluginModel: vi.fn().mockResolvedValue({ modelId: "mock-model" }),
+  getPluginModel: vi.fn().mockResolvedValue({ modelId: "mock-model" }),
 }));
 
 import { InMemoryMemoryStore } from "./memory-store";

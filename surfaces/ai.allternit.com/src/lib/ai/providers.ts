@@ -56,8 +56,11 @@ const localAiFetch: typeof fetch = (input, init) => {
 
 const getLocalLanguageModel = (requestedId: string) => {
   // The env var may be an origin-relative path; the OpenAI provider needs an
-  // absolute base URL.
-  const baseURL = new URL(LOCAL_AI_BASE_URL!, globalThis.location.origin).href;
+  // absolute base URL. Outside a browser (the model-proxy sidecar runs this
+  // module under Bun for server-side simulations) there is no location — the
+  // env var is absolute there, so the base is only a formality.
+  const origin = globalThis.location?.origin ?? "http://127.0.0.1:8090";
+  const baseURL = new URL(LOCAL_AI_BASE_URL!, origin).href;
   logger.debug(
     { requestedId, baseURL },
     "Local AI override active — routing via model-proxy sidecar"

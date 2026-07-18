@@ -102,6 +102,11 @@ function fetchAllAppModels(): Promise<AppModelDefinition[]> {
   return allAppModelsPromise;
 }
 
+/** All enabled language models from the registry snapshot (registry-derived — never hardcode ids). */
+export async function listAppModels(): Promise<AppModelDefinition[]> {
+  return fetchAllAppModels();
+}
+
 export async function getAppModelDefinition(
   modelId: AppModelId
 ): Promise<AppModelDefinition> {

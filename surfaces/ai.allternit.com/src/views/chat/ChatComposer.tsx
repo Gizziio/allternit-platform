@@ -81,6 +81,7 @@ import { ModeDock } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
 import { MiroFishPanel } from './panels/MiroFishPanel';
+import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
 import { BottomDock } from './components/BottomDock';
 import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
@@ -1213,7 +1214,12 @@ export function ChatComposer({
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
     }
 
-    if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
+    if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
+      // MiroFish's single entry point is this composer: the prompt goes to
+      // the results-only panel below, which interprets and runs it — never
+      // through the normal agent-mode send.
+      useMiroFishRunStore.getState().requestRun(enrichedInput);
+    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
       onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
     } else {
       onSend(enrichedInput);

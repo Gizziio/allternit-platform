@@ -19,7 +19,7 @@ import { createModuleLogger } from '@/lib/logger';
 
 import { LocalSwarmProvider } from "@/lib/sandbox/swarm/local-provider";
 import { SwarmScheduler } from "@/lib/sandbox/swarm/scheduler";
-import type { SwarmUnitSpec } from "@/lib/sandbox/swarm/types";
+import type { SwarmProvider, SwarmUnitSpec } from "@/lib/sandbox/swarm/types";
 
 import { modelCallSignal, throwIfAborted } from "./model-call";
 import { seedGraphPromptBlock } from "./seed-graph";
@@ -110,6 +110,8 @@ export interface PersonaBuilderOptions {
   seedGraph?: SeedGraph | null;
   /** Registry model id; defaults to the registry default. */
   modelId?: string;
+  /** Swarm provider to fan work out through; defaults to in-process LocalSwarmProvider. */
+  provider?: SwarmProvider;
 }
 
 /** Build `populationSize` personas from `seed`, one LLM call per persona, fanned out concurrently. */
@@ -121,7 +123,7 @@ export async function buildPersonas(
   if (populationSize <= 0) return [];
   throwIfAborted(options.signal);
 
-  const provider = new LocalSwarmProvider({ concurrency: options.concurrency });
+  const provider = options.provider ?? new LocalSwarmProvider({ concurrency: options.concurrency });
   const scheduler = new SwarmScheduler(provider, { concurrency: options.concurrency });
 
   const specs: SwarmUnitSpec[] = Array.from({ length: populationSize }, (_, index) => ({
@@ -143,7 +145,9 @@ export async function buildPersonas(
     const prompt = buildPersonaPrompt(seed, index, populationSize, options.seedGraph);
 
     try {
-      // One retry on unparseable output before falling back.
+      // One retry on unparseable output. A persona that still can't be parsed
+      // is a real failure — it gets counted (participation badges / total-
+      // failure throw), never papered over with a fabricated placeholder.
       for (let attempt = 0; attempt < 2; attempt++) {
         throwIfAborted(options.signal);
         const { text } = await generateText({
@@ -157,15 +161,14 @@ export async function buildPersonas(
         const persona = tryParsePersona(text, unit.id);
         if (persona) return persona;
 
-        if (attempt === 0) {
-          logger.warn({ unitId: unit.id }, "Persona response unparseable — retrying once");
-        } else {
-          logger.warn({ unitId: unit.id }, "Persona response unparseable after retry — using fallback");
-          return fallbackPersona(unit.id, index, text);
-        }
+        logger.warn(
+          { unitId: unit.id, attempt },
+          attempt === 0
+            ? "Persona response unparseable — retrying once"
+            : "Persona response unparseable after retry"
+        );
       }
-      // Unreachable, but keeps the compiler honest about the return path.
-      return fallbackPersona(unit.id, index, "");
+      throw new Error("Persona response was not valid JSON after retry");
     } finally {
       completed += 1;
       options.onProgress?.(completed, populationSize);

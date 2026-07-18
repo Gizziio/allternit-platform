@@ -84,3 +84,50 @@ app: poll with targeted `querySelector` evaluations, never whole-body `innerText
 trace), `05-results.png` + `06-deep-interaction.png` (persona grid, rounds, chat),
 `run.mjs` (repeatable driver), `diag.mjs`/`freeze-diag.mjs` (engine-direct and
 freeze-isolation diagnostics).
+
+---
+
+# Addendum (2026-07-17, later): Gizzi models, single entry point, server-side runs
+
+Everything below is E2E-verified live (`/tmp/mirofish-test/composer-result.json`, screenshots `c1`–`c4`).
+
+## What changed
+
+1. **Real Gizzi models, no fabricated output.** All model calls route through the
+   `scripts/model-proxy.mjs` sidecar by registry id: `kimi/*` → kimi coding API (OAuth
+   auto-refresh at auth.kimi.com, rotated refresh_token written back atomically),
+   `anthropic/*` → `claude -p` subscription subprocess (concurrency 3), else → Ollama.
+   Credentials never reach the browser. The fabricated-persona fallback is GONE: an
+   unparseable persona after one retry is a counted failure (participation badges /
+   total-failure throw), never a placeholder card. Verified against a real failure:
+   kimi quota exhaustion surfaced the exact billing message in the red box.
+2. **Single entry point (Eoj's correction).** The panel's form is deleted; the chat
+   composer is the only input. One interpretation call (`run-request.ts`) derives
+   seed text, kind, population/rounds ("how 4 retailers … over 2 rounds" → 4×2,
+   verified), and the grounding entities — replacing both the form and the separate
+   graph-extraction call. Detected config renders as editable chips + Re-run; a
+   registry-derived model chip (`listAppModels`) selects the model.
+3. **Server-side runs.** Under Bun the sidecar imports the TS engine directly and
+   executes simulations itself: `POST /mirofish/runs` → SSE progress →
+   world persisted as JSON under `~/.allternit/mirofish-runs/`, always
+   userId-scoped (multi-tenant by default). The panel is server-first with
+   in-browser fallback; closing the tab no longer kills a run. Cancel = DELETE.
+4. **Provider injectability.** `RunSimulationOptions.provider` accepts any
+   `SwarmProvider` (E2B tier now has a consumer path).
+
+## Operational notes
+
+- Start the sidecar with `bun scripts/model-proxy.mjs` (bun enables `/mirofish/*`;
+  plain node still serves `/v1` model routing, server runs 501).
+- Per-model-call timeout is 180s (absorbs backend queue time); claude subprocess
+  ceiling 150s. The report stage is best-effort — under heavy subprocess load it can
+  time out and the run keeps its raw rounds (observed once; bike-lane run's report
+  generated fine).
+- Kimi quota is per billing cycle — exhaustion surfaces cleanly in the UI.
+
+## Verified final flow
+
+Composer prompt → interpretation (kind=policy, 4 personas, 2 rounds detected) →
+server run over claude → live staged progress → 4/4 agents both rounds → persona
+cards (e.g. "Marcus Chen, gig delivery cyclist…") → contextual multi-turn persona
+chat. Old form fields on page: 0. Tests: 32/32.
