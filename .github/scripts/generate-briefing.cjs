@@ -143,9 +143,31 @@ async function main() {
   // Step 1: Generate news edition markdown
   console.log('Generating news edition with Kimi...');
   const prompt = buildBriefingPrompt(sourcesText, weekLabel);
-  // Reasoning models consume thinking tokens from this budget — give it
-  // headroom or the final answer comes back empty.
-  const markdown = await callKimi([{ role: 'user', content: prompt }], 16000);
+  const NO_PLANNING =
+    'You are a publication writer. Never include planning, reasoning, or self-talk in your reply. ' +
+    'Begin the reply directly with the markdown title line of the article.';
+  // Reasoning models consume thinking tokens from the max_tokens budget —
+  // give it headroom or the final answer comes back empty.
+  let markdown = await callKimi(
+    [
+      { role: 'system', content: NO_PLANNING },
+      { role: 'user', content: prompt },
+    ],
+    16000,
+  );
+  if (markdown && !markdown.includes('# Allternit News')) {
+    console.warn('First attempt returned a planning trace — retrying with explicit instruction...');
+    markdown = await callKimi(
+      [
+        { role: 'system', content: NO_PLANNING },
+        {
+          role: 'user',
+          content: `${prompt}\n\nIMPORTANT: Begin your reply directly with \`# Allternit News\`. No planning, no reasoning, no preamble.`,
+        },
+      ],
+      16000,
+    );
+  }
 
   if (!markdown) {
     console.error('Empty response from Kimi. Skipping.');
