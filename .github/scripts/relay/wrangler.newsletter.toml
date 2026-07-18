@@ -1,0 +1,8 @@
+name = "allternit-newsletter"
+main = "newsletter-worker.js"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "allternit-newsletter"
+database_id = "446d7224-bd1b-490b-926b-2203017ddf82"
