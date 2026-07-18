@@ -17,6 +17,7 @@ const {
   savePipeline,
   buildPublication,
 } = require('./lib/pipeline.cjs');
+const { writeCover } = require('./lib/cover.cjs');
 
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
@@ -175,6 +176,9 @@ async function main() {
     series: 'Allternit Blog',
     issueNumber: `${now.getFullYear()}-W${weekNum}`,
   });
+
+  // Generate the cover image and attach its public URL before persisting
+  publication.imageUrl = writeCover(publication);
 
   pipeline.push(publication);
   pipeline.sort(

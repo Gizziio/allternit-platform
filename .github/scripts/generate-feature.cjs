@@ -20,6 +20,7 @@ const {
   savePipeline,
   buildPublication,
 } = require('./lib/pipeline.cjs');
+const { writeCover } = require('./lib/cover.cjs');
 
 // ─── Prompt Templates ───────────────────────────────────────────────────────
 
@@ -271,6 +272,9 @@ async function main() {
     issueNumber: `${now.getFullYear()}-W${weekNum}`,
     metrics: totalEngagement,
   });
+
+  // Generate the cover image and attach its public URL before persisting
+  publication.imageUrl = writeCover(publication);
 
   pipeline.push(publication);
   pipeline.sort(

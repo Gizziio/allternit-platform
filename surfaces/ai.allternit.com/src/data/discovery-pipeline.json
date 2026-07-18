@@ -378,7 +378,8 @@
       "citationCount": 0
     },
     "license": "CC BY 4.0",
-    "accessLevel": "public"
+    "accessLevel": "public",
+    "imageUrl": "https://ai.allternit.com/images/discovery/builders-notebook-2026-w29.svg"
   },
   {
     "id": "signal-2026-07-17-daily-brief",
@@ -464,7 +465,8 @@
       "citationCount": 0
     },
     "license": "CC BY 4.0",
-    "accessLevel": "public"
+    "accessLevel": "public",
+    "imageUrl": "https://ai.allternit.com/images/discovery/daily-brief-2026-07-17.svg"
   },
   {
     "id": "signal-2026-04-27-daily-brief",
@@ -507,6 +509,7 @@
       "citationCount": 0
     },
     "license": "CC BY 4.0",
-    "accessLevel": "public"
+    "accessLevel": "public",
+    "imageUrl": "https://ai.allternit.com/images/discovery/daily-brief-2026-04-27.svg"
   }
 ]

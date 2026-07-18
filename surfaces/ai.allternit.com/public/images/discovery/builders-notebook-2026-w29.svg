@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<title>Expanding the discovery layer: more sources, better classification, and a weekly generator</title>
+<rect width="1200" height="630" fill="#F5F3EF"/>
+<rect x="0" y="0" width="12" height="630" fill="#059669"/>
+<rect x="80" y="62" width="16" height="16" fill="#059669"/>
+<text x="108" y="77" font-family="'Courier New', Courier, monospace" font-size="21" letter-spacing="5" fill="#1A1A1A">ALLTERNIT BLOG</text>
+<text x="1120" y="77" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="17" letter-spacing="2" fill="#6B6B6B">EDITION 2026-W29</text>
+<line x1="80" y1="96" x2="1120" y2="96" stroke="#1A1A1A" stroke-width="1"/>
+<line x1="80" y1="96" x2="248" y2="96" stroke="#059669" stroke-width="3"/>
+<text x="80" y="265" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-weight="bold" fill="#1A1A1A">Expanding the discovery layer: more</text>
+<text x="80" y="322" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-weight="bold" fill="#1A1A1A">sources, better classification, and</text>
+<text x="80" y="379" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-weight="bold" fill="#1A1A1A">a weekly generator</text>
+<line x1="80" y1="580" x2="1120" y2="580" stroke="#1A1A1A" stroke-width="1"/>
+<text x="80" y="608" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">AI.ALLTERNIT.COM · DISCOVERY</text>
+<text x="1120" y="608" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">13 MIN READ</text>
+</svg>
