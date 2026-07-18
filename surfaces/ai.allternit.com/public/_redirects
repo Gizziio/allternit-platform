@@ -5,6 +5,7 @@
 /_next/static/* /_next/static/:splat 200
 /assets/* /assets/:splat 200
 /images/* /images/:splat 200
+/editions/* /editions/:splat 200
 /.well-known/* /.well-known/:splat 200
 /favicon.svg /favicon.svg 200
 
