@@ -134,7 +134,7 @@ async function main() {
 
   console.log('Writing notebook post with Kimi...');
   const prompt = buildBlogPrompt(gitLog, release, friendlyDate);
-  const markdown = await callKimi([{ role: 'user', content: prompt }], 4000);
+  const markdown = await callKimi([{ role: 'user', content: prompt }], 16000);
 
   if (!markdown) {
     console.error('Empty response from Kimi. Skipping.');

@@ -195,7 +195,7 @@ async function main() {
   // Step 2: Generate feature article
   console.log('Generating feature article...');
   const featurePrompt = buildFeaturePrompt(topic, sourcesText, newsHighlights);
-  const markdown = await callKimi([{ role: 'user', content: featurePrompt }], 4000);
+  const markdown = await callKimi([{ role: 'user', content: featurePrompt }], 16000);
 
   if (!markdown) {
     console.error('Empty feature response. Skipping.');
