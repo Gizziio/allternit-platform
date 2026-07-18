@@ -1,12 +1,12 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useEffect, useState } from 'react';
-import { gracefulShutdown } from 'src/utils/gracefulShutdown.js';
+import { gracefulShutdown } from '../../../shared/utils/gracefulShutdown.js';
 import { writeToStdout } from 'src/utils/process.js';
 import { Box, color, Text, useTheme } from '@/ink.js';
 import { addMcpConfig, getAllMcpConfigs } from '@/services/mcp/config.js';
 import type { ConfigScope, McpServerConfig, ScopedMcpServerConfig } from '@/services/mcp/types.js';
-import { plural } from '../utils/stringUtils.js';
+import { plural } from '../../../shared/utils/stringUtils.js';
 import { ConfigurableShortcutHint } from './ConfigurableShortcutHint.js';
 import { SelectMulti } from './CustomSelect/SelectMulti.js';
 import { Byline } from './design-system/Byline.js';

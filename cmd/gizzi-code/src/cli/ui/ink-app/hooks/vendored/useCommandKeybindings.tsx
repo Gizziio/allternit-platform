@@ -9,10 +9,10 @@
  * away and preserve the user's existing input text (the prompt is not cleared).
  */
 import { useMemo } from 'react';
-import { useIsModalOverlayActive } from '../../vendor/context/overlayContext';
-import { useOptionalKeybindingContext } from '../keybindings/KeybindingContext';
-import { useKeybindings } from '../keybindings/useKeybinding';
-import type { PromptInputHelpers } from '../../vendor/utils/handlePromptSubmit';
+import { useIsModalOverlayActive } from '../../context/overlayContext';
+import { useOptionalKeybindingContext } from '../../context/KeybindingContext';
+import { useKeybindings } from '../../keybindings/useKeybinding';
+import type { PromptInputHelpers } from '../../../../../shared/utils/handlePromptSubmit';
 
 type Props = {
   // onSubmit accepts additional parameters beyond what we pass here,

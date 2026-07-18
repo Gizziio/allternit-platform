@@ -5,20 +5,20 @@
 
 import type { AgentId } from '@/types/ids.js'
 import type { HookResultMessage, Message } from '@/types/message.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { isEnvTruthy } from '../../../utils/envUtils.js'
-import { errorMessage } from '../../../utils/errors.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { isEnvTruthy } from '../../../shared/utils/envUtils.js'
+import { errorMessage } from '../../../shared/utils/errors.js'
 import {
   createCompactBoundaryMessage,
   createUserMessage,
   isCompactBoundaryMessage,
-} from '../../../utils/messages.js'
+} from '../../../shared/utils/messages.js'
 import { getMainLoopModel } from '../../../utils/model/model.js'
 import { getSessionMemoryPath } from '../../../utils/permissions/filesystem.js'
-import { processSessionStartHooks } from '../../../utils/sessionStart.js'
+import { processSessionStartHooks } from '../../../shared/utils/sessionStart.js'
 import { getTranscriptPath } from '../../../utils/sessionStorage.js'
 import { tokenCountFromLastAPIResponse } from '../../../utils/tokens.js'
-import { extractDiscoveredToolNames } from '../../../utils/toolSearch.js'
+import { extractDiscoveredToolNames } from '../../../shared/utils/toolSearch.js'
 import {
   getDynamicConfig_BLOCKS_ON_INIT,
   getFeatureValue_CACHED_MAY_BE_STALE,

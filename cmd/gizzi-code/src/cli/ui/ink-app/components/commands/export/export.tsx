@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { join } from 'path';
 import React from 'react';
-import { ExportDialog } from '../../components/ExportDialog';
+import { ExportDialog } from '../../ExportDialog';
 import type { ToolUseContext } from '../../Tool';
-import type { LocalJSXCommandOnDone } from '../../types/command';
-import type { Message } from '../../types/message';
-import { getCwd } from '../../utils/cwd';
-import { renderMessagesToPlainText } from '../../utils/exportRenderer';
-import { writeFileSync_DEPRECATED } from '../../utils/slowOperations';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
+import type { Message } from '../../message';
+import { getCwd } from '../../../../../../shared/utils/cwd';
+import { renderMessagesToPlainText } from '../../../../../../shared/utils/exportRenderer';
+import { writeFileSync_DEPRECATED } from '../../../utils/slowOperations';
 function formatTimestamp(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

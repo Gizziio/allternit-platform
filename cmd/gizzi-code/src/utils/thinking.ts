@@ -58,4 +58,5 @@ export default {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../shared/utils/thinking.js'
+export { findThinkingTriggerPositions, getRainbowColor, hasUltrathinkKeyword, isUltrathinkEnabled, modelSupportsAdaptiveThinking, modelSupportsThinking, shouldEnableThinkingByDefault } from "../shared/utils/thinking.js";
+export type { ThinkingConfig } from "../shared/utils/thinking.js";

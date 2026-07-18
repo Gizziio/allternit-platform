@@ -3,8 +3,8 @@ import { useEffect, useRef } from 'react'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../services/analytics/index'
-import { useOptionalKeybindingContext } from './KeybindingContext'
+} from '../index'
+import { useOptionalKeybindingContext } from '../../keybindings/KeybindingContext'
 import type { KeybindingContextName } from './types'
 
 // TODO(keybindings-migration): Remove fallback parameter after migration is complete

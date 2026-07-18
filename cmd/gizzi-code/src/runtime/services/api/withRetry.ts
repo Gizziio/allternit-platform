@@ -8,9 +8,9 @@ import {
 } from '@anthropic-ai/sdk'
 import type { QuerySource } from '@/constants/querySource.js'
 import type { SystemAPIErrorMessage } from '@/types/message.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { logError } from '../../../utils/log.js'
-import { createSystemAPIErrorMessage } from '../../../utils/messages.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { logError } from '../../../shared/utils/log.js'
+import { createSystemAPIErrorMessage } from '../../../shared/utils/messages.js'
 import { getAPIProviderForStatsig } from '../../../utils/model/providers.js'
 import {
   clearApiKeyHelperCache,
@@ -19,8 +19,8 @@ import {
   isClaudeAISubscriber,
   isEnterpriseSubscriber,
 } from '../../../utils/auth.js'
-import { isEnvTruthy } from '../../../utils/envUtils.js'
-import { errorMessage } from '../../../utils/errors.js'
+import { isEnvTruthy } from '../../../shared/utils/envUtils.js'
+import { errorMessage } from '../../../shared/utils/errors.js'
 import {
   type CooldownReason,
   handleFastModeOverageRejection,
@@ -28,9 +28,9 @@ import {
   isFastModeCooldown,
   isFastModeEnabled,
   triggerFastModeCooldown,
-} from '../../../utils/fastMode.js'
+} from '../../../shared/utils/fastMode.js'
 import { isNonCustomOpusModel } from '../../../utils/model/model.js'
-import { disableKeepAlive } from '../../../utils/proxy.js'
+import { disableKeepAlive } from '../../../shared/utils/proxy.js'
 import { sleep } from '../../../utils/sleep.js'
 import type { ThinkingConfig } from '../../../utils/thinking.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'

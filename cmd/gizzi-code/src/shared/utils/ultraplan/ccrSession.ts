@@ -9,8 +9,8 @@ import type {
   ToolResultBlockParam,
   ToolUseBlock,
 } from '@anthropic-ai/sdk/resources'
-import type { SDKMessage } from '../../entrypoints/agentSdkTypes.js'
-import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../tools/ExitPlanModeTool/constants.js'
+import type { SDKMessage } from '../../../entrypoints/sdk/controlTypes.js'
+import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'
 import { logForDebugging } from '../debug.js'
 import { sleep } from '../sleep.js'
 import { isTransientNetworkError } from '../teleport/api.js'

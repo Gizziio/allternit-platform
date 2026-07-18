@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { BuiltInAgentDefinition } from '../loadAgentsDir'
+import type { BuiltInAgentDefinition } from '../../../../tools/AgentTool/loadAgentsDir'
 
 const SHARED_PREFIX = `You are an agent for Claude Code, Anthropic's official CLI for Claude. Given the user's message, you should use the tools available to complete the task. Complete the task fully—don't gold-plate, but don't leave it half-done.`
 const SHARED_GUIDELINES = `Your strengths:

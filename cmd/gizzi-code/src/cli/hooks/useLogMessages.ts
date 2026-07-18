@@ -2,12 +2,12 @@ type UUID = string
 import { useEffect, useRef } from 'react'
 import { useAppState } from '@/state/AppState.js'
 import type { Message } from '@/types/message.js'
-import { isAgentSwarmsEnabled } from '../utils/agentSwarmsEnabled.js'
+import { isAgentSwarmsEnabled } from '../../shared/utils/agentSwarmsEnabled.js'
 import {
   cleanMessagesForLogging,
   isChainParticipant,
   recordTranscript,
-} from '../utils/sessionStorage.js'
+} from '../../shared/utils/sessionStorage.js'
 
 /**
  * Hook that logs messages to the transcript

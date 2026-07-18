@@ -113,6 +113,41 @@ Key files:
 
 ---
 
+## OfficeCLI Backend (Gateway-Hosted)
+
+The add-in can offload heavy document work to [OfficeCLI](https://github.com/iOfficeAI/OfficeCLI) — a single-binary Office engine running **server-side inside the Allternit API gateway** (`cmd/allternit-api`, port 8013). This gives the agent capabilities Office.js cannot provide: full-document rendering (screenshots/HTML), deep structural analysis, schema validation, atomic batch edits, template merge, and new-document generation.
+
+### How it works
+
+1. **Snapshot sync** — the add-in exports the live document via `Office.getFileAsync` (compressed .docx/.xlsx/.pptx bytes, sliced) and uploads it to the gateway (`POST /api/v1/office/cli/document`). All `officecli` commands run against that server-side snapshot.
+2. **Read/analyze/render/validate** — `officecli_view`, `officecli_render`, `officecli_get`, `officecli_query`, `officecli_analyze` tools run on the snapshot. Screenshots come back as inline previews in the sidepanel.
+3. **Mutation** — live edits still go through the existing Office.js tools. OfficeCLI mutation is used for:
+   - **New-document generation** (`officecli_create` + `officecli_batch`) → delivered as a download artifact.
+   - **Live apply-back** (`target: "live"` on `officecli_edit`/`officecli_batch`) — the edited snapshot is written back into the open document via host APIs (`insertFileFromBase64` / `insertWorksheetsFromBase64` / `insertSlidesFromBase64`). Destructive: requires approval.
+   - **Direct file-path editing** — only when the gateway shares the filesystem (local dev) and the document is a saved `file://` path. Office will prompt to reload.
+4. **Self-healing loop** — after Office.js edits the snapshot is marked dirty and lazily re-synced, so the agent can verify its own work with `officecli_render` (screenshot) and `officecli_analyze` (validate + issues) before finishing.
+
+### Tool surface
+
+| Tool | Purpose |
+|---|---|
+| `officecli_view` / `officecli_get` / `officecli_query` | Read content, structure, styles — outline/text/JSON |
+| `officecli_render` | Screenshot (PNG) or HTML render — the agent's "eyes" |
+| `officecli_analyze` | Schema validation + issue enumeration |
+| `officecli_edit` / `officecli_batch` | Single op / atomic multi-op edits (snapshot or `target:"live"`) |
+| `officecli_create` / `officecli_merge` / `officecli_dump` | New files, `{{key}}` template merge, round-trip dump |
+| `officecli_raw` / `officecli_exec` | Raw-XML fallback and allowlisted escape hatch |
+| `officecli_watch_start` / `officecli_watch_stop` | Live auto-refreshing HTML preview (SSE) |
+| `mcp_officecli_*` | Tools discovered dynamically from OfficeCLI's MCP server (single `command` param, passed through verbatim) |
+
+### Setup
+
+- The gateway host needs the `officecli` binary: `brew install officecli` (or the official install script), optionally pinned via `OFFICECLI_BIN`.
+- Dev gateway runs with `ALLTERNIT_LOCAL_DEV_BYPASS=1` (already the `make api` default); the add-in auto-detects availability via `GET /api/v1/office/cli/capabilities` and hides the tools when the binary is missing.
+- OfficeCLI tool calls that mutate require the same destructive-action approval as existing tools.
+
+---
+
 ## Sources & Credits
 
 This add-in draws patterns from:

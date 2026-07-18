@@ -192,4 +192,5 @@ export default {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../../cli/ui/ink-app/services/analytics/growthbook.js'
+export { checkGate_CACHED_OR_BLOCKING, checkSecurityRestrictionGate, checkStatsigFeatureGate_CACHED_MAY_BE_STALE, clearGrowthBookConfigOverrides, getAllGrowthBookFeatures, getApiBaseUrlHost, getDynamicConfig_BLOCKS_ON_INIT, getDynamicConfig_CACHED_MAY_BE_STALE, getFeatureValue_CACHED_WITH_REFRESH, getFeatureValue_DEPRECATED, getGrowthBookConfigOverrides, hasGrowthBookEnvOverride, initializeGrowthBook, onGrowthBookRefresh, refreshGrowthBookAfterAuthChange, refreshGrowthBookFeatures, resetGrowthBook, setGrowthBookConfigOverride, setupPeriodicGrowthBookRefresh, stopPeriodicGrowthBookRefresh } from "../../cli/ui/ink-app/services/analytics/growthbook.js";
+export type { GrowthBookUserAttributes } from "../../cli/ui/ink-app/services/analytics/growthbook.js";

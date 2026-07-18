@@ -1,8 +1,8 @@
 import React from 'react';
-import { MessageResponse } from '../../components/MessageResponse.js';
-import { stringWidth } from '@/ink/stringWidth.js';
+import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
+import { stringWidth } from '../../../../cli/ui/ink-renderer/stringWidth.js';
 import { Text } from '@/ink.js';
-import { truncateToWidthNoEllipsis } from '../../utils/format.js';
+import { truncateToWidthNoEllipsis } from '../../../../shared/utils/format.js';
 import type { Output } from './TaskStopTool.js';
 export function renderToolUseMessage(): React.ReactElement | null {
   return null;

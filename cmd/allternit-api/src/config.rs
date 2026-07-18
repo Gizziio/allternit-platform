@@ -350,6 +350,78 @@ impl AppConfig {
             .map(PathBuf::from)
     }
 
+    /// Path to the OfficeCLI binary used by the Office add-in gateway routes.
+    /// Resolution order: `OFFICECLI_BIN` env → `officecli` on PATH → the
+    /// default per-user install location (`~/.officecli/bin/officecli`).
+    pub fn officecli_bin(&self) -> PathBuf {
+        if let Ok(value) = std::env::var("OFFICECLI_BIN") {
+            if !value.is_empty() {
+                return PathBuf::from(value);
+            }
+        }
+        if let Some(found) = find_on_path("officecli") {
+            return found;
+        }
+        dirs::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".officecli")
+            .join("bin")
+            .join("officecli")
+    }
+
+    /// Directory where OfficeCLI document snapshots and artifacts live.
+    /// Falls back to `<data_dir>/office-cli` using the same data-dir
+    /// convention as `main.rs` (env → platform data dir → /var/lib).
+    pub fn office_cli_dir(&self) -> PathBuf {
+        std::env::var("ALLTERNIT_OFFICE_CLI_DIR")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                std::env::var("ALLTERNIT_DATA_DIR")
+                    .ok()
+                    .filter(|value| !value.is_empty())
+                    .map(PathBuf::from)
+                    .or_else(|| dirs::data_dir().map(|d| d.join("allternit")))
+                    .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"))
+                    .join("office-cli")
+            })
+    }
+
+    /// Arguments used to spawn the OfficeCLI MCP stdio server
+    /// (comma-or-space separated). Verified against officecli 1.0.138: the
+    /// stdio server starts on bare `officecli mcp` (targets like `claude` are
+    /// for registration, `serve` is not a valid subcommand). The
+    /// `OFFICECLI_MCP_ARGS` env override absorbs any future change.
+    pub fn officecli_mcp_args(&self) -> Vec<String> {
+        let raw = std::env::var("OFFICECLI_MCP_ARGS").unwrap_or_else(|_| "mcp".to_string());
+        raw.split(|c: char| c == ',' || c.is_whitespace())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    /// Whether OfficeCLI may run directly against on-disk file paths
+    /// (transport model 3). Only meaningful when the gateway shares the user's
+    /// filesystem, so it defaults to true for self-hosted / local-dev
+    /// deployments and false otherwise.
+    pub fn officecli_live_fs(&self) -> bool {
+        std::env::var("ALLTERNIT_OFFICECLI_LIVE_FS")
+            .ok()
+            .map(|v| v.eq_ignore_ascii_case("true") || v == "1")
+            .unwrap_or_else(|| self.self_hosted() || self.local_dev_bypass())
+    }
+
+    /// Port range available to `officecli watch` preview servers.
+    pub fn officecli_watch_ports(&self) -> std::ops::RangeInclusive<u16> {
+        let raw = std::env::var("ALLTERNIT_OFFICECLI_WATCH_PORTS")
+            .unwrap_or_else(|_| "26400-26419".to_string());
+        let parsed = raw.split_once('-').and_then(|(start, end)| {
+            Some(start.trim().parse::<u16>().ok()?..=end.trim().parse::<u16>().ok()?)
+        });
+        parsed.unwrap_or(26400..=26419)
+    }
+
     /// Ollama base URL.
     pub fn ollama_url(&self) -> String {
         std::env::var("OLLAMA_URL")
@@ -507,6 +579,18 @@ fn company_config_paths() -> Vec<PathBuf> {
     }
 
     paths
+}
+
+/// Locate an executable on PATH (first match wins).
+fn find_on_path(name: &str) -> Option<PathBuf> {
+    let paths = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&paths) {
+        let candidate = dir.join(name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
 }
 
 fn user_config_path() -> PathBuf {

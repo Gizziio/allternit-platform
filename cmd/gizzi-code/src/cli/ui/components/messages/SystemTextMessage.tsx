@@ -11,7 +11,7 @@ import figures from 'figures';
 import { basename } from 'path';
 import { MessageResponse } from '../MessageResponse.js';
 import { FilePathLink } from '../FilePathLink.js';
-import { openPath } from '../../utils/browser.js';
+import { openPath } from '../../../../shared/utils/browser.js';
 /* eslint-disable @typescript-eslint/no-require-imports */
 const teamMemSaved = feature('TEAMMEM') ? require('./teamMemSaved.js') as typeof import('./teamMemSaved.js') : null;
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -19,14 +19,14 @@ import { TURN_COMPLETION_VERBS } from '@/constants/turnCompletionVerbs.js';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
 import type { SystemMessage, SystemStopHookSummaryMessage, SystemBridgeStatusMessage, SystemTurnDurationMessage, SystemThinkingMessage, SystemMemorySavedMessage } from '@/types/message.js';
 import { SystemAPIErrorMessage } from './SystemAPIErrorMessage.js';
-import { formatDuration, formatNumber, formatSecondsShort } from '../../utils/format.js';
-import { getGlobalConfig } from '../../utils/config.js';
-import Link from '@/ink/components/Link.js';
+import { formatDuration, formatNumber, formatSecondsShort } from '../../../../shared/utils/format.js';
+import { getGlobalConfig } from '../../../../shared/utils/config.js';
+import Link from '../../ink-renderer/components/Link.js';
 import ThemedText from '../design-system/ThemedText.js';
 import { CtrlOToExpand } from '../CtrlOToExpand.js';
 import { useAppStateStore } from '@/state/AppState.js';
 import { isBackgroundTask, type TaskState } from '../../tasks/types.js';
-import { getPillLabel } from '../../tasks/pillLabel.js';
+import { getPillLabel } from '../../ink-app/tasks/pillLabel.js';
 import { HOOK_TIMING_DISPLAY_THRESHOLD_MS } from '@/services/tools/toolExecution.js';
 import { useSelectedMessageBg } from '../messageActions.js';
 type Props = {

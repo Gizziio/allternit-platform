@@ -1,2 +1,0 @@
-// @ts-nocheck
-export * from '../../../../../shared/utils/sessionTitle.js'

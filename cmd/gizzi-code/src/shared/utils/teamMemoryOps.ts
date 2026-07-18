@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { isTeamMemFile } from '../memdir/teamMemPaths.js'
-import { FILE_EDIT_TOOL_NAME } from '../../runtime/tools/FileEditTool/constants.js'
-import { FILE_WRITE_TOOL_NAME } from '../../runtime/tools/FileWriteTool/prompt.js'
+import { isTeamMemFile } from '../../memdir/teamMemPaths.js'
+import { FILE_EDIT_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileEditTool/constants.js'
+import { FILE_WRITE_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
 
 export { isTeamMemFile }
 

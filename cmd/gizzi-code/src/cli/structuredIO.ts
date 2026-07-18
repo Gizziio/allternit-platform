@@ -23,9 +23,9 @@ import type {
 import type { CanUseToolFn } from 'src/hooks/useCanUseTool.js'
 import type { Tool, ToolUseContext } from 'src/Tool.js'
 import { type HookCallback, hookJSONOutputSchema } from 'src/types/hooks.js'
-import { logForDebugging } from 'src/utils/debug.js'
-import { logForDiagnosticsNoPII } from 'src/utils/diagLogs.js'
-import { AbortError } from 'src/utils/errors.js'
+import { logForDebugging } from '../shared/utils/debug.js'
+import { logForDiagnosticsNoPII } from '../shared/utils/diagLogs.js'
+import { AbortError } from '../shared/utils/errors.js'
 import {
   type Output as PermissionToolOutput,
   permissionPromptToolResultToPermissionDecision,
@@ -37,22 +37,22 @@ import type {
 } from 'src/utils/permissions/PermissionResult.js'
 import { hasPermissionsToUseTool } from 'src/utils/permissions/permissions.js'
 import { writeToStdout } from 'src/utils/process.js'
-import { jsonStringify } from 'src/utils/slowOperations.js'
+import { jsonStringify } from '../shared/utils/slowOperations.js'
 import { z } from 'zod/v4'
-import { notifyCommandLifecycle } from '../utils/commandLifecycle.js'
-import { normalizeControlMessageKeys } from '../utils/controlMessageCompat.js'
-import { executePermissionRequestHooks } from '../utils/hooks.js'
+import { notifyCommandLifecycle } from '../shared/utils/commandLifecycle.js'
+import { normalizeControlMessageKeys } from '../shared/utils/controlMessageCompat.js'
+import { executePermissionRequestHooks } from '../shared/utils/hooks.js'
 import {
   applyPermissionUpdates,
   persistPermissionUpdates,
-} from '../utils/permissions/PermissionUpdate.js'
+} from '../shared/utils/permissions/PermissionUpdate.js'
 import {
   notifySessionStateChanged,
   type RequiresActionDetails,
   type SessionExternalMetadata,
-} from '../utils/sessionState.js'
-import { jsonParse } from '../utils/slowOperations.js'
-import { Stream } from '../utils/stream.js'
+} from '../shared/utils/sessionState.js'
+import { jsonParse } from '../shared/utils/slowOperations.js'
+import { Stream } from '../shared/utils/stream.js'
 import { ndjsonSafeStringify } from './ndjsonSafeStringify.js'
 
 /**

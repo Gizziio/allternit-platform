@@ -1,14 +1,14 @@
 // @ts-nocheck
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import * as React from 'react';
-import { extractTag } from 'src/utils/messages.js';
-import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js';
-import { FilePathLink } from '../../components/FilePathLink.js';
-import { MessageResponse } from '../../components/MessageResponse.js';
+import { extractTag } from '../../../../shared/utils/messages.js';
+import { FallbackToolUseErrorMessage } from '../../../../cli/ui/ink-app/components/FallbackToolUseErrorMessage.js';
+import { FilePathLink } from '../../../../cli/ui/ink-app/components/FilePathLink.js';
+import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { Text } from '@/ink.js';
-import { FILE_NOT_FOUND_CWD_NOTE, getDisplayPath } from '../../utils/file.js';
-import { formatFileSize } from '../../utils/format.js';
-import { getPlansDirectory } from '../../utils/plans.js';
+import { FILE_NOT_FOUND_CWD_NOTE, getDisplayPath } from '../../../../shared/utils/file.js';
+import { formatFileSize } from '../../../../shared/utils/format.js';
+import { getPlansDirectory } from '../../../../shared/utils/plans.js';
 import { getTaskOutputDir } from '../../utils/task/diskOutput.js';
 import type { Input, Output } from './FileReadTool.js';
 

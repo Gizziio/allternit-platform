@@ -14,7 +14,7 @@ import {
   clearSkillCaches,
   getSkillsPath,
   onDynamicSkillsLoaded,
-} from '../../skills/loadSkillsDir.js'
+} from '../../../cli/ui/ink-app/skills/loadSkillsDir.js'
 import { resetSentSkillNames } from '../attachments.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { logForDebugging } from '../debug.js'

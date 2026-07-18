@@ -2,8 +2,8 @@
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { stringWidth } from '../../ink/stringWidth';
-import { Box, Text } from '../../core/ink';
-import TextInput from '../TextInput';
+import { Box, Text } from '../../../ink';
+import TextInput from '../../TextInput';
 type Props = {
   value: string;
   onChange: (value: string) => void;

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from 'react'
 import { Box, Text } from '@/ink.js'
-import type { LocalWorkflowTaskState } from '../../tasks/LocalWorkflowTask/LocalWorkflowTask.js'
+import type { LocalWorkflowTaskState } from '../../ink-app/tasks/LocalWorkflowTask/LocalWorkflowTask.js'
 
 type Props = {
   task: LocalWorkflowTaskState

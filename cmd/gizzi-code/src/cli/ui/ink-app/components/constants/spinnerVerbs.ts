@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { getInitialSettings } from '../utils/settings/settings'
+import { getInitialSettings } from '../../utils/settings/settings'
 
 export function getSpinnerVerbs(): string[] {
   const settings = getInitialSettings()

@@ -6,7 +6,8 @@ import {
 import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
 import type z from 'zod/v4'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
-import type { AnyObject, Tool, ToolUseContext } from '../../../runtime/tools/Tool.js'
+import type { Tool, ToolUseContext } from '../../../runtime/tools/Tool.js';
+import type { AnyObject } from '../../../Tool.js';
 import type { HookProgress } from '@/types/hooks.js'
 import type {
   AssistantMessage,
@@ -15,21 +16,21 @@ import type {
 } from '@/types/message.js'
 import type { PermissionDecision } from '@/types/permissions.js'
 import { createAttachmentMessage } from '../../../utils/attachments.js'
-import { logForDebugging } from '../../../utils/debug.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
 import {
   executePostToolHooks,
   executePostToolUseFailureHooks,
   executePreToolHooks,
   getPreToolHookBlockingMessage,
-} from '../../../utils/hooks.js'
-import { logError } from '../../../utils/log.js'
+} from '../../../shared/utils/hooks.js'
+import { logError } from '../../../shared/utils/log.js'
 import {
   getRuleBehaviorDescription,
   type PermissionDecisionReason,
   type PermissionResult,
 } from '../../../utils/permissions/PermissionResult.js'
 import { checkRuleBasedPermissions } from '../../../utils/permissions/permissions.js'
-import { formatError } from '../../../utils/toolErrors.js'
+import { formatError } from '../../../shared/utils/toolErrors.js'
 import { isMcpTool } from '../mcp/utils.js'
 import type { McpServerType, MessageUpdateLazy } from './toolExecution.js'
 

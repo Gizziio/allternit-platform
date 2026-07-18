@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { useSyncExternalStore } from 'react'
-import type { QueuedCommand } from '../../vendor/types/textInputTypes'
+import type { QueuedCommand } from '../../types/textInputTypes'
 import {
   getCommandQueueSnapshot,
   subscribeToCommandQueue,
-} from '../../vendor/utils/messageQueueManager'
+} from '../../../../../shared/utils/messageQueueManager'
 
 /**
  * React hook to subscribe to the unified command queue.

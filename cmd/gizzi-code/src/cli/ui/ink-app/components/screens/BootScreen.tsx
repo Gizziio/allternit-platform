@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
-import { Box, Text } from '../ink';
+import { Box, Text } from '../../ink';
 
 interface BootScreenProps {
   harnessEnabled: boolean;

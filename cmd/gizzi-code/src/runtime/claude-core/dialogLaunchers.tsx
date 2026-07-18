@@ -10,14 +10,14 @@
 import React from 'react';
 // @ts-ignore Module import issue
 import type { AssistantSession } from './assistant/sessionDiscovery.js';
-import type { StatsStore } from './context/stats.js';
+import type { StatsStore } from '../context/stats.js';
 import type { Root } from '@/ink.js';
 import { renderAndRun, showSetupDialog } from './interactiveHelpers.js';
 import { KeybindingSetup } from '@/keybindings/KeybindingProviderSetup.js';
 import type { AppState } from '@/state/AppStateStore.js';
 import type { AgentMemoryScope } from './tools/AgentTool/agentMemory.js';
 import type { TeleportRemoteResponse } from './utils/conversationRecovery.js';
-import type { FpsMetrics } from './utils/fpsTracker.js';
+import type { FpsMetrics } from '../../shared/utils/fpsTracker.js';
 import type { ValidationError } from './utils/settings/validation.js';
 
 // Type-only access to ResumeConversation's Props via the module type.
@@ -127,7 +127,7 @@ export async function launchResumeChooser(root: Root, appProps: {
     ResumeConversation
   }, {
     App
-  }] = await Promise.all([worktreePathsPromise, import('./screens/ResumeConversation.js'), import('./components/App.js')]);
+  }] = await Promise.all([worktreePathsPromise, import('./screens/ResumeConversation.js'), import('../../cli/ui/ink-app/components/App.js')]);
   await renderAndRun(root, <App getFpsMetrics={appProps.getFpsMetrics} stats={appProps.stats} initialState={appProps.initialState}>
       <KeybindingSetup>
         {/* @ts-ignore Props mismatch */}

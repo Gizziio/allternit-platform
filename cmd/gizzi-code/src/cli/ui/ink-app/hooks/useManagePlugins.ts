@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useCallback, useEffect } from 'react'
 import type { Command } from '../commands.js'
-import { useNotifications } from '../context/notifications.js'
+import { useNotifications } from '../../../../context/notifications.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,

@@ -2,8 +2,8 @@
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { BLACK_CIRCLE } from '../../constants/figures';
-import { Box, Text } from '../../core/ink';
-import { toInkColor } from '../../utils/ink';
+import { Box, Text } from '../../../ink';
+import { toInkColor } from '../../../../../../shared/utils/ink';
 export type WorkerBadgeProps = {
   name: string;
   color: string;

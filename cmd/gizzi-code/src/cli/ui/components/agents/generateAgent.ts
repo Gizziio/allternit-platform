@@ -3,20 +3,20 @@ import type { ContentBlock } from '@anthropic-ai/sdk/resources/index.mjs'
 import { getUserContext } from 'src/context.js'
 import { queryModelWithoutStreaming } from 'src/services/api/claude.js'
 import { getEmptyToolPermissionContext } from 'src/Tool.js'
-import { AGENT_TOOL_NAME } from 'src/tools/AgentTool/constants.js'
+import { AGENT_TOOL_NAME } from '../../ink-app/tools/AgentTool/constants.js'
 import { prependUserContext } from 'src/utils/api.js'
 import {
   createUserMessage,
   normalizeMessagesForAPI,
-} from 'src/utils/messages.js'
+} from '../../../../shared/utils/messages.js'
 import type { ModelName } from 'src/utils/model/model.js'
-import { isAutoMemoryEnabled } from '../../memdir/paths.js'
+import { isAutoMemoryEnabled } from '../../../../memdir/paths.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '@/services/analytics/index.js'
-import { jsonParse } from '../../utils/slowOperations.js'
-import { asSystemPrompt } from '../../utils/systemPromptType.js'
+import { jsonParse } from '../../../../shared/utils/slowOperations.js'
+import { asSystemPrompt } from '../../../../shared/utils/systemPromptType.js'
 
 type GeneratedAgent = {
   identifier: string

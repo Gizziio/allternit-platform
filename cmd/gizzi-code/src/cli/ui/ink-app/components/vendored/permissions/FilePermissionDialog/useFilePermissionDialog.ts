@@ -5,10 +5,10 @@ import { useKeybindings } from '../../../keybindings/useKeybinding.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../../services/analytics/index.js'
+} from '../../../index.js'
 import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata.js'
-import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
-import type { CompletionType } from '../../../utils/unaryLogging.js'
+import type { PermissionUpdate } from '../../../../utils/permissions/PermissionUpdateSchema.js'
+import type { CompletionType } from '../../../../../../../shared/utils/unaryLogging.js'
 import type { ToolUseConfirm } from '../PermissionRequest.js'
 import {
   type FileOperationType,

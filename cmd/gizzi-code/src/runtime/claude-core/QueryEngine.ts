@@ -31,57 +31,57 @@ import {
   getTotalCost,
 } from './cost-tracker.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
-import { loadMemoryPrompt } from './memdir/memdir.js'
-import { hasAutoMemPathOverride } from './memdir/paths.js'
+import { loadMemoryPrompt } from '../../cli/ui/ink-app/memdir/memdir.js'
+import { hasAutoMemPathOverride } from '../../cli/ui/ink-app/memdir/paths.js'
 import { query } from './query.js'
 import { categorizeRetryableAPIError } from '@/services/api/errors.js'
 import type { MCPServerConnection } from '@/services/mcp/types.js'
 import type { AppState } from '@/state/AppState.js'
 import { type Tools, type ToolUseContext, toolMatchesName } from '@/Tool.js'
-import type { AgentDefinition } from './tools/AgentTool/loadAgentsDir.js'
-import { SYNTHETIC_OUTPUT_TOOL_NAME } from './tools/SyntheticOutputTool/SyntheticOutputTool.js'
+import type { AgentDefinition } from '../../tools/AgentTool/loadAgentsDir.js'
+import { SYNTHETIC_OUTPUT_TOOL_NAME } from '../../cli/ui/ink-app/tools/SyntheticOutputTool/SyntheticOutputTool.js'
 import type { Message } from '@/types/message.js'
 import type { OrphanedPermission } from '@/types/textInputTypes.js'
-import { createAbortController } from './utils/abortController.js'
-import type { AttributionState } from './utils/commitAttribution.js'
-import { getGlobalConfig } from './utils/config.js'
-import { getCwd } from './utils/cwd.js'
-import { isBareMode, isEnvTruthy } from './utils/envUtils.js'
-import { getFastModeState } from './utils/fastMode.js'
+import { createAbortController } from '../../shared/utils/abortController.js'
+import type { AttributionState } from '../../shared/utils/commitAttribution.js'
+import { getGlobalConfig } from '../../shared/utils/config.js'
+import { getCwd } from '../../shared/utils/cwd.js'
+import { isBareMode, isEnvTruthy } from '../../shared/utils/envUtils.js'
+import { getFastModeState } from '../../shared/utils/fastMode.js'
 import {
   type FileHistoryState,
   fileHistoryEnabled,
   fileHistoryMakeSnapshot,
-} from './utils/fileHistory.js'
+} from '../../shared/utils/fileHistory.js'
 import {
   cloneFileStateCache,
   type FileStateCache,
-} from './utils/fileStateCache.js'
-import { headlessProfilerCheckpoint } from './utils/headlessProfiler.js'
-import { registerStructuredOutputEnforcement } from './utils/hooks/hookHelpers.js'
-import { getInMemoryErrors } from './utils/log.js'
-import { countToolCalls, SYNTHETIC_MESSAGES } from './utils/messages.js'
+} from '../../shared/utils/fileStateCache.js'
+import { headlessProfilerCheckpoint } from '../../shared/utils/headlessProfiler.js'
+import { registerStructuredOutputEnforcement } from '../../shared/utils/hooks/hookHelpers.js'
+import { getInMemoryErrors } from '../../shared/utils/log.js'
+import { countToolCalls, SYNTHETIC_MESSAGES } from '../../shared/utils/messages.js'
 import {
   getMainLoopModel,
   parseUserSpecifiedModel,
-} from './utils/model/model.js'
-import { loadAllPluginsCacheOnly } from './utils/plugins/pluginLoader.js'
+} from '../../utils/model/model.js'
+import { loadAllPluginsCacheOnly } from '../../shared/utils/plugins/pluginLoader.js'
 import {
   type ProcessUserInputContext,
   processUserInput,
-} from './utils/processUserInput/processUserInput.js'
-import { fetchSystemPromptParts } from './utils/queryContext.js'
-import { setCwd } from './utils/Shell.js'
+} from '../../cli/ui/ink-app/utils/processUserInput/processUserInput.js'
+import { fetchSystemPromptParts } from '../../shared/utils/queryContext.js'
+import { setCwd } from '../../shared/utils/Shell.js'
 import {
   flushSessionStorage,
   recordTranscript,
-} from './utils/sessionStorage.js'
-import { asSystemPrompt } from './utils/systemPromptType.js'
-import { resolveThemeSetting } from './utils/systemTheme.js'
+} from '../../shared/utils/sessionStorage.js'
+import { asSystemPrompt } from '../../shared/utils/systemPromptType.js'
+import { resolveThemeSetting } from '../../shared/utils/systemTheme.js'
 import {
   shouldEnableThinkingByDefault,
   type ThinkingConfig,
-} from './utils/thinking.js'
+} from '../../shared/utils/thinking.js'
 
 // Lazy: MessageSelector.tsx pulls React/ink; only needed for message filtering at query time
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -92,21 +92,21 @@ const messageSelector =
 import {
   localCommandOutputToSDKAssistantMessage,
   toSDKCompactMetadata,
-} from './utils/messages/mappers.js'
+} from '../../cli/ui/ink-app/utils/messages/mappers.js'
 import {
   buildSystemInitMessage,
   sdkCompatToolName,
-} from './utils/messages/systemInit.js'
+} from '../../cli/ui/ink-app/utils/messages/systemInit.js'
 import {
   getScratchpadDir,
   isScratchpadEnabled,
-} from './utils/permissions/filesystem.js'
+} from '../../utils/permissions/filesystem.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import {
   handleOrphanedPermission,
   isResultSuccessful,
   normalizeMessage,
-} from './utils/queryHelpers.js'
+} from '../../shared/utils/queryHelpers.js'
 
 // Dead code elimination: conditional import for coordinator mode
 /* eslint-disable @typescript-eslint/no-require-imports */

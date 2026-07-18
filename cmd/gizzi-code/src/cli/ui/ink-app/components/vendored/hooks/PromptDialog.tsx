@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { Box, Text } from '../../core/ink';
+import { Box, Text } from '../../../ink';
 import { useKeybinding } from '../../keybindings/useKeybinding';
-import type { PromptRequest } from '../../types/hooks';
+import type { PromptRequest } from '../../../../../../shared/utils/hooks';
 import { Select } from '../CustomSelect/select';
 import { PermissionDialog } from '../permissions/PermissionDialog';
 type Props = {

@@ -1,18 +1,18 @@
 // @ts-nocheck
 import * as React from 'react';
 import { useState } from 'react';
-import type { CommandResultDisplay, LocalJSXCommandContext } from '../../commands';
-import { Dialog } from '../../components/design-system/Dialog';
-import { FastIcon, getFastIconString } from '../../components/FastIcon';
-import { Box, Link, Text } from '../../core/ink';
+import type { CommandResultDisplay, LocalJSXCommandContext } from '../../../commands';
+import { Dialog } from '../../../../components/design-system/Dialog';
+import { FastIcon, getFastIconString } from '../../FastIcon';
+import { Box, Link, Text } from '../../../ink';
 import { useKeybindings } from '../../keybindings/useKeybinding';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../index';
 import { type AppState, useAppState, useSetAppState } from '../../state/AppState';
-import type { LocalJSXCommandOnDone } from '../../types/command';
-import { clearFastModeCooldown, FAST_MODE_MODEL_DISPLAY, getFastModeModel, getFastModeRuntimeState, getFastModeUnavailableReason, isFastModeEnabled, isFastModeSupportedByModel, prefetchFastModeStatus } from '../../utils/fastMode';
-import { formatDuration } from '../../utils/format';
-import { formatModelPricing, getOpus46CostTier } from '../../utils/modelCost';
-import { updateSettingsForSource } from '../../utils/settings/settings';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
+import { clearFastModeCooldown, FAST_MODE_MODEL_DISPLAY, getFastModeModel, getFastModeRuntimeState, getFastModeUnavailableReason, isFastModeEnabled, isFastModeSupportedByModel, prefetchFastModeStatus } from '../../../../../../shared/utils/fastMode';
+import { formatDuration } from '../../../utils/format';
+import { formatModelPricing, getOpus46CostTier } from '../../../../../../shared/utils/modelCost';
+import { updateSettingsForSource } from '../../../utils/settings/settings';
 
 function applyFastMode(enable: boolean, setAppState: (f: (prev: AppState) => AppState) => void): void {
   clearFastModeCooldown();

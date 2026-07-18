@@ -2,21 +2,21 @@
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import * as React from 'react';
-import { resetCostState } from '../../bootstrap/state';
-import { clearTrustedDeviceToken, enrollTrustedDevice } from '../../bridge/trustedDevice';
-import type { LocalJSXCommandContext } from '../../commands';
-import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint';
-import { ConsoleOAuthFlow } from '../../components/ConsoleOAuthFlow';
-import { Dialog } from '../../components/design-system/Dialog';
-import { useMainLoopModel } from '../../hooks/useMainLoopModel';
-import { Text } from '../../core/ink';
-import { refreshGrowthBookAfterAuthChange } from '../../services/analytics/growthbook';
-import { refreshPolicyLimits } from '../../services/policyLimits/index';
-import { refreshRemoteManagedSettings } from '../../services/remoteManagedSettings/index';
-import type { LocalJSXCommandOnDone } from '../../types/command';
-import { stripSignatureBlocks } from '../../utils/messages';
-import { checkAndDisableAutoModeIfNeeded, checkAndDisableBypassPermissionsIfNeeded, resetAutoModeGateCheck, resetBypassPermissionsCheck } from '../../utils/permissions/bypassPermissionsKillswitch';
-import { resetUserCache } from '../../utils/user';
+import { resetCostState } from '../../../bootstrap/state';
+import { clearTrustedDeviceToken, enrollTrustedDevice } from '../../../../../../runtime/integrations/trustedDevice';
+import type { LocalJSXCommandContext } from '../../../commands';
+import { ConfigurableShortcutHint } from '../../ConfigurableShortcutHint';
+import { ConsoleOAuthFlow } from '../../ConsoleOAuthFlow';
+import { Dialog } from '../../../../components/design-system/Dialog';
+import { useMainLoopModel } from '../../../hooks/useMainLoopModel';
+import { Text } from '../../../ink';
+import { refreshGrowthBookAfterAuthChange } from '../../../../../../runtime/services/analytics/growthbook';
+import { refreshPolicyLimits } from '../../index';
+import { refreshRemoteManagedSettings } from '../../index';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
+import { stripSignatureBlocks } from '../../../utils/messages';
+import { checkAndDisableAutoModeIfNeeded, checkAndDisableBypassPermissionsIfNeeded, resetAutoModeGateCheck, resetBypassPermissionsCheck } from '../../../../../../shared/utils/permissions/bypassPermissionsKillswitch';
+import { resetUserCache } from '../../../../../../shared/utils/user';
 export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext): Promise<React.ReactNode> {
   return <Login onDone={async success => {
     context.onChangeAPIKey();

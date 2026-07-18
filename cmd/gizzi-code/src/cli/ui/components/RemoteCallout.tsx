@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { isBridgeEnabled } from '../bridge/bridgeEnabled.js';
+import { isBridgeEnabled } from '../../../runtime/integrations/bridgeEnabled.js';
 import { Box, Text } from '@/ink.js';
-import { getClaudeAIOAuthTokens } from '../utils/auth.js';
-import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js';
+import { getClaudeAIOAuthTokens } from '../../../shared/utils/auth.js';
+import { getGlobalConfig, saveGlobalConfig } from '../../../shared/utils/config.js';
 import type { OptionWithDescription } from './CustomSelect/select.js';
 import { Select } from './CustomSelect/select.js';
 import { PermissionDialog } from './permissions/PermissionDialog.js';

@@ -216,7 +216,7 @@ export async function shouldAutoCompact(
   if (feature('CONTEXT_COLLAPSE')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const { isContextCollapseEnabled } =
-      require('../contextCollapse/index.js') as typeof import('../contextCollapse/index.js')
+      require('../contextCollapse/operations.js') as typeof import('../contextCollapse/operations.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
     if (isContextCollapseEnabled()) {
       return false

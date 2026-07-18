@@ -229,13 +229,13 @@ function getMcpToolTimeoutMs(): number {
   )
 }
 
-import { isAllternitInChromeMCPServer } from '../../utils/allternitInChrome/common.js'
+import { isAllternitInChromeMCPServer } from '../../../../../shared/utils/allternitInChrome/common.js'
 
 // Lazy: toolRendering.tsx pulls React/ink (whose reconciler uses top-level
 // await); only needed when Allternit-in-Chrome MCP server is connected.
 // Dynamic import — Bun's bundler cannot include a require() of a TLA graph.
 const loadAllternitInChromeToolRendering = () =>
-  import('../../utils/allternitInChrome/toolRendering.js')
+  import('../../../../../shared/utils/allternitInChrome/toolRendering.js')
 // Lazy: wrapper.tsx → hostAdapter.ts → executor.ts pulls both native modules
 // (@ant/computer-use-input + @ant/computer-use-swift). Runtime-gated by
 // GrowthBook tengu_malort_pedway (see gates.ts).
@@ -908,7 +908,7 @@ export const connectToServer = memoize(
       ) {
         // Run the Chrome MCP server in-process to avoid spawning a ~325 MB subprocess
         const { createChromeContext } = await import(
-          '../../utils/allternitInChrome/mcpServer.js'
+          '../../../../../shared/utils/allternitInChrome/mcpServer.js'
         )
         const { createClaudeForChromeMcpServer } = await import(
           '@allternit/extension'

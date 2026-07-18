@@ -3,18 +3,18 @@ import type {
   BetaContentBlock,
   BetaWebSearchTool20250305,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import { getAPIProvider } from '../../../utils/model/providers.js'
+import { getAPIProvider } from '../../../../cli/ui/ink-app/utils/model/providers.js'
 import type { PermissionResult } from '../../../utils/permissions/PermissionResult.js'
 import { z } from 'zod/v4'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'
 import { queryModelWithStreaming } from '@/services/api/claude.js'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import { lazySchema } from '../../../utils/lazySchema.js'
-import { logError } from '../../../utils/log.js'
-import { createUserMessage } from '../../../utils/messages.js'
-import { getMainLoopModel, getSmallFastModel } from '../../../utils/model/model.js'
-import { jsonParse, jsonStringify } from '../../../utils/slowOperations.js'
-import { asSystemPrompt } from '../../../utils/systemPromptType.js'
+import { lazySchema } from '../../../../shared/utils/lazySchema.js'
+import { logError } from '../../../../shared/utils/log.js'
+import { createUserMessage } from '../../../../shared/utils/messages.js'
+import { getMainLoopModel, getSmallFastModel } from '../../../../shared/utils/model/model.js'
+import { jsonParse, jsonStringify } from '../../../../shared/utils/slowOperations.js'
+import { asSystemPrompt } from '../../../../shared/utils/systemPromptType.js'
 import { getWebSearchPrompt, WEB_SEARCH_TOOL_NAME } from './prompt.js'
 import {
   getToolUseSummary,

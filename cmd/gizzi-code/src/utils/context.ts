@@ -19,4 +19,4 @@ export function setContext(ctx: Partial<Context>): void {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../shared/utils/context.js'
+export { CAPPED_DEFAULT_MAX_TOKENS, COMPACT_MAX_OUTPUT_TOKENS, ESCALATED_MAX_TOKENS, MODEL_CONTEXT_WINDOW_DEFAULT, calculateContextPercentages, getContextWindowForModel, getMaxThinkingTokensForModel, getModelMaxOutputTokens, getSonnet1mExpTreatmentEnabled, has1mContext, is1mContextDisabled, modelSupports1M } from "../shared/utils/context.js";

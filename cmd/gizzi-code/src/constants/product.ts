@@ -76,4 +76,4 @@ export function getRemoteSessionUrl(
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../cli/ui/ink-app/constants/product.js'
+export { CLAUDE_AI_BASE_URL, CLAUDE_AI_LOCAL_BASE_URL, CLAUDE_AI_STAGING_BASE_URL, getClaudeAiBaseUrl } from "../cli/ui/ink-app/constants/product.js";

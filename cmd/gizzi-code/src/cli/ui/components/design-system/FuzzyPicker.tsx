@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useSearchInput } from '@/hooks/useSearchInput.js';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
 import type { KeyboardEvent } from '@/ink/events/keyboard-event.js';
-import { clamp } from '@/ink/layout/geometry.js';
+import { clamp } from '../../ink-renderer/layout/geometry.js';
 import { Box, Text, useTerminalFocus } from '@/ink.js';
 import { SearchBox } from '../SearchBox.js';
 import { Byline } from './Byline.js';

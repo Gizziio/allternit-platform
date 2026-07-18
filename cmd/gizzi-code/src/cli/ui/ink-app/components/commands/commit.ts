@@ -1,8 +1,8 @@
 // @ts-nocheck
-import type { Command } from '../commands'
-import { getAttributionTexts } from '../utils/attribution'
-import { executeShellCommandsInPrompt } from '../utils/promptShellExecution'
-import { getUndercoverInstructions, isUndercover } from '../utils/undercover'
+import type { Command } from '../../commands'
+import { getAttributionTexts } from '../../../../../shared/utils/attribution'
+import { executeShellCommandsInPrompt } from '../../../../../shared/utils/promptShellExecution'
+import { getUndercoverInstructions, isUndercover } from '../../../../../shared/utils/undercover'
 
 const ALLOWED_TOOLS = [
   'Bash(git add:*)',

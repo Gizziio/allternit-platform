@@ -1,9 +1,9 @@
 // @ts-nocheck
 import * as React from 'react';
-import { MessageResponse } from '../../components/MessageResponse.js';
-import { supportsHyperlinks } from '@/ink/supports-hyperlinks.js';
+import { MessageResponse } from '../../../cli/ui/ink-app/components/MessageResponse.js';
+import { supportsHyperlinks } from '../../../cli/ui/ink-renderer/supports-hyperlinks.js';
 import { Link, Text } from '@/ink.js';
-import { renderToolResultMessage as renderDefaultMCPToolResultMessage } from '../../tools/MCPTool/UI.js';
+import { renderToolResultMessage as renderDefaultMCPToolResultMessage } from '../../../cli/ui/ink-app/tools/MCPTool/UI.js';
 import type { MCPToolResult } from '../../utils/mcpValidation.js';
 import { truncateToWidth } from '../format.js';
 import { trackAllternitInChromeTabId } from './common.js';

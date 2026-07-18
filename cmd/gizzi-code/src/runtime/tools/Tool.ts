@@ -74,23 +74,12 @@ export function buildTool<TParams, TResult>(
 // Tools collection type
 export type Tools = Tool[] | Map<string, Tool>
 
-// Auto-added export
-export const QueryChainTracking: any = {}
 
-// Auto-added export
-export const ToolCallProgress: any = {}
 
-// Auto-added export
-export const ToolProgress: any = {}
 
-// Auto-added export
-export const ToolProgressData: any = {}
 
-// Auto-added export
-export const AnyObject: any = {}
 
-// Auto-added export
-export const Progress: any = {}
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../../cli/ui/ink-app/Tool.js'
+export { filterToolProgressMessages, findToolByName, getEmptyToolPermissionContext, toolMatchesName } from "../../cli/ui/ink-app/Tool.js";
+export type { AgentToolProgress, AnyObject, BashProgress, CompactProgressEvent, MCPProgress, Progress, QueryChainTracking, REPLToolProgress, SetToolJSXFn, SkillToolProgress, TaskOutputProgress, ToolCallProgress, ToolInputJSONSchema, ToolPermissionRulesBySource, ToolProgress, ToolProgressData, ToolResult, ValidationResult, WebSearchProgress } from "../../cli/ui/ink-app/Tool.js";

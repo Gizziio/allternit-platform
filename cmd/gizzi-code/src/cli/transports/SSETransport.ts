@@ -1,12 +1,12 @@
 import axios, { type AxiosError } from 'axios'
 import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js'
-import { errorMessage } from '../../utils/errors.js'
-import { getSessionIngressAuthHeaders } from '../../utils/sessionIngressAuth.js'
+import { logForDebugging } from '../../shared/utils/debug.js'
+import { logForDiagnosticsNoPII } from '../../shared/utils/diagLogs.js'
+import { errorMessage } from '../../shared/utils/errors.js'
+import { getSessionIngressAuthHeaders } from '../../shared/utils/sessionIngressAuth.js'
 import { sleep } from '../../utils/sleep.js'
-import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
-import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
+import { jsonParse, jsonStringify } from '../../shared/utils/slowOperations.js'
+import { getClaudeCodeUserAgent } from '../../shared/utils/userAgent.js'
 import type { Transport, TransportMessage, TransportOptions } from './Transport.js'
 
 // ---------------------------------------------------------------------------

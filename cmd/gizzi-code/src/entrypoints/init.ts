@@ -18,37 +18,37 @@ import {
   isEligibleForRemoteManagedSettings,
   waitForRemoteManagedSettingsToLoad,
 } from '@/services/remoteManagedSettings/index.js'
-import { preconnectAnthropicApi } from '../utils/apiPreconnect.js'
-import { applyExtraCACertsFromConfig } from '../utils/caCertsConfig.js'
-import { registerCleanup } from '../utils/cleanupRegistry.js'
+import { preconnectAnthropicApi } from '../shared/utils/apiPreconnect.js'
+import { applyExtraCACertsFromConfig } from '../shared/utils/caCertsConfig.js'
+import { registerCleanup } from '../shared/utils/cleanupRegistry.js'
 // @ts-ignore missing exports from utils/config
 import { enableConfigs, recordFirstStartTime } from '../utils/config.js'
-import { logForDebugging } from '../utils/debug.js'
-import { detectCurrentRepository } from '../utils/detectRepository.js'
-import { logForDiagnosticsNoPII } from '../utils/diagLogs.js'
-import { initJetBrainsDetection } from '../utils/envDynamic.js'
-import { isEnvTruthy } from '../utils/envUtils.js'
-import { ConfigParseError, errorMessage } from '../utils/errors.js'
+import { logForDebugging } from '../shared/utils/debug.js'
+import { detectCurrentRepository } from '../shared/utils/detectRepository.js'
+import { logForDiagnosticsNoPII } from '../shared/utils/diagLogs.js'
+import { initJetBrainsDetection } from '../shared/utils/envDynamic.js'
+import { isEnvTruthy } from '../shared/utils/envUtils.js'
+import { ConfigParseError, errorMessage } from '../shared/utils/errors.js'
 // showInvalidConfigDialog is dynamically imported in the error path to avoid loading React at init
 import {
   gracefulShutdownSync,
   setupGracefulShutdown,
-} from '../utils/gracefulShutdown.js'
+} from '../shared/utils/gracefulShutdown.js'
 import {
   applyConfigEnvironmentVariables,
   applySafeConfigEnvironmentVariables,
-} from '../utils/managedEnv.js'
-import { configureGlobalMTLS } from '../utils/mtls.js'
+} from '../shared/utils/managedEnv.js'
+import { configureGlobalMTLS } from '../shared/utils/mtls.js'
 // @ts-ignore missing exports from utils/permissions/filesystem
 import { ensureScratchpadDir, isScratchpadEnabled } from '../utils/permissions/filesystem.js'
 // initializeTelemetry is loaded lazily via import() in setMeterState() to defer
 // ~400KB of OpenTelemetry + protobuf modules until telemetry is actually initialized.
 // gRPC exporters (~700KB via @grpc/grpc-js) are further lazy-loaded within instrumentation.ts.
-import { configureGlobalAgents } from '../utils/proxy.js'
+import { configureGlobalAgents } from '../shared/utils/proxy.js'
 // @ts-ignore missing module utils/telemetry/betaSessionTracing
 import { isBetaTracingEnabled } from '../utils/telemetry/betaSessionTracing.js'
-import { getTelemetryAttributes } from '../utils/telemetryAttributes.js'
-import { setShellIfWindows } from '../utils/windowsPaths.js'
+import { getTelemetryAttributes } from '../shared/utils/telemetryAttributes.js'
+import { setShellIfWindows } from '../shared/utils/windowsPaths.js'
 
 // initialize1PEventLogging is dynamically imported to defer OpenTelemetry sdk-logs/resources
 
@@ -172,7 +172,7 @@ export const init = memoize(async (): Promise<void> => {
           '../upstreamproxy/upstreamproxy.js'
         )
         const { registerUpstreamProxyEnvFn } = await import(
-          '../utils/subprocessEnv.js'
+          '../shared/utils/subprocessEnv.js'
         )
         registerUpstreamProxyEnvFn(getUpstreamProxyEnv)
         await initUpstreamProxy()
@@ -227,7 +227,7 @@ export const init = memoize(async (): Promise<void> => {
       }
 
       // Show the invalid config dialog with the error object and wait for it to complete
-      return import('../components/InvalidConfigDialog.js').then(m =>
+      return import('../cli/ui/ink-app/components/InvalidConfigDialog.js').then(m =>
         m.showInvalidConfigDialog({ error }),
       )
       // Dialog itself handles process.exit, so we don't need additional cleanup here

@@ -19,11 +19,11 @@ import { getSessionId } from '@/bootstrap/state.js'
 import { getSpinnerVerbs } from '@/constants/spinnerVerbs.js'
 import { TURN_COMPLETION_VERBS } from '@/constants/turnCompletionVerbs.js'
 import type { AppState } from '@/state/AppState.js'
-import { createTaskStateBase, generateTaskId } from '../../Task.js'
+import { createTaskStateBase, generateTaskId } from '../../../cli/ui/ink-app/Task.js'
 import type {
   InProcessTeammateTaskState,
   TeammateIdentity,
-} from '../../tasks/InProcessTeammateTask/types.js'
+} from '../../../cli/ui/tasks/InProcessTeammateTask/types.js'
 import { createAbortController } from '../abortController.js'
 import { formatAgentId } from '../agentId.js'
 import { registerCleanup } from '../cleanupRegistry.js'

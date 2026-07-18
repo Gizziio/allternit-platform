@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import type { CommandResultDisplay } from '../../commands';
-import { Pane } from '../../components/design-system/Pane';
-import { ThemePicker } from '../../components/ThemePicker';
-import { useTheme } from '../../core/ink';
-import type { LocalJSXCommandCall } from '../../types/command';
+import type { CommandResultDisplay } from '../../../commands';
+import { Pane } from '../../../../components/design-system/Pane';
+import { ThemePicker } from '../../ThemePicker';
+import { useTheme } from '../../../ink';
+import type { LocalJSXCommandCall } from '../../../types/command';
 type Props = {
   onDone: (result?: string, options?: {
     display?: CommandResultDisplay;

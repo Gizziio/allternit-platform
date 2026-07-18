@@ -86,7 +86,7 @@ const forceSnip = feature('HISTORY_SNIP')
   : null
 const workflowsCmd = feature('WORKFLOW_SCRIPTS')
   ? (
-      require('./commands/workflows/index.js') as typeof import('./commands/workflows/index.js')
+      require('./ui/ink-app/components/index.js') as typeof import('./ui/ink-app/components/index.js')
     ).default
   : null
 const webCmd = feature('CCR_REMOTE_SETUP')
@@ -96,7 +96,7 @@ const webCmd = feature('CCR_REMOTE_SETUP')
   : null
 const clearSkillIndexCache = feature('EXPERIMENTAL_SKILL_SEARCH')
   ? (
-      require('./services/skillSearch/localSearch.js') as typeof import('./services/skillSearch/localSearch.js')
+      require('../runtime/services/skillSearch/localSearch.js') as typeof import('../runtime/services/skillSearch/localSearch.js')
     ).clearSkillIndexCache
   : null
 const subscribePr = feature('KAIROS_GITHUB_WEBHOOKS')
@@ -108,7 +108,7 @@ const ultraplan = feature('ULTRAPLAN')
 const torch = feature('TORCH') ? require('./commands/torch.js').default : null
 const peersCmd = feature('UDS_INBOX')
   ? (
-      require('./commands/peers/index.js') as typeof import('./commands/peers/index.js')
+      require('./ui/ink-app/components/index.js') as typeof import('./ui/ink-app/components/index.js')
     ).default
   : null
 const forkCmd = feature('FORK_SUBAGENT')
@@ -158,9 +158,9 @@ import {
   getSkillDirCommands,
   clearSkillCaches,
   getDynamicSkills,
-} from './skills/loadSkillsDir.js'
-import { getBundledSkills } from './skills/bundledSkills.js'
-import { getBuiltinPluginSkillCommands } from './plugins/builtinPlugins.js'
+} from '../runtime/skills/loadSkillsDir.js'
+import { getBundledSkills } from '../runtime/skills/bundledSkills.js'
+import { getBuiltinPluginSkillCommands } from '../plugins/builtinPlugins.js'
 import {
   getPluginCommands,
   clearPluginCommandCache,
@@ -169,7 +169,7 @@ import {
 } from './utils/plugins/loadPluginCommands.js'
 import memoize from 'lodash-es/memoize.js'
 import { isUsing3PServices, isClaudeAISubscriber } from './utils/auth.js'
-import { isFirstPartyAnthropicBaseUrl } from './utils/model/providers.js'
+import { isFirstPartyAnthropicBaseUrl } from '../utils/model/providers.js'
 import env from '@/commands/env/index.js'
 import exit from '@/commands/exit/index.js'
 import exportCommand from '@/commands/export/index.js'
@@ -203,7 +203,7 @@ const usageReport: Command = {
 }
 import oauthRefresh from '@/commands/oauth-refresh/index.js'
 import debugToolCall from '@/commands/debug-tool-call/index.js'
-import { getSettingSourceName } from './utils/settings/constants.js'
+import { getSettingSourceName } from '../tools/REPLTool/constants.js'
 import {
   type Command,
   getCommandName,
@@ -401,7 +401,7 @@ async function getSkills(cwd: string): Promise<{
 /* eslint-disable @typescript-eslint/no-require-imports */
 const getWorkflowCommands = feature('WORKFLOW_SCRIPTS')
   ? (
-      require('./tools/WorkflowTool/createWorkflowCommand.js') as typeof import('./tools/WorkflowTool/createWorkflowCommand.js')
+      require('./ui/ink-app/tools/WorkflowTool/createWorkflowCommand.js') as typeof import('./ui/ink-app/tools/WorkflowTool/createWorkflowCommand.js')
     ).getWorkflowCommands
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */

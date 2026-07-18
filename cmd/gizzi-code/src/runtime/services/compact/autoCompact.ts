@@ -7,11 +7,11 @@ import type { ToolUseContext } from '../../../runtime/tools/Tool.js'
 import type { Message } from '@/types/message.js'
 import { getGlobalConfig } from '../../../utils/config.js'
 import { getContextWindowForModel } from '../../../utils/context.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { isEnvTruthy } from '../../../utils/envUtils.js'
-import { hasExactErrorMessage } from '../../../utils/errors.js'
-import type { CacheSafeParams } from '../../../utils/forkedAgent.js'
-import { logError } from '../../../utils/log.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { isEnvTruthy } from '../../../shared/utils/envUtils.js'
+import { hasExactErrorMessage } from '../../../shared/utils/errors.js'
+import type { CacheSafeParams } from '../../../shared/utils/forkedAgent.js'
+import { logError } from '../../../shared/utils/log.js'
 import { tokenCountWithEstimation } from '../../../utils/tokens.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import { getMaxOutputTokensForModel } from '../api/claude.js'
@@ -216,7 +216,7 @@ export async function shouldAutoCompact(
   if (feature('CONTEXT_COLLAPSE')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const { isContextCollapseEnabled } =
-      require('../contextCollapse/index.js') as typeof import('../contextCollapse/index.js')
+      require('../contextCollapse/operations.js') as typeof import('../contextCollapse/operations.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
     if (isContextCollapseEnabled()) {
       return false

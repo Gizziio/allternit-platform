@@ -184,6 +184,10 @@ fn run_pty_task(
 
     let mut cmd = CommandBuilder::new(&program);
     cmd.args(args.iter().map(|s| s.as_str()));
+    // The daemon usually runs headless, so the inherited TERM is unset or
+    // "dumb"; prompts like starship refuse to render under that. Callers can
+    // still override via their own env.
+    cmd.env("TERM", "xterm-256color");
     for (k, v) in env {
         cmd.env(k, v);
     }

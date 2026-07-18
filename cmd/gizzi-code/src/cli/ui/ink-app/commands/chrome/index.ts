@@ -8,6 +8,6 @@ const command: Command = {
   availability: ['claude-ai'],
   isEnabled: () => !getIsNonInteractiveSession(),
   type: 'local-jsx',
-  load: () => import('./chrome.js'),
+  load: () => import('../../../../commands/chrome/chrome.js'),
 }
 export default command

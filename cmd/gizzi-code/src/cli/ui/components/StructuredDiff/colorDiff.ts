@@ -4,7 +4,7 @@ import {
   getSyntaxTheme as nativeGetSyntaxTheme,
   type SyntaxTheme,
 } from '../../../../vendor/color-diff-napi'
-import { isEnvDefinedFalsy } from '../../utils/envUtils.js'
+import { isEnvDefinedFalsy } from '../../../../shared/utils/envUtils.js'
 
 export type ColorModuleUnavailableReason = 'env'
 

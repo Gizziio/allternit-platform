@@ -92,6 +92,18 @@ export interface ExtensionSidepanelAdapter {
   clearSessions?: () => void | Promise<void>;
   /** Backend connectivity state — online / offline / checking */
   connectivity?: 'online' | 'offline' | 'checking';
+  /**
+   * Optional officecli artifact support (Office add-in only). When present,
+   * tool outputs containing `[artifact:{...}]` / `[watch:{...}]` markers are
+   * rendered as inline image previews / download chips / live-preview
+   * buttons. Absent → outputs render as plain text (Chrome extension path).
+   */
+  officeCliArtifacts?: {
+    /** Resolves an artifact to a (revocable) object URL. */
+    resolve: (docId: string, name: string) => Promise<string>;
+    /** Opens a watch live-preview URL (defaults to window.open). */
+    onOpenWatch?: (url: string) => void;
+  };
 }
 
 export interface ExtensionSidepanelCopy {

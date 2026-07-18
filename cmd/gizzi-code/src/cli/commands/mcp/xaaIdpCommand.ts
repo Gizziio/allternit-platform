@@ -7,7 +7,7 @@
  * keyed by issuer (secret). Separate trust domain from per-server AS secrets.
  */
 import type { Command } from '@commander-js/extra-typings'
-import { cliError, cliOk } from '../../cli/exit.js'
+import { cliError, cliOk } from '../../ui/ink-app/context/exit.js'
 import {
   acquireIdpIdToken,
   clearIdpClientSecret,
@@ -20,7 +20,7 @@ import {
   saveIdpIdTokenFromJwt,
 } from '@/services/mcp/xaaIdpLogin.js'
 import { errorMessage } from '../../utils/errors.js'
-import { updateSettingsForSource } from '../../utils/settings/settings.js'
+import { updateSettingsForSource } from '../../../runtime/context/settings/settings.js'
 
 export function registerMcpXaaIdpCommand(mcp: Command): void {
   const xaaIdp = mcp

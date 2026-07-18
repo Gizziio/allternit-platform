@@ -15,7 +15,7 @@ import {
   MaxFileReadTokenExceededError,
   type Output as FileReadToolOutput,
   readImageWithTokenBudget,
-} from '../../runtime/tools/FileReadTool/FileReadTool.js'
+} from '../../cli/ui/ink-app/tools/FileReadTool/FileReadTool.js'
 import { FileTooLargeError, readFileInRange } from './readFileInRange.js'
 import { expandPath } from './path.js'
 import { countCharInString } from './stringUtils.js'
@@ -23,11 +23,11 @@ import { count, uniq } from './array.js'
 import { getFsImplementation } from './fsOperations.js'
 import { readdir, stat } from 'fs/promises'
 import type { IDESelection } from '@/hooks/useIdeSelection.js'
-import { TODO_WRITE_TOOL_NAME } from '../../runtime/tools/TodoWriteTool/constants.js'
-import { TASK_CREATE_TOOL_NAME } from '../../runtime/tools/TaskCreateTool/constants.js'
-import { TASK_UPDATE_TOOL_NAME } from '../../runtime/tools/TaskUpdateTool/constants.js'
-import { BASH_TOOL_NAME } from '../../runtime/tools/BashTool/toolName.js'
-import { SKILL_TOOL_NAME } from '../../runtime/tools/SkillTool/constants.js'
+import { TODO_WRITE_TOOL_NAME } from '../../cli/ui/ink-app/tools/TodoWriteTool/constants.js'
+import { TASK_CREATE_TOOL_NAME } from '../../runtime/tools/builtins/taskcreatetool/constants.js'
+import { TASK_UPDATE_TOOL_NAME } from '../../runtime/tools/builtins/taskupdatetool/constants.js'
+import { BASH_TOOL_NAME } from '../../cli/ui/ink-app/tools/BashTool/toolName.js'
+import { SKILL_TOOL_NAME } from '../../cli/ui/ink-app/tools/SkillTool/constants.js'
 import type { TodoList } from './todo/types.js'
 import {
   type Task,
@@ -46,7 +46,7 @@ import {
   type MemoryFileInfo,
 } from './claudemd.js'
 import { dirname, parse, relative, resolve } from 'path'
-import { getCwd } from '../../utils/cwd.js'
+import { getCwd } from './cwd.js'
 import { getViewedTeammateTask } from '@/state/selectors.js'
 import { logError } from './log.js'
 import { logAntError } from './debug.js'
@@ -84,7 +84,7 @@ import { getSkillToolCommands, getMcpSkillCommands } from '../../cli/ui/ink-app/
 import type { Command } from '@/types/command.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { getProjectRoot } from '@/bootstrap/state.js'
-import { formatCommandsWithinBudget } from '../../runtime/tools/SkillTool/prompt.js'
+import { formatCommandsWithinBudget } from '../../cli/ui/ink-app/tools/SkillTool/prompt.js'
 import { getContextWindowForModel } from './context.js'
 type DiscoverySignal = any
 // Conditional require for DCE. All skill-search string literals that would
@@ -108,8 +108,8 @@ const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
 import {
   MAX_LINES_TO_READ,
   FILE_READ_TOOL_NAME,
-} from '../../tools/FileReadTool/prompt.js'
-import { getDefaultFileReadingLimits } from '../../tools/FileReadTool/limits.js'
+} from '../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { getDefaultFileReadingLimits } from '../../cli/ui/ink-app/tools/FileReadTool/limits.js'
 import { cacheKeys, type FileStateCache } from './fileStateCache.js'
 import {
   createAbortController,
@@ -122,11 +122,11 @@ import {
 } from './file.js'
 import type { AgentDefinition } from '../../runtime/tools/AgentTool/loadAgentsDir.js'
 import { filterAgentsByMcpRequirements } from '../../runtime/tools/AgentTool/loadAgentsDir.js'
-import { AGENT_TOOL_NAME } from '../../runtime/tools/AgentTool/constants.js'
+import { AGENT_TOOL_NAME } from '../../cli/ui/ink-app/tools/AgentTool/constants.js'
 import {
   formatAgentLine,
   shouldInjectAgentListInMessages,
-} from '../../runtime/tools/AgentTool/prompt.js'
+} from '../../runtime/tools/builtins/agenttool/prompt.js'
 import { filterDeniedAgents } from './permissions/permissions.js'
 import { getSubscriptionType } from './auth.js'
 import { mcpInfoFromString } from '../../runtime/services/mcp/mcpStringUtils.js'
@@ -140,7 +140,7 @@ import {
 } from './task/framework.js'
 import { getTaskOutputPath } from './task/diskOutput.js'
 import { drainPendingMessages } from '../tasks/LocalAgentTask/LocalAgentTask.js'
-import type { TaskType, TaskStatus } from '../Task.js'
+import type { TaskType, TaskStatus } from '../../cli/ui/ink-app/Task.js'
 import {
   getOriginalCwd,
   getSessionId,
@@ -201,7 +201,7 @@ import { feature } from 'bun:bundle'
 const BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
     ? (
-        require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
+        require('../../cli/ui/ink-app/context/prompt.js') as typeof import('../../cli/ui/ink-app/context/prompt.js')
       ).BRIEF_TOOL_NAME
     : null
 const sessionTranscriptModule = feature('KAIROS')
@@ -233,7 +233,7 @@ import { isAgentSwarmsEnabled } from './agentSwarmsEnabled.js'
 import { findRelevantMemories } from '../../memdir/findRelevantMemories.js'
 import { memoryAge, memoryFreshnessText } from '../../memdir/memoryAge.js'
 import { getAutoMemPath, isAutoMemoryEnabled } from '../memdir/paths.js'
-import { getAgentMemoryDir } from '../../runtime/tools/AgentTool/agentMemory.js'
+import { getAgentMemoryDir } from '../../cli/ui/ink-app/tools/AgentTool/agentMemory.js'
 import {
   readUnreadMessages,
   markMessagesAsReadByPredicate,

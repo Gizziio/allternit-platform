@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Box, Text } from '@/ink.js';
 import type { ToolProgressData } from '@/Tool.js';
 import type { ProgressMessage } from '@/types/message.js';
-import type { ThemeName } from '../../utils/theme.js';
+import type { ThemeName } from '../../../../shared/utils/theme.js';
 import type { Output } from './ExitWorktreeTool.js';
 export function renderToolUseMessage(): React.ReactElement | null {
   return <>Exiting worktree…</>;

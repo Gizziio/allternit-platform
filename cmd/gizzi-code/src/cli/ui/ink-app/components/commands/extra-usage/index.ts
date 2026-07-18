@@ -1,8 +1,8 @@
 // @ts-nocheck
-import { getIsNonInteractiveSession } from '../../bootstrap/state'
-import type { Command } from '../../commands'
-import { isOverageProvisioningAllowed } from '../../utils/auth'
-import { isEnvTruthy } from '../../utils/envUtils'
+import { getIsNonInteractiveSession } from '../../../bootstrap/state'
+import type { Command } from '../../../commands'
+import { isOverageProvisioningAllowed } from '../../../utils/auth'
+import { isEnvTruthy } from '../../../utils/envUtils'
 
 function isExtraUsageAllowed(): boolean {
   if (isEnvTruthy(process.env.DISABLE_EXTRA_USAGE_COMMAND)) {

@@ -13,27 +13,27 @@ import {
   useAppStateStore,
   useSetAppState,
 } from 'src/state/AppState.js'
-import { isVimModeEnabled } from '../components/PromptInput/utils.js'
-import type { ToolUseConfirm } from '../components/permissions/PermissionRequest.js'
-import type { SpinnerMode } from '../components/Spinner/types.js'
-import { useNotifications } from '../context/notifications.js'
-import { useIsOverlayActive } from '../context/overlayContext.js'
+import { isVimModeEnabled } from '../ui/ink-app/tools/utils.js'
+import type { ToolUseConfirm } from '../ui/components/permissions/PermissionRequest.js'
+import type { SpinnerMode } from '../../runtime/integrations/types.js'
+import { useNotifications } from '../../context/notifications.js'
+import { useIsOverlayActive } from '../ui/ink-app/context/overlayContext.js'
 import { useCommandQueue } from '@/hooks/useCommandQueue.js'
 import { getShortcutDisplay } from '@/keybindings/shortcutFormat.js'
 import { useKeybinding } from '@/keybindings/useKeybinding.js'
-import type { Screen } from '../screens/REPL.js'
+import type { Screen } from '../ui/ink-app/screens/REPL.js'
 import { exitTeammateView } from '@/state/teammateViewHelpers.js'
 import {
   killAllRunningAgentTasks,
   markAgentsNotified,
-} from '../tasks/LocalAgentTask/LocalAgentTask.js'
+} from '../ui/ink-app/tasks/LocalAgentTask/LocalAgentTask.js'
 import type { PromptInputMode, VimMode } from '@/types/textInputTypes.js'
 import {
   clearCommandQueue,
   enqueuePendingNotification,
   hasCommandsInQueue,
-} from '../utils/messageQueueManager.js'
-import { emitTaskTerminatedSdk } from '../utils/sdkEventQueue.js'
+} from '../../shared/utils/messageQueueManager.js'
+import { emitTaskTerminatedSdk } from '../../shared/utils/sdkEventQueue.js'
 
 /** Time window in ms during which a second press kills all background agents. */
 const KILL_AGENTS_CONFIRM_WINDOW_MS = 3000

@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { getBridgeDebugHandle } from '../bridge/bridgeDebug'
-import type { Command } from '../commands'
-import type { LocalCommandCall } from '../types/command'
+import { getBridgeDebugHandle } from '../../../../../runtime/integrations/bridgeDebug'
+import type { Command } from '../../commands'
+import type { LocalCommandCall } from '../../types/command'
 
 /**
  * Ant-only: inject bridge failure states to manually test recovery paths.

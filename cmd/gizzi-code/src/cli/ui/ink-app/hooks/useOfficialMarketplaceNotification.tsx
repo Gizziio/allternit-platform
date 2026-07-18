@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as React from 'react';
-import type { Notification } from '../context/notifications';
+import type { Notification } from '../../../../context/notifications';
 import { Text } from '../ink';
 import { logForDebugging } from '../utils/debug';
 import { checkAndInstallOfficialMarketplace } from '../utils/plugins/officialMarketplaceStartupCheck';

@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useTheme } from '../components/design-system/ThemeProvider.js'
-import type { useSelection } from '@/ink/hooks/use-selection.js'
-import { getGlobalConfig } from '../utils/config.js'
-import { getTheme } from '../utils/theme.js'
+import { useTheme } from '../ui/components/design-system/ThemeProvider.js'
+import type { useSelection } from '../ui/ink-renderer/hooks/use-selection.js'
+import { getGlobalConfig } from '../../shared/utils/config.js'
+import { getTheme } from '../../shared/utils/theme.js'
 
 type Selection = ReturnType<typeof useSelection>
 

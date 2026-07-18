@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useEffect, useRef } from 'react';
-import { useNotifications } from './../../context/notifications.tsx';
+import { useNotifications } from '../../../../../context/notifications';
 import { Text } from './../../ink.ts';
 import type { MCPServerConnection } from './../../services/mcp/types.ts';
 import { getGlobalConfig, saveGlobalConfig } from './../../utils/config.ts';

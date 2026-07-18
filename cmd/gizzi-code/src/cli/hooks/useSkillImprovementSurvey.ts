@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useCallback, useRef, useState } from 'react'
-import type { FeedbackSurveyResponse } from '../components/FeedbackSurvey/utils.js'
+import type { FeedbackSurveyResponse } from '../ui/ink-app/tools/utils.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
@@ -8,9 +8,9 @@ import {
 } from '@/services/analytics/index.js'
 import { useAppState, useSetAppState } from '@/state/AppState.js'
 import type { Message } from '@/types/message.js'
-import type { SkillUpdate } from '../utils/hooks/skillImprovement.js'
-import { applySkillImprovement } from '../utils/hooks/skillImprovement.js'
-import { createSystemMessage } from '../utils/messages.js'
+import type { SkillUpdate } from '../../shared/utils/hooks/skillImprovement.js'
+import { applySkillImprovement } from '../../shared/utils/hooks/skillImprovement.js'
+import { createSystemMessage } from '../../shared/utils/messages.js'
 
 type SkillImprovementSuggestion = {
   skillName: string

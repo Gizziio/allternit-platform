@@ -1,4 +1,4 @@
-import { getHistory } from '../../history.js'
+import { getHistory } from '../../../cli/ui/ink-app/components/history.js'
 import { logForDebugging } from '../debug.js'
 
 /**

@@ -5,13 +5,13 @@ import * as React from 'react';
 import { Suspense, use } from 'react';
 import { getSessionId } from '@/bootstrap/state.js';
 import type { LocalJSXCommandContext } from '@/commands.js';
-import { useIsInsideModal } from '../../context/modalContext.js';
+import { useIsInsideModal } from '../../ink-app/context/modalContext.js';
 import { Box, Text, useTheme } from '@/ink.js';
 import { type AppState, useAppState } from '@/state/AppState.js';
-import { getCwd } from '../../utils/cwd.js';
-import { getCurrentSessionTitle } from '../../utils/sessionStorage.js';
+import { getCwd } from '../../../../shared/utils/cwd.js';
+import { getCurrentSessionTitle } from '../../../../shared/utils/sessionStorage.js';
 import { buildAccountProperties, buildAPIProviderProperties, buildIDEProperties, buildInstallationDiagnostics, buildInstallationHealthDiagnostics, buildMcpProperties, buildMemoryDiagnostics, buildSandboxProperties, buildSettingSourcesProperties, type Diagnostic, getModelDisplayLabel, type Property } from '../../utils/status.js';
-import type { ThemeName } from '../../utils/theme.js';
+import type { ThemeName } from '../../../../shared/utils/theme.js';
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js';
 type Props = {
   context: LocalJSXCommandContext;

@@ -5,13 +5,13 @@ import { join } from 'node:path';
 import React, { useEffect, useState } from 'react';
 import type { CommandResultDisplay } from 'src/commands.js';
 import { logEvent } from 'src/services/analytics/index.js';
-import { StatusIcon } from '../components/design-system/StatusIcon.js';
+import { StatusIcon } from '../ui/components/design-system/StatusIcon.js';
 import { Box, render, Text } from '@/ink.js';
 import { logForDebugging } from '../utils/debug.js';
-import { env } from '../utils/env.js';
+import { env } from '../../shared/utils/env.js';
 import { errorMessage } from '../utils/errors.js';
-import { checkInstall, cleanupNpmInstallations, cleanupShellAliases, installLatest } from '../utils/nativeInstaller/index.js';
-import { getInitialSettings, updateSettingsForSource } from '../utils/settings/settings.js';
+import { checkInstall, cleanupNpmInstallations, cleanupShellAliases, installLatest } from '../ui/ink-app/components/index.js';
+import { getInitialSettings, updateSettingsForSource } from '../../runtime/context/settings/settings.js';
 interface InstallProps {
   onDone: (result: string, options?: {
     display?: CommandResultDisplay;

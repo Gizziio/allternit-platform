@@ -2,11 +2,11 @@
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { pathToFileURL } from 'url';
-import Link from '@/ink/components/Link.js';
-import { supportsHyperlinks } from '@/ink/supports-hyperlinks.js';
+import Link from '../ink-renderer/components/Link.js';
+import { supportsHyperlinks } from '../ink-renderer/supports-hyperlinks.js';
 import { Text } from '@/ink.js';
-import { getStoredImagePath } from '../utils/imageStore.js';
-import type { Theme } from '../utils/theme.js';
+import { getStoredImagePath } from '../../../shared/utils/imageStore.js';
+import type { Theme } from '../../../shared/utils/theme.js';
 type Props = {
   imageId: number;
   backgroundColor?: keyof Theme;

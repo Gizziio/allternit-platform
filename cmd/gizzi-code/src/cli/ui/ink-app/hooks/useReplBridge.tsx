@@ -10,7 +10,7 @@ import { setReplBridgeHandle } from '../bridge/replBridgeHandle';
 import type { Command } from '../commands';
 import { getSlashCommandToolSkills, isBridgeSafeCommand } from '../commands';
 import { getRemoteSessionUrl } from '../constants/product';
-import { useNotifications } from '../context/notifications';
+import { useNotifications } from '../../../../context/notifications';
 import type { PermissionMode, SDKMessage } from '../entrypoints/agentSdkTypes';
 import type { SDKControlResponse } from '../entrypoints/sdk/controlTypes';
 import { Text } from '../ink';

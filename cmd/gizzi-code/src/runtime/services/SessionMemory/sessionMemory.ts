@@ -23,7 +23,7 @@ import {
   createCacheSafeParams,
   createSubagentContext,
   runForkedAgent,
-} from '../../../utils/forkedAgent.js'
+} from '../../../shared/utils/forkedAgent.js'
 import { getFsImplementation } from '../../../utils/fsOperations.js'
 import {
   type REPLHookContext,
@@ -32,12 +32,12 @@ import {
 import {
   createUserMessage,
   hasToolCallsInLastAssistantTurn,
-} from '../../../utils/messages.js'
+} from '../../../shared/utils/messages.js'
 import {
   getSessionMemoryDir,
   getSessionMemoryPath,
 } from '../../../utils/permissions/filesystem.js'
-import { sequential } from '../../../utils/sequential.js'
+import { sequential } from '../../../shared/utils/sequential.js'
 import { asSystemPrompt } from '../../../utils/systemPromptType.js'
 import { getTokenUsage, tokenCountWithEstimation } from '../../../utils/tokens.js'
 import { logEvent } from '../analytics/index.js'
@@ -68,7 +68,7 @@ import {
 // These functions return cached values from disk immediately without blocking
 // on GrowthBook initialization. Values may be stale but are updated in background.
 
-import { errorMessage, getErrnoCode } from '../../../utils/errors.js'
+import { errorMessage, getErrnoCode } from '../../../shared/utils/errors.js'
 import {
   getDynamicConfig_CACHED_MAY_BE_STALE,
   getFeatureValue_CACHED_MAY_BE_STALE,

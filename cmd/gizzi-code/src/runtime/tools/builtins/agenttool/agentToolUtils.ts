@@ -38,24 +38,24 @@ import {
 } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
 import { asAgentId } from '@/types/ids.js'
 import type { Message as MessageType } from '@/types/message.js'
-import { isAgentSwarmsEnabled } from '../../../utils/agentSwarmsEnabled.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { isInProtectedNamespace } from '../../../utils/envUtils.js'
+import { isAgentSwarmsEnabled } from '../../../../shared/utils/agentSwarmsEnabled.js'
+import { logForDebugging } from '../../../../shared/utils/debug.js'
+import { isInProtectedNamespace } from '../../../../shared/utils/envUtils.js'
 import { AbortError, errorMessage } from '../../../utils/errors.js'
-import type { CacheSafeParams } from '../../../utils/forkedAgent.js'
-import { lazySchema } from '../../../utils/lazySchema.js'
+import type { CacheSafeParams } from '../../../../shared/utils/forkedAgent.js'
+import { lazySchema } from '../../../../shared/utils/lazySchema.js'
 import {
   extractTextContent,
   getLastAssistantMessage,
-} from '../../../utils/messages.js'
-import type { PermissionMode } from '../../../utils/permissions/PermissionMode.js'
+} from '../../../../shared/utils/messages.js'
+import type { PermissionMode } from '../../../../cli/ui/ink-app/utils/permissions/PermissionMode.js'
 import { permissionRuleValueFromString } from '../../../utils/permissions/permissionRuleParser.js'
 import {
   buildTranscriptForClassifier,
   classifyYoloAction,
 } from '../../../utils/permissions/yoloClassifier.js'
 import { emitTaskProgress as emitTaskProgressEvent } from '../../../utils/task/sdkProgress.js'
-import { isInProcessTeammate } from '../../../utils/teammateContext.js'
+import { isInProcessTeammate } from '../../../../shared/utils/teammateContext.js'
 import { getTokenCountFromUsage } from '../../../utils/tokens.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../ExitPlanModeTool/constants.js'
 import { AGENT_TOOL_NAME, LEGACY_AGENT_TOOL_NAME } from './constants.js'

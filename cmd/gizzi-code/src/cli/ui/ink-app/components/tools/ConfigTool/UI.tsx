@@ -1,8 +1,8 @@
 // @ts-nocheck
 import React from 'react';
-import { MessageResponse } from '../../components/MessageResponse';
-import { Text } from '../../core/ink';
-import { jsonStringify } from '../../utils/slowOperations';
+import { MessageResponse } from '../../MessageResponse';
+import { Text } from '../../../ink';
+import { jsonStringify } from '../../../utils/slowOperations';
 import type { Input, Output } from './ConfigTool';
 export function renderToolUseMessage(input: Partial<Input>): React.ReactElement | null {
   if (!input.setting) return null;

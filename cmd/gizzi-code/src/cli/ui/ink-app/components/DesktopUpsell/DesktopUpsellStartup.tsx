@@ -7,7 +7,7 @@ import { getDynamicConfig_CACHED_MAY_BE_STALE } from '../../services/analytics/g
 import { logEvent } from '../../services/analytics/index';
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config';
 import { Select } from '../CustomSelect/select';
-import { DesktopHandoff } from '../DesktopHandoff';
+import { DesktopHandoff } from '../../../components/DesktopHandoff';
 import { PermissionDialog } from '../permissions/PermissionDialog';
 type DesktopUpsellConfig = {
   enable_shortcut_tip: boolean;

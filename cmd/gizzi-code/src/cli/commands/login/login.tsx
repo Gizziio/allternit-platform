@@ -2,20 +2,20 @@ import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { resetCostState } from '@/bootstrap/state.js';
-import { clearTrustedDeviceToken, enrollTrustedDevice } from '../../bridge/trustedDevice.js';
+import { clearTrustedDeviceToken, enrollTrustedDevice } from '../../../runtime/integrations/trustedDevice.js';
 import type { LocalJSXCommandContext } from '@/commands.js';
-import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js';
-import { ConsoleOAuthFlow } from '../../components/ConsoleOAuthFlow.js';
-import { Dialog } from '../../components/design-system/Dialog.js';
+import { ConfigurableShortcutHint } from '../../ui/ink-app/components/ConfigurableShortcutHint.js';
+import { ConsoleOAuthFlow } from '../../ui/ink-app/components/ConsoleOAuthFlow.js';
+import { Dialog } from '../../ui/components/design-system/Dialog.js';
 import { useMainLoopModel } from '@/hooks/useMainLoopModel.js';
 import { Text } from '@/ink.js';
 import { refreshGrowthBookAfterAuthChange } from '@/services/analytics/growthbook.js';
 import { refreshPolicyLimits } from '@/services/policyLimits/index.js';
 import { refreshRemoteManagedSettings } from '@/services/remoteManagedSettings/index.js';
 import type { LocalJSXCommandOnDone } from '@/types/command.js';
-import { stripSignatureBlocks } from '../../utils/messages.js';
-import { checkAndDisableAutoModeIfNeeded, checkAndDisableBypassPermissionsIfNeeded, resetAutoModeGateCheck, resetBypassPermissionsCheck } from '../../utils/permissions/bypassPermissionsKillswitch.js';
-import { resetUserCache } from '../../utils/user.js';
+import { stripSignatureBlocks } from '../../../shared/utils/messages.js';
+import { checkAndDisableAutoModeIfNeeded, checkAndDisableBypassPermissionsIfNeeded, resetAutoModeGateCheck, resetBypassPermissionsCheck } from '../../../shared/utils/permissions/bypassPermissionsKillswitch.js';
+import { resetUserCache } from '../../../shared/utils/user.js';
 export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext): Promise<React.ReactNode> {
   return <Login onDone={async success => {
     context.onChangeAPIKey();

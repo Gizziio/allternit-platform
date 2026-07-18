@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { logForDebugging } from '../utils/debug.js'
-import { errorMessage } from '../utils/errors.js'
+import { logForDebugging } from '../shared/utils/debug.js'
+import { errorMessage } from '../shared/utils/errors.js'
 import { getDefaultSonnetModel } from '../utils/model/model.js'
-import { sideQuery } from '../utils/sideQuery.js'
-import { jsonParse } from '../utils/slowOperations.js'
+import { sideQuery } from '../shared/utils/sideQuery.js'
+import { jsonParse } from '../shared/utils/slowOperations.js'
 import {
   formatMemoryManifest,
   type MemoryHeader,

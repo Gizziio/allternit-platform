@@ -12,7 +12,7 @@ import type {
   UserMessage,
 } from '@/types/message.js'
 import { getPlanSlugCache, getSessionId } from '@/bootstrap/state.js'
-import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../runtime/tools/ExitPlanModeTool/constants.js'
+import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'
 import { getCwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'

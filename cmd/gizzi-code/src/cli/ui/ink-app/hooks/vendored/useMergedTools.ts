@@ -1,10 +1,10 @@
 // @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { useMemo } from 'react'
-import type { Tools, ToolPermissionContext } from '../Tool'
+import type { Tools, ToolPermissionContext } from '../../components/Tool'
 import { assembleToolPool } from '../tools'
 import { useAppState } from '../../state/AppState'
-import { mergeAndFilterTools } from '../../vendor/utils/toolPool'
+import { mergeAndFilterTools } from '../../../../../shared/utils/toolPool'
 
 /**
  * React hook that assembles the full tool pool for the REPL.

@@ -46,7 +46,7 @@ import {
   getAdditionalDirectoriesForClaudeMd,
   getOriginalCwd,
 } from '@/bootstrap/state.js'
-import { truncateEntrypointContent } from '../memdir/memdir.js'
+import { truncateEntrypointContent } from '../../cli/ui/ink-app/memdir/memdir.js'
 import { getAutoMemEntrypoint, isAutoMemoryEnabled } from '../memdir/paths.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
 import {

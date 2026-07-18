@@ -37,7 +37,7 @@ import { appendTeammateMessage } from '../../tasks/InProcessTeammateTask/InProce
 import type {
   InProcessTeammateTaskState,
   TeammateIdentity,
-} from '../../tasks/InProcessTeammateTask/types.js'
+} from '../../../cli/ui/tasks/InProcessTeammateTask/types.js'
 import { appendCappedMessage } from '../../tasks/InProcessTeammateTask/types.js'
 import {
   createActivityDescriptionResolver,
@@ -45,17 +45,17 @@ import {
   getProgressUpdate,
   updateProgressFromMessage,
 } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
-import type { CustomAgentDefinition } from '../../tools/AgentTool/loadAgentsDir.js'
+import type { CustomAgentDefinition } from '../../../cli/ui/ink-app/tools/AgentTool/loadAgentsDir.js'
 import { runAgent } from '../../tools/AgentTool/runAgent.js'
-import { awaitClassifierAutoApproval } from '../../tools/BashTool/bashPermissions.js'
-import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
-import { SEND_MESSAGE_TOOL_NAME } from '../../tools/SendMessageTool/constants.js'
-import { TASK_CREATE_TOOL_NAME } from '../../tools/TaskCreateTool/constants.js'
-import { TASK_GET_TOOL_NAME } from '../../tools/TaskGetTool/constants.js'
-import { TASK_LIST_TOOL_NAME } from '../../tools/TaskListTool/constants.js'
-import { TASK_UPDATE_TOOL_NAME } from '../../tools/TaskUpdateTool/constants.js'
-import { TEAM_CREATE_TOOL_NAME } from '../../tools/TeamCreateTool/constants.js'
-import { TEAM_DELETE_TOOL_NAME } from '../../tools/TeamDeleteTool/constants.js'
+import { awaitClassifierAutoApproval } from '../../../cli/ui/ink-app/tools/BashTool/bashPermissions.js'
+import { BASH_TOOL_NAME } from '../../../cli/ui/ink-app/tools/BashTool/toolName.js'
+import { SEND_MESSAGE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/SendMessageTool/constants.js'
+import { TASK_CREATE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskCreateTool/constants.js'
+import { TASK_GET_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskGetTool/constants.js'
+import { TASK_LIST_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskListTool/constants.js'
+import { TASK_UPDATE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskUpdateTool/constants.js'
+import { TEAM_CREATE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TeamCreateTool/constants.js'
+import { TEAM_DELETE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TeamDeleteTool/constants.js'
 import type { Message } from '@/types/message.js'
 import type { PermissionDecision } from '@/types/permissions.js'
 import {

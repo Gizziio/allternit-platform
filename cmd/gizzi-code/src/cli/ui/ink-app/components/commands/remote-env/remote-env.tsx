@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as React from 'react';
-import { RemoteEnvironmentDialog } from '../../components/RemoteEnvironmentDialog';
-import type { LocalJSXCommandOnDone } from '../../types/command';
+import { RemoteEnvironmentDialog } from '../../RemoteEnvironmentDialog';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
 export async function call(onDone: LocalJSXCommandOnDone): Promise<React.ReactNode> {
   return <RemoteEnvironmentDialog onDone={onDone} />;
 }

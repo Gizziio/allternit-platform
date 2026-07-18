@@ -32,7 +32,7 @@ export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
   selectedArtifactTitle,
 }) => {
   return (
-    <div className="w-full max-w-[760px] px-5 py-6 pb-[180px] box-border relative">
+    <div className="w-full max-w-[760px] px-2 md:px-5 py-6 pb-[180px] box-border relative">
       {embeddedAgentStrip}
       
       <CoworkTranscript

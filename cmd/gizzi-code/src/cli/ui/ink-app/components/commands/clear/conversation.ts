@@ -10,41 +10,41 @@ import {
   getOriginalCwd,
   getSessionId,
   regenerateSessionId,
-} from '../../bootstrap/state'
+} from '../../../bootstrap/state'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../services/analytics/index'
+} from '../../index'
 import type { AppState } from '../../state/AppState'
-import { isInProcessTeammateTask } from '../../tasks/InProcessTeammateTask/types'
+import { isInProcessTeammateTask } from '../../../../../../runtime/integrations/types'
 import {
   isLocalAgentTask,
   type LocalAgentTaskState,
-} from '../../tasks/LocalAgentTask/LocalAgentTask'
-import { isLocalShellTask } from '../../tasks/LocalShellTask/guards'
-import { asAgentId } from '../../types/ids'
-import type { Message } from '../../types/message'
-import { createEmptyAttributionState } from '../../utils/commitAttribution'
-import type { FileStateCache } from '../../utils/fileStateCache'
+} from '../../../tasks/LocalAgentTask/LocalAgentTask'
+import { isLocalShellTask } from '../../../tasks/LocalShellTask/guards'
+import { asAgentId } from '../../../types/ids'
+import type { Message } from '../../message'
+import { createEmptyAttributionState } from '../../../../../../shared/utils/commitAttribution'
+import type { FileStateCache } from '../../../../../../shared/utils/fileStateCache'
 import {
   executeSessionEndHooks,
   getSessionEndHookTimeoutMs,
-} from '../../utils/hooks'
-import { logError } from '../../utils/log'
-import { clearAllPlanSlugs } from '../../utils/plans'
-import { setCwd } from '../../utils/Shell'
-import { processSessionStartHooks } from '../../utils/sessionStart'
+} from '../../../../../../shared/utils/hooks'
+import { logError } from '../../../utils/log'
+import { clearAllPlanSlugs } from '../../../../../../shared/utils/plans'
+import { setCwd } from '../../../../../../shared/utils/Shell'
+import { processSessionStartHooks } from '../../../../../../shared/utils/sessionStart'
 import {
   clearSessionMetadata,
   getAgentTranscriptPath,
   resetSessionFilePointer,
   saveWorktreeState,
-} from '../../utils/sessionStorage'
+} from '../../../../../../shared/utils/sessionStorage'
 import {
   evictTaskOutput,
   initTaskOutputAsSymlink,
-} from '../../utils/task/diskOutput'
-import { getCurrentWorktreeSession } from '../../utils/worktree'
+} from '../../../../../../shared/utils/task/diskOutput'
+import { getCurrentWorktreeSession } from '../../../../../../shared/utils/worktree'
 import { clearSessionCaches } from './caches'
 
 export async function clearConversation({
@@ -231,7 +231,7 @@ export async function clearConversation({
   // wiped both from the cache, but the process is still in the same mode
   // and (if applicable) the same worktree directory.
   if (feature('COORDINATOR_MODE')) {
-    const { saveMode } = require('../../utils/sessionStorage.js')
+    const { saveMode } = require('../../../../../../shared/utils/sessionStorage.js')
     const {
       isCoordinatorMode,
     } = require('../../coordinator/coordinatorMode.js')

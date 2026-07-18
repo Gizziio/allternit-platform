@@ -8,14 +8,14 @@ import {
   logEvent,
 } from '@/services/analytics/index.js'
 import type { ToolUseContext } from '@/Tool.js'
-import { isBriefEntitled } from '../tools/BriefTool/BriefTool.js'
-import { BRIEF_TOOL_NAME } from '../tools/BriefTool/prompt.js'
+import { isBriefEntitled } from '../../runtime/tools/builtins/brieftool/BriefTool.js'
+import { BRIEF_TOOL_NAME } from '../ui/ink-app/context/prompt.js'
 import type {
   Command,
   LocalJSXCommandContext,
   LocalJSXCommandOnDone,
 } from '@/types/command.js'
-import { lazySchema } from '../utils/lazySchema.js'
+import { lazySchema } from '../../shared/utils/lazySchema.js'
 
 // Zod guards against fat-fingered GB pushes (same pattern as pollConfig.ts /
 // cronScheduler.ts). A malformed config falls back to DEFAULT_BRIEF_CONFIG

@@ -30,7 +30,7 @@ function CollapseStatus() {
         const {
           getStats,
           isContextCollapseEnabled
-        } = require("../services/contextCollapse/index.js") as typeof import('../services/contextCollapse/index.js');
+        } = require("../services/contextCollapse/operations.js") as typeof import('../services/contextCollapse/operations.js');
         if (!isContextCollapseEnabled()) {
           t1 = null;
           break bb0;

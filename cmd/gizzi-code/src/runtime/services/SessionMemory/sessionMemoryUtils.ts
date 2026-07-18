@@ -4,7 +4,7 @@
  * These are separate from the main sessionMemory.ts to avoid importing runAgent.
  */
 
-import { isFsInaccessible } from '../../../utils/errors.js'
+import { isFsInaccessible } from '../../../shared/utils/errors.js'
 import { getFsImplementation } from '../../../utils/fsOperations.js'
 import { getSessionMemoryPath } from '../../../utils/permissions/filesystem.js'
 import { sleep } from '../../../utils/sleep.js'

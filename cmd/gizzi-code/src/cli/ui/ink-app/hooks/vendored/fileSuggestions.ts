@@ -5,31 +5,31 @@ import * as path from 'path'
 import {
   CLAUDE_CONFIG_DIRECTORIES,
   loadMarkdownFilesForSubdir,
-} from '../vendor/utils/markdownConfigLoader'
+} from '../../../../../shared/utils/markdownConfigLoader'
 import type { SuggestionItem } from '../../components/vendored/PromptInput/PromptInputFooterSuggestions'
 import {
   CHUNK_MS,
   FileIndex,
   yieldToEventLoop,
-} from '../native-ts/file-index/index'
-import { logEvent } from '../../vendor/services/analytics/index'
-import type { FileSuggestionCommandInput } from '../../vendor/types/fileSuggestion'
-import { getGlobalConfig } from '../../vendor/utils/config'
-import { getCwd } from '../../vendor/utils/cwd'
-import { logForDebugging } from '../../vendor/utils/debug'
-import { errorMessage } from '../../vendor/utils/errors'
-import { execFileNoThrowWithCwd } from '../../vendor/utils/execFileNoThrow'
-import { getFsImplementation } from '../../vendor/utils/fsOperations'
-import { findGitRoot, gitExe } from '../../vendor/utils/git'
+} from '../../components/index'
+import { logEvent } from '../../components/index'
+import type { FileSuggestionCommandInput } from '../../types/fileSuggestion'
+import { getGlobalConfig } from '../../../../../shared/utils/config'
+import { getCwd } from '../../../../../shared/utils/cwd'
+import { logForDebugging } from '../../../../../shared/utils/debug'
+import { errorMessage } from '../../../../../shared/utils/errors'
+import { execFileNoThrowWithCwd } from '../../../../../shared/utils/execFileNoThrow'
+import { getFsImplementation } from '../../../../../shared/utils/fsOperations'
+import { findGitRoot, gitExe } from '../../../../../shared/utils/git'
 import {
   createBaseHookInput,
   executeFileSuggestionCommand,
-} from '../../vendor/utils/hooks'
-import { logError } from '../../vendor/utils/log'
-import { expandPath } from '../../vendor/utils/path'
-import { ripGrep } from '../../vendor/utils/ripgrep'
+} from '../../../../../shared/utils/hooks'
+import { logError } from '../../../../../shared/utils/log'
+import { expandPath } from '../../../../../shared/utils/path'
+import { ripGrep } from '../../../../../shared/utils/ripgrep'
 import { getInitialSettings } from '../../vendor/utils/settings/settings'
-import { createSignal } from '../../vendor/utils/signal'
+import { createSignal } from '../../../../../shared/utils/signal'
 
 // Lazily constructed singleton
 let fileIndex: FileIndex | null = null

@@ -17,14 +17,14 @@ import { errorMessage } from '../utils/errors.js'
 import {
   type PermissionUpdate,
   permissionUpdateSchema,
-} from '../utils/permissions/PermissionUpdateSchema.js'
+} from '../../shared/utils/permissions/PermissionUpdateSchema.js'
 import {
   isSwarmWorker,
   type PermissionResponse,
   pollForResponse,
   removeWorkerResponse,
-} from '../utils/swarm/permissionSync.js'
-import { getAgentName, getTeamName } from '../utils/teammate.js'
+} from '../../shared/utils/swarm/permissionSync.js'
+import { getAgentName, getTeamName } from '../../shared/utils/teammate.js'
 
 const POLL_INTERVAL_MS = 500
 

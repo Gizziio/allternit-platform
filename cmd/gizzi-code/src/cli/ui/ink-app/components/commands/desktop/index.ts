@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 
 function isSupportedPlatform(): boolean {
   if (process.platform === 'darwin') {

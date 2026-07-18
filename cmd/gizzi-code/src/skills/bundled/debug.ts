@@ -3,8 +3,8 @@ import { open, stat } from 'fs/promises'
 import { GIZZI_GUIDE_AGENT_TYPE } from 'src/tools/AgentTool/built-in/claudeCodeGuideAgent.js'
 // @ts-ignore missing export from utils/settings/settings
 import { getSettingsFilePathForSource } from 'src/utils/settings/settings.js'
-import { enableDebugLogging, getDebugLogPath } from '../../utils/debug.js'
-import { errorMessage, isENOENT } from '../../utils/errors.js'
+import { enableDebugLogging, getDebugLogPath } from '../../shared/utils/debug.js'
+import { errorMessage, isENOENT } from '../../shared/utils/errors.js'
 // @ts-ignore missing export from utils/format
 import { formatFileSize } from '../../utils/format.js'
 import { registerBundledSkill } from '../bundledSkills.js'

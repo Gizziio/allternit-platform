@@ -1,11 +1,11 @@
 // @ts-nocheck
-import type { LocalCommandResult } from '../../types/command'
+import type { LocalCommandResult } from '../../../types/command'
 import {
   CHANGELOG_URL,
   fetchAndStoreChangelog,
   getAllReleaseNotes,
   getStoredChangelog,
-} from '../../utils/releaseNotes'
+} from '../../../../../../shared/utils/releaseNotes'
 
 function formatReleaseNotes(notes: Array<[string, string[]]>): string {
   return notes

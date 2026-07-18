@@ -1,42 +1,42 @@
 // @ts-nocheck
-import type { Notification } from './../../context/notifications.tsx'
+import type { Notification } from '../../../../../context/notifications'
 import type { TodoList } from './../../utils/todo/types.ts'
-import type { BridgePermissionCallbacks } from '../bridge/bridgePermissionCallbacks'
-import type { Command } from '../commands'
+import type { BridgePermissionCallbacks } from '../../../../../runtime/integrations/bridgePermissionCallbacks'
+import type { Command } from '../../commands'
 import type { ChannelPermissionCallbacks } from '../services/mcp/channelPermissions'
 import type { ElicitationRequestEvent } from '../services/mcp/elicitationHandler'
 import type {
   MCPServerConnection,
   ServerResource,
-} from '../services/mcp/types'
+} from '../../../../../runtime/integrations/types'
 import { shouldEnablePromptSuggestion } from '../services/PromptSuggestion/promptSuggestion'
 import {
   getEmptyToolPermissionContext,
   type Tool,
   type ToolPermissionContext,
 } from '../Tool'
-import type { TaskState } from '../tasks/types'
-import type { AgentColorName } from '../tools/AgentTool/agentColorManager'
-import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir'
+import type { TaskState } from '../../../../../runtime/integrations/types'
+import type { AgentColorName } from '../../tools/AgentTool/agentColorManager'
+import type { AgentDefinitionsResult } from '../../tools/AgentTool/loadAgentsDir'
 import type { AllowedPrompt } from '../tools/ExitPlanModeTool/ExitPlanModeV2Tool'
-import type { AgentId } from '../types/ids'
-import type { Message, UserMessage } from '../types/message'
-import type { LoadedPlugin, PluginError } from '../types/plugin'
-import type { DeepImmutable } from '../types/utils'
+import type { AgentId } from '../../types/ids'
+import type { Message, UserMessage } from '../message'
+import type { LoadedPlugin, PluginError } from '../../types/plugin'
+import type { DeepImmutable } from '../../tools/utils'
 import {
   type AttributionState,
   createEmptyAttributionState,
-} from '../utils/commitAttribution'
-import type { EffortValue } from '../utils/effort'
-import type { FileHistoryState } from '../utils/fileHistory'
+} from '../../../../../shared/utils/commitAttribution'
+import type { EffortValue } from '../../../../../shared/utils/effort'
+import type { FileHistoryState } from '../../../../../shared/utils/fileHistory'
 import type { REPLHookContext } from '../utils/hooks/postSamplingHooks'
 import type { SessionHooksState } from '../utils/hooks/sessionHooks'
-import type { ModelSetting } from '../utils/model/model'
+import type { ModelSetting } from '../../utils/model/model'
 import type { DenialTrackingState } from '../utils/permissions/denialTracking'
 import type { PermissionMode } from '../utils/permissions/PermissionMode'
-import { getInitialSettings } from '../utils/settings/settings'
-import type { SettingsJson } from '../utils/settings/types'
-import { shouldEnableThinkingByDefault } from '../utils/thinking'
+import { getInitialSettings } from '../../utils/settings/settings'
+import type { SettingsJson } from '../../../../../runtime/integrations/types'
+import { shouldEnableThinkingByDefault } from '../../../../../shared/utils/thinking'
 import type { Store } from './store'
 
 export type CompletionBoundary =
@@ -447,7 +447,7 @@ export function getDefaultAppState(): AppState {
   // Use lazy require to avoid circular dependency with teammate.ts
   /* eslint-disable @typescript-eslint/no-require-imports */
   const teammateUtils =
-    require('../utils/teammate.js') as typeof import('../utils/teammate.js')
+    require('../../../../../shared/utils/teammate.js') as typeof import('../../../../../shared/utils/teammate.js')
   /* eslint-enable @typescript-eslint/no-require-imports */
   const initialMode: PermissionMode =
     teammateUtils.isTeammate() && teammateUtils.isPlanModeRequired()

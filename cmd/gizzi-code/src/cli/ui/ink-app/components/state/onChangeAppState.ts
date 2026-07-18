@@ -1,14 +1,14 @@
 // @ts-nocheck
-import { setMainLoopModelOverride } from '../bootstrap/state'
+import { setMainLoopModelOverride } from '../../bootstrap/state'
 import {
   clearApiKeyHelperCache,
   clearAwsCredentialsCache,
   clearGcpCredentialsCache,
-} from '../utils/auth'
-import { getGlobalConfig, saveGlobalConfig } from '../utils/config'
-import { toError } from '../utils/errors'
-import { logError } from '../utils/log'
-import { applyConfigEnvironmentVariables } from '../utils/managedEnv'
+} from '../../utils/auth'
+import { getGlobalConfig, saveGlobalConfig } from '../../utils/config'
+import { toError } from '../../utils/errors'
+import { logError } from '../../utils/log'
+import { applyConfigEnvironmentVariables } from '../../../../../shared/utils/managedEnv'
 import {
   permissionModeFromString,
   toExternalPermissionMode,
@@ -17,8 +17,8 @@ import {
   notifyPermissionModeChanged,
   notifySessionMetadataChanged,
   type SessionExternalMetadata,
-} from '../utils/sessionState'
-import { updateSettingsForSource } from '../utils/settings/settings'
+} from '../../../../../shared/utils/sessionState'
+import { updateSettingsForSource } from '../../utils/settings/settings'
 import type { AppState } from './AppStateStore'
 
 // Inverse of the push below — restore on worker restart.

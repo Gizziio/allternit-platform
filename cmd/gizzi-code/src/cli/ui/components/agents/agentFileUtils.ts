@@ -3,16 +3,16 @@ import { mkdir, open, unlink } from 'fs/promises'
 import { join } from 'path'
 import type { SettingSource } from 'src/utils/settings/constants.js'
 import { getManagedFilePath } from 'src/utils/settings/managedPath.js'
-import type { AgentMemoryScope } from '../../tools/AgentTool/agentMemory.js'
+import type { AgentMemoryScope } from '../../../../runtime/tools/builtins/agenttool/agentMemory.js'
 import {
   type AgentDefinition,
   isBuiltInAgent,
   isPluginAgent,
-} from '../../tools/AgentTool/loadAgentsDir.js'
-import { getCwd } from '../../utils/cwd.js'
-import type { EffortValue } from '../../utils/effort.js'
-import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
-import { getErrnoCode } from '../../utils/errors.js'
+} from '../../../../tools/AgentTool/loadAgentsDir.js'
+import { getCwd } from '../../../../shared/utils/cwd.js'
+import type { EffortValue } from '../../../../shared/utils/effort.js'
+import { getClaudeConfigHomeDir } from '../../../../shared/utils/envUtils.js'
+import { getErrnoCode } from '../../../../shared/utils/errors.js'
 import { AGENT_PATHS } from './types.js'
 
 /**

@@ -4,7 +4,7 @@ import { handlePlanModeTransition } from '@/bootstrap/state.js';
 import { Box, Text } from '@/ink.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '@/services/analytics/index.js';
 import { useAppState } from '@/state/AppState.js';
-import { isPlanModeInterviewPhaseEnabled } from '../../../utils/planModeV2.js';
+import { isPlanModeInterviewPhaseEnabled } from '../../../../../shared/utils/planModeV2.js';
 import { Select } from '../../CustomSelect/index.js';
 import { PermissionDialog } from '../PermissionDialog.js';
 import type { PermissionRequestProps } from '../PermissionRequest.js';

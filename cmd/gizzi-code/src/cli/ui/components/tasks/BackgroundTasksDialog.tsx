@@ -25,13 +25,13 @@ import { intersperse } from 'src/utils/array.js';
 import { TEAM_LEAD_NAME } from 'src/utils/swarm/constants.js';
 import { stopUltraplan } from '@/commands/ultraplan.js';
 import type { CommandResultDisplay } from '@/commands.js';
-import { useRegisterOverlay } from '../../context/overlayContext.js';
+import { useRegisterOverlay } from '../../ink-app/context/overlayContext.js';
 import type { ExitState } from '@/hooks/useExitOnCtrlCDWithKeybindings.js';
 import type { KeyboardEvent } from '@/ink/events/keyboard-event.js';
 import { Box, Text } from '@/ink.js';
 import { useKeybindings } from '@/keybindings/useKeybinding.js';
 import { useShortcutDisplay } from '@/keybindings/useShortcutDisplay.js';
-import { count } from '../../utils/array.js';
+import { count } from '../../../../shared/utils/array.js';
 import { Byline } from '../design-system/Byline.js';
 import { Dialog } from '../design-system/Dialog.js';
 import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js';
@@ -115,7 +115,7 @@ const retryWorkflowAgent = workflowTaskModule?.retryWorkflowAgent ?? null;
 // Relative path, not `src/...` path-mapping — Bun's DCE can statically
 // resolve + eliminate `./` requires, but path-mapped strings stay opaque
 // and survive as dead literals in the bundle. Matches tasks.ts pattern.
-const monitorMcpModule = feature('MONITOR_TOOL') ? require('../../tasks/MonitorMcpTask/MonitorMcpTask.js') as typeof import('../../tasks/MonitorMcpTask/MonitorMcpTask.js') : null;
+const monitorMcpModule = feature('MONITOR_TOOL') ? require('../../ink-app/tasks/MonitorMcpTask/MonitorMcpTask.js') as typeof import('../../ink-app/tasks/MonitorMcpTask/MonitorMcpTask.js') : null;
 const killMonitorMcp = monitorMcpModule?.killMonitorMcp ?? null;
 const MonitorMcpDetailDialog = feature('MONITOR_TOOL') ? (require('./MonitorMcpDetailDialog.js') as typeof import('./MonitorMcpDetailDialog.js')).MonitorMcpDetailDialog : null;
 /* eslint-enable @typescript-eslint/no-require-imports */

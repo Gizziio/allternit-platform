@@ -2,7 +2,7 @@
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useEffect } from 'react';
-import { useNotifications } from './../../context/notifications.tsx';
+import { useNotifications } from '../../../../../context/notifications';
 import { getIsRemoteMode } from '../../bootstrap/state';
 import { Text } from '../../ink';
 import { hasClaudeAiMcpEverConnected } from '../../services/mcp/claudeai';

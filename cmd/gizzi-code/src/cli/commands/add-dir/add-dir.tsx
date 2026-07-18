@@ -4,13 +4,13 @@ import figures from 'figures';
 import React, { useEffect } from 'react';
 import { getAdditionalDirectoriesForClaudeMd, setAdditionalDirectoriesForClaudeMd } from '@/bootstrap/state.js';
 import type { LocalJSXCommandContext } from '@/commands.js';
-import { MessageResponse } from '../../components/MessageResponse.js';
-import { AddWorkspaceDirectory } from '../../components/permissions/rules/AddWorkspaceDirectory.js';
+import { MessageResponse } from '../../ui/ink-app/components/MessageResponse.js';
+import { AddWorkspaceDirectory } from '../../ui/components/permissions/rules/AddWorkspaceDirectory.js';
 import { Box, Text } from '@/ink.js';
 import type { LocalJSXCommandOnDone } from '@/types/command.js';
-import { applyPermissionUpdate, persistPermissionUpdate } from '../../utils/permissions/PermissionUpdate.js';
-import type { PermissionUpdateDestination } from '../../utils/permissions/PermissionUpdateSchema.js';
-import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js';
+import { applyPermissionUpdate, persistPermissionUpdate } from '../../../shared/utils/permissions/PermissionUpdate.js';
+import type { PermissionUpdateDestination } from '../../../shared/utils/permissions/PermissionUpdateSchema.js';
+import { SandboxManager } from '../../../utils/sandbox/sandbox-adapter.js';
 import { addDirHelpMessage, validateDirectoryForWorkspace } from './validation.js';
 function AddDirError(t0) {
   const $ = _c(10);

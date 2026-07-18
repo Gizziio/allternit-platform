@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as React from 'react'
-import { Box, Text } from '../ink'
+import { Box, Text } from '../../ink'
 import UserMessage from './UserMessage'
 import AssistantMessage from './AssistantMessage'
 import ToolUseMessage from './ToolUseMessage'

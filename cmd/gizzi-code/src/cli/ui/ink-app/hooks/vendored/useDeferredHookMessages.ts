@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useCallback, useEffect, useRef } from 'react'
-import type { HookResultMessage, Message } from '../../vendor/types/message'
+import type { HookResultMessage, Message } from '../../components/message'
 
 /**
  * Manages deferred SessionStart hook messages so the REPL can render

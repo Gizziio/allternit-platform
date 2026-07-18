@@ -1,0 +1,187 @@
+import SwiftUI
+
+struct ArtifactRecord: Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String
+    let fileType: String
+    let codeContent: String
+    /// Typed `artifact.created` event metadata; `nil` for locally built records.
+    let artifactId: String?
+    let artifactType: String?
+    let url: String?
+    /// Inline content carried by the event itself (contract `inlinePreview`);
+    /// `nil` when the event only references content by `url` / `artifactId`.
+    let inlinePreview: String?
+
+    init(id: String,
+         title: String,
+         fileType: String,
+         codeContent: String = "",
+         artifactId: String? = nil,
+         artifactType: String? = nil,
+         url: String? = nil,
+         inlinePreview: String? = nil) {
+        self.id = id
+        self.title = title
+        self.fileType = fileType
+        self.codeContent = codeContent
+        self.artifactId = artifactId
+        self.artifactType = artifactType
+        self.url = url
+        self.inlinePreview = inlinePreview
+    }
+
+    /// Attachment built from a typed `artifact.created` SSE event. Content
+    /// resolution (url → inline preview → artifacts endpoint) is handled by
+    /// `ArtifactContentLoader` when the details view opens.
+    ///
+    /// QUARANTINED with the replies-runtime contract (see ReplyEvent.swift) —
+    /// the live path builds records via `init(agentChat:)` below.
+    init(event: ArtifactCreatedEvent) {
+        self.init(
+            id: event.artifactId,
+            title: event.title,
+            fileType: event.artifactType,
+            artifactId: event.artifactId,
+            artifactType: event.artifactType,
+            url: event.url,
+            inlinePreview: event.inlinePreview
+        )
+    }
+
+    /// Attachment built from an agent-chat artifact frame (LIVE path). The
+    /// frame is pre-normalized by `AgentChatEvent` (kind whitelist, title
+    /// fallback, image data-URL handling) exactly like the web parser; the
+    /// frame's `content` maps to `inlinePreview` for ArtifactContentLoader.
+    init(agentChat artifact: AgentChatEvent.Artifact) {
+        self.init(
+            id: artifact.artifactId,
+            title: artifact.title,
+            fileType: artifact.kind,
+            artifactId: artifact.artifactId,
+            artifactType: artifact.kind,
+            url: artifact.url,
+            inlinePreview: artifact.content
+        )
+    }
+
+    var isPreviewable: Bool {
+        let types = ["html", "svg", "css", "javascript"]
+        return types.contains(fileType.lowercased())
+    }
+}
+
+struct ArtifactDetailsView: View {
+    let artifact: ArtifactRecord
+    @Environment(\.dismiss) var dismiss
+    @State private var selectedTab = 0
+    @StateObject private var loader = ArtifactContentLoader()
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Segmented picker if preview is supported
+                if artifact.isPreviewable {
+                    Picker("", selection: $selectedTab) {
+                        Text("Preview").tag(0)
+                        Text("Code").tag(1)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding()
+                    .background(Color("BgPrimary"))
+                }
+
+                ZStack {
+                    Color("BgSecondary").edgesIgnoringSafeArea(.all)
+                    content
+                }
+            }
+            .navigationTitle(artifact.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                    .foregroundColor(Color("AccentPrimary"))
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        UIPasteboard.general.string = loader.content
+                        let generator = UINotificationFeedbackGenerator()
+                        generator.notificationOccurred(.success)
+                    }) {
+                        Image(systemName: "doc.on.doc")
+                            .foregroundColor(Color("TextPrimary"))
+                    }
+                    .disabled(loader.content == nil)
+                }
+            }
+            .preferredColorScheme(.dark)
+        }
+        .task {
+            await loader.load(artifact: artifact)
+        }
+    }
+
+    // MARK: - Content states
+
+    @ViewBuilder
+    private var content: some View {
+        switch loader.state {
+        case .idle, .loading:
+            VStack(spacing: 12) {
+                ProgressView()
+                    .tint(Color("AccentPrimary"))
+                Text("Loading artifact…")
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+            }
+
+        case .failed(let message):
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+                Text("Couldn't load this artifact")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color("TextPrimary"))
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                Button("Retry") {
+                    Task { await loader.retry(artifact: artifact) }
+                }
+                .font(.subheadline)
+                .foregroundColor(Color("AccentPrimary"))
+                .padding(.top, 4)
+            }
+
+        case .loaded(let text):
+            if text.isEmpty {
+                Text("This artifact is empty.")
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextSecondary"))
+            } else if selectedTab == 0 && artifact.isPreviewable {
+                // Sandboxed execution preview (custom scheme + CSP, no network).
+                SandboxedArtifactWebView(content: text, artifactType: artifact.fileType)
+            } else {
+                // Scrollable plain code container
+                ScrollView {
+                    VStack(alignment: .leading) {
+                        Text(text)
+                            .font(.system(.subheadline, design: .monospaced))
+                            .foregroundColor(Color("TextPrimary"))
+                            .padding()
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+}

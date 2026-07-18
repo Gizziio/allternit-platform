@@ -14,13 +14,13 @@ import { getInvokedSkillsForAgent } from '@/bootstrap/state.js'
 import type { QuerySource } from '@/constants/querySource.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
 import type { Tool, ToolUseContext } from '../../../runtime/tools/Tool.js'
-import type { LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
+import type { LocalAgentTaskState } from '../../../shared/tasks/LocalAgentTask/LocalAgentTask.js'
 import { FileReadTool } from '../../tools/builtins/file-read/FileReadTool.js'
 import {
   FILE_READ_TOOL_NAME,
   FILE_UNCHANGED_STUB,
-} from '../../../tools/FileReadTool/prompt.js'
-import { ToolSearchTool } from '../../tools/ToolSearchTool/ToolSearchTool.js'
+} from '../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { ToolSearchTool } from '../../../cli/ui/ink-app/tools/ToolSearchTool/ToolSearchTool.js'
 import type { AgentId } from '@/types/ids.js'
 import type {
   AssistantMessage,
@@ -44,19 +44,19 @@ import { COMPACT_MAX_OUTPUT_TOKENS } from '../../../utils/context.js'
 import {
   analyzeContext,
   tokenStatsToStatsigMetrics,
-} from '../../../utils/contextAnalysis.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { hasExactErrorMessage } from '../../../utils/errors.js'
-import { cacheToObject } from '../../../utils/fileStateCache.js'
+} from '../../../shared/utils/contextAnalysis.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { hasExactErrorMessage } from '../../../shared/utils/errors.js'
+import { cacheToObject } from '../../../shared/utils/fileStateCache.js'
 import {
   type CacheSafeParams,
   runForkedAgent,
-} from '../../../utils/forkedAgent.js'
+} from '../../../shared/utils/forkedAgent.js'
 import {
   executePostCompactHooks,
   executePreCompactHooks,
-} from '../../../utils/hooks.js'
-import { logError } from '../../../utils/log.js'
+} from '../../../shared/utils/hooks.js'
+import { logError } from '../../../shared/utils/log.js'
 import { MEMORY_TYPE_VALUES } from '../../../utils/memory/types.js'
 import {
   createCompactBoundaryMessage,
@@ -66,23 +66,23 @@ import {
   getMessagesAfterCompactBoundary,
   isCompactBoundaryMessage,
   normalizeMessagesForAPI,
-} from '../../../utils/messages.js'
-import { expandPath } from '../../../utils/path.js'
-import { getPlan, getPlanFilePath } from '../../../utils/plans.js'
+} from '../../../shared/utils/messages.js'
+import { expandPath } from '../../../shared/utils/path.js'
+import { getPlan, getPlanFilePath } from '../../../shared/utils/plans.js'
 import {
   isSessionActivityTrackingActive,
   sendSessionActivitySignal,
-} from '../../../utils/sessionActivity.js'
-import { processSessionStartHooks } from '../../../utils/sessionStart.js'
+} from '../../../shared/utils/sessionActivity.js'
+import { processSessionStartHooks } from '../../../shared/utils/sessionStart.js'
 import {
   getTranscriptPath,
   reAppendSessionMetadata,
 } from '../../../utils/sessionStorage.js'
 import { sleep } from '../../../utils/sleep.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { asSystemPrompt } from '../../../utils/systemPromptType.js'
-import { getTaskOutputPath } from '../../claude-core/utils/task/diskOutput.js'
+import { getTaskOutputPath } from '../../../shared/utils/task/diskOutput.js'
 import {
   getTokenUsage,
   tokenCountFromLastAPIResponse,
@@ -91,7 +91,7 @@ import {
 import {
   extractDiscoveredToolNames,
   isToolSearchEnabled,
-} from '../../../utils/toolSearch.js'
+} from '../../../shared/utils/toolSearch.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

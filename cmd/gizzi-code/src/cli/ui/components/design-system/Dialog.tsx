@@ -3,7 +3,7 @@ import React from 'react';
 import { type ExitState, useExitOnCtrlCDWithKeybindings } from '@/hooks/useExitOnCtrlCDWithKeybindings.js';
 import { Box, Text } from '@/ink.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
-import type { Theme } from '../../utils/theme.js';
+import type { Theme } from '../../../../shared/utils/theme.js';
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js';
 import { Byline } from './Byline.js';
 import { KeyboardShortcutHint } from './KeyboardShortcutHint.js';

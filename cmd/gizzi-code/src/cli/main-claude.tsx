@@ -29,9 +29,9 @@ import uniqBy from 'lodash-es/uniqBy.js';
 import React from 'react';
 import { getOauthConfig } from '@/constants/oauth.js';
 import { getRemoteSessionUrl } from '@/constants/product.js';
-import { getSystemContext, getUserContext } from './context.js';
+import { getSystemContext, getUserContext } from '../shared/utils/context.js';
 import { init, initializeTelemetryAfterTrust } from './entrypoints/init.js';
-import { addToHistory } from './history.js';
+import { addToHistory } from './ui/ink-app/components/history.js';
 import type { Root } from '@/ink.js';
 import { launchRepl } from './replLauncher.js';
 import { hasGrowthBookEnvOverride, initializeGrowthBook, refreshGrowthBookAfterAuthChange } from '@/services/analytics/growthbook.js';
@@ -45,30 +45,30 @@ import { loadRemoteManagedSettings, refreshRemoteManagedSettings } from '@/servi
 import type { ToolInputJSONSchema } from '@/Tool.js';
 import { createSyntheticOutputTool, isSyntheticOutputToolEnabled } from './tools/SyntheticOutputTool/SyntheticOutputTool.js';
 import { getTools } from './tools.js';
-import { canUserConfigureAdvisor, getInitialAdvisorSetting, isAdvisorEnabled, isValidAdvisorModel, modelSupportsAdvisor } from './utils/advisor.js';
-import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled.js';
-import { count, uniq } from './utils/array.js';
+import { canUserConfigureAdvisor, getInitialAdvisorSetting, isAdvisorEnabled, isValidAdvisorModel, modelSupportsAdvisor } from '../shared/utils/advisor.js';
+import { isAgentSwarmsEnabled } from '../shared/utils/agentSwarmsEnabled.js';
+import { count, uniq } from '../shared/utils/array.js';
 import { installAsciicastRecorder } from './utils/asciicast.js';
 import { getSubscriptionType, isClaudeAISubscriber, prefetchAwsCredentialsAndBedRockInfoIfSafe, prefetchGcpCredentialsIfSafe, validateForceLoginOrg } from './utils/auth.js';
-import { checkHasTrustDialogAccepted, getGlobalConfig, getRemoteControlAtStartup, isAutoUpdaterDisabled, saveGlobalConfig } from './utils/config.js';
+import { checkHasTrustDialogAccepted, getGlobalConfig, getRemoteControlAtStartup, isAutoUpdaterDisabled, saveGlobalConfig } from '../shared/utils/config.js';
 import { seedEarlyInput, stopCapturingEarlyInput } from './utils/earlyInput.js';
-import { getInitialEffortSetting, parseEffortValue } from './utils/effort.js';
-import { getInitialFastModeSetting, isFastModeEnabled, prefetchFastModeStatus, resolveFastModeStatusFromCache } from './utils/fastMode.js';
+import { getInitialEffortSetting, parseEffortValue } from '../shared/utils/effort.js';
+import { getInitialFastModeSetting, isFastModeEnabled, prefetchFastModeStatus, resolveFastModeStatusFromCache } from '../shared/utils/fastMode.js';
 import { applyConfigEnvironmentVariables } from './utils/managedEnv.js';
-import { createSystemMessage, createUserMessage } from './utils/messages.js';
-import { getPlatform } from './utils/platform.js';
+import { createSystemMessage, createUserMessage } from '../shared/utils/messages.js';
+import { getPlatform } from '../shared/utils/platform.js';
 import { getBaseRenderOptions } from './utils/renderOptions.js';
 import { getSessionIngressAuthToken } from './utils/sessionIngressAuth.js';
-import { settingsChangeDetector } from './utils/settings/changeDetector.js';
-import { skillChangeDetector } from './utils/skills/skillChangeDetector.js';
-import { jsonParse, writeFileSync_DEPRECATED } from './utils/slowOperations.js';
-import { computeInitialTeamContext } from './utils/swarm/reconnection.js';
+import { settingsChangeDetector } from '../shared/utils/settings/changeDetector.js';
+import { skillChangeDetector } from '../shared/utils/skills/skillChangeDetector.js';
+import { jsonParse, writeFileSync_DEPRECATED } from '../shared/utils/slowOperations.js';
+import { computeInitialTeamContext } from '../shared/utils/swarm/reconnection.js';
 import { initializeWarningHandler } from './utils/warningHandler.js';
 import { isWorktreeModeEnabled } from './utils/worktreeModeEnabled.js';
 
 // Lazy require to avoid circular dependency: teammate.ts -> AppState.tsx -> ... -> main.tsx
 /* eslint-disable @typescript-eslint/no-require-imports */
-const getTeammateUtils = () => require('./utils/teammate.js') as typeof import('./utils/teammate.js');
+const getTeammateUtils = () => require('../shared/utils/teammate.js') as typeof import('../shared/utils/teammate.js');
 const getTeammatePromptAddendum = () => require('./utils/swarm/teammatePromptAddendum.js') as typeof import('./utils/swarm/teammatePromptAddendum.js');
 const getTeammateModeSnapshot = () => require('./utils/swarm/backends/teammateModeSnapshot.js') as typeof import('./utils/swarm/backends/teammateModeSnapshot.js');
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -78,7 +78,7 @@ const coordinatorModeModule = feature('COORDINATOR_MODE') ? require('./coordinat
 /* eslint-enable @typescript-eslint/no-require-imports */
 // Dead code elimination: conditional import for KAIROS (assistant mode)
 /* eslint-disable @typescript-eslint/no-require-imports */
-const assistantModule = feature('KAIROS') ? require('./assistant/index.js') as typeof import('./assistant/index.js') : null;
+const assistantModule = feature('KAIROS') ? require('./ui/ink-app/components/index.js') as typeof import('./ui/ink-app/components/index.js') : null;
 // @ts-ignore - This module only exists in ant builds
 const kairosGate = feature('KAIROS') ? require('./assistant/gate.js') as typeof import('./assistant/gate.js') : null;
 import { relative, resolve } from 'path';
@@ -98,8 +98,8 @@ import { checkQuotaStatus } from '@/services/claudeAiLimits.js';
 import { getMcpToolsCommandsAndResources, prefetchAllMcpResources } from '@/services/mcp/client.js';
 import { VALID_INSTALLABLE_SCOPES, VALID_UPDATE_SCOPES } from '@/services/plugins/pluginCliCommands.js';
 import { initBundledSkills } from './skills/bundled/index.js';
-import type { AgentColorName } from './tools/AgentTool/agentColorManager.js';
-import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides, isBuiltInAgent, isCustomAgent, parseAgentsFromJson } from './tools/AgentTool/loadAgentsDir.js';
+import type { AgentColorName } from '../runtime/tools/builtins/agenttool/agentColorManager.js';
+import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides, isBuiltInAgent, isCustomAgent, parseAgentsFromJson } from '../tools/AgentTool/loadAgentsDir.js';
 import type { LogOption } from '@/types/logs.js';
 import type { Message as MessageType } from '@/types/message.js';
 import { assertMinVersion } from './utils/autoUpdater.js';
@@ -108,32 +108,32 @@ import { setupAllternitInChrome, shouldAutoEnableAllternitInChrome, shouldEnable
 import { getContextWindowForModel } from './utils/context.js';
 import { loadConversationForResume } from './utils/conversationRecovery.js';
 import { buildDeepLinkBanner } from './utils/deepLink/banner.js';
-import { hasNodeOption, isBareMode, isEnvTruthy, isInProtectedNamespace } from './utils/envUtils.js';
+import { hasNodeOption, isBareMode, isEnvTruthy, isInProtectedNamespace } from '../shared/utils/envUtils.js';
 import { refreshExampleCommands } from './utils/exampleCommands.js';
 import type { FpsMetrics } from './utils/fpsTracker.js';
 import { getWorktreePaths } from './utils/getWorktreePaths.js';
-import { findGitRoot, getBranch, getIsGit, getWorktreeCount } from './utils/git.js';
+import { findGitRoot, getBranch, getIsGit, getWorktreeCount } from '../shared/utils/git.js';
 import { getGhAuthStatus } from './utils/github/ghAuthStatus.js';
-import { safeParseJSON } from './utils/json.js';
+import { safeParseJSON } from '../shared/utils/json.js';
 import { logError } from './utils/log.js';
 import { getModelDeprecationWarning } from './utils/model/deprecation.js';
-import { getDefaultMainLoopModel, getUserSpecifiedModelSetting, normalizeModelStringForAPI, parseUserSpecifiedModel } from './utils/model/model.js';
+import { getDefaultMainLoopModel, getUserSpecifiedModelSetting, normalizeModelStringForAPI, parseUserSpecifiedModel } from '../runtime/types/model.js';
 import { ensureModelStringsInitialized } from './utils/model/modelStrings.js';
-import { PERMISSION_MODES } from './utils/permissions/PermissionMode.js';
-import { checkAndDisableBypassPermissions, getAutoModeEnabledStateIfCached, initializeToolPermissionContext, initialPermissionModeFromCLI, isDefaultPermissionModeAuto, parseToolListFromCLI, removeDangerousPermissions, stripDangerousPermissionsForAutoMode, verifyAutoModeGateAccess } from './utils/permissions/permissionSetup.js';
+import { PERMISSION_MODES } from '../shared/utils/permissions/PermissionMode.js';
+import { checkAndDisableBypassPermissions, getAutoModeEnabledStateIfCached, initializeToolPermissionContext, initialPermissionModeFromCLI, isDefaultPermissionModeAuto, parseToolListFromCLI, removeDangerousPermissions, stripDangerousPermissionsForAutoMode, verifyAutoModeGateAccess } from '../shared/utils/permissions/permissionSetup.js';
 import { cleanupOrphanedPluginVersionsInBackground } from './utils/plugins/cacheUtils.js';
 import { initializeVersionedPlugins } from './utils/plugins/installedPluginsManager.js';
 import { getManagedPluginNames } from './utils/plugins/managedPlugins.js';
 import { getGlobExclusionsForPluginCache } from './utils/plugins/orphanedPluginFilter.js';
 import { getPluginSeedDirs } from './utils/plugins/pluginDirectories.js';
-import { countFilesRoundedRg } from './utils/ripgrep.js';
-import { processSessionStartHooks, processSetupHooks } from './utils/sessionStart.js';
-import { cacheSessionTitle, getSessionIdFromLog, loadTranscriptFromFile, saveAgentSetting, saveMode, searchSessionsByCustomTitle, sessionIdExists } from './utils/sessionStorage.js';
+import { countFilesRoundedRg } from '../shared/utils/ripgrep.js';
+import { processSessionStartHooks, processSetupHooks } from '../shared/utils/sessionStart.js';
+import { cacheSessionTitle, getSessionIdFromLog, loadTranscriptFromFile, saveAgentSetting, saveMode, searchSessionsByCustomTitle, sessionIdExists } from '../shared/utils/sessionStorage.js';
 import { ensureMdmSettingsLoaded } from './utils/settings/mdm/settings.js';
-import { getInitialSettings, getManagedSettingsKeysForLogging, getSettingsForSource, getSettingsWithErrors } from './utils/settings/settings.js';
+import { getInitialSettings, getManagedSettingsKeysForLogging, getSettingsForSource, getSettingsWithErrors } from '../runtime/context/settings/settings.js';
 import { resetSettingsCache } from './utils/settings/settingsCache.js';
-import type { ValidationError } from './utils/settings/validation.js';
-import { DEFAULT_TASKS_MODE_TASK_LIST_ID, TASK_STATUSES } from './utils/tasks.js';
+import type { ValidationError } from '../shared/utils/settings/validation.js';
+import { DEFAULT_TASKS_MODE_TASK_LIST_ID, TASK_STATUSES } from '../shared/utils/tasks.js';
 import { logPluginLoadErrors, logPluginsEnabledForSession } from './utils/telemetry/pluginTelemetry.js';
 import { logSkillsLoaded } from './utils/telemetry/skillLoadedEvent.js';
 import { generateTempFilePath } from './utils/tempfile.js';
@@ -142,7 +142,7 @@ import { validateUuid } from './utils/uuid.js';
 
 import { registerMcpAddCommand } from 'src/commands/mcp/addCommand.js';
 import { registerMcpXaaIdpCommand } from 'src/commands/mcp/xaaIdpCommand.js';
-import { logPermissionContextForAnts } from 'src/services/internalLogging.js';
+import { logPermissionContextForAnts } from '../runtime/services/internalLogging.js';
 import { fetchClaudeAIMcpConfigsIfEligible } from 'src/services/mcp/claudeai.js';
 import { clearServerCache } from 'src/services/mcp/client.js';
 import { areMcpConfigsAllowedWithEnterpriseMcpConfig, dedupClaudeAiMcpServers, doesEnterpriseMcpConfigExist, filterMcpServersByPolicy, getClaudeCodeMcpConfigs, getMcpServerSignature, parseMcpConfig, parseMcpConfigFromFilePath } from 'src/services/mcp/config.js';
@@ -151,15 +151,15 @@ import { isXaaEnabled } from 'src/services/mcp/xaaIdpLogin.js';
 import { getRelevantTips } from 'src/services/tips/tipRegistry.js';
 import { logContextMetrics } from 'src/utils/api.js';
 import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME, isAllternitInChromeMCPServer } from 'src/utils/allternitInChrome/common.js';
-import { registerCleanup } from 'src/utils/cleanupRegistry.js';
+import { registerCleanup } from '../shared/utils/cleanupRegistry.js';
 import { eagerParseCliFlag } from 'src/utils/cliArgs.js';
 import { createEmptyAttributionState } from 'src/utils/commitAttribution.js';
 import { countConcurrentSessions, registerSession, updateSessionName } from 'src/utils/concurrentSessions.js';
-import { getCwd } from 'src/utils/cwd.js';
-import { logForDebugging, setHasFormattedOutput } from 'src/utils/debug.js';
-import { errorMessage, getErrnoCode, isENOENT, TeleportOperationError, toError } from 'src/utils/errors.js';
+import { getCwd } from '../shared/utils/cwd.js';
+import { logForDebugging, setHasFormattedOutput } from '../shared/utils/debug.js';
+import { errorMessage, getErrnoCode, isENOENT, TeleportOperationError, toError } from '../shared/utils/errors.js';
 import { getFsImplementation, safeResolvePath } from 'src/utils/fsOperations.js';
-import { gracefulShutdown, gracefulShutdownSync } from 'src/utils/gracefulShutdown.js';
+import { gracefulShutdown, gracefulShutdownSync } from '../shared/utils/gracefulShutdown.js';
 import { setAllHookEventsEnabled } from 'src/utils/hooks/hookEvents.js';
 import { refreshModelCapabilities } from 'src/utils/model/modelCapabilities.js';
 import { peekForStdinData, writeToStderr } from 'src/utils/process.js';
@@ -184,7 +184,7 @@ import { migrateSonnet1mToSonnet45 } from './migrations/migrateSonnet1mToSonnet4
 import { migrateSonnet45ToSonnet46 } from './migrations/migrateSonnet45ToSonnet46.js';
 import { resetAutoModeOptInForDefaultOffer } from './migrations/resetAutoModeOptInForDefaultOffer.js';
 import { resetProToOpusDefault } from './migrations/resetProToOpusDefault.js';
-import { createRemoteSessionConfig } from './remote/RemoteSessionManager.js';
+import { createRemoteSessionConfig } from './ui/ink-app/remote/RemoteSessionManager.js';
 /* eslint-enable @typescript-eslint/no-require-imports */
 // teleportWithProgress dynamically imported at call site
 import { createDirectConnectSession, DirectConnectError } from './server/createDirectConnectSession.js';
@@ -196,16 +196,16 @@ import { createStore } from '@/state/store.js';
 import { asSessionId } from '@/types/ids.js';
 import { filterAllowedSdkBetas } from './utils/betas.js';
 import { isInBundledMode, isRunningWithBun } from './utils/bundledMode.js';
-import { logForDiagnosticsNoPII } from './utils/diagLogs.js';
+import { logForDiagnosticsNoPII } from '../shared/utils/diagLogs.js';
 import { filterExistingPaths, getKnownPathsForRepo } from './utils/githubRepoPathMapping.js';
-import { clearPluginCache, loadAllPluginsCacheOnly } from './utils/plugins/pluginLoader.js';
+import { clearPluginCache, loadAllPluginsCacheOnly } from '../shared/utils/plugins/pluginLoader.js';
 import { migrateChangelogFromConfig } from './utils/releaseNotes.js';
-import { SandboxManager } from './utils/sandbox/sandbox-adapter.js';
+import { SandboxManager } from '../utils/sandbox/sandbox-adapter.js';
 import { fetchSession, prepareApiRequest } from './utils/teleport/api.js';
-import { checkOutTeleportedSessionBranch, processMessagesForTeleportResume, teleportToRemoteWithErrorHandling, validateGitState, validateSessionRepository } from './utils/teleport.js';
+import { checkOutTeleportedSessionBranch, processMessagesForTeleportResume, teleportToRemoteWithErrorHandling, validateGitState, validateSessionRepository } from '../shared/utils/teleport.js';
 import { shouldEnableThinkingByDefault, type ThinkingConfig } from './utils/thinking.js';
-import { initUser, resetUserCache } from './utils/user.js';
-import { getTmuxInstallInstructions, isTmuxAvailable, parsePRReference } from './utils/worktree.js';
+import { initUser, resetUserCache } from '../shared/utils/user.js';
+import { getTmuxInstallInstructions, isTmuxAvailable, parsePRReference } from '../shared/utils/worktree.js';
 
 // eslint-disable-next-line custom-rules/no-top-level-side-effects
 profileCheckpoint('main_tsx_imports_loaded');
@@ -656,7 +656,7 @@ export async function main() {
     if (handleUriIdx !== -1 && process.argv[handleUriIdx + 1]) {
       const {
         enableConfigs
-      } = await import('./utils/config.js');
+      } = await import('../shared/utils/config.js');
       enableConfigs();
       const uri = process.argv[handleUriIdx + 1]!;
       const {
@@ -673,7 +673,7 @@ export async function main() {
     if (process.platform === 'darwin' && process.env.__CFBundleIdentifier === 'com.anthropic.gizzi-url-handler') {
       const {
         enableConfigs
-      } = await import('./utils/config.js');
+      } = await import('../shared/utils/config.js');
       enableConfigs();
       const {
         handleUrlSchemeLaunch
@@ -1739,10 +1739,10 @@ async function run(): Promise<CommanderCommand> {
       const {
         BRIEF_TOOL_NAME,
         LEGACY_BRIEF_TOOL_NAME
-      } = require('./tools/BriefTool/prompt.js') as typeof import('./tools/BriefTool/prompt.js');
+      } = require('./ui/ink-app/context/prompt.js') as typeof import('./ui/ink-app/context/prompt.js');
       const {
         isBriefEntitled
-      } = require('./tools/BriefTool/BriefTool.js') as typeof import('./tools/BriefTool/BriefTool.js');
+      } = require('../runtime/tools/builtins/brieftool/BriefTool.js') as typeof import('../runtime/tools/builtins/brieftool/BriefTool.js');
       /* eslint-enable @typescript-eslint/no-require-imports */
       const parsed = parseToolListFromCLI(baseTools);
       if ((parsed.includes(BRIEF_TOOL_NAME) || parsed.includes(LEGACY_BRIEF_TOOL_NAME)) && isBriefEntitled()) {
@@ -1882,7 +1882,7 @@ async function run(): Promise<CommanderCommand> {
     if (feature('COORDINATOR_MODE') && isEnvTruthy(process.env.GIZZI_COORDINATOR_MODE)) {
       const {
         applyCoordinatorToolFilter
-      } = await import('./utils/toolPool.js');
+      } = await import('../shared/utils/toolPool.js');
       tools = applyCoordinatorToolFilter(tools);
     }
     profileCheckpoint('action_tools_loaded');
@@ -2197,7 +2197,7 @@ async function run(): Promise<CommanderCommand> {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const {
         isBriefEntitled
-      } = require('./tools/BriefTool/BriefTool.js') as typeof import('./tools/BriefTool/BriefTool.js');
+      } = require('../runtime/tools/builtins/brieftool/BriefTool.js') as typeof import('../runtime/tools/builtins/brieftool/BriefTool.js');
       /* eslint-enable @typescript-eslint/no-require-imports */
       if (isBriefEntitled()) {
         setUserMsgOptIn(true);
@@ -2210,7 +2210,7 @@ async function run(): Promise<CommanderCommand> {
       proactive?: boolean;
     }).proactive || isEnvTruthy(process.env.GIZZI_PROACTIVE)) && !coordinatorModeModule?.isCoordinatorMode()) {
       /* eslint-disable @typescript-eslint/no-require-imports */
-      const briefVisibility = feature('KAIROS') || feature('KAIROS_BRIEF') ? (require('./tools/BriefTool/BriefTool.js') as typeof import('./tools/BriefTool/BriefTool.js')).isBriefEnabled() ? 'Call SendUserMessage at checkpoints to mark where things stand.' : 'The user will see any text you output.' : 'The user will see any text you output.';
+      const briefVisibility = feature('KAIROS') || feature('KAIROS_BRIEF') ? (require('../runtime/tools/builtins/brieftool/BriefTool.js') as typeof import('../runtime/tools/builtins/brieftool/BriefTool.js')).isBriefEnabled() ? 'Call SendUserMessage at checkpoints to mark where things stand.' : 'The user will see any text you output.' : 'The user will see any text you output.';
       /* eslint-enable @typescript-eslint/no-require-imports */
       const proactivePrompt = `\n# Proactive Mode\n\nYou are in proactive mode. Take initiative — explore, act, and make progress without waiting for instructions.\n\nStart by briefly greeting the user.\n\nYou will receive periodic <tick> prompts. These are check-ins. Do whatever seems most useful, or call Sleep if there's nothing to do. ${briefVisibility}`;
       appendSystemPrompt = appendSystemPrompt ? `${appendSystemPrompt}\n\n${proactivePrompt}` : proactivePrompt;
@@ -2259,7 +2259,7 @@ async function run(): Promise<CommanderCommand> {
       if (feature('BRIDGE_MODE') && remoteControlOption !== undefined) {
         const {
           getBridgeDisabledReason
-        } = await import('./bridge/bridgeEnabled.js');
+        } = await import('../runtime/integrations/bridgeEnabled.js');
         const disabledReason = await getBridgeDisabledReason();
         remoteControl = disabledReason === null;
         if (disabledReason) {
@@ -2304,7 +2304,7 @@ async function run(): Promise<CommanderCommand> {
         // — enrollTrustedDevice() via checkGate_CACHED_OR_BLOCKING (awaits
         // the GrowthBook reinit above), clearTrustedDeviceToken() via the
         // sync cached check (acceptable since clear is idempotent).
-        void import('./bridge/trustedDevice.js').then(m => {
+        void import('../runtime/integrations/trustedDevice.js').then(m => {
           m.clearTrustedDeviceToken();
           return m.enrollTrustedDevice();
         });
@@ -2935,7 +2935,7 @@ async function run(): Promise<CommanderCommand> {
       /* eslint-disable @typescript-eslint/no-require-imports */
       const {
         isCcrMirrorEnabled
-      } = require('./bridge/bridgeEnabled.js') as typeof import('./bridge/bridgeEnabled.js');
+      } = require('../runtime/integrations/bridgeEnabled.js') as typeof import('../runtime/integrations/bridgeEnabled.js');
       /* eslint-enable @typescript-eslint/no-require-imports */
       ccrMirrorEnabled = isCcrMirrorEnabled();
     }
@@ -4448,7 +4448,7 @@ async function run(): Promise<CommanderCommand> {
       const {
         logHandler
       // @ts-ignore - These exports only exist in ant builds
-      } = await import('./cli/handlers/ant.js') as unknown as { logHandler: (logId: string | number | undefined) => Promise<void> };
+      } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { logHandler: (logId: string | number | undefined) => Promise<void> };
       await logHandler(logId);
     });
 
@@ -4457,7 +4457,7 @@ async function run(): Promise<CommanderCommand> {
       const {
         errorHandler
       // @ts-ignore - These exports only exist in ant builds
-      } = await import('./cli/handlers/ant.js') as unknown as { errorHandler: (number: number | undefined) => Promise<void> };
+      } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { errorHandler: (number: number | undefined) => Promise<void> };
       await errorHandler(number);
     });
 
@@ -4471,7 +4471,7 @@ Examples:
       const {
         exportHandler
       // @ts-ignore - These exports only exist in ant builds
-      } = await import('./cli/handlers/ant.js') as unknown as { exportHandler: (source: string, outputFile: string) => Promise<void> };
+      } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { exportHandler: (source: string, outputFile: string) => Promise<void> };
       await exportHandler(source, outputFile);
     });
     // @ts-ignore - This is a build-time conditional
@@ -4484,7 +4484,7 @@ Examples:
         const {
           taskCreateHandler
         // @ts-ignore - These exports only exist in ant builds
-        } = await import('./cli/handlers/ant.js') as unknown as { taskCreateHandler: (subject: string, opts: unknown) => Promise<void> };
+        } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { taskCreateHandler: (subject: string, opts: unknown) => Promise<void> };
         await taskCreateHandler(subject, opts);
       });
       taskCmd.command('list').description('List all tasks').option('-l, --list <id>', 'Task list ID (defaults to "tasklist")').option('--pending', 'Show only pending tasks').option('--json', 'Output as JSON').action(async (opts: {
@@ -4495,7 +4495,7 @@ Examples:
         const {
           taskListHandler
         // @ts-ignore - These exports only exist in ant builds
-        } = await import('./cli/handlers/ant.js') as unknown as { taskListHandler: (opts: unknown) => Promise<void> };
+        } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { taskListHandler: (opts: unknown) => Promise<void> };
         await taskListHandler(opts);
       });
       taskCmd.command('get <id>').description('Get details of a task').option('-l, --list <id>', 'Task list ID (defaults to "tasklist")').action(async (id: string, opts: {
@@ -4504,7 +4504,7 @@ Examples:
         const {
           taskGetHandler
         // @ts-ignore - These exports only exist in ant builds
-        } = await import('./cli/handlers/ant.js') as unknown as { taskGetHandler: (id: string, opts: unknown) => Promise<void> };
+        } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { taskGetHandler: (id: string, opts: unknown) => Promise<void> };
         await taskGetHandler(id, opts);
       });
       taskCmd.command('update <id>').description('Update a task').option('-l, --list <id>', 'Task list ID (defaults to "tasklist")').option('-s, --status <status>', `Set status (${TASK_STATUSES.join(', ')})`).option('--subject <text>', 'Update subject').option('-d, --description <text>', 'Update description').option('--owner <agentId>', 'Set owner').option('--clear-owner', 'Clear owner').action(async (id: string, opts: {
@@ -4518,7 +4518,7 @@ Examples:
         const {
           taskUpdateHandler
         // @ts-ignore - These exports only exist in ant builds
-        } = await import('./cli/handlers/ant.js') as unknown as { taskUpdateHandler: (id: string, opts: unknown) => Promise<void> };
+        } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { taskUpdateHandler: (id: string, opts: unknown) => Promise<void> };
         await taskUpdateHandler(id, opts);
       });
       taskCmd.command('dir').description('Show the tasks directory path').option('-l, --list <id>', 'Task list ID (defaults to "tasklist")').action(async (opts: {
@@ -4527,7 +4527,7 @@ Examples:
         const {
           taskDirHandler
         // @ts-ignore - These exports only exist in ant builds
-        } = await import('./cli/handlers/ant.js') as unknown as { taskDirHandler: (opts: unknown) => Promise<void> };
+        } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { taskDirHandler: (opts: unknown) => Promise<void> };
         await taskDirHandler(opts);
       });
     }
@@ -4541,7 +4541,7 @@ Examples:
       const {
         completionHandler
       // @ts-ignore - These exports only exist in ant builds
-      } = await import('./cli/handlers/ant.js') as unknown as { completionHandler: (shell: string, opts: unknown, program: unknown) => Promise<void> };
+      } = await import('./ui/ink-app/cli/handlers/ant.js') as unknown as { completionHandler: (shell: string, opts: unknown, program: unknown) => Promise<void> };
       await completionHandler(shell, opts, program);
     });
   }
@@ -4682,7 +4682,7 @@ function maybeActivateBrief(options: unknown): void {
   /* eslint-disable @typescript-eslint/no-require-imports */
   const {
     isBriefEntitled
-  } = require('./tools/BriefTool/BriefTool.js') as typeof import('./tools/BriefTool/BriefTool.js');
+  } = require('../runtime/tools/builtins/brieftool/BriefTool.js') as typeof import('../runtime/tools/builtins/brieftool/BriefTool.js');
   /* eslint-enable @typescript-eslint/no-require-imports */
   const entitled = isBriefEntitled();
   if (entitled) {

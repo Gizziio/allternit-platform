@@ -1,17 +1,17 @@
 // @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { toolMatchesName, type Tool, type Tools } from '@/Tool.js'
-import { AgentTool } from './tools/AgentTool/AgentTool.js'
-import { SkillTool } from './tools/SkillTool/SkillTool.js'
-import { BashTool } from './tools/BashTool/BashTool.js'
-import { FileEditTool } from './tools/FileEditTool/FileEditTool.js'
-import { FileReadTool } from './tools/FileReadTool/FileReadTool.js'
-import { FileWriteTool } from './tools/FileWriteTool/FileWriteTool.js'
-import { GlobTool } from './tools/GlobTool/GlobTool.js'
-import { NotebookEditTool } from './tools/NotebookEditTool/NotebookEditTool.js'
-import { WebFetchTool } from './tools/WebFetchTool/WebFetchTool.js'
-import { TaskStopTool } from './tools/TaskStopTool/TaskStopTool.js'
-import { BriefTool } from './tools/BriefTool/BriefTool.js'
+import { AgentTool } from '../cli/ui/ink-app/tools/AgentTool/AgentTool.js'
+import { SkillTool } from '../cli/ui/ink-app/tools/SkillTool/SkillTool.js'
+import { BashTool } from '../cli/ui/ink-app/tools/BashTool/BashTool.js'
+import { FileEditTool } from '../cli/ui/ink-app/tools/FileEditTool/FileEditTool.js'
+import { FileReadTool } from '../cli/ui/ink-app/tools/FileReadTool/FileReadTool.js'
+import { FileWriteTool } from '../cli/ui/ink-app/tools/FileWriteTool/FileWriteTool.js'
+import { GlobTool } from '../cli/ui/ink-app/tools/GlobTool/GlobTool.js'
+import { NotebookEditTool } from '../cli/ui/ink-app/tools/NotebookEditTool/NotebookEditTool.js'
+import { WebFetchTool } from '../cli/ui/ink-app/tools/WebFetchTool/WebFetchTool.js'
+import { TaskStopTool } from '../cli/ui/ink-app/tools/TaskStopTool/TaskStopTool.js'
+import { BriefTool } from '../cli/ui/ink-app/tools/BriefTool/BriefTool.js'
 // Dead code elimination: conditional import for ant-only tools
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 const REPLTool =
@@ -52,13 +52,13 @@ const SubscribePRTool = feature('KAIROS_GITHUB_WEBHOOKS')
   ? require('./tools/SubscribePRTool/SubscribePRTool.js').SubscribePRTool
   : null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
-import { TaskOutputTool } from './tools/TaskOutputTool/TaskOutputTool.js'
-import { WebSearchTool } from './tools/WebSearchTool/WebSearchTool.js'
-import { TodoWriteTool } from './tools/TodoWriteTool/TodoWriteTool.js'
-import { ExitPlanModeV2Tool } from './tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
-import { TestingPermissionTool } from './tools/testing/TestingPermissionTool.js'
-import { GrepTool } from './tools/GrepTool/GrepTool.js'
-import { TungstenTool } from './tools/TungstenTool/TungstenTool.js'
+import { TaskOutputTool } from '../cli/ui/ink-app/tools/TaskOutputTool/TaskOutputTool.js'
+import { WebSearchTool } from '../cli/ui/ink-app/tools/WebSearchTool/WebSearchTool.js'
+import { TodoWriteTool } from '../cli/ui/ink-app/tools/TodoWriteTool/TodoWriteTool.js'
+import { ExitPlanModeV2Tool } from '../cli/ui/ink-app/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
+import { TestingPermissionTool } from '../cli/ui/ink-app/tools/testing/TestingPermissionTool.js'
+import { GrepTool } from '../cli/ui/ink-app/tools/GrepTool/GrepTool.js'
+import { TungstenTool } from '../cli/ui/ink-app/tools/TungstenTool/TungstenTool.js'
 // Lazy require to break circular dependency: tools.ts -> TeamCreateTool/TeamDeleteTool -> ... -> tools.ts
 /* eslint-disable @typescript-eslint/no-require-imports */
 const getTeamCreateTool = () =>
@@ -71,22 +71,22 @@ const getSendMessageTool = () =>
   require('./tools/SendMessageTool/SendMessageTool.js')
     .SendMessageTool as typeof import('./tools/SendMessageTool/SendMessageTool.js').SendMessageTool
 /* eslint-enable @typescript-eslint/no-require-imports */
-import { AskUserQuestionTool } from './tools/AskUserQuestionTool/AskUserQuestionTool.js'
-import { LSPTool } from './tools/LSPTool/LSPTool.js'
-import { ListMcpResourcesTool } from './tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
-import { ReadMcpResourceTool } from './tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
-import { ToolSearchTool } from './tools/ToolSearchTool/ToolSearchTool.js'
-import { EnterPlanModeTool } from './tools/EnterPlanModeTool/EnterPlanModeTool.js'
-import { EnterWorktreeTool } from './tools/EnterWorktreeTool/EnterWorktreeTool.js'
-import { ExitWorktreeTool } from './tools/ExitWorktreeTool/ExitWorktreeTool.js'
-import { ConfigTool } from './tools/ConfigTool/ConfigTool.js'
-import { TaskCreateTool } from './tools/TaskCreateTool/TaskCreateTool.js'
-import { TaskGetTool } from './tools/TaskGetTool/TaskGetTool.js'
-import { TaskUpdateTool } from './tools/TaskUpdateTool/TaskUpdateTool.js'
-import { TaskListTool } from './tools/TaskListTool/TaskListTool.js'
+import { AskUserQuestionTool } from '../cli/ui/ink-app/tools/AskUserQuestionTool/AskUserQuestionTool.js'
+import { LSPTool } from '../cli/ui/ink-app/tools/LSPTool/LSPTool.js'
+import { ListMcpResourcesTool } from '../cli/ui/ink-app/tools/ListMcpResourcesTool/ListMcpResourcesTool.js'
+import { ReadMcpResourceTool } from '../cli/ui/ink-app/tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
+import { ToolSearchTool } from '../cli/ui/ink-app/tools/ToolSearchTool/ToolSearchTool.js'
+import { EnterPlanModeTool } from '../cli/ui/ink-app/tools/EnterPlanModeTool/EnterPlanModeTool.js'
+import { EnterWorktreeTool } from '../cli/ui/ink-app/tools/EnterWorktreeTool/EnterWorktreeTool.js'
+import { ExitWorktreeTool } from '../cli/ui/ink-app/tools/ExitWorktreeTool/ExitWorktreeTool.js'
+import { ConfigTool } from '../cli/ui/ink-app/tools/ConfigTool/ConfigTool.js'
+import { TaskCreateTool } from './tools/builtins/taskcreatetool/TaskCreateTool.js'
+import { TaskGetTool } from './tools/builtins/taskgettool/TaskGetTool.js'
+import { TaskUpdateTool } from './tools/builtins/taskupdatetool/TaskUpdateTool.js'
+import { TaskListTool } from './tools/builtins/tasklisttool/TaskListTool.js'
 import uniqBy from 'lodash-es/uniqBy.js'
-import { isToolSearchEnabledOptimistic } from './utils/toolSearch.js'
-import { isTodoV2Enabled } from './utils/tasks.js'
+import { isToolSearchEnabledOptimistic } from '../shared/utils/toolSearch.js'
+import { isTodoV2Enabled } from '../shared/utils/tasks.js'
 // Dead code elimination: conditional import for GIZZI_VERIFY_PLAN
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 const VerifyPlanExecutionTool =
@@ -95,7 +95,7 @@ const VerifyPlanExecutionTool =
         .VerifyPlanExecutionTool
     : null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
-import { SYNTHETIC_OUTPUT_TOOL_NAME } from './tools/SyntheticOutputTool/SyntheticOutputTool.js'
+import { SYNTHETIC_OUTPUT_TOOL_NAME } from '../cli/ui/ink-app/tools/SyntheticOutputTool/SyntheticOutputTool.js'
 export {
   ALL_AGENT_DISALLOWED_TOOLS,
   CUSTOM_AGENT_DISALLOWED_TOOLS,
@@ -135,12 +135,12 @@ const WorkflowTool = feature('WORKFLOW_SCRIPTS')
   : null
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import type { ToolPermissionContext } from '@/Tool.js'
-import { getDenyRuleForTool } from './utils/permissions/permissions.js'
-import { hasEmbeddedSearchTools } from './utils/embeddedTools.js'
-import { isEnvTruthy } from './utils/envUtils.js'
-import { isPowerShellToolEnabled } from './utils/shell/shellToolUtils.js'
-import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled.js'
-import { isWorktreeModeEnabled } from './utils/worktreeModeEnabled.js'
+import { getDenyRuleForTool } from '../cli/ui/ink-app/utils/permissions/permissions.js'
+import { hasEmbeddedSearchTools } from '../shared/utils/embeddedTools.js'
+import { isEnvTruthy } from '../shared/utils/envUtils.js'
+import { isPowerShellToolEnabled } from '../cli/ui/ink-app/utils/shell/shellToolUtils.js'
+import { isAgentSwarmsEnabled } from '../shared/utils/agentSwarmsEnabled.js'
+import { isWorktreeModeEnabled } from '../shared/utils/worktreeModeEnabled.js'
 import {
   REPL_TOOL_NAME,
   REPL_ONLY_TOOLS,

@@ -2,7 +2,7 @@ import {
   expandPastedTextRefs,
   formatPastedTextRef,
   getPastedTextRefNumLines,
-} from '../history.js'
+} from '../../cli/ui/ink-app/components/history.js'
 import instances from '../../cli/ui/ink-renderer/instances.js'
 import type { PastedContent } from './config.js'
 import { classifyGuiEditor, getExternalEditor } from './editor.js'

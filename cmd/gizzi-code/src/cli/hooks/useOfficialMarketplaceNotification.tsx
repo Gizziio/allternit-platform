@@ -1,8 +1,8 @@
 import * as React from 'react';
-import type { Notification } from '../context/notifications.js';
+import type { Notification } from '../../context/notifications.js';
 import { Text } from '@/ink.js';
 import { logForDebugging } from '../utils/debug.js';
-import { checkAndInstallOfficialMarketplace } from '../utils/plugins/officialMarketplaceStartupCheck.js';
+import { checkAndInstallOfficialMarketplace } from '../../shared/utils/plugins/officialMarketplaceStartupCheck.js';
 import { useStartupNotification } from './notifs/useStartupNotification.js';
 
 /**

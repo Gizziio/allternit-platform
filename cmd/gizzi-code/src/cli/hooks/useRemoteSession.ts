@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { BoundedUUIDSet } from '../bridge/bridgeMessaging.js'
-import type { ToolUseConfirm } from '../components/permissions/PermissionRequest.js'
-import type { SpinnerMode } from '../components/Spinner/types.js'
+import type { ToolUseConfirm } from '../ui/components/permissions/PermissionRequest.js'
+import type { SpinnerMode } from '../../runtime/integrations/types.js'
 import {
   type RemotePermissionResponse,
   type RemoteSessionConfig,
   RemoteSessionManager,
-} from '../remote/RemoteSessionManager.js'
+} from '../ui/ink-app/remote/RemoteSessionManager.js'
 import {
   createSyntheticAssistantMessage,
   createToolStub,
@@ -15,7 +15,7 @@ import {
 import {
   convertSDKMessage,
   isSessionEndMessage,
-} from '../remote/sdkMessageAdapter.js'
+} from '../ui/ink-app/remote/sdkMessageAdapter.js'
 import { useSetAppState } from '@/state/AppState.js'
 import type { AppState } from '@/state/AppStateStore.js'
 import type { Tool } from '@/Tool.js'
@@ -23,13 +23,13 @@ import { findToolByName } from '@/Tool.js'
 import type { Message as MessageType } from '@/types/message.js'
 import type { PermissionAskDecision } from '@/types/permissions.js'
 import { logForDebugging } from '../utils/debug.js'
-import { truncateToWidth } from '../utils/format.js'
+import { truncateToWidth } from '../../shared/utils/format.js'
 import {
   createSystemMessage,
   extractTextContent,
   handleMessageFromStream,
   type StreamingToolUse,
-} from '../utils/messages.js'
+} from '../../shared/utils/messages.js'
 import { generateSessionTitle } from '../utils/sessionTitle.js'
 import type { RemoteMessageContent } from '../utils/teleport/api.js'
 import { updateSessionTitle } from '../utils/teleport/api.js'

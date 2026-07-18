@@ -129,6 +129,21 @@ export async function sendTerminalInput(remoteSessionId: string, data: string): 
   if (!response.ok) throw await responseError(response, 'Terminal input failed');
 }
 
+/**
+ * Check whether a remote session is still alive without side effects (an
+ * empty input write is a no-op for the shell). Used to validate persisted
+ * session ids after a page reload.
+ */
+export async function probeTerminalSession(remoteSessionId: string): Promise<boolean> {
+  if (!TERMINAL_SESSION_ID_PATTERN.test(remoteSessionId)) return false;
+  try {
+    await sendTerminalInput(remoteSessionId, '');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function resizeTerminal(remoteSessionId: string, cols: number, rows: number): Promise<void> {
   const connection = connectionForSession(remoteSessionId);
   const response = await fetch(terminalUrl(`/terminal/${remoteSessionId}/resize`, connection), {

@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Box, Text } from '../../core/ink';
-import type { Workflow } from './types';
+import { Box, Text } from '../../../ink';
+import type { Workflow } from '../../../commands/install-github-app/types';
 interface CreatingStepProps {
   currentWorkflowInstallStep: number;
   secretExists: boolean;

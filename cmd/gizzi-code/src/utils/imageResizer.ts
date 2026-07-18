@@ -32,4 +32,5 @@ function formatFileSize(bytes: number): string {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../shared/utils/imageResizer.js'
+export { ImageResizeError, compressImageBlock, compressImageBuffer, compressImageBufferWithTokenLimit, detectImageFormatFromBase64, detectImageFormatFromBuffer, maybeResizeAndDownsampleImageBlock, maybeResizeAndDownsampleImageBuffer } from "../shared/utils/imageResizer.js";
+export type { ImageBlockWithDimensions, ImageDimensions, ResizeResult } from "../shared/utils/imageResizer.js";

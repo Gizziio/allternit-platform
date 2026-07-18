@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { PermissionUpdate } from '../utils/permissions/PermissionUpdateSchema.js'
+import type { PermissionUpdate } from '../../../entrypoints/agentSdkTypes.js'
 
 type BridgePermissionResponse = {
   behavior: 'allow' | 'deny'

@@ -2,7 +2,7 @@
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNotifications } from './../../context/notifications.tsx';
+import { useNotifications } from '../../../../../context/notifications';
 import { Text } from './../../ink.ts';
 import { getRateLimitWarning, getUsingOverageText } from './../../services/claudeAiLimits.ts';
 import { useClaudeAiLimits } from './../../services/claudeAiLimitsHook.ts';

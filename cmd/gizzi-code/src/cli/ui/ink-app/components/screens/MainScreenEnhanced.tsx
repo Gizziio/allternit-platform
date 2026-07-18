@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Box, Text, useApp, useInput } from '../ink';
+import { Box, Text, useApp, useInput } from '../../ink';
 import { useTerminalSize } from '../../hooks/useTerminalSize';
 import type { Session, Message, ToolUse, ToolResult } from '../../types';
 import { getHarnessService } from '../../services/harness';

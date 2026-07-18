@@ -3,11 +3,11 @@ import React, { useEffect, useState } from 'react';
 import type { CommandResultDisplay } from '@/commands.js';
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw input for "any key" dismiss and y/n prompt
 import { Box, Text, useInput } from '@/ink.js';
-import { openBrowser } from '../utils/browser.js';
-import { getDesktopInstallStatus, openCurrentSessionInDesktop } from '../utils/desktopDeepLink.js';
-import { errorMessage } from '../utils/errors.js';
-import { gracefulShutdown } from '../utils/gracefulShutdown.js';
-import { flushSessionStorage } from '../utils/sessionStorage.js';
+import { openBrowser } from '../../../shared/utils/browser.js';
+import { getDesktopInstallStatus, openCurrentSessionInDesktop } from '../../../shared/utils/desktopDeepLink.js';
+import { errorMessage } from '../../../shared/utils/errors.js';
+import { gracefulShutdown } from '../../../shared/utils/gracefulShutdown.js';
+import { flushSessionStorage } from '../../../shared/utils/sessionStorage.js';
 import { LoadingState } from './design-system/LoadingState.js';
 const DESKTOP_DOCS_URL = 'https://docs.allternit.com/desktop';
 export function getDownloadUrl(): string {

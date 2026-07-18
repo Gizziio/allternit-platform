@@ -1,11 +1,11 @@
 // @ts-nocheck
 import React, { PureComponent, type ReactNode } from 'react';
 import { updateLastInteractionTime } from '@/bootstrap/state.js';
-import { logForDebugging } from '../../utils/debug.js';
+import { logForDebugging } from '../../../../shared/utils/debug.js';
 import { stopCapturingEarlyInput } from '../../utils/earlyInput.js';
-import { isEnvTruthy } from '../../utils/envUtils.js';
-import { isMouseClicksDisabled } from '../../utils/fullscreen.js';
-import { logError } from '../../utils/log.js';
+import { isEnvTruthy } from '../../../../shared/utils/envUtils.js';
+import { isMouseClicksDisabled } from '../../../../shared/utils/fullscreen.js';
+import { logError } from '../../../../shared/utils/log.js';
 import { EventEmitter } from '../events/emitter.js';
 import { InputEvent } from '../events/input-event.js';
 import { TerminalFocusEvent } from '../events/terminal-focus-event.js';

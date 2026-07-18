@@ -15,12 +15,12 @@ import {
 import {
   getRunningTeammatesSorted,
   InProcessTeammateTask,
-} from '../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
+} from '../ui/ink-app/tasks/InProcessTeammateTask/InProcessTeammateTask.js'
 import {
   type InProcessTeammateTaskState,
   isInProcessTeammateTask,
-} from '../tasks/InProcessTeammateTask/types.js'
-import { isBackgroundTask } from '../tasks/types.js'
+} from '../../runtime/integrations/types.js'
+import { isBackgroundTask } from '../../runtime/integrations/types.js'
 
 // Step teammate selection by delta, wrapping across leader(-1)..teammates(0..n-1)..hide(n).
 // First step from a collapsed tree expands it and parks on leader.

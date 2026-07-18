@@ -832,11 +832,13 @@ body {
   color: rgba(212, 176, 140, 0.9);
 }
 
-/* Code block container (Shiki renders inside <pre>) */
+/* Code block container (Shiki renders inside <pre>) — long lines scroll
+   horizontally instead of being clipped or breaking the chat column. */
 .allternit-markdown pre {
   margin: 0.75rem 0;
   border-radius: 0.5rem;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid rgba(255, 255, 255, 0.09);
   font-size: 0.8rem;
   line-height: 1.65;
@@ -856,7 +858,10 @@ body {
   text-underline-offset: 3px;
 }
 
-.allternit-markdown table { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin: 0.75rem 0; }
+/* Wide tables scroll horizontally within the message column (display:block
+   turns the table into its own scroll container; visually identical when the
+   content fits). */
+.allternit-markdown table { display: block; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-collapse: collapse; font-size: 0.875rem; margin: 0.75rem 0; }
 .allternit-markdown th { font-weight: 600; text-align: left; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); }
 .allternit-markdown td { padding: 5px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 

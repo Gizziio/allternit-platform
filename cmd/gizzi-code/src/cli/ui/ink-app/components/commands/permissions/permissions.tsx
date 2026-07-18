@@ -1,8 +1,8 @@
 // @ts-nocheck
 import * as React from 'react';
-import { PermissionRuleList } from '../../components/permissions/rules/PermissionRuleList';
-import type { LocalJSXCommandCall } from '../../types/command';
-import { createPermissionRetryMessage } from '../../utils/messages';
+import { PermissionRuleList } from '../../../../components/permissions/rules/PermissionRuleList';
+import type { LocalJSXCommandCall } from '../../../types/command';
+import { createPermissionRetryMessage } from '../../../utils/messages';
 export const call: LocalJSXCommandCall = async (onDone, context) => {
   return <PermissionRuleList onExit={onDone} onRetryDenials={commands => {
     context.setMessages(prev => [...prev, createPermissionRetryMessage(commands)]);

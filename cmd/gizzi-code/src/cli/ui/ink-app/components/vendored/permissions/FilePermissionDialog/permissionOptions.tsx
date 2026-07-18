@@ -2,12 +2,12 @@
 import { homedir } from 'os';
 import { basename, join, sep } from 'path';
 import React, { type ReactNode } from 'react';
-import { getOriginalCwd } from '../../../bootstrap/state.js';
-import { Text } from '../../../ink.js';
+import { getOriginalCwd } from '../../../../bootstrap/state.js';
+import { Text } from '../../../../ink.js';
 import { getShortcutDisplay } from '../../../keybindings/shortcutFormat.js';
 import type { ToolPermissionContext } from '../../../Tool.js';
-import { expandPath, getDirectoryForPath } from '../../../utils/path.js';
-import { normalizeCaseForComparison, pathInAllowedWorkingPath } from '../../../utils/permissions/filesystem.js';
+import { expandPath, getDirectoryForPath } from '../../../../../../../shared/utils/path.js';
+import { normalizeCaseForComparison, pathInAllowedWorkingPath } from '../../../../../../../runtime/util/filesystem.js';
 import type { OptionWithDescription } from '../../CustomSelect/select.js';
 /**
  * Check if a path is within the project's .claude/ folder.

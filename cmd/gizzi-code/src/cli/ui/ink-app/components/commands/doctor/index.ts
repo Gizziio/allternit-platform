@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { isEnvTruthy } from '../../utils/envUtils'
+import type { Command } from '../../../commands'
+import { isEnvTruthy } from '../../../utils/envUtils'
 
 const doctor: Command = {
   name: 'doctor',

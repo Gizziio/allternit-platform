@@ -1,9 +1,9 @@
 import { feature } from 'bun:bundle'
 import type { Task, TaskType } from './Task.js'
-import { DreamTask } from './tasks/DreamTask/DreamTask.js'
-import { LocalAgentTask } from './tasks/LocalAgentTask/LocalAgentTask.js'
-import { LocalShellTask } from './tasks/LocalShellTask/LocalShellTask.js'
-import { RemoteAgentTask } from './tasks/RemoteAgentTask/RemoteAgentTask.js'
+import { DreamTask } from '../../cli/ui/ink-app/tasks/DreamTask/DreamTask.js'
+import { LocalAgentTask } from '../../cli/ui/ink-app/tasks/LocalAgentTask/LocalAgentTask.js'
+import { LocalShellTask } from '../../cli/ui/ink-app/tasks/LocalShellTask/LocalShellTask.js'
+import { RemoteAgentTask } from '../../cli/ui/ink-app/tasks/RemoteAgentTask/RemoteAgentTask.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const LocalWorkflowTask: Task | null = feature('WORKFLOW_SCRIPTS')

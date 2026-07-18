@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { logForDebugging } from '../../../utils/debug.js'
-import { errorMessage } from '../../../utils/errors.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { errorMessage } from '../../../shared/utils/errors.js'
 
 type RegistryServer = {
   server: {

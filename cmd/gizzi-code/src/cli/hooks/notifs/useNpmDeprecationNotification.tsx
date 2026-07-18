@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { isInBundledMode } from 'src/utils/bundledMode.js';
-import { getCurrentInstallationType } from 'src/utils/doctorDiagnostic.js';
-import { isEnvTruthy } from 'src/utils/envUtils.js';
+import { isInBundledMode } from '../../../shared/utils/bundledMode.js';
+import { getCurrentInstallationType } from '../../../shared/utils/doctorDiagnostic.js';
+import { isEnvTruthy } from '../../../shared/utils/envUtils.js';
 import { useStartupNotification } from './useStartupNotification.js';
 const NPM_DEPRECATION_MESSAGE = 'Gizzi has switched from npm to native installer. Run `claude install` or see https://docs.allternit.io/en/docs/gizzi/getting-started for more options.';
 export function useNpmDeprecationNotification() {

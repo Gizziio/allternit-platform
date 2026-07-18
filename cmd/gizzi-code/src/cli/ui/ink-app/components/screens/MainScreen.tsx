@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useCallback, useEffect } from 'react';
-import { Box, Text, useApp, useInput } from '../ink';
+import { Box, Text, useApp, useInput } from '../../ink';
 import type { Session, ToolUse, ToolResult, CommandOption } from '../../types';
 import { getHarnessService } from '../../services/harness';
 import { CommandPalette } from '../CommandPalette';

@@ -9,11 +9,11 @@ import { WEB_SEARCH_TOOL_NAME } from './../../../../tools/WebSearchTool/prompt.t
 import { isUsing3PServices } from './../../../../utils/auth.ts'
 import { hasEmbeddedSearchTools } from './../../../../utils/embeddedTools.ts'
 import { getSettings_DEPRECATED } from './../../../../utils/settings/settings.ts'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import { jsonStringify } from '../../../../utils/slowOperations.js'
 import type {
   AgentDefinition,
   BuiltInAgentDefinition,
-} from '../loadAgentsDir.js'
+} from '../../../../tools/AgentTool/loadAgentsDir.js'
 
 const GIZZI_DOCS_MAP_URL =
   'https://code.claude.com/docs/en/claude_code_docs_map.md'

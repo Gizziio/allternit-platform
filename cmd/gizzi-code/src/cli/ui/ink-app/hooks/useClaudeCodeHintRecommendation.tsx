@@ -11,7 +11,7 @@ import { c as _c } from "react/compiler-runtime";
  */
 
 import * as React from 'react';
-import { useNotifications } from '../context/notifications';
+import { useNotifications } from '../../../../context/notifications';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, logEvent } from '../services/analytics/index';
 import { clearPendingHint, getPendingHintSnapshot, markShownThisSession, subscribeToPendingHint } from '../utils/claudeCodeHints';
 import { logForDebugging } from '../utils/debug';

@@ -3,8 +3,8 @@
  * Cost command - minimal metadata only.
  * Implementation is lazy-loaded from cost.ts to reduce startup time.
  */
-import type { Command } from '../../commands'
-import { isClaudeAISubscriber } from '../../utils/auth'
+import type { Command } from '../../../commands'
+import { isClaudeAISubscriber } from '../../../utils/auth'
 
 const cost = {
   type: 'local',

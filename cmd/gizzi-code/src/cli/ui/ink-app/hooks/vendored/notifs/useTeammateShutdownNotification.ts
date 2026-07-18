@@ -4,9 +4,9 @@ import { getIsRemoteMode } from '../../bootstrap/state'
 import {
   type Notification,
   useNotifications,
-} from '../../context/notifications'
-import { useAppState } from '../../state/AppState'
-import { isInProcessTeammateTask } from '../../tasks/InProcessTeammateTask/types'
+} from '../../../../../../context/notifications'
+import { useAppState } from '../../../state/AppState'
+import { isInProcessTeammateTask } from '../../../../../../runtime/integrations/types'
 
 function parseCount(notif: Notification): number {
   if (!('text' in notif)) {

@@ -3,7 +3,7 @@ import { createServer, type Server } from 'http'
 import type { AddressInfo } from 'net'
 import { logEvent } from '@/services/analytics/index.js'
 import { getOauthConfig } from '@/constants/oauth.js'
-import { logError } from '../../../utils/log.js'
+import { logError } from '../../../shared/utils/log.js'
 import { shouldUseClaudeAIAuth } from './client.js'
 
 /**

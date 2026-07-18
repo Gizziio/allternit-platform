@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import * as path from 'path';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { useNotifications } from './../../context/notifications.tsx';
+import { useNotifications } from '../../../../../context/notifications';
 import { useCommandQueue } from './../../hooks/useCommandQueue.ts';
 import { type IDEAtMentioned, useIdeAtMentioned } from './../../hooks/useIdeAtMentioned.ts';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './../../services/analytics/index.ts';

@@ -1,18 +1,18 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { microcompactMessages } from '../../services/compact/microCompact'
+import { microcompactMessages } from '../../../../../../runtime/services/compact/microCompact'
 import type { AppState } from '../../state/AppStateStore'
 import type { Tools, ToolUseContext } from '../../Tool'
-import type { AgentDefinitionsResult } from '../../tools/AgentTool/loadAgentsDir'
-import type { Message } from '../../types/message'
+import type { AgentDefinitionsResult } from '../../../tools/AgentTool/loadAgentsDir'
+import type { Message } from '../../message'
 import {
   analyzeContextUsage,
   type ContextData,
-} from '../../utils/analyzeContext'
-import { formatTokens } from '../../utils/format'
-import { getMessagesAfterCompactBoundary } from '../../utils/messages'
-import { getSourceDisplayName } from '../../utils/settings/constants'
-import { plural } from '../../utils/stringUtils'
+} from '../../../../../../shared/utils/analyzeContext'
+import { formatTokens } from '../../../utils/format'
+import { getMessagesAfterCompactBoundary } from '../../../utils/messages'
+import { getSourceDisplayName } from '../../../../../../tools/REPLTool/constants'
+import { plural } from '../../../utils/stringUtils'
 
 /**
  * Shared data-collection path for `/context` (slash command) and the SDK
@@ -51,7 +51,7 @@ export async function collectContextData(
   if (feature('CONTEXT_COLLAPSE')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const { projectView } =
-      require('../../services/contextCollapse/operations.js') as typeof import('../../services/contextCollapse/operations.js')
+      require('../../../../../../runtime/services/contextCollapse/operations.js') as typeof import('../../../../../../runtime/services/contextCollapse/operations.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
     apiView = projectView(apiView) as any
   }
@@ -113,7 +113,7 @@ function formatContextAsMarkdownTable(data: ContextData): string {
   // even before anything has fired.
   if (feature('CONTEXT_COLLAPSE')) {
     const { getStats, isContextCollapseEnabled } =
-      require('../../services/contextCollapse/index.js') as typeof import('../../services/contextCollapse/index.js')
+      require('../../index.js') as typeof import('../../index.js')
     if (isContextCollapseEnabled()) {
       const s = getStats() as any
       const { health: h } = s

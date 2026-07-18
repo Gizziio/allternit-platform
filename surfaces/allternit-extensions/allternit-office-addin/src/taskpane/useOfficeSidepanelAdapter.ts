@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOfficeAgent } from '@/agent/useOfficeAgent'
 import { getBridge } from '@/lib/bridge-factory'
 import { getOfficeHostDisplayName, getOfficeHostPlaceholder, getOfficeHost, getOfficeManifestUrl } from '@/lib/host-detector'
+import { resolveArtifactUrl } from '@/lib/artifact-markers'
 import { useConnectivity } from './hooks/useConnectivity'
 import {
   bootstrapOfficeRuntime,
@@ -360,6 +361,19 @@ export function useOfficeSidepanelAdapter() {
       [agent],
     ),
     connectivity,
+
+    // officecli artifact rendering in tool cards (screenshots inline, files
+    // as download chips, watch URLs as live-preview buttons).
+    officeCliArtifacts: {
+      resolve: resolveArtifactUrl,
+      onOpenWatch: (url: string) => {
+        const opened = window.open(url, '_blank')
+        // Task panes may block window.open — fall back to the Office dialog host.
+        if (!opened && typeof Office !== 'undefined' && Office.context?.ui) {
+          Office.context.ui.openBrowserWindow(url)
+        }
+      },
+    },
   }
 
   return { adapter, agent }

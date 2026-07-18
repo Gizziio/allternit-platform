@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Text } from '@/ink.js'
-import type { MonitorMcpTaskState } from '../../tasks/MonitorMcpTask/MonitorMcpTask.js'
+import type { MonitorMcpTaskState } from '../../ink-app/tasks/MonitorMcpTask/MonitorMcpTask.js'
 
 type Props = {
   task: MonitorMcpTaskState

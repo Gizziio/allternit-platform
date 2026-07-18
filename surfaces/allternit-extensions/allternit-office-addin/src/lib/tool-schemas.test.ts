@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { toOpenAITool, mergeToolCallDelta, finalizeToolCalls } from './tool-schemas'
+import { describe, it, expect, afterEach } from 'vitest'
+import { toOpenAITool, mergeToolCallDelta, finalizeToolCalls, getToolsForHost } from './tool-schemas'
 
 describe('toOpenAITool', () => {
   it('converts internal definition to OpenAI format', () => {
@@ -116,5 +116,43 @@ describe('finalizeToolCalls', () => {
     const result = finalizeToolCalls(map)
 
     expect(result[0].arguments).toEqual({})
+  })
+})
+
+describe('getToolsForHost with officecli tools', () => {
+  const HOST_CASES = [
+    { host: 'excel', officeHost: 'Excel', hostTool: 'excel_read_range' },
+    { host: 'word', officeHost: 'Word', hostTool: 'word_read_body' },
+    { host: 'powerpoint', officeHost: 'PowerPoint', hostTool: 'ppt_get_slide_count' },
+  ]
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).Office
+  })
+
+  function installOfficeHost(officeHost: string) {
+    ;(globalThis as Record<string, unknown>).Office = {
+      context: { host: officeHost },
+      HostType: { Excel: 'Excel', Word: 'Word', PowerPoint: 'PowerPoint' },
+    }
+  }
+
+  for (const { host, officeHost, hostTool } of HOST_CASES) {
+    it(`includes officecli_* tools alongside host tools for ${host}`, () => {
+      installOfficeHost(officeHost)
+
+      const names = getToolsForHost().map((t) => t.function.name)
+
+      expect(names).toContain(hostTool)
+      expect(names).toContain('officecli_view')
+      expect(names).toContain('officecli_edit')
+      expect(names).toContain('officecli_render')
+      expect(names).toContain('officecli_watch_start')
+    })
+  }
+
+  it('returns no tools for unrecognized hosts', () => {
+    delete (globalThis as Record<string, unknown>).Office
+    expect(getToolsForHost()).toEqual([])
   })
 })

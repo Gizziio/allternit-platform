@@ -54,7 +54,7 @@ import type { AppState } from './../../state/AppState.tsx'
 import type { PluginError } from './../../types/plugin.ts'
 import { logForDebugging } from './../../utils/debug.ts'
 import { getAllowedChannels } from '../../bootstrap/state.js'
-import { useNotifications } from '../../context/notifications.js'
+import { useNotifications } from '../../../../../context/notifications.js'
 import {
   useAppState,
   useAppStateStore,

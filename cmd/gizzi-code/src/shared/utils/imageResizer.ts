@@ -14,7 +14,7 @@ import {
   getImageProcessor,
   type SharpFunction,
   type SharpInstance,
-} from '../../runtime/tools/FileReadTool/imageProcessor.js'
+} from '../../runtime/tools/builtins/file-read/imageProcessor.js'
 import { logForDebugging } from './debug.js'
 import { errorMessage } from './errors.js'
 import { formatFileSize } from './format.js'

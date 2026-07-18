@@ -11,4 +11,4 @@ export function countTokens(text: string): number {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../shared/utils/tokens.js'
+export { doesMostRecentAssistantMessageExceed200k, finalContextTokensFromLastResponse, getAssistantMessageContentLength, getCurrentUsage, getTokenCountFromUsage, getTokenUsage, messageTokenCountFromLastAPIResponse, tokenCountFromLastAPIResponse, tokenCountWithEstimation } from "../shared/utils/tokens.js";

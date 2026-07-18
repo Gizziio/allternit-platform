@@ -516,7 +516,7 @@ export function ShellRail({
         <div className="h-11 shrink-0" />
         <div className="px-3 pt-3">
           <div className="px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--shell-item-muted)]">Code session</div>
-          <button type="button" onClick={() => session && openNativeSessionSurface(session)} className="mt-2 flex w-full items-center gap-2.5 rounded-xl border-none bg-[var(--shell-item-active-bg)] px-3 py-2.5 text-left text-[var(--shell-item-active-fg)] cursor-pointer">
+          <button type="button" onClick={() => session && openNativeSessionSurface(session)} className="mt-2 flex w-full items-center gap-2.5 rounded-xl border-none bg-[var(--shell-item-active-bg)] px-3 py-2.5 max-md:min-h-11 text-left text-[var(--shell-item-active-fg)] cursor-pointer">
             <TerminalWindow size={15} weight="fill" />
             <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{session?.name || 'Session'}</span>
           </button>
@@ -548,7 +548,7 @@ export function ShellRail({
               onOpen?.('chat');
             }}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border-none text-[11px] font-bold cursor-pointer transition-all duration-200",
+              "flex-1 flex items-center justify-center gap-1 py-1.5 max-md:min-h-11 rounded-lg border-none text-[11px] font-bold cursor-pointer transition-all duration-200",
               mode === 'chat'
                 ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-[var(--shadow-sm)]"
                 : "bg-transparent text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
@@ -564,7 +564,7 @@ export function ShellRail({
               onOpen?.('code');
             }}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border-none text-[11px] font-bold cursor-pointer transition-all duration-200",
+              "flex-1 flex items-center justify-center gap-1 py-1.5 max-md:min-h-11 rounded-lg border-none text-[11px] font-bold cursor-pointer transition-all duration-200",
               mode === 'code'
                 ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-[var(--shadow-sm)]"
                 : "bg-transparent text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
@@ -580,7 +580,7 @@ export function ShellRail({
               onOpen?.('browser');
             }}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg border-none text-[11px] font-bold cursor-pointer transition-all duration-200",
+              "flex-1 flex items-center justify-center gap-1 py-1.5 max-md:min-h-11 rounded-lg border-none text-[11px] font-bold cursor-pointer transition-all duration-200",
               mode === 'browser'
                 ? "bg-[var(--bg-primary)] text-[var(--accent-primary)] shadow-[var(--shadow-sm)]"
                 : "bg-transparent text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
@@ -609,7 +609,7 @@ export function ShellRail({
               onOpen?.('chat');
             }
           }}
-          className="w-full flex items-center gap-2 py-1.5 px-3 rounded-xl border-none bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] text-[var(--shell-item-fg)] font-semibold cursor-pointer text-left transition-colors"
+          className="w-full flex items-center gap-2 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] text-[var(--shell-item-fg)] font-semibold cursor-pointer text-left transition-colors"
         >
           <Plus size={16} weight="bold" className="text-[var(--accent-primary)]" />
           <span className="text-[12px]">{mode === 'browser' ? 'New Session' : isCodeMode ? 'New Thread' : 'New'}</span>
@@ -687,7 +687,7 @@ export function ShellRail({
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
+                    className="size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
                     title="Filter recents"
                   >
                     <SlidersHorizontal size={13} />
@@ -751,7 +751,7 @@ export function ShellRail({
                 <div
                   key={item.id}
                   className={cn(
-                    "group relative w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+                    "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
                     item.isActive
                       ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
                       : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
@@ -856,7 +856,7 @@ export function ShellRail({
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
+                    className="size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
                     title="Filter recents"
                   >
                     <SlidersHorizontal size={13} />
@@ -937,7 +937,7 @@ export function ShellRail({
                 <div
                   key={item.id}
                   className={cn(
-                    "group relative w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+                    "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
                     item.isActive
                       ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
                       : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
@@ -1045,7 +1045,7 @@ export function ShellRail({
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
+                    className="size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
                     title="Filter recents"
                   >
                     <SlidersHorizontal size={13} />
@@ -1207,7 +1207,7 @@ export function ShellRail({
                         <div
                           key={s.id}
                           className={cn(
-                            "group relative w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+                            "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
                             isActive
                               ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
                               : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
@@ -1329,7 +1329,7 @@ function RecentsPanel({
             <button
               type="button"
               onClick={onOpenAll}
-              className="opacity-0 group-hover:opacity-100 size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+              className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
               title={openAllTitle}
             >
               <ArrowSquareOut size={13} />
@@ -1359,7 +1359,7 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
       onClick={onClick}
       data-rail-item={id}
       className={cn(
-        "w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium",
+        "w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium",
         isActive
           ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
           : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
@@ -1399,7 +1399,7 @@ function RecentItemMenu({ onDelete }: { onDelete: () => void }): React.ReactNode
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}
-          className="opacity-0 group-hover:opacity-100 size-6 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all shrink-0"
+          className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all shrink-0"
           title="More"
         >
           <DotsThreeVertical size={14} />
@@ -1444,7 +1444,7 @@ function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
         onClick={onOpen}
         data-rail-item={app.id}
         className={cn(
-          "w-full flex items-center gap-2.5 py-1.5 px-3 rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium pr-8",
+          "w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium pr-8",
           isActive
             ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
             : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"

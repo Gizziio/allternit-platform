@@ -34,7 +34,7 @@ import {
   is1PApiCustomer,
   isClaudeAISubscriber,
 } from 'src/utils/auth.js'
-import { getPlatform, getWslVersion } from 'src/utils/platform.js'
+import { getPlatform, getWslVersion } from '../platform.js'
 
 import { getCACertificates } from '../caCerts.js'
 import { registerCleanup } from '../cleanupRegistry.js'

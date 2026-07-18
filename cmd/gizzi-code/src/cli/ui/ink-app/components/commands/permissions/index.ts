@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 
 const permissions = {
   type: 'local-jsx',

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { formatTotalCost, saveCurrentSessionCosts } from './cost-tracker.js'
-import { hasConsoleBillingAccess } from './utils/billing.js'
-import type { FpsMetrics } from './utils/fpsTracker.js'
+import { hasConsoleBillingAccess } from '../../shared/utils/billing.js'
+import type { FpsMetrics } from '../../shared/utils/fpsTracker.js'
 
 export function useCostSummary(
   getFpsMetrics?: () => FpsMetrics | undefined,

@@ -1,5 +1,5 @@
 import { logEvent } from '@/services/analytics/index.js'
-import { openBrowser } from '../../../utils/browser.js'
+import { openBrowser } from '../../../shared/utils/browser.js'
 import { AuthCodeListener } from './auth-code-listener.js'
 import * as client from './client.js'
 import * as crypto from './crypto.js'

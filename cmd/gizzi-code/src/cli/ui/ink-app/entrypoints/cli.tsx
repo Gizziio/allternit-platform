@@ -74,14 +74,14 @@ async function main(): Promise<void> {
     profileCheckpoint('cli_claude_in_chrome_mcp_path');
     const {
       runAllternitInChromeMcpServer
-    } = await import('../utils/allternitInChrome/mcpServer.js');
+    } = await import('../../../../shared/utils/allternitInChrome/mcpServer.js');
     await runAllternitInChromeMcpServer();
     return;
   } else if (process.argv[2] === '--chrome-native-host') {
     profileCheckpoint('cli_chrome_native_host_path');
     const {
       runChromeNativeHost
-    } = await import('../utils/allternitInChrome/chromeNativeHost.js');
+    } = await import('../../../../shared/utils/allternitInChrome/chromeNativeHost.js');
     await runChromeNativeHost();
     return;
   } else if (feature('CHICAGO_MCP') && process.argv[2] === '--computer-use-mcp') {

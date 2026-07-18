@@ -34,8 +34,8 @@ declare function discoverOAuthProtectedResourceMetadata(
 import type { FetchLike } from '@modelcontextprotocol/sdk/shared/transport.js'
 import { z } from 'zod/v4'
 import { lazySchema } from '../../../utils/lazySchema.js'
-import { logMCPDebug } from '../../../utils/log.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import { logMCPDebug } from '../../../shared/utils/log.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 
 const XAA_REQUEST_TIMEOUT_MS = 30000
 

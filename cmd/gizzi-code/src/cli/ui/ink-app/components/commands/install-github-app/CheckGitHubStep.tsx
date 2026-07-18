@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Text } from '../../core/ink';
+import { Text } from '../../../ink';
 export function CheckGitHubStep() {
   const $ = _c(1);
   let t0;

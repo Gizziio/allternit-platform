@@ -9,7 +9,7 @@ import { GREP_TOOL_NAME } from './../../../../tools/GrepTool/prompt.ts'
 import { NOTEBOOK_EDIT_TOOL_NAME } from './../../../../tools/NotebookEditTool/constants.ts'
 import { hasEmbeddedSearchTools } from './../../../../utils/embeddedTools.ts'
 import { AGENT_TOOL_NAME } from '../constants'
-import type { BuiltInAgentDefinition } from '../loadAgentsDir'
+import type { BuiltInAgentDefinition } from '../../../../tools/AgentTool/loadAgentsDir'
 import { EXPLORE_AGENT } from './exploreAgent'
 
 function getPlanV2SystemPrompt(): string {

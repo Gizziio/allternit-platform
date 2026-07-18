@@ -29,14 +29,8 @@ import {
   getAttributionHeader,
   getCLISyspromptPrefix,
 } from '@/constants/system.js'
-import {
-  getEmptyToolPermissionContext,
-  type QueryChainTracking,
-  type Tool,
-  type ToolPermissionContext,
-  type Tools,
-  toolMatchesName,
-} from '../../../runtime/tools/Tool.js'
+import { getEmptyToolPermissionContext, type Tool, type ToolPermissionContext, type Tools, toolMatchesName } from '../../../runtime/tools/Tool.js';
+import { type QueryChainTracking } from '../../../cli/ui/ink-app/Tool.js';
 import type { AgentDefinition } from '../../../tools/AgentTool/loadAgentsDir.js'
 import {
   type ConnectorTextBlock,
@@ -61,7 +55,7 @@ import {
   getBedrockExtraBodyParamsBetas,
   getMergedBetas,
   getModelBetas,
-} from '../../../utils/betas.js'
+} from '../../../shared/utils/betas.js'
 import { getOrCreateUserID } from '../../../utils/config.js'
 import {
   CAPPED_DEFAULT_MAX_TOKENS,
@@ -69,10 +63,10 @@ import {
   getSonnet1mExpTreatmentEnabled,
 } from '../../../utils/context.js'
 import { resolveAppliedEffort } from '../../../utils/effort.js'
-import { isEnvTruthy } from '../../../utils/envUtils.js'
-import { errorMessage } from '../../../utils/errors.js'
+import { isEnvTruthy } from '../../../shared/utils/envUtils.js'
+import { errorMessage } from '../../../shared/utils/errors.js'
 import { computeFingerprintFromMessages } from '../../../utils/fingerprint.js'
-import { captureAPIRequest, logError } from '../../../utils/log.js'
+import { captureAPIRequest, logError } from '../../../shared/utils/log.js'
 import {
   createAssistantAPIErrorMessage,
   createUserMessage,
@@ -82,7 +76,7 @@ import {
   stripAdvisorBlocks,
   stripCallerFieldFromAssistantMessage,
   stripToolReferenceBlocksFromUserMessage,
-} from '../../../utils/messages.js'
+} from '../../../shared/utils/messages.js'
 import {
   getDefaultOpusModel,
   getDefaultSonnetModel,
@@ -154,31 +148,31 @@ import {
   isValidAdvisorModel,
   modelSupportsAdvisor,
 } from '../../../utils/advisor.js'
-import { getAgentContext } from '../../../utils/agentContext.js'
+import { getAgentContext } from '../../../shared/utils/agentContext.js'
 import { isClaudeAISubscriber } from '../../../utils/auth.js'
 import {
   getToolSearchBetaHeader,
   modelSupportsStructuredOutputs,
   shouldIncludeFirstPartyOnlyBetas,
   shouldUseGlobalCacheScope,
-} from '../../../utils/betas.js'
+} from '../../../shared/utils/betas.js'
 import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME } from '../../../utils/allternitInChrome/common.js'
 import { CHROME_TOOL_SEARCH_INSTRUCTIONS } from '../../../utils/allternitInChrome/prompt.js'
 import { getMaxThinkingTokensForModel } from '../../../utils/context.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../../../utils/diagLogs.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { logForDiagnosticsNoPII } from '../../../shared/utils/diagLogs.js'
 import { type EffortValue, modelSupportsEffort } from '../../../utils/effort.js'
 import {
   isFastModeAvailable,
   isFastModeCooldown,
   isFastModeEnabled,
   isFastModeSupportedByModel,
-} from '../../../utils/fastMode.js'
-import { returnValue } from '../../../utils/generators.js'
-import { headlessProfilerCheckpoint } from '../../../utils/headlessProfiler.js'
-import { isMcpInstructionsDeltaEnabled } from '../../../utils/mcpInstructionsDelta.js'
-import { calculateUSDCost } from '../../../utils/modelCost.js'
-import { endQueryProfile, queryCheckpoint } from '../../../utils/queryProfiler.js'
+} from '../../../shared/utils/fastMode.js'
+import { returnValue } from '../../../shared/utils/generators.js'
+import { headlessProfilerCheckpoint } from '../../../shared/utils/headlessProfiler.js'
+import { isMcpInstructionsDeltaEnabled } from '../../../shared/utils/mcpInstructionsDelta.js'
+import { calculateUSDCost } from '../../../shared/utils/modelCost.js'
+import { endQueryProfile, queryCheckpoint } from '../../../shared/utils/queryProfiler.js'
 import {
   modelSupportsAdaptiveThinking,
   modelSupportsThinking,
@@ -188,18 +182,18 @@ import {
   extractDiscoveredToolNames,
   isDeferredToolsDeltaEnabled,
   isToolSearchEnabled,
-} from '../../../utils/toolSearch.js'
+} from '../../../shared/utils/toolSearch.js'
 import { API_MAX_MEDIA_PER_REQUEST } from '@/constants/apiLimits.js'
 import { ADVISOR_BETA_HEADER } from '@/constants/betas.js'
 import {
   formatDeferredToolLine,
   isDeferredTool,
   TOOL_SEARCH_TOOL_NAME,
-} from '../../../tools/ToolSearchTool/prompt.js'
+} from '../../../cli/ui/ink-app/tools/ToolSearchTool/prompt.js'
 import { count } from '../../../utils/array.js'
-import { insertBlockAfterToolResults } from '../../../utils/contentArray.js'
-import { validateBoundedIntEnvVar } from '../../../utils/envValidation.js'
-import { safeParseJSON } from '../../../utils/json.js'
+import { insertBlockAfterToolResults } from '../../../shared/utils/contentArray.js'
+import { validateBoundedIntEnvVar } from '../../../shared/utils/envValidation.js'
+import { safeParseJSON } from '../../../shared/utils/json.js'
 
 import {
   normalizeModelStringForAPI,
@@ -208,8 +202,8 @@ import {
 import {
   startSessionActivity,
   stopSessionActivity,
-} from '../../../utils/sessionActivity.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+} from '../../../shared/utils/sessionActivity.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import {
   isBetaTracingEnabled,
   type LLMRequestNewContext,

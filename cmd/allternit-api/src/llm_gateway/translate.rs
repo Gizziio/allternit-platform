@@ -1,0 +1,738 @@
+//! OpenAI Chat Completions wire types and pure translation helpers.
+//!
+//! The request side deliberately accepts unknown fields (OpenAI client
+//! libraries routinely send extras) but validates the fields it knows,
+//! mapping problems to OpenAI-shaped 400 errors. The response side produces
+//! spec-faithful `chat.completion` / `chat.completion.chunk` payloads.
+//!
+//! Everything in this file is pure data + pure functions; the Gizzi-facing
+//! logic lives in `proxy.rs`.
+
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+
+// ─── Error body ─────────────────────────────────────────────────────────────
+
+/// OpenAI-shaped error body: `{"error": {message, type, param, code}}`.
+#[derive(Debug, Clone, Serialize)]
+pub struct OpenAiError {
+    pub message: String,
+    #[serde(rename = "type")]
+    pub error_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub param: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+}
+
+/// An OpenAI error paired with the HTTP status it should be returned with.
+pub struct OpenAiErrorResponse {
+    pub status: StatusCode,
+    pub error: OpenAiError,
+}
+
+impl OpenAiErrorResponse {
+    pub fn new(
+        status: StatusCode,
+        message: impl Into<String>,
+        error_type: &str,
+        param: Option<&str>,
+        code: Option<&str>,
+    ) -> Self {
+        Self {
+            status,
+            error: OpenAiError {
+                message: message.into(),
+                error_type: error_type.to_string(),
+                param: param.map(str::to_string),
+                code: code.map(str::to_string),
+            },
+        }
+    }
+
+    /// 400 invalid_request_error for malformed fields.
+    pub fn invalid_request(message: impl Into<String>, param: Option<&str>) -> Self {
+        Self::new(
+            StatusCode::BAD_REQUEST,
+            message,
+            "invalid_request_error",
+            param,
+            None,
+        )
+    }
+
+    /// 502 for failures talking to the Gizzi runtime. `error_type` carries the
+    /// Gizzi error name when one is known.
+    pub fn upstream(message: impl Into<String>, error_type: &str) -> Self {
+        Self::new(StatusCode::BAD_GATEWAY, message, error_type, None, None)
+    }
+}
+
+impl IntoResponse for OpenAiErrorResponse {
+    fn into_response(self) -> Response {
+        (self.status, Json(json!({ "error": self.error }))).into_response()
+    }
+}
+
+// ─── Request model ──────────────────────────────────────────────────────────
+
+/// OpenAI chat completion request. Unknown fields are tolerated on purpose
+/// (no `deny_unknown_fields`): OpenAI client libraries send extra keys.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ChatCompletionRequest {
+    pub model: String,
+    pub messages: Vec<ChatMessage>,
+    #[serde(default)]
+    pub temperature: Option<f64>,
+    #[serde(default)]
+    pub top_p: Option<f64>,
+    #[serde(default)]
+    pub max_tokens: Option<u32>,
+    #[serde(default)]
+    pub stop: Option<StopSequences>,
+    #[serde(default)]
+    pub presence_penalty: Option<f64>,
+    #[serde(default)]
+    pub frequency_penalty: Option<f64>,
+    #[serde(default)]
+    pub stream: Option<bool>,
+    #[serde(default)]
+    pub stream_options: Option<StreamOptions>,
+    #[serde(default)]
+    pub response_format: Option<ResponseFormat>,
+    /// Validated for shape but not forwarded to Gizzi (its agent loop owns
+    /// tool execution; see proxy.rs doc comment).
+    #[serde(default)]
+    pub tools: Option<Vec<Tool>>,
+    #[serde(default)]
+    pub tool_choice: Option<serde_json::Value>,
+    #[serde(default)]
+    pub user: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ChatMessage {
+    pub role: String,
+    #[serde(default)]
+    pub content: Option<MessageContent>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub tool_call_id: Option<String>,
+    #[serde(default)]
+    pub tool_calls: Option<Vec<ToolCall>>,
+}
+
+impl ChatMessage {
+    /// Flatten string-or-multipart content into plain text. Non-text parts
+    /// (images, audio) become bracketed placeholders so the transcript still
+    /// reads sensibly.
+    pub fn content_text(&self) -> String {
+        match &self.content {
+            Some(MessageContent::Text(text)) => text.clone(),
+            Some(MessageContent::Parts(parts)) => parts
+                .iter()
+                .map(|part| match part.part_type.as_str() {
+                    "text" => part.text.clone().unwrap_or_default(),
+                    other => format!("[{other}]"),
+                })
+                .collect::<Vec<_>>()
+                .join("\n"),
+            None => String::new(),
+        }
+    }
+}
+
+/// Message content is either a plain string or an array of typed parts.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum MessageContent {
+    Text(String),
+    Parts(Vec<ContentPart>),
+}
+
+/// A content part. Only `text` is interpreted; other part kinds (image_url,
+/// input_audio, ...) are kept as their type marker only.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ContentPart {
+    #[serde(rename = "type")]
+    pub part_type: String,
+    #[serde(default)]
+    pub text: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ToolCall {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub call_type: String,
+    pub function: ToolCallFunction,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ToolCallFunction {
+    pub name: String,
+    pub arguments: String,
+}
+
+/// `stop` accepts a single string or an array of strings.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum StopSequences {
+    Single(String),
+    Multiple(Vec<String>),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct StreamOptions {
+    #[serde(default)]
+    pub include_usage: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ResponseFormat {
+    #[serde(rename = "type")]
+    pub format_type: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct Tool {
+    #[serde(rename = "type")]
+    pub tool_type: String,
+    pub function: ToolFunction,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolFunction {
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub parameters: Option<serde_json::Value>,
+}
+
+/// Validate the fields we understand. Returns an OpenAI-shaped 400 on the
+/// first problem found.
+pub fn validate_request(req: &ChatCompletionRequest) -> Result<(), OpenAiErrorResponse> {
+    if req.model.trim().is_empty() {
+        return Err(OpenAiErrorResponse::invalid_request(
+            "`model` must be a non-empty string.",
+            Some("model"),
+        ));
+    }
+    if req.messages.is_empty() {
+        return Err(OpenAiErrorResponse::invalid_request(
+            "`messages` must contain at least one message.",
+            Some("messages"),
+        ));
+    }
+    for (index, message) in req.messages.iter().enumerate() {
+        if !matches!(message.role.as_str(), "system" | "user" | "assistant" | "tool") {
+            return Err(OpenAiErrorResponse::invalid_request(
+                format!("messages[{index}].role must be one of system, user, assistant, tool."),
+                Some("messages"),
+            ));
+        }
+        if message.role == "tool" && message.tool_call_id.is_none() {
+            return Err(OpenAiErrorResponse::invalid_request(
+                format!("messages[{index}] with role 'tool' must include `tool_call_id`."),
+                Some("messages"),
+            ));
+        }
+    }
+    if let Some(temperature) = req.temperature {
+        if !(0.0..=2.0).contains(&temperature) {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`temperature` must be between 0 and 2.",
+                Some("temperature"),
+            ));
+        }
+    }
+    if let Some(top_p) = req.top_p {
+        if !(0.0..=1.0).contains(&top_p) {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`top_p` must be between 0 and 1.",
+                Some("top_p"),
+            ));
+        }
+    }
+    if let Some(max_tokens) = req.max_tokens {
+        if max_tokens == 0 {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`max_tokens` must be at least 1.",
+                Some("max_tokens"),
+            ));
+        }
+    }
+    if let Some(tools) = &req.tools {
+        for tool in tools {
+            if tool.tool_type != "function" {
+                return Err(OpenAiErrorResponse::invalid_request(
+                    "Only `function` tools are supported.",
+                    Some("tools"),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+// ─── OpenAI → Gizzi translation ─────────────────────────────────────────────
+
+/// Split an OpenAI message list into Gizzi prompt input: the concatenated
+/// system prompt (top-level `system` field of Gizzi's PromptInput) and the
+/// remaining history rendered as a labeled plain-text transcript.
+///
+/// Gizzi owns multi-turn context when a session is reused, so the transcript
+/// is only sent in full for fresh sessions (see proxy.rs).
+pub fn messages_to_prompt(messages: &[ChatMessage]) -> (Option<String>, String) {
+    let mut system_parts: Vec<String> = Vec::new();
+    let mut transcript = String::new();
+
+    for message in messages {
+        let text = message.content_text();
+        match message.role.as_str() {
+            "system" => {
+                if !text.is_empty() {
+                    system_parts.push(text);
+                }
+            }
+            "user" => {
+                if !transcript.is_empty() {
+                    transcript.push_str("\n\n");
+                }
+                match &message.name {
+                    Some(name) => transcript.push_str(&format!("User ({name}):\n{text}")),
+                    None => transcript.push_str(&format!("User:\n{text}")),
+                }
+            }
+            "assistant" => {
+                if !transcript.is_empty() {
+                    transcript.push_str("\n\n");
+                }
+                transcript.push_str(&format!("Assistant:\n{text}"));
+                if let Some(tool_calls) = &message.tool_calls {
+                    for call in tool_calls {
+                        transcript.push_str(&format!(
+                            "\n[assistant called tool {}({})]",
+                            call.function.name, call.function.arguments
+                        ));
+                    }
+                }
+            }
+            "tool" => {
+                if !transcript.is_empty() {
+                    transcript.push_str("\n\n");
+                }
+                let call_id = message.tool_call_id.as_deref().unwrap_or("unknown");
+                transcript.push_str(&format!("Tool result ({call_id}):\n{text}"));
+            }
+            _ => {}
+        }
+    }
+
+    let system = if system_parts.is_empty() {
+        None
+    } else {
+        Some(system_parts.join("\n\n"))
+    };
+    (system, transcript)
+}
+
+/// Map a Gizzi/AI-SDK finish value to an OpenAI `finish_reason`.
+pub fn map_finish_reason(gizzi_finish: Option<&str>) -> &'static str {
+    match gizzi_finish.unwrap_or("") {
+        "length" | "max_tokens" => "length",
+        "tool-calls" | "tool_calls" => "tool_calls",
+        "content-filter" | "content_filter" => "content_filter",
+        _ => "stop",
+    }
+}
+
+/// Generate an OpenAI-style completion id.
+pub fn new_completion_id() -> String {
+    format!("chatcmpl-{}", uuid::Uuid::new_v4().simple())
+}
+
+// ─── Response model ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Usage {
+    pub prompt_tokens: i64,
+    pub completion_tokens: i64,
+    pub total_tokens: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completion_tokens_details: Option<CompletionTokensDetails>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_tokens_details: Option<PromptTokensDetails>,
+}
+
+impl Usage {
+    pub fn new(prompt: i64, completion: i64, reasoning: i64, cached: i64) -> Self {
+        Self {
+            prompt_tokens: prompt,
+            completion_tokens: completion,
+            total_tokens: prompt + completion,
+            completion_tokens_details: (reasoning > 0)
+                .then_some(CompletionTokensDetails { reasoning_tokens: reasoning }),
+            prompt_tokens_details: (cached > 0)
+                .then_some(PromptTokensDetails { cached_tokens: cached }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CompletionTokensDetails {
+    pub reasoning_tokens: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PromptTokensDetails {
+    pub cached_tokens: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AssistantMessage {
+    pub role: String,
+    pub content: String,
+}
+
+impl AssistantMessage {
+    pub fn new(content: String) -> Self {
+        Self {
+            role: "assistant".to_string(),
+            content,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Choice {
+    pub index: u32,
+    pub message: AssistantMessage,
+    pub finish_reason: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChatCompletionResponse {
+    pub id: String,
+    pub object: String,
+    pub created: i64,
+    pub model: String,
+    pub choices: Vec<Choice>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
+}
+
+impl ChatCompletionResponse {
+    pub fn new(
+        id: String,
+        created: i64,
+        model: String,
+        content: String,
+        finish_reason: String,
+        usage: Option<Usage>,
+    ) -> Self {
+        Self {
+            id,
+            object: "chat.completion".to_string(),
+            created,
+            model,
+            choices: vec![Choice {
+                index: 0,
+                message: AssistantMessage::new(content),
+                finish_reason,
+            }],
+            usage,
+        }
+    }
+}
+
+// ─── Streaming chunk model ──────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChunkDelta {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChunkChoice {
+    pub index: u32,
+    pub delta: ChunkDelta,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub finish_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ChatCompletionChunk {
+    pub id: String,
+    pub object: String,
+    pub created: i64,
+    pub model: String,
+    pub choices: Vec<ChunkChoice>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
+}
+
+impl ChatCompletionChunk {
+    fn base(id: &str, created: i64, model: &str) -> Self {
+        Self {
+            id: id.to_string(),
+            object: "chat.completion.chunk".to_string(),
+            created,
+            model: model.to_string(),
+            choices: Vec::new(),
+            usage: None,
+        }
+    }
+
+    /// First chunk of a stream: announces the assistant role.
+    pub fn role_chunk(id: &str, created: i64, model: &str) -> Self {
+        let mut chunk = Self::base(id, created, model);
+        chunk.choices.push(ChunkChoice {
+            index: 0,
+            delta: ChunkDelta {
+                role: Some("assistant".to_string()),
+                content: None,
+            },
+            finish_reason: None,
+        });
+        chunk
+    }
+
+    /// Content delta chunk.
+    pub fn content_chunk(id: &str, created: i64, model: &str, delta: &str) -> Self {
+        let mut chunk = Self::base(id, created, model);
+        chunk.choices.push(ChunkChoice {
+            index: 0,
+            delta: ChunkDelta {
+                role: None,
+                content: Some(delta.to_string()),
+            },
+            finish_reason: None,
+        });
+        chunk
+    }
+
+    /// Final content chunk: empty delta carrying the finish reason.
+    pub fn finish_chunk(id: &str, created: i64, model: &str, finish_reason: &str) -> Self {
+        let mut chunk = Self::base(id, created, model);
+        chunk.choices.push(ChunkChoice {
+            index: 0,
+            delta: ChunkDelta {
+                role: None,
+                content: None,
+            },
+            finish_reason: Some(finish_reason.to_string()),
+        });
+        chunk
+    }
+
+    /// Terminal usage chunk (stream_options.include_usage): empty choices,
+    /// usage populated.
+    pub fn usage_chunk(id: &str, created: i64, model: &str, usage: Usage) -> Self {
+        let mut chunk = Self::base(id, created, model);
+        chunk.usage = Some(usage);
+        chunk
+    }
+
+    /// Serialize for an SSE `data:` frame.
+    pub fn to_sse_data(&self) -> String {
+        serde_json::to_string(self).unwrap_or_else(|_| "{}".to_string())
+    }
+}
+
+/// Mid-stream error frame body (OpenAI error shape).
+pub fn stream_error_data(message: &str, error_type: &str, code: Option<&str>) -> String {
+    json!({
+        "error": {
+            "message": message,
+            "type": error_type,
+            "param": serde_json::Value::Null,
+            "code": code,
+        }
+    })
+    .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn parse(body: &serde_json::Value) -> Result<ChatCompletionRequest, serde_json::Error> {
+        serde_json::from_value(body.clone())
+    }
+
+    #[test]
+    fn request_tolerates_unknown_fields() {
+        let req = parse(&json!({
+            "model": "gpt-4o",
+            "messages": [{"role": "user", "content": "hi"}],
+            "some_future_field": {"nested": true},
+            "logit_bias": {},
+        }))
+        .expect("unknown fields must be tolerated");
+        assert_eq!(req.model, "gpt-4o");
+        assert!(req.stream.is_none());
+    }
+
+    #[test]
+    fn request_accepts_string_and_part_content() {
+        let req = parse(&json!({
+            "model": "m",
+            "messages": [
+                {"role": "user", "content": "plain"},
+                {"role": "user", "content": [
+                    {"type": "text", "text": "first"},
+                    {"type": "image_url", "image_url": {"url": "data:..."}},
+                    {"type": "text", "text": "second"}
+                ]}
+            ]
+        }))
+        .unwrap();
+        assert_eq!(req.messages[0].content_text(), "plain");
+        assert_eq!(req.messages[1].content_text(), "first\n[image_url]\nsecond");
+    }
+
+    #[test]
+    fn request_accepts_single_or_multiple_stop() {
+        let single: StopSequences = serde_json::from_value(json!("END")).unwrap();
+        assert!(matches!(single, StopSequences::Single(ref s) if s == "END"));
+        let multi: StopSequences = serde_json::from_value(json!(["A", "B"])).unwrap();
+        assert!(matches!(multi, StopSequences::Multiple(ref v) if v.len() == 2));
+    }
+
+    #[test]
+    fn validation_rejects_bad_requests() {
+        let no_model = parse(&json!({"model": "  ", "messages": [{"role": "user", "content": "x"}]})).unwrap();
+        assert!(validate_request(&no_model).is_err());
+
+        let no_messages = parse(&json!({"model": "m", "messages": []})).unwrap();
+        assert!(validate_request(&no_messages).is_err());
+
+        let bad_role = parse(&json!({"model": "m", "messages": [{"role": "hacker", "content": "x"}]})).unwrap();
+        assert!(validate_request(&bad_role).is_err());
+
+        let tool_without_id =
+            parse(&json!({"model": "m", "messages": [{"role": "tool", "content": "x"}]})).unwrap();
+        assert!(validate_request(&tool_without_id).is_err());
+
+        let bad_temp = parse(&json!({"model": "m", "messages": [{"role": "user", "content": "x"}], "temperature": 3.0})).unwrap();
+        assert!(validate_request(&bad_temp).is_err());
+    }
+
+    #[test]
+    fn prompt_splits_system_and_transcript() {
+        let req = parse(&json!({
+            "model": "m",
+            "messages": [
+                {"role": "system", "content": "Be terse."},
+                {"role": "system", "content": "Be kind."},
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there"},
+                {"role": "user", "name": "eoj", "content": "How are you?"},
+                {"role": "tool", "tool_call_id": "call_1", "content": "42"}
+            ]
+        }))
+        .unwrap();
+        let (system, transcript) = messages_to_prompt(&req.messages);
+        assert_eq!(system.as_deref(), Some("Be terse.\n\nBe kind."));
+        assert_eq!(
+            transcript,
+            "User:\nHello\n\nAssistant:\nHi there\n\nUser (eoj):\nHow are you?\n\nTool result (call_1):\n42"
+        );
+    }
+
+    #[test]
+    fn prompt_renders_assistant_tool_calls() {
+        let req = parse(&json!({
+            "model": "m",
+            "messages": [
+                {"role": "assistant", "content": null, "tool_calls": [
+                    {"id": "c1", "type": "function", "function": {"name": "get_weather", "arguments": "{\"city\":\"SF\"}"}}
+                ]}
+            ]
+        }))
+        .unwrap();
+        let (_system, transcript) = messages_to_prompt(&req.messages);
+        assert_eq!(
+            transcript,
+            "Assistant:\n\n[assistant called tool get_weather({\"city\":\"SF\"})]"
+        );
+    }
+
+    #[test]
+    fn finish_reason_mapping() {
+        assert_eq!(map_finish_reason(Some("stop")), "stop");
+        assert_eq!(map_finish_reason(Some("length")), "length");
+        assert_eq!(map_finish_reason(Some("tool-calls")), "tool_calls");
+        assert_eq!(map_finish_reason(Some("content-filter")), "content_filter");
+        assert_eq!(map_finish_reason(None), "stop");
+        assert_eq!(map_finish_reason(Some("whatever")), "stop");
+    }
+
+    #[test]
+    fn error_body_shape() {
+        let err = OpenAiErrorResponse::new(
+            StatusCode::UNAUTHORIZED,
+            "bad key",
+            "invalid_request_error",
+            None,
+            Some("invalid_api_key"),
+        );
+        let body = json!({ "error": err.error });
+        assert_eq!(body["error"]["message"], "bad key");
+        assert_eq!(body["error"]["type"], "invalid_request_error");
+        assert_eq!(body["error"]["code"], "invalid_api_key");
+        assert!(body["error"].get("param").is_none());
+    }
+
+    #[test]
+    fn chunk_serialization() {
+        let role = ChatCompletionChunk::role_chunk("chatcmpl-1", 1_700_000_000, "auto");
+        let value = serde_json::to_value(&role).unwrap();
+        assert_eq!(value["object"], "chat.completion.chunk");
+        assert_eq!(value["choices"][0]["delta"]["role"], "assistant");
+        assert!(value["choices"][0]["delta"].get("content").is_none());
+        assert!(value.get("usage").is_none());
+
+        let usage = ChatCompletionChunk::usage_chunk(
+            "chatcmpl-1",
+            1_700_000_000,
+            "auto",
+            Usage::new(10, 5, 2, 0),
+        );
+        let value = serde_json::to_value(&usage).unwrap();
+        assert_eq!(value["choices"].as_array().unwrap().len(), 0);
+        assert_eq!(value["usage"]["total_tokens"], 15);
+        assert_eq!(value["usage"]["completion_tokens_details"]["reasoning_tokens"], 2);
+        // cached == 0 → prompt_tokens_details omitted
+        assert!(value["usage"].get("prompt_tokens_details").is_none());
+    }
+
+    #[test]
+    fn completion_response_shape() {
+        let resp = ChatCompletionResponse::new(
+            new_completion_id(),
+            1_700_000_000,
+            "anthropic/claude-sonnet-4".to_string(),
+            "hello".to_string(),
+            "stop".to_string(),
+            Some(Usage::new(3, 2, 0, 1)),
+        );
+        let value = serde_json::to_value(&resp).unwrap();
+        assert_eq!(value["object"], "chat.completion");
+        assert_eq!(value["choices"][0]["message"]["role"], "assistant");
+        assert_eq!(value["choices"][0]["finish_reason"], "stop");
+        assert_eq!(value["usage"]["prompt_tokens_details"]["cached_tokens"], 1);
+    }
+}

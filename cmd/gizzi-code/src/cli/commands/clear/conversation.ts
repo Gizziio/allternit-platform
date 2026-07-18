@@ -16,35 +16,35 @@ import {
   logEvent,
 } from '@/services/analytics/index.js'
 import type { AppState } from '@/state/AppState.js'
-import { isInProcessTeammateTask } from '../../tasks/InProcessTeammateTask/types.js'
+import { isInProcessTeammateTask } from '../../../runtime/integrations/types.js'
 import {
   isLocalAgentTask,
   type LocalAgentTaskState,
-} from '../../tasks/LocalAgentTask/LocalAgentTask.js'
-import { isLocalShellTask } from '../../tasks/LocalShellTask/guards.js'
+} from '../../ui/ink-app/tasks/LocalAgentTask/LocalAgentTask.js'
+import { isLocalShellTask } from '../../ui/ink-app/tasks/LocalShellTask/guards.js'
 import { asAgentId } from '@/types/ids.js'
 import type { Message } from '@/types/message.js'
-import { createEmptyAttributionState } from '../../utils/commitAttribution.js'
-import type { FileStateCache } from '../../utils/fileStateCache.js'
+import { createEmptyAttributionState } from '../../../shared/utils/commitAttribution.js'
+import type { FileStateCache } from '../../../shared/utils/fileStateCache.js'
 import {
   executeSessionEndHooks,
   getSessionEndHookTimeoutMs,
-} from '../../utils/hooks.js'
+} from '../../../shared/utils/hooks.js'
 import { logError } from '../../utils/log.js'
-import { clearAllPlanSlugs } from '../../utils/plans.js'
-import { setCwd } from '../../utils/Shell.js'
-import { processSessionStartHooks } from '../../utils/sessionStart.js'
+import { clearAllPlanSlugs } from '../../../shared/utils/plans.js'
+import { setCwd } from '../../../shared/utils/Shell.js'
+import { processSessionStartHooks } from '../../../shared/utils/sessionStart.js'
 import {
   clearSessionMetadata,
   getAgentTranscriptPath,
   resetSessionFilePointer,
   saveWorktreeState,
-} from '../../utils/sessionStorage.js'
+} from '../../../shared/utils/sessionStorage.js'
 import {
   evictTaskOutput,
   initTaskOutputAsSymlink,
-} from '../../utils/task/diskOutput.js'
-import { getCurrentWorktreeSession } from '../../utils/worktree.js'
+} from '../../../shared/utils/task/diskOutput.js'
+import { getCurrentWorktreeSession } from '../../../shared/utils/worktree.js'
 import { clearSessionCaches } from './caches.js'
 
 export async function clearConversation({
@@ -230,7 +230,7 @@ export async function clearConversation({
   // and (if applicable) the same worktree directory.
   if (feature('COORDINATOR_MODE')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { saveMode } = require('../../utils/sessionStorage.js')
+    const { saveMode } = require('../../../shared/utils/sessionStorage.js')
     const {
       isCoordinatorMode,
     } = require('../../coordinator/coordinatorMode.js')

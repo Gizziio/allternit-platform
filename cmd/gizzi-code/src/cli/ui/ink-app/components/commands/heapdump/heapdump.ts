@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { performHeapDump } from '../../utils/heapDumpService'
+import { performHeapDump } from '../../../../../../shared/utils/heapDumpService'
 
 export async function call(): Promise<{ type: 'text'; value: string }> {
   const result = await performHeapDump()

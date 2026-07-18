@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { Box, Text } from '../../core/ink';
+import { Box, Text } from '../../../../../shared/utils/ink';
 import { useKeybinding } from '../../keybindings/useKeybinding';
 import type { PromptRequest } from '../../types/hooks';
 import { Select } from '../CustomSelect/select';

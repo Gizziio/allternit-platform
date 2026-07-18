@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { OfficeAgentConfig } from '@/agent/useOfficeAgent'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { getCapabilities } from '@/lib/officecli-client'
 import { officeStorage } from '@/lib/storage'
 import {
   getOfficeBootstrapState,
@@ -48,6 +49,25 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
   const [contextError, setContextError] = useState<string | null>(null)
   const [contextSaved, setContextSaved] = useState(false)
   const [signInPending, setSignInPending] = useState(false)
+
+  // OfficeCLI backend probe (gateway-hosted binary): version / unavailable.
+  const [officeCli, setOfficeCli] = useState<{ available: boolean; label: string } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    getCapabilities()
+      .then((caps) => {
+        if (cancelled) return
+        setOfficeCli(
+          caps.available
+            ? { available: true, label: `OfficeCLI v${caps.version ?? 'unknown'}` }
+            : { available: false, label: 'OfficeCLI unavailable (gateway)' },
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setOfficeCli({ available: false, label: 'OfficeCLI unavailable (gateway)' })
+      })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     setApiKey(config?.apiKey ?? '')
@@ -421,6 +441,15 @@ export function OfficeConfigPanel({ config, onSave, onBack }: Props) {
           <option value="en">English</option>
           <option value="zh">中文</option>
         </select>
+      </div>
+
+      {/* OfficeCLI backend status */}
+      <div className="flex items-center justify-between">
+        <label className="text-xs text-muted-foreground">OfficeCLI</label>
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className={`size-1.5 rounded-full ${officeCli?.available ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+          {officeCli === null ? 'Checking…' : officeCli.label}
+        </span>
       </div>
 
       {/* Advanced */}

@@ -3,10 +3,10 @@ import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
 import { useCallback, useEffect } from 'react';
-import { getOriginalCwd } from '../../../bootstrap/state.js';
-import type { CommandResultDisplay } from '../../../commands.js';
-import { Select } from '../../../components/CustomSelect/select.js';
-import { Box, Text } from '../../../ink.js';
+import { getOriginalCwd } from '../../../../bootstrap/state.js';
+import type { CommandResultDisplay } from '../../../../commands.js';
+import { Select } from '../../../../../components/CustomSelect/select.js';
+import { Box, Text } from '../../../../ink.js';
 import type { ToolPermissionContext } from '../../../Tool.js';
 import { useTabHeaderFocus } from '../../design-system/Tabs.js';
 type Props = {

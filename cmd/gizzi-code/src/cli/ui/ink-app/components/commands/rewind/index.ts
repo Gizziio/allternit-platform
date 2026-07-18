@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 
 const rewind = {
   description: `Restore the code and/or conversation to a previous point`,

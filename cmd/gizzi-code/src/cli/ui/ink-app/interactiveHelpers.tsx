@@ -292,7 +292,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
   if (allternitInChrome && !getGlobalConfig().hasCompletedAllternitInChromeOnboarding) {
     const {
       AllternitInChromeOnboarding
-    } = await import('./components/AllternitInChromeOnboarding.js');
+    } = await import('../components/AllternitInChromeOnboarding.js');
     await showSetupDialog(root, done => <AllternitInChromeOnboarding onDone={done} />);
   }
   return onboardingShown;

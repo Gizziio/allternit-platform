@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { getOauthProfileFromApiKey } from './../../../services/oauth/getOauthProfile.ts';
 import { isClaudeAISubscriber } from './../../../utils/auth.ts';
-import { Text } from '../../ink';
+import { Text } from '../../../../../../shared/utils/ink';
 import { logEvent } from '../../services/analytics/index';
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config';
 import { useStartupNotification } from './useStartupNotification';

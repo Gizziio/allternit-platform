@@ -18,22 +18,22 @@ import { feature } from 'bun:bundle'
 import { basename } from 'path'
 import { getIsRemoteMode } from '@/bootstrap/state.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
-import { ENTRYPOINT_NAME } from '../../memdir/memdir.js'
+import { ENTRYPOINT_NAME } from '../../../memdir/memdir.js'
 import {
   formatMemoryManifest,
   scanMemoryFiles,
-} from '../../memdir/memoryScan.js'
+} from '../../../memdir/memoryScan.js'
 import {
   getAutoMemPath,
   isAutoMemoryEnabled,
   isAutoMemPath,
-} from '../../memdir/paths.js'
+} from '../../../cli/ui/ink-app/memdir/paths.js'
 import type { Tool } from '../../../runtime/tools/Tool.js'
 import { BASH_TOOL_NAME } from '../../tools/builtins/bash/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
-import { FILE_READ_TOOL_NAME } from '../../../tools/FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from '../../../tools/FileWriteTool/prompt.js'
-import { GLOB_TOOL_NAME } from '../../../tools/GlobTool/prompt.js'
+import { FILE_READ_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { FILE_WRITE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
+import { GLOB_TOOL_NAME } from '../../../cli/ui/ink-app/tools/GlobTool/prompt.js'
 import { GREP_TOOL_NAME } from '../../../tools/GrepTool/prompt.js'
 import { REPL_TOOL_NAME } from '../../../tools/REPLTool/constants.js'
 import type {
@@ -42,18 +42,18 @@ import type {
   SystemLocalCommandMessage,
   SystemMessage,
 } from '@/types/message.js'
-import { createAbortController } from '../../../utils/abortController.js'
+import { createAbortController } from '../../../shared/utils/abortController.js'
 import { count, uniq } from '../../../utils/array.js'
-import { logForDebugging } from '../../../utils/debug.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
 import {
   createCacheSafeParams,
   runForkedAgent,
-} from '../../../utils/forkedAgent.js'
+} from '../../../shared/utils/forkedAgent.js'
 import type { REPLHookContext } from '../../../shared/utils/hooks/postSamplingHooks.js'
 import {
   createMemorySavedMessage,
   createUserMessage,
-} from '../../../utils/messages.js'
+} from '../../../shared/utils/messages.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import { logEvent } from '../analytics/index.js'
 import { sanitizeToolNameForAnalytics } from '../analytics/metadata.js'

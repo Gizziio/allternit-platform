@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { shouldAutoEnableAllternitInChrome } from './../../utils/allternitInChrome/setup.ts'
+import { shouldAutoEnableAllternitInChrome } from '../../../../../shared/utils/allternitInChrome/setup'
 import { registerBatchSkill } from './batch.js'
 import { registerAllternitInChromeSkill } from './allternitInChrome.js'
 import { registerDebugSkill } from './debug.js'

@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { Box, Text } from '../../../core/ink';
-import { getAgentName, getTeammateColor, getTeamName } from '../../utils/teammate';
+import { Box, Text } from '../../../../../../shared/utils/ink';
+import { getAgentName, getTeammateColor, getTeamName } from '../../../../../../shared/utils/teammate';
 import { Spinner } from '../Spinner';
 import { WorkerBadge } from './WorkerBadge';
 type Props = {

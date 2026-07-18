@@ -24,7 +24,7 @@ import { CostThresholdDialog } from '../components/CostThresholdDialog';
 import { IdleReturnDialog } from '../components/IdleReturnDialog';
 import * as React from 'react';
 import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue, useLayoutEffect, type RefObject } from 'react';
-import { useNotifications } from '../context/notifications';
+import { useNotifications } from '../../../../context/notifications';
 import { sendNotification } from '../services/notifier';
 import { startPreventSleep, stopPreventSleep } from '../services/preventSleep';
 import { useTerminalNotification } from '../ink/useTerminalNotification';
@@ -336,7 +336,7 @@ import { usePostCompactSurvey } from './../components/FeedbackSurvey/usePostComp
 import { FeedbackSurvey } from './../components/FeedbackSurvey/FeedbackSurvey.tsx';
 import { useInstallMessages } from './../hooks/notifs/useInstallMessages.tsx';
 import { useAwaySummary } from './../hooks/useAwaySummary.ts';
-import { useChromeExtensionNotification } from './../hooks/useChromeExtensionNotification.tsx';
+import { useChromeExtensionNotification } from '../../../hooks/useChromeExtensionNotification';
 import { useOfficialMarketplaceNotification } from './../hooks/useOfficialMarketplaceNotification.tsx';
 import { usePromptsFromAllternitInChrome } from './../hooks/usePromptsFromAllternitInChrome.tsx';
 import { getTipToShowOnSpinner, recordShownTip } from './../services/tips/tipScheduler.ts';
@@ -3966,7 +3966,7 @@ export function REPL({
       // threshold crossing.
       /* eslint-disable @typescript-eslint/no-require-imports */
       ;
-      (require('../services/contextCollapse/index.js') as typeof import('../services/contextCollapse/index.js')).resetContextCollapse();
+      (require('../services/contextCollapse/operations.js') as typeof import('../services/contextCollapse/operations.js')).resetContextCollapse();
       /* eslint-enable @typescript-eslint/no-require-imports */
     }
 

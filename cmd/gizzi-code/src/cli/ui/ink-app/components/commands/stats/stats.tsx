@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as React from 'react';
-import { Stats } from '../../components/Stats';
-import type { LocalJSXCommandCall } from '../../types/command';
+import { Stats } from '../../../../../../shared/utils/Stats';
+import type { LocalJSXCommandCall } from '../../../types/command';
 export const call: LocalJSXCommandCall = async onDone => {
   return <Stats onClose={onDone} />;
 };

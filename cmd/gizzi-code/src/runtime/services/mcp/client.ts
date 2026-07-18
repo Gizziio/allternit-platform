@@ -47,57 +47,54 @@ import type { Command } from '@/commands.js'
 import { getOauthConfig } from '@/constants/oauth.js'
 import { PRODUCT_URL } from '@/constants/product.js'
 import type { AppState } from '@/state/AppState.js'
-import {
-  type Tool,
-  type ToolCallProgress,
-  toolMatchesName,
-} from '../../../runtime/tools/Tool.js'
+import { type Tool, toolMatchesName } from '../../../runtime/tools/Tool.js';
+import { type ToolCallProgress } from '../../../cli/ui/ink-app/Tool.js';
 import { ListMcpResourcesTool } from '../../tools/builtins/listmcpresourcestool/ListMcpResourcesTool.js'
 import { type MCPProgress, MCPTool } from '../../tools/builtins/mcptool/MCPTool.js'
 import { createMcpAuthTool } from '../../tools/builtins/mcpauthtool/McpAuthTool.js'
-import { ReadMcpResourceTool } from '../../tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
-import { createAbortController } from '../../../utils/abortController.js'
+import { ReadMcpResourceTool } from '../../../cli/ui/ink-app/tools/ReadMcpResourceTool/ReadMcpResourceTool.js'
+import { createAbortController } from '../../../shared/utils/abortController.js'
 import { count } from '../../../utils/array.js'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
   getClaudeAIOAuthTokens,
   handleOAuth401Error,
 } from '../../../utils/auth.js'
-import { registerCleanup } from '../../../utils/cleanupRegistry.js'
-import { detectCodeIndexingFromMcpServerName } from '../../../utils/codeIndexing.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { isEnvDefinedFalsy, isEnvTruthy } from '../../../utils/envUtils.js'
+import { registerCleanup } from '../../../shared/utils/cleanupRegistry.js'
+import { detectCodeIndexingFromMcpServerName } from '../../../shared/utils/codeIndexing.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { isEnvDefinedFalsy, isEnvTruthy } from '../../../shared/utils/envUtils.js'
 import {
   errorMessage,
   TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-} from '../../../utils/errors.js'
-import { getMCPUserAgent } from '../../../utils/http.js'
+} from '../../../shared/utils/errors.js'
+import { getMCPUserAgent } from '../../../shared/utils/http.js'
 import { maybeNotifyIDEConnected } from '../../../utils/ide.js'
 import { maybeResizeAndDownsampleImageBuffer } from '../../../utils/imageResizer.js'
-import { logMCPDebug, logMCPError } from '../../../utils/log.js'
+import { logMCPDebug, logMCPError } from '../../../shared/utils/log.js'
 import {
   getBinaryBlobSavedMessage,
   getFormatDescription,
   getLargeOutputInstructions,
   persistBinaryContent,
-} from '../../../utils/mcpOutputStorage.js'
+} from '../../../shared/utils/mcpOutputStorage.js'
 import {
   getContentSizeEstimate,
   type MCPToolResult,
   mcpContentNeedsTruncation,
   truncateMcpContentIfNeeded,
-} from '../../../utils/mcpValidation.js'
-import { WebSocketTransport } from '../../../utils/mcpWebSocketTransport.js'
-import { memoizeWithLRU } from '../../../utils/memoize.js'
-import { getWebSocketTLSOptions } from '../../../utils/mtls.js'
+} from '../../../shared/utils/mcpValidation.js'
+import { WebSocketTransport } from '../../../shared/utils/mcpWebSocketTransport.js'
+import { memoizeWithLRU } from '../../../shared/utils/memoize.js'
+import { getWebSocketTLSOptions } from '../../../shared/utils/mtls.js'
 import {
   getProxyFetchOptions,
   getWebSocketProxyAgent,
   getWebSocketProxyUrl,
-} from '../../../utils/proxy.js'
-import { recursivelySanitizeUnicode } from '../../../utils/sanitization.js'
-import { getSessionIngressAuthToken } from '../../../utils/sessionIngressAuth.js'
-import { subprocessEnv } from '../../../utils/subprocessEnv.js'
+} from '../../../shared/utils/proxy.js'
+import { recursivelySanitizeUnicode } from '../../../shared/utils/sanitization.js'
+import { getSessionIngressAuthToken } from '../../../shared/utils/sessionIngressAuth.js'
+import { subprocessEnv } from '../../../shared/utils/subprocessEnv.js'
 import {
   isPersistError,
   persistToolResult,
@@ -252,9 +249,9 @@ const isComputerUseMCPServer = feature('CHICAGO_MCP')
 
 import { mkdir, readFile, unlink, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
-import { getClaudeConfigHomeDir } from '../../../utils/envUtils.js'
+import { getClaudeConfigHomeDir } from '../../../shared/utils/envUtils.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
-import { jsonParse, jsonStringify } from '../../../utils/slowOperations.js'
+import { jsonParse, jsonStringify } from '../../../shared/utils/slowOperations.js'
 
 const MCP_AUTH_CACHE_TTL_MS = 15 * 60 * 1000 // 15 min
 

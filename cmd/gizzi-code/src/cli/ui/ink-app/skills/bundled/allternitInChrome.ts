@@ -1,7 +1,7 @@
 // @ts-nocheck
 // Stubbed: 0
-import { BASE_CHROME_PROMPT } from '../../utils/allternitInChrome/prompt'
-import { shouldAutoEnableAllternitInChrome } from '../../utils/allternitInChrome/setup'
+import { BASE_CHROME_PROMPT } from '../../../../../shared/utils/allternitInChrome/prompt'
+import { shouldAutoEnableAllternitInChrome } from '../../../../../shared/utils/allternitInChrome/setup'
 import { registerBundledSkill } from '../bundledSkills'
 
 const ALLTERNIT_IN_CHROME_MCP_TOOLS = (BROWSER_TOOLS as any[]).map(

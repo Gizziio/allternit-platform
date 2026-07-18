@@ -16,12 +16,12 @@ import {
   TYPES_SECTION_COMBINED,
   TYPES_SECTION_INDIVIDUAL,
   WHAT_NOT_TO_SAVE_SECTION,
-} from '../../memdir/memoryTypes.js'
+} from '../../../memdir/memoryTypes.js'
 import { BASH_TOOL_NAME } from '../../tools/builtins/bash/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
-import { FILE_READ_TOOL_NAME } from '../../../tools/FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from '../../../tools/FileWriteTool/prompt.js'
-import { GLOB_TOOL_NAME } from '../../../tools/GlobTool/prompt.js'
+import { FILE_READ_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { FILE_WRITE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
+import { GLOB_TOOL_NAME } from '../../../cli/ui/ink-app/tools/GlobTool/prompt.js'
 import { GREP_TOOL_NAME } from '../../../tools/GrepTool/prompt.js'
 
 /**

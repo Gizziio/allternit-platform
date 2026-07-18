@@ -102,8 +102,8 @@ import { getActiveAgentsFromList, getAgentDefinitionsWithOverrides, isBuiltInAge
 import type { LogOption } from './types/logs';
 import type { Message as MessageType } from './types/message';
 import { assertMinVersion } from './utils/autoUpdater';
-import { ALLTERNIT_IN_CHROME_SKILL_HINT, ALLTERNIT_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER } from './utils/allternitInChrome/prompt';
-import { setupAllternitInChrome, shouldAutoEnableAllternitInChrome, shouldEnableAllternitInChrome } from './utils/allternitInChrome/setup';
+import { ALLTERNIT_IN_CHROME_SKILL_HINT, ALLTERNIT_IN_CHROME_SKILL_HINT_WITH_WEBBROWSER } from '../../../shared/utils/allternitInChrome/prompt';
+import { setupAllternitInChrome, shouldAutoEnableAllternitInChrome, shouldEnableAllternitInChrome } from '../../../shared/utils/allternitInChrome/setup';
 import { getContextWindowForModel } from './utils/context';
 import { loadConversationForResume } from './utils/conversationRecovery';
 import { buildDeepLinkBanner } from './utils/deepLink/banner';
@@ -149,7 +149,7 @@ import { excludeCommandsByServer, excludeResourcesByServer } from './services/mc
 import { isXaaEnabled } from './services/mcp/xaaIdpLogin.ts';
 import { getRelevantTips } from './services/tips/tipRegistry.ts';
 import { logContextMetrics } from './utils/api.ts';
-import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME, isAllternitInChromeMCPServer } from './utils/allternitInChrome/common.ts';
+import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME, isAllternitInChromeMCPServer } from '../../../shared/utils/allternitInChrome/common';
 import { registerCleanup } from './utils/cleanupRegistry.ts';
 import { eagerParseCliFlag } from './utils/cliArgs.ts';
 import { createEmptyAttributionState } from './utils/commitAttribution.ts';

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Box, Text } from '../../core/ink';
+import { Box, Text } from '../../../ink';
 import { Byline } from '../design-system/Byline';
 type Props = {
   serverToolsCount: number;

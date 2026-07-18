@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { getHostPlatformForAnalytics } from '../../utils/env'
-import { type CompletionType, logUnaryEvent } from '../../utils/unaryLogging'
+import { getHostPlatformForAnalytics } from '../../../utils/env'
+import { type CompletionType, logUnaryEvent } from '../../../../../../shared/utils/unaryLogging'
 import type { ToolUseConfirm } from './PermissionRequest'
 
 export function logUnaryPermissionEvent(

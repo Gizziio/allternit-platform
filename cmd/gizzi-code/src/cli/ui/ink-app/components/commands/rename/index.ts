@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 
 const rename = {
   type: 'local-jsx',
@@ -7,6 +7,6 @@ const rename = {
   description: 'Rename the current conversation',
   immediate: true,
   argumentHint: '[name]',
-  load: () => import('./rename.js'),
+  load: () => import('../../../commands/rename/rename.js'),
 } satisfies Command
 export default rename

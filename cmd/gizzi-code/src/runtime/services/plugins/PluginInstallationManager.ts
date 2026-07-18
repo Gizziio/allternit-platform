@@ -6,15 +6,15 @@
  */
 
 import type { AppState } from '@/state/AppState.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../../../utils/diagLogs.js'
-import { logError } from '../../../utils/log.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { logForDiagnosticsNoPII } from '../../../shared/utils/diagLogs.js'
+import { logError } from '../../../shared/utils/log.js'
 import {
   clearMarketplacesCache,
   getDeclaredMarketplaces,
   loadKnownMarketplacesConfig,
-} from '../../../utils/plugins/marketplaceManager.js'
-import { clearPluginCache } from '../../../utils/plugins/pluginLoader.js'
+} from '../../../shared/utils/plugins/marketplaceManager.js'
+import { clearPluginCache } from '../../../shared/utils/plugins/pluginLoader.js'
 import {
   diffMarketplaces,
   reconcileMarketplaces,

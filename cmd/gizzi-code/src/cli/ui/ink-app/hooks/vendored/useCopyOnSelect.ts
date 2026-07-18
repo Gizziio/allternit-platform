@@ -2,8 +2,8 @@
 import { useEffect, useRef } from 'react'
 import { useTheme } from '../../components/vendored/design-system/ThemeProvider'
 import type { useSelection } from '../../core/hooks/use-selection'
-import { getGlobalConfig } from '../../vendor/utils/config'
-import { getTheme } from '../../vendor/utils/theme'
+import { getGlobalConfig } from '../../../../../shared/utils/config'
+import { getTheme } from '../../../../../shared/utils/theme'
 
 type Selection = ReturnType<typeof useSelection>
 

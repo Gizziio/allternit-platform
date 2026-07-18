@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
-import { useMailbox } from '../../vendor/context/mailbox'
+import { useMailbox } from '../../../../../shared/utils/mailbox'
 
 type Props = {
   isLoading: boolean

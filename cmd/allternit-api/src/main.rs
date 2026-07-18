@@ -12,6 +12,7 @@
 
 use axum::http::{header, HeaderName, Method};
 use axum::Router;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -58,6 +59,7 @@ use allternit_api::me_routes::me_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
 use allternit_api::oauth_routes::oauth_router;
+use allternit_api::office_cli_routes::office_cli_router;
 use allternit_api::office_routes::office_router;
 use allternit_api::onboarding_routes::onboarding_router;
 use allternit_api::orchestrator_routes::orchestrator_router;
@@ -137,6 +139,9 @@ async fn main() {
     let db = DbHandle::new(db_path.clone()).expect("Failed to initialize SQLite database");
     info!("Database ready at {}", db_path.display());
 
+    // B5: seed published benchmark scores for LLM routing (idempotent).
+    allternit_api::llm_gateway::benchmarks::sync_at_startup(&db);
+
     // Initialize unified auth configuration and JWKS manager for Clerk JWT verification
     let auth_config = allternit_api::auth::AuthConfig::from_app_config(app_config);
     let jwks = allternit_api::auth::JwksManager::new(&auth_config);
@@ -174,6 +179,15 @@ async fn main() {
         allternit_api::office_routes::load_runtime_file(),
     ));
 
+    // Initialize OfficeCLI document registry (load docs.json or start empty)
+    let office_cli_dir = app_config.office_cli_dir();
+    if let Err(e) = std::fs::create_dir_all(&office_cli_dir) {
+        warn!("Failed to create office-cli directory: {e}");
+    }
+    let office_cli_docs = Arc::new(tokio::sync::RwLock::new(
+        allternit_api::office_cli_routes::load_docs(&app_config),
+    ));
+
     // Open Design skill cache — daemon-side discovery with hot-reload.
     let design_skill_cache = DesignSkillCache::new();
     {
@@ -202,9 +216,44 @@ async fn main() {
         cowork_run_manager,
         webhook_secret,
         office_runtime,
+        office_cli_docs,
+        office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
+        office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
         design_skill_cache,
         terminal_sessions: TerminalSessionStore::new(),
     });
+
+    // OfficeCLI idle reaper: evicts stale docs, closes idle resident sessions,
+    // kills idle watch processes and MCP sessions.
+    {
+        let state = Arc::clone(&state);
+        tokio::spawn(async move {
+            allternit_api::office_cli_routes::reap_idle_sessions(state).await;
+        });
+    }
+
+    // Probe the officecli binary once at startup (non-fatal).
+    {
+        let config = app_config.clone();
+        tokio::spawn(async move {
+            let probe = tokio::time::timeout(
+                Duration::from_secs(5),
+                tokio::process::Command::new(config.officecli_bin())
+                    .arg("--version")
+                    .output(),
+            )
+            .await;
+            match probe {
+                Ok(Ok(out)) if out.status.success() => {
+                    info!(
+                        "officecli available: {}",
+                        String::from_utf8_lossy(&out.stdout).trim()
+                    );
+                }
+                _ => warn!("officecli binary not available — Office CLI routes will report unavailable"),
+            }
+        });
+    }
 
     // ── Build V1 API routes (all merged, then nested under /api/v1) ───────────
     let v1_routes = provider_router()
@@ -240,10 +289,13 @@ async fn main() {
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
+        .merge(allternit_api::llm_gateway::gateway_keys_router())
+        .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())
         .merge(office_router())
+        .merge(office_cli_router())
         .merge(orchestrator_router())
         .merge(alabs_router())
         .merge(automation_router());
@@ -295,6 +347,15 @@ async fn main() {
         // session, so these are gated by internal_auth::require_internal_token
         // per-handler instead of the Clerk auth_middleware layer above.
         .merge(allternit_api::internal_routes::internal_router());
+
+    // LLM gateway: the OpenAI-compatible /v1 surface (chat completions,
+    // models). It carries its own virtual-key middleware chain (llm_key auth
+    // → rate limit → budget pre-check), so it mounts on the public router —
+    // do NOT put it behind the Clerk auth middleware.
+    public = public.nest(
+        "/v1",
+        allternit_api::llm_gateway::llm_gateway_router(state.clone()),
+    );
 
     // Mount the offline platform UI at `/` when a static export is available.
     // This is intentionally last among the explicit public routes so that
@@ -348,6 +409,13 @@ async fn main() {
                 HeaderName::from_static("x-allternit-user-id"),
                 HeaderName::from_static("x-allternit-user-email"),
                 HeaderName::from_static("x-allternit-user-name"),
+                // OfficeCLI document upload headers (browser taskpane)
+                HeaderName::from_static("x-office-filename"),
+                HeaderName::from_static("x-office-host"),
+                HeaderName::from_static("x-office-binding-id"),
+                // LLM gateway (OpenAI-compatible /v1 surface)
+                HeaderName::from_static("idempotency-key"),
+                HeaderName::from_static("x-allternit-session-id"),
             ]),
     );
 
@@ -378,6 +446,7 @@ async fn main() {
     info!("  - Event Stream:   WS /stream/ws/*");
     info!("  - Terminal:       POST /terminal/*");
     info!("  - Webhooks:       POST /webhooks/clerk/*");
+    info!("  - LLM Gateway:    POST /v1/chat/completions, GET /v1/models (Bearer ak-...)");
 
     // Re-index Open Design skills on SIGHUP in production without restarting.
     {

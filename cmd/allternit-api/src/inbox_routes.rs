@@ -60,7 +60,8 @@ async fn list_inbox(
     };
     let conn = match state.db.connect() {
         Ok(c) => c,
-        Err(_) => {
+        Err(e) => {
+            tracing::error!("inbox: db connect failed: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"items": [], "unreadCount": 0})),

@@ -8,7 +8,7 @@ import { c as _c } from "react/compiler-runtime";
 
 import { cwd } from 'process';
 import React from 'react';
-import { WelcomeV2 } from '../../components/LogoV2/WelcomeV2.js';
+import { WelcomeV2 } from '../ui/components/LogoV2/WelcomeV2.js';
 import { useManagePlugins } from '@/hooks/useManagePlugins.js';
 import type { Root } from '@/ink.js';
 import { Box, Text } from '@/ink.js';
@@ -23,7 +23,7 @@ export async function setupTokenHandler(root: Root): Promise<void> {
   const showAuthWarning = !isAnthropicAuthEnabled();
   const {
     ConsoleOAuthFlow
-  } = await import('../../components/ConsoleOAuthFlow.js');
+  } = await import('../ui/ink-app/components/ConsoleOAuthFlow.js');
   await new Promise<void>(resolve => {
     root.render(<AppStateProvider onChangeAppState={onChangeAppState}>
         <KeybindingSetup>
@@ -93,11 +93,11 @@ export async function installHandler(target: string | undefined, options: {
 }): Promise<void> {
   const {
     setup
-  } = await import('../../setup.js');
+  } = await import('../../runtime/claude-core/setup.js');
   await setup(cwd(), 'default', false, false, undefined, false);
   const {
     install
-  } = await import('../../commands/install.js');
+  } = await import('../ui/ink-app/components/commands/install.js');
   await new Promise<void>(resolve => {
     const args: string[] = [];
     if (target) args.push(target);

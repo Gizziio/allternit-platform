@@ -6,14 +6,14 @@ import type { Command } from '@/commands.js'
 import type { AgentMcpServerInfo } from '../../providers/types.js'
 import type { Tool } from '../../../runtime/tools/Tool.js'
 import type { AgentDefinition } from '../../../tools/AgentTool/loadAgentsDir.js'
-import { getCwd } from '../../../utils/cwd.js'
-import { getGlobalClaudeFile } from '../../../utils/env.js'
+import { getCwd } from '../../../shared/utils/cwd.js'
+import { getGlobalClaudeFile } from '../../../shared/utils/env.js'
 import { isSettingSourceEnabled } from '../../../utils/settings/constants.js'
 import {
   getSettings_DEPRECATED,
   hasSkipDangerousModePermissionPrompt,
 } from '../../../utils/settings/settings.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import { getEnterpriseMcpFilePath, getMcpConfigByName } from './config.js'
 import { mcpInfoFromString } from './mcpStringUtils.js'
 import { normalizeNameForMCP } from './normalization.js'

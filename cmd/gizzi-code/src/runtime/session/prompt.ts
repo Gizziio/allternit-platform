@@ -100,6 +100,14 @@ export namespace SessionPrompt {
         modelID: z.string(),
       })
       .optional(),
+    fallbackModels: z
+      .array(
+        z.object({
+          providerID: z.string(),
+          modelID: z.string(),
+        }),
+      )
+      .optional(),
     agent: z.string().optional(),
     noReply: z.boolean().optional(),
     tools: z
@@ -176,7 +184,7 @@ const message = await createUserMessage(input)
       return message
     }
 
-    return loop({ sessionID: input.sessionID })
+    return loop({ sessionID: input.sessionID, fallbackModels: input.fallbackModels })
   })
 
   export async function resolvePromptParts(template: string): Promise<PromptInput["parts"]> {
@@ -265,6 +273,14 @@ const message = await createUserMessage(input)
   export const LoopInput = z.object({
     sessionID: Identifier.schema("session"),
     resume_existing: z.boolean().optional(),
+    fallbackModels: z
+      .array(
+        z.object({
+          providerID: z.string(),
+          modelID: z.string(),
+        }),
+      )
+      .optional(),
   })
   export const loop = fn(LoopInput, async (input) => {
     const { sessionID, resume_existing } = input
@@ -617,6 +633,7 @@ const message = await createUserMessage(input)
         sessionID: sessionID,
         model,
         abort,
+        fallbackModels: input.fallbackModels,
       })
       using _ = defer(() => InstructionPrompt.clear(processor.message.id))
 

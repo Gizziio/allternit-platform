@@ -6,34 +6,34 @@
  * This component renders nothing - it just registers the cancel keybinding handler.
  */
 import { useCallback, useRef } from 'react'
-import { logEvent } from '../vendor/services/analytics/index'
+import { logEvent } from '../../components/index'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../vendor/services/analytics/metadata'
 import {
   useAppState,
   useAppStateStore,
   useSetAppState,
-} from '../vendor/state/AppState'
+} from '../../state/AppState'
 import { isVimModeEnabled } from '../../components/vendored/PromptInput/utils'
 import type { ToolUseConfirm } from '../../components/vendored/permissions/PermissionRequest'
-import type { SpinnerMode } from '../../components/vendored/Spinner/types'
-import { useNotifications } from '../../vendor/context/notifications'
-import { useIsOverlayActive } from '../../vendor/context/overlayContext'
-import { useCommandQueue } from './hooks/vendored/useCommandQueue'
-import { getShortcutDisplay } from '../keybindings/shortcutFormat'
-import { useKeybinding } from '../keybindings/useKeybinding'
-import type { Screen } from '../types/screen'
+import type { SpinnerMode } from '../../../../../runtime/integrations/types'
+import { useNotifications } from '../../../../../context/notifications'
+import { useIsOverlayActive } from '../../context/overlayContext'
+import { useCommandQueue } from '../useCommandQueue'
+import { getShortcutDisplay } from '../../keybindings/shortcutFormat'
+import { useKeybinding } from '../../keybindings/useKeybinding'
+import type { Screen } from '../../types/screen'
 import { exitTeammateView } from '../../state/teammateViewHelpers'
 import {
   killAllRunningAgentTasks,
   markAgentsNotified,
 } from '../../vendor/tasks/LocalAgentTask/LocalAgentTask'
-import type { PromptInputMode, VimMode } from '../../vendor/types/textInputTypes'
+import type { PromptInputMode, VimMode } from '../../types/textInputTypes'
 import {
   clearCommandQueue,
   enqueuePendingNotification,
   hasCommandsInQueue,
-} from '../../vendor/utils/messageQueueManager'
-import { emitTaskTerminatedSdk } from '../../vendor/utils/sdkEventQueue'
+} from '../../../../../shared/utils/messageQueueManager'
+import { emitTaskTerminatedSdk } from '../../../../../shared/utils/sdkEventQueue'
 
 /** Time window in ms during which a second press kills all background agents. */
 const KILL_AGENTS_CONFIRM_WINDOW_MS = 3000

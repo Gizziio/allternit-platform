@@ -8,7 +8,7 @@ import { stat } from 'fs/promises';
 import pMap from 'p-map';
 import { cwd } from 'process';
 import React from 'react';
-import { MCPServerDesktopImportDialog } from '../../components/MCPServerDesktopImportDialog.js';
+import { MCPServerDesktopImportDialog } from '../ui/ink-app/components/MCPServerDesktopImportDialog.js';
 import { render } from '@/ink.js';
 import { KeybindingSetup } from '@/keybindings/KeybindingProviderSetup.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '@/services/analytics/index.js';
@@ -19,10 +19,10 @@ import type { ConfigScope, ScopedMcpServerConfig } from '@/services/mcp/types.js
 import { describeMcpConfigFilePath, ensureConfigScope, getScopeLabel } from '@/services/mcp/utils.js';
 import { AppStateProvider } from '@/state/AppState.js';
 import { getCurrentProjectConfig, getGlobalConfig, saveCurrentProjectConfig } from '../../utils/config.js';
-import { isFsInaccessible } from '../../utils/errors.js';
-import { gracefulShutdown } from '../../utils/gracefulShutdown.js';
-import { safeParseJSON } from '../../utils/json.js';
-import { getPlatform } from '../../utils/platform.js';
+import { isFsInaccessible } from '../../shared/utils/errors.js';
+import { gracefulShutdown } from '../../shared/utils/gracefulShutdown.js';
+import { safeParseJSON } from '../../shared/utils/json.js';
+import { getPlatform } from '../../shared/utils/platform.js';
 import { cliError, cliOk } from '../exit.js';
 async function checkMcpServerHealth(name: string, server: ScopedMcpServerConfig): Promise<string> {
   try {
@@ -60,7 +60,7 @@ export async function mcpServeHandler({
   try {
     const {
       setup
-    } = await import('../../setup.js');
+    } = await import('../../runtime/claude-core/setup.js');
     await setup(providedCwd, 'default', false, false, undefined, false);
     const {
       startMCPServer
@@ -328,7 +328,7 @@ export async function mcpAddFromDesktopHandler(options: {
     });
     const {
       readClaudeDesktopMcpServers
-    } = await import('../../utils/claudeDesktop.js');
+    } = await import('../../shared/utils/claudeDesktop.js');
     const servers = await readClaudeDesktopMcpServers();
     if (Object.keys(servers).length === 0) {
       cliOk('No MCP servers found in Claude Desktop configuration or configuration file does not exist.');

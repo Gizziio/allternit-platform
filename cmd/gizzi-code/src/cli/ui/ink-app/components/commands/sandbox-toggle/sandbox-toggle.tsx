@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { relative } from 'path';
 import React from 'react';
-import { getCwdState } from '../../bootstrap/state';
-import { SandboxSettings } from '../../components/sandbox/SandboxSettings';
-import { color } from '../../core/ink';
-import { getPlatform } from '../../utils/platform';
-import { addToExcludedCommands, SandboxManager } from '../../utils/sandbox/sandbox-adapter';
-import { getSettings_DEPRECATED, getSettingsFilePathForSource } from '../../utils/settings/settings';
-import type { ThemeName } from '../../utils/theme';
+import { getCwdState } from '../../../bootstrap/state';
+import { SandboxSettings } from '../../../../components/sandbox/SandboxSettings';
+import { color } from '../../../ink';
+import { getPlatform } from '../../../../../../shared/utils/platform';
+import { addToExcludedCommands, SandboxManager } from '../../../utils/sandbox/sandbox-adapter';
+import { getSettings_DEPRECATED, getSettingsFilePathForSource } from '../../../utils/settings/settings';
+import type { ThemeName } from '../../../utils/theme';
 export async function call(onDone: (result?: string) => void, _context: unknown, args?: string): Promise<React.ReactNode | null> {
   const settings = getSettings_DEPRECATED();
   const themeName: ThemeName = settings.theme as ThemeName || 'light';

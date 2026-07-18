@@ -12,7 +12,7 @@ import {
   resetYankState,
   updateYankLength,
   yankPop,
-} from '../utils/Cursor.js'
+} from '../../shared/utils/Cursor.js'
 import { useTerminalSize } from './useTerminalSize.js'
 
 type UseSearchInputOptions = {

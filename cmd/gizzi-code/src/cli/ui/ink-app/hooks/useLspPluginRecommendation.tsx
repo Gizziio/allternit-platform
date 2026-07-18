@@ -15,7 +15,7 @@ import { c as _c } from "react/compiler-runtime";
 import { extname, join } from 'path';
 import * as React from 'react';
 import { hasShownLspRecommendationThisSession, setLspRecommendationShownThisSession } from '../bootstrap/state';
-import { useNotifications } from '../context/notifications';
+import { useNotifications } from '../../../../context/notifications';
 import { useAppState } from '../state/AppState';
 import { saveGlobalConfig } from '../utils/config';
 import { logForDebugging } from '../utils/debug';

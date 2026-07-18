@@ -87,6 +87,9 @@ allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
 # Testing
 [dev-dependencies]
 axum-test = "14"
+# `ServiceExt::oneshot` for in-process route tests (workspace tower is 0.5;
+# the util feature is additive and matches axum 0.7's service traits).
+tower = { workspace = true, features = ["util"] }
 
 [features]
 default = ["vm-driver"]

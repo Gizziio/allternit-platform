@@ -1,9 +1,9 @@
 // @ts-nocheck
 import * as React from 'react';
-import { Text } from '../../core/ink';
-import { isClaudeAISubscriber } from '../../vendor/utils/auth';
+import { Text } from '../../../../../shared/utils/ink';
+import { isClaudeAISubscriber } from '../../../../../shared/utils/auth';
 import { isChromeExtensionInstalled, shouldEnableAllternitInChrome } from '../../vendor/utils/allternitInChrome/setup';
-import { isRunningOnHomespace } from '../../vendor/utils/envUtils';
+import { isRunningOnHomespace } from '../../../../../shared/utils/envUtils';
 import { useStartupNotification } from './notifs/useStartupNotification';
 
 function getChromeFlag(): boolean | undefined {

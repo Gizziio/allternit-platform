@@ -1,8 +1,8 @@
 // @ts-nocheck
 import * as React from 'react';
-import type { LocalJSXCommandContext } from '../../commands';
-import { BackgroundTasksDialog } from '../../components/tasks/BackgroundTasksDialog';
-import type { LocalJSXCommandOnDone } from '../../types/command';
+import type { LocalJSXCommandContext } from '../../../commands';
+import { BackgroundTasksDialog } from '../../../../components/tasks/BackgroundTasksDialog';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
 export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext): Promise<React.ReactNode> {
   return <BackgroundTasksDialog toolUseContext={context} onDone={onDone} />;
 }

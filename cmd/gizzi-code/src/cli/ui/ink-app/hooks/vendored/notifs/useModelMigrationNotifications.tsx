@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Notification } from './../../../context/notifications.tsx';
+import type { Notification } from '../../../../../../context/notifications';
 import { type GlobalConfig, getGlobalConfig } from './../../../utils/config.ts';
 import { useStartupNotification } from './useStartupNotification';
 

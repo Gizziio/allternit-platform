@@ -20,7 +20,7 @@ import {
   getActiveAgentsFromList,
   getAgentDefinitionsWithOverrides,
 } from '../../runtime/tools/AgentTool/loadAgentsDir.js'
-import { TODO_WRITE_TOOL_NAME } from '../../runtime/tools/TodoWriteTool/constants.js'
+import { TODO_WRITE_TOOL_NAME } from '../../cli/ui/ink-app/tools/TodoWriteTool/constants.js'
 import { asSessionId } from '@/types/ids.js'
 import type {
   AttributionSnapshotMessage,

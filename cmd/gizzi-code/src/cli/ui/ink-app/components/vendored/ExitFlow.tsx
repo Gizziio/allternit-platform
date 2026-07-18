@@ -2,8 +2,8 @@
 import { c as _c } from "react/compiler-runtime";
 import sample from 'lodash-es/sample';
 import React from 'react';
-import { gracefulShutdown } from '../../vendor/utils/gracefulShutdown';
-import { WorktreeExitDialog } from './WorktreeExitDialog';
+import { gracefulShutdown } from '../../../../../shared/utils/gracefulShutdown';
+import { WorktreeExitDialog } from '../WorktreeExitDialog';
 const GOODBYE_MESSAGES = ['Goodbye!', 'See ya!', 'Bye!', 'Catch you later!'];
 function getRandomGoodbyeMessage(): string {
   return sample(GOODBYE_MESSAGES) ?? 'Goodbye!';

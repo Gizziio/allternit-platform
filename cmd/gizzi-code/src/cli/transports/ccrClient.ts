@@ -3,25 +3,25 @@ import type {
   SDKPartialAssistantMessage,
   StdoutMessage,
 } from 'src/entrypoints/sdk/controlTypes.js'
-import { decodeJwtExpiry } from '../../bridge/jwtUtils.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js'
-import { errorMessage, getErrnoCode } from '../../utils/errors.js'
-import { createAxiosInstance } from '../../utils/proxy.js'
+import { decodeJwtExpiry } from '../../runtime/integrations/jwtUtils.js'
+import { logForDebugging } from '../../shared/utils/debug.js'
+import { logForDiagnosticsNoPII } from '../../shared/utils/diagLogs.js'
+import { errorMessage, getErrnoCode } from '../../shared/utils/errors.js'
+import { createAxiosInstance } from '../../shared/utils/proxy.js'
 import {
   registerSessionActivityCallback,
   unregisterSessionActivityCallback,
-} from '../../utils/sessionActivity.js'
+} from '../../shared/utils/sessionActivity.js'
 import {
   getSessionIngressAuthHeaders,
   getSessionIngressAuthToken,
-} from '../../utils/sessionIngressAuth.js'
+} from '../../shared/utils/sessionIngressAuth.js'
 import type {
   RequiresActionDetails,
   SessionState,
-} from '../../utils/sessionState.js'
+} from '../../shared/utils/sessionState.js'
 import { sleep } from '../../utils/sleep.js'
-import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
+import { getClaudeCodeUserAgent } from '../../shared/utils/userAgent.js'
 import {
   RetryableError,
   SerialBatchEventUploader,

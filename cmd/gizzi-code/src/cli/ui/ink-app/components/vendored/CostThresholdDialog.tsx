@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Box, Link, Text } from '../../core/ink';
+import { Box, Link, Text } from '../../../../../shared/utils/ink';
 import { Select } from '../../vendor/components/CustomSelect';
 import { Dialog } from '../../core/components/design-system/Dialog';
 type Props = {

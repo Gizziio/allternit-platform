@@ -4,7 +4,7 @@
  * Automated code review and quality analysis
  */
 
-import { log } from './utils/log.js'
+import { log } from '../../shared/utils/log.js'
 import { execSync } from 'child_process'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'

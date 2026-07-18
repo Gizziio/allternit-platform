@@ -4,7 +4,7 @@
  * critique user-written rules. Dynamically imported when `claude auto-mode ...` runs.
  */
 
-import { errorMessage } from '../../utils/errors.js'
+import { errorMessage } from '../../shared/utils/errors.js'
 import {
   getMainLoopModel,
   parseUserSpecifiedModel,
@@ -13,10 +13,10 @@ import {
   type AutoModeRules,
   buildDefaultExternalSystemPrompt,
   getDefaultExternalAutoModeRules,
-} from '../../utils/permissions/yoloClassifier.js'
+} from '../../shared/utils/permissions/yoloClassifier.js'
 import { getAutoModeConfig } from '../../utils/settings/settings.js'
-import { sideQuery } from '../../utils/sideQuery.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
+import { sideQuery } from '../../shared/utils/sideQuery.js'
+import { jsonStringify } from '../../shared/utils/slowOperations.js'
 
 function writeRules(rules: AutoModeRules): void {
   process.stdout.write(jsonStringify(rules, null, 2) + '\n')

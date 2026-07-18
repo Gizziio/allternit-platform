@@ -6,11 +6,11 @@ import { feature } from 'bun:bundle'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../vendor/services/analytics/index'
+} from '../../../components/index'
 import { sanitizeToolNameForAnalytics } from '../../vendor/services/analytics/metadata'
 import { getCodeEditToolDecisionCounter } from '../../bootstrap/state'
-import type { Tool as ToolType, ToolUseContext } from '../../Tool'
-import { getLanguageName } from '../../vendor/utils/cliHighlight'
+import type { Tool as ToolType, ToolUseContext } from '../../../components/Tool'
+import { getLanguageName } from '../../../../../../shared/utils/cliHighlight'
 import { SandboxManager } from '../../vendor/utils/sandbox/sandbox-adapter'
 import { logOTelEvent } from '../../vendor/utils/telemetry/events'
 import type {

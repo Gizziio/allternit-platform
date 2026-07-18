@@ -17,30 +17,30 @@ import {
   type ToolDef,
   toolMatchesName,
 } from '@/Tool.js'
-import { formatAgentId, generateRequestId } from '../../../utils/agentId.js'
-import { isAgentSwarmsEnabled } from '../../../utils/agentSwarmsEnabled.js'
-import { logForDebugging } from '../../../utils/debug.js'
+import { formatAgentId, generateRequestId } from '../../../../shared/utils/agentId.js'
+import { isAgentSwarmsEnabled } from '../../../../shared/utils/agentSwarmsEnabled.js'
+import { logForDebugging } from '../../../../shared/utils/debug.js'
 import {
   findInProcessTeammateTaskId,
   setAwaitingPlanApproval,
-} from '../../../utils/inProcessTeammateHelpers.js'
-import { lazySchema } from '../../../utils/lazySchema.js'
-import { logError } from '../../../utils/log.js'
+} from '../../../../shared/utils/inProcessTeammateHelpers.js'
+import { lazySchema } from '../../../../shared/utils/lazySchema.js'
+import { logError } from '../../../../shared/utils/log.js'
 import {
   getPlan,
   getPlanFilePath,
   persistFileSnapshotIfRemote,
-} from '../../../utils/plans.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+} from '../../../../shared/utils/plans.js'
+import { jsonStringify } from '../../../../shared/utils/slowOperations.js'
 import {
   getAgentName,
   getTeamName,
   isPlanModeRequired,
   isTeammate,
-} from '../../../utils/teammate.js'
-import { writeToMailbox } from '../../../utils/teammateMailbox.js'
+} from '../../../../shared/utils/teammate.js'
+import { writeToMailbox } from '../../../../shared/utils/teammateMailbox.js'
 import { AGENT_TOOL_NAME } from '../AgentTool/constants.js'
-import { TEAM_CREATE_TOOL_NAME } from '../../../../shared/tools/TeamCreateTool/constants.js'
+import { TEAM_CREATE_TOOL_NAME } from '../../../../cli/ui/ink-app/tools/TeamCreateTool/constants.js'
 import { EXIT_PLAN_MODE_V2_TOOL_NAME } from './constants.js'
 import { EXIT_PLAN_MODE_V2_TOOL_PROMPT } from './prompt.js'
 import {

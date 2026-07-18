@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useEffect, useRef } from 'react';
-import { MCPSettings } from '../../components/mcp/index';
-import { MCPReconnect } from '../../components/mcp/MCPReconnect';
-import { useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager';
+import { MCPSettings } from '../../index';
+import { MCPReconnect } from '../../../../components/mcp/MCPReconnect';
+import { useMcpToggleEnabled } from '../../../../../../runtime/services/mcp/MCPConnectionManager';
 import { useAppState } from '../../state/AppState';
-import type { LocalJSXCommandOnDone } from '../../types/command';
-import { PluginSettings } from '../plugin/PluginSettings';
-import { getUserType } from '../../utils/sessionStorage';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
+import { PluginSettings } from '../../../commands/plugin/PluginSettings';
+import { getUserType } from '../../../../../../shared/utils/sessionStorage';
 
 // TODO: This is a hack to get the context value from toggleMcpServer (useContext only works in a component)
 // Ideally, all MCP state and functions would be in global state.

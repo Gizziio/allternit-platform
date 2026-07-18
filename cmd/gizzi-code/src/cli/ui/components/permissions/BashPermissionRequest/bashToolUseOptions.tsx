@@ -1,10 +1,10 @@
 // @ts-nocheck
-import { BASH_TOOL_NAME } from '../../../tools/BashTool/toolName.js';
-import { extractOutputRedirections } from '../../../utils/bash/commands.js';
-import { isClassifierPermissionsEnabled } from '../../../utils/permissions/bashClassifier.js';
-import type { PermissionDecisionReason } from '../../../utils/permissions/PermissionResult.js';
+import { BASH_TOOL_NAME } from '../../../../../runtime/tools/builtins/bash/toolName.js';
+import { extractOutputRedirections } from '../../../../../commands.js';
+import { isClassifierPermissionsEnabled } from '../../../../../shared/utils/permissions/bashClassifier.js';
+import type { PermissionDecisionReason } from '../../../../../runtime/utils/permissions/PermissionResult.js';
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js';
-import { shouldShowAlwaysAllowOptions } from '../../../utils/permissions/permissionsLoader.js';
+import { shouldShowAlwaysAllowOptions } from '../../../../../shared/utils/permissions/permissionsLoader.js';
 import type { OptionWithDescription } from '../../CustomSelect/select.js';
 import { generateShellSuggestionsLabel } from '../shellPermissionHelpers.js';
 export type BashToolUseOption = 'yes' | 'yes-apply-suggestions' | 'yes-prefix-edited' | 'yes-classifier-reviewed' | 'no';

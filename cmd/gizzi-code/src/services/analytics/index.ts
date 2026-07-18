@@ -215,4 +215,5 @@ export default {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../../cli/ui/ink-app/services/analytics/index.js'
+export { _resetForTesting, attachAnalyticsSink, logEvent, logEventAsync, stripProtoFields } from "../../cli/ui/ink-app/services/analytics/index.js";
+export type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, AnalyticsSink } from "../../cli/ui/ink-app/services/analytics/index.js";

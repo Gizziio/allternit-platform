@@ -11,10 +11,10 @@ import type { Tools } from '@/Tool.js';
 import { type ConnectorTextBlock, isConnectorTextBlock } from '@/types/connectorText.js';
 import type { AssistantMessage, AttachmentMessage as AttachmentMessageType, CollapsedReadSearchGroup as CollapsedReadSearchGroupType, GroupedToolUseMessage as GroupedToolUseMessageType, NormalizedUserMessage, ProgressMessage, SystemMessage } from '@/types/message.js';
 import { hasArrayContent } from '@/types/message.js';
-import { type AdvisorBlock, isAdvisorBlock } from '../utils/advisor.js';
-import { isFullscreenEnvEnabled } from '../utils/fullscreen.js';
-import { logError } from '../utils/log.js';
-import type { buildMessageLookups } from '../utils/messages.js';
+import { type AdvisorBlock, isAdvisorBlock } from '../../../shared/utils/advisor.js';
+import { isFullscreenEnvEnabled } from '../../../shared/utils/fullscreen.js';
+import { logError } from '../../../shared/utils/log.js';
+import type { buildMessageLookups } from '../../../shared/utils/messages.js';
 import { CompactSummary } from './CompactSummary.js';
 import { AdvisorMessage } from './messages/AdvisorMessage.js';
 import { AssistantRedactedThinkingMessage } from './messages/AssistantRedactedThinkingMessage.js';
@@ -284,10 +284,10 @@ function MessageImpl(t0: Props): React.ReactElement | null {
         if (feature("HISTORY_SNIP")) {
           const {
             isSnipBoundaryMessage
-          } = require("../services/compact/snipProjection.js") as typeof import('../services/compact/snipProjection.js');
+          } = require("../../../runtime/services/compact/snipProjection.js") as typeof import('../../../runtime/services/compact/snipProjection.js');
           const {
             isSnipMarkerMessage
-          } = require("../services/compact/snipCompact.js") as typeof import('../services/compact/snipCompact.js');
+          } = require("../../../runtime/services/compact/snipCompact.js") as typeof import('../../../runtime/services/compact/snipCompact.js');
           if (isSnipBoundaryMessage(message)) {
             let t2;
             if ($[65] === Symbol.for("react.memo_cache_sentinel")) {

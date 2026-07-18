@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as React from 'react';
 import { FLAG_ICON } from '../../constants/figures';
-import { Box, Text } from '../../core/ink';
+import { Box, Text } from '../../../ink';
 
 /**
  * ANT-ONLY: Banner shown in the transcript that prompts users to report

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as React from 'react'
-import { Box, Text } from '../ink'
+import { Box, Text } from '../../ink'
 
 export function moduleExport(): React.ReactElement {
   return (

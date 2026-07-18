@@ -1,7 +1,7 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { hasAnthropicApiKeyAuth } from '../../utils/auth'
-import { isEnvTruthy } from '../../utils/envUtils'
+import type { Command } from '../../../commands'
+import { hasAnthropicApiKeyAuth } from '../../../utils/auth'
+import { isEnvTruthy } from '../../../utils/envUtils'
 
 export default () =>
   ({

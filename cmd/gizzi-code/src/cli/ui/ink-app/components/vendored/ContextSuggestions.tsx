@@ -2,9 +2,9 @@
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
-import { Box, Text } from './core/ink';
-import type { ContextSuggestion } from '../../vendor/utils/contextSuggestions';
-import { formatTokens } from '../../vendor/utils/format';
+import { Box, Text } from '../../../../../shared/utils/ink';
+import type { ContextSuggestion } from '../../../../../shared/utils/contextSuggestions';
+import { formatTokens } from '../../../../../shared/utils/format';
 import { StatusIcon } from '../../core/components/design-system/StatusIcon';
 type Props = {
   suggestions: ContextSuggestion[];

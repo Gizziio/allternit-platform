@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Box, Text } from '../../../ink.js';
-import { formatTokens } from '../../../utils/format.js';
-import { Select } from './CustomSelect/index';
+import { Box, Text } from '../../ink.js';
+import { formatTokens } from '../../../../../shared/utils/format.js';
+import { Select } from '../index';
 import { Dialog } from './design-system/Dialog';
 type IdleReturnAction = 'continue' | 'clear' | 'dismiss' | 'never';
 type Props = {

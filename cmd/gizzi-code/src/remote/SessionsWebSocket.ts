@@ -8,12 +8,12 @@ import type {
   SDKControlRequestInner,
   SDKControlResponse,
 } from '../entrypoints/sdk/controlTypes.js'
-import { logForDebugging } from '../utils/debug.js'
-import { errorMessage } from '../utils/errors.js'
-import { logError } from '../utils/log.js'
-import { getWebSocketTLSOptions } from '../utils/mtls.js'
-import { getWebSocketProxyAgent, getWebSocketProxyUrl } from '../utils/proxy.js'
-import { jsonParse, jsonStringify } from '../utils/slowOperations.js'
+import { logForDebugging } from '../shared/utils/debug.js'
+import { errorMessage } from '../shared/utils/errors.js'
+import { logError } from '../shared/utils/log.js'
+import { getWebSocketTLSOptions } from '../shared/utils/mtls.js'
+import { getWebSocketProxyAgent, getWebSocketProxyUrl } from '../shared/utils/proxy.js'
+import { jsonParse, jsonStringify } from '../shared/utils/slowOperations.js'
 
 const RECONNECT_DELAY_MS = 2000
 const MAX_RECONNECT_ATTEMPTS = 5

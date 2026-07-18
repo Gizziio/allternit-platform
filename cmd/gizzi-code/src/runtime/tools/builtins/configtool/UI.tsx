@@ -1,7 +1,7 @@
 import React from 'react';
-import { MessageResponse } from '../../components/MessageResponse.js';
+import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { Text } from '@/ink.js';
-import { jsonStringify } from '../../utils/slowOperations.js';
+import { jsonStringify } from '../../../../shared/utils/slowOperations.js';
 import type { Input, Output } from './ConfigTool.js';
 export function renderToolUseMessage(input: Partial<Input>): React.ReactElement | null {
   if (!input.setting) return null;

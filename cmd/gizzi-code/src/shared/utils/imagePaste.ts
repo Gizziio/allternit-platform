@@ -9,7 +9,7 @@ import {
   IMAGE_TARGET_RAW_SIZE,
 } from '@/constants/apiLimits.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
-import { getImageProcessor } from '../../runtime/tools/FileReadTool/imageProcessor.js'
+import { getImageProcessor } from '../../runtime/tools/builtins/file-read/imageProcessor.js'
 import { logForDebugging } from './debug.js'
 import { execFileNoThrowWithCwd } from './execFileNoThrow.js'
 import { getFsImplementation } from './fsOperations.js'

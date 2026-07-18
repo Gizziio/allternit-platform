@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { LocalCommandResult } from '../../types/command'
-import { openBrowser } from '../../utils/browser'
+import type { LocalCommandResult } from '../../../types/command'
+import { openBrowser } from '../../../../../../shared/utils/browser'
 
 export async function call(): Promise<LocalCommandResult> {
   const url = 'https://www.stickermule.com/claudecode'

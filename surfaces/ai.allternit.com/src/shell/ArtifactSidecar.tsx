@@ -17,6 +17,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { useMode } from '../providers/mode-provider';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { useChatStore } from '../views/chat/ChatStore';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 
 export function ArtifactSidecar(): React.ReactNode | null {
   const { mode } = useMode();
+  const isMobile = useIsMobile();
   const {
     isOpen,
     activePanel,
@@ -49,7 +51,7 @@ export function ArtifactSidecar(): React.ReactNode | null {
   if (!isOpen) return null;
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-primary)] border-l border-solid border-[var(--border-subtle)]" style={{ width }}>
+    <div className="flex flex-col h-full bg-[var(--bg-primary)] border-l border-solid border-[var(--border-subtle)]" style={{ width: isMobile ? '100%' : width }}>
       <div className="h-12 flex items-center px-3 border-b border-solid border-[var(--border-subtle)] justify-between bg-[var(--bg-secondary)]">
         <div className="flex gap-1">
           <TabButton
@@ -81,7 +83,7 @@ export function ArtifactSidecar(): React.ReactNode | null {
         </div>
         <button type="button"
           onClick={() => setOpen(false)}
-          className="bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer p-1 rounded-md hover:bg-[var(--bg-hover)] transition-colors"
+          className="bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer p-1 max-md:p-3.5 rounded-md hover:bg-[var(--bg-hover)] transition-colors"
         >
           <X size={16} />
         </button>
@@ -107,7 +109,7 @@ function TabButton({ active, onClick, icon: Icon, title }: TabButtonProps): Reac
       onClick={onClick}
       title={title}
       className={cn(
-        "p-[6px_10px] rounded-md border-none flex items-center justify-center cursor-pointer transition-all duration-200",
+        "p-[6px_10px] max-md:min-h-11 max-md:min-w-11 rounded-md border-none flex items-center justify-center cursor-pointer transition-all duration-200",
         active ? "bg-[var(--bg-primary)] text-[var(--accent-chat)]" : "bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)]"
       )}
     >

@@ -6,14 +6,14 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
-import type { ToolUseConfirm } from '../../components/permissions/PermissionRequest.js'
+import type { ToolUseConfirm } from '../../ui/components/permissions/PermissionRequest.js'
 import type {
   ToolPermissionContext,
   Tool as ToolType,
   ToolUseContext,
 } from '@/Tool.js'
-import { awaitClassifierAutoApproval } from '../../tools/BashTool/bashPermissions.js'
-import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js'
+import { awaitClassifierAutoApproval } from '../../../runtime/tools/builtins/bash/bashPermissions.js'
+import { BASH_TOOL_NAME } from '../../../runtime/tools/builtins/bash/toolName.js'
 import type { AssistantMessage } from '@/types/message.js'
 import type {
   PendingClassifierCheck,
@@ -21,23 +21,23 @@ import type {
   PermissionDecisionReason,
   PermissionDenyDecision,
 } from '@/types/permissions.js'
-import { setClassifierApproval } from '../../utils/classifierApprovals.js'
+import { setClassifierApproval } from '../../../shared/utils/classifierApprovals.js'
 import { logForDebugging } from '../../utils/debug.js'
-import { executePermissionRequestHooks } from '../../utils/hooks.js'
+import { executePermissionRequestHooks } from '../../../shared/utils/hooks.js'
 import {
   REJECT_MESSAGE,
   REJECT_MESSAGE_WITH_REASON_PREFIX,
   SUBAGENT_REJECT_MESSAGE,
   SUBAGENT_REJECT_MESSAGE_WITH_REASON_PREFIX,
   withMemoryCorrectionHint,
-} from '../../utils/messages.js'
-import type { PermissionDecision } from '../../utils/permissions/PermissionResult.js'
+} from '../../../shared/utils/messages.js'
+import type { PermissionDecision } from '../../../types/permissions.js'
 import {
   applyPermissionUpdates,
   persistPermissionUpdates,
   supportsPersistence,
-} from '../../utils/permissions/PermissionUpdate.js'
-import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js'
+} from '../../../shared/utils/permissions/PermissionUpdate.js'
+import type { PermissionUpdate } from '../../../shared/utils/permissions/PermissionUpdateSchema.js'
 import {
   logPermissionDecision,
   type PermissionDecisionArgs,

@@ -2,9 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { officeStorage } from '@/lib/storage'
 import { loadPlugin, buildPluginSystemPromptPrefix, loadPluginSkillContent } from '@/lib/plugin-loader'
 import { extractCode, executeCode, executeWithRetry, type RetryContext } from '@/lib/code-executor'
-import { getToolsForHost, mergeToolCallDelta, finalizeToolCalls, type OpenAITool, type ParsedToolCall } from '@/lib/tool-schemas'
+import { getToolsForHost, mergeToolCallDelta, finalizeToolCalls, toOpenAITool, type OpenAITool, type ParsedToolCall } from '@/lib/tool-schemas'
 import { buildToolCallCode, describeToolCall, validateToolCall } from '@/lib/tool-dispatcher'
 import { checkToolRequirement } from '@/lib/tool-requirements'
+import { executeOfficeCliTool, OFFICECLI_DESTRUCTIVE, OFFICECLI_TOOL_SCHEMAS } from '@/lib/officecli-tools'
+import { getCapabilities } from '@/lib/officecli-client'
+import { callMcpTool, getMcpTools, initMcp, isDestructiveMcpTool } from '@/lib/mcp-client'
+import { ensureFreshSnapshot, markDirty } from '@/lib/document-sync'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -120,10 +124,46 @@ const DESTRUCTIVE_TOOLS = new Set([
   'ppt_delete_slide',
   'ppt_add_textbox',
   'ppt_set_notes',
+  ...OFFICECLI_DESTRUCTIVE,
 ])
 
+/** Tool-name prefix for officecli MCP tools bridged through the gateway */
+const MCP_OFFICECLI_PREFIX = 'mcp_officecli_'
+
 function isDestructiveTool(name: string): boolean {
-  return DESTRUCTIVE_TOOLS.has(name)
+  if (DESTRUCTIVE_TOOLS.has(name)) return true
+  // MCP-bridged officecli tools get a heuristic destructive check (mutating verbs)
+  if (name.startsWith(MCP_OFFICECLI_PREFIX)) {
+    return isDestructiveMcpTool(name.slice(MCP_OFFICECLI_PREFIX.length))
+  }
+  return false
+}
+
+// ── OfficeCLI backend discovery ──────────────────────────────────────────────
+// Probed once per add-in session (module scope): capabilities + MCP tool list.
+// Failures degrade gracefully — the static officecli_* tools stay registered
+// and report the backend error at call time.
+
+let officeCliAvailable = false
+let officeCliSessionPromise: Promise<boolean> | null = null
+
+function ensureOfficeCliSession(): Promise<boolean> {
+  if (!officeCliSessionPromise) {
+    officeCliSessionPromise = (async () => {
+      try {
+        const capabilities = await getCapabilities()
+        officeCliAvailable = capabilities.available === true
+        if (officeCliAvailable) {
+          await initMcp() // graceful — warns and returns false on failure
+        }
+      } catch (err) {
+        console.warn('[useOfficeAgent] officecli backend probe failed:', err)
+        officeCliAvailable = false
+      }
+      return officeCliAvailable
+    })()
+  }
+  return officeCliSessionPromise
 }
 
 export function useOfficeAgent(): UseOfficeAgentResult {
@@ -353,6 +393,10 @@ export function useOfficeAgent(): UseOfficeAgentResult {
       let toolCallsExecuted = 0
 
       try {
+        // Probe the officecli backend once per session before building the
+        // prompt — the system prompt section and MCP tool list depend on it.
+        const officeCliReady = await ensureOfficeCliSession()
+
         // Build system prompt: plugin prefix + document context + custom instruction
         const systemPrompt = await buildSystemPrompt(context, config)
 
@@ -366,6 +410,32 @@ export function useOfficeAgent(): UseOfficeAgentResult {
         const plugin = loadPlugin()
         const maxRetries = plugin?.executionConfig.errorRecovery.maxRetries ?? 2
         const tools = getToolsForHost()
+
+        // Merge the static officecli_* tool set (already included per-host by
+        // getToolsForHost — this is a defensive no-op guard against dupes).
+        const presentToolNames = new Set(tools.map((t) => t.function.name))
+        for (const def of OFFICECLI_TOOL_SCHEMAS) {
+          if (!presentToolNames.has(def.name)) tools.push(toOpenAITool(def))
+        }
+
+        // Append officecli MCP tools discovered from the gateway as
+        // mcp_officecli_* — the MCP-provided JSON schema becomes parameters.
+        if (officeCliReady) {
+          for (const mcpTool of getMcpTools()) {
+            tools.push({
+              type: 'function',
+              function: {
+                name: `${MCP_OFFICECLI_PREFIX}${mcpTool.name}`,
+                description: mcpTool.description,
+                parameters: {
+                  type: 'object',
+                  properties: mcpTool.inputSchema?.properties ?? {},
+                  required: mcpTool.inputSchema?.required ?? [],
+                },
+              },
+            })
+          }
+        }
 
         // Agentic tool-use loop: run until the model produces a final text response
         // or the step limit is reached. Each iteration may produce tool calls that
@@ -518,20 +588,47 @@ export function useOfficeAgent(): UseOfficeAgentResult {
             let toolResult: string
             let toolDuration = 0
             try {
-              const code = buildToolCallCode(toolCall)
-              const execStart = performance.now()
-              const execResult = await executeCode(code)
-              toolDuration = Math.round(performance.now() - execStart)
-              if (execResult.success) {
-                toolResult = typeof execResult.output === 'string'
-                  ? execResult.output
-                  : JSON.stringify(execResult.output ?? null)
+              if (toolCall.name.startsWith('officecli_')) {
+                // officecli backend tools run first-party against the gateway
+                // snapshot — never through the sandboxed code executor.
+                const execStart = performance.now()
+                toolResult = await executeOfficeCliTool(toolCall)
+                toolDuration = Math.round(performance.now() - execStart)
+                setActivity({ type: 'executed', tool: toolCall.name, output: toolResult, duration: toolDuration })
+                updateToolStatus('completed', { output: toolResult, duration: toolDuration })
+              } else if (toolCall.name.startsWith(MCP_OFFICECLI_PREFIX)) {
+                // MCP-bridged officecli tools: sync the snapshot, then call the
+                // MCP tool (the file argument is injected as "@doc").
+                const execStart = performance.now()
+                const { docId } = await ensureFreshSnapshot()
+                const mcpResult = await callMcpTool(
+                  toolCall.name.slice(MCP_OFFICECLI_PREFIX.length),
+                  toolCall.arguments,
+                  docId,
+                )
+                toolResult = typeof mcpResult === 'string' ? mcpResult : JSON.stringify(mcpResult ?? null)
+                toolDuration = Math.round(performance.now() - execStart)
                 setActivity({ type: 'executed', tool: toolCall.name, output: toolResult, duration: toolDuration })
                 updateToolStatus('completed', { output: toolResult, duration: toolDuration })
               } else {
-                toolResult = `Error: ${execResult.error?.message ?? 'Unknown error'}`
-                setActivity({ type: 'error', message: toolResult })
-                updateToolStatus('error', { output: toolResult })
+                const code = buildToolCallCode(toolCall)
+                const execStart = performance.now()
+                const execResult = await executeCode(code)
+                toolDuration = Math.round(performance.now() - execStart)
+                if (execResult.success) {
+                  toolResult = typeof execResult.output === 'string'
+                    ? execResult.output
+                    : JSON.stringify(execResult.output ?? null)
+                  setActivity({ type: 'executed', tool: toolCall.name, output: toolResult, duration: toolDuration })
+                  updateToolStatus('completed', { output: toolResult, duration: toolDuration })
+                  // The live document may have changed — re-sync the officecli
+                  // snapshot lazily before the next officecli_* call.
+                  markDirty()
+                } else {
+                  toolResult = `Error: ${execResult.error?.message ?? 'Unknown error'}`
+                  setActivity({ type: 'error', message: toolResult })
+                  updateToolStatus('error', { output: toolResult })
+                }
               }
             } catch (err) {
               toolResult = `Error: ${err instanceof Error ? err.message : String(err)}`
@@ -587,6 +684,9 @@ export function useOfficeAgent(): UseOfficeAgentResult {
           if (result.success) {
             const ms = result.durationMs.toFixed(0)
             displayText = `${finalContent}\n\n*✓ Done (${ms}ms)*`
+            // Free-code execution may have mutated the document — re-sync the
+            // officecli snapshot lazily before the next officecli_* call.
+            markDirty()
           } else {
             const errMsg = result.error?.message ?? 'Unknown error'
             displayText = `${finalContent}\n\n*⚠ Execution failed: ${errMsg}*`
@@ -645,9 +745,34 @@ async function buildSystemPrompt(documentContext: string, config: OfficeAgentCon
     'When your response includes executable Office.js code (in a ```javascript block), it will be automatically executed in the document. Use the Office.js API patterns from your skills. Return code blocks only when direct document manipulation is needed.',
   )
 
+  // officecli backend capabilities — only when the gateway reported the binary
+  if (officeCliAvailable) {
+    parts.push('', buildOfficeCliPromptSection())
+  }
+
   if (config?.systemInstruction?.trim()) {
     parts.push('', '## Custom Instructions', config.systemInstruction.trim())
   }
 
   return parts.join('\n')
+}
+
+/**
+ * Compact "OfficeCLI backend" prompt section: snapshot model, tool families,
+ * live apply-back semantics, and the verify loop.
+ */
+function buildOfficeCliPromptSection(): string {
+  const lines = [
+    '## OfficeCLI Backend',
+    'The gateway runs officecli against a server-side SNAPSHOT of the open document (synced automatically before each officecli_* call; Office.js edits trigger a lazy re-sync).',
+    '- Reads/analysis: officecli_view, officecli_get, officecli_query, officecli_dump, officecli_raw (action "get"), officecli_analyze (validate + issues).',
+    '- Visual check: officecli_render returns a screenshot/HTML artifact of the snapshot — use it to verify visual edits.',
+    '- Mutations: officecli_edit / officecli_batch default to target "snapshot" (server-side copy only). With target "live" the edited file REPLACES the open document (requires user approval; some content may not round-trip).',
+    '- New files: officecli_create / officecli_merge generate documents delivered as download artifacts ([artifact:...] markers) — they never touch the open document.',
+    '- Verify loop for edits: edit → officecli_render (look) → officecli_analyze (validate) → fix if needed.',
+  ]
+  if (getMcpTools().length > 0) {
+    lines.push('- mcp_officecli_* tools come from the officecli MCP server. Their `command` string must reference the file as "@doc" (e.g. "view @doc outline") — the gateway resolves it to the synced snapshot path.')
+  }
+  return lines.join('\n')
 }

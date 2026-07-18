@@ -11,15 +11,15 @@ import {
   getGlobalConfig,
   getRemoteControlAtStartup,
   saveGlobalConfig,
-} from '../../../utils/config.js'
+} from '../../../../shared/utils/config.js'
 import { errorMessage } from '../../../utils/errors.js'
-import { lazySchema } from '../../../utils/lazySchema.js'
-import { logError } from '../../../utils/log.js'
+import { lazySchema } from '../../../../shared/utils/lazySchema.js'
+import { logError } from '../../../../shared/utils/log.js'
 import {
   getInitialSettings,
   updateSettingsForSource,
-} from '../../../utils/settings/settings.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+} from '../../../../utils/settings/settings.js'
+import { jsonStringify } from '../../../../shared/utils/slowOperations.js'
 import { CONFIG_TOOL_NAME } from './constants.js'
 import { DESCRIPTION, generatePrompt } from './prompt.js'
 import {
@@ -239,7 +239,7 @@ export const ConfigTool = buildTool({
         '../../voice/voiceModeEnabled.js'
       )
       if (!isVoiceModeEnabled()) {
-        const { isAnthropicAuthEnabled } = await import('../../utils/auth.js')
+        const { isAnthropicAuthEnabled } = await import('../../../../shared/utils/auth.js')
         return {
           data: {
             success: false,
@@ -250,13 +250,13 @@ export const ConfigTool = buildTool({
         }
       }
       const { isVoiceStreamAvailable } = await import(
-        '../../services/voiceStreamSTT.js'
+        '../../../services/voiceStreamSTT.js'
       )
       const {
         checkRecordingAvailability,
         checkVoiceDependencies,
         requestMicrophonePermission,
-      } = await import('../../services/voice.js')
+      } = await import('../../../services/voice.js')
 
       const recording = await checkRecordingAvailability()
       if (!recording.available) {

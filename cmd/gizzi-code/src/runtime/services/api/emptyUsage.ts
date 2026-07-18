@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { NonNullableUsage } from '../../entrypoints/sdk/sdkUtilityTypes.js'
+import type { NonNullableUsage } from '../../../entrypoints/sdk/sdkUtilityTypes.js'
 
 /**
  * Zero-initialized usage object. Extracted from logging.ts so that

@@ -4,19 +4,19 @@ import type { AppState } from '@/state/AppState.js'
 import type { Message } from '@/types/message.js'
 import { isAgentSwarmsEnabled } from '../../../utils/agentSwarmsEnabled.js'
 import { count } from '../../../utils/array.js'
-import { isEnvDefinedFalsy, isEnvTruthy } from '../../../utils/envUtils.js'
-import { toError } from '../../../utils/errors.js'
+import { isEnvDefinedFalsy, isEnvTruthy } from '../../../shared/utils/envUtils.js'
+import { toError } from '../../../shared/utils/errors.js'
 import {
   type CacheSafeParams,
   createCacheSafeParams,
   runForkedAgent,
-} from '../../../utils/forkedAgent.js'
+} from '../../../shared/utils/forkedAgent.js'
 import type { REPLHookContext } from '../../../utils/hooks/postSamplingHooks.js'
-import { logError } from '../../../utils/log.js'
+import { logError } from '../../../shared/utils/log.js'
 import {
   createUserMessage,
   getLastAssistantMessage,
-} from '../../../utils/messages.js'
+} from '../../../shared/utils/messages.js'
 import { getInitialSettings } from '../../../utils/settings/settings.js'
 import { isTeammate } from '../../../utils/teammate.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'

@@ -2,7 +2,7 @@
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import React, { useEffect } from 'react';
-import { useNotifications } from '../context/notifications';
+import { useNotifications } from '../../../../context/notifications';
 import { Text } from '../ink';
 import { getGlobalConfig } from '../utils/config';
 import { getRainbowColor } from '../utils/thinking';

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { isBridgeEnabled } from '../../bridge/bridgeEnabled'
-import type { Command } from '../../commands'
+import { isBridgeEnabled } from '../../../../../../runtime/integrations/bridgeEnabled'
+import type { Command } from '../../../commands'
 
 function isEnabled(): boolean {
   if (!feature('BRIDGE_MODE')) {
@@ -20,6 +20,6 @@ const bridge = {
     return !isEnabled()
   },
   immediate: true,
-  load: () => import('./bridge.js'),
+  load: () => import('../../../commands/bridge/bridge.js'),
 } satisfies Command
 export default bridge

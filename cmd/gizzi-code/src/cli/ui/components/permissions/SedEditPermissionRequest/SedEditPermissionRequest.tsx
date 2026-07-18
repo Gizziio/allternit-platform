@@ -3,13 +3,13 @@ import { c as _c } from "react/compiler-runtime";
 import { basename, relative } from 'path';
 import React, { Suspense, use, useMemo } from 'react';
 import { FileEditToolDiff } from 'src/components/FileEditToolDiff.js';
-import { getCwd } from 'src/utils/cwd.js';
-import { isENOENT } from 'src/utils/errors.js';
-import { detectEncodingForResolvedPath } from 'src/utils/fileRead.js';
+import { getCwd } from '../../../../../shared/utils/cwd.js';
+import { isENOENT } from '../../../../../shared/utils/errors.js';
+import { detectEncodingForResolvedPath } from '../../../../../shared/utils/fileRead.js';
 import { getFsImplementation } from 'src/utils/fsOperations.js';
 import { Text } from '@/ink.js';
-import { BashTool } from '../../../tools/BashTool/BashTool.js';
-import { applySedSubstitution, type SedEditInfo } from '../../../tools/BashTool/sedEditParser.js';
+import { BashTool } from '../../../../../runtime/tools/builtins/bash/BashTool.js';
+import { applySedSubstitution, type SedEditInfo } from '../../../../../runtime/tools/builtins/bash/sedEditParser.js';
 import { FilePermissionDialog } from '../FilePermissionDialog/FilePermissionDialog.js';
 import type { PermissionRequestProps } from '../PermissionRequest.js';
 type SedEditPermissionRequestProps = PermissionRequestProps & {

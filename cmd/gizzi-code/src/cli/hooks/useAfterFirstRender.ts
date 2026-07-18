@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { isEnvTruthy } from '../utils/envUtils.js'
+import { isEnvTruthy } from '../../shared/utils/envUtils.js'
 
 export function useAfterFirstRender(): void {
   useEffect(() => {

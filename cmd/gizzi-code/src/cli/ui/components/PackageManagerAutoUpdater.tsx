@@ -4,11 +4,11 @@ import * as React from 'react';
 import { useState } from 'react';
 import { useInterval } from 'usehooks-ts';
 import { Text } from '@/ink.js';
-import { type AutoUpdaterResult, getLatestVersionFromGcs, getMaxVersion, shouldSkipVersion } from '../utils/autoUpdater.js';
-import { isAutoUpdaterDisabled } from '../utils/config.js';
-import { logForDebugging } from '../utils/debug.js';
-import { getPackageManager, type PackageManager } from '../utils/nativeInstaller/packageManagers.js';
-import { gt, gte } from '../utils/semver.js';
+import { type AutoUpdaterResult, getLatestVersionFromGcs, getMaxVersion, shouldSkipVersion } from '../../../shared/utils/autoUpdater.js';
+import { isAutoUpdaterDisabled } from '../../../shared/utils/config.js';
+import { logForDebugging } from '../../../shared/utils/debug.js';
+import { getPackageManager, type PackageManager } from '../../../shared/utils/nativeInstaller/packageManagers.js';
+import { gt, gte } from '../../../shared/utils/semver.js';
 import { getInitialSettings } from '../utils/settings/settings.js';
 type Props = {
   isUpdating: boolean;

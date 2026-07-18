@@ -3,21 +3,21 @@ import { c as _c } from "react/compiler-runtime";
 import type { ElicitRequestFormParams, ElicitRequestURLParams, ElicitResult, PrimitiveSchemaDefinition } from '@modelcontextprotocol/sdk/types.js';
 import figures from 'figures';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRegisterOverlay } from '../../context/overlayContext.js';
+import { useRegisterOverlay } from '../../../context/overlayContext.js';
 import { useNotifyAfterTimeout } from '../../../hooks/useNotifyAfterTimeout.js';
 import { useTerminalSize } from '../../../hooks/useTerminalSize.js';
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- raw text input for elicitation form
 import { Box, Text, useInput } from '../../../ink.js';
 import { useKeybinding } from '../../../keybindings/useKeybinding.js';
 import type { ElicitationRequestEvent } from '../../../services/mcp/elicitationHandler.js';
-import { openBrowser } from '../../utils/browser.js';
+import { openBrowser } from '../../../../../../shared/utils/browser.js';
 import { getEnumLabel, getEnumValues, getMultiSelectLabel, getMultiSelectValues, isDateTimeSchema, isEnumSchema, isMultiSelectEnumSchema, validateElicitationInput, validateElicitationInputAsync, type MultiSelectEnumSchema } from '../../utils/mcp/elicitationValidation.js';
-import { plural } from '../../utils/stringUtils.js';
-import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js';
+import { plural } from '../../../utils/stringUtils.js';
+import { ConfigurableShortcutHint } from '../../ConfigurableShortcutHint.js';
 import { Byline } from '../design-system/Byline.js';
 import { Dialog } from '../design-system/Dialog.js';
 import { KeyboardShortcutHint } from '../design-system/KeyboardShortcutHint.js';
-import TextInput from '../TextInput.js';
+import TextInput from '../../TextInput.js';
 type Props = {
   event: ElicitationRequestEvent;
   onResponse: (action: ElicitResult['action'], content?: ElicitResult['content']) => void;

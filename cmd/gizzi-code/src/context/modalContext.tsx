@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import { createContext, type RefObject, useContext } from 'react';
-import type { ScrollBoxHandle } from '@/ink/components/ScrollBox.js';
+import type { ScrollBoxHandle } from '../cli/ui/ink-renderer/components/ScrollBox.js';
 
 /**
  * Set by FullscreenLayout when rendering content in its `modal` slot —

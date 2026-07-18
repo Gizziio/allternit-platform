@@ -6,7 +6,7 @@ import { useState } from 'react';
 import type { Root } from '@/ink.js';
 import { Box, Text, useAnimationFrame } from '@/ink.js';
 import { AppStateProvider } from '@/state/AppState.js';
-import { checkOutTeleportedSessionBranch, processMessagesForTeleportResume, type TeleportProgressStep, type TeleportResult, teleportResumeCodeSession } from '../utils/teleport.js';
+import { checkOutTeleportedSessionBranch, processMessagesForTeleportResume, type TeleportProgressStep, type TeleportResult, teleportResumeCodeSession } from '../../../shared/utils/teleport.js';
 type Props = {
   currentStep: TeleportProgressStep;
   sessionId?: string;

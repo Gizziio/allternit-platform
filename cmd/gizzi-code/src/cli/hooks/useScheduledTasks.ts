@@ -1,20 +1,20 @@
 // @ts-nocheck
 import { useEffect, useRef } from 'react'
 import { useAppStateStore, useSetAppState } from '@/state/AppState.js'
-import { isTerminalTaskStatus } from '../Task.js'
+import { isTerminalTaskStatus } from '../../runtime/claude-core/Task.js'
 import {
   findTeammateTaskByAgentId,
   injectUserMessageToTeammate,
-} from '../tasks/InProcessTeammateTask/InProcessTeammateTask.js'
-import { isKairosCronEnabled } from '../tools/ScheduleCronTool/prompt.js'
+} from '../ui/ink-app/tasks/InProcessTeammateTask/InProcessTeammateTask.js'
+import { isKairosCronEnabled } from '../ui/ink-app/context/prompt.js'
 import type { Message } from '@/types/message.js'
-import { getCronJitterConfig } from '../utils/cronJitterConfig.js'
-import { createCronScheduler } from '../utils/cronScheduler.js'
-import { removeCronTasks } from '../utils/cronTasks.js'
+import { getCronJitterConfig } from '../../shared/utils/cronJitterConfig.js'
+import { createCronScheduler } from '../../shared/utils/cronScheduler.js'
+import { removeCronTasks } from '../../shared/utils/cronTasks.js'
 import { logForDebugging } from '../utils/debug.js'
-import { enqueuePendingNotification } from '../utils/messageQueueManager.js'
-import { createScheduledTaskFireMessage } from '../utils/messages.js'
-import { WORKLOAD_CRON } from '../utils/workloadContext.js'
+import { enqueuePendingNotification } from '../../shared/utils/messageQueueManager.js'
+import { createScheduledTaskFireMessage } from '../../shared/utils/messages.js'
+import { WORKLOAD_CRON } from '../../shared/utils/workloadContext.js'
 
 type Props = {
   isLoading: boolean

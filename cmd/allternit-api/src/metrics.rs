@@ -1,7 +1,11 @@
 //! Prometheus metrics middleware and endpoint.
 //!
 //! Registers a histogram (`http_request_duration_seconds`) and a counter
-//! (`http_requests_total`) labelled by method, status, and matched path.
+//! (`http_requests_total`) labelled by method, status, and matched path,
+//! plus the LLM gateway series (`llm_requests_total`, `llm_tokens_total`,
+//! `llm_cost_microdollars_total`, `llm_request_duration_seconds`,
+//! `llm_fallback_total`) emitted from the single
+//! `llm_gateway::proxy::record_usage_event` choke point.
 
 use axum::{
     extract::Request,
@@ -19,6 +23,11 @@ struct Metrics {
     registry: Registry,
     http_request_duration_seconds: HistogramVec,
     http_requests_total: CounterVec,
+    llm_requests_total: CounterVec,
+    llm_tokens_total: CounterVec,
+    llm_cost_microdollars_total: CounterVec,
+    llm_request_duration_seconds: HistogramVec,
+    llm_fallback_total: CounterVec,
 }
 
 impl Metrics {
@@ -43,17 +52,80 @@ impl Metrics {
         )
         .expect("invalid http_requests_total metric");
 
+        // ── LLM gateway series (B7) ─────────────────────────────────────
+        let llm_requests_total = CounterVec::new(
+            Opts::new("llm_requests_total", "Total LLM gateway requests"),
+            &["model", "provider", "status"],
+        )
+        .expect("invalid llm_requests_total metric");
+
+        let llm_tokens_total = CounterVec::new(
+            Opts::new("llm_tokens_total", "Total LLM tokens by kind"),
+            &["model", "kind"],
+        )
+        .expect("invalid llm_tokens_total metric");
+
+        let llm_cost_microdollars_total = CounterVec::new(
+            Opts::new(
+                "llm_cost_microdollars_total",
+                "Total LLM spend in microdollars",
+            ),
+            &["tenant", "model"],
+        )
+        .expect("invalid llm_cost_microdollars_total metric");
+
+        let llm_request_duration_seconds = HistogramVec::new(
+            HistogramOpts::new(
+                "llm_request_duration_seconds",
+                "LLM gateway request duration in seconds",
+            )
+            .buckets(vec![
+                0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0,
+            ]),
+            &["model"],
+        )
+        .expect("invalid llm_request_duration_seconds metric");
+
+        let llm_fallback_total = CounterVec::new(
+            Opts::new(
+                "llm_fallback_total",
+                "Total cross-provider failovers (from,to as provider/model)",
+            ),
+            &["from", "to"],
+        )
+        .expect("invalid llm_fallback_total metric");
+
         registry
             .register(Box::new(http_request_duration_seconds.clone()))
             .expect("failed to register http_request_duration_seconds");
         registry
             .register(Box::new(http_requests_total.clone()))
             .expect("failed to register http_requests_total");
+        registry
+            .register(Box::new(llm_requests_total.clone()))
+            .expect("failed to register llm_requests_total");
+        registry
+            .register(Box::new(llm_tokens_total.clone()))
+            .expect("failed to register llm_tokens_total");
+        registry
+            .register(Box::new(llm_cost_microdollars_total.clone()))
+            .expect("failed to register llm_cost_microdollars_total");
+        registry
+            .register(Box::new(llm_request_duration_seconds.clone()))
+            .expect("failed to register llm_request_duration_seconds");
+        registry
+            .register(Box::new(llm_fallback_total.clone()))
+            .expect("failed to register llm_fallback_total");
 
         Self {
             registry,
             http_request_duration_seconds,
             http_requests_total,
+            llm_requests_total,
+            llm_tokens_total,
+            llm_cost_microdollars_total,
+            llm_request_duration_seconds,
+            llm_fallback_total,
         }
     }
 }
@@ -121,6 +193,55 @@ pub async fn metrics_middleware(request: Request, next: Next) -> Response {
     );
 
     response
+}
+
+// ── LLM gateway emitters (called from llm_gateway::proxy::record_usage_event) ─
+
+/// One completed gateway request, labelled by model/provider/status
+/// (`ok`, `error`, `dlp_blocked`, `client_disconnected`, ...).
+pub fn record_llm_request(model: &str, provider: &str, status: &str) {
+    METRICS
+        .llm_requests_total
+        .with_label_values(&[model, provider, status])
+        .inc();
+}
+
+/// Token usage by kind (`prompt`, `completion`, `reasoning`, `cached`).
+pub fn record_llm_tokens(model: &str, kind: &str, count: i64) {
+    if count <= 0 {
+        return;
+    }
+    METRICS
+        .llm_tokens_total
+        .with_label_values(&[model, kind])
+        .inc_by(count as f64);
+}
+
+/// Spend in microdollars (the recomputed cost when available).
+pub fn record_llm_cost(tenant: &str, model: &str, microdollars: i64) {
+    if microdollars <= 0 {
+        return;
+    }
+    METRICS
+        .llm_cost_microdollars_total
+        .with_label_values(&[tenant, model])
+        .inc_by(microdollars as f64);
+}
+
+/// End-to-end gateway latency for one request.
+pub fn observe_llm_duration(model: &str, seconds: f64) {
+    METRICS
+        .llm_request_duration_seconds
+        .with_label_values(&[model])
+        .observe(seconds);
+}
+
+/// One cross-provider failover (`from`/`to` as `provider/model`).
+pub fn inc_llm_fallback(from: &str, to: &str) {
+    METRICS
+        .llm_fallback_total
+        .with_label_values(&[from, to])
+        .inc();
 }
 
 /// Router for the metrics endpoint (no auth required).

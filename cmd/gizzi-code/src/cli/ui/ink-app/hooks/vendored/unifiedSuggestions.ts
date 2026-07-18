@@ -2,13 +2,13 @@
 import Fuse from 'fuse'
 import { basename } from 'path'
 import type { SuggestionItem } from '../vendor/components/PromptInput/PromptInputFooterSuggestions'
-import { generateFileSuggestions } from '../vendor/hooks/fileSuggestions'
-import type { ServerResource } from '../vendor/services/mcp/types'
+import { generateFileSuggestions } from '../fileSuggestions'
+import type { ServerResource } from '../../../../../runtime/integrations/types'
 import { getAgentColor } from '../vendor/tools/AgentTool/agentColorManager'
 import type { AgentDefinition } from '../vendor/tools/AgentTool/loadAgentsDir'
-import { truncateToWidth } from '../vendor/utils/format'
-import { logError } from '../vendor/utils/log'
-import type { Theme } from '../vendor/utils/theme'
+import { truncateToWidth } from '../../../../../shared/utils/format'
+import { logError } from '../../../../../shared/utils/log'
+import type { Theme } from '../../../../../shared/utils/theme'
 
 type FileSuggestionSource = {
   type: 'file'

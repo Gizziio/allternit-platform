@@ -8,7 +8,7 @@
 // endpoint (conversation_engine) for STT.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSetVoiceState } from '../context/voice.js'
+import { useSetVoiceState } from '../../runtime/services/voice.js'
 import { useTerminalFocus } from '@/ink/hooks/use-terminal-focus.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -23,10 +23,10 @@ import {
 } from '@/services/voiceStreamSTT.js'
 import { logForDebugging } from '../utils/debug.js'
 import { toError } from '../utils/errors.js'
-import { getSystemLocaleLanguage } from '../utils/intl.js'
+import { getSystemLocaleLanguage } from '../../shared/utils/intl.js'
 import { logError } from '../utils/log.js'
-import { getInitialSettings } from '../utils/settings/settings.js'
-import { sleep } from '../utils/sleep.js'
+import { getInitialSettings } from '../../runtime/context/settings/settings.js'
+import { sleep } from '../../shared/utils/sleep.js'
 
 // ─── Language normalization ─────────────────────────────────────────────
 
@@ -138,7 +138,7 @@ export function normalizeLanguageForSTT(language: string | undefined): {
 // audio-capture-napi dependency) until voice input is actually activated.
 // On macOS, loading the native audio module can trigger a TCC microphone
 // permission prompt — we must avoid that until voice input is actually enabled.
-type VoiceModule = typeof import('../services/voice.js')
+type VoiceModule = typeof import('../../runtime/services/voice.js')
 let voiceModule: VoiceModule | null = null
 
 type VoiceState = 'idle' | 'recording' | 'processing'
@@ -530,7 +530,7 @@ export function useVoice({
   // dlopen still blocks. The first voice keypress pays the dlopen cost instead.
   useEffect(() => {
     if (enabled && !voiceModule) {
-      void import('../services/voice.js').then(mod => {
+      void import('../../runtime/services/voice.js').then(mod => {
         voiceModule = mod
       })
     }
@@ -597,7 +597,7 @@ export function useVoice({
       } else {
         // Voice module is loading (async import resolves from cache as a
         // microtask). Wait for it before starting the recording session.
-        void import('../services/voice.js').then(mod => {
+        void import('../../runtime/services/voice.js').then(mod => {
           voiceModule = mod
           beginFocusRecording()
         })

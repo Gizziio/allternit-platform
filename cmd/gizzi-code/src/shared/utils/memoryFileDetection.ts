@@ -7,7 +7,7 @@ import {
   isAutoMemoryEnabled,
   isAutoMemPath,
 } from '../memdir/paths.js'
-import { isAgentMemoryPath } from '../../runtime/tools/AgentTool/agentMemory.js'
+import { isAgentMemoryPath } from '../../cli/ui/ink-app/tools/AgentTool/agentMemory.js'
 import { getClaudeConfigHomeDir } from './envUtils.js'
 import {
   posixPathToWindowsPath,

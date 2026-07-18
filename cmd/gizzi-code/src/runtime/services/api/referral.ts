@@ -7,9 +7,9 @@ import {
   isClaudeAISubscriber,
 } from '../../../utils/auth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../../utils/config.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { logError } from '../../../utils/log.js'
-import { isEssentialTrafficOnly } from '../../../utils/privacyLevel.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { logError } from '../../../shared/utils/log.js'
+import { isEssentialTrafficOnly } from '../../../shared/utils/privacyLevel.js'
 import { getOAuthHeaders, prepareApiRequest } from '../../../utils/teleport/api.js'
 import type {
   ReferralCampaign,

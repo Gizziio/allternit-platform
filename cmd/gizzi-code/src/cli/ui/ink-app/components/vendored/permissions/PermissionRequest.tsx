@@ -43,7 +43,7 @@ const MonitorPermissionRequest = feature('MONITOR_TOOL') ? (require('./MonitorPe
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs';
 /* eslint-enable @typescript-eslint/no-require-imports */
 import type { z } from 'zod/v4';
-import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js';
+import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js';
 import type { WorkerBadgeProps } from './WorkerBadge';
 function permissionComponentForTool(tool: Tool): React.ComponentType<PermissionRequestProps> {
   switch (tool) {

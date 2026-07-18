@@ -4,14 +4,14 @@ import { feature } from 'bun:bundle';
 import { toString as qrToString } from 'qrcode';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { getBridgeAccessToken } from '../../bridge/bridgeConfig.js';
-import { checkBridgeMinVersion, getBridgeDisabledReason, isEnvLessBridgeEnabled } from '../../bridge/bridgeEnabled.js';
-import { checkEnvLessBridgeMinVersion } from '../../bridge/envLessBridgeConfig.js';
-import { BRIDGE_LOGIN_INSTRUCTION, REMOTE_CONTROL_DISCONNECTED_MSG } from '../../bridge/types.js';
-import { Dialog } from '../../components/design-system/Dialog.js';
-import { ListItem } from '../../components/design-system/ListItem.js';
-import { shouldShowRemoteCallout } from '../../components/RemoteCallout.js';
-import { useRegisterOverlay } from '../../context/overlayContext.js';
+import { getBridgeAccessToken } from '../../../runtime/integrations/bridgeConfig.js';
+import { checkBridgeMinVersion, getBridgeDisabledReason, isEnvLessBridgeEnabled } from '../../../runtime/integrations/bridgeEnabled.js';
+import { checkEnvLessBridgeMinVersion } from '../../../runtime/integrations/envLessBridgeConfig.js';
+import { BRIDGE_LOGIN_INSTRUCTION, REMOTE_CONTROL_DISCONNECTED_MSG } from '../../../runtime/integrations/types.js';
+import { Dialog } from '../../ui/components/design-system/Dialog.js';
+import { ListItem } from '../../ui/components/design-system/ListItem.js';
+import { shouldShowRemoteCallout } from '../../ui/ink-app/components/RemoteCallout.js';
+import { useRegisterOverlay } from '../../ui/ink-app/context/overlayContext.js';
 import { Box, Text } from '@/ink.js';
 import { useKeybindings } from '@/keybindings/useKeybinding.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '@/services/analytics/index.js';
@@ -470,7 +470,7 @@ async function checkBridgePrerequisites(): Promise<string | null> {
   const {
     waitForPolicyLimitsToLoad,
     isPolicyAllowed
-  } = await import('../../services/policyLimits/index.js');
+  } = await import('../../ui/ink-app/components/index.js');
   await waitForPolicyLimitsToLoad();
   if (!isPolicyAllowed('allow_remote_control')) {
     return "Remote Control is disabled by your organization's policy.";
@@ -488,7 +488,7 @@ async function checkBridgePrerequisites(): Promise<string | null> {
   if (feature('KAIROS') && useV2) {
     const {
       isAssistantMode
-    } = await import('../../assistant/index.js');
+    } = await import('../../ui/ink-app/components/index.js');
     if (isAssistantMode()) {
       useV2 = false;
     }

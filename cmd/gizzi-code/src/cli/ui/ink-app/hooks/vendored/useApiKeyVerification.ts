@@ -7,7 +7,7 @@ import {
   getApiKeyFromApiKeyHelper,
   isAnthropicAuthEnabled,
   isClaudeAISubscriber,
-} from '../../vendor/utils/auth'
+} from '../../../../../shared/utils/auth'
 
 export type VerificationStatus =
   | 'loading'

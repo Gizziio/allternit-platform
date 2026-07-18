@@ -3,14 +3,14 @@ import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { getAllowedChannels, getQuestionPreviewFormat } from '@/bootstrap/state.js';
-import { MessageResponse } from '../../../components/MessageResponse.js';
+import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { BLACK_CIRCLE } from '@/constants/figures.js';
-import { getModeColor } from '../../../utils/permissions/PermissionMode.js';
+import { getModeColor } from '../../../../cli/ui/ink-app/utils/permissions/PermissionMode.js';
 import { z } from 'zod/v4';
 import { Box, Text } from '@/ink.js';
 import type { Tool } from '@/Tool.js';
 import { buildTool, type ToolDef } from '@/Tool.js';
-import { lazySchema } from '../../utils/lazySchema.js';
+import { lazySchema } from '../../../../shared/utils/lazySchema.js';
 import { ASK_USER_QUESTION_TOOL_CHIP_WIDTH, ASK_USER_QUESTION_TOOL_NAME, ASK_USER_QUESTION_TOOL_PROMPT, DESCRIPTION, PREVIEW_FEATURE_PROMPT } from './prompt.js';
 const questionOptionSchema = lazySchema(() => z.object({
   label: z.string().describe('The display text for this option that the user will see and select. Should be concise (1-5 words) and clearly describe the choice.'),

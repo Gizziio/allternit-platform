@@ -1,27 +1,27 @@
 // @ts-nocheck
 import { useCallback, useEffect } from 'react'
 import type { Command } from '@/commands.js'
-import { useNotifications } from '../context/notifications.js'
+import { useNotifications } from '../../context/notifications.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '@/services/analytics/index.js'
 import { reinitializeLspServerManager } from '@/services/lsp/manager.js'
 import { useAppState, useSetAppState } from '@/state/AppState.js'
-import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir.js'
-import { count } from '../utils/array.js'
+import type { AgentDefinition } from '../../tools/AgentTool/loadAgentsDir.js'
+import { count } from '../../shared/utils/array.js'
 import { logForDebugging } from '../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../utils/diagLogs.js'
+import { logForDiagnosticsNoPII } from '../../shared/utils/diagLogs.js'
 import { toError } from '../utils/errors.js'
 import { logError } from '../utils/log.js'
-import { loadPluginAgents } from '../utils/plugins/loadPluginAgents.js'
+import { loadPluginAgents } from '../../shared/utils/plugins/loadPluginAgents.js'
 import { getPluginCommands } from '../utils/plugins/loadPluginCommands.js'
-import { loadPluginHooks } from '../utils/plugins/loadPluginHooks.js'
-import { loadPluginLspServers } from '../utils/plugins/lspPluginIntegration.js'
-import { loadPluginMcpServers } from '../utils/plugins/mcpPluginIntegration.js'
-import { detectAndUninstallDelistedPlugins } from '../utils/plugins/pluginBlocklist.js'
-import { getFlaggedPlugins } from '../utils/plugins/pluginFlagging.js'
-import { loadAllPlugins } from '../utils/plugins/pluginLoader.js'
+import { loadPluginHooks } from '../../shared/utils/plugins/loadPluginHooks.js'
+import { loadPluginLspServers } from '../../shared/utils/plugins/lspPluginIntegration.js'
+import { loadPluginMcpServers } from '../../shared/utils/plugins/mcpPluginIntegration.js'
+import { detectAndUninstallDelistedPlugins } from '../../shared/utils/plugins/pluginBlocklist.js'
+import { getFlaggedPlugins } from '../../shared/utils/plugins/pluginFlagging.js'
+import { loadAllPlugins } from '../../shared/utils/plugins/pluginLoader.js'
 
 /**
  * Hook to manage plugin state and synchronize with AppState.

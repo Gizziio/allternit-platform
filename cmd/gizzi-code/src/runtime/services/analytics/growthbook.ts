@@ -9,11 +9,11 @@ import {
   checkHasTrustDialogAccepted,
   getGlobalConfig,
   saveGlobalConfig,
-} from '../../../config/config.js'
+} from '../../../shared/utils/config.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'
 import { toError } from '../../../shared/utils/errors.js'
 import { getAuthHeaders } from '../../../shared/utils/http.js'
-import { logError } from '../../util/log.js'
+import { logError } from '../../../cli/utils/log.js'
 import { createSignal } from '../../util/signal.js'
 import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import {

@@ -2,7 +2,7 @@ import { c as _c } from "react/compiler-runtime";
 import React, { type ReactNode, useCallback, useState } from 'react';
 import { Box, Text } from '@/ink.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
-import { editPromptInEditor } from '../../../../utils/promptEditor.js';
+import { editPromptInEditor } from '../../../../../../shared/utils/promptEditor.js';
 import { ConfigurableShortcutHint } from '../../../ConfigurableShortcutHint.js';
 import { Byline } from '../../../design-system/Byline.js';
 import { KeyboardShortcutHint } from '../../../design-system/KeyboardShortcutHint.js';

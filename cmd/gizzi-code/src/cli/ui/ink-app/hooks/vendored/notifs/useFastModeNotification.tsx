@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useEffect } from 'react';
-import { useNotifications } from './../../../context/notifications.tsx';
+import { useNotifications } from '../../../../../../context/notifications';
 import { useAppState, useSetAppState } from './../../../state/AppState.tsx';
 import { type CooldownReason, isFastModeEnabled, onCooldownExpired, onCooldownTriggered, onFastModeOverageRejection, onOrgFastModeChanged } from './../../../utils/fastMode.ts';
 import { formatDuration } from './../../../utils/format.ts';

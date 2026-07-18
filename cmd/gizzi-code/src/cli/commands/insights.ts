@@ -19,24 +19,24 @@ import { queryWithModel } from '@/services/api/claude.js'
 import {
   AGENT_TOOL_NAME,
   LEGACY_AGENT_TOOL_NAME,
-} from '../tools/AgentTool/constants.js'
+} from '../../tools/REPLTool/constants.js'
 import type { LogOption } from '@/types/logs.js'
-import { getClaudeConfigHomeDir } from '../utils/envUtils.js'
+import { getClaudeConfigHomeDir } from '../../shared/utils/envUtils.js'
 import { toError } from '../utils/errors.js'
-import { execFileNoThrow } from '../utils/execFileNoThrow.js'
+import { execFileNoThrow } from '../../shared/utils/execFileNoThrow.js'
 import { logError } from '../utils/log.js'
-import { extractTextContent } from '../utils/messages.js'
-import { getDefaultOpusModel } from '../utils/model/model.js'
+import { extractTextContent } from '../../shared/utils/messages.js'
+import { getDefaultOpusModel } from '../../runtime/types/model.js'
 import {
   getProjectsDir,
   getSessionFilesWithMtime,
   getSessionIdFromLog,
   loadAllLogsFromSessionFile,
-} from '../utils/sessionStorage.js'
-import { jsonParse, jsonStringify } from '../utils/slowOperations.js'
-import { countCharInString } from '../utils/stringUtils.js'
-import { asSystemPrompt } from '../utils/systemPromptType.js'
-import { escapeXmlAttr as escapeHtml } from '../utils/xml.js'
+} from '../../shared/utils/sessionStorage.js'
+import { jsonParse, jsonStringify } from '../../shared/utils/slowOperations.js'
+import { countCharInString } from '../../shared/utils/stringUtils.js'
+import { asSystemPrompt } from '../../shared/utils/systemPromptType.js'
+import { escapeXmlAttr as escapeHtml } from '../../shared/utils/xml.js'
 
 // Model for facet extraction and summarization (Opus - best quality)
 function getAnalysisModel(): string {

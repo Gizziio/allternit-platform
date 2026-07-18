@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { formatTotalCost } from '../../cost-tracker'
-import { currentLimits } from '../../services/claudeAiLimits'
-import type { LocalCommandCall } from '../../types/command'
-import { isClaudeAISubscriber } from '../../utils/auth'
+import { currentLimits } from '../../../../../../runtime/services/claudeAiLimits'
+import type { LocalCommandCall } from '../../../types/command'
+import { isClaudeAISubscriber } from '../../../utils/auth'
 
 export const call: LocalCommandCall = async () => {
   if (isClaudeAISubscriber()) {

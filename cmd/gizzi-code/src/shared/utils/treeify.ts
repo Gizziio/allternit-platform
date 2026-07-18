@@ -1,6 +1,6 @@
 // @ts-nocheck
 import figures from 'figures'
-import { color } from '../components/design-system/color.js'
+import { color } from '../../cli/ui/ink-app/components/design-system/color.js'
 import type { Theme, ThemeName } from './theme.js'
 
 export type TreeNode = {

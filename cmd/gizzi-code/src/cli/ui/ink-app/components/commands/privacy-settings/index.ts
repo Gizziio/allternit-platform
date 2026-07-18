@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { isConsumerSubscriber } from '../../utils/auth'
+import type { Command } from '../../../commands'
+import { isConsumerSubscriber } from '../../../utils/auth'
 
 const privacySettings = {
   type: 'local-jsx',

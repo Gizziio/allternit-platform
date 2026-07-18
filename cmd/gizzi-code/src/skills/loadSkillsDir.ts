@@ -5,7 +5,7 @@
 
 import { readdir, readFile, access, constants, stat } from 'fs/promises'
 import { join, extname, basename } from 'path'
-import logger from '../utils/log.js'
+import logger from '../shared/utils/log.js'
 import { glob } from '../runtime/util/filesystem.js'
 
 const log = logger.log

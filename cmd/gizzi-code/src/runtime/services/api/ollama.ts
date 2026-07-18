@@ -7,7 +7,7 @@
  */
 
 import axios from 'axios';
-import { logForDebugging } from '../../../utils/debug.js';
+import { logForDebugging } from '../../../shared/utils/debug.js';
 import type { 
     Message, 
     AssistantMessage, 

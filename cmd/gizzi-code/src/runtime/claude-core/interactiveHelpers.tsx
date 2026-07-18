@@ -3,33 +3,34 @@ import { feature } from 'bun:bundle';
 import { appendFileSync } from 'fs';
 import React from 'react';
 import { logEvent } from 'src/services/analytics/index.js';
-import { gracefulShutdown, gracefulShutdownSync } from 'src/utils/gracefulShutdown.js';
+import { gracefulShutdown, gracefulShutdownSync } from '../../shared/utils/gracefulShutdown.js';
 import { type ChannelEntry, getAllowedChannels, setAllowedChannels, setHasDevChannels, setSessionTrustAccepted, setStatsStore } from './bootstrap/state.js';
 import type { Command } from '@/commands.js';
-import { createStatsStore, type StatsStore } from './context/stats.js';
+import { createStatsStore } from './context/stats.js';
+import { type StatsStore } from '../context/stats.js';;
 import { getSystemContext } from './context.js';
-import { initializeTelemetryAfterTrust } from './entrypoints/init.js';
-import { isSynchronizedOutputSupported } from '@/ink/terminal.js';
+import { initializeTelemetryAfterTrust } from '../../cli/ui/ink-app/entrypoints/init.js';
+import { isSynchronizedOutputSupported } from '../../cli/ui/ink-renderer/terminal.js';
 import type { RenderOptions, Root, TextProps } from '@/ink.js';
 import { KeybindingSetup } from '@/keybindings/KeybindingProviderSetup.js';
-import { startDeferredPrefetches } from './main.js';
+import { startDeferredPrefetches } from '../../cli/ui/ink-app/main.js';
 import { checkGate_CACHED_OR_BLOCKING, initializeGrowthBook, resetGrowthBook } from '@/services/analytics/growthbook.js';
 import { isQualifiedForGrove } from '@/services/api/grove.js';
 import { handleMcpjsonServerApprovals } from '@/services/mcpServerApproval.js';
 import { AppStateProvider } from '@/state/AppState.js';
 import { onChangeAppState } from '@/state/onChangeAppState.js';
-import { normalizeApiKeyForConfig } from './utils/authPortable.js';
-import { getExternalClaudeMdIncludes, getMemoryFiles, shouldShowClaudeMdExternalIncludesWarning } from './utils/claudemd.js';
-import { checkHasTrustDialogAccepted, getCustomApiKeyStatus, getGlobalConfig, saveGlobalConfig } from './utils/config.js';
-import { updateDeepLinkTerminalPreference } from './utils/deepLink/terminalPreference.js';
-import { isEnvTruthy, isRunningOnHomespace } from './utils/envUtils.js';
-import { type FpsMetrics, FpsTracker } from './utils/fpsTracker.js';
-import { updateGithubRepoPathMapping } from './utils/githubRepoPathMapping.js';
-import { applyConfigEnvironmentVariables } from './utils/managedEnv.js';
-import type { PermissionMode } from './utils/permissions/PermissionMode.js';
-import { getBaseRenderOptions } from './utils/renderOptions.js';
-import { getSettingsWithAllErrors } from './utils/settings/allErrors.js';
-import { hasAutoModeOptIn, hasSkipDangerousModePermissionPrompt } from './utils/settings/settings.js';
+import { normalizeApiKeyForConfig } from '../../shared/utils/authPortable.js';
+import { getExternalClaudeMdIncludes, getMemoryFiles, shouldShowClaudeMdExternalIncludesWarning } from '../../shared/utils/claudemd.js';
+import { checkHasTrustDialogAccepted, getCustomApiKeyStatus, getGlobalConfig, saveGlobalConfig } from '../../shared/utils/config.js';
+import { updateDeepLinkTerminalPreference } from '../../shared/utils/deepLink/terminalPreference.js';
+import { isEnvTruthy, isRunningOnHomespace } from '../../shared/utils/envUtils.js';
+import { type FpsMetrics, FpsTracker } from '../../shared/utils/fpsTracker.js';
+import { updateGithubRepoPathMapping } from '../../shared/utils/githubRepoPathMapping.js';
+import { applyConfigEnvironmentVariables } from '../../shared/utils/managedEnv.js';
+import type { PermissionMode } from '../../cli/ui/ink-app/utils/permissions/PermissionMode.js';
+import { getBaseRenderOptions } from '../../shared/utils/renderOptions.js';
+import { getSettingsWithAllErrors } from '../../shared/utils/settings/allErrors.js';
+import { hasAutoModeOptIn, hasSkipDangerousModePermissionPrompt } from '../../shared/utils/settings/settings.js';
 export function completeOnboarding(): void {
   saveGlobalConfig(current => ({
     ...current,
@@ -115,7 +116,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
     onboardingShown = true;
     const {
       Onboarding
-    } = await import('./components/Onboarding.js');
+    } = await import('../../cli/ui/ink-app/components/Onboarding.js');
     await showSetupDialog(root, done => <Onboarding onDone={() => {
       completeOnboarding();
       void done();
@@ -167,7 +168,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
       const externalIncludes = getExternalClaudeMdIncludes(await getMemoryFiles(true));
       const {
         ClaudeMdExternalIncludesDialog
-      } = await import('./components/ClaudeMdExternalIncludesDialog.js');
+      } = await import('../../cli/ui/ink-app/components/ClaudeMdExternalIncludesDialog.js');
       await showSetupDialog(root, done => <ClaudeMdExternalIncludesDialog onDone={done} isStandaloneDialog externalIncludes={externalIncludes} />);
     }
   }
@@ -211,7 +212,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
     if (keyStatus === 'new') {
       const {
         ApproveApiKey
-      } = await import('./components/ApproveApiKey.js');
+      } = await import('../../cli/ui/ink-app/components/ApproveApiKey.js');
       await showSetupDialog<boolean>(root, done => <ApproveApiKey customApiKeyTruncated={customApiKeyTruncated} onDone={done} />, {
         onChangeAppState
       });
@@ -220,7 +221,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
   if ((permissionMode === 'bypassPermissions' || allowDangerouslySkipPermissions) && !hasSkipDangerousModePermissionPrompt()) {
     const {
       BypassPermissionsModeDialog
-    } = await import('./components/BypassPermissionsModeDialog.js');
+    } = await import('../../cli/ui/ink-app/components/BypassPermissionsModeDialog.js');
     await showSetupDialog(root, done => <BypassPermissionsModeDialog onAccept={done} />);
   }
   if (feature('TRANSCRIPT_CLASSIFIER')) {
@@ -231,7 +232,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
     if (permissionMode === 'auto' && !hasAutoModeOptIn()) {
       const {
         AutoModeOptInDialog
-      } = await import('./components/AutoModeOptInDialog.js');
+      } = await import('../../cli/ui/ink-app/components/AutoModeOptInDialog.js');
       await showSetupDialog(root, done => <AutoModeOptInDialog onAccept={done} onDecline={() => gracefulShutdownSync(1)} declineExits />);
     }
   }
@@ -257,7 +258,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
         isChannelsEnabled
       }, {
         getClaudeAIOAuthTokens
-      }] = await Promise.all([import('./services/mcp/channelAllowlist.js'), import('./utils/auth.js')]);
+      }] = await Promise.all([import('./services/mcp/channelAllowlist.js'), import('../../shared/utils/auth.js')]);
       // Skip the dialog when channels are blocked (tengu_harbor off or no
       // OAuth) — accepting then immediately seeing "not available" in
       // ChannelsNotice is worse than no dialog. Append entries anyway so
@@ -274,7 +275,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
       } else {
         const {
           DevChannelsDialog
-        } = await import('./components/DevChannelsDialog.js');
+        } = await import('../../cli/ui/ink-app/components/DevChannelsDialog.js');
         await showSetupDialog(root, done => <DevChannelsDialog channels={devChannels} onAccept={() => {
           // Mark dev entries per-entry so the allowlist bypass doesn't leak
           // to --channels entries when both flags are passed.
@@ -293,7 +294,7 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
   if (allternitInChrome && !getGlobalConfig().hasCompletedAllternitInChromeOnboarding) {
     const {
       AllternitInChromeOnboarding
-    } = await import('./components/AllternitInChromeOnboarding.js');
+    } = await import('../../cli/ui/components/AllternitInChromeOnboarding.js');
     await showSetupDialog(root, done => <AllternitInChromeOnboarding onDone={done} />);
   }
   return onboardingShown;

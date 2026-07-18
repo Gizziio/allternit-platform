@@ -1,12 +1,12 @@
 // @ts-nocheck
-import { queryHaiku } from '../../services/api/claude.js'
-import type { Message } from '../../types/message.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { errorMessage } from '../../utils/errors.js'
-import { safeParseJSON } from '../../utils/json.js'
-import { extractTextContent } from '../../utils/messages.js'
-import { extractConversationText } from '../../utils/sessionTitle.js'
-import { asSystemPrompt } from '../../utils/systemPromptType.js'
+import { queryHaiku } from '../../../../../../runtime/services/api/claude.js'
+import type { Message } from '../../message.js'
+import { logForDebugging } from '../../../utils/debug.js'
+import { errorMessage } from '../../../utils/errors.js'
+import { safeParseJSON } from '../../../../../../shared/utils/json.js'
+import { extractTextContent } from '../../../utils/messages.js'
+import { extractConversationText } from '../../../../../../shared/utils/sessionTitle.js'
+import { asSystemPrompt } from '../../../../../../shared/utils/systemPromptType.js'
 
 export async function generateSessionName(
   messages: Message[],

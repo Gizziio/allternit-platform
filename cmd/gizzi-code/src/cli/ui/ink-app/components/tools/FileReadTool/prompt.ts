@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { isPDFSupported } from '../../utils/pdfUtils'
+import { isPDFSupported } from '../../../../../../shared/utils/pdfUtils'
 import { BASH_TOOL_NAME } from '../BashTool/toolName'
 
 // Use a string constant for tool names to avoid circular dependencies

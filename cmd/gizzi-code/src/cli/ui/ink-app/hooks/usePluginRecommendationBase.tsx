@@ -9,7 +9,7 @@ import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
 import { getIsRemoteMode } from '../bootstrap/state';
-import type { useNotifications } from '../context/notifications';
+import type { useNotifications } from '../../../../context/notifications';
 import { Text } from '../ink';
 import { logError } from '../utils/log';
 import { getPluginById } from '../utils/plugins/marketplaceManager';

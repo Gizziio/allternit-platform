@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { useCallback, useEffect } from 'react'
-import { settingsChangeDetector } from '../utils/settings/changeDetector.js'
-import type { SettingSource } from '../utils/settings/constants.js'
-import { getSettings_DEPRECATED } from '../utils/settings/settings.js'
-import type { SettingsJson } from '../utils/settings/types.js'
+import { settingsChangeDetector } from '../../shared/utils/settings/changeDetector.js'
+import type { SettingSource } from '../../tools/REPLTool/constants.js'
+import { getSettings_DEPRECATED } from '../../runtime/context/settings/settings.js'
+import type { SettingsJson } from '../../runtime/integrations/types.js'
 
 export function useSettingsChange(
   onChange: (source: SettingSource, settings: SettingsJson) => void,

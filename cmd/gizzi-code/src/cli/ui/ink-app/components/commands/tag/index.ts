@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 
 const tag = {
   type: 'local-jsx',
@@ -7,6 +7,6 @@ const tag = {
   description: 'Toggle a searchable tag on the current session',
   isEnabled: () => process.env.USER_TYPE === 'ant',
   argumentHint: '<tag-name>',
-  load: () => import('./tag.js'),
+  load: () => import('../../../commands/tag/tag.js'),
 } satisfies Command
 export default tag

@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import { shouldAutoEnableAllternitInChrome } from 'src/utils/allternitInChrome/setup.js'
+import { shouldAutoEnableAllternitInChrome } from '../../shared/utils/allternitInChrome/setup.js'
 import { registerBatchSkill } from './batch.js'
 export { registerWorkspaceSkills } from './workspaceSkills.js'
 import { registerAllternitInChromeSkill } from './allternitInChrome.js'

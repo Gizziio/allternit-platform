@@ -4,8 +4,8 @@ import figures from 'figures';
 import * as React from 'react';
 import { Box, Text, type TextProps } from '@/ink.js';
 import { useAppState } from '@/state/AppState.js';
-import { getRunningTeammatesSorted } from '../../tasks/InProcessTeammateTask/InProcessTeammateTask.js';
-import { formatNumber } from '../../utils/format.js';
+import { getRunningTeammatesSorted } from '../../ink-app/tasks/InProcessTeammateTask/InProcessTeammateTask.js';
+import { formatNumber } from '../../../../shared/utils/format.js';
 import { TeammateSpinnerLine } from './TeammateSpinnerLine.js';
 import { TEAMMATE_SELECT_HINT } from './teammateSelectHint.js';
 type Props = {

@@ -1,6 +1,6 @@
 // @ts-nocheck
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
-import type { Command } from '../commands';
+import type { Command } from '../../commands';
 import { AGENT_TOOL_NAME } from '../tools/AgentTool/constants';
 const statusline = {
   type: 'prompt',

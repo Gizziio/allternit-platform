@@ -7,7 +7,7 @@ import {
 import { microcompactMessages } from '@/services/compact/microCompact.js'
 import { getSdkBetas } from '@/bootstrap/state.js'
 import { getCommandName } from '../../cli/ui/ink-app/commands.js'
-import { getSystemContext } from '../../runtime/context/context.js'
+import { getSystemContext } from '../../runtime/claude-core/context.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
 import {
   AUTOCOMPACT_BUFFER_TOKENS,
@@ -20,7 +20,7 @@ import {
   countTokensViaHaikuFallback,
   roughTokenCountEstimation,
 } from '../../runtime/services/tokenEstimation.js'
-import { estimateSkillFrontmatterTokens } from '../skills/loadSkillsDir.js'
+import { estimateSkillFrontmatterTokens } from '../../cli/ui/ink-app/skills/loadSkillsDir.js'
 import {
   findToolByName,
   type Tool,
@@ -33,11 +33,11 @@ import type {
   AgentDefinition,
   AgentDefinitionsResult,
 } from '../../runtime/tools/AgentTool/loadAgentsDir.js'
-import { SKILL_TOOL_NAME } from '../../runtime/tools/SkillTool/constants.js'
+import { SKILL_TOOL_NAME } from '../../cli/ui/ink-app/tools/SkillTool/constants.js'
 import {
   getLimitedSkillToolCommands,
   getSkillToolInfo as getSlashCommandInfo,
-} from '../../runtime/tools/SkillTool/prompt.js'
+} from '../../cli/ui/ink-app/tools/SkillTool/prompt.js'
 import type {
   AssistantMessage,
   AttachmentMessage,
@@ -1119,7 +1119,7 @@ export async function analyzeContextUsage(
   if (feature('CONTEXT_COLLAPSE')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const { isContextCollapseEnabled } =
-      require('../services/contextCollapse/index.js') as typeof import('../services/contextCollapse/index.js')
+      require('../../cli/ui/ink-app/components/index.js') as typeof import('../../cli/ui/ink-app/components/index.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
     if (isContextCollapseEnabled()) {
       skipReservedBuffer = true

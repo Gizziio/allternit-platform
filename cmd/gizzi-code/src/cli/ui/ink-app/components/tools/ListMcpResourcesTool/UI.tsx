@@ -1,11 +1,11 @@
 // @ts-nocheck
 import * as React from 'react';
-import { MessageResponse } from '../../components/MessageResponse';
+import { MessageResponse } from '../../MessageResponse';
 import { OutputLine } from '../../components/shell/OutputLine';
-import { Text } from '../../core/ink';
+import { Text } from '../../../ink';
 import type { ToolProgressData } from '../../Tool';
-import type { ProgressMessage } from '../../types/message';
-import { jsonStringify } from '../../utils/slowOperations';
+import type { ProgressMessage } from '../../message';
+import { jsonStringify } from '../../../utils/slowOperations';
 import type { Output } from './ListMcpResourcesTool';
 export function renderToolUseMessage(input: Partial<{
   server?: string;

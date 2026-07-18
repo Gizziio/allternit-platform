@@ -1,15 +1,15 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { getIsNonInteractiveSession } from '../../bootstrap/state'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook'
-import { isEnvTruthy } from '../../utils/envUtils'
+import { getIsNonInteractiveSession } from '../../../bootstrap/state'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../../../../runtime/services/analytics/growthbook'
+import { isEnvTruthy } from '../../../utils/envUtils'
 import { CLAUDE_CODE_GUIDE_AGENT } from './built-in/claudeCodeGuideAgent'
 import { EXPLORE_AGENT } from './built-in/exploreAgent'
 import { GENERAL_PURPOSE_AGENT } from './built-in/generalPurposeAgent'
 import { PLAN_AGENT } from './built-in/planAgent'
 import { STATUSLINE_SETUP_AGENT } from './built-in/statuslineSetup'
 import { VERIFICATION_AGENT } from './built-in/verificationAgent'
-import type { AgentDefinition } from './loadAgentsDir'
+import type { AgentDefinition } from '../../../tools/AgentTool/loadAgentsDir'
 
 export function areExplorePlanAgentsEnabled(): boolean {
   if (feature('BUILTIN_EXPLORE_PLAN_AGENTS')) {

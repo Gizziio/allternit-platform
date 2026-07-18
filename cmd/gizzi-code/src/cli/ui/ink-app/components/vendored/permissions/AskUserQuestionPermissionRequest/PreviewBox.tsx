@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { Suspense, use, useMemo } from 'react';
-import { useSettings } from '../../../hooks/useSettings.js';
-import { useTerminalSize } from '../../../hooks/useTerminalSize.js';
+import { useSettings } from '../../../../hooks/useSettings.js';
+import { useTerminalSize } from '../../../../hooks/useTerminalSize.js';
 import { stringWidth } from '../../../ink/stringWidth.js';
-import { Ansi, Box, Text, useTheme } from '../../../ink.js';
-import { type CliHighlight, getCliHighlightPromise } from '../../../utils/cliHighlight.js';
-import { applyMarkdown } from '../../../utils/markdown.js';
-import sliceAnsi from '../../../utils/sliceAnsi.js';
+import { Ansi, Box, Text, useTheme } from '../../../../ink.js';
+import { type CliHighlight, getCliHighlightPromise } from '../../../../../../../shared/utils/cliHighlight.js';
+import { applyMarkdown } from '../../../../../../../shared/utils/markdown.js';
+import sliceAnsi from '../../../../../../../shared/utils/sliceAnsi.js';
 type PreviewBoxProps = {
   /** The preview content to display. Markdown is rendered with syntax highlighting
    * for code blocks (```ts, ```py, etc.). Also supports plain multi-line text. */

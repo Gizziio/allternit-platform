@@ -1,7 +1,7 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook'
-import { isPolicyAllowed } from '../../services/policyLimits/index'
+import type { Command } from '../../../commands'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../../../../runtime/services/analytics/growthbook'
+import { isPolicyAllowed } from '../../index'
 
 const web = {
   type: 'local-jsx',
@@ -15,6 +15,6 @@ const web = {
   get isHidden() {
     return !isPolicyAllowed('allow_remote_sessions')
   },
-  load: () => import('./remote-setup.js'),
+  load: () => import('../../../commands/remote-setup/remote-setup.js'),
 } satisfies Command
 export default web

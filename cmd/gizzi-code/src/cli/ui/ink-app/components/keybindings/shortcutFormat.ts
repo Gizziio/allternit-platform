@@ -2,9 +2,9 @@
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../services/analytics/index'
-import { loadKeybindingsSync } from './loadUserBindings'
-import { getBindingDisplayText } from './resolver'
+} from '../index'
+import { loadKeybindingsSync } from '../../keybindings/loadUserBindings'
+import { getBindingDisplayText } from '../../keybindings/resolver'
 import type { KeybindingContextName } from './types'
 
 // TODO(keybindings-migration): Remove fallback parameter after migration is

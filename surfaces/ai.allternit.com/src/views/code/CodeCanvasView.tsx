@@ -26,6 +26,7 @@ import { CodeCanvasTileSession } from '@/components/canvas/CodeCanvasTileSession
 import { CodeCanvasTilePreview } from '@/components/canvas/CodeCanvasTilePreview';
 import { CodeCanvasTileDiff } from '@/components/canvas/CodeCanvasTileDiff';
 import { CodeCanvasTileTerminal } from '@/components/canvas/CodeCanvasTileTerminal';
+import { disposeTerminalSessions } from '@/components/workspace/UnifiedTerminal';
 import { CodeCanvasTileNotes } from '@/components/canvas/CodeCanvasTileNotes';
 import { CodeCanvasTileKnowledge } from '@/components/canvas/CodeCanvasTileKnowledge';
 import { CodeCanvasTileKnowledgeGraph } from '@/components/canvas/CodeCanvasTileKnowledgeGraph';
@@ -85,15 +86,15 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
     current: { x: number; y: number; w: number; h: number } | null;
   }>({ active: false, startX: 0, startY: 0, pointerId: null, current: null });
 
-  // h5i Tier 1: Track files touched for the active session (SSE)
-  useFilesTouched(workspace?.root_path, activeLegacySessionId || undefined);
-  const executors = useOrchestratorCanvasSync(workspaceId, workspace?.root_path);
-
   const tiles = workspace?.canvasTiles ?? [];
   const viewport = workspace?.canvasViewport ?? { x: 0, y: 0, zoom: 1 };
   const focusTileId = workspace?.canvasFocusTileId ?? null;
   const workspaceId = workspace?.workspace_id ?? '';
   const selectedIds = workspace?.canvasSelectedIds ?? [];
+
+  // h5i Tier 1: Track files touched for the active session (SSE)
+  useFilesTouched(workspace?.root_path, activeLegacySessionId || undefined);
+  const executors = useOrchestratorCanvasSync(workspaceId, workspace?.root_path);
 
   React.useEffect(() => {
     const root = rootRef.current;
@@ -214,12 +215,25 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
     [workspaceId, setCanvasFocusTile],
   );
 
+  // Terminal PTYs outlive tile unmounts (see UnifiedTerminal); closing the
+  // tile itself is the point where they should actually die.
+  const disposeTileSessions = useCallback(
+    (tileId: string) => {
+      const tile = tiles.find((t) => t.tileId === tileId);
+      if (tile?.type === 'terminal') {
+        disposeTerminalSessions(`canvas:${tile.tileId}:${tile.sessionId || 'workspace'}`);
+      }
+    },
+    [tiles],
+  );
+
   const handleClose = useCallback(
     (tileId: string) => {
       if (!workspaceId) return;
+      disposeTileSessions(tileId);
       removeCanvasTile(workspaceId, tileId);
     },
-    [workspaceId, removeCanvasTile],
+    [workspaceId, removeCanvasTile, disposeTileSessions],
   );
 
   const handleTileSelect = useCallback(
@@ -462,12 +476,13 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
         setCanvasFocusTile(workspaceId, null);
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0 && !focusTileId) {
         e.preventDefault();
+        selectedIds.forEach(disposeTileSessions);
         removeCanvasTiles(workspaceId, selectedIds);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [viewport, focusTileId, workspaceId, selectedIds, handleViewportChange, setCanvasFocusTile, undoCanvas, redoCanvas, removeCanvasTiles]);
+  }, [viewport, focusTileId, workspaceId, selectedIds, handleViewportChange, setCanvasFocusTile, undoCanvas, redoCanvas, removeCanvasTiles, disposeTileSessions]);
 
   // Focus mode: render only the focused tile
   if (focusTileId && workspace) {
@@ -478,7 +493,7 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
           tile={focusedTile}
           workspace={workspace}
           onExit={() => setCanvasFocusTile(workspaceId, null)}
-          onClose={() => removeCanvasTile(workspaceId, focusedTile.tileId)}
+          onClose={() => handleClose(focusedTile.tileId)}
         />
       );
     }

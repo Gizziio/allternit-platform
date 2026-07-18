@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { useExitOnCtrlCDWithKeybindings } from '../../hooks/vendored/useExitOnCtrlCDWithKeybindings';
-import { Box, Text } from '../../core/ink';
+import { useExitOnCtrlCDWithKeybindings } from '../../../hooks/useExitOnCtrlCDWithKeybindings';
+import { Box, Text } from '../../../ink';
 import { useKeybinding } from '../../keybindings/useKeybinding';
-import type { SettingsJson } from '../../vendor/utils/settings/types';
-import { Select } from '../CustomSelect/index';
+import type { SettingsJson } from '../../../../../../runtime/integrations/types';
+import { Select } from '../../index';
 import { PermissionDialog } from '../permissions/PermissionDialog';
 import { extractDangerousSettings, formatDangerousSettingsList } from './utils';
 type Props = {

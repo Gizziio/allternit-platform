@@ -1,12 +1,12 @@
 // @ts-nocheck
-import type { Command } from '../commands'
+import type { Command } from '../../commands'
 import {
   getAttributionTexts,
   getEnhancedPRAttribution,
-} from '../utils/attribution'
-import { getDefaultBranch } from '../utils/git'
-import { executeShellCommandsInPrompt } from '../utils/promptShellExecution'
-import { getUndercoverInstructions, isUndercover } from '../utils/undercover'
+} from '../../../../../shared/utils/attribution'
+import { getDefaultBranch } from '../../utils/git'
+import { executeShellCommandsInPrompt } from '../../../../../shared/utils/promptShellExecution'
+import { getUndercoverInstructions, isUndercover } from '../../../../../shared/utils/undercover'
 
 const ALLOWED_TOOLS = [
   'Bash(git checkout --branch:*)',

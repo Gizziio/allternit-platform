@@ -1,6 +1,6 @@
 // @ts-nocheck
 type ContentBlockParam = Anthropic.ContentBlockParam
-import type { Command } from '../commands'
+import type { Command } from '../../commands'
 import type { ToolUseContext } from '../Tool'
 
 type Options = {

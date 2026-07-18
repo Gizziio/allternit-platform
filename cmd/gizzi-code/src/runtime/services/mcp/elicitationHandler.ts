@@ -10,9 +10,9 @@ import {
   executeElicitationHooks,
   executeElicitationResultHooks,
   executeNotificationHooks,
-} from '../../../utils/hooks.js'
-import { logMCPDebug, logMCPError } from '../../../utils/log.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+} from '../../../shared/utils/hooks.js'
+import { logMCPDebug, logMCPError } from '../../../shared/utils/log.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,

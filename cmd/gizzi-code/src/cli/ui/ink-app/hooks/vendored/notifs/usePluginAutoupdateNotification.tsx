@@ -3,9 +3,9 @@ import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { getIsRemoteMode } from '../../bootstrap/state';
-import { useNotifications } from '../../context/notifications';
-import { Text } from '../../ink';
-import { logForDebugging } from '../../utils/debug';
+import { useNotifications } from '../../../../../../context/notifications';
+import { Text } from '../../../../../../shared/utils/ink';
+import { logForDebugging } from '../../../../../../shared/utils/debug';
 import { onPluginsAutoUpdated } from '../../utils/plugins/pluginAutoupdate';
 
 /**

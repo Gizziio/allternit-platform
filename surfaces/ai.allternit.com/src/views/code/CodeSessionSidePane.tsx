@@ -123,7 +123,7 @@ export function CodeSessionSidePane({ activeTab: controlledTab, onTabChange, ses
           <CodeDiffPanel workingDir={workingDir} />
         </div>
         <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'terminal' ? 'flex' : 'none', flexDirection: 'column' }}>
-          <UnifiedTerminal sessionId={sessionId ?? 'allternit-session'} workingDir={workingDir} terminalContext={terminalContext} />
+          <UnifiedTerminal sessionId={`sidepane:${sessionId ?? 'allternit-session'}`} workingDir={workingDir} terminalContext={terminalContext} />
         </div>
         <div className="code-side-fill" style={{ flex: 1, minHeight: 0, display: activeTab === 'artifacts' ? 'flex' : 'none', flexDirection: 'column' }}>
           <ArtifactCenter />

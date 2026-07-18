@@ -1,18 +1,18 @@
 // @ts-nocheck
-import type { Command } from '../commands'
-import type { LocalCommandCall } from '../types/command'
+import type { Command } from '../../commands'
+import type { LocalCommandCall } from '../../types/command'
 import {
   canUserConfigureAdvisor,
   isValidAdvisorModel,
   modelSupportsAdvisor,
-} from '../utils/advisor'
+} from '../../../../../shared/utils/advisor'
 import {
   getDefaultMainLoopModelSetting,
   normalizeModelStringForAPI,
   parseUserSpecifiedModel,
-} from '../utils/model/model'
-import { validateModel } from '../utils/model/validateModel'
-import { updateSettingsForSource } from '../utils/settings/settings'
+} from '../../utils/model/model'
+import { validateModel } from '../../../../../shared/utils/model/validateModel'
+import { updateSettingsForSource } from '../../utils/settings/settings'
 
 const call: LocalCommandCall = async (args, context) => {
   const arg = args.trim().toLowerCase()

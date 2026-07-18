@@ -9,12 +9,12 @@ import { useAppState } from '../../../state/AppState.js';
 import type { PermissionMode } from '../../utils/permissions/PermissionMode.js';
 import { permissionModeTitle } from '../../utils/permissions/PermissionMode.js';
 import type { PermissionDecision, PermissionDecisionReason } from '../../utils/permissions/PermissionResult.js';
-import { extractRules } from '../../utils/permissions/PermissionUpdate.js';
-import type { PermissionUpdate } from '../../utils/permissions/PermissionUpdateSchema.js';
+import { extractRules } from '../../../../../../shared/utils/permissions/PermissionUpdate.js';
+import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js';
 import { permissionRuleValueToString } from '../../utils/permissions/permissionRuleParser.js';
 import { detectUnreachableRules } from '../../utils/permissions/shadowedRuleDetection.js';
-import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js';
-import { getSettingSourceDisplayNameLowercase } from '../../utils/settings/constants.js';
+import { SandboxManager } from '../../../utils/sandbox/sandbox-adapter.js';
+import { getSettingSourceDisplayNameLowercase } from '../../../../../../tools/REPLTool/constants.js';
 type PermissionDecisionInfoItemProps = {
   title?: string;
   decisionReason: PermissionDecisionReason;

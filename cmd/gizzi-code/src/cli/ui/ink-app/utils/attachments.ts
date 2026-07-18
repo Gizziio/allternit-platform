@@ -173,8 +173,8 @@ import {
   isMcpInstructionsDeltaEnabled,
   type ClientSideInstruction,
 } from './mcpInstructionsDelta.js'
-import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME } from './allternitInChrome/common.js'
-import { CHROME_TOOL_SEARCH_INSTRUCTIONS } from './allternitInChrome/prompt.js'
+import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME } from '../../../../shared/utils/allternitInChrome/common.js'
+import { CHROME_TOOL_SEARCH_INSTRUCTIONS } from '../../../../shared/utils/allternitInChrome/prompt.js'
 import type { MCPServerConnection } from '../services/mcp/types.js'
 import type {
   HookEvent,

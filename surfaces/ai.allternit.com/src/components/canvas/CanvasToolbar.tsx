@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Minus,
   Plus,
@@ -583,6 +584,7 @@ function OrchestratedAgentDialog({ workspacePath, onClose }: OrchestratedAgentDi
         workdir: workspacePath,
         vendor,
         mode,
+        backend: 'mux',
         isolation: worktree ? 'worktree' : 'none',
         taskFile: taskFile.trim() || undefined,
         notesFile: `docs/${trimmedSlug}_NOTES.md`,
@@ -595,7 +597,10 @@ function OrchestratedAgentDialog({ workspacePath, onClose }: OrchestratedAgentDi
     }
   };
 
-  return (
+  // Portal to body: the toolbar lives inside the canvas' transformed/clipped
+  // subtree, where position:fixed resolves against the transform ancestor and
+  // the dialog gets clipped off screen.
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -630,7 +635,7 @@ function OrchestratedAgentDialog({ workspacePath, onClose }: OrchestratedAgentDi
             Orchestrated agent
           </div>
           <div style={{ marginTop: 3, fontSize: 11, color: 'var(--text-muted)' }}>
-            Background executor on tmux via the orchestrator. Its tile appears on this canvas.
+            Background executor on the mux via the orchestrator. Its tile appears on this canvas.
           </div>
         </div>
 
@@ -697,6 +702,7 @@ function OrchestratedAgentDialog({ workspacePath, onClose }: OrchestratedAgentDi
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

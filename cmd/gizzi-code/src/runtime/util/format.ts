@@ -19,6 +19,4 @@ export function formatDuration(secs: number) {
   return weeks === 1 ? "~1 week" : `~${weeks} weeks`
 }
 
-// Auto-added export
-export const truncateToWidth: any = {}
 

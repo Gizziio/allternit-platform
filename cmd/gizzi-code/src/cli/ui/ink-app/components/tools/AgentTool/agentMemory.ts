@@ -1,14 +1,14 @@
 // @ts-nocheck
 import { join, normalize, sep } from 'path'
-import { getProjectRoot } from '../../bootstrap/state'
+import { getProjectRoot } from '../../../bootstrap/state'
 import {
   buildMemoryPrompt,
   ensureMemoryDirExists,
 } from '../../memdir/memdir'
 import { getMemoryBaseDir } from '../../memdir/paths'
-import { getCwd } from '../../utils/cwd'
-import { findCanonicalGitRoot } from '../../utils/git'
-import { sanitizePath } from '../../utils/path'
+import { getCwd } from '../../../../../../shared/utils/cwd'
+import { findCanonicalGitRoot } from '../../../utils/git'
+import { sanitizePath } from '../../../../../../shared/utils/path'
 
 // Persistent agent memory scope: 'user' (~/.claude/agent-memory/), 'project' (.claude/agent-memory/), or 'local' (.claude/agent-memory-local/)
 export type AgentMemoryScope = 'user' | 'project' | 'local'

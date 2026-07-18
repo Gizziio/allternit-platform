@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import type { CommandResultDisplay } from '../../commands';
-import { DesktopHandoff } from '../../components/DesktopHandoff';
+import { DesktopHandoff } from '../../../components/DesktopHandoff';
 export async function call(onDone: (result?: string, options?: {
   display?: CommandResultDisplay;
 }) => void): Promise<React.ReactNode> {

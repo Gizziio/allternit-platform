@@ -2,7 +2,7 @@
 import { feature } from 'bun:bundle'
 type UUID = string
 import { relative } from 'path'
-import { getCwd } from '../../utils/cwd.js'
+import { getCwd } from './cwd.js'
 import { addInvokedSkill } from '@/bootstrap/state.js'
 import { asSessionId } from '@/types/ids.js'
 import type {
@@ -56,13 +56,13 @@ import type { ContentReplacementRecord } from './toolResultStorage.js'
 const BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
     ? (
-        require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
+        require('../../cli/ui/ink-app/context/prompt.js') as typeof import('../../cli/ui/ink-app/context/prompt.js')
       ).BRIEF_TOOL_NAME
     : null
 const LEGACY_BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
     ? (
-        require('../tools/BriefTool/prompt.js') as typeof import('../tools/BriefTool/prompt.js')
+        require('../../cli/ui/ink-app/context/prompt.js') as typeof import('../../cli/ui/ink-app/context/prompt.js')
       ).LEGACY_BRIEF_TOOL_NAME
     : null
 const SEND_USER_FILE_TOOL_NAME: string | null = feature('KAIROS')

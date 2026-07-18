@@ -5,16 +5,16 @@ import {
   getLatestVersion,
   type InstallStatus,
   installGlobalPackage,
-} from 'src/utils/autoUpdater.js'
+} from '../shared/utils/autoUpdater.js'
 import { regenerateCompletionCache } from 'src/utils/completionCache.js'
 import {
   getGlobalConfig,
   type InstallMethod,
   saveGlobalConfig,
 } from 'src/utils/config.js'
-import { logForDebugging } from 'src/utils/debug.js'
-import { getDoctorDiagnostic } from 'src/utils/doctorDiagnostic.js'
-import { gracefulShutdown } from 'src/utils/gracefulShutdown.js'
+import { logForDebugging } from '../shared/utils/debug.js'
+import { getDoctorDiagnostic } from '../shared/utils/doctorDiagnostic.js'
+import { gracefulShutdown } from '../shared/utils/gracefulShutdown.js'
 import {
   installOrUpdateClaudePackage,
   localInstallationExists,

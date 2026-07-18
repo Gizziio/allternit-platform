@@ -220,3 +220,31 @@ If the user is in the Allternit platform, they are in:
 - a platform-native workspace surface.
 
 Those are both valid, but they are not the same runtime.
+
+## OfficeCLI Gateway Backend
+
+The taskpane's OfficeCLI tools are served by the Allternit API gateway (`cmd/allternit-api`, port 8013) — the same service that owns `/api/v1/office/bootstrap`. OfficeCLI is a native binary that runs **on the gateway host**, never in the taskpane sandbox.
+
+### Routes (all under `/api/v1/office/cli/`, auth inherited from the protected router)
+
+| Route | Purpose |
+|---|---|
+| `POST /document` | Upload a document snapshot (binary body, `x-office-filename`/`x-office-host` headers). Returns `doc_id`. Per-user storage under `<data_dir>/office-cli/<user>/<doc_id>/`. |
+| `POST /exec` | Run an allowlisted officecli subcommand (`create view get query set add remove move swap validate batch dump merge raw raw-set add-part refresh open save close plugins load_skill`) against a `doc_id`. argv-array execution only — no shell. Timeouts, 1 MiB stdout cap, `OFFICECLI_SKIP_UPDATE=1`, `OFFICECLI_RESIDENT_FLUSH=each` for mutations. Structured officecli errors (`code`, `suggestion`) pass through untouched for agent self-correction. |
+| `GET /document/:doc_id/artifact/:name` | Stream a produced artifact (PNG/HTML/JSON/.docx/.xlsx/.pptx) with traversal-safe name validation and ownership check. |
+| `GET /capabilities` | officecli availability/version + `live_fs` flag (cached 5 min). The taskpane feature-detects from this. |
+| `POST /watch` / `DELETE /watch/:doc_id` | Start/stop `officecli watch <file> --port N` (port pool `ALLTERNIT_OFFICECLI_WATCH_PORTS`, default 26400–26419). Auto-refresh transport is SSE, so a plain HTTP reverse proxy suffices for remote gateways. |
+| `POST /mcp` | JSON-RPC 2.0 passthrough to a per-user `officecli mcp` stdio server (initialized on spawn). Any `@doc` substring inside `params` is rewritten to the synced document's absolute gateway path. |
+
+### Operational requirements
+
+- `officecli` binary on the gateway host (`brew install officecli` or the official installer); override path with `OFFICECLI_BIN`. Production: `officecli config autoUpdate false`.
+- Storage/cleanup: document registry persisted at `<office_cli_dir>/docs.json`; docs idle >24 h, residents >15 min, watch processes >30 min are reaped (residents are flushed via `officecli save`/`close` first).
+- `ALLTERNIT_OFFICECLI_LIVE_FS` gates direct file-path editing (default on only for self-hosted/local dev).
+- Upload body limit: 64 MiB on `POST /document` (the rest of the API keeps the 2 MiB default).
+
+### Security model
+
+- Subcommand allowlist + argv arrays; no user string ever reaches a shell.
+- Every document and artifact is scoped to the authenticated caller (`AuthUser`); cross-user access returns 404.
+- Snapshot mutations never touch the user's live file; writing back into the open document happens client-side through Office.js base64 insert APIs and requires destructive-action approval in the taskpane.

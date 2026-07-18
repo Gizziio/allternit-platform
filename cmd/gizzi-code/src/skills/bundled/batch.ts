@@ -1,13 +1,13 @@
 // @ts-ignore missing module tools/AgentTool/constants
-import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js'
+import { AGENT_TOOL_NAME } from '../../cli/ui/ink-app/tools/AgentTool/constants.js'
 // @ts-ignore missing export from tools/AskUserQuestionTool/prompt
-import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js'
+import { ASK_USER_QUESTION_TOOL_NAME } from '../../cli/ui/ink-app/tools/AskUserQuestionTool/prompt.js'
 // @ts-ignore missing module tools/EnterPlanModeTool/constants
 import { ENTER_PLAN_MODE_TOOL_NAME } from '../../tools/EnterPlanModeTool/constants.js'
 // @ts-ignore missing module tools/ExitPlanModeTool/constants
-import { EXIT_PLAN_MODE_TOOL_NAME } from '../../tools/ExitPlanModeTool/constants.js'
+import { EXIT_PLAN_MODE_TOOL_NAME } from '../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'
 // @ts-ignore missing module tools/SkillTool/constants
-import { SKILL_TOOL_NAME } from '../../tools/SkillTool/constants.js'
+import { SKILL_TOOL_NAME } from '../../cli/ui/ink-app/tools/SkillTool/constants.js'
 import { getIsGit } from '../../utils/git.js'
 import { registerBundledSkill } from '../bundledSkills.js'
 

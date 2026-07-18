@@ -4,7 +4,7 @@ import { getIsRemoteMode } from '../../bootstrap/state.js'
 import {
   type Notification,
   useNotifications,
-} from '../../context/notifications.js'
+} from '../../../../../context/notifications.js'
 import { useAppState } from '../../state/AppState.js'
 import { isInProcessTeammateTask } from '../../tasks/InProcessTeammateTask/types.js'
 

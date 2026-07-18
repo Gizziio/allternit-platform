@@ -1,24 +1,24 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
 import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js'
-import { ENTER_PLAN_MODE_TOOL_NAME } from '../../tools/EnterPlanModeTool/constants.js'
-import { EXIT_PLAN_MODE_TOOL_NAME } from '../../tools/ExitPlanModeTool/constants.js'
+import { ENTER_PLAN_MODE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/EnterPlanModeTool/constants.js'
+import { EXIT_PLAN_MODE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'
 import { FILE_READ_TOOL_NAME } from '../../tools/FileReadTool/prompt.js'
 import { GLOB_TOOL_NAME } from '../../tools/GlobTool/prompt.js'
 import { GREP_TOOL_NAME } from '../../tools/GrepTool/prompt.js'
 import { LIST_MCP_RESOURCES_TOOL_NAME } from '../../tools/ListMcpResourcesTool/prompt.js'
 import { LSP_TOOL_NAME } from '../../tools/LSPTool/prompt.js'
-import { SEND_MESSAGE_TOOL_NAME } from '../../tools/SendMessageTool/constants.js'
+import { SEND_MESSAGE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/SendMessageTool/constants.js'
 import { SLEEP_TOOL_NAME } from '../../tools/SleepTool/prompt.js'
-import { TASK_CREATE_TOOL_NAME } from '../../tools/TaskCreateTool/constants.js'
-import { TASK_GET_TOOL_NAME } from '../../tools/TaskGetTool/constants.js'
-import { TASK_LIST_TOOL_NAME } from '../../tools/TaskListTool/constants.js'
-import { TASK_OUTPUT_TOOL_NAME } from '../../tools/TaskOutputTool/constants.js'
+import { TASK_CREATE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskCreateTool/constants.js'
+import { TASK_GET_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskGetTool/constants.js'
+import { TASK_LIST_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskListTool/constants.js'
+import { TASK_OUTPUT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskOutputTool/constants.js'
 import { TASK_STOP_TOOL_NAME } from '../../tools/TaskStopTool/prompt.js'
-import { TASK_UPDATE_TOOL_NAME } from '../../tools/TaskUpdateTool/constants.js'
-import { TEAM_CREATE_TOOL_NAME } from '../../tools/TeamCreateTool/constants.js'
-import { TEAM_DELETE_TOOL_NAME } from '../../tools/TeamDeleteTool/constants.js'
-import { TODO_WRITE_TOOL_NAME } from '../../tools/TodoWriteTool/constants.js'
+import { TASK_UPDATE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskUpdateTool/constants.js'
+import { TEAM_CREATE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TeamCreateTool/constants.js'
+import { TEAM_DELETE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TeamDeleteTool/constants.js'
+import { TODO_WRITE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TodoWriteTool/constants.js'
 import { TOOL_SEARCH_TOOL_NAME } from '../../tools/ToolSearchTool/prompt.js'
 import { YOLO_CLASSIFIER_TOOL_NAME } from './yoloClassifier.js'
 
@@ -27,7 +27,7 @@ import { YOLO_CLASSIFIER_TOOL_NAME } from './yoloClassifier.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const TERMINAL_CAPTURE_TOOL_NAME = feature('TERMINAL_PANEL')
   ? (
-      require('../../tools/TerminalCaptureTool/prompt.js') as typeof import('../../tools/TerminalCaptureTool/prompt.js')
+      require('../../../cli/ui/ink-app/context/prompt.js') as typeof import('../../../cli/ui/ink-app/context/prompt.js')
     ).TERMINAL_CAPTURE_TOOL_NAME
   : null
 const OVERFLOW_TEST_TOOL_NAME = feature('OVERFLOW_TEST_TOOL')

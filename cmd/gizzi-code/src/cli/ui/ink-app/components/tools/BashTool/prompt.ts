@@ -1,21 +1,21 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { prependBullets } from '../../constants/prompts'
-import { getAttributionTexts } from '../../utils/attribution'
-import { hasEmbeddedSearchTools } from '../../utils/embeddedTools'
-import { isEnvTruthy } from '../../utils/envUtils'
-import { shouldIncludeGitInstructions } from '../../utils/gitSettings'
-import { getClaudeTempDir } from '../../utils/permissions/filesystem'
-import { SandboxManager } from '../../utils/sandbox/sandbox-adapter'
-import { jsonStringify } from '../../utils/slowOperations'
+import { prependBullets } from '../../../constants/prompts'
+import { getAttributionTexts } from '../../../../../../shared/utils/attribution'
+import { hasEmbeddedSearchTools } from '../../../../../../shared/utils/embeddedTools'
+import { isEnvTruthy } from '../../../utils/envUtils'
+import { shouldIncludeGitInstructions } from '../../../../../../shared/utils/gitSettings'
+import { getClaudeTempDir } from '../../../../../../runtime/util/filesystem'
+import { SandboxManager } from '../../../utils/sandbox/sandbox-adapter'
+import { jsonStringify } from '../../../utils/slowOperations'
 import {
   getDefaultBashTimeoutMs,
   getMaxBashTimeoutMs,
-} from '../../utils/timeouts'
+} from '../../../../../../shared/utils/timeouts'
 import {
   getUndercoverInstructions,
   isUndercover,
-} from '../../utils/undercover'
+} from '../../../../../../shared/utils/undercover'
 import { AGENT_TOOL_NAME } from '../AgentTool/constants'
 import { FILE_EDIT_TOOL_NAME } from '../FileEditTool/constants'
 import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt'

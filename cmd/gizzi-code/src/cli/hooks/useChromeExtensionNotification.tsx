@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Text } from '@/ink.js';
 import { isClaudeAISubscriber } from '../utils/auth.js';
 import { isChromeExtensionInstalled, shouldEnableAllternitInChrome } from '../utils/allternitInChrome/setup.js';
-import { isRunningOnHomespace } from '../utils/envUtils.js';
+import { isRunningOnHomespace } from '../../shared/utils/envUtils.js';
 import { useStartupNotification } from './notifs/useStartupNotification.js';
 function getChromeFlag(): boolean | undefined {
   if (process.argv.includes('--chrome')) {

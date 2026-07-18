@@ -1,4 +1,4 @@
-import { logForDebugging } from '../utils/debug.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
 import { BridgeFatalError } from './bridgeApi.js'
 import type { BridgeApiClient } from './types.js'
 

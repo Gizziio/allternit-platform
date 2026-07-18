@@ -38,7 +38,7 @@ const teamMemPaths = feature('TEAMMEM')
   ? (require('../memdir/teamMemPaths.js') as typeof import('../memdir/teamMemPaths.js'))
   : null
 const ccrAutoConnect = feature('CCR_AUTO_CONNECT')
-  ? (require('../bridge/bridgeEnabled.js') as typeof import('../bridge/bridgeEnabled.js'))
+  ? (require('../../runtime/integrations/bridgeEnabled.js') as typeof import('../../runtime/integrations/bridgeEnabled.js'))
   : null
 
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -268,7 +268,7 @@ export type GlobalConfig = {
   }
 
   // /buddy companion soul — bones regenerated from userId on read. See src/buddy/.
-  companion?: import('../buddy/types.js').StoredCompanion
+  companion?: import('../../runtime/integrations/types.js').StoredCompanion
   companionMuted?: boolean
 
   // Feedback survey tracking

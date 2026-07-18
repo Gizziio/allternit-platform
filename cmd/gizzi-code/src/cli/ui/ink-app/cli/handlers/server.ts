@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { randomBytes } from 'crypto';
-import { startServer } from '../../server/server.js';
+import { startServer } from '../../../../../runtime/server/server.js';
 import { SessionManager } from '../../server/sessionManager.js';
 import { DangerousBackend } from '../../server/backends/dangerousBackend.js';
 import { printBanner } from '../../server/serverBanner.js';
@@ -9,7 +9,7 @@ import {
   writeServerLock,
   removeServerLock,
   probeRunningServer,
-} from '../../server/lockfile.js';
+} from '../../../../../shared/utils/lockfile.js';
 
 export async function serverHandler(opts: {
   port: string;

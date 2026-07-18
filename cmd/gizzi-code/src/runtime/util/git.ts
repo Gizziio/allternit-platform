@@ -82,5 +82,3 @@ export namespace Git {
 // Keep the direct export for compatibility if needed
 export const git = Git.exec;
 
-// Auto-added export
-export const getRepoRemoteHash: any = {}

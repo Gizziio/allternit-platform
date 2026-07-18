@@ -50,17 +50,17 @@ import {
   updateSettingsForSource,
 } from '../settings/settings.js'
 import type { SettingsJson } from '../settings/types.js'
-import type { SandboxFilesystemConfig } from '../../entrypoints/sandboxTypes.js'
+import type { SandboxFilesystemConfig } from '../../../cli/ui/ink-app/entrypoints/sandboxTypes.js'
 export type { SandboxFilesystemConfig }
 
 // ============================================================================
 // Settings Converter
 // ============================================================================
 
-import { BASH_TOOL_NAME } from 'src/tools/BashTool/toolName.js'
-import { FILE_EDIT_TOOL_NAME } from 'src/tools/FileEditTool/constants.js'
-import { FILE_READ_TOOL_NAME } from 'src/tools/FileReadTool/prompt.js'
-import { WEB_FETCH_TOOL_NAME } from 'src/tools/WebFetchTool/prompt.js'
+import { BASH_TOOL_NAME } from '../../../cli/ui/ink-app/tools/BashTool/toolName.js'
+import { FILE_EDIT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileEditTool/constants.js'
+import { FILE_READ_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { WEB_FETCH_TOOL_NAME } from '../../../cli/ui/ink-app/tools/WebFetchTool/prompt.js'
 import { errorMessage } from '../errors.js'
 import { getClaudeTempDir } from '../permissions/filesystem.js'
 import type { PermissionRuleValue } from '../permissions/PermissionRule.js'

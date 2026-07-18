@@ -6,9 +6,9 @@ import { getFeatureValue_CACHED_WITH_REFRESH } from '@/services/analytics/growth
 import { logEvent } from '@/services/analytics/index.js'
 import type { ValidationResult } from '@/Tool.js'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import { isEnvTruthy } from '../../../utils/envUtils.js'
-import { lazySchema } from '../../../utils/lazySchema.js'
-import { plural } from '../../../utils/stringUtils.js'
+import { isEnvTruthy } from '../../../../shared/utils/envUtils.js'
+import { lazySchema } from '../../../../shared/utils/lazySchema.js'
+import { plural } from '../../../../shared/utils/stringUtils.js'
 import { resolveAttachments, validateAttachmentPaths } from './attachments.js'
 import {
   BRIEF_TOOL_NAME,

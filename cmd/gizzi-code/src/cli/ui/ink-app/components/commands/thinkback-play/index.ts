@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook'
+import type { Command } from '../../../commands'
+import { checkStatsigFeatureGate_CACHED_MAY_BE_STALE } from '../../../../../../runtime/services/analytics/growthbook'
 
 // Hidden command that just plays the animation
 // Called by the thinkback skill after generation is complete
@@ -12,6 +12,6 @@ const thinkbackPlay = {
     checkStatsigFeatureGate_CACHED_MAY_BE_STALE('tengu_thinkback'),
   isHidden: true,
   supportsNonInteractive: false,
-  load: () => import('./thinkback-play.js'),
+  load: () => import('../../../commands/thinkback-play/thinkback-play.js'),
 } satisfies Command
 export default thinkbackPlay

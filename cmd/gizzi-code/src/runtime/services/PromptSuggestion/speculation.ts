@@ -15,35 +15,35 @@ import { commandHasAnyCd } from '../../tools/builtins/bash/bashPermissions.js'
 import { checkReadOnlyConstraints } from '../../tools/builtins/bash/readOnlyValidation.js'
 import type { SpeculationAcceptMessage } from '@/types/logs.js'
 import type { Message } from '@/types/message.js'
-import { createChildAbortController } from '../../../utils/abortController.js'
+import { createChildAbortController } from '../../../shared/utils/abortController.js'
 import { count } from '../../../utils/array.js'
 import { getGlobalConfig } from '../../../utils/config.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { errorMessage } from '../../../utils/errors.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { errorMessage } from '../../../shared/utils/errors.js'
 import {
   type FileStateCache,
   mergeFileStateCaches,
   READ_FILE_STATE_CACHE_SIZE,
-} from '../../../utils/fileStateCache.js'
+} from '../../../shared/utils/fileStateCache.js'
 import {
   type CacheSafeParams,
   createCacheSafeParams,
   runForkedAgent,
-} from '../../../utils/forkedAgent.js'
+} from '../../../shared/utils/forkedAgent.js'
 import { formatDuration, formatNumber } from '../../../utils/format.js'
 import type { REPLHookContext } from '../../../shared/utils/hooks/postSamplingHooks.js'
-import { logError } from '../../../utils/log.js'
-import type { SetAppState } from '../../../utils/messageQueueManager.js'
+import { logError } from '../../../shared/utils/log.js'
+import type { SetAppState } from '../../../shared/utils/messageQueueManager.js'
 import {
   createSystemMessage,
   createUserMessage,
   INTERRUPT_MESSAGE,
   INTERRUPT_MESSAGE_FOR_TOOL_USE,
-} from '../../../utils/messages.js'
+} from '../../../shared/utils/messages.js'
 import { getClaudeTempDir } from '../../../utils/permissions/filesystem.js'
-import { extractReadFilesFromMessages } from '../../../utils/queryHelpers.js'
+import { extractReadFilesFromMessages } from '../../../shared/utils/queryHelpers.js'
 import { getTranscriptPath } from '../../../utils/sessionStorage.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,

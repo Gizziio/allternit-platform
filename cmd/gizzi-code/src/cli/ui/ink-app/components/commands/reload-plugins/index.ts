@@ -3,7 +3,7 @@
  * /reload-plugins — Layer-3 refresh. Applies pending plugin changes to the
  * running session. Implementation lazy-loaded.
  */
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 
 const reloadPlugins = {
   type: 'local',
@@ -13,6 +13,6 @@ const reloadPlugins = {
   // sending this as a text prompt — that returns structured data
   // (commands, agents, plugins, mcpServers) for UI updates.
   supportsNonInteractive: false,
-  load: () => import('./reload-plugins.js'),
+  load: () => import('../../../commands/reload-plugins/reload-plugins.js'),
 } satisfies Command
 export default reloadPlugins

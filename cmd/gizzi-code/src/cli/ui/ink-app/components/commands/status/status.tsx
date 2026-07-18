@@ -1,8 +1,8 @@
 // @ts-nocheck
 import * as React from 'react';
-import type { LocalJSXCommandContext } from '../../commands';
-import { Settings } from '../../components/Settings/Settings';
-import type { LocalJSXCommandOnDone } from '../../types/command';
+import type { LocalJSXCommandContext } from '../../../commands';
+import { Settings } from '../../../../components/Settings/Settings';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
 export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext): Promise<React.ReactNode> {
   return <Settings onClose={onDone} context={context} defaultTab="Status" />;
 }

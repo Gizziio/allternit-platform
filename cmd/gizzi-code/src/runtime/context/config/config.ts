@@ -1164,6 +1164,12 @@ export namespace Config {
             complex: ModelId.describe("Model for complex requests (multi-step, technical)"),
             reasoning: ModelId.describe("Model for reasoning requests (formal logic, planning)"),
           }),
+          fallbacks: z
+            .array(ModelId)
+            .optional()
+            .describe(
+              "Ordered cross-provider failover chain (format: provider/model). When the active model fails, the next untried model in this list takes over.",
+            ),
         })
         .optional()
         .describe(

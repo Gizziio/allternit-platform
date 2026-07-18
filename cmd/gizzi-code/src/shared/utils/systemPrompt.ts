@@ -18,7 +18,7 @@ export { asSystemPrompt, type SystemPrompt } from './systemPromptType.js'
 /* eslint-disable @typescript-eslint/no-require-imports */
 const proactiveModule =
   feature('PROACTIVE') || feature('KAIROS')
-    ? (require('../proactive/index.js') as typeof import('../proactive/index.js'))
+    ? (require('../../cli/ui/ink-app/components/index.js') as typeof import('../../cli/ui/ink-app/components/index.js'))
     : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 

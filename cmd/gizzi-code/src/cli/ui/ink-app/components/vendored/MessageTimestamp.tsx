@@ -2,8 +2,8 @@
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { stringWidth } from './core/stringWidth';
-import { Box, Text } from './core/ink';
-import type { NormalizedMessage } from '../../vendor/types/message';
+import { Box, Text } from '../../../../../shared/utils/ink';
+import type { NormalizedMessage } from '../message';
 type Props = {
   message: NormalizedMessage;
   isTranscriptMode: boolean;

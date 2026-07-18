@@ -1,0 +1,50 @@
+name: Allternit
+options:
+  bundleIdPrefix: com.allternit
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+packages:
+  clerk-ios:
+    url: https://github.com/clerk/clerk-ios
+    exactVersion: "1.3.2"
+  MarkdownView:
+    url: https://github.com/LiYanan2004/MarkdownView
+    from: "3.0.0"
+  Runestone:
+    url: https://github.com/simonbs/Runestone
+    from: "0.5.2"
+targets:
+  Allternit:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: App
+      - path: Core
+      - path: Features
+      - path: Assets.xcassets
+    settings:
+      base:
+        INFOPLIST_FILE: Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.allternit.mobile
+        PRODUCT_NAME: Allternit
+        SWIFT_VERSION: "6.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        # Placeholder — set your team for device builds.
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - package: clerk-ios
+        product: ClerkKit
+      - package: clerk-ios
+        product: ClerkKitUI
+      - package: MarkdownView
+        product: MarkdownView
+      - package: Runestone
+        product: Runestone

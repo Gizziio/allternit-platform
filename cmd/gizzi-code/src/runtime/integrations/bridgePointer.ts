@@ -2,7 +2,7 @@ import { mkdir, readFile, stat, unlink, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import { z } from 'zod/v4'
 import { logForDebugging } from '../../shared/utils/debug.js'
-import { isENOENT } from '../../runtime/services/api/errors.js'
+import { isENOENT } from '../../shared/utils/errors.js'
 import { getWorktreePathsPortable } from '../../shared/utils/getWorktreePathsPortable.js'
 import { lazySchema } from '../../shared/utils/lazySchema.js'
 import {

@@ -56,6 +56,7 @@ import { useModelDiscovery } from '@/integration/api-client';
 import { useAgentSurfaceModeStore, type AgentModeSurface, type AgentModeId } from '@/stores/agent-surface-mode.store';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
 
 import {
@@ -427,6 +428,7 @@ export function ChatComposer({
   topDeckContent,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
+  const isMobile = useIsMobile();
   const {
     isRecording: isVoiceRecording,
     interimTranscript,
@@ -1890,14 +1892,20 @@ export function ChatComposer({
                     onClick={() => void enterVoiceMode()}
                     aria-label="Start voice mode"
                     title="Voice mode"
-                    className="size-7 rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer"
+                    className={cn(
+                      'rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer',
+                      isMobile ? 'size-11' : 'size-7'
+                    )}
                   >
                     <Waveform size={17} weight="bold" />
                   </button>
                   <button type="button"
                     onClick={() => setShowModelMenu(!showModelMenu)}
                     disabled={terminalModelsLoading && allModels.length === 0}
-                    className="flex items-center gap-1 py-1 px-2 rounded-full text-xs font-medium transition-all"
+                    className={cn(
+                      'flex items-center gap-1 px-2 rounded-full text-xs font-medium transition-all',
+                      isMobile ? 'py-3.5' : 'py-1'
+                    )}
                     style={{
                       background: showModelMenu ? THEME.hoverBg : 'transparent',
                       color: terminalModelsLoading && allModels.length === 0 ? THEME.textMuted : THEME.textSecondary,
@@ -1963,7 +1971,10 @@ export function ChatComposer({
                     <button
                       onClick={onStop}
                       type="button"
-                      className="size-7 rounded-full bg-composer-soft border border-input-border text-accent flex items-center justify-center cursor-pointer transition-all"
+                      className={cn(
+                        'rounded-full bg-composer-soft border border-input-border text-accent flex items-center justify-center cursor-pointer transition-all',
+                        isMobile ? 'size-11' : 'size-7'
+                      )}
                     >
                       <Square size={11} fill="currentColor" />
                     </button>
@@ -1972,7 +1983,10 @@ export function ChatComposer({
                       onClick={handleSubmit}
                       disabled={!canSubmit}
                       type="button"
-                      className="size-7 rounded-full flex items-center justify-center transition-all"
+                      className={cn(
+                        'rounded-full flex items-center justify-center transition-all',
+                        isMobile ? 'size-11' : 'size-7'
+                      )}
                       style={{
                         background: canSubmit ? THEME.accent : 'var(--chat-composer-soft)',
                         border: canSubmit ? 'none' : `1px solid ${THEME.inputBorder}`,
@@ -2140,11 +2154,14 @@ export function ChatComposer({
             </div>
           ) : null}
 
-          {!compact && (<div className="flex items-center justify-between p-3">
+          {!compact && (<div className={cn('flex items-center justify-between', isMobile ? 'p-2' : 'p-3')}>
             <div className="flex items-center gap-1 relative">
               <AttachmentButton
                 onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
-                className="size-8 transition-colors bg-transparent shadow-none border-none"
+                className={cn(
+                  'transition-colors bg-transparent shadow-none border-none',
+                  isMobile ? 'size-11' : 'size-8'
+                )}
                 icon={
                   <Plus
                     size={20}
@@ -2391,14 +2408,20 @@ export function ChatComposer({
                 onClick={() => void enterVoiceMode()}
                 aria-label="Start voice mode"
                 title="Voice mode"
-                className="size-7 rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer"
+                className={cn(
+                  'rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer',
+                  isMobile ? 'size-11' : 'size-7'
+                )}
               >
                 <Waveform size={17} weight="bold" />
               </button>
               <button type="button"
                 onClick={() => setShowModelMenu(!showModelMenu)}
                 disabled={terminalModelsLoading && allModels.length === 0}
-                className="flex items-center gap-1 py-1 px-2.5 rounded-full text-sm font-medium transition-all"
+                className={cn(
+                  'flex items-center gap-1 px-2.5 rounded-full text-sm font-medium transition-all',
+                  isMobile ? 'py-3' : 'py-1'
+                )}
                 style={{
                   background: showModelMenu ? THEME.hoverBg : 'transparent',
                   color: terminalModelsLoading && allModels.length === 0 ? THEME.textMuted : THEME.textSecondary,
@@ -2475,7 +2498,10 @@ export function ChatComposer({
                   <button
                     onClick={onStop}
                     type="button"
-                    className="size-8 rounded-full bg-composer-soft border border-input-border text-accent flex items-center justify-center cursor-pointer transition-all"
+                    className={cn(
+                      'rounded-full bg-composer-soft border border-input-border text-accent flex items-center justify-center cursor-pointer transition-all',
+                      isMobile ? 'size-11' : 'size-8'
+                    )}
                   >
                     <Square size={12} fill="currentColor" />
                   </button>
@@ -2485,7 +2511,10 @@ export function ChatComposer({
                   onClick={handleSubmit}
                   disabled={!canSubmit}
                   type="button"
-                  className="size-8 rounded-full flex items-center justify-center transition-all"
+                  className={cn(
+                    'rounded-full flex items-center justify-center transition-all',
+                    isMobile ? 'size-11' : 'size-8'
+                  )}
                   style={{
                     background: canSubmit ? THEME.accent : 'var(--chat-composer-soft)',
                     border: canSubmit ? 'none' : `1px solid ${THEME.inputBorder}`,

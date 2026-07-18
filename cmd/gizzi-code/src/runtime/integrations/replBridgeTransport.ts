@@ -1,12 +1,12 @@
 // @ts-nocheck
 import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
-import { CCRClient } from '../cli/transports/ccrClient.js'
-import type { HybridTransport } from '../cli/transports/HybridTransport.js'
-import { SSETransport } from '../cli/transports/SSETransport.js'
-import { logForDebugging } from '../utils/debug.js'
+import { CCRClient } from '../../cli/ui/ink-app/cli/transports/ccrClient.js'
+import type { HybridTransport } from '../../cli/ui/ink-app/cli/transports/HybridTransport.js'
+import { SSETransport } from '../../cli/ui/ink-app/cli/transports/SSETransport.js'
+import { logForDebugging } from '../../shared/utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
-import { updateSessionIngressAuthToken } from '../utils/sessionIngressAuth.js'
-import type { SessionState } from '../utils/sessionState.js'
+import { updateSessionIngressAuthToken } from '../../shared/utils/sessionIngressAuth.js'
+import type { SessionState } from '../../shared/utils/sessionState.js'
 import { registerWorker } from './workSecret.js'
 
 /**

@@ -2,33 +2,33 @@
 import figures from 'figures';
 import { join } from 'path';
 import React, { Suspense, use, useCallback, useEffect, useMemo, useState } from 'react';
-import { KeybindingWarnings } from '../vendor/components/KeybindingWarnings';
+import { KeybindingWarnings } from '../KeybindingWarnings';
 import { McpParsingWarnings } from '../vendor/components/mcp/McpParsingWarnings';
-import { getModelMaxOutputTokens } from '../vendor/utils/context';
-import { getGizziConfigHomeDir } from '../vendor/utils/envUtils';
+import { getModelMaxOutputTokens } from '../../../../../shared/utils/context';
+import { getGizziConfigHomeDir } from '../../../../../shared/utils/envUtils';
 import type { SettingSource } from '../vendor/utils/settings/constants';
 import { getOriginalCwd } from './vendor/bootstrap/state';
 import type { CommandResultDisplay } from './vendor/commands';
 import { Pane } from './components/vendored/design-system/Pane';
-import { PressEnterToContinue } from './components/vendored/PressEnterToContinue';
+import { PressEnterToContinue } from '../PressEnterToContinue';
 import { SandboxDoctorSection } from './components/vendored/sandbox/SandboxDoctorSection';
-import { ValidationErrorsList } from './components/vendored/ValidationErrorsList';
+import { ValidationErrorsList } from '../ValidationErrorsList';
 import { useSettingsErrors } from './hooks/vendored/notifs/useSettingsErrors';
-import { useExitOnCtrlCDWithKeybindings } from './hooks/vendored/useExitOnCtrlCDWithKeybindings';
-import { Box, Text } from './core/ink';
+import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings';
+import { Box, Text } from '../../../../../shared/utils/ink';
 import { useKeybindings } from '../keybindings/useKeybinding';
 import { useAppState } from '../state/AppState';
-import { getPluginErrorMessage } from './vendor/types/plugin';
-import { getGcsDistTags, getNpmDistTags, type NpmDistTags } from './vendor/utils/autoUpdater';
-import { type ContextWarnings, checkContextWarnings } from './vendor/utils/doctorContextWarnings';
-import { type DiagnosticInfo, getDoctorDiagnostic } from './vendor/utils/doctorDiagnostic';
-import { validateBoundedIntEnvVar } from './vendor/utils/envValidation';
-import { pathExists } from './vendor/utils/file';
+import { getPluginErrorMessage } from '../../types/plugin';
+import { getGcsDistTags, getNpmDistTags, type NpmDistTags } from '../../../../../shared/utils/autoUpdater';
+import { type ContextWarnings, checkContextWarnings } from '../../../../../shared/utils/doctorContextWarnings';
+import { type DiagnosticInfo, getDoctorDiagnostic } from '../../../../../shared/utils/doctorDiagnostic';
+import { validateBoundedIntEnvVar } from '../../../../../shared/utils/envValidation';
+import { pathExists } from '../../../../../shared/utils/file';
 import { cleanupStaleLocks, getAllLockInfo, isPidBasedLockingEnabled, type LockInfo } from './vendor/utils/nativeInstaller/pidLock';
 import { getInitialSettings } from './vendor/utils/settings/settings';
 import { BASH_MAX_OUTPUT_DEFAULT, BASH_MAX_OUTPUT_UPPER_LIMIT } from './vendor/utils/shell/outputLimits';
 import { TASK_MAX_OUTPUT_DEFAULT, TASK_MAX_OUTPUT_UPPER_LIMIT } from './vendor/utils/task/outputFormatting';
-import { getXDGStateHome } from './vendor/utils/xdg';
+import { getXDGStateHome } from '../../../../../shared/utils/xdg';
 
 type Props = {
   onDone: (result?: string, options?: {

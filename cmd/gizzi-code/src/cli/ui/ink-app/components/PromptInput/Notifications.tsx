@@ -3,7 +3,7 @@ import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { type Notification, useNotifications } from './../../context/notifications.tsx';
+import { type Notification, useNotifications } from '../../../../../context/notifications';
 import { logEvent } from './../../services/analytics/index.ts';
 import { useAppState } from './../../state/AppState.tsx';
 import { useVoiceState } from '../../context/voice';

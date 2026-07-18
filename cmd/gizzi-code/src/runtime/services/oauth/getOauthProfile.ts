@@ -4,7 +4,7 @@ import { getOauthConfig, OAUTH_BETA_HEADER } from '@/constants/oauth.js'
 import type { OAuthProfileResponse } from '@/services/oauth/types.js'
 import { getAnthropicApiKey } from '../../../utils/auth.js'
 import { getGlobalConfig } from '../../../utils/config.js'
-import { logError } from '../../../utils/log.js'
+import { logError } from '../../../shared/utils/log.js'
 export async function getOauthProfileFromApiKey(): Promise<
   OAuthProfileResponse | undefined
 > {

@@ -9,25 +9,25 @@ import { registerAsyncAgent } from '../../tasks/LocalAgentTask/LocalAgentTask.js
 import { assembleToolPool } from '../../tools.js'
 import { asAgentId } from '@/types/ids.js'
 import { runWithAgentContext } from '../../../utils/agentContext.js'
-import { runWithCwdOverride } from '../../../utils/cwd.js'
-import { logForDebugging } from '../../../utils/debug.js'
+import { runWithCwdOverride } from '../../../../shared/utils/cwd.js'
+import { logForDebugging } from '../../../../shared/utils/debug.js'
 import {
   createUserMessage,
   filterOrphanedThinkingOnlyMessages,
   filterUnresolvedToolUses,
   filterWhitespaceOnlyAssistantMessages,
-} from '../../../utils/messages.js'
-import { getAgentModel } from '../../../utils/model/agent.js'
+} from '../../../../shared/utils/messages.js'
+import { getAgentModel } from '../../../../cli/ui/ink-app/utils/model/agent.js'
 import { getQuerySourceForAgent } from '../../../utils/promptCategory.js'
 import {
   getAgentTranscript,
   readAgentMetadata,
-} from '../../../utils/sessionStorage.js'
+} from '../../../../shared/utils/sessionStorage.js'
 import { buildEffectiveSystemPrompt } from '../../../utils/systemPrompt.js'
-import type { SystemPrompt } from '../../../utils/systemPromptType.js'
+import type { SystemPrompt } from '../../../../shared/utils/systemPromptType.js'
 import { getTaskOutputPath } from '../../../utils/task/diskOutput.js'
-import { getParentSessionId } from '../../../utils/teammate.js'
-import { reconstructForSubagentResume } from '../../../utils/toolResultStorage.js'
+import { getParentSessionId } from '../../../../shared/utils/teammate.js'
+import { reconstructForSubagentResume } from '../../../../shared/utils/toolResultStorage.js'
 import { runAsyncAgentLifecycle } from './agentToolUtils.js'
 import { GENERAL_PURPOSE_AGENT } from './built-in/generalPurposeAgent.js'
 import { FORK_AGENT, isForkSubagentEnabled } from './forkSubagent.js'

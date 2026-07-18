@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { getIsNonInteractiveSession } from '../../bootstrap/state'
-import type { Command } from '../../commands'
+import { getIsNonInteractiveSession } from '../../../bootstrap/state'
+import type { Command } from '../../../commands'
 
 export const context: Command = {
   name: 'context',

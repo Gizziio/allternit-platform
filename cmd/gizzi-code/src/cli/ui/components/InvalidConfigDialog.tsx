@@ -3,10 +3,10 @@ import React from 'react';
 import { Box, render, Text } from '@/ink.js';
 import { KeybindingSetup } from '@/keybindings/KeybindingProviderSetup.js';
 import { AppStateProvider } from '@/state/AppState.js';
-import type { ConfigParseError } from '../utils/errors.js';
-import { getBaseRenderOptions } from '../utils/renderOptions.js';
-import { jsonStringify, writeFileSync_DEPRECATED } from '../utils/slowOperations.js';
-import type { ThemeName } from '../utils/theme.js';
+import type { ConfigParseError } from '../../../shared/utils/errors.js';
+import { getBaseRenderOptions } from '../../../shared/utils/renderOptions.js';
+import { jsonStringify, writeFileSync_DEPRECATED } from '../../../shared/utils/slowOperations.js';
+import type { ThemeName } from '../../../shared/utils/theme.js';
 import { Select } from './CustomSelect/index.js';
 import { Dialog } from './design-system/Dialog.js';
 interface InvalidConfigHandlerProps {

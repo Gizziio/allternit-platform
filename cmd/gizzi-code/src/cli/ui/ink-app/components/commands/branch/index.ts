@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 
 const branch = {
   type: 'local-jsx',

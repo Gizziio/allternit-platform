@@ -4,8 +4,8 @@ import { getIsRemoteMode } from '../../bootstrap/state'
 import {
   type Notification,
   useNotifications,
-} from '../../context/notifications'
-import { logError } from '../../utils/log'
+} from '../../../../../../context/notifications'
+import { logError } from '../../../../../../shared/utils/log'
 
 type Result = Notification | Notification[] | null
 /**

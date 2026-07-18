@@ -7,31 +7,31 @@ import { feature } from 'bun:bundle'
 import {
   clearInvokedSkills,
   setLastEmittedDate,
-} from '../../bootstrap/state'
-import { clearCommandsCache } from '../../commands'
+} from '../../../bootstrap/state'
+import { clearCommandsCache } from '../../../commands'
 import { getSessionStartDate } from '../../constants/common'
 import {
   getGitStatus,
   getSystemContext,
   getUserContext,
   setSystemPromptInjection,
-} from '../../context'
-import { clearFileSuggestionCaches } from '../../hooks/fileSuggestions'
-import { clearAllPendingCallbacks } from '../../hooks/useSwarmPermissionPoller'
-import { clearAllDumpState } from '../../services/api/dumpPrompts'
-import { resetPromptCacheBreakDetection } from '../../services/api/promptCacheBreakDetection'
-import { clearAllSessions } from '../../services/api/sessionIngress'
-import { runPostCompactCleanup } from '../../services/compact/postCompactCleanup'
-import { resetAllLSPDiagnosticState } from '../../services/lsp/LSPDiagnosticRegistry'
-import { clearTrackedMagicDocs } from '../../services/MagicDocs/magicDocs'
-import { clearDynamicSkills } from '../../skills/loadSkillsDir'
-import { resetSentSkillNames } from '../../utils/attachments'
-import { clearCommandPrefixCaches } from '../../utils/bash/commands'
-import { resetGetMemoryFilesCache } from '../../utils/claudemd'
-import { clearRepositoryCaches } from '../../utils/detectRepository'
-import { clearResolveGitDirCache } from '../../utils/git/gitFilesystem'
-import { clearStoredImagePaths } from '../../utils/imageStore'
-import { clearSessionEnvVars } from '../../utils/sessionEnvVars'
+} from '../../../context'
+import { clearFileSuggestionCaches } from '../../../hooks/fileSuggestions'
+import { clearAllPendingCallbacks } from '../../../hooks/useSwarmPermissionPoller'
+import { clearAllDumpState } from '../../../../../../runtime/services/api/dumpPrompts'
+import { resetPromptCacheBreakDetection } from '../../../../../../runtime/services/api/promptCacheBreakDetection'
+import { clearAllSessions } from '../../../../../../runtime/services/api/sessionIngress'
+import { runPostCompactCleanup } from '../../../../../../runtime/services/compact/postCompactCleanup'
+import { resetAllLSPDiagnosticState } from '../../../../../../runtime/services/lsp/LSPDiagnosticRegistry'
+import { clearTrackedMagicDocs } from '../../../../../../runtime/services/MagicDocs/magicDocs'
+import { clearDynamicSkills } from '../../../../../../runtime/skills/loadSkillsDir'
+import { resetSentSkillNames } from '../../../../../../shared/utils/attachments'
+import { clearCommandPrefixCaches } from '../../../../../../commands'
+import { resetGetMemoryFilesCache } from '../../../../../../shared/utils/claudemd'
+import { clearRepositoryCaches } from '../../../../../../shared/utils/detectRepository'
+import { clearResolveGitDirCache } from '../../../../../../shared/utils/git/gitFilesystem'
+import { clearStoredImagePaths } from '../../../../../../shared/utils/imageStore'
+import { clearSessionEnvVars } from '../../../../../../shared/utils/sessionEnvVars'
 
 /**
  * Clear all session-related caches.
@@ -110,7 +110,7 @@ export function clearSessionCaches(
   // Clear attribution caches (file content cache, pending bash states)
   // Dynamic import to preserve dead code elimination for COMMIT_ATTRIBUTION feature flag
   if (feature('COMMIT_ATTRIBUTION')) {
-    void import('../../utils/attributionHooks.js').then(
+    void import('../../../../../../shared/utils/attributionHooks.js').then(
       ({ clearAttributionCaches }) => clearAttributionCaches(),
     )
   }
@@ -153,7 +153,7 @@ export function clearSessionCaches(
   )
 
   // Clear agent definitions cache (accumulates per-cwd via EnterWorktreeTool)
-  void import('../../tools/AgentTool/loadAgentsDir.js').then(
+  void import('../../../tools/AgentTool/loadAgentsDir.js').then(
     ({ clearAgentDefinitionsCache }) => clearAgentDefinitionsCache(),
   )
 

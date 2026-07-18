@@ -7,7 +7,7 @@ import { z } from 'zod/v4';
 import { callIdeRpc } from '../services/mcp/client';
 import type { ConnectedMCPServer, MCPServerConnection } from '../services/mcp/types';
 import type { PermissionMode } from '../types/permissions';
-import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME, isTrackedAllternitInChromeTabId } from '../utils/allternitInChrome/common';
+import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME, isTrackedAllternitInChromeTabId } from '../../../../shared/utils/allternitInChrome/common';
 import { lazySchema } from '../utils/lazySchema';
 import { enqueuePendingNotification } from '../utils/messageQueueManager';
 

@@ -1,16 +1,16 @@
 // @ts-nocheck
 import React, { type RefObject, useEffect, useRef } from 'react';
-import { useNotifications } from '../context/notifications.js';
+import { useNotifications } from '../../../context/notifications.js';
 import { useCopyOnSelect, useSelectionBgColor } from '@/hooks/useCopyOnSelect.js';
-import type { ScrollBoxHandle } from '@/ink/components/ScrollBox.js';
-import { useSelection } from '@/ink/hooks/use-selection.js';
-import type { FocusMove, SelectionState } from '@/ink/selection.js';
-import { isXtermJs } from '@/ink/terminal.js';
-import { getClipboardPath } from '@/ink/termio/osc.js';
+import type { ScrollBoxHandle } from '../ink-renderer/components/ScrollBox.js';
+import { useSelection } from '../ink-renderer/hooks/use-selection.js';
+import type { FocusMove, SelectionState } from '../ink-renderer/selection.js';
+import { isXtermJs } from '../ink-renderer/terminal.js';
+import { getClipboardPath } from '../ink-renderer/termio/osc.js';
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- Esc needs conditional propagation based on selection state
 import { type Key, useInput } from '@/ink.js';
 import { useKeybindings } from '@/keybindings/useKeybinding.js';
-import { logForDebugging } from '../utils/debug.js';
+import { logForDebugging } from '../../../shared/utils/debug.js';
 type Props = {
   scrollRef: RefObject<ScrollBoxHandle | null>;
   isActive: boolean;

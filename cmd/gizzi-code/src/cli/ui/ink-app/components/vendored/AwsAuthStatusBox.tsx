@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useEffect, useState } from 'react';
-import { Box, Link, Text } from '../ink';
-import { type AwsAuthStatus, AwsAuthStatusManager } from '../utils/awsAuthStatusManager';
+import { Box, Link, Text } from '../../ink';
+import { type AwsAuthStatus, AwsAuthStatusManager } from '../../../../../shared/utils/awsAuthStatusManager';
 const URL_RE = /https?:\/\/\S+/;
 export function AwsAuthStatusBox() {
   const $ = _c(11);

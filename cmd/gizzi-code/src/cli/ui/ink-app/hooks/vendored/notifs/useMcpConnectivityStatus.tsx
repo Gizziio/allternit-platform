@@ -1,11 +1,11 @@
 // @ts-nocheck
 import * as React from 'react';
 import { useEffect } from 'react';
-import { useNotifications } from './../../../context/notifications.tsx';
+import { useNotifications } from '../../../../../../context/notifications';
 import { getIsRemoteMode } from '../../bootstrap/state';
-import { Text } from '../../ink';
+import { Text } from '../../../../../../shared/utils/ink';
 import { hasClaudeAiMcpEverConnected } from '../../services/mcp/claudeai';
-import type { MCPServerConnection } from '../../services/mcp/types';
+import type { MCPServerConnection } from '../../../../../../runtime/integrations/types';
 
 type Props = {
   mcpClients?: MCPServerConnection[];

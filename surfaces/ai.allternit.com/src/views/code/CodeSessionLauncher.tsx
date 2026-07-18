@@ -11,6 +11,7 @@ import {
   GitFork,
   Globe,
   PencilSimple,
+  SquaresFour,
   TerminalWindow,
   Trash,
   Scroll,
@@ -20,6 +21,8 @@ export type CodePaneTarget = 'artifacts' | 'files' | 'diff' | 'terminal' | 'aci'
 
 interface CodeSessionLauncherProps {
   onOpenPane: (pane: CodePaneTarget) => void;
+  /** Renders the canvas-mode toggle inline with the other pane widgets. */
+  onCanvasMode?: () => void;
   onRename: () => void;
   onFork: () => void;
   onArchive: () => void;
@@ -112,6 +115,9 @@ export function CodeSessionLauncher(props: CodeSessionLauncherProps): React.Reac
         WebkitBackdropFilter: 'blur(10px)',
       }}
     >
+      {props.onCanvasMode ? (
+        <button type="button" data-testid="code-canvas-mode-toggle" aria-label="Switch to canvas mode" title="Switch to canvas mode" onClick={props.onCanvasMode} style={iconButton}><SquaresFour size={16} weight="bold" /></button>
+      ) : null}
       <button type="button" aria-label="Open terminal" onClick={() => props.onOpenPane('terminal')} style={iconButton}><TerminalWindow size={16} weight="bold" /></button>
       <button type="button" aria-label="Open diff" onClick={() => props.onOpenPane('diff')} style={iconButton}><GitDiff size={16} weight="bold" /></button>
       <button type="button" aria-label="Open ACI" onClick={() => props.onOpenPane('aci')} style={iconButton}><Globe size={16} weight="bold" /></button>

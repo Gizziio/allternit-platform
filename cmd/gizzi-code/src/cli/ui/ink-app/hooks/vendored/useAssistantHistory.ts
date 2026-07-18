@@ -17,8 +17,8 @@ import {
 import type { ScrollBoxHandle } from '../../core/components/ScrollBox'
 import type { RemoteSessionConfig } from '../remote/RemoteSessionManager'
 import { convertSDKMessage } from '../remote/sdkMessageAdapter'
-import type { Message, SystemInformationalMessage } from '../../vendor/types/message'
-import { logForDebugging } from '../../vendor/utils/debug'
+import type { Message, SystemInformationalMessage } from '../../components/message'
+import { logForDebugging } from '../../../../../shared/utils/debug'
 
 type Props = {
   /** Gated on viewerOnly — non-viewer sessions have no remote history to page. */

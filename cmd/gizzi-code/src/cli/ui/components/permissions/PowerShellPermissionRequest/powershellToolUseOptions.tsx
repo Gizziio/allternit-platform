@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { POWERSHELL_TOOL_NAME } from '../../../tools/PowerShellTool/toolName.js';
+import { POWERSHELL_TOOL_NAME } from '../../../../../runtime/tools/builtins/bash/toolName.js';
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js';
-import { shouldShowAlwaysAllowOptions } from '../../../utils/permissions/permissionsLoader.js';
+import { shouldShowAlwaysAllowOptions } from '../../../../../shared/utils/permissions/permissionsLoader.js';
 import type { OptionWithDescription } from '../../CustomSelect/select.js';
 import { generateShellSuggestionsLabel } from '../shellPermissionHelpers.js';
 export type PowerShellToolUseOption = 'yes' | 'yes-apply-suggestions' | 'yes-prefix-edited' | 'no';

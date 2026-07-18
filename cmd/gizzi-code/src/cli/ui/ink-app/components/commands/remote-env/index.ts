@@ -1,7 +1,7 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { isPolicyAllowed } from '../../services/policyLimits/index'
-import { isClaudeAISubscriber } from '../../utils/auth'
+import type { Command } from '../../../commands'
+import { isPolicyAllowed } from '../../index'
+import { isClaudeAISubscriber } from '../../../utils/auth'
 
 export default {
   type: 'local-jsx',

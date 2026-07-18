@@ -6,9 +6,9 @@ import {
   logEvent,
 } from '@/services/analytics/index.js'
 import { getOauthAccountInfo, isConsumerSubscriber } from '../../../utils/auth.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { gracefulShutdown } from '../../../utils/gracefulShutdown.js'
-import { isEssentialTrafficOnly } from '../../../utils/privacyLevel.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { gracefulShutdown } from '../../../shared/utils/gracefulShutdown.js'
+import { isEssentialTrafficOnly } from '../../../shared/utils/privacyLevel.js'
 import { writeToStderr } from '../../../utils/process.js'
 import { getOauthConfig } from '@/constants/oauth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../../utils/config.js'
@@ -16,9 +16,9 @@ import {
   getAuthHeaders,
   getUserAgent,
   withOAuth401Retry,
-} from '../../../utils/http.js'
-import { logError } from '../../../utils/log.js'
-import { getClaudeCodeUserAgent } from '../../../utils/userAgent.js'
+} from '../../../shared/utils/http.js'
+import { logError } from '../../../shared/utils/log.js'
+import { getClaudeCodeUserAgent } from '../../../shared/utils/userAgent.js'
 
 // Cache expiration: 24 hours
 const GROVE_CACHE_EXPIRATION_MS = 24 * 60 * 60 * 1000

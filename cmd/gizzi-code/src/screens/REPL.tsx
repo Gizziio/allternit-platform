@@ -4,7 +4,7 @@ import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import { spawnSync } from 'child_process';
 import { snapshotOutputTokensForTurn, getCurrentTurnTokenBudget, getTurnOutputTokens, getBudgetContinuationCount, getTotalInputTokens } from '@/bootstrap/state.js';
-import { parseTokenBudget } from '../utils/tokenBudget.js';
+import { parseTokenBudget } from '../shared/utils/tokenBudget.js';
 import { count } from '../utils/array.js';
 import { dirname, join } from 'path';
 import { tmpdir } from 'os';
@@ -30,14 +30,14 @@ import { useEffect, useMemo, useRef, useState, useCallback, useDeferredValue, us
 import { useNotifications } from '../context/notifications.js';
 import { sendNotification } from '@/services/notifier.js';
 import { startPreventSleep, stopPreventSleep } from '@/services/preventSleep.js';
-import { useTerminalNotification } from '@/ink/useTerminalNotification.js';
-import { hasCursorUpViewportYankBug } from '@/ink/terminal.js';
-import { createFileStateCacheWithSizeLimit, mergeFileStateCaches, READ_FILE_STATE_CACHE_SIZE } from '../utils/fileStateCache.js';
+import { useTerminalNotification } from '../cli/ui/ink-renderer/useTerminalNotification.js';
+import { hasCursorUpViewportYankBug } from '../cli/ui/ink-renderer/terminal.js';
+import { createFileStateCacheWithSizeLimit, mergeFileStateCaches, READ_FILE_STATE_CACHE_SIZE } from '../shared/utils/fileStateCache.js';
 import { updateLastInteractionTime, getLastInteractionTime, getOriginalCwd, getProjectRoot, getSessionId, switchSession, setCostStateForRestore, getTurnHookDurationMs, getTurnHookCount, resetTurnHookDuration, getTurnToolDurationMs, getTurnToolCount, resetTurnToolDuration, getTurnClassifierDurationMs, getTurnClassifierCount, resetTurnClassifierDuration } from '@/bootstrap/state.js';
 import { asSessionId, asAgentId } from '@/types/ids.js';
-import { logForDebugging } from '../utils/debug.js';
+import { logForDebugging } from '../shared/utils/debug.js';
 import { QueryGuard } from '../utils/QueryGuard.js';
-import { isEnvTruthy } from '../utils/envUtils.js';
+import { isEnvTruthy } from '../shared/utils/envUtils.js';
 import { formatTokens, truncateToWidth } from '../utils/format.js';
 import { consumeEarlyInput } from '../utils/earlyInput.js';
 import { setMemberActive } from '../utils/swarm/teamHelpers.js';
@@ -74,7 +74,7 @@ import { SpinnerWithVerb, BriefIdleStatus, type SpinnerMode } from '../component
 import { getSystemPrompt } from '@/constants/prompts.js';
 import { buildEffectiveSystemPrompt } from '../utils/systemPrompt.js';
 import { getSystemContext, getUserContext } from '../context.js';
-import { getMemoryFiles } from '../utils/claudemd.js';
+import { getMemoryFiles } from '../shared/utils/claudemd.js';
 import { startBackgroundHousekeeping } from '../utils/backgroundHousekeeping.js';
 import { getTotalCost, saveCurrentSessionCosts, resetCostState, getStoredSessionCosts } from '../cost-tracker.js';
 import { useCostSummary } from '../costHook.js';
@@ -94,9 +94,9 @@ import { CancelRequestHandler } from '@/hooks/useCancelRequest.js';
 import { useBackgroundTaskNavigation } from '@/hooks/useBackgroundTaskNavigation.js';
 import { useSwarmInitialization } from '@/hooks/useSwarmInitialization.js';
 import { useTeammateViewAutoExit } from '@/hooks/useTeammateViewAutoExit.js';
-import { errorMessage } from '../utils/errors.js';
+import { errorMessage } from '../shared/utils/errors.js';
 import { isHumanTurn } from '../utils/messagePredicates.js';
-import { logError } from '../utils/log.js';
+import { logError } from '../shared/utils/log.js';
 // Dead code elimination: conditional imports
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 const useVoiceIntegration: typeof import('../hooks/useVoiceIntegration.js').useVoiceIntegration = feature('VOICE_MODE') ? require('../hooks/useVoiceIntegration.js').useVoiceIntegration : () => ({
@@ -126,14 +126,14 @@ const getCoordinatorUserContext: (mcpClients: ReadonlyArray<{
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import useCanUseTool from '@/hooks/useCanUseTool.js';
 import type { ToolPermissionContext, Tool } from '@/Tool.js';
-import { applyPermissionUpdate, applyPermissionUpdates, persistPermissionUpdate } from '../utils/permissions/PermissionUpdate.js';
+import { applyPermissionUpdate, applyPermissionUpdates, persistPermissionUpdate } from '../shared/utils/permissions/PermissionUpdate.js';
 import { buildPermissionUpdates } from '../components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest.js';
 import { stripDangerousPermissionsForAutoMode } from '../utils/permissions/permissionSetup.js';
 import { getScratchpadDir, isScratchpadEnabled } from '../utils/permissions/filesystem.js';
-import { WEB_FETCH_TOOL_NAME } from '../tools/WebFetchTool/prompt.js';
+import { WEB_FETCH_TOOL_NAME } from '../cli/ui/ink-app/tools/WebFetchTool/prompt.js';
 import { SLEEP_TOOL_NAME } from '../tools/SleepTool/prompt.js';
 import { clearSpeculativeChecks } from '../tools/BashTool/bashPermissions.js';
-import type { AutoUpdaterResult } from '../utils/autoUpdater.js';
+import type { AutoUpdaterResult } from '../shared/utils/autoUpdater.js';
 import { getGlobalConfig, saveGlobalConfig, getGlobalConfigWriteCount } from '../utils/config.js';
 import { hasConsoleBillingAccess } from '../utils/billing.js';
 import { logEvent, type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/index.js';
@@ -141,13 +141,13 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/grow
 import { textForResubmit, handleMessageFromStream, type StreamingToolUse, type StreamingThinking, isCompactBoundaryMessage, getMessagesAfterCompactBoundary, getContentText, createUserMessage, createAssistantMessage, createTurnDurationMessage, createAgentsKilledMessage, createApiMetricsMessage, createSystemMessage, createCommandInputMessage, formatCommandInputTags } from '../utils/messages.js';
 import { generateSessionTitle } from '../utils/sessionTitle.js';
 import { BASH_INPUT_TAG, COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG, LOCAL_COMMAND_STDOUT_TAG } from '@/constants/xml.js';
-import { escapeXml } from '../utils/xml.js';
+import { escapeXml } from '../shared/utils/xml.js';
 import type { ThinkingConfig } from '../utils/thinking.js';
-import { gracefulShutdownSync } from '../utils/gracefulShutdown.js';
+import { gracefulShutdownSync } from '../shared/utils/gracefulShutdown.js';
 import { handlePromptSubmit, type PromptInputHelpers } from '../utils/handlePromptSubmit.js';
 import { useQueueProcessor } from '@/hooks/useQueueProcessor.js';
 import { useMailboxBridge } from '@/hooks/useMailboxBridge.js';
-import { queryCheckpoint, logQueryProfileReport } from '../utils/queryProfiler.js';
+import { queryCheckpoint, logQueryProfileReport } from '../shared/utils/queryProfiler.js';
 import type { Message as MessageType, UserMessage, ProgressMessage, HookResultMessage, PartialCompactDirection } from '@/types/message.js';
 import { query } from '../query.js';
 import { mergeClients, useMergedClients } from '@/hooks/useMergedClients.js';
@@ -165,8 +165,8 @@ import { maybeMarkProjectOnboardingComplete } from '../projectOnboardingState.js
 import type { MCPServerConnection } from '@/services/mcp/types.js';
 import type { ScopedMcpServerConfig } from '@/services/mcp/types.js';
 import { randomUUID, type UUID } from 'crypto';
-import { processSessionStartHooks } from '../utils/sessionStart.js';
-import { executeSessionEndHooks, getSessionEndHookTimeoutMs } from '../utils/hooks.js';
+import { processSessionStartHooks } from '../shared/utils/sessionStart.js';
+import { executeSessionEndHooks, getSessionEndHookTimeoutMs } from '../shared/utils/hooks.js';
 import { type IDESelection, useIdeSelection } from '@/hooks/useIdeSelection.js';
 import { getTools, assembleToolPool } from '../tools.js';
 import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir.js';
@@ -177,10 +177,10 @@ import { useAppState, useSetAppState, useAppStateStore } from '@/state/AppState.
 import type { ContentBlockParam, ImageBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs';
 import type { ProcessUserInputContext } from '../utils/processUserInput/processUserInput.js';
 import type { PastedContent } from '../utils/config.js';
-import { copyPlanForFork, copyPlanForResume, getPlanSlug, setPlanSlug } from '../utils/plans.js';
+import { copyPlanForFork, copyPlanForResume, getPlanSlug, setPlanSlug } from '../shared/utils/plans.js';
 import { clearSessionMetadata, resetSessionFilePointer, adoptResumedSessionFile, removeTranscriptMessage, restoreSessionMetadata, getCurrentSessionTitle, isEphemeralToolProgress, isLoggableMessage, saveWorktreeState, getAgentTranscript } from '../utils/sessionStorage.js';
 import { deserializeMessages } from '../utils/conversationRecovery.js';
-import { extractReadFilesFromMessages, extractBashToolsFromMessages } from '../utils/queryHelpers.js';
+import { extractReadFilesFromMessages, extractBashToolsFromMessages } from '../shared/utils/queryHelpers.js';
 import { resetMicrocompactState } from '@/services/compact/microCompact.js';
 import { runPostCompactCleanup } from '@/services/compact/postCompactCleanup.js';
 import { provisionContentReplacementState, reconstructContentReplacementState, type ContentReplacementRecord } from '../utils/toolResultStorage.js';
@@ -211,8 +211,8 @@ import { type IDEExtensionInstallationStatus, closeOpenDiffs, getConnectedIdeCli
 import { useIDEIntegration } from '@/hooks/useIDEIntegration.js';
 import exit from '@/commands/exit/index.js';
 import { ExitFlow } from '../components/ExitFlow.js';
-import { getCurrentWorktreeSession } from '../utils/worktree.js';
-import { popAllEditable, enqueue, type SetAppState, getCommandQueue, getCommandQueueLength, removeByFilter } from '../utils/messageQueueManager.js';
+import { getCurrentWorktreeSession } from '../shared/utils/worktree.js';
+import { popAllEditable, enqueue, type SetAppState, getCommandQueue, getCommandQueueLength, removeByFilter } from '../shared/utils/messageQueueManager.js';
 import { useCommandQueue } from '@/hooks/useCommandQueue.js';
 import { SessionBackgroundHint } from '../components/SessionBackgroundHint.js';
 import { startBackgroundSession } from '../tasks/LocalMainSessionTask.js';
@@ -229,7 +229,7 @@ const shouldShowAntModelSwitch = (process.env.USER_TYPE as string) === 'ant' ? r
 const UndercoverAutoCallout = (process.env.USER_TYPE as string) === 'ant' ? require('../components/UndercoverAutoCallout.js').UndercoverAutoCallout : null;
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import { activityManager } from '../utils/activityManager.js';
-import { createAbortController } from '../utils/abortController.js';
+import { createAbortController } from '../shared/utils/abortController.js';
 import { MCPConnectionManager } from 'src/services/mcp/MCPConnectionManager.js';
 import { useFeedbackSurvey } from 'src/components/FeedbackSurvey/useFeedbackSurvey.js';
 import { useMemorySurvey } from 'src/components/FeedbackSurvey/useMemorySurvey.js';
@@ -238,7 +238,7 @@ import { FeedbackSurvey } from 'src/components/FeedbackSurvey/FeedbackSurvey.js'
 import type { FeedbackSurveyResponse } from 'src/components/FeedbackSurvey/utils.js';
 import { useInstallMessages } from 'src/hooks/notifs/useInstallMessages.js';
 import { useAwaySummary } from 'src/hooks/useAwaySummary.js';
-import { useChromeExtensionNotification } from 'src/hooks/useChromeExtensionNotification.js';
+import { useChromeExtensionNotification } from '../cli/hooks/useChromeExtensionNotification.js';
 import { useOfficialMarketplaceNotification } from 'src/hooks/useOfficialMarketplaceNotification.js';
 import { usePromptsFromAllternitInChrome } from 'src/hooks/usePromptsFromAllternitInChrome.js';
 import { getTipToShowOnSpinner, recordShownTip } from 'src/services/tips/tipScheduler.js';
@@ -293,8 +293,8 @@ import { isFullscreenEnvEnabled, maybeGetTmuxMouseHint, isMouseTrackingEnabled }
 import { AlternateScreen } from '@/ink/components/AlternateScreen.js';
 import { ScrollKeybindingHandler } from '../components/ScrollKeybindingHandler.js';
 import { useMessageActions, MessageActionsKeybindings, MessageActionsBar, type MessageActionsState, type MessageActionsNav, type MessageActionCaps } from '../components/messageActions.js';
-import { setClipboard } from '@/ink/termio/osc.js';
-import type { ScrollBoxHandle } from '@/ink/components/ScrollBox.js';
+import { setClipboard } from '../cli/ui/ink-renderer/termio/osc.js';
+import type { ScrollBoxHandle } from '../cli/ui/ink-renderer/components/ScrollBox.js';
 import { createAttachmentMessage, getQueuedCommandAttachments } from '../utils/attachments.js';
 
 // Stable empty array for hooks that accept MCPServerConnection[] — avoids

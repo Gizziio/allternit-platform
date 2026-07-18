@@ -1,7 +1,7 @@
 /**
  * Bundled skills
  */
-import logger from '../utils/log.js'
+import logger from '../shared/utils/log.js'
 
 const log = logger.log
 

@@ -8,6 +8,7 @@ import {
   Globe,
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
+import { isElectronShell } from '../lib/platform';
 import { cn } from '@/lib/utils';
 
 interface RailControlsProps {
@@ -52,6 +53,11 @@ export function RailControls({
   const [collapsedHovered, setCollapsedHovered] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
 
+  // The 100px leading offset clears the frameless window's traffic-light
+  // controls, which only exist inside the Electron desktop shell. Plain
+  // browsers (and mobile web) have no traffic lights — use a normal inset.
+  const trafficLightClearance = isElectronShell() ? 100 : 8;
+
   useEffect(() => {
     if (!showCreateMenu) return;
     const handlePointerDown = (event: MouseEvent): void => {
@@ -71,7 +77,7 @@ export function RailControls({
       >
         <div
           className="h-11 flex items-center pointer-events-auto [WebkitAppRegion:no-drag]"
-          style={{ marginLeft: 100 }}
+          style={{ marginLeft: trafficLightClearance }}
           onMouseEnter={() => { setCollapsedHovered(true); onCollapsedHover?.(true); }}
           onMouseLeave={() => { setCollapsedHovered(false); onCollapsedHover?.(false); }}
         >
@@ -102,7 +108,7 @@ export function RailControls({
                       onClick={() => onModeChange(btn.id)}
                       title={btn.label}
                       data-testid={`rail-mode-${btn.id}`}
-                      className="flex items-center justify-center w-7 h-7 rounded-lg border-none cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag]"
+                      className="flex items-center justify-center w-11 h-11 md:w-7 md:h-7 rounded-lg border-none cursor-pointer transition-all duration-150 [WebkitAppRegion:no-drag]"
                       style={{
                         background: isActive ? btn.accent : 'transparent',
                         color: isActive ? 'var(--ui-text-inverse)' : 'var(--shell-item-muted)',
@@ -144,7 +150,7 @@ export function RailControls({
       {/* Title bar widget row */}
       <div
         className="h-11 flex items-center pr-2 pointer-events-auto [WebkitAppRegion:no-drag]"
-        style={{ paddingLeft: 100 }}
+        style={{ paddingLeft: trafficLightClearance }}
       >
         <div className="flex items-center gap-1 [WebkitAppRegion:no-drag]">
           <TitleBarButton
@@ -204,7 +210,7 @@ function TitleBarButton({
       onClick={onClick}
       onMouseDown={(e) => e.stopPropagation()}
       title={title}
-      className="bg-transparent border-none rounded-md w-7 h-7 flex items-center justify-center text-[var(--shell-item-muted)] cursor-pointer transition-all duration-150 shrink-0 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)]"
+      className="bg-transparent border-none rounded-md w-11 h-11 md:w-7 md:h-7 flex items-center justify-center text-[var(--shell-item-muted)] cursor-pointer transition-all duration-150 shrink-0 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)]"
     >
       {children}
     </button>

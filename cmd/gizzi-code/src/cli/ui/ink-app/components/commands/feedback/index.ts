@@ -1,8 +1,8 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { isPolicyAllowed } from '../../services/policyLimits/index'
-import { isEnvTruthy } from '../../utils/envUtils'
-import { isEssentialTrafficOnly } from '../../utils/privacyLevel'
+import type { Command } from '../../../commands'
+import { isPolicyAllowed } from '../../index'
+import { isEnvTruthy } from '../../../utils/envUtils'
+import { isEssentialTrafficOnly } from '../../../../../../shared/utils/privacyLevel'
 
 const feedback = {
   aliases: ['bug'],

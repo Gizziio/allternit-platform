@@ -1,16 +1,16 @@
 // @ts-nocheck
 import * as React from 'react';
 import { Markdown } from '../../../components/Markdown.js';
-import { MessageResponse } from '../../../components/MessageResponse.js';
-import { RejectedPlanMessage } from '../../../components/messages/UserToolResultMessage/RejectedPlanMessage.js';
+import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
+import { RejectedPlanMessage } from '../../../../cli/ui/ink-app/components/messages/UserToolResultMessage/RejectedPlanMessage.js';
 import { BLACK_CIRCLE } from '@/constants/figures.js';
-import { getModeColor } from '../../../utils/permissions/PermissionMode.js';
+import { getModeColor } from '../../../../cli/ui/ink-app/utils/permissions/PermissionMode.js';
 import { Box, Text } from '@/ink.js';
 import type { ToolProgressData } from '@/Tool.js';
 import type { ProgressMessage } from '@/types/message.js';
-import { getDisplayPath } from '../../utils/file.js';
-import { getPlan } from '../../utils/plans.js';
-import type { ThemeName } from '../../utils/theme.js';
+import { getDisplayPath } from '../../../../shared/utils/file.js';
+import { getPlan } from '../../../../shared/utils/plans.js';
+import type { ThemeName } from '../../../../shared/utils/theme.js';
 import type { Output } from './ExitPlanModeV2Tool.js';
 export function renderToolUseMessage(): React.ReactElement | null {
   return null;

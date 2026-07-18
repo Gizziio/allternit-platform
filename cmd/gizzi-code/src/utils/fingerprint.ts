@@ -7,4 +7,4 @@ export async function getFingerprint(): Promise<string> {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../shared/utils/fingerprint.js'
+export { FINGERPRINT_SALT, computeFingerprint, computeFingerprintFromMessages, extractFirstMessageText } from "../shared/utils/fingerprint.js";

@@ -9,11 +9,11 @@ import { useExitOnCtrlCDWithKeybindings } from '@/hooks/useExitOnCtrlCDWithKeybi
 import { Box, Link, Text } from '@/ink.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
 import { getMcpConfigsByScope } from '@/services/mcp/config.js';
-import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName.js';
-import { checkHasTrustDialogAccepted, saveCurrentProjectConfig } from '../../utils/config.js';
-import { getCwd } from '../../utils/cwd.js';
-import { getFsImplementation } from '../../utils/fsOperations.js';
-import { gracefulShutdownSync } from '../../utils/gracefulShutdown.js';
+import { BASH_TOOL_NAME } from '../../../../runtime/tools/builtins/bash/toolName.js';
+import { checkHasTrustDialogAccepted, saveCurrentProjectConfig } from '../../../../shared/utils/config.js';
+import { getCwd } from '../../../../shared/utils/cwd.js';
+import { getFsImplementation } from '../../../../shared/utils/fsOperations.js';
+import { gracefulShutdownSync } from '../../../../shared/utils/gracefulShutdown.js';
 import { Select } from '../CustomSelect/index.js';
 import { PermissionDialog } from '../permissions/PermissionDialog.js';
 import { getApiKeyHelperSources, getAwsCommandsSources, getBashPermissionSources, getDangerousEnvVarsSources, getGcpCommandsSources, getHooksSources, getOtelHeadersHelperSources } from './utils.js';

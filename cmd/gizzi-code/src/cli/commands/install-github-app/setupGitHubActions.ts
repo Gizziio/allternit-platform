@@ -10,8 +10,8 @@ import {
   PR_TITLE,
   WORKFLOW_CONTENT,
 } from '@/constants/github-app.js'
-import { openBrowser } from '../../utils/browser.js'
-import { execFileNoThrow } from '../../utils/execFileNoThrow.js'
+import { openBrowser } from '../../../shared/utils/browser.js'
+import { execFileNoThrow } from '../../../shared/utils/execFileNoThrow.js'
 import { logError } from '../../utils/log.js'
 import type { Workflow } from './types.js'
 

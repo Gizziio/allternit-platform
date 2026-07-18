@@ -14,8 +14,5 @@ export function createLspManager(): LspManager {
   }
 }
 
-// Auto-added export
-
-
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../../../cli/ui/ink-app/services/lsp/manager.js'
+export { _resetLspManagerForTesting, getInitializationStatus, getLspServerManager, initializeLspServerManager, isLspConnected, reinitializeLspServerManager, shutdownLspServerManager, waitForInitialization } from "../../../cli/ui/ink-app/services/lsp/manager.js";

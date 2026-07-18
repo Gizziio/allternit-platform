@@ -1,6 +1,6 @@
 // @ts-nocheck
 import type { Buffer } from 'buffer'
-import { isInBundledMode } from '../../../../utils/bundledMode.js'
+import { isInBundledMode } from '../../../../shared/utils/bundledMode.js'
 
 export type SharpInstance = {
   metadata(): Promise<{ width: number; height: number; format: string }>

@@ -1,6 +1,6 @@
 // @ts-nocheck
 type ContentBlockParam = Anthropic.ContentBlockParam
-import type { Command } from '../commands'
+import type { Command } from '../../commands'
 import { isUltrareviewEnabled } from './review/ultrareviewEnabled'
 
 // Legal wants the explicit surface name plus a docs link visible before the
@@ -44,7 +44,7 @@ const ultrareview: Command = {
   name: 'ultrareview',
   description: `~10–20 min · Finds and verifies bugs in your branch. Runs in Claude Code on the web. See ${CCR_TERMS_URL}`,
   isEnabled: () => isUltrareviewEnabled(),
-  load: () => import('./review/ultrareviewCommand.js'),
+  load: () => import('../../commands/review/ultrareviewCommand.js'),
 }
 
 export default review

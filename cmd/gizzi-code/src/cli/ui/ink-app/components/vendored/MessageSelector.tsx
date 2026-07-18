@@ -9,12 +9,12 @@ import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEve
 import { useAppState } from './../../state/AppState.tsx';
 import { type DiffStats, fileHistoryCanRestore, fileHistoryEnabled, fileHistoryGetDiffStats } from './../../utils/fileHistory.ts';
 import { logError } from './../../utils/log.ts';
-import { useExitOnCtrlCDWithKeybindings } from '../../../hooks/useExitOnCtrlCDWithKeybindings.js';
-import { Box, Text } from '../../../ink.js';
-import { useKeybinding, useKeybindings } from '../../../keybindings/useKeybinding.js';
-import type { Message, PartialCompactDirection, UserMessage } from '../../../types/message.js';
+import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js';
+import { Box, Text } from '../../ink.js';
+import { useKeybinding, useKeybindings } from '../../keybindings/useKeybinding.js';
+import type { Message, PartialCompactDirection, UserMessage } from '../message.js';
 import { stripDisplayTags } from '../../../utils/displayTags.js';
-import { createUserMessage, extractTag, isEmptyMessageText, isSyntheticMessage, isToolUseResultMessage } from '../../../utils/messages.js';
+import { createUserMessage, extractTag, isEmptyMessageText, isSyntheticMessage, isToolUseResultMessage } from '../../../../../shared/utils/messages.js';
 import { type OptionWithDescription, Select } from './CustomSelect/select';
 import { Spinner } from './Spinner';
 function isTextBlock(block: ContentBlockParam): boolean {
@@ -25,9 +25,9 @@ import { useTerminalSize } from './../../hooks/useTerminalSize.ts';
 import type { FileEditOutput } from './../../tools/FileEditTool/types.ts';
 import type { Output as FileWriteToolOutput } from './../../tools/FileWriteTool/FileWriteTool.ts';
 import { BASH_STDERR_TAG, BASH_STDOUT_TAG, COMMAND_MESSAGE_TAG, LOCAL_COMMAND_STDERR_TAG, LOCAL_COMMAND_STDOUT_TAG, TASK_NOTIFICATION_TAG, TEAMMATE_MESSAGE_TAG, TICK_TAG } from '../../../constants/xml.js';
-import { count } from '../../../utils/array.js';
-import { formatRelativeTimeAgo, truncate } from '../../../utils/format.js';
-import type { Theme } from '../../../utils/theme.js';
+import { count } from '../../../../../shared/utils/array.js';
+import { formatRelativeTimeAgo, truncate } from '../../../../../shared/utils/format.js';
+import type { Theme } from '../../../../../shared/utils/theme.js';
 import { Divider } from './design-system/Divider';
 type RestoreOption = 'both' | 'conversation' | 'code' | 'summarize' | 'summarize_up_to' | 'nevermind';
 function isSummarizeOption(option: RestoreOption | null): option is 'summarize' | 'summarize_up_to' {

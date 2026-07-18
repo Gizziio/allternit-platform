@@ -7,15 +7,15 @@ import React, {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { MailboxProvider } from '../context/mailbox.js';
-import { useSettingsChange } from '../hooks/useSettingsChange.js';
-import { logForDebugging } from '../utils/debug.js';
+import { MailboxProvider } from '../../../../../shared/utils/mailbox.js';
+import { useSettingsChange } from '../../hooks/useSettingsChange.js';
+import { logForDebugging } from '../../utils/debug.js';
 import {
   createDisabledBypassPermissionsContext,
   isBypassPermissionsModeDisabled,
 } from '../utils/permissions/permissionSetup.js';
 import { applySettingsChange } from '../utils/settings/applySettingsChange.js';
-import type { SettingSource } from '../utils/settings/constants.js';
+import type { SettingSource } from '../../../../../tools/REPLTool/constants.js';
 import { createStore } from './store.js';
 
 // DCE: voice context is ant-only. External builds get a passthrough.
@@ -23,7 +23,7 @@ import { createStore } from './store.js';
 const VoiceProvider: (props: {
   children: React.ReactNode;
 }) => React.ReactNode = feature('VOICE_MODE')
-  ? require('../context/voice.js').VoiceProvider
+  ? require('../../../../../runtime/services/voice.js').VoiceProvider
   : ({ children }) => children;
 /* eslint-enable @typescript-eslint/no-require-imports */
 

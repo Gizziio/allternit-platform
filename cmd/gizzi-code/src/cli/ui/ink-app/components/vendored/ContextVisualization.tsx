@@ -2,13 +2,13 @@
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
 import * as React from 'react';
-import { Box, Text } from '../../../ink.js';
-import type { ContextData } from '../../../utils/analyzeContext.js';
-import { generateContextSuggestions } from '../../../utils/contextSuggestions.js';
-import { getDisplayPath } from '../../../utils/file.js';
-import { formatTokens } from '../../../utils/format.js';
-import { getSourceDisplayName, type SettingSource } from '../../../utils/settings/constants.js';
-import { plural } from '../../../utils/stringUtils.js';
+import { Box, Text } from '../../ink.js';
+import type { ContextData } from '../../../../../shared/utils/analyzeContext.js';
+import { generateContextSuggestions } from '../../../../../shared/utils/contextSuggestions.js';
+import { getDisplayPath } from '../../../../../shared/utils/file.js';
+import { formatTokens } from '../../../../../shared/utils/format.js';
+import { getSourceDisplayName, type SettingSource } from '../../../../../tools/REPLTool/constants.js';
+import { plural } from '../../../../../shared/utils/stringUtils.js';
 import { ContextSuggestions } from './ContextSuggestions';
 const RESERVED_CATEGORY_NAME = 'Autocompact buffer';
 
@@ -30,7 +30,7 @@ function CollapseStatus() {
         const {
           getStats,
           isContextCollapseEnabled
-        } = require("../services/contextCollapse/index.js") as typeof import('../services/contextCollapse/index.js');
+        } = require("../index.js") as typeof import('../index.js');
         if (!isContextCollapseEnabled()) {
           t1 = null;
           break bb0;

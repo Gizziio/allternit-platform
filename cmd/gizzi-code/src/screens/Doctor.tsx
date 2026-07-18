@@ -6,27 +6,27 @@ import { KeybindingWarnings } from 'src/components/KeybindingWarnings.js';
 import { McpParsingWarnings } from 'src/components/mcp/McpParsingWarnings.js';
 // @ts-ignore missing export from utils/context
 import { getModelMaxOutputTokens } from 'src/utils/context.js';
-import { getClaudeConfigHomeDir } from 'src/utils/envUtils.js';
+import { getClaudeConfigHomeDir } from '../shared/utils/envUtils.js';
 import type { SettingSource } from 'src/utils/settings/constants.js';
 import { getOriginalCwd } from '@/bootstrap/state.js';
 import type { CommandResultDisplay } from '@/commands.js';
 // @ts-ignore missing module components/design-system/Pane
 import { Pane } from '../components/design-system/Pane.js';
-import { PressEnterToContinue } from '../components/PressEnterToContinue.js';
+import { PressEnterToContinue } from '../cli/ui/ink-app/components/PressEnterToContinue.js';
 // @ts-ignore missing module components/sandbox/SandboxDoctorSection
 import { SandboxDoctorSection } from '../components/sandbox/SandboxDoctorSection.js';
-import { ValidationErrorsList } from '../components/ValidationErrorsList.js';
+import { ValidationErrorsList } from '../cli/ui/ink-app/components/ValidationErrorsList.js';
 import { useSettingsErrors } from '@/hooks/notifs/useSettingsErrors.js';
 import { useExitOnCtrlCDWithKeybindings } from '@/hooks/useExitOnCtrlCDWithKeybindings.js';
 import { Box, Text } from '@/ink.js';
 import { useKeybindings } from '@/keybindings/useKeybinding.js';
 import { useAppState } from '@/state/AppState.js';
 import { getPluginErrorMessage } from '@/types/plugin.js';
-import { getGcsDistTags, getNpmDistTags, type NpmDistTags } from '../utils/autoUpdater.js';
-import { type ContextWarnings, checkContextWarnings } from '../utils/doctorContextWarnings.js';
-import { type DiagnosticInfo, getDoctorDiagnostic } from '../utils/doctorDiagnostic.js';
-import { validateBoundedIntEnvVar } from '../utils/envValidation.js';
-import { pathExists } from '../utils/file.js';
+import { getGcsDistTags, getNpmDistTags, type NpmDistTags } from '../shared/utils/autoUpdater.js';
+import { type ContextWarnings, checkContextWarnings } from '../shared/utils/doctorContextWarnings.js';
+import { type DiagnosticInfo, getDoctorDiagnostic } from '../shared/utils/doctorDiagnostic.js';
+import { validateBoundedIntEnvVar } from '../shared/utils/envValidation.js';
+import { pathExists } from '../shared/utils/file.js';
 // @ts-ignore missing module utils/nativeInstaller/pidLock
 import { cleanupStaleLocks, getAllLockInfo, isPidBasedLockingEnabled, type LockInfo } from '../utils/nativeInstaller/pidLock.js';
 import { getInitialSettings } from '../utils/settings/settings.js';
@@ -34,7 +34,7 @@ import { getInitialSettings } from '../utils/settings/settings.js';
 import { BASH_MAX_OUTPUT_DEFAULT, BASH_MAX_OUTPUT_UPPER_LIMIT } from '../utils/shell/outputLimits.js';
 // @ts-ignore missing module utils/task/outputFormatting
 import { TASK_MAX_OUTPUT_DEFAULT, TASK_MAX_OUTPUT_UPPER_LIMIT } from '../utils/task/outputFormatting.js';
-import { getXDGStateHome } from '../utils/xdg.js';
+import { getXDGStateHome } from '../shared/utils/xdg.js';
 type Props = {
   onDone: (result?: string, options?: {
     display?: CommandResultDisplay;

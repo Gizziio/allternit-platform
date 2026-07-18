@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, normalize, relative, resolve } from 'path'
 import { getCwd } from './cwd.js'
 import { getFsImplementation } from './fsOperations.js'
 import { getPlatform } from './platform.js'
+import { normalizePath } from '../../runtime/util/filesystem.js'
 import { posixPathToWindowsPath } from './windowsPaths.js'
 
 /**
@@ -164,5 +165,3 @@ export default {
   normalizePath,
 }
 
-// Auto-added export
-export const normalizePath: any = {}

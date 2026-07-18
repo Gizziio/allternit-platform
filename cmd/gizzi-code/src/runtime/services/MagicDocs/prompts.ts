@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { join } from 'path'
-import { getClaudeConfigHomeDir } from '../../../utils/envUtils.js'
+import { getClaudeConfigHomeDir } from '../../../shared/utils/envUtils.js'
 import { getFsImplementation } from '../../../utils/fsOperations.js'
 
 /**

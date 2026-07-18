@@ -14,10 +14,10 @@ import {
 } from '../../skills/loadSkillsDir.js'
 import type { ToolUseContext } from '@/Tool.js'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import { getCwd } from '../../../utils/cwd.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { countLinesChanged } from '../../../utils/diff.js'
-import { isEnvTruthy } from '../../../utils/envUtils.js'
+import { getCwd } from '../../../../shared/utils/cwd.js'
+import { logForDebugging } from '../../../../shared/utils/debug.js'
+import { countLinesChanged } from '../../../../shared/utils/diff.js'
+import { isEnvTruthy } from '../../../../shared/utils/envUtils.js'
 import { isENOENT } from '../../../utils/errors.js'
 import {
   FILE_NOT_FOUND_CWD_NOTE,
@@ -29,27 +29,27 @@ import {
 import {
   fileHistoryEnabled,
   fileHistoryTrackEdit,
-} from '../../../utils/fileHistory.js'
-import { logFileOperation } from '../../../utils/fileOperationAnalytics.js'
+} from '../../../../shared/utils/fileHistory.js'
+import { logFileOperation } from '../../../../shared/utils/fileOperationAnalytics.js'
 import {
   type LineEndingType,
   readFileSyncWithMetadata,
-} from '../../../utils/fileRead.js'
-import { formatFileSize } from '../../../utils/format.js'
-import { getFsImplementation } from '../../../utils/fsOperations.js'
+} from '../../../../shared/utils/fileRead.js'
+import { formatFileSize } from '../../../../shared/utils/format.js'
+import { getFsImplementation } from '../../../../shared/utils/fsOperations.js'
 import {
   fetchSingleFileGitDiff,
   type ToolUseDiff,
-} from '../../../utils/gitDiff.js'
-import { logError } from '../../../utils/log.js'
+} from '../../../../shared/utils/gitDiff.js'
+import { logError } from '../../../../shared/utils/log.js'
 import { expandPath } from '../../../utils/path.js'
 import {
   checkWritePermissionForTool,
   matchingRuleForInput,
 } from '../../../utils/permissions/filesystem.js'
-import type { PermissionDecision } from '../../../utils/permissions/PermissionResult.js'
-import { matchWildcardPattern } from '../../../utils/permissions/shellRuleMatching.js'
-import { validateInputForSettingsFileEdit } from '../../../utils/settings/validateEditTool.js'
+import type { PermissionDecision } from '../../../../types/permissions.js'
+import { matchWildcardPattern } from '../../../../shared/utils/permissions/shellRuleMatching.js'
+import { validateInputForSettingsFileEdit } from '../../../../cli/ui/ink-app/utils/settings/validateEditTool.js'
 import { NOTEBOOK_EDIT_TOOL_NAME } from '../NotebookEditTool/constants.js'
 import {
   FILE_EDIT_TOOL_NAME,

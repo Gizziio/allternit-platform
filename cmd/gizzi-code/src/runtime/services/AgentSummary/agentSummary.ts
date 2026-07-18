@@ -11,17 +11,17 @@
  * key matching but denied via canUseTool callback.
  */
 
-import type { TaskContext } from '../../Task.js'
-import { updateAgentSummary } from '../../tasks/LocalAgentTask/LocalAgentTask.js'
+import type { TaskContext } from '../../../cli/ui/ink-app/Task.js'
+import { updateAgentSummary } from '../../../shared/tasks/LocalAgentTask/LocalAgentTask.js'
 import { filterIncompleteToolCalls } from '../../../tools/AgentTool/runAgent.js'
 import type { AgentId } from '@/types/ids.js'
-import { logForDebugging } from '../../../utils/debug.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
 import {
   type CacheSafeParams,
   runForkedAgent,
-} from '../../../utils/forkedAgent.js'
-import { logError } from '../../../utils/log.js'
-import { createUserMessage } from '../../../utils/messages.js'
+} from '../../../shared/utils/forkedAgent.js'
+import { logError } from '../../../shared/utils/log.js'
+import { createUserMessage } from '../../../shared/utils/messages.js'
 import { getAgentTranscript } from '../../../utils/sessionStorage.js'
 
 const SUMMARY_INTERVAL_MS = 30_000

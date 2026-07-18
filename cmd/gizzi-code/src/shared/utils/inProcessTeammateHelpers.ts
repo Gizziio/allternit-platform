@@ -11,10 +11,8 @@
  */
 
 import type { AppState } from '@/state/AppState.js'
-import {
-  type InProcessTeammateTaskState,
-  isInProcessTeammateTask,
-} from '../tasks/InProcessTeammateTask/types.js'
+import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js';
+import { type InProcessTeammateTaskState } from '../../cli/ui/tasks/InProcessTeammateTask/types.js';
 import { updateTaskState } from './task/framework.js'
 import {
   isPermissionResponse,

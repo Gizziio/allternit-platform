@@ -2,10 +2,10 @@
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import React from 'react';
-import { Box, Text } from '../../../ink';
+import { Box, Text } from '../../../../ink';
 import type { Question } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool';
 import type { PermissionDecision } from '../../../utils/permissions/PermissionResult';
-import { Select } from '../../CustomSelect/index';
+import { Select } from '../../../index';
 import { Divider } from '../../design-system/Divider';
 import { PermissionRequestTitle } from '../PermissionRequestTitle';
 import { PermissionRuleExplanation } from '../PermissionRuleExplanation';

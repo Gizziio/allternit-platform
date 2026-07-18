@@ -143,7 +143,7 @@ import {
   TASK_BUDGETS_BETA_HEADER,
 } from './../../constants/betas.ts'
 import type { QuerySource } from './../../constants/querySource.ts'
-import type { Notification } from './../../context/notifications.tsx'
+import type { Notification } from '../../../../../context/notifications'
 import { addToTotalSessionCost } from './../../cost-tracker.ts'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from './../analytics/growthbook.ts'
 import type { AgentId } from './../../types/ids.ts'
@@ -162,8 +162,8 @@ import {
   shouldIncludeFirstPartyOnlyBetas,
   shouldUseGlobalCacheScope,
 } from './../../utils/betas.ts'
-import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME } from './../../utils/allternitInChrome/common.ts'
-import { CHROME_TOOL_SEARCH_INSTRUCTIONS } from './../../utils/allternitInChrome/prompt.ts'
+import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME } from '../../../../../shared/utils/allternitInChrome/common'
+import { CHROME_TOOL_SEARCH_INSTRUCTIONS } from '../../../../../shared/utils/allternitInChrome/prompt'
 import { getMaxThinkingTokensForModel } from './../../utils/context.ts'
 import { logForDebugging } from './../../utils/debug.ts'
 import { logForDiagnosticsNoPII } from './../../utils/diagLogs.ts'

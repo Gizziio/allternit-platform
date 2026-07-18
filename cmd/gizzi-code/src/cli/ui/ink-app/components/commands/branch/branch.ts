@@ -1,18 +1,18 @@
 // @ts-nocheck
 import { randomUUID } from 'crypto'
 import { mkdir, readFile, writeFile } from 'fs/promises'
-import { getOriginalCwd, getSessionId } from '../../bootstrap/state'
-import type { LocalJSXCommandContext } from '../../commands'
-import { logEvent } from '../../services/analytics/index'
-import type { LocalJSXCommandOnDone } from '../../types/command'
+import { getOriginalCwd, getSessionId } from '../../../bootstrap/state'
+import type { LocalJSXCommandContext } from '../../../commands'
+import { logEvent } from '../../index'
+import type { LocalJSXCommandOnDone } from '../../../types/command'
 import type {
   ContentReplacementEntry,
   Entry,
   LogOption,
   SerializedMessage,
   TranscriptMessage,
-} from '../../types/logs'
-import { parseJSONL } from '../../utils/json'
+} from '../../../types/logs'
+import { parseJSONL } from '../../../../../../shared/utils/json'
 import {
   getProjectDir,
   getTranscriptPath,
@@ -20,9 +20,9 @@ import {
   isTranscriptMessage,
   saveCustomTitle,
   searchSessionsByCustomTitle,
-} from '../../utils/sessionStorage'
-import { jsonStringify } from '../../utils/slowOperations'
-import { escapeRegExp } from '../../utils/stringUtils'
+} from '../../../../../../shared/utils/sessionStorage'
+import { jsonStringify } from '../../../utils/slowOperations'
+import { escapeRegExp } from '../../../utils/stringUtils'
 
 type UUID = string
 

@@ -21,4 +21,5 @@ export async function apiRequest<T>(
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../shared/utils/api.js'
+export { appendSystemContext, logAPIPrefix, logContextMetrics, normalizeToolInput, normalizeToolInputForAPI, prependUserContext, splitSysPromptPrefix, toolToAPISchema } from "../shared/utils/api.js";
+export type { CacheScope, SystemPromptBlock } from "../shared/utils/api.js";

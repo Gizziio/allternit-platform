@@ -1,6 +1,6 @@
 // @ts-nocheck
 import chalk from 'chalk'
-import { logForDebugging } from 'src/utils/debug.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
 import { fileHistoryEnabled } from 'src/utils/fileHistory.js'
 import {
   getInitialSettings,
@@ -12,7 +12,7 @@ import { getDesktopUpsellConfig } from '../../../components/DesktopUpsell/Deskto
 import { color } from '../../../components/design-system/color.js'
 import { shouldShowOverageCreditUpsell } from '../../../components/LogoV2/OverageCreditUpsell.js'
 import { getShortcutDisplay } from '@/keybindings/shortcutFormat.js'
-import { isKairosCronEnabled } from '../../../tools/ScheduleCronTool/prompt.js'
+import { isKairosCronEnabled } from '../../../cli/ui/ink-app/tools/ScheduleCronTool/prompt.js'
 import { is1PApiCustomer } from '../../../utils/auth.js'
 import { countConcurrentSessions } from '../../../utils/concurrentSessions.js'
 import { getGlobalConfig } from '../../../utils/config.js'
@@ -20,8 +20,8 @@ import {
   getEffortEnvOverride,
   modelSupportsEffort,
 } from '../../../utils/effort.js'
-import { env } from '../../../utils/env.js'
-import { cacheKeys } from '../../../utils/fileStateCache.js'
+import { env } from '../../../shared/utils/env.js'
+import { cacheKeys } from '../../../shared/utils/fileStateCache.js'
 import { getWorktreeCount } from '../../../utils/git.js'
 import {
   detectRunningIDEsCached,
@@ -36,9 +36,9 @@ import {
   getMainLoopModel,
   getUserSpecifiedModelSetting,
 } from '../../../utils/model/model.js'
-import { getPlatform } from '../../../utils/platform.js'
-import { isPluginInstalled } from '../../../utils/plugins/installedPluginsManager.js'
-import { loadKnownMarketplacesConfigSafe } from '../../../utils/plugins/marketplaceManager.js'
+import { getPlatform } from '../../../shared/utils/platform.js'
+import { isPluginInstalled } from '../../../shared/utils/plugins/installedPluginsManager.js'
+import { loadKnownMarketplacesConfigSafe } from '../../../shared/utils/plugins/marketplaceManager.js'
 import { OFFICIAL_MARKETPLACE_NAME } from '../../../utils/plugins/officialMarketplace.js'
 import {
   getCurrentSessionAgentColor,

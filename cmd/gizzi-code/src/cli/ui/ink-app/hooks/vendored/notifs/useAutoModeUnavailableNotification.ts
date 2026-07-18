@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
 import { useEffect, useRef } from 'react'
-import { useNotifications } from './../../../context/notifications.tsx'
+import { useNotifications } from '../../../../../../context/notifications'
 import { getIsRemoteMode } from '../../bootstrap/state'
-import { useAppState } from '../../state/AppState'
+import { useAppState } from '../../../state/AppState'
 import type { PermissionMode } from '../../utils/permissions/PermissionMode'
 import {
   getAutoModeUnavailableNotification,

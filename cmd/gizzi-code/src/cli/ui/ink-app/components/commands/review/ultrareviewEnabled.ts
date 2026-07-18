@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../../../../runtime/services/analytics/growthbook'
 
 /**
  * Runtime gate for /ultrareview. GB config's `enabled` field controls

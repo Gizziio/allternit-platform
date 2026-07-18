@@ -5,7 +5,7 @@ import type { ToolUseContext } from '@/Tool.js'
 import {
   AGENT_COLORS,
   type AgentColorName,
-} from '../../tools/AgentTool/agentColorManager.js'
+} from '../../../runtime/tools/builtins/agenttool/agentColorManager.js'
 import type {
   LocalJSXCommandContext,
   LocalJSXCommandOnDone,
@@ -13,8 +13,8 @@ import type {
 import {
   getTranscriptPath,
   saveAgentColor,
-} from '../../utils/sessionStorage.js'
-import { isTeammate } from '../../utils/teammate.js'
+} from '../../../shared/utils/sessionStorage.js'
+import { isTeammate } from '../../../shared/utils/teammate.js'
 
 const RESET_ALIASES = ['default', 'reset', 'none', 'gray', 'grey'] as const
 

@@ -11,12 +11,12 @@ import {
   type ResolvedAgent,
   resolveAgentModelDisplay,
   resolveAgentOverrides,
-} from '../../tools/AgentTool/agentDisplay.js'
+} from '../../runtime/tools/builtins/agenttool/agentDisplay.js'
 import {
   getActiveAgentsFromList,
   getAgentDefinitionsWithOverrides,
 } from '../../tools/AgentTool/loadAgentsDir.js'
-import { getCwd } from '../../utils/cwd.js'
+import { getCwd } from '../../shared/utils/cwd.js'
 
 function formatAgent(agent: ResolvedAgent): string {
   const model = resolveAgentModelDisplay(agent)

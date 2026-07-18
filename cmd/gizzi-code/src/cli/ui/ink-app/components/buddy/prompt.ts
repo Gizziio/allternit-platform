@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { Message } from '../types/message'
-import type { Attachment } from '../utils/attachments'
-import { getGlobalConfig } from '../utils/config'
+import type { Message } from '../message'
+import type { Attachment } from '../../../../../shared/utils/attachments'
+import { getGlobalConfig } from '../../utils/config'
 import { getCompanion } from './companion'
 
 export function companionIntroText(name: string, species: string): string {

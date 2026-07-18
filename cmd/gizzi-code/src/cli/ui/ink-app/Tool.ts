@@ -21,7 +21,7 @@ export type ToolInputJSONSchema = {
   }
 }
 
-import type { Notification } from './context/notifications'
+import type { Notification } from '../../../context/notifications'
 import type {
   MCPServerConnection,
   ServerResource,

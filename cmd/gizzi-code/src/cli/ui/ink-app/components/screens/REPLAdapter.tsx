@@ -10,17 +10,17 @@
  */
 
 import React, { useMemo, useEffect, useState, lazy, Suspense } from 'react';
-import { Box, Text } from '../ink';
+import { Box, Text } from '../../ink';
 import { getHarnessService } from '../../services/harness';
 // Lazy load REPL to avoid bundling issues with the large file
-const REPL = lazy(() => import('./REPL.js').then(m => ({ default: m.REPL })));
-import type { Props as REPLProps } from './REPL';
+const REPL = lazy(() => import('../../screens/REPL.js').then(m => ({ default: m.REPL })));
+import type { Props as REPLProps } from '../../screens/REPL';
 import type { Session, Tool, Command, Message, ThinkingConfig } from '../../types';
 import type { AgentDefinition } from '../../vendor/tools/AgentTool/loadAgentsDir';
-import type { MCPServerConnection, ScopedMcpServerConfig } from '../../vendor/services/mcp/types';
-import type { FileHistorySnapshot } from '../../vendor/utils/fileHistory';
-import type { ContentReplacementRecord } from '../../vendor/utils/toolResultStorage';
-import type { HookResultMessage, Message as MessageType } from '../../vendor/types/message';
+import type { MCPServerConnection, ScopedMcpServerConfig } from '../../../../../runtime/integrations/types';
+import type { FileHistorySnapshot } from '../../../../../shared/utils/fileHistory';
+import type { ContentReplacementRecord } from '../../../../../shared/utils/toolResultStorage';
+import type { HookResultMessage, Message as MessageType } from '../message';
 import type { RemoteSessionConfig } from '../../vendor/remote/RemoteSessionManager';
 import type { DirectConnectConfig } from '../../vendor/server/directConnectManager';
 import type { SSHSession } from '../../vendor/ssh/createSSHSession';

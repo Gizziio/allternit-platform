@@ -41,7 +41,7 @@ export interface AssignExecutorInput {
   workdir: string;
   vendor: ExecutorVendor;
   mode: ExecutorMode;
-  backend?: 'tmux' | 'terminal-control';
+  backend?: 'tmux' | 'terminal-control' | 'mux';
   isolation?: 'worktree' | 'none';
   taskFile?: string;
   notesFile: string;

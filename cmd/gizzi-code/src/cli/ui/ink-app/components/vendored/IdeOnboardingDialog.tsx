@@ -2,11 +2,11 @@
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { envDynamic } from './../../utils/envDynamic.ts';
-import { Box, Text } from '../../../ink.js';
-import { useKeybindings } from '../../../keybindings/useKeybinding.js';
-import { getGlobalConfig, saveGlobalConfig } from '../../../utils/config.js';
-import { env } from '../../../utils/env.js';
-import { getTerminalIdeType, type IDEExtensionInstallationStatus, isJetBrainsIde, toIDEDisplayName } from '../../../utils/ide.js';
+import { Box, Text } from '../../ink.js';
+import { useKeybindings } from '../../keybindings/useKeybinding.js';
+import { getGlobalConfig, saveGlobalConfig } from '../../../../../shared/utils/config.js';
+import { env } from '../../../../../shared/utils/env.js';
+import { getTerminalIdeType, type IDEExtensionInstallationStatus, isJetBrainsIde, toIDEDisplayName } from '../../../../../shared/utils/ide.js';
 import { Dialog } from './design-system/Dialog';
 interface Props {
   onDone: () => void;

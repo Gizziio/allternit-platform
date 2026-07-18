@@ -12,7 +12,7 @@ import Yoga, {
   PositionType,
   Wrap,
   type Node as YogaNode,
-} from '../../../native-ts/yoga-layout/index.js'
+} from '../../ink-app/components/index.js'
 import {
   type LayoutAlign,
   LayoutDisplay,

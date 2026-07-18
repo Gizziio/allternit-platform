@@ -28,8 +28,8 @@ import {
 } from '../../skills/loadSkillsDir.js'
 import type { ToolUseContext } from '@/Tool.js'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import { getCwd } from '../../../utils/cwd.js'
-import { getClaudeConfigHomeDir, isEnvTruthy } from '../../../utils/envUtils.js'
+import { getCwd } from '../../../../shared/utils/cwd.js'
+import { getClaudeConfigHomeDir, isEnvTruthy } from '../../../../shared/utils/envUtils.js'
 import { getErrnoCode, isENOENT } from '../../../utils/errors.js'
 import {
   addLineNumbers,
@@ -38,9 +38,9 @@ import {
   getFileModificationTimeAsync,
   suggestPathUnderCwd,
 } from '../../../utils/file.js'
-import { logFileOperation } from '../../../utils/fileOperationAnalytics.js'
-import { formatFileSize } from '../../../utils/format.js'
-import { getFsImplementation } from '../../../utils/fsOperations.js'
+import { logFileOperation } from '../../../../shared/utils/fileOperationAnalytics.js'
+import { formatFileSize } from '../../../../shared/utils/format.js'
+import { getFsImplementation } from '../../../../shared/utils/fsOperations.js'
 import {
   compressImageBufferWithTokenLimit,
   createImageMetadataText,
@@ -48,32 +48,32 @@ import {
   type ImageDimensions,
   ImageResizeError,
   maybeResizeAndDownsampleImageBuffer,
-} from '../../../utils/imageResizer.js'
-import { lazySchema } from '../../../utils/lazySchema.js'
-import { logError } from '../../../utils/log.js'
-import { isAutoMemFile } from '../../../utils/memoryFileDetection.js'
-import { createUserMessage } from '../../../utils/messages.js'
-import { getCanonicalName, getMainLoopModel } from '../../../utils/model/model.js'
+} from '../../../../shared/utils/imageResizer.js'
+import { lazySchema } from '../../../../shared/utils/lazySchema.js'
+import { logError } from '../../../../shared/utils/log.js'
+import { isAutoMemFile } from '../../../../shared/utils/memoryFileDetection.js'
+import { createUserMessage } from '../../../../shared/utils/messages.js'
+import { getCanonicalName, getMainLoopModel } from '../../../../shared/utils/model/model.js'
 import {
   mapNotebookCellsToToolResult,
   readNotebook,
-} from '../../../utils/notebook.js'
+} from '../../../../shared/utils/notebook.js'
 import { expandPath } from '../../../utils/path.js'
-import { extractPDFPages, getPDFPageCount, readPDF } from '../../../utils/pdf.js'
+import { extractPDFPages, getPDFPageCount, readPDF } from '../../../../shared/utils/pdf.js'
 import {
   isPDFExtension,
   isPDFSupported,
   parsePDFPageRange,
-} from '../../../utils/pdfUtils.js'
+} from '../../../../shared/utils/pdfUtils.js'
 import {
   checkReadPermissionForTool,
   matchingRuleForInput,
 } from '../../../utils/permissions/filesystem.js'
-import type { PermissionDecision } from '../../../utils/permissions/PermissionResult.js'
-import { matchWildcardPattern } from '../../../utils/permissions/shellRuleMatching.js'
-import { readFileInRange } from '../../../utils/readFileInRange.js'
-import { semanticNumber } from '../../../utils/semanticNumber.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import type { PermissionDecision } from '../../../../types/permissions.js'
+import { matchWildcardPattern } from '../../../../shared/utils/permissions/shellRuleMatching.js'
+import { readFileInRange } from '../../../../shared/utils/readFileInRange.js'
+import { semanticNumber } from '../../../../shared/utils/semanticNumber.js'
+import { jsonStringify } from '../../../../shared/utils/slowOperations.js'
 import { BASH_TOOL_NAME } from '../BashTool/toolName.js'
 import { getDefaultFileReadingLimits } from './limits.js'
 import {

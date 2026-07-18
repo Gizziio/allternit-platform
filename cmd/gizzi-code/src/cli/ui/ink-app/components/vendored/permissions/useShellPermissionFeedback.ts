@@ -3,7 +3,7 @@ import { useState } from 'react'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../services/analytics/index'
+} from '../../index'
 import { sanitizeToolNameForAnalytics } from '../../services/analytics/metadata'
 import { useSetAppState } from '../../state/AppState'
 import type { ToolUseConfirm } from './PermissionRequest'

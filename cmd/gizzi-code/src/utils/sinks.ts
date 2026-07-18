@@ -11,4 +11,4 @@ export function getSinks(): Sink[] {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../shared/utils/sinks.js'
+export { initSinks } from "../shared/utils/sinks.js";

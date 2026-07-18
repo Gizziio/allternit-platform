@@ -7,6 +7,7 @@
  */
 
 import { getOfficeHost } from './host-detector'
+import { OFFICECLI_TOOL_SCHEMAS } from './officecli-tools'
 
 type InternalToolDefinition = {
   name: string
@@ -117,17 +118,19 @@ export function toOpenAITool(def: {
 
 /**
  * Returns the tool set for the current Office host in OpenAI format.
- * Returns an empty array if the host is unrecognized.
+ * The host-agnostic officecli_* tools (gateway snapshot backend) are included
+ * for every supported host. Returns an empty array if the host is unrecognized.
  */
 export function getToolsForHost(): OpenAITool[] {
   const host = getOfficeHost()
+  const officeCliTools = OFFICECLI_TOOL_SCHEMAS.map(toOpenAITool)
   switch (host) {
     case 'excel':
-      return excelTools.map(toOpenAITool)
+      return [...excelTools.map(toOpenAITool), ...officeCliTools]
     case 'powerpoint':
-      return powerpointTools.map(toOpenAITool)
+      return [...powerpointTools.map(toOpenAITool), ...officeCliTools]
     case 'word':
-      return wordTools.map(toOpenAITool)
+      return [...wordTools.map(toOpenAITool), ...officeCliTools]
     default:
       return []
   }

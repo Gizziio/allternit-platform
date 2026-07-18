@@ -14,15 +14,15 @@
  */
 import { dirname, join } from 'path'
 import { getOriginalCwd } from '@/bootstrap/state.js'
-import { isBuiltinPluginId } from '../../plugins/builtinPlugins.js'
+import { isBuiltinPluginId } from '../../../cli/ui/ink-app/plugins/builtinPlugins.js'
 import type { LoadedPlugin, PluginManifest } from '@/types/plugin.js'
-import { isENOENT, toError } from '../../../utils/errors.js'
+import { isENOENT, toError } from '../../../shared/utils/errors.js'
 import { getFsImplementation } from '../../../utils/fsOperations.js'
-import { logError } from '../../../utils/log.js'
+import { logError } from '../../../shared/utils/log.js'
 import {
   clearAllCaches,
   markPluginVersionOrphaned,
-} from '../../../utils/plugins/cacheUtils.js'
+} from '../../../shared/utils/plugins/cacheUtils.js'
 import {
   findReverseDependents,
   formatReverseDependentsSuffix,
@@ -32,17 +32,17 @@ import {
   loadInstalledPluginsV2,
   removePluginInstallation,
   updateInstallationPathOnDisk,
-} from '../../../utils/plugins/installedPluginsManager.js'
+} from '../../../shared/utils/plugins/installedPluginsManager.js'
 import {
   getMarketplace,
   getPluginById,
   loadKnownMarketplacesConfig,
-} from '../../../utils/plugins/marketplaceManager.js'
+} from '../../../shared/utils/plugins/marketplaceManager.js'
 import { deletePluginDataDir } from '../../../shared/utils/plugins/pluginDirectories.js'
 import {
   parsePluginIdentifier,
   scopeToSettingSource,
-} from '../../../utils/plugins/pluginIdentifier.js'
+} from '../../../shared/utils/plugins/pluginIdentifier.js'
 import {
   formatResolutionError,
   installResolvedPlugin,
@@ -54,10 +54,10 @@ import {
   getVersionedZipCachePath,
   loadAllPlugins,
   loadPluginManifest,
-} from '../../../utils/plugins/pluginLoader.js'
+} from '../../../shared/utils/plugins/pluginLoader.js'
 import { deletePluginOptions } from '../../../shared/utils/plugins/pluginOptionsStorage.js'
 import { isPluginBlockedByPolicy } from '../../../shared/utils/plugins/pluginPolicy.js'
-import { getPluginEditableScopes } from '../../../utils/plugins/pluginStartupCheck.js'
+import { getPluginEditableScopes } from '../../../shared/utils/plugins/pluginStartupCheck.js'
 import { calculatePluginVersion } from '../../../shared/utils/plugins/pluginVersioning.js'
 import type {
   PluginMarketplaceEntry,

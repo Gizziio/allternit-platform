@@ -1,10 +1,10 @@
 // @ts-nocheck
 import type { Tools } from '@/Tool.js'
-import { resolveAgentTools } from '../../tools/AgentTool/agentToolUtils.js'
+import { resolveAgentTools } from '../../../../runtime/tools/builtins/agenttool/agentToolUtils.js'
 import type {
   AgentDefinition,
   CustomAgentDefinition,
-} from '../../tools/AgentTool/loadAgentsDir.js'
+} from '../../../../tools/AgentTool/loadAgentsDir.js'
 import { getAgentSourceDisplayName } from './utils.js'
 
 export type AgentValidationResult = {

@@ -15,7 +15,7 @@ import {
   getSystemContext,
   getUserContext,
   setSystemPromptInjection,
-} from '../../context.js'
+} from '../../../shared/utils/context.js'
 import { clearFileSuggestionCaches } from '@/hooks/fileSuggestions.js'
 import { clearAllPendingCallbacks } from '@/hooks/useSwarmPermissionPoller.js'
 import { clearAllDumpState } from '@/services/api/dumpPrompts.js'
@@ -24,14 +24,14 @@ import { clearAllSessions } from '@/services/api/sessionIngress.js'
 import { runPostCompactCleanup } from '@/services/compact/postCompactCleanup.js'
 import { resetAllLSPDiagnosticState } from '@/services/lsp/LSPDiagnosticRegistry.js'
 import { clearTrackedMagicDocs } from '@/services/MagicDocs/magicDocs.js'
-import { clearDynamicSkills } from '../../skills/loadSkillsDir.js'
-import { resetSentSkillNames } from '../../utils/attachments.js'
-import { clearCommandPrefixCaches } from '../../utils/bash/commands.js'
-import { resetGetMemoryFilesCache } from '../../utils/claudemd.js'
-import { clearRepositoryCaches } from '../../utils/detectRepository.js'
-import { clearResolveGitDirCache } from '../../utils/git/gitFilesystem.js'
-import { clearStoredImagePaths } from '../../utils/imageStore.js'
-import { clearSessionEnvVars } from '../../utils/sessionEnvVars.js'
+import { clearDynamicSkills } from '../../../runtime/skills/loadSkillsDir.js'
+import { resetSentSkillNames } from '../../../shared/utils/attachments.js'
+import { clearCommandPrefixCaches } from '../../../commands.js'
+import { resetGetMemoryFilesCache } from '../../../shared/utils/claudemd.js'
+import { clearRepositoryCaches } from '../../../shared/utils/detectRepository.js'
+import { clearResolveGitDirCache } from '../../../shared/utils/git/gitFilesystem.js'
+import { clearStoredImagePaths } from '../../../shared/utils/imageStore.js'
+import { clearSessionEnvVars } from '../../../shared/utils/sessionEnvVars.js'
 
 /**
  * Clear all session-related caches.
@@ -94,7 +94,7 @@ export function clearSessionCaches(
 
   // Clear tungsten session usage tracking
   if (process.env.USER_TYPE === 'ant') {
-    void import('../../tools/TungstenTool/TungstenTool.js').then(
+    void import('../../ui/ink-app/tools/TungstenTool/TungstenTool.js').then(
       ({ clearSessionsWithTungstenUsage, resetInitializationState }) => {
         clearSessionsWithTungstenUsage()
         resetInitializationState()
@@ -104,7 +104,7 @@ export function clearSessionCaches(
   // Clear attribution caches (file content cache, pending bash states)
   // Dynamic import to preserve dead code elimination for COMMIT_ATTRIBUTION feature flag
   if (feature('COMMIT_ATTRIBUTION')) {
-    void import('../../utils/attributionHooks.js').then(
+    void import('../../../shared/utils/attributionHooks.js').then(
       ({ clearAttributionCaches }) => clearAttributionCaches(),
     )
   }
@@ -127,19 +127,19 @@ export function clearSessionCaches(
   // Clear session environment variables
   clearSessionEnvVars()
   // Clear WebFetch URL cache (up to 50MB of cached page content)
-  void import('../../tools/WebFetchTool/utils.js').then(
+  void import('../../ui/ink-app/tools/utils.js').then(
     ({ clearWebFetchCache }) => clearWebFetchCache(),
   )
   // Clear ToolSearch description cache (full tool prompts, ~500KB for 50 MCP tools)
-  void import('../../tools/ToolSearchTool/ToolSearchTool.js').then(
+  void import('../../ui/ink-app/tools/ToolSearchTool/ToolSearchTool.js').then(
     ({ clearToolSearchDescriptionCache }) => clearToolSearchDescriptionCache(),
   )
   // Clear agent definitions cache (accumulates per-cwd via EnterWorktreeTool)
-  void import('../../tools/AgentTool/loadAgentsDir.js').then(
+  void import('../../../tools/AgentTool/loadAgentsDir.js').then(
     ({ clearAgentDefinitionsCache }) => clearAgentDefinitionsCache(),
   )
   // Clear SkillTool prompt cache (accumulates per project root)
-  void import('../../tools/SkillTool/prompt.js').then(({ clearPromptCache }) =>
+  void import('../../ui/ink-app/context/prompt.js').then(({ clearPromptCache }) =>
     clearPromptCache(),
   )
 }

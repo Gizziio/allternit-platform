@@ -3,9 +3,9 @@ import { feature } from 'bun:bundle'
 import type { QuerySource } from '@/constants/querySource.js'
 import { clearSystemPromptSections } from '@/constants/systemPromptSections.js'
 import { getUserContext } from '../../context.js'
-import { clearSpeculativeChecks } from '../../../shared/tools/BashTool/bashPermissions.js'
+import { clearSpeculativeChecks } from '../../../cli/ui/ink-app/tools/BashTool/bashPermissions.js'
 import { clearClassifierApprovals } from '../../../shared/utils/classifierApprovals.js'
-import { resetGetMemoryFilesCache } from '../../../utils/claudemd.js'
+import { resetGetMemoryFilesCache } from '../../../shared/utils/claudemd.js'
 import { clearSessionMessagesCache } from '../../../utils/sessionStorage.js'
 import { clearBetaTracingState } from '../../../shared/utils/telemetry/betaSessionTracing.js'
 import { resetMicrocompactState } from './microCompact.js'
@@ -44,7 +44,7 @@ export function runPostCompactCleanup(querySource?: QuerySource): void {
     if (isMainThreadCompact) {
       /* eslint-disable @typescript-eslint/no-require-imports */
       ;(
-        require('../contextCollapse/index.js') as typeof import('../contextCollapse/index.js')
+        require('../contextCollapse/operations.js') as typeof import('../contextCollapse/operations.js')
       ).resetContextCollapse()
       /* eslint-enable @typescript-eslint/no-require-imports */
     }

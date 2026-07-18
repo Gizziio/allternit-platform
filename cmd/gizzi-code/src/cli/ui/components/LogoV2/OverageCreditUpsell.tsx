@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { Text } from '@/ink.js';
 import { logEvent } from '@/services/analytics/index.js';
 import { formatGrantAmount, getCachedOverageCreditGrant, refreshOverageCreditGrantCache } from '@/services/api/overageCreditGrant.js';
-import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js';
-import { truncate } from '../../utils/format.js';
+import { getGlobalConfig, saveGlobalConfig } from '../../../../shared/utils/config.js';
+import { truncate } from '../../../../shared/utils/format.js';
 import type { FeedConfig } from './Feed.js';
 const MAX_IMPRESSIONS = 3;
 

@@ -37,7 +37,7 @@ import {
   getPdfTooLargeErrorMessage,
   getRequestTooLargeErrorMessage,
 } from '../../runtime/services/api/errors.js'
-import type { AnyObject, Progress } from '../../runtime/tools/Tool.js'
+import type { AnyObject, Progress } from '../../Tool.js'
 import { isConnectorTextBlock } from '@/types/connectorText.js'
 import type {
   AssistantMessage,
@@ -119,21 +119,21 @@ import type {
 import { EXPLORE_AGENT } from '../../runtime/tools/builtins/agenttool/built-in/exploreAgent.js'
 import { PLAN_AGENT } from '../../runtime/tools/builtins/agenttool/built-in/planAgent.js'
 import { areExplorePlanAgentsEnabled } from '../../runtime/tools/builtins/agenttool/builtInAgents.js'
-import { AGENT_TOOL_NAME } from '../../runtime/tools/AgentTool/constants.js'
-import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js'
-import { BashTool } from '../../runtime/tools/BashTool/BashTool.js'
-import { ExitPlanModeV2Tool } from '../../runtime/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
-import { FileEditTool } from '../../runtime/tools/FileEditTool/FileEditTool.js'
+import { AGENT_TOOL_NAME } from '../../cli/ui/ink-app/tools/AgentTool/constants.js'
+import { ASK_USER_QUESTION_TOOL_NAME } from '../../cli/ui/ink-app/tools/AskUserQuestionTool/prompt.js'
+import { BashTool } from '../../cli/ui/ink-app/tools/BashTool/BashTool.js'
+import { ExitPlanModeV2Tool } from '../../cli/ui/ink-app/tools/ExitPlanModeTool/ExitPlanModeV2Tool.js'
+import { FileEditTool } from '../../cli/ui/ink-app/tools/FileEditTool/FileEditTool.js'
 import {
   FILE_READ_TOOL_NAME,
   MAX_LINES_TO_READ,
-} from '../../tools/FileReadTool/prompt.js'
-import { FileWriteTool } from '../../runtime/tools/FileWriteTool/FileWriteTool.js'
-import { GLOB_TOOL_NAME } from '../../tools/GlobTool/prompt.js'
+} from '../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { FileWriteTool } from '../../cli/ui/ink-app/tools/FileWriteTool/FileWriteTool.js'
+import { GLOB_TOOL_NAME } from '../../cli/ui/ink-app/tools/GlobTool/prompt.js'
 import { GREP_TOOL_NAME } from '../../tools/GrepTool/prompt.js'
 import type { DeepImmutable } from '@/types/utils.js'
 import { getStrictToolResultPairing } from '@/bootstrap/state.js'
-import type { SpinnerMode } from '../components/Spinner.js'
+import type { SpinnerMode } from '../../cli/ui/ink-app/components/Spinner.js'
 import {
   COMMAND_ARGS_TAG,
   COMMAND_MESSAGE_TAG,
@@ -151,11 +151,11 @@ import {
 import {
   FileReadTool,
   type Output as FileReadToolOutput,
-} from '../../runtime/tools/FileReadTool/FileReadTool.js'
-import { SEND_MESSAGE_TOOL_NAME } from '../../runtime/tools/SendMessageTool/constants.js'
-import { TASK_CREATE_TOOL_NAME } from '../../runtime/tools/TaskCreateTool/constants.js'
-import { TASK_OUTPUT_TOOL_NAME } from '../../runtime/tools/TaskOutputTool/constants.js'
-import { TASK_UPDATE_TOOL_NAME } from '../../runtime/tools/TaskUpdateTool/constants.js'
+} from '../../cli/ui/ink-app/tools/FileReadTool/FileReadTool.js'
+import { SEND_MESSAGE_TOOL_NAME } from '../../cli/ui/ink-app/tools/SendMessageTool/constants.js'
+import { TASK_CREATE_TOOL_NAME } from '../../runtime/tools/builtins/taskcreatetool/constants.js'
+import { TASK_OUTPUT_TOOL_NAME } from '../../cli/ui/ink-app/tools/TaskOutputTool/constants.js'
+import { TASK_UPDATE_TOOL_NAME } from '../../runtime/tools/builtins/taskupdatetool/constants.js'
 import type { PermissionMode } from '@/types/permissions.js'
 import { normalizeToolInput, normalizeToolInputForAPI } from './api.js'
 import { getCurrentProjectConfig } from './config.js'

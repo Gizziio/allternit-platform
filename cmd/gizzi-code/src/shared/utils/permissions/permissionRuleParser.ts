@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { AGENT_TOOL_NAME } from '../../tools/AgentTool/constants.js'
-import { TASK_OUTPUT_TOOL_NAME } from '../../tools/TaskOutputTool/constants.js'
+import { AGENT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/AgentTool/constants.js'
+import { TASK_OUTPUT_TOOL_NAME } from '../../../cli/ui/ink-app/tools/TaskOutputTool/constants.js'
 import { TASK_STOP_TOOL_NAME } from '../../tools/TaskStopTool/prompt.js'
 import type { PermissionRuleValue } from './PermissionRule.js'
 
@@ -11,7 +11,7 @@ import type { PermissionRuleValue } from './PermissionRule.js'
 const BRIEF_TOOL_NAME: string | null =
   feature('KAIROS') || feature('KAIROS_BRIEF')
     ? (
-        require('../../tools/BriefTool/prompt.js') as typeof import('../../tools/BriefTool/prompt.js')
+        require('../../../cli/ui/ink-app/context/prompt.js') as typeof import('../../../cli/ui/ink-app/context/prompt.js')
       ).BRIEF_TOOL_NAME
     : null
 /* eslint-enable @typescript-eslint/no-require-imports */

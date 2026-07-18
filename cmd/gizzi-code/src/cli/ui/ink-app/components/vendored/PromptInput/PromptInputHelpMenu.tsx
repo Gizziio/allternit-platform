@@ -4,10 +4,10 @@ import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { Box, Text } from './../../../ink.ts';
 import { getPlatform } from './../../../utils/platform.ts';
-import { isKeybindingCustomizationEnabled } from '../../keybindings/loadUserBindings';
+import { isKeybindingCustomizationEnabled } from '../../../keybindings/loadUserBindings';
 import { useShortcutDisplay } from '../../keybindings/useShortcutDisplay';
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook';
-import { isFastModeAvailable, isFastModeEnabled } from '../../utils/fastMode';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../../../../runtime/services/analytics/growthbook';
+import { isFastModeAvailable, isFastModeEnabled } from '../../../../../../shared/utils/fastMode';
 import { getNewlineInstructions } from './utils';
 
 /** Format a shortcut for display in the help menu (e.g., "ctrl+o" → "ctrl + o") */

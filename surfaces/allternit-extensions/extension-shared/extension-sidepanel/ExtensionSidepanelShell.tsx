@@ -388,6 +388,17 @@ function Presentation({ className }: IconProps) {
   );
 }
 
+function FileImage({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.7.7l4.6 4.6a2.4 2.4 0 0 1 .7 1.7V20a2 2 0 0 1-2 2Z" />
+      <path d="M14 2v6h6" />
+      <circle cx="10" cy="13" r="2" />
+      <path d="m20 17-3.5-3.5a2 2 0 0 0-3 0L6 21" />
+    </SvgIcon>
+  );
+}
+
 function ChevronDown({ className }: IconProps) {
   return (
     <SvgIcon className={className}>
@@ -984,10 +995,168 @@ function UserTakeoverCard({
   );
 }
 
+// ── officecli artifact markers (opt-in via adapter.officeCliArtifacts) ──────
+
+interface OfficeCliArtifactRef {
+  doc_id: string;
+  name: string;
+  kind: string;
+  url: string;
+}
+
+interface OfficeCliWatchRef {
+  url: string;
+}
+
+type OfficeCliArtifactsProp = NonNullable<ExtensionSidepanelAdapter["officeCliArtifacts"]>;
+
+/** Marker payloads are gateway-sanitized and never contain `]`. */
+const OFFICECLI_MARKER_RE = /\[(artifact|watch):(\{[^\]]*\})\]/g;
+
+function parseOfficeCliMarkers(text: string): {
+  artifacts: OfficeCliArtifactRef[];
+  watches: OfficeCliWatchRef[];
+} {
+  const artifacts: OfficeCliArtifactRef[] = [];
+  const watches: OfficeCliWatchRef[] = [];
+  for (const match of text.matchAll(OFFICECLI_MARKER_RE)) {
+    try {
+      const data = JSON.parse(match[2]) as Record<string, unknown>;
+      if (match[1] === "artifact" && typeof data.doc_id === "string" && typeof data.name === "string") {
+        artifacts.push(data as unknown as OfficeCliArtifactRef);
+      } else if (match[1] === "watch" && typeof data.url === "string") {
+        watches.push(data as unknown as OfficeCliWatchRef);
+      }
+    } catch {
+      // malformed marker payload — skip
+    }
+  }
+  return { artifacts, watches };
+}
+
+function isImageArtifact(artifact: OfficeCliArtifactRef): boolean {
+  return (
+    artifact.kind === "png" ||
+    artifact.kind === "image" ||
+    /\.(png|jpe?g|gif|webp|svg)$/i.test(artifact.name)
+  );
+}
+
+/**
+ * Renders officecli `[artifact:...]` markers from a tool output as inline
+ * image previews / download chips, and `[watch:...]` markers as a live-preview
+ * button. Mounted only when the adapter provides officeCliArtifacts.
+ */
+function OfficeCliArtifactGallery({
+  output,
+  officeCliArtifacts,
+}: {
+  output: string;
+  officeCliArtifacts: OfficeCliArtifactsProp;
+}) {
+  const parsed = useMemo(() => parseOfficeCliMarkers(output), [output]);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const objectUrls: string[] = [];
+    for (const artifact of parsed.artifacts) {
+      officeCliArtifacts
+        .resolve(artifact.doc_id, artifact.name)
+        .then((url) => {
+          if (cancelled) {
+            URL.revokeObjectURL(url);
+            return;
+          }
+          objectUrls.push(url);
+          setPreviews((prev) => ({ ...prev, [artifact.name]: url }));
+        })
+        .catch(() => {
+          // resolution failed — the chip simply shows no preview
+        });
+    }
+    return () => {
+      cancelled = true;
+      for (const url of objectUrls) URL.revokeObjectURL(url);
+    };
+  }, [parsed, officeCliArtifacts]);
+
+  const download = (artifact: OfficeCliArtifactRef) => {
+    officeCliArtifacts
+      .resolve(artifact.doc_id, artifact.name)
+      .then((url) => {
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = artifact.name;
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+      })
+      .catch(() => {});
+  };
+
+  if (parsed.artifacts.length === 0 && parsed.watches.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      {parsed.artifacts.map((artifact) => {
+        const src = previews[artifact.name];
+        if (isImageArtifact(artifact)) {
+          return src ? (
+            <a
+              key={artifact.name}
+              href={src}
+              target="_blank"
+              rel="noreferrer"
+              title={artifact.name}
+              className="block overflow-hidden rounded-md border border-border transition-colors hover:border-foreground/40"
+            >
+              <img src={src} alt={artifact.name} className="max-h-40 max-w-full object-contain" />
+            </a>
+          ) : (
+            <span
+              key={artifact.name}
+              className="rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] text-muted-foreground"
+            >
+              {artifact.name}
+            </span>
+          );
+        }
+        return (
+          <button
+            key={artifact.name}
+            type="button"
+            onClick={() => download(artifact)}
+            className="flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] text-foreground/80 transition-colors hover:border-foreground/40"
+          >
+            <FileText className="size-3" />
+            {artifact.name}
+          </button>
+        );
+      })}
+      {parsed.watches.map((watch) => (
+        <button
+          key={watch.url}
+          type="button"
+          onClick={() =>
+            officeCliArtifacts.onOpenWatch
+              ? officeCliArtifacts.onOpenWatch(watch.url)
+              : window.open(watch.url, "_blank")
+          }
+          className="flex items-center gap-1 rounded-md border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[10px] text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-400"
+        >
+          <Eye className="size-3" />
+          Live preview
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ToolExecutionCard({
   event,
 }: {
   event: Extract<ExtensionSidepanelHistoricalEvent, { type: "tool_execution" }>;
+  officeCliArtifacts?: ExtensionSidepanelAdapter["officeCliArtifacts"];
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -1008,7 +1177,9 @@ function ToolExecutionCard({
         ? FileText
         : event.tool.startsWith("ppt_")
           ? Presentation
-          : Zap;
+          : event.tool.startsWith("officecli_") || event.tool.startsWith("mcp_officecli_")
+            ? FileImage
+            : Zap;
 
   return (
     <div
@@ -1035,6 +1206,9 @@ function ToolExecutionCard({
               </span>
             )}
           </div>
+          {officeCliArtifacts && typeof event.output === "string" && (
+            <OfficeCliArtifactGallery output={event.output} officeCliArtifacts={officeCliArtifacts} />
+          )}
         </div>
         <button
           type="button"
@@ -1056,7 +1230,13 @@ function ToolExecutionCard({
   );
 }
 
-function EventCardInner({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
+function EventCardInner({
+  event,
+  officeCliArtifacts,
+}: {
+  event: ExtensionSidepanelHistoricalEvent;
+  officeCliArtifacts?: ExtensionSidepanelAdapter["officeCliArtifacts"];
+}) {
   if (event.type === "step" && event.action?.name === "done") {
     const input = event.action.input as { text?: string; success?: boolean } | undefined;
     return (
@@ -1069,7 +1249,8 @@ function EventCardInner({ event }: { event: ExtensionSidepanelHistoricalEvent })
 
   if (event.type === "step") return <StepCard event={event} />;
   if (event.type === "observation") return <ObservationCard event={event} />;
-  if (event.type === "tool_execution") return <ToolExecutionCard event={event} />;
+  if (event.type === "tool_execution")
+    return <ToolExecutionCard event={event} officeCliArtifacts={officeCliArtifacts} />;
   if (event.type === "retry") return <RetryCard event={event} />;
   if (event.type === "error") return <ErrorCard event={event} />;
   if (event.type === "user_takeover") return <UserTakeoverCard event={event} />;
@@ -1502,7 +1683,11 @@ export function ExtensionSidepanelShell({
             <div ref={historyRef} className="flex-1 space-y-3 overflow-y-auto p-4">
               {showEmptyState && <EmptyState copy={shellCopy} brandIcon={brandIcon} />}
               {adapter.history.map((event, index) => (
-                <EventCard key={`extension-event-${index}`} event={event} />
+                <EventCard
+                  key={`extension-event-${index}`}
+                  event={event}
+                  officeCliArtifacts={adapter.officeCliArtifacts}
+                />
               ))}
               {adapter.activity && <ActivityCard activity={adapter.activity} />}
             </div>

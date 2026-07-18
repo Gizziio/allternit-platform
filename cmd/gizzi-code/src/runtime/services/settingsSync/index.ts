@@ -25,10 +25,10 @@ import {
   checkAndRefreshOAuthTokenIfNeeded,
   getClaudeAIOAuthTokens,
 } from '../../../utils/auth.js'
-import { clearMemoryFileCaches } from '../../../utils/claudemd.js'
+import { clearMemoryFileCaches } from '../../../shared/utils/claudemd.js'
 import { getMemoryPath } from '../../../utils/config.js'
-import { logForDiagnosticsNoPII } from '../../../utils/diagLogs.js'
-import { classifyAxiosError } from '../../../utils/errors.js'
+import { logForDiagnosticsNoPII } from '../../../shared/utils/diagLogs.js'
+import { classifyAxiosError } from '../../../shared/utils/errors.js'
 import { getRepoRemoteHash } from '../../../utils/git.js'
 import {
   getAPIProvider,
@@ -38,7 +38,7 @@ import { markInternalWrite } from '../../../shared/utils/settings/internalWrites
 import { getSettingsFilePathForSource } from '../../../utils/settings/settings.js'
 import { resetSettingsCache } from '../../../shared/utils/settings/settingsCache.js'
 import { sleep } from '../../../utils/sleep.js'
-import { getClaudeCodeUserAgent } from '../../../utils/userAgent.js'
+import { getClaudeCodeUserAgent } from '../../../shared/utils/userAgent.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
 import { logEvent } from '../analytics/index.js'
 import { getRetryDelay } from '../api/withRetry.js'

@@ -11,7 +11,7 @@ type UUID = string
 import type { z } from 'zod/v4'
 import type { Command } from '@/commands.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
-import type { ThinkingConfig } from './utils/thinking.js'
+import type { ThinkingConfig } from '../../shared/utils/thinking.js'
 
 export type ToolInputJSONSchema = {
   [x: string]: unknown
@@ -21,7 +21,7 @@ export type ToolInputJSONSchema = {
   }
 }
 
-import type { Notification } from './context/notifications.js'
+import type { Notification } from '../../context/notifications.js'
 import type {
   MCPServerConnection,
   ServerResource,
@@ -29,7 +29,7 @@ import type {
 import type {
   AgentDefinition,
   AgentDefinitionsResult,
-} from './tools/AgentTool/loadAgentsDir.js'
+} from './AgentTool/loadAgentsDir.js'
 import type {
   AssistantMessage,
   AttachmentMessage,
@@ -57,10 +57,10 @@ import type {
   ToolProgressData,
   WebSearchProgress,
 } from '@/types/tools.js'
-import type { FileStateCache } from './utils/fileStateCache.js'
-import type { DenialTrackingState } from './utils/permissions/denialTracking.js'
-import type { SystemPrompt } from './utils/systemPromptType.js'
-import type { ContentReplacementState } from './utils/toolResultStorage.js'
+import type { FileStateCache } from '../../shared/utils/fileStateCache.js'
+import type { DenialTrackingState } from '../../shared/utils/permissions/denialTracking.js'
+import type { SystemPrompt } from '../../shared/utils/systemPromptType.js'
+import type { ContentReplacementState } from '../../shared/utils/toolResultStorage.js'
 
 // Re-export progress types for backwards compatibility
 export type {
@@ -73,9 +73,9 @@ export type {
   WebSearchProgress,
 }
 
-import type { SpinnerMode } from './components/Spinner.js'
+import type { SpinnerMode } from '../../cli/ui/ink-app/components/Spinner.js'
 import type { QuerySource } from '@/constants/querySource.js'
-import type { SDKStatus } from './entrypoints/agentSdkTypes.js'
+import type { SDKStatus } from '../../entrypoints/agentSdkTypes.js'
 import type { AppState } from '@/state/AppState.js'
 import type {
   HookProgress,
@@ -84,9 +84,9 @@ import type {
 } from '@/types/hooks.js'
 import type { AgentId } from '@/types/ids.js'
 import type { DeepImmutable } from '@/types/utils.js'
-import type { AttributionState } from './utils/commitAttribution.js'
-import type { FileHistoryState } from './utils/fileHistory.js'
-import type { Theme, ThemeName } from './utils/theme.js'
+import type { AttributionState } from '../../shared/utils/commitAttribution.js'
+import type { FileHistoryState } from '../../shared/utils/fileHistory.js'
+import type { Theme, ThemeName } from '../../shared/utils/theme.js'
 
 export type QueryChainTracking = {
   chainId: string

@@ -1,55 +1,55 @@
 // @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { type as osType, version as osVersion, release as osRelease } from 'os'
-import { env } from '../utils/env.js'
+import { env } from '../shared/utils/env.js'
 import { getIsGit } from '../utils/git.js'
-import { getCwd } from '../utils/cwd.js'
+import { getCwd } from '../shared/utils/cwd.js'
 import { getIsNonInteractiveSession } from '@/bootstrap/state.js'
-import { getCurrentWorktreeSession } from '../utils/worktree.js'
+import { getCurrentWorktreeSession } from '../shared/utils/worktree.js'
 import { getSessionStartDate } from './common.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
 import {
   AGENT_TOOL_NAME,
   VERIFICATION_AGENT_TYPE,
-} from '../tools/AgentTool/constants.js'
-import { FILE_WRITE_TOOL_NAME } from '../tools/FileWriteTool/prompt.js'
-import { FILE_READ_TOOL_NAME } from '../tools/FileReadTool/prompt.js'
-import { FILE_EDIT_TOOL_NAME } from '../tools/FileEditTool/constants.js'
-import { TODO_WRITE_TOOL_NAME } from '../tools/TodoWriteTool/constants.js'
-import { TASK_CREATE_TOOL_NAME } from '../tools/TaskCreateTool/constants.js'
+} from '../cli/ui/ink-app/tools/AgentTool/constants.js'
+import { FILE_WRITE_TOOL_NAME } from '../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
+import { FILE_READ_TOOL_NAME } from '../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { FILE_EDIT_TOOL_NAME } from '../cli/ui/ink-app/tools/FileEditTool/constants.js'
+import { TODO_WRITE_TOOL_NAME } from '../cli/ui/ink-app/tools/TodoWriteTool/constants.js'
+import { TASK_CREATE_TOOL_NAME } from '../cli/ui/ink-app/tools/TaskCreateTool/constants.js'
 import type { Tools } from '@/Tool.js'
 import type { Command } from '@/types/command.js'
-import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
+import { BASH_TOOL_NAME } from '../cli/ui/ink-app/tools/BashTool/toolName.js'
 import {
   getCanonicalName,
   getMarketingNameForModel,
 } from '../utils/model/model.js'
-import { getAntModelOverrideConfig } from '../utils/model/antModels.js'
+import { getAntModelOverrideConfig } from '../cli/ui/ink-app/utils/model/antModels.js'
 import { getSkillToolCommands } from '@/commands.js'
-import { SKILL_TOOL_NAME } from '../tools/SkillTool/constants.js'
+import { SKILL_TOOL_NAME } from '../cli/ui/ink-app/tools/SkillTool/constants.js'
 import { getOutputStyleConfig } from './outputStyles.js'
 import type {
   MCPServerConnection,
   ConnectedMCPServer,
 } from '@/services/mcp/types.js'
-import { GLOB_TOOL_NAME } from '../tools/GlobTool/prompt.js'
+import { GLOB_TOOL_NAME } from '../cli/ui/ink-app/tools/GlobTool/prompt.js'
 import { GREP_TOOL_NAME } from '../tools/GrepTool/prompt.js'
 import { hasEmbeddedSearchTools } from '../utils/embeddedTools.js'
-import { ASK_USER_QUESTION_TOOL_NAME } from '../tools/AskUserQuestionTool/prompt.js'
+import { ASK_USER_QUESTION_TOOL_NAME } from '../cli/ui/ink-app/tools/AskUserQuestionTool/prompt.js'
 import {
   EXPLORE_AGENT,
   EXPLORE_AGENT_MIN_QUERIES,
-} from '../tools/AgentTool/built-in/exploreAgent.js'
-import { areExplorePlanAgentsEnabled } from '../tools/AgentTool/builtInAgents.js'
+} from '../cli/ui/ink-app/tools/AgentTool/built-in/exploreAgent.js'
+import { areExplorePlanAgentsEnabled } from '../cli/ui/ink-app/tools/AgentTool/builtInAgents.js'
 import {
   isScratchpadEnabled,
   getScratchpadDir,
 } from '../utils/permissions/filesystem.js'
-import { isEnvTruthy } from '../utils/envUtils.js'
+import { isEnvTruthy } from '../shared/utils/envUtils.js'
 import { isReplModeEnabled } from '../tools/REPLTool/constants.js'
 import { feature } from 'bun:bundle'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'
-import { shouldUseGlobalCacheScope } from '../utils/betas.js'
+import { shouldUseGlobalCacheScope } from '../shared/utils/betas.js'
 import { isForkSubagentEnabled } from '../cli/ui/ink-app/tools/AgentTool/forkSubagent.js'
 import {
   systemPromptSection,
@@ -58,10 +58,10 @@ import {
 } from './systemPromptSections.js'
 import { SLEEP_TOOL_NAME } from '../shared/tools/SleepTool/prompt.js'
 import { TICK_TAG } from './xml.js'
-import { logForDebugging } from '../utils/debug.js'
+import { logForDebugging } from '../shared/utils/debug.js'
 import { loadMemoryPrompt } from '../memdir/memdir.js'
 import { isUndercover } from '../shared/utils/undercover.js'
-import { isMcpInstructionsDeltaEnabled } from '../utils/mcpInstructionsDelta.js'
+import { isMcpInstructionsDeltaEnabled } from '../shared/utils/mcpInstructionsDelta.js'
 
 // Dead code elimination: conditional imports for feature-gated modules
 /* eslint-disable @typescript-eslint/no-require-imports */

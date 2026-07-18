@@ -1,15 +1,15 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useMemo } from 'react';
-import { logError } from 'src/utils/log.js';
+import { logError } from '../../../../../shared/utils/log.js';
 import { getOriginalCwd } from '@/bootstrap/state.js';
 import { Box, Text } from '@/ink.js';
 import { sanitizeToolNameForAnalytics } from '@/services/analytics/metadata.js';
-import { SKILL_TOOL_NAME } from '../../../tools/SkillTool/constants.js';
-import { SkillTool } from '../../../tools/SkillTool/SkillTool.js';
-import { env } from '../../../utils/env.js';
-import { shouldShowAlwaysAllowOptions } from '../../../utils/permissions/permissionsLoader.js';
-import { logUnaryEvent } from '../../../utils/unaryLogging.js';
+import { SKILL_TOOL_NAME } from '../../../../../tools/REPLTool/constants.js';
+import { SkillTool } from '../../../ink-app/tools/SkillTool/SkillTool.js';
+import { env } from '../../../../../shared/utils/env.js';
+import { shouldShowAlwaysAllowOptions } from '../../../../../shared/utils/permissions/permissionsLoader.js';
+import { logUnaryEvent } from '../../../../../shared/utils/unaryLogging.js';
 import { type UnaryEvent, usePermissionRequestLogging } from '../hooks.js';
 import { PermissionDialog } from '../PermissionDialog.js';
 import { PermissionPrompt, type PermissionPromptOption, type ToolAnalyticsContext } from '../PermissionPrompt.js';

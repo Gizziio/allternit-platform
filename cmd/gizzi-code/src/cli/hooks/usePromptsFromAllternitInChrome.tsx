@@ -2,14 +2,14 @@
 import { c as _c } from "react/compiler-runtime";
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs';
 import { useEffect, useRef } from 'react';
-import { logError } from 'src/utils/log.js';
+import { logError } from '../../shared/utils/log.js';
 import { z } from 'zod/v4';
 import { callIdeRpc } from '@/services/mcp/client.js';
 import type { ConnectedMCPServer, MCPServerConnection } from '@/services/mcp/types.js';
 import type { PermissionMode } from '@/types/permissions.js';
 import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME, isTrackedAllternitInChromeTabId } from '../utils/allternitInChrome/common.js';
-import { lazySchema } from '../utils/lazySchema.js';
-import { enqueuePendingNotification } from '../utils/messageQueueManager.js';
+import { lazySchema } from '../../shared/utils/lazySchema.js';
+import { enqueuePendingNotification } from '../../shared/utils/messageQueueManager.js';
 
 // Schema for the prompt notification from Chrome extension (JSON-RPC 2.0 format)
 const AllternitInChromePromptNotificationSchema = lazySchema(() => z.object({

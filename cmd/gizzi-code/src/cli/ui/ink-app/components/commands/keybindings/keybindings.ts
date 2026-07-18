@@ -4,10 +4,10 @@ import { dirname } from 'path'
 import {
   getKeybindingsPath,
   isKeybindingCustomizationEnabled,
-} from '../../keybindings/loadUserBindings'
-import { generateKeybindingsTemplate } from '../../keybindings/template'
-import { getErrnoCode } from '../../utils/errors'
-import { editFileInEditor } from '../../utils/promptEditor'
+} from '../../../keybindings/loadUserBindings'
+import { generateKeybindingsTemplate } from '../../../keybindings/template'
+import { getErrnoCode } from '../../../utils/errors'
+import { editFileInEditor } from '../../../../../../shared/utils/promptEditor'
 
 export async function call(): Promise<{ type: 'text'; value: string }> {
   if (!isKeybindingCustomizationEnabled()) {

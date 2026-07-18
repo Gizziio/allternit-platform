@@ -3,17 +3,17 @@ import { c as _c } from "react/compiler-runtime";
 import { relative } from 'path';
 import * as React from 'react';
 import { Suspense, use, useMemo } from 'react';
-import { Box, NoSelect, Text } from '../../../ink.js';
+import { Box, NoSelect, Text } from '../../../../ink.js';
 // @ts-ignore Module import issue
 import type { NotebookCellType, NotebookContent } from '../../../types/notebook.js';
-import { intersperse } from '../../../utils/array.js';
-import { getCwd } from '../../../utils/cwd.js';
-import { getPatchForDisplay } from '../../../utils/diff.js';
-import { getFsImplementation } from '../../../utils/fsOperations.js';
-import { safeParseJSON } from '../../../utils/json.js';
-import { parseCellId } from '../../../utils/notebook.js';
-import { HighlightedCode } from '../../HighlightedCode.js';
-import { StructuredDiff } from '../../StructuredDiff.js';
+import { intersperse } from '../../../../../../../shared/utils/array.js';
+import { getCwd } from '../../../../../../../shared/utils/cwd.js';
+import { getPatchForDisplay } from '../../../../../../../shared/utils/diff.js';
+import { getFsImplementation } from '../../../../../../../shared/utils/fsOperations.js';
+import { safeParseJSON } from '../../../../../../../shared/utils/json.js';
+import { parseCellId } from '../../../../../../../shared/utils/notebook.js';
+import { HighlightedCode } from '../../../HighlightedCode.js';
+import { StructuredDiff } from '../../../StructuredDiff.js';
 type Props = {
   notebook_path: string;
   cell_id: string | undefined;

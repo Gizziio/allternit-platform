@@ -5,8 +5,8 @@ import {
   hasProfileScope,
   isClaudeAISubscriber,
 } from '../../../utils/auth.js'
-import { getAuthHeaders } from '../../../utils/http.js'
-import { getClaudeCodeUserAgent } from '../../../utils/userAgent.js'
+import { getAuthHeaders } from '../../../shared/utils/http.js'
+import { getClaudeCodeUserAgent } from '../../../shared/utils/userAgent.js'
 import { isOAuthTokenExpired } from '../oauth/client.js'
 
 export type RateLimit = {

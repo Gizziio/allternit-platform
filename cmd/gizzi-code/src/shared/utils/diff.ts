@@ -3,7 +3,7 @@ import { type StructuredPatchHunk, structuredPatch } from 'diff'
 import { logEvent } from '@/services/analytics/index.js'
 import { getLocCounter } from '@/bootstrap/state.js'
 import { addToTotalLinesChanged } from '../cost-tracker.js'
-import type { FileEdit } from '../../runtime/tools/FileEditTool/types.js'
+import type { FileEdit } from '../../runtime/tools/builtins/file-edit/types.js'
 import { count } from './array.js'
 import { convertLeadingTabsToSpaces } from './file.js'
 

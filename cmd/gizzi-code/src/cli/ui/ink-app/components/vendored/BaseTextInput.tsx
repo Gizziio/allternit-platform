@@ -1,12 +1,12 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { renderPlaceholder } from '../../../hooks/renderPlaceholder.js';
-import { usePasteHandler } from '../../../hooks/usePasteHandler.js';
+import { renderPlaceholder } from '../../hooks/renderPlaceholder.js';
+import { usePasteHandler } from '../../hooks/usePasteHandler.js';
 import { useDeclaredCursor } from '../../../ink/hooks/use-declared-cursor.js';
-import { Ansi, Box, Text, useInput } from '../../../ink.js';
-import type { BaseInputState, BaseTextInputProps } from '../../../types/textInputTypes.js';
-import type { TextHighlight } from '../../../utils/textHighlighting.js';
+import { Ansi, Box, Text, useInput } from '../../ink.js';
+import type { BaseInputState, BaseTextInputProps } from '../../types/textInputTypes.js';
+import type { TextHighlight } from '../../../../../shared/utils/textHighlighting.js';
 import { HighlightedInput } from './PromptInput/ShimmeredInput';
 type BaseTextInputComponentProps = BaseTextInputProps & {
   inputState: BaseInputState;

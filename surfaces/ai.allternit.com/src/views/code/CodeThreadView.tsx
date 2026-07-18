@@ -135,6 +135,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
       {hasSession && isPreviewCollapsed ? (
         <CodeSessionLauncher
           onOpenPane={openSideTab}
+          onCanvasMode={workspaceId ? () => setWorkspaceLayoutMode(workspaceId, 'canvas') : undefined}
           onRename={renameSession}
           onFork={forkSession}
           onArchive={() => activeCodeSessionId && void useCodeSessionStore.getState().updateSession(activeCodeSessionId, { isActive: false, metadata: { ...activeCodeSession?.metadata, originSurface: 'code', archived: true } })}
@@ -142,51 +143,6 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
           onOpenIn={openIn}
         />
       ) : null}
-
-      {workspaceId && (
-        <button
-          type="button"
-          data-testid="code-canvas-mode-toggle"
-          onClick={() => setWorkspaceLayoutMode(workspaceId, 'canvas')}
-          title="Switch to canvas mode"
-          aria-label="Switch to canvas mode"
-          style={{
-            position: 'absolute',
-            top: 8,
-            right: hasSession && isPreviewCollapsed ? 160 : 18,
-            zIndex: 8,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 34,
-            height: 34,
-            padding: 0,
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 10,
-            background: 'var(--glass-bg-thick)',
-            boxShadow: 'var(--shadow-sm)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            color: 'var(--text-secondary)',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'background 120ms ease, color 120ms ease, transform 120ms ease',
-          }}
-          onMouseEnter={(event) => {
-            event.currentTarget.style.background = 'var(--surface-hover)';
-            event.currentTarget.style.color = 'var(--text-primary)';
-            event.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(event) => {
-            event.currentTarget.style.background = 'var(--glass-bg-thick)';
-            event.currentTarget.style.color = 'var(--text-secondary)';
-            event.currentTarget.style.transform = 'none';
-          }}
-        >
-          <SquaresFour size={17} weight="bold" />
-        </button>
-      )}
 
       {/* Main layout: canvas fills all space */}
       <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 0, overflow: 'hidden', position: 'relative' }}>
@@ -199,8 +155,56 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
+            position: 'relative',
           }}
         >
+          {/* Standalone toggle only when the launcher pill (which carries it
+              inline) is hidden; anchored to the canvas pane so it never
+              overlaps the session side pane. */}
+          {workspaceId && !(hasSession && isPreviewCollapsed) && (
+            <button
+              type="button"
+              data-testid="code-canvas-mode-toggle"
+              onClick={() => setWorkspaceLayoutMode(workspaceId, 'canvas')}
+              title="Switch to canvas mode"
+              aria-label="Switch to canvas mode"
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 18,
+                zIndex: 8,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 34,
+                height: 34,
+                padding: 0,
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 10,
+                background: 'var(--glass-bg-thick)',
+                boxShadow: 'var(--shadow-sm)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                color: 'var(--text-secondary)',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'background 120ms ease, color 120ms ease, transform 120ms ease',
+              }}
+              onMouseEnter={(event) => {
+                event.currentTarget.style.background = 'var(--surface-hover)';
+                event.currentTarget.style.color = 'var(--text-primary)';
+                event.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(event) => {
+                event.currentTarget.style.background = 'var(--glass-bg-thick)';
+                event.currentTarget.style.color = 'var(--text-secondary)';
+                event.currentTarget.style.transform = 'none';
+              }}
+            >
+              <SquaresFour size={17} weight="bold" />
+            </button>
+          )}
           <ChatIdProvider
             chatId={workspace?.workspace_id || 'code'}
             isPersisted={false}

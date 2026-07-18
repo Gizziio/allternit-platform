@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Box, Text, useTheme } from '../../../ink';
+import { Box, Text, useTheme } from '../../../../ink';
 import { FallbackPermissionRequest } from '../FallbackPermissionRequest';
 import { FilePermissionDialog } from '../FilePermissionDialog/FilePermissionDialog';
 import type { ToolInput } from '../FilePermissionDialog/useFilePermissionDialog';

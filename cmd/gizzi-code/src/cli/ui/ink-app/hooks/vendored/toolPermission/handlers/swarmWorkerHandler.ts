@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
-import type { PendingClassifierCheck } from '../../../types/permissions'
-import { isAgentSwarmsEnabled } from '../../../utils/agentSwarmsEnabled'
-import { toError } from '../../../utils/errors'
-import { logError } from '../../../utils/log'
+import type { PendingClassifierCheck } from '../../../../types/permissions'
+import { isAgentSwarmsEnabled } from '../../../../../../../shared/utils/agentSwarmsEnabled'
+import { toError } from '../../../../../../../shared/utils/errors'
+import { logError } from '../../../../../../../shared/utils/log'
 import type { PermissionDecision } from '../../../utils/permissions/PermissionResult'
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema'
 import {

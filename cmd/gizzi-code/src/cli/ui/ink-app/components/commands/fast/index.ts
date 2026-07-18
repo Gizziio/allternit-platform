@@ -1,10 +1,10 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 import {
   FAST_MODE_MODEL_DISPLAY,
   isFastModeEnabled,
-} from '../../utils/fastMode'
-import { shouldInferenceConfigCommandBeImmediate } from '../../utils/immediateCommand'
+} from '../../../../../../shared/utils/fastMode'
+import { shouldInferenceConfigCommandBeImmediate } from '../../../../../../shared/utils/immediateCommand'
 
 const fast = {
   type: 'local-jsx',

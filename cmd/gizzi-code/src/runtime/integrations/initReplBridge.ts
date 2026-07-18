@@ -17,8 +17,8 @@
 import { feature } from 'bun:bundle'
 import { hostname } from 'os'
 import { getOriginalCwd, getSessionId } from '@/bootstrap/state.js'
-import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
-import type { SDKControlResponse } from '../entrypoints/sdk/controlTypes.js'
+import type { SDKMessage } from '../../entrypoints/sdk/controlTypes.js'
+import type { SDKControlResponse } from '../../entrypoints/sdk/controlTypes.js'
 import { getFeatureValue_CACHED_WITH_REFRESH } from '@/services/analytics/growthbook.js'
 import { getOrganizationUUID } from '@/services/oauth/client.js'
 import {
@@ -30,25 +30,25 @@ import {
   checkAndRefreshOAuthTokenIfNeeded,
   getClaudeAIOAuthTokens,
   handleOAuth401Error,
-} from '../utils/auth.js'
-import { getGlobalConfig, saveGlobalConfig } from '../utils/config.js'
-import { logForDebugging } from '../utils/debug.js'
-import { stripDisplayTagsAllowEmpty } from '../utils/displayTags.js'
+} from '../../shared/utils/auth.js'
+import { getGlobalConfig, saveGlobalConfig } from '../../shared/utils/config.js'
+import { logForDebugging } from '../../shared/utils/debug.js'
+import { stripDisplayTagsAllowEmpty } from '../../shared/utils/displayTags.js'
 import { errorMessage } from '../utils/errors.js'
-import { getBranch, getRemoteUrl } from '../utils/git.js'
-import { toSDKMessages } from '../utils/messages/mappers.js'
+import { getBranch, getRemoteUrl } from '../../shared/utils/git.js'
+import { toSDKMessages } from '../../cli/ui/ink-app/utils/messages/mappers.js'
 import {
   getContentText,
   getMessagesAfterCompactBoundary,
   isSyntheticMessage,
-} from '../utils/messages.js'
-import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
-import { getCurrentSessionTitle } from '../utils/sessionStorage.js'
+} from '../../shared/utils/messages.js'
+import type { PermissionMode } from '../../cli/ui/ink-app/utils/permissions/PermissionMode.js'
+import { getCurrentSessionTitle } from '../../shared/utils/sessionStorage.js'
 import {
   extractConversationText,
   generateSessionTitle,
-} from '../utils/sessionTitle.js'
-import { generateShortWordSlug } from '../utils/words.js'
+} from '../../shared/utils/sessionTitle.js'
+import { generateShortWordSlug } from '../../shared/utils/words.js'
 import {
   getBridgeAccessToken,
   getBridgeBaseUrl,
@@ -478,7 +478,7 @@ export async function initReplBridge(
   if (feature('KAIROS')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const { isAssistantMode } =
-      require('../assistant/index.js') as typeof import('../assistant/index.js')
+      require('../../cli/ui/ink-app/components/index.js') as typeof import('../../cli/ui/ink-app/components/index.js')
     /* eslint-enable @typescript-eslint/no-require-imports */
     if (isAssistantMode()) {
       workerType = 'claude_code_assistant'

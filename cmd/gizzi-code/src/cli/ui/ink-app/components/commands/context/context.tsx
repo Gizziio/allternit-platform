@@ -1,14 +1,14 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle';
 import * as React from 'react';
-import type { LocalJSXCommandContext } from '../../commands';
-import { ContextVisualization } from '../../components/ContextVisualization';
-import { microcompactMessages } from '../../services/compact/microCompact';
-import type { LocalJSXCommandOnDone } from '../../types/command';
-import type { Message } from '../../types/message';
-import { analyzeContextUsage } from '../../utils/analyzeContext';
-import { getMessagesAfterCompactBoundary } from '../../utils/messages';
-import { renderToAnsiString } from '../../utils/staticRender';
+import type { LocalJSXCommandContext } from '../../../commands';
+import { ContextVisualization } from '../../ContextVisualization';
+import { microcompactMessages } from '../../../../../../runtime/services/compact/microCompact';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
+import type { Message } from '../../message';
+import { analyzeContextUsage } from '../../../../../../shared/utils/analyzeContext';
+import { getMessagesAfterCompactBoundary } from '../../../utils/messages';
+import { renderToAnsiString } from '../../../../../../shared/utils/staticRender';
 
 /**
  * Apply the same context transforms query.ts does before the API call, so
@@ -22,7 +22,7 @@ function toApiView(messages: Message[]): Message[] {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const {
       projectView
-    } = require('../../services/contextCollapse/operations.js') as typeof import('../../services/contextCollapse/operations.js');
+    } = require('../../../../../../runtime/services/contextCollapse/operations.js') as typeof import('../../../../../../runtime/services/contextCollapse/operations.js');
     /* eslint-enable @typescript-eslint/no-require-imports */
     view = projectView(view) as any;
   }

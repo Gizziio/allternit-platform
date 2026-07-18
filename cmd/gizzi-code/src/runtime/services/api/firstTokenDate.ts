@@ -2,9 +2,9 @@
 import axios from 'axios'
 import { getOauthConfig } from '@/constants/oauth.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../../utils/config.js'
-import { getAuthHeaders } from '../../../utils/http.js'
-import { logError } from '../../../utils/log.js'
-import { getClaudeCodeUserAgent } from '../../../utils/userAgent.js'
+import { getAuthHeaders } from '../../../shared/utils/http.js'
+import { logError } from '../../../shared/utils/log.js'
+import { getClaudeCodeUserAgent } from '../../../shared/utils/userAgent.js'
 
 /**
  * Fetch the user's first Gizzi token date and store in config.

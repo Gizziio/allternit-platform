@@ -42,7 +42,7 @@ import {
   getHooksConfigFromSnapshot,
   shouldAllowManagedHooksOnly,
   shouldDisableAllHooksIncludingManaged,
-} from '../../runtime/utils/hooks/hooksConfigSnapshot.js'
+} from './hooks/hooksConfigSnapshot.js'
 import {
   getTranscriptPathForSession,
   getAgentTranscriptPath,
@@ -158,7 +158,7 @@ import {
   clearSessionHooks,
   type SessionDerivedHookMatcher,
   type FunctionHook,
-} from '../../runtime/utils/hooks/sessionHooks.js'
+} from './hooks/sessionHooks.js'
 import type { AppState } from '@/state/AppState.js'
 import { jsonStringify, jsonParse } from './slowOperations.js'
 import { isEnvTruthy } from './envUtils.js'

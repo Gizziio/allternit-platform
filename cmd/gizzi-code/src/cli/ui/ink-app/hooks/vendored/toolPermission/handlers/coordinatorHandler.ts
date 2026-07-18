@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { PendingClassifierCheck } from '../../../types/permissions'
-import { logError } from '../../../utils/log'
+import type { PendingClassifierCheck } from '../../../../types/permissions'
+import { logError } from '../../../../../../../shared/utils/log'
 import type { PermissionDecision } from '../../../utils/permissions/PermissionResult'
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema'
 import type { PermissionContext } from '../PermissionContext'

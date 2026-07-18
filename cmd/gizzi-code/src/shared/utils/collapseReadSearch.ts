@@ -2,19 +2,19 @@
 import { feature } from 'bun:bundle'
 type UUID = string
 import { findToolByName, type Tools } from '../../runtime/tools/Tool.js'
-import { extractBashCommentLabel } from '../../runtime/tools/BashTool/commentLabel.js'
-import { BASH_TOOL_NAME } from '../../runtime/tools/BashTool/toolName.js'
-import { FILE_EDIT_TOOL_NAME } from '../../runtime/tools/FileEditTool/constants.js'
-import { FILE_WRITE_TOOL_NAME } from '../../runtime/tools/FileWriteTool/prompt.js'
+import { extractBashCommentLabel } from '../../cli/ui/ink-app/tools/BashTool/commentLabel.js'
+import { BASH_TOOL_NAME } from '../../cli/ui/ink-app/tools/BashTool/toolName.js'
+import { FILE_EDIT_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileEditTool/constants.js'
+import { FILE_WRITE_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
 import { REPL_TOOL_NAME } from '../../runtime/tools/REPLTool/constants.js'
-import { getReplPrimitiveTools } from '../../runtime/tools/REPLTool/primitiveTools.js'
+import { getReplPrimitiveTools } from '../../cli/ui/ink-app/tools/REPLTool/primitiveTools.js'
 import {
   type BranchAction,
   type CommitKind,
   detectGitOperation,
   type PrAction,
 } from '../../runtime/tools/shared/gitOperationTracking.js'
-import { TOOL_SEARCH_TOOL_NAME } from '../../runtime/tools/ToolSearchTool/prompt.js'
+import { TOOL_SEARCH_TOOL_NAME } from '../../cli/ui/ink-app/tools/ToolSearchTool/prompt.js'
 import type {
   CollapsedReadSearchGroup,
   CollapsibleMessage,

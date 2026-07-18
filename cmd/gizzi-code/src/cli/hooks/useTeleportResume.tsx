@@ -6,7 +6,7 @@ import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEve
 import type { TeleportRemoteResponse } from 'src/utils/conversationRecovery.js';
 import type { CodeSession } from 'src/utils/teleport/api.js';
 import { errorMessage, TeleportOperationError } from '../utils/errors.js';
-import { teleportResumeCodeSession } from '../utils/teleport.js';
+import { teleportResumeCodeSession } from '../../shared/utils/teleport.js';
 export type TeleportResumeError = {
   message: string;
   formattedMessage?: string;

@@ -10,7 +10,7 @@ import {
   getSessionId,
   setCwdState,
 } from '@/bootstrap/state.js'
-import { generateTaskId } from '../Task.js'
+import { generateTaskId } from '../../cli/ui/ink-app/Task.js'
 import { pwd } from './cwd.js'
 import { logForDebugging } from './debug.js'
 import { errorMessage, isENOENT } from './errors.js'

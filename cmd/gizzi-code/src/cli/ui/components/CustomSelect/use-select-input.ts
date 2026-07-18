@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { useMemo } from 'react'
-import { useRegisterOverlay } from '../../context/overlayContext.js'
+import { useRegisterOverlay } from '../../ink-app/context/overlayContext.js'
 import type { InputEvent } from '@/ink/events/input-event.js'
 import { useInput } from '@/ink.js'
 import { useKeybindings } from '@/keybindings/useKeybinding.js'
 import {
   normalizeFullWidthDigits,
   normalizeFullWidthSpace,
-} from '../../utils/stringUtils.js'
+} from '../../../../shared/utils/stringUtils.js'
 import type { OptionWithDescription } from './select.js'
 import type { SelectState } from './use-select-state.js'
 

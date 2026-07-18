@@ -43,12 +43,15 @@ pub mod inbox_routes;
 pub mod internal_auth;
 pub mod internal_routes;
 pub mod library_routes;
+pub mod llm_gateway;
 pub mod local_brain_routes;
 pub mod mcp_routes;
 pub mod me_routes;
 pub mod memory_routes;
 pub mod metrics;
 pub mod oauth_routes;
+pub mod office_cli_mcp;
+pub mod office_cli_routes;
 pub mod office_routes;
 pub mod onboarding_routes;
 pub mod open_connector_proxy;
@@ -109,6 +112,18 @@ pub fn init_app_config() -> &'static AppConfig {
 /// Office runtime state (bindings + sessions) — kept in memory for concurrency safety
 pub type OfficeRuntimeState = Arc<RwLock<crate::office_routes::OfficeRuntimeFile>>;
 
+/// OfficeCLI document registry — in-memory mirror of `<office_cli_dir>/docs.json`.
+pub type OfficeCliDocsState =
+    Arc<RwLock<std::collections::HashMap<uuid::Uuid, crate::office_cli_routes::OfficeCliDoc>>>;
+
+/// Live `officecli watch` child processes keyed by doc_id (not serialized).
+pub type OfficeCliWatchState =
+    Arc<RwLock<std::collections::HashMap<uuid::Uuid, tokio::process::Child>>>;
+
+/// OfficeCLI MCP stdio sessions, one per user_id.
+pub type OfficeCliMcpState =
+    Arc<RwLock<std::collections::HashMap<String, crate::office_cli_mcp::McpSession>>>;
+
 /// Application state shared across all route handlers
 pub struct AppState {
     /// Unified app configuration (company + user + env overrides)
@@ -136,6 +151,12 @@ pub struct AppState {
     pub webhook_secret: Option<String>,
     /// Office add-in runtime bindings and sessions
     pub office_runtime: OfficeRuntimeState,
+    /// OfficeCLI document registry (snapshot docs uploaded by the add-in)
+    pub office_cli_docs: OfficeCliDocsState,
+    /// Live `officecli watch` preview processes keyed by doc_id
+    pub office_cli_watches: OfficeCliWatchState,
+    /// OfficeCLI MCP stdio sessions, one per user
+    pub office_cli_mcp_sessions: OfficeCliMcpState,
     /// Daemon-side Open Design skill cache with hot-reload semantics.
     pub design_skill_cache: DesignSkillCache,
     /// Local tmux-backed terminal sessions for Code Mode.

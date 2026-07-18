@@ -29,26 +29,21 @@ import {
   isCodeEditingTool,
 } from '@/hooks/toolPermission/permissionLogging.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
-import {
-  findToolByName,
-  type Tool,
-  type ToolProgress,
-  type ToolProgressData,
-  type ToolUseContext,
-} from '../../../runtime/tools/Tool.js'
+import { findToolByName, type Tool, type ToolUseContext } from '../../../runtime/tools/Tool.js';
+import { type ToolProgress, type ToolProgressData } from '../../../types/tools.js';
 import type { BashToolInput } from '../../tools/builtins/bash/BashTool.js'
 import { startSpeculativeClassifierCheck } from '../../tools/builtins/bash/bashPermissions.js'
 import { BASH_TOOL_NAME } from '../../tools/builtins/bash/toolName.js'
 import { FILE_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
-import { FILE_READ_TOOL_NAME } from '../../../tools/FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from '../../../tools/FileWriteTool/prompt.js'
+import { FILE_READ_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { FILE_WRITE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
 import { NOTEBOOK_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
 import { POWERSHELL_TOOL_NAME } from '../../tools/builtins/bash/toolName.js'
 import { parseGitCommitId } from '../../tools/shared/gitOperationTracking.js'
 import {
   isDeferredTool,
   TOOL_SEARCH_TOOL_NAME,
-} from '../../../tools/ToolSearchTool/prompt.js'
+} from '../../../cli/ui/ink-app/tools/ToolSearchTool/prompt.js'
 import { getAllBaseTools } from '../../tools.js'
 import type { HookProgress } from '@/types/hooks.js'
 import type {
@@ -60,16 +55,16 @@ import type {
 } from '@/types/message.js'
 import { count } from '../../../utils/array.js'
 import { createAttachmentMessage } from '../../../utils/attachments.js'
-import { logForDebugging } from '../../../utils/debug.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
 import {
   AbortError,
   errorMessage,
   getErrnoCode,
   ShellError,
   TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-} from '../../../utils/errors.js'
-import { executePermissionDeniedHooks } from '../../../utils/hooks.js'
-import { logError } from '../../../utils/log.js'
+} from '../../../shared/utils/errors.js'
+import { executePermissionDeniedHooks } from '../../../shared/utils/hooks.js'
+import { logError } from '../../../shared/utils/log.js'
 import {
   CANCEL_MESSAGE,
   createProgressMessage,
@@ -77,7 +72,7 @@ import {
   createToolResultStopMessage,
   createUserMessage,
   withMemoryCorrectionHint,
-} from '../../../utils/messages.js'
+} from '../../../shared/utils/messages.js'
 import type {
   PermissionDecisionReason,
   PermissionResult,
@@ -85,9 +80,9 @@ import type {
 import {
   startSessionActivity,
   stopSessionActivity,
-} from '../../../utils/sessionActivity.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
-import { Stream } from '../../../utils/stream.js'
+} from '../../../shared/utils/sessionActivity.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
+import { Stream } from '../../../shared/utils/stream.js'
 import { logOTelEvent } from '../../../shared/utils/telemetry/events.js'
 import {
   addToolContentEvent,
@@ -102,7 +97,7 @@ import {
 import {
   formatError,
   formatZodValidationError,
-} from '../../../utils/toolErrors.js'
+} from '../../../shared/utils/toolErrors.js'
 import {
   processPreMappedToolResultBlock,
   processToolResultBlock,
@@ -111,7 +106,7 @@ import {
   extractDiscoveredToolNames,
   isToolSearchEnabledOptimistic,
   isToolSearchToolAvailable,
-} from '../../../utils/toolSearch.js'
+} from '../../../shared/utils/toolSearch.js'
 import {
   McpAuthError,
   McpToolCallError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

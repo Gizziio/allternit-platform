@@ -7,14 +7,14 @@
  */
 import { feature } from 'bun:bundle';
 import { useCallback } from 'react';
-import instances from '@/ink/instances.js';
+import instances from '../ui/ink-renderer/instances.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
-import type { Screen } from '../screens/REPL.js';
+import type { Screen } from '../ui/ink-app/screens/REPL.js';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '@/services/analytics/index.js';
 import { useAppState, useSetAppState } from '@/state/AppState.js';
-import { count } from '../utils/array.js';
-import { getTerminalPanel } from '../utils/terminalPanel.js';
+import { count } from '../../shared/utils/array.js';
+import { getTerminalPanel } from '../../shared/utils/terminalPanel.js';
 type Props = {
   screen: Screen;
   setScreen: React.Dispatch<React.SetStateAction<Screen>>;
@@ -58,7 +58,7 @@ export function GlobalKeybindingHandlers({
         getAllInProcessTeammateTasks
       } =
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      require('../tasks/InProcessTeammateTask/InProcessTeammateTask.js') as typeof import('../tasks/InProcessTeammateTask/InProcessTeammateTask.js');
+      require('../ui/ink-app/tasks/InProcessTeammateTask/InProcessTeammateTask.js') as typeof import('../ui/ink-app/tasks/InProcessTeammateTask/InProcessTeammateTask.js');
       const hasTeammates = count(getAllInProcessTeammateTasks(prev.tasks), t => t.status === 'running') > 0;
       if (hasTeammates) {
         // Both exist: none → tasks → teammates → none
@@ -103,7 +103,7 @@ export function GlobalKeybindingHandlers({
       /* eslint-disable @typescript-eslint/no-require-imports */
       const {
         isBriefEnabled
-      } = require('../tools/BriefTool/BriefTool.js') as typeof import('../tools/BriefTool/BriefTool.js');
+      } = require('../../runtime/tools/builtins/brieftool/BriefTool.js') as typeof import('../../runtime/tools/builtins/brieftool/BriefTool.js');
       /* eslint-enable @typescript-eslint/no-require-imports */
       if (!isBriefEnabled() && isBriefOnly && screen !== 'transcript') {
         setAppState(prev_0 => {
@@ -163,7 +163,7 @@ export function GlobalKeybindingHandlers({
       /* eslint-disable @typescript-eslint/no-require-imports */
       const {
         isBriefEnabled: isBriefEnabled_0
-      } = require('../tools/BriefTool/BriefTool.js') as typeof import('../tools/BriefTool/BriefTool.js');
+      } = require('../../runtime/tools/builtins/brieftool/BriefTool.js') as typeof import('../../runtime/tools/builtins/brieftool/BriefTool.js');
       /* eslint-enable @typescript-eslint/no-require-imports */
       if (!isBriefEnabled_0() && !isBriefOnly) return;
       const next = !isBriefOnly;

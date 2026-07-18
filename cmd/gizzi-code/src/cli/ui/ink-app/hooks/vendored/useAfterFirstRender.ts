@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useEffect } from 'react'
-import { isEnvTruthy } from '../../vendor/utils/envUtils'
+import { isEnvTruthy } from '../../../../../shared/utils/envUtils'
 
 export function useAfterFirstRender(): void {
   useEffect(() => {

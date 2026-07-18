@@ -3,20 +3,20 @@ import type { MCPServerConnection } from '@/services/mcp/types.js'
 import { isPolicyAllowed } from '@/services/policyLimits/index.js'
 import type { ToolUseContext } from '@/Tool.js'
 // @ts-ignore missing export from tools/AskUserQuestionTool/prompt
-import { ASK_USER_QUESTION_TOOL_NAME } from '../../tools/AskUserQuestionTool/prompt.js'
+import { ASK_USER_QUESTION_TOOL_NAME } from '../../cli/ui/ink-app/tools/AskUserQuestionTool/prompt.js'
 // @ts-ignore missing module tools/RemoteTriggerTool/prompt
-import { REMOTE_TRIGGER_TOOL_NAME } from '../../tools/RemoteTriggerTool/prompt.js'
+import { REMOTE_TRIGGER_TOOL_NAME } from '../../cli/ui/ink-app/tools/RemoteTriggerTool/prompt.js'
 import { getClaudeAIOAuthTokens } from '../../utils/auth.js'
 // @ts-ignore missing module utils/background/remote/preconditions
 import { checkRepoForRemoteAccess } from '../../utils/background/remote/preconditions.js'
-import { logForDebugging } from '../../utils/debug.js'
+import { logForDebugging } from '../../shared/utils/debug.js'
 import {
   detectCurrentRepositoryWithHost,
   parseGitRemote,
-} from '../../utils/detectRepository.js'
+} from '../../shared/utils/detectRepository.js'
 // @ts-ignore missing export from utils/git
 import { getRemoteUrl } from '../../utils/git.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
+import { jsonStringify } from '../../shared/utils/slowOperations.js'
 // @ts-ignore missing module utils/teleport/environments
 import { createDefaultCloudEnvironment, type EnvironmentResource, fetchEnvironments } from '../../utils/teleport/environments.js'
 import { registerBundledSkill } from '../bundledSkills.js'

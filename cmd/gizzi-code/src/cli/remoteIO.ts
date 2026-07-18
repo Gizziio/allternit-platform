@@ -3,21 +3,21 @@ import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
 import { PassThrough } from 'stream'
 import { URL } from 'url'
 import { getSessionId } from '@/bootstrap/state.js'
-import { getPollIntervalConfig } from '../bridge/pollConfig.js'
-import { registerCleanup } from '../utils/cleanupRegistry.js'
-import { setCommandLifecycleListener } from '../utils/commandLifecycle.js'
-import { isDebugMode, logForDebugging } from '../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../utils/diagLogs.js'
-import { isEnvTruthy } from '../utils/envUtils.js'
-import { errorMessage } from '../utils/errors.js'
-import { gracefulShutdown } from '../utils/gracefulShutdown.js'
-import { logError } from '../utils/log.js'
+import { getPollIntervalConfig } from '../runtime/integrations/pollConfig.js'
+import { registerCleanup } from '../shared/utils/cleanupRegistry.js'
+import { setCommandLifecycleListener } from '../shared/utils/commandLifecycle.js'
+import { isDebugMode, logForDebugging } from '../shared/utils/debug.js'
+import { logForDiagnosticsNoPII } from '../shared/utils/diagLogs.js'
+import { isEnvTruthy } from '../shared/utils/envUtils.js'
+import { errorMessage } from '../shared/utils/errors.js'
+import { gracefulShutdown } from '../shared/utils/gracefulShutdown.js'
+import { logError } from '../shared/utils/log.js'
 import { writeToStdout } from '../utils/process.js'
-import { getSessionIngressAuthToken } from '../utils/sessionIngressAuth.js'
+import { getSessionIngressAuthToken } from '../shared/utils/sessionIngressAuth.js'
 import {
   setSessionMetadataChangedListener,
   setSessionStateChangedListener,
-} from '../utils/sessionState.js'
+} from '../shared/utils/sessionState.js'
 import {
   setInternalEventReader,
   setInternalEventWriter,

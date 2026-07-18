@@ -4,14 +4,14 @@ import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../vendor/services/analytics/index'
+} from '../../../components/index'
 import { sanitizeToolNameForAnalytics } from '../../vendor/services/analytics/metadata'
 import type { ToolUseConfirm } from '../../components/permissions/PermissionRequest'
 import type {
   ToolPermissionContext,
   Tool as ToolType,
   ToolUseContext,
-} from '../../Tool'
+} from '../../../components/Tool'
 import { awaitClassifierAutoApproval } from '../../tools/BashTool/bashPermissions'
 import { BASH_TOOL_NAME } from '../../tools/BashTool/toolName'
 import type {
@@ -20,17 +20,17 @@ import type {
   PermissionAllowDecision,
   PermissionDecisionReason,
   PermissionDenyDecision,
-} from '../../types/message'
-import { setClassifierApproval } from '../../vendor/utils/classifierApprovals'
-import { logForDebugging } from '../../vendor/utils/debug'
-import { executePermissionRequestHooks } from '../../vendor/utils/hooks'
+} from '../../../components/message'
+import { setClassifierApproval } from '../../../../../../shared/utils/classifierApprovals'
+import { logForDebugging } from '../../../../../../shared/utils/debug'
+import { executePermissionRequestHooks } from '../../../../../../shared/utils/hooks'
 import {
   REJECT_MESSAGE,
   REJECT_MESSAGE_WITH_REASON_PREFIX,
   SUBAGENT_REJECT_MESSAGE,
   SUBAGENT_REJECT_MESSAGE_WITH_REASON_PREFIX,
   withMemoryCorrectionHint,
-} from '../../vendor/utils/messages'
+} from '../../../../../../shared/utils/messages'
 import type { PermissionDecision } from '../../vendor/utils/permissions/PermissionResult'
 import {
   applyPermissionUpdates,

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as React from 'react';
-import { Settings } from '../../components/Settings/Settings';
-import type { LocalJSXCommandCall } from '../../types/command';
+import { Settings } from '../../../../components/Settings/Settings';
+import type { LocalJSXCommandCall } from '../../../types/command';
 export const call: LocalJSXCommandCall = async (onDone, context) => {
   return <Settings onClose={onDone} context={context} defaultTab="Usage" />;
 };

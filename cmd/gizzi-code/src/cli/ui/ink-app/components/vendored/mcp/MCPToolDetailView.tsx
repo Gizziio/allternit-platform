@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { Box, Text } from '../../core/ink';
+import { Box, Text } from '../../../ink';
 import { extractMcpToolDisplayName, getMcpDisplayName } from '../../services/mcp/mcpStringUtils';
 import type { Tool } from '../../Tool';
-import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint';
+import { ConfigurableShortcutHint } from '../../ConfigurableShortcutHint';
 import { Dialog } from '../design-system/Dialog';
 import type { ServerInfo } from './types';
 type Props = {

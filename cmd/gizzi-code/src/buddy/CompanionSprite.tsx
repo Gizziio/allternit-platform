@@ -4,7 +4,7 @@ import { feature } from 'bun:bundle';
 import figures from 'figures';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
-import { stringWidth } from '@/ink/stringWidth.js';
+import { stringWidth } from '../cli/ui/ink-renderer/stringWidth.js';
 import { Box, Text } from '@/ink.js';
 import { useAppState, useSetAppState } from '@/state/AppState.js';
 import type { AppState } from '@/state/AppStateStore.js';

@@ -22,14 +22,15 @@ export type {
   SDKControlResponse,
 } from './sdk/controlTypes.js'
 // Re-export core types (common serializable types)
-export * from './sdk/coreTypes.js'
+export { EXIT_REASONS, HOOK_EVENTS } from "./sdk/coreTypes.js";
+export type { ApiKeySource, ConfigChangeHookInput, CwdChangedHookInput, ElicitationHookInput, ElicitationResultHookInput, FileChangedHookInput, GeneratedCoreTypes, InstructionsLoadedHookInput, NonNullableUsage, PermissionDeniedHookInput, PermissionRequestHookInput, PostCompactHookInput, PreCompactHookInput, SDKRateLimitInfo, SandboxFilesystemConfig, SandboxIgnoreViolations, SandboxNetworkConfig, SandboxSettings, SessionEndHookInput, SessionStartHookInput } from "./sdk/coreTypes.js";
 // Re-export runtime types (callbacks, interfaces with methods)
-export * from './sdk/runtimeTypes.js'
+export type { RuntimeConfig, RuntimeEvent, RuntimeState } from "./sdk/runtimeTypes.js";
 
 // Re-export settings types (generated from settings JSON schema)
 export type { Settings } from './sdk/settingsTypes.generated.js'
 // Re-export tool types (all marked @internal until SDK API stabilizes)
-export * from './sdk/toolTypes.js'
+export type { ToolDefinition, ToolInputSchema, ToolProgressData, ToolUseRequest, ToolUseResult } from "./sdk/toolTypes.js";
 
 // ============================================================================
 // Functions

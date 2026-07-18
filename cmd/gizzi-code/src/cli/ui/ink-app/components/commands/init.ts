@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import type { Command } from '../commands'
-import { maybeMarkProjectOnboardingComplete } from '../projectOnboardingState'
-import { isEnvTruthy } from '../utils/envUtils'
+import type { Command } from '../../commands'
+import { maybeMarkProjectOnboardingComplete } from '../../projectOnboardingState'
+import { isEnvTruthy } from '../../utils/envUtils'
 
 const OLD_INIT_PROMPT = `Please analyze this codebase and create a CLAUDE.md file, which will be given to future instances of Claude Code to operate in this repository.
 What to add:

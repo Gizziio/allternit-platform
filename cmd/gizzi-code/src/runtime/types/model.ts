@@ -35,4 +35,5 @@ export interface ModelSetting {
 export type NullableModelSetting = ModelSetting | null | undefined
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../../shared/utils/model/model.js'
+export { firstPartyNameToCanonical, getBestModel, getCanonicalName, getClaudeAiUserDefaultModelDescription, getDefaultHaikuModel, getDefaultMainLoopModel, getDefaultMainLoopModelSetting, getDefaultOpusModel, getDefaultSonnetModel, getMainLoopModel, getMarketingNameForModel, getOpus46PricingSuffix, getPublicModelDisplayName, getPublicModelName, getRuntimeMainLoopModel, getSmallFastModel, getUserSpecifiedModelSetting, isLegacyModelRemapEnabled, isNonCustomOpusModel, isOpus1mMergeEnabled, modelDisplayString, normalizeModelStringForAPI, parseUserSpecifiedModel, renderDefaultModelSetting, renderModelName, renderModelSetting, resolveSkillModelOverride } from "../../shared/utils/model/model.js";
+export type { ModelName, ModelShortName } from "../../shared/utils/model/model.js";

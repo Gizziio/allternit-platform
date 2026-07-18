@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { getIsNonInteractiveSession } from '@/bootstrap/state.js'
 import { checkHasTrustDialogAccepted } from '../../../utils/config.js'
-import { logAntError } from '../../../utils/debug.js'
-import { errorMessage } from '../../../utils/errors.js'
-import { execFileNoThrowWithCwd } from '../../../utils/execFileNoThrow.js'
-import { logError, logMCPDebug, logMCPError } from '../../../utils/log.js'
-import { jsonParse } from '../../../utils/slowOperations.js'
+import { logAntError } from '../../../shared/utils/debug.js'
+import { errorMessage } from '../../../shared/utils/errors.js'
+import { execFileNoThrowWithCwd } from '../../../shared/utils/execFileNoThrow.js'
+import { logError, logMCPDebug, logMCPError } from '../../../shared/utils/log.js'
+import { jsonParse } from '../../../shared/utils/slowOperations.js'
 import { logEvent } from '../analytics/index.js'
 import type {
   McpHTTPServerConfig,

@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { WorkspaceBackground } from '../components/WorkspaceBackground';
 import { useMode } from '../providers/mode-provider';
 import { useSidecarStore } from '../stores/sidecar-store';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
@@ -12,6 +13,9 @@ const SIDECAR_MAX_WIDTH = 700;
 const RAIL_MIN_WIDTH = 180;
 const RAIL_MAX_WIDTH = 420;
 const RAIL_DEFAULT_WIDTH = 248;
+
+/** Width of the slide-out rail drawer on mobile viewports. */
+const MOBILE_RAIL_DRAWER_WIDTH = 280;
 
 // =============================================================================
 // ResizeGrip — shared visual indicator shown on resize handle hover
@@ -47,6 +51,8 @@ export function ShellFrame({
   onRailWidthChange,
   onRailHover,
   peekRail,
+  mobileRailOpen,
+  onMobileRailClose,
 }: {
   rail: React.ReactNode;
   header?: React.ReactNode;
@@ -65,9 +71,14 @@ export function ShellFrame({
   onRailHover?: (hovered: boolean) => void;
   /** When true, render the rail as a fixed slide-out overlay even if collapsed. */
   peekRail?: boolean;
+  /** (Mobile) Whether the slide-out rail drawer is open. */
+  mobileRailOpen?: boolean;
+  /** (Mobile) Called when the rail drawer should close (backdrop scrim tap). */
+  onMobileRailClose?: () => void;
 
 }) {
   const { mode } = useMode();
+  const isMobile = useIsMobile();
   const selectedAgentIdBySurface = useAgentSurfaceModeStore((s) => s.selectedAgentIdBySurface);
 
   const currentSurface: AgentModeSurface =
@@ -156,7 +167,9 @@ export function ShellFrame({
   // ----------------------------------------------------------------
   const railCol = isRailCollapsed ? '0px' : resolvedRailWidth + 'px';
   const sidecarCol = sidecarOpen ? ('minmax(200px, ' + sidecarWidth + 'px)') : '0px';
-  const gridCols = railCol + ' 1fr ' + sidecarCol;
+  // On mobile the rail and sidecar render as overlays, so the grid carries
+  // only the canvas column.
+  const gridCols = isMobile ? '0px 1fr 0px' : railCol + ' 1fr ' + sidecarCol;
 
   return (
     <div style={{
@@ -172,8 +185,8 @@ export function ShellFrame({
     }}>
       <WorkspaceBackground />
 
-      {/* Rail Container — solid panel with subtle border */}
-      {!isRailCollapsed && (
+      {/* Rail Container — solid panel with subtle border (desktop only; mobile uses the drawer below) */}
+      {!isRailCollapsed && !isMobile && (
         <div
           onMouseEnter={() => onRailHover?.(true)}
           onMouseLeave={() => onRailHover?.(false)}
@@ -220,8 +233,8 @@ export function ShellFrame({
         </div>
       )}
 
-      {/* Peek Rail — slides out when hovering collapsed mode icons */}
-      {peekRail && (
+      {/* Peek Rail — slides out when hovering collapsed mode icons (desktop only) */}
+      {peekRail && !isMobile && (
         <div
           onMouseEnter={() => onRailHover?.(true)}
           onMouseLeave={() => onRailHover?.(false)}
@@ -248,6 +261,56 @@ export function ShellFrame({
             ? React.cloneElement(rail as React.ReactElement<{ isCollapsed?: boolean }>, { isCollapsed: false })
             : rail}
         </div>
+      )}
+
+      {/* Mobile Rail Drawer — fixed slide-out panel with a backdrop scrim.
+          Stays mounted off-canvas so open/close animates via CSS transform. */}
+      {isMobile && (
+        <>
+          <div
+            onClick={onMobileRailClose}
+            aria-hidden={!mobileRailOpen}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              opacity: mobileRailOpen ? 1 : 0,
+              pointerEvents: mobileRailOpen ? 'auto' : 'none',
+              transition: 'opacity 0.25s ease',
+              zIndex: 150,
+            }}
+          />
+          <div
+            aria-hidden={!mobileRailOpen}
+            style={{
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: MOBILE_RAIL_DRAWER_WIDTH,
+              zIndex: 151,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              padding: '0px',
+              background: 'var(--shell-rail-bg)',
+              borderRight: '1px solid var(--border-subtle)',
+              transform: mobileRailOpen ? 'translateX(0)' : 'translateX(-100%)',
+              // visibility:hidden removes the closed drawer from the keyboard
+              // tab order (aria-hidden + pointer-events alone do not). The
+              // delayed visibility transition lets the slide-out finish first.
+              visibility: mobileRailOpen ? 'visible' : 'hidden',
+              transition: mobileRailOpen
+                ? 'transform 0.25s ease'
+                : 'transform 0.25s ease, visibility 0s linear 0.25s',
+              pointerEvents: mobileRailOpen ? 'auto' : 'none',
+            }}
+          >
+            {React.isValidElement(rail)
+              ? React.cloneElement(rail as React.ReactElement<{ isCollapsed?: boolean }>, { isCollapsed: false })
+              : rail}
+          </div>
+        </>
       )}
 
       {/* Main Canvas — unified agent glow, views provide their own surfaces */}
@@ -282,8 +345,8 @@ export function ShellFrame({
         {overlays}
       </div>
 
-      {/* Sidecar Panel */}
-      {sidecarOpen && (
+      {/* Sidecar Panel (desktop — side-by-side grid column with resize handle) */}
+      {sidecarOpen && !isMobile && (
         <div style={{
           gridRow: '1',
           gridColumn: '3',
@@ -305,6 +368,23 @@ export function ShellFrame({
           }}>
             {sidecar}
           </div>
+        </div>
+      )}
+
+      {/* Mobile Sidecar — full-screen overlay above the canvas. The sidecar's
+          own header close button collapses it back to the canvas. */}
+      {sidecarOpen && isMobile && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 155,
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--shell-panel-bg)',
+          overflow: 'hidden',
+          WebkitAppRegion: 'no-drag'
+        }}>
+          {sidecar}
         </div>
       )}
 

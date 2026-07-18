@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from 'react';
-import { jsonParse } from '../../utils/slowOperations';
+import { jsonParse } from '../../../utils/slowOperations';
 import type { Output } from './TeamDeleteTool';
 export function renderToolUseMessage(_input: Record<string, unknown>): React.ReactElement | null {
   return <>cleanup team: current</>;

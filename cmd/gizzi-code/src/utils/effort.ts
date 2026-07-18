@@ -15,4 +15,5 @@ export function setEffortLevel(level: EffortLevel): void {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../shared/utils/effort.js'
+export { EFFORT_LEVELS, convertEffortValueToLevel, getDefaultEffortForModel, getDisplayedEffortLevel, getEffortEnvOverride, getEffortLevelDescription, getEffortSuffix, getEffortValueDescription, getInitialEffortSetting, getOpusDefaultEffortConfig, isEffortLevel, isValidNumericEffort, modelSupportsEffort, modelSupportsMaxEffort, parseEffortValue, resolveAppliedEffort, resolvePickerEffortPersistence, toPersistableEffort } from "../shared/utils/effort.js";
+export type { EffortValue, OpusDefaultEffortConfig } from "../shared/utils/effort.js";

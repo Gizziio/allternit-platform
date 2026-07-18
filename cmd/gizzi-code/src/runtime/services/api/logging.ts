@@ -25,20 +25,20 @@ const isConnectorTextBlock = (content: unknown): boolean => {
   )
 }
 import type { AssistantMessage } from '@/types/message.js'
-import { logForDebugging } from '../../../utils/debug.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
 import type { EffortLevel } from '../../../utils/effort.js'
-import { logError } from '../../../utils/log.js'
+import { logError } from '../../../shared/utils/log.js'
 import { getAPIProviderForStatsig } from '../../../utils/model/providers.js'
 import type { PermissionMode } from '../../../utils/permissions/PermissionMode.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import { logOTelEvent } from '../../../shared/utils/telemetry/events.js'
 import {
   endLLMRequestSpan,
   isBetaTracingEnabled,
   type Span,
 } from '../../../shared/utils/telemetry/sessionTracing.js'
-import type { NonNullableUsage } from '../../entrypoints/sdk/sdkUtilityTypes.js'
-import { consumeInvokingRequestId } from '../../../utils/agentContext.js'
+import type { NonNullableUsage } from '../../../entrypoints/sdk/sdkUtilityTypes.js'
+import { consumeInvokingRequestId } from '../../../shared/utils/agentContext.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,

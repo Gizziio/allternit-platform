@@ -1,20 +1,20 @@
 import type { StdoutMessage } from 'src/entrypoints/sdk/controlTypes.js'
 import type WsWebSocket from 'ws'
 import { logEvent } from '@/services/analytics/index.js'
-import { CircularBuffer } from '../../utils/CircularBuffer.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../../utils/diagLogs.js'
-import { isEnvTruthy } from '../../utils/envUtils.js'
-import { getWebSocketTLSOptions } from '../../utils/mtls.js'
+import { CircularBuffer } from '../../shared/utils/CircularBuffer.js'
+import { logForDebugging } from '../../shared/utils/debug.js'
+import { logForDiagnosticsNoPII } from '../../shared/utils/diagLogs.js'
+import { isEnvTruthy } from '../../shared/utils/envUtils.js'
+import { getWebSocketTLSOptions } from '../../shared/utils/mtls.js'
 import {
   getWebSocketProxyAgent,
   getWebSocketProxyUrl,
-} from '../../utils/proxy.js'
+} from '../../shared/utils/proxy.js'
 import {
   registerSessionActivityCallback,
   unregisterSessionActivityCallback,
-} from '../../utils/sessionActivity.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
+} from '../../shared/utils/sessionActivity.js'
+import { jsonStringify } from '../../shared/utils/slowOperations.js'
 import type { Transport, TransportOptions } from './Transport.js'
 
 const KEEP_ALIVE_FRAME = '{"type":"keep_alive"}\n'

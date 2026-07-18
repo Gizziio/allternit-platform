@@ -1,7 +1,7 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { getSubscriptionType } from '../../utils/auth'
-import { isEnvTruthy } from '../../utils/envUtils'
+import type { Command } from '../../../commands'
+import { getSubscriptionType } from '../../../utils/auth'
+import { isEnvTruthy } from '../../../utils/envUtils'
 
 const upgrade = {
   type: 'local-jsx',
@@ -11,6 +11,6 @@ const upgrade = {
   isEnabled: () =>
     !isEnvTruthy(process.env.DISABLE_UPGRADE_COMMAND) &&
     getSubscriptionType() !== 'enterprise',
-  load: () => import('./upgrade.js'),
+  load: () => import('../../../commands/upgrade/upgrade.js'),
 } satisfies Command
 export default upgrade

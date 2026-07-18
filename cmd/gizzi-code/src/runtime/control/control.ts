@@ -3,7 +3,7 @@ import { Database } from "@/runtime/session/storage/db"
 import { ControlAccountTable } from "@/shared/control/control.sql"
 import z from "zod/v4"
 
-export * from "@/shared/control/control.sql"
+export { ControlAccountTable } from "@/shared/control/control.sql";
 
 export namespace Control {
   export const Account = z.object({

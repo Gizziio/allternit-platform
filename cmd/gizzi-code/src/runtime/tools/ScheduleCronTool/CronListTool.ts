@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { z } from 'zod/v4'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import { lazySchema } from '../../utils/lazySchema.js'
+import { lazySchema } from '../../../shared/utils/lazySchema.js'
 import {
   CRON_LIST_TOOL_NAME,
   CRON_LIST_DESCRIPTION,

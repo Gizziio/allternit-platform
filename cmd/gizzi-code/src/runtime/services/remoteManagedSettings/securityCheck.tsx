@@ -1,14 +1,14 @@
 // @ts-nocheck
 import React from 'react';
 import { getIsInteractive } from '@/bootstrap/state.js';
-import { ManagedSettingsSecurityDialog } from '../../components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.js';
+import { ManagedSettingsSecurityDialog } from '../../../cli/ui/ink-app/components/ManagedSettingsSecurityDialog/ManagedSettingsSecurityDialog.js';
 import { extractDangerousSettings, hasDangerousSettings, hasDangerousSettingsChanged } from '../../components/ManagedSettingsSecurityDialog/utils.js';
 import { render } from '@/ink.js';
 import { KeybindingSetup } from '@/keybindings/KeybindingProviderSetup.js';
 import { AppStateProvider } from '@/state/AppState.js';
-import { gracefulShutdownSync } from '../../utils/gracefulShutdown.js';
-import { getBaseRenderOptions } from '../../utils/renderOptions.js';
-import type { SettingsJson } from '../../utils/settings/types.js';
+import { gracefulShutdownSync } from '../../../shared/utils/gracefulShutdown.js';
+import { getBaseRenderOptions } from '../../../shared/utils/renderOptions.js';
+import type { SettingsJson } from '../../../utils/settings/types.js';
 import { logEvent } from '../analytics/index.js';
 export type SecurityCheckResult = 'approved' | 'rejected' | 'no_check_needed';
 

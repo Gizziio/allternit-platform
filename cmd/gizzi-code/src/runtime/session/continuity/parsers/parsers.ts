@@ -8,7 +8,7 @@
 import { Log } from "@/runtime/util/log"
 import { Filesystem } from "@/runtime/util/filesystem"
 import path from "path"
-import type { SessionSource, ToolType, SessionContext } from "@/runtime/session/continuity/continuity/types"
+import type { SessionSource, ToolType, SessionContext } from "../types"
 
 const log = Log.create({ service: "continuity.parsers" })
 

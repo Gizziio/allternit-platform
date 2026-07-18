@@ -1,17 +1,17 @@
 import type { ToolResultBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import * as React from 'react';
 import type { Message, ProgressMessage } from '@/types/message.js';
-import { extractTag } from '../../../utils/messages.js';
-import type { ThemeName } from '../../../utils/theme.js';
+import { extractTag } from '../../../../shared/utils/messages.js';
+import type { ThemeName } from '../../../../shared/utils/theme.js';
 import type { z } from 'zod/v4';
-import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage.js';
-import { FilePathLink } from '../../components/FilePathLink.js';
-import { HighlightedCode } from '../../components/HighlightedCode.js';
-import { MessageResponse } from '../../components/MessageResponse.js';
-import { NotebookEditToolUseRejectedMessage } from '../../components/NotebookEditToolUseRejectedMessage.js';
+import { FallbackToolUseErrorMessage } from '../../../../cli/ui/ink-app/components/FallbackToolUseErrorMessage.js';
+import { FilePathLink } from '../../../../cli/ui/ink-app/components/FilePathLink.js';
+import { HighlightedCode } from '../../../../cli/ui/ink-app/components/HighlightedCode.js';
+import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
+import { NotebookEditToolUseRejectedMessage } from '../../../../cli/ui/ink-app/components/NotebookEditToolUseRejectedMessage.js';
 import { Box, Text } from '@/ink.js';
 import type { Tools } from '@/Tool.js';
-import { getDisplayPath } from '../../utils/file.js';
+import { getDisplayPath } from '../../../../shared/utils/file.js';
 import type { inputSchema, Output } from './NotebookEditTool.js';
 export function getToolUseSummary(input: Partial<z.infer<ReturnType<typeof inputSchema>>> | undefined): string | null {
   if (!input?.notebook_path) {

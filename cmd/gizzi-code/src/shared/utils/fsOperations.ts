@@ -769,8 +769,5 @@ export async function* readLinesReverse(
   }
 }
 
-// Auto-added export
-export const safeStat: any = {}
 
-// Auto-added export
 export const safeReadFile: any = {}

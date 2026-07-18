@@ -2591,5 +2591,3 @@ export async function bashCommandIsSafeAsync_DEPRECATED(
   }
 }
 
-// Auto-added export
-export const validateBashCommand: any = {}

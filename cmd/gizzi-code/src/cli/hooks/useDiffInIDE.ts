@@ -3,32 +3,32 @@ import { randomUUID } from 'crypto'
 import { basename } from 'path'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
-import { readFileSync } from 'src/utils/fileRead.js'
-import { expandPath } from 'src/utils/path.js'
-import type { PermissionOption } from '../components/permissions/FilePermissionDialog/permissionOptions.js'
+import { readFileSync } from '../../shared/utils/fileRead.js'
+import { expandPath } from '../../shared/utils/path.js'
+import type { PermissionOption } from '../ui/components/permissions/FilePermissionDialog/permissionOptions.js'
 import type {
   MCPServerConnection,
   McpSSEIDEServerConfig,
   McpWebSocketIDEServerConfig,
 } from '@/services/mcp/types.js'
 import type { ToolUseContext } from '@/Tool.js'
-import type { FileEdit } from '../tools/FileEditTool/types.js'
+import type { FileEdit } from '../../runtime/integrations/types.js'
 import {
   getEditsForPatch,
   getPatchForEdits,
-} from '../tools/FileEditTool/utils.js'
-import { getGlobalConfig } from '../utils/config.js'
-import { getPatchFromContents } from '../utils/diff.js'
+} from '../ui/ink-app/tools/utils.js'
+import { getGlobalConfig } from '../../shared/utils/config.js'
+import { getPatchFromContents } from '../../shared/utils/diff.js'
 import { isENOENT } from '../utils/errors.js'
 import {
   callIdeRpc,
   getConnectedIdeClient,
   getConnectedIdeName,
   hasAccessToIDEExtensionDiffFeature,
-} from '../utils/ide.js'
-import { WindowsToWSLConverter } from '../utils/idePathConversion.js'
+} from '../../shared/utils/ide.js'
+import { WindowsToWSLConverter } from '../../shared/utils/idePathConversion.js'
 import { logError } from '../utils/log.js'
-import { getPlatform } from '../utils/platform.js'
+import { getPlatform } from '../../shared/utils/platform.js'
 
 type Props = {
   onChange(

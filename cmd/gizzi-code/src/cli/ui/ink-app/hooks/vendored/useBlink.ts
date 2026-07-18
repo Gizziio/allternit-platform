@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { type DOMElement, useAnimationFrame, useTerminalFocus } from '../../core/ink'
+import { type DOMElement, useAnimationFrame, useTerminalFocus } from '../../../../../shared/utils/ink'
 
 const BLINK_INTERVAL_MS = 600
 /**

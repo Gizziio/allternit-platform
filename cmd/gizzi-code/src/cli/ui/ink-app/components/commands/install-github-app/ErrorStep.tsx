@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
-import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app';
-import { Box, Text } from '../../core/ink';
+import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../../../../../constants/github-app';
+import { Box, Text } from '../../../ink';
 interface ErrorStepProps {
   error: string | undefined;
   errorReason?: string;

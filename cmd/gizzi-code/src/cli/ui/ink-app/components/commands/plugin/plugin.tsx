@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as React from 'react';
-import type { LocalJSXCommandOnDone } from '../../types/command';
-import { PluginSettings } from './PluginSettings';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
+import { PluginSettings } from '../../../commands/plugin/PluginSettings';
 export async function call(onDone: LocalJSXCommandOnDone, _context: unknown, args?: string): Promise<React.ReactNode> {
   return <PluginSettings onComplete={onDone} args={args} />;
 }

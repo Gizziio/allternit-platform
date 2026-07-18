@@ -2,37 +2,37 @@
 import { feature } from 'bun:bundle';
 import { dirname } from 'path';
 import React from 'react';
-import { useTerminalSize } from '../vendor/hooks/useTerminalSize';
+import { useTerminalSize } from '../../hooks/useTerminalSize';
 import { getOriginalCwd, switchSession } from './vendor/bootstrap/state';
 import type { Command } from './vendor/commands';
-import { LogSelector } from './components/vendored/LogSelector';
-import { Spinner } from './components/vendored/Spinner';
+import { LogSelector } from '../LogSelector';
+import { Spinner } from '../Spinner';
 import { restoreCostStateForSession } from '../cost-tracker';
 import { setClipboard } from './core/termio/osc';
-import { Box, Text } from './core/ink';
+import { Box, Text } from '../../../../../shared/utils/ink';
 import { useKeybinding } from '../keybindings/useKeybinding';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './vendor/services/analytics/index';
-import type { MCPServerConnection, ScopedMcpServerConfig } from './vendor/services/mcp/types';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../index';
+import type { MCPServerConnection, ScopedMcpServerConfig } from '../../../../../runtime/integrations/types';
 import { useAppState, useSetAppState } from '../state/AppState';
 import type { Tool } from '../Tool';
-import type { AgentColorName } from '../tools/AgentTool/agentColorManager';
-import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir';
-import { asSessionId } from './vendor/types/ids';
-import type { LogOption } from './vendor/types/logs';
-import type { Message } from './vendor/types/message';
-import { agenticSessionSearch } from './vendor/utils/agenticSessionSearch';
-import { renameRecordingForSession } from './vendor/utils/asciicast';
-import { updateSessionName } from './vendor/utils/concurrentSessions';
-import { loadConversationForResume } from './vendor/utils/conversationRecovery';
-import { checkCrossProjectResume } from './vendor/utils/crossProjectResume';
-import type { FileHistorySnapshot } from './vendor/utils/fileHistory';
-import { logError } from './vendor/utils/log';
-import { createSystemMessage } from './vendor/utils/messages';
-import { computeStandaloneAgentContext, restoreAgentFromSession, restoreWorktreeForResume } from './vendor/utils/sessionRestore';
-import { adoptResumedSessionFile, enrichLogs, isCustomTitleEnabled, loadAllProjectsMessageLogsProgressive, loadSameRepoMessageLogsProgressive, recordContentReplacement, resetSessionFilePointer, restoreSessionMetadata, type SessionLogResult } from './vendor/utils/sessionStorage';
-import type { ThinkingConfig } from './vendor/utils/thinking';
-import type { ContentReplacementRecord } from './vendor/utils/toolResultStorage';
-import { REPL } from './REPL';
+import type { AgentColorName } from '../../tools/AgentTool/agentColorManager';
+import type { AgentDefinition } from '../../tools/AgentTool/loadAgentsDir';
+import { asSessionId } from '../../types/ids';
+import type { LogOption } from '../../types/logs';
+import type { Message } from '../message';
+import { agenticSessionSearch } from '../../../../../shared/utils/agenticSessionSearch';
+import { renameRecordingForSession } from '../../../../../shared/utils/asciicast';
+import { updateSessionName } from '../../../../../shared/utils/concurrentSessions';
+import { loadConversationForResume } from '../../../../../shared/utils/conversationRecovery';
+import { checkCrossProjectResume } from '../../../../../shared/utils/crossProjectResume';
+import type { FileHistorySnapshot } from '../../../../../shared/utils/fileHistory';
+import { logError } from '../../../../../shared/utils/log';
+import { createSystemMessage } from '../../../../../shared/utils/messages';
+import { computeStandaloneAgentContext, restoreAgentFromSession, restoreWorktreeForResume } from '../../../../../shared/utils/sessionRestore';
+import { adoptResumedSessionFile, enrichLogs, isCustomTitleEnabled, loadAllProjectsMessageLogsProgressive, loadSameRepoMessageLogsProgressive, recordContentReplacement, resetSessionFilePointer, restoreSessionMetadata, type SessionLogResult } from '../../../../../shared/utils/sessionStorage';
+import type { ThinkingConfig } from '../../../../../shared/utils/thinking';
+import type { ContentReplacementRecord } from '../../../../../shared/utils/toolResultStorage';
+import { REPL } from '../../screens/REPL';
 
 function parsePrIdentifier(value: string): number | null {
   const directNumber = parseInt(value, 10);
@@ -207,7 +207,7 @@ export function ResumeConversation({
           const {
             getAgentDefinitionsWithOverrides,
             getActiveAgentsFromList
-          } = require('../tools/AgentTool/loadAgentsDir.js') as typeof import('../tools/AgentTool/loadAgentsDir.js');
+          } = require('../../tools/AgentTool/loadAgentsDir.js') as typeof import('../../tools/AgentTool/loadAgentsDir.js');
           getAgentDefinitionsWithOverrides.cache.clear?.();
           const freshAgentDefs = await getAgentDefinitionsWithOverrides(getOriginalCwd());
           setAppState(prev => ({
@@ -242,7 +242,7 @@ export function ResumeConversation({
         agent: resolvedAgentDef?.agentType
       }));
       
-      const { saveMode } = require('../utils/sessionStorage.js');
+      const { saveMode } = require('../../../../../shared/utils/sessionStorage.js');
       const { isCoordinatorMode } = require('../coordinator/coordinatorMode.js') as typeof import('../coordinator/coordinatorMode.js');
       saveMode(isCoordinatorMode() ? 'coordinator' : 'normal');
       

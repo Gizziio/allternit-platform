@@ -1,6 +1,6 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
-import { shouldInferenceConfigCommandBeImmediate } from '../../utils/immediateCommand'
+import type { Command } from '../../../commands'
+import { shouldInferenceConfigCommandBeImmediate } from '../../../../../../shared/utils/immediateCommand'
 
 export default {
   type: 'local-jsx',

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Command } from '../../commands'
+import type { Command } from '../../../commands'
 
 const installSlackApp = {
   type: 'local',
@@ -7,6 +7,6 @@ const installSlackApp = {
   description: 'Install the Claude Slack app',
   availability: ['claude-ai'],
   supportsNonInteractive: false,
-  load: () => import('./install-slack-app.js'),
+  load: () => import('../../../commands/install-slack-app/install-slack-app.js'),
 } satisfies Command
 export default installSlackApp

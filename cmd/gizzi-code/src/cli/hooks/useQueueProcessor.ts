@@ -3,9 +3,9 @@ import type { QueuedCommand } from '@/types/textInputTypes.js'
 import {
   getCommandQueueSnapshot,
   subscribeToCommandQueue,
-} from '../utils/messageQueueManager.js'
-import type { QueryGuard } from '../utils/QueryGuard.js'
-import { processQueueIfReady } from '../utils/queueProcessor.js'
+} from '../../shared/utils/messageQueueManager.js'
+import type { QueryGuard } from '../../shared/utils/QueryGuard.js'
+import { processQueueIfReady } from '../../shared/utils/queueProcessor.js'
 
 type UseQueueProcessorParams = {
   executeQueuedInput: (commands: QueuedCommand[]) => Promise<void>

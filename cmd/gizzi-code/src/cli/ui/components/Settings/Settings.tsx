@@ -5,7 +5,7 @@ import { Suspense, useState } from 'react';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
 import { useExitOnCtrlCDWithKeybindings } from '@/hooks/useExitOnCtrlCDWithKeybindings.js';
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
-import { useIsInsideModal, useModalOrTerminalSize } from '../../context/modalContext.js';
+import { useIsInsideModal, useModalOrTerminalSize } from '../../ink-app/context/modalContext.js';
 import { Pane } from '../design-system/Pane.js';
 import { Tabs, Tab } from '../design-system/Tabs.js';
 import { Status, buildDiagnostics } from './Status.js';

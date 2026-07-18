@@ -6,10 +6,10 @@ import { useMemo } from 'react';
 import { type Command, type CommandBase, type CommandResultDisplay, getCommandName, type PromptCommand } from '@/commands.js';
 import { Box, Text } from '@/ink.js';
 import { estimateSkillFrontmatterTokens, getSkillsPath } from '../../skills/loadSkillsDir.js';
-import { getDisplayPath } from '../../utils/file.js';
-import { formatTokens } from '../../utils/format.js';
-import { getSettingSourceName, type SettingSource } from '../../utils/settings/constants.js';
-import { plural } from '../../utils/stringUtils.js';
+import { getDisplayPath } from '../../../../shared/utils/file.js';
+import { formatTokens } from '../../../../shared/utils/format.js';
+import { getSettingSourceName, type SettingSource } from '../../../../tools/REPLTool/constants.js';
+import { plural } from '../../../../shared/utils/stringUtils.js';
 import { ConfigurableShortcutHint } from '../ConfigurableShortcutHint.js';
 import { Dialog } from '../design-system/Dialog.js';
 

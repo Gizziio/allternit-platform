@@ -2,9 +2,9 @@ import {
   getClaudeAiBaseUrl,
   getRemoteSessionUrl,
 } from '@/constants/product.js'
-import { stringWidth } from '@/ink/stringWidth.js'
-import { formatDuration, truncateToWidth } from '../utils/format.js'
-import { getGraphemeSegmenter } from '../utils/intl.js'
+import { stringWidth } from '../../../cli/ui/ink-renderer/stringWidth.js'
+import { formatDuration, truncateToWidth } from '../../../shared/utils/format.js'
+import { getGraphemeSegmenter } from '../../../shared/utils/intl.js'
 
 /** Bridge status state machine states. */
 export type StatusState =

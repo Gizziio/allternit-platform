@@ -15,7 +15,8 @@ export function updateSettings(settings: Partial<Settings>): void {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export * from '../../shared/utils/settings/settings.js'
+export { getAutoModeConfig, getInitialSettings, getManagedFileSettingsPresence, getManagedSettingsKeysForLogging, getPolicySettingsOrigin, getRelativeSettingsFilePathForSource, getSettingsFilePathForSource, getSettingsRootPathForSource, getSettingsWithErrors, getSettingsWithSources, getUseAutoModeDuringPlan, hasAutoModeOptIn, hasSkipDangerousModePermissionPrompt, loadManagedFileSettings, parseSettingsFile, rawSettingsContainsKey, settingsMergeCustomizer, updateSettingsForSource } from "../../shared/utils/settings/settings.js";
+export type { SettingsWithSources } from "../../shared/utils/settings/settings.js";
 
 /** Settings scoped to a source layer; only userSettings exists in this shim. */
 export function getSettingsForSource(source: string): Settings | undefined {

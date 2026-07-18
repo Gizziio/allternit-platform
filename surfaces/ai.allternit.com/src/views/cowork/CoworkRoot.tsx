@@ -45,6 +45,7 @@ import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
 import { ChatModelsProvider } from '@/providers/chat-models-provider';
 import { ModelSelectionProvider } from '@/providers/model-selection-provider';
 import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useModelSelection } from '@/providers/model-selection-provider';
 import {
   buildAgentConversationContext,
@@ -682,6 +683,7 @@ interface CoworkComposeEventDetail {
 
 function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpdate }: CoworkChatProps) {
   const _defaultSelection = useDefaultModelSelection();
+  const isMobile = useIsMobile();
   const { selection: modelSelection, selectModel, startSelection } = useModelSelection();
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('cowork');
@@ -1181,13 +1183,13 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
         alignItems: 'center',
         background: 'transparent',
         pointerEvents: 'none',
-        paddingBottom: '12px',
+        paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
         zIndex: 40,
       }}>
         <div style={{
           width: '100%',
           maxWidth: '760px',
-          padding: '0 20px',
+          padding: isMobile ? '0 8px' : '0 20px',
           boxSizing: 'border-box',
           pointerEvents: 'auto',
         }}>

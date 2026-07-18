@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 import { marked, type Token, type Tokens } from 'marked'
 import stripAnsi from 'strip-ansi'
-import { color } from '../components/design-system/color.js'
+import { color } from '../../cli/ui/ink-app/components/design-system/color.js'
 import { BLOCKQUOTE_BAR } from '@/constants/figures.js'
 import { stringWidth } from '../../cli/ui/ink-renderer/stringWidth.js'
 import { supportsHyperlinks } from '../../cli/ui/ink-renderer/supports-hyperlinks.js'

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Command, LocalCommandCall } from '../types/command'
+import type { Command, LocalCommandCall } from '../../types/command'
 
 const call: LocalCommandCall = async () => {
   return {

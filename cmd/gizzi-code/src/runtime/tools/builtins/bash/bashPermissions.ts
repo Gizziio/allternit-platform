@@ -8,7 +8,7 @@ import {
   logEvent,
 } from '@/runtime/services/analytics/index.js'
 import type { ToolPermissionContext, ToolUseContext } from '@/runtime/tools/Tool.js'
-import type { PendingClassifierCheck } from '@/runtime/types/permissions.js'
+import type { PendingClassifierCheck } from '../../../../types/permissions.js'
 import { count } from '@/shared/utils/array.js'
 import {
   checkSemantics,

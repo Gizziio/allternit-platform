@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useCallback, useSyncExternalStore } from 'react'
-import { formatDuration } from '../../vendor/utils/format'
+import { formatDuration } from '../../../../../shared/utils/format'
 
 /**
  * Hook that returns formatted elapsed time since startTime.

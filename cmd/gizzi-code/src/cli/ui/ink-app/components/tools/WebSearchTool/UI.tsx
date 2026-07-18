@@ -1,10 +1,10 @@
 // @ts-nocheck
 import React from 'react';
-import { MessageResponse } from '../../components/MessageResponse';
-import { TOOL_SUMMARY_MAX_LENGTH } from '../../constants/toolLimits';
-import { Box, Text } from '../../core/ink';
-import type { ProgressMessage } from '../../types/message';
-import { truncate } from '../../utils/format';
+import { MessageResponse } from '../../MessageResponse';
+import { TOOL_SUMMARY_MAX_LENGTH } from '../../../constants/toolLimits';
+import { Box, Text } from '../../../ink';
+import type { ProgressMessage } from '../../message';
+import { truncate } from '../../../utils/format';
 import type { Output, SearchResult, WebSearchProgress } from './WebSearchTool';
 function getSearchSummary(results: (SearchResult | string | null | undefined)[]): {
   searchCount: number;

@@ -15,7 +15,7 @@ import * as IO from "./io"
 const log = Log.create({ service: "vault" })
 
 export { Vault }
-export * from "./io"
+export { ensureVaultStructure, extractTags, extractWikilinks, listNotes, parseFrontmatter, readNote, sanitizeFilename, stringifyFrontmatter, writeNote } from "./io";
 export { VaultIndex }
 
 export class VaultManager {

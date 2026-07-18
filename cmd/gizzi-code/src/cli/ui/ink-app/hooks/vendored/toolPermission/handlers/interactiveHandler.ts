@@ -2,9 +2,9 @@
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'crypto'
-import { logForDebugging } from '../../../vendor/utils/debug'
+import { logForDebugging } from '../../../../../../../shared/utils/debug'
 import { getAllowedChannels } from '../../../bootstrap/state'
-import type { BridgePermissionCallbacks } from '../../../bridge/bridgePermissionCallbacks'
+import type { BridgePermissionCallbacks } from '../../../../../../../runtime/integrations/bridgePermissionCallbacks'
 import { getTerminalFocused } from '../../../ink/terminal-focus-state'
 import {
   CHANNEL_PERMISSION_REQUEST_METHOD,
@@ -22,11 +22,11 @@ import {
   setClassifierApproval,
   setClassifierChecking,
   setYoloClassifierApproval,
-} from '../../../utils/classifierApprovals'
-import { errorMessage } from '../../../utils/errors'
+} from '../../../../../../../shared/utils/classifierApprovals'
+import { errorMessage } from '../../../../../../../shared/utils/errors'
 import type { PermissionDecision } from '../../../utils/permissions/PermissionResult'
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema'
-import { hasPermissionsToUseTool } from '../../../utils/permissions/permissions'
+import { hasPermissionsToUseTool } from '../../../../types/permissions'
 import type { PermissionContext } from '../PermissionContext'
 import { createResolveOnce } from '../PermissionContext'
 

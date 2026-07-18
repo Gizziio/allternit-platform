@@ -10,13 +10,14 @@ import { Bus } from "@/shared/bus"
 import { SessionRetry } from "@/runtime/session/retry"
 import { SessionStatus } from "@/runtime/session/status"
 import { Plugin } from "@/runtime/integrations/plugin"
-import type { Provider } from "@/runtime/providers/provider"
+import { Provider } from "@/runtime/providers/provider"
 import { LLM } from "@/runtime/session/llm"
 import { Config } from "@/runtime/context/config/config"
 import { SessionCompaction } from "@/runtime/session/compaction"
 import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { Question } from "@/runtime/integrations/question"
 import { SessionUsage } from "@/runtime/session/usage"
+import { describeProviderError } from "@/shared/util/provider-error"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -32,6 +33,7 @@ export namespace SessionProcessor {
     sessionID: string
     model: Provider.Model
     abort: AbortSignal
+    fallbackModels?: { providerID: string; modelID: string }[]
   }) {
     const toolcalls: Record<string, MessageV2.ToolPart> = {}
     let snapshot: string | undefined
@@ -53,6 +55,62 @@ export namespace SessionProcessor {
         const shouldBreak = cfg.experimental?.continue_loop_on_deny !== true
         const retryMaxAttempts = cfg.experimental?.retry_max_attempts ?? DEFAULT_RETRY_MAX_ATTEMPTS
         const retryMaxDelayMs = cfg.experimental?.retry_max_delay_ms ?? DEFAULT_RETRY_MAX_DELAY_MS
+        // Cross-provider failover chain. Per-request fallbackModels take precedence over the
+        // global routing.fallbacks config; when neither is set the chain is empty and error
+        // handling behaves exactly as before.
+        const fallbackChain: { providerID: string; modelID: string }[] =
+          input.fallbackModels ?? (cfg.routing?.fallbacks ?? []).map((entry: string) => Provider.parseModel(entry))
+        const tried = new Set<string>([`${input.model.providerID}/${input.model.id}`])
+        let fallbackIndex = 0
+        // Provider error categories that are never worth retrying on the same model (mirrors
+        // the non-retryable classification in shared/util/provider-error.ts / SessionRetry).
+        const nonRetryableFallbackReason = (error: ReturnType<typeof MessageV2.fromError>): string | undefined => {
+          if (MessageV2.AuthError.isInstance(error)) return "auth"
+          if (!MessageV2.APIError.isInstance(error)) return undefined
+          const info = describeProviderError({ raw: error.data?.message || "" })
+          if (["auth", "insufficient_balance", "unsupported_model", "context_overflow"].includes(info.code)) {
+            return info.code
+          }
+          return undefined
+        }
+        const switchToFallbackModel = async (reason: string): Promise<boolean> => {
+          if (input.abort.aborted) return false
+          while (fallbackIndex < fallbackChain.length) {
+            const candidate = fallbackChain[fallbackIndex++]
+            const key = `${candidate.providerID}/${candidate.modelID}`
+            if (tried.has(key)) continue
+            tried.add(key)
+            const next = await Provider.getModel(candidate.providerID, candidate.modelID).catch((e: unknown) => {
+              log.warn("fallback model unavailable, skipping", {
+                providerID: candidate.providerID,
+                modelID: candidate.modelID,
+                error: e,
+              })
+              return undefined
+            })
+            if (!next) continue
+            tried.add(`${next.providerID}/${next.id}`)
+            const from = { providerID: input.model.providerID, modelID: input.model.id }
+            const to = { providerID: next.providerID, modelID: next.id }
+            log.info("switching to fallback model", { sessionID: input.sessionID, from, to, reason })
+            Bus.publish(Session.Event.ModelFallback, {
+              sessionID: input.sessionID,
+              from,
+              to,
+              reason,
+            })
+            input.model = next
+            streamInput.model = next
+            input.assistantMessage.providerID = next.providerID
+            input.assistantMessage.modelID = next.id
+            await Session.updateMessage(input.assistantMessage)
+            // Each model in the chain gets the same configured retry attempts as the primary.
+            attempt = 0
+            SessionStatus.set(input.sessionID, { type: "busy" })
+            return true
+          }
+          return false
+        }
         while (true) {
           try {
             let currentText: MessageV2.TextPart | undefined
@@ -548,6 +606,14 @@ export namespace SessionProcessor {
             const retry = SessionRetry.retryable(error)
             if (retry !== undefined) {
               if (attempt >= retryMaxAttempts) {
+                // Same-model retries exhausted: continue with the next fallback model when a
+                // chain is configured instead of failing the session.
+                if (
+                  await switchToFallbackModel(
+                    `${retry} (retry limit reached after ${attempt} attempt${attempt === 1 ? "" : "s"})`,
+                  )
+                )
+                  continue
                 log.warn("retry limit reached", {
                   attempt,
                   retryMaxAttempts,
@@ -583,6 +649,11 @@ export namespace SessionProcessor {
                 await SessionRetry.sleep(delay, input.abort).catch(() => {})
                 continue
               }
+            } else {
+              // Non-retryable provider errors (auth, insufficient balance, unsupported model,
+              // context overflow) skip straight to the next fallback model when a chain exists.
+              const reason = nonRetryableFallbackReason(error)
+              if (reason !== undefined && (await switchToFallbackModel(reason))) continue
             }
             if (!input.assistantMessage.error) {
               input.assistantMessage.error = error

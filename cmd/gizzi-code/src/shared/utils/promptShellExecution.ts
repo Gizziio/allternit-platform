@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { randomUUID } from 'crypto'
 import type { Tool, ToolUseContext } from '../../runtime/tools/Tool.js'
-import { BashTool } from '../../runtime/tools/BashTool/BashTool.js'
+import { BashTool } from '../../cli/ui/ink-app/tools/BashTool/BashTool.js'
 import { logForDebugging } from './debug.js'
 import { errorMessage, MalformedCommandError, ShellError } from './errors.js'
 import type { FrontmatterShell } from './frontmatterParser.js'

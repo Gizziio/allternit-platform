@@ -1,9 +1,9 @@
 // @ts-nocheck
 import React from 'react';
-import { MessageResponse } from '../../components/MessageResponse';
+import { MessageResponse } from '../../MessageResponse';
 import { stringWidth } from '../../ink/stringWidth';
-import { Text } from '../../core/ink';
-import { truncateToWidthNoEllipsis } from '../../utils/format';
+import { Text } from '../../../ink';
+import { truncateToWidthNoEllipsis } from '../../../utils/format';
 import type { Output } from './TaskStopTool';
 export function renderToolUseMessage(): React.ReactElement | null {
   return null;

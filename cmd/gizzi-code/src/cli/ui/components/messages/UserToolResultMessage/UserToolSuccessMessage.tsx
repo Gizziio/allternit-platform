@@ -7,8 +7,8 @@ import { Box, Text, useTheme } from '@/ink.js';
 import { useAppState } from '@/state/AppState.js';
 import { filterToolProgressMessages, type Tool, type Tools } from '@/Tool.js';
 import type { NormalizedUserMessage, ProgressMessage } from '@/types/message.js';
-import { deleteClassifierApproval, getClassifierApproval, getYoloClassifierApproval } from '../../../utils/classifierApprovals.js';
-import type { buildMessageLookups } from '../../../utils/messages.js';
+import { deleteClassifierApproval, getClassifierApproval, getYoloClassifierApproval } from '../../../../../shared/utils/classifierApprovals.js';
+import type { buildMessageLookups } from '../../../../../shared/utils/messages.js';
 import { MessageResponse } from '../../MessageResponse.js';
 import { HookProgressMessage } from '../HookProgressMessage.js';
 type Props = {

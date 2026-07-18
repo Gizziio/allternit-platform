@@ -21,13 +21,13 @@ import {
   hasProfileScope,
   isClaudeAISubscriber,
 } from '../../../shared/utils/auth.js'
-import { checkHasTrustDialogAccepted } from '../../../config/config.js'
+import { checkHasTrustDialogAccepted } from '../../../shared/utils/config.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'
 import { getClaudeConfigHomeDir } from '../../../shared/utils/envUtils.js'
 import { errorMessage, isFsInaccessible, toError } from '../../../shared/utils/errors.js'
 import { getAuthHeaders } from '../../../shared/utils/http.js'
 import { readJSONLFile } from '../../../shared/utils/json.js'
-import { logError } from '../../util/log.js'
+import { logError } from '../../../cli/utils/log.js'
 import { sleep } from '../../../shared/utils/sleep.js'
 import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import { getClaudeCodeUserAgent } from '../../../shared/utils/userAgent.js'

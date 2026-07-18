@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import * as React from 'react';
-import { Box } from '../../core/ink';
-import type { Theme } from '../../utils/theme';
+import { Box } from '../../../ink';
+import type { Theme } from '../../../utils/theme';
 import { PermissionRequestTitle } from './PermissionRequestTitle';
 import type { WorkerBadgeProps } from './WorkerBadge';
 type Props = {

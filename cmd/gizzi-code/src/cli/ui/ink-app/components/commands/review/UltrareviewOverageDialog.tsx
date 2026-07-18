@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useRef, useState } from 'react';
-import { Select } from '../../components/CustomSelect/select';
-import { Dialog } from '../../components/design-system/Dialog';
-import { Box, Text } from '../../core/ink';
+import { Select } from '../../../../components/CustomSelect/select';
+import { Dialog } from '../../../../components/design-system/Dialog';
+import { Box, Text } from '../../../ink';
 type Props = {
   onProceed: (signal: AbortSignal) => Promise<void>;
   onCancel: () => void;

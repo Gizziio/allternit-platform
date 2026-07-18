@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import type { ToolUseConfirm } from '../components/permissions/PermissionRequest.js'
-import type { RemotePermissionResponse } from '../remote/RemoteSessionManager.js'
+import type { ToolUseConfirm } from '../ui/components/permissions/PermissionRequest.js'
+import type { RemotePermissionResponse } from '../ui/ink-app/remote/RemoteSessionManager.js'
 import {
   createSyntheticAssistantMessage,
   createToolStub,
@@ -9,7 +9,7 @@ import {
 import {
   convertSDKMessage,
   isSessionEndMessage,
-} from '../remote/sdkMessageAdapter.js'
+} from '../ui/ink-app/remote/sdkMessageAdapter.js'
 import {
   type DirectConnectConfig,
   DirectConnectSessionManager,
@@ -19,7 +19,7 @@ import { findToolByName } from '@/Tool.js'
 import type { Message as MessageType } from '@/types/message.js'
 import type { PermissionAskDecision } from '@/types/permissions.js'
 import { logForDebugging } from '../utils/debug.js'
-import { gracefulShutdown } from '../utils/gracefulShutdown.js'
+import { gracefulShutdown } from '../../shared/utils/gracefulShutdown.js'
 import type { RemoteMessageContent } from '../utils/teleport/api.js'
 
 type UseDirectConnectResult = {

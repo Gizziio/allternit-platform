@@ -11,8 +11,8 @@ import type {
   SDKMessage,
   SDKRateLimitInfo,
 } from 'src/entrypoints/agentSdkTypes.js'
-import type { ClaudeAILimits } from 'src/services/claudeAiLimits.js'
-import { EXIT_PLAN_MODE_V2_TOOL_NAME } from 'src/tools/ExitPlanModeTool/constants.js'
+import type { ClaudeAILimits } from '../../../runtime/services/claudeAiLimits.js'
+import { EXIT_PLAN_MODE_V2_TOOL_NAME } from '../../../cli/ui/ink-app/tools/ExitPlanModeTool/constants.js'
 import type {
   AssistantMessage,
   CompactMetadata,

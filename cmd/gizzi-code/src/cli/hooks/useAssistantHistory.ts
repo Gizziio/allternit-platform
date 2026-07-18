@@ -13,10 +13,10 @@ import {
   fetchOlderEvents,
   type HistoryAuthCtx,
   type HistoryPage,
-} from '../assistant/sessionHistory.js'
-import type { ScrollBoxHandle } from '@/ink/components/ScrollBox.js'
-import type { RemoteSessionConfig } from '../remote/RemoteSessionManager.js'
-import { convertSDKMessage } from '../remote/sdkMessageAdapter.js'
+} from '../ui/ink-app/assistant/sessionHistory.js'
+import type { ScrollBoxHandle } from '../ui/ink-renderer/components/ScrollBox.js'
+import type { RemoteSessionConfig } from '../ui/ink-app/remote/RemoteSessionManager.js'
+import { convertSDKMessage } from '../ui/ink-app/remote/sdkMessageAdapter.js'
 import type { Message, SystemInformationalMessage } from '@/types/message.js'
 import { logForDebugging } from '../utils/debug.js'
 

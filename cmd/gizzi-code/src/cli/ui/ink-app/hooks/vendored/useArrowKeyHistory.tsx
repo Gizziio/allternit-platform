@@ -1,13 +1,13 @@
 // @ts-nocheck
 import React, { useCallback, useRef, useState } from 'react';
 import { getModeFromInput } from '../vendor/components/PromptInput/inputModes';
-import { useNotifications } from '../vendor/context/notifications';
-import { ConfigurableShortcutHint } from '../../components/vendored/ConfigurableShortcutHint';
+import { useNotifications } from '../../../../../context/notifications';
+import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint';
 import { FOOTER_TEMPORARY_STATUS_TIMEOUT } from '../../components/vendored/PromptInput/Notifications';
-import { getHistory } from '../history';
-import { Text } from '../../core/ink';
-import type { PromptInputMode } from '../../vendor/types/textInputTypes';
-import type { HistoryEntry, PastedContent } from '../../vendor/utils/config';
+import { getHistory } from '../../components/history';
+import { Text } from '../../../../../shared/utils/ink';
+import type { PromptInputMode } from '../../types/textInputTypes';
+import type { HistoryEntry, PastedContent } from '../../../../../shared/utils/config';
 
 export type HistoryMode = PromptInputMode;
 

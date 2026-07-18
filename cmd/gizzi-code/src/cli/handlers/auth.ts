@@ -32,17 +32,17 @@ import {
   validateForceLoginOrg,
 } from '../../utils/auth.js'
 import { saveGlobalConfig } from '../../utils/config.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { isRunningOnHomespace } from '../../utils/envUtils.js'
-import { errorMessage } from '../../utils/errors.js'
-import { logError } from '../../utils/log.js'
+import { logForDebugging } from '../../shared/utils/debug.js'
+import { isRunningOnHomespace } from '../../shared/utils/envUtils.js'
+import { errorMessage } from '../../shared/utils/errors.js'
+import { logError } from '../../shared/utils/log.js'
 import { getAPIProvider } from '../../utils/model/providers.js'
 import { getInitialSettings } from '../../utils/settings/settings.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
+import { jsonStringify } from '../../shared/utils/slowOperations.js'
 import {
   buildAccountProperties,
   buildAPIProviderProperties,
-} from '../../utils/status.js'
+} from '../../shared/utils/status.js'
 
 /**
  * Shared post-token-acquisition logic. Saves tokens, fetches profile/roles,

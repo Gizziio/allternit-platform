@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { relative } from 'path'
 import type { ToolUseContext } from '../../Tool'
-import type { LocalCommandResult } from '../../types/command'
-import { getCwd } from '../../utils/cwd'
-import { cacheKeys } from '../../utils/fileStateCache'
+import type { LocalCommandResult } from '../../../types/command'
+import { getCwd } from '../../../../../../shared/utils/cwd'
+import { cacheKeys } from '../../../../../../shared/utils/fileStateCache'
 
 export async function call(
   _args: string,

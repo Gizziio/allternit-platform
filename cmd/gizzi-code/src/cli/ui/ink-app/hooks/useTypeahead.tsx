@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNotifications } from './../context/notifications.tsx';
+import { useNotifications } from '../../../../context/notifications';
 import { Text } from './../ink.ts';
 import { logEvent } from './../services/analytics/index.ts';
 import { useDebounceCallback } from 'usehooks-ts';

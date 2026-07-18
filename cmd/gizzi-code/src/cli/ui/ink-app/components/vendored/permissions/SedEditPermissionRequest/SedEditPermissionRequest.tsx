@@ -7,7 +7,7 @@ import { getCwd } from './../../../../utils/cwd.ts';
 import { isENOENT } from './../../../../utils/errors.ts';
 import { detectEncodingForResolvedPath } from './../../../../utils/fileRead.ts';
 import { getFsImplementation } from './../../../../utils/fsOperations.ts';
-import { Text } from '../../../ink.js';
+import { Text } from '../../../../ink.js';
 import { BashTool } from '../../../tools/BashTool/BashTool.js';
 import { applySedSubstitution, type SedEditInfo } from '../../../tools/BashTool/sedEditParser.js';
 import { FilePermissionDialog } from '../FilePermissionDialog/FilePermissionDialog.js';

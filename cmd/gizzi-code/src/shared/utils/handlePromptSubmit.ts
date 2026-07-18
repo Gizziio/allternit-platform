@@ -6,7 +6,7 @@ import { type Command, getCommandName, isCommandEnabled } from '../../cli/comman
 import { selectableUserMessagesFilter } from '../components/MessageSelector.js'
 import type { SpinnerMode } from '../components/Spinner/types.js'
 import type { QuerySource } from '@/constants/querySource.js'
-import { expandPastedTextRefs, parseReferences } from '../history.js'
+import { expandPastedTextRefs, parseReferences } from '../../cli/ui/ink-app/components/history.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
 import type { IDESelection } from '@/hooks/useIdeSelection.js'
 import type { AppState } from '@/state/AppState.js'

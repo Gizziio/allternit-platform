@@ -118,13 +118,13 @@ async function main(): Promise<void> {
     const {
       getBridgeDisabledReason,
       checkBridgeMinVersion
-    } = (await import('../bridge/bridgeEnabled.js')) as any;
+    } = (await import('../runtime/integrations/bridgeEnabled.js')) as any;
     const {
       BRIDGE_LOGIN_ERROR
-    } = (await import('../bridge/types.js')) as any;
+    } = (await import('../runtime/integrations/types.js')) as any;
     const {
       bridgeMain
-    } = (await import('../bridge/bridgeMain.js')) as any;
+    } = (await import('../runtime/integrations/bridgeMain.js')) as any;
     const {
       exitWithError
     } = (await import('../utils/process.js')) as any;
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
     const {
       waitForPolicyLimitsToLoad,
       isPolicyAllowed
-    } = (await import('../services/policyLimits/index.js')) as any;
+    } = (await import('../cli/ui/ink-app/components/index.js')) as any;
     await waitForPolicyLimitsToLoad();
     if (!isPolicyAllowed('allow_remote_control')) {
       exitWithError("Error: Remote Control is disabled by your organization's policy.");
@@ -258,7 +258,7 @@ async function main(): Promise<void> {
     if (isWorktreeModeEnabled()) {
       const {
         execIntoTmuxWorktree
-      } = (await import('../utils/worktree.js')) as any;
+      } = (await import('../shared/utils/worktree.js')) as any;
       const result = await execIntoTmuxWorktree(args);
       if (result.handled) {
         return;

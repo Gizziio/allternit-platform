@@ -23,7 +23,7 @@ import {
 import { isEnvTruthy } from '../../../shared/utils/envUtils.js'
 import { isOfficialMcpUrl } from '../mcp/officialRegistry.js'
 import { isClaudeAISubscriber, getSubscriptionType } from '../../../shared/utils/auth.js'
-import { getRepoRemoteHash } from '../../util/git.js'
+import { getRepoRemoteHash } from '../../../shared/utils/git.js'
 import {
   getWslVersion,
   getLinuxDistroInfo,

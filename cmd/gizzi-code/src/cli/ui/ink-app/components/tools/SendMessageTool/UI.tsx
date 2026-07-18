@@ -1,8 +1,8 @@
 // @ts-nocheck
 import React from 'react';
-import { MessageResponse } from '../../components/MessageResponse';
-import { Text } from '../../core/ink';
-import { jsonParse } from '../../utils/slowOperations';
+import { MessageResponse } from '../../MessageResponse';
+import { Text } from '../../../ink';
+import { jsonParse } from '../../../utils/slowOperations';
 import type { Input, SendMessageToolOutput } from './SendMessageTool';
 export function renderToolUseMessage(input: Partial<Input>): React.ReactElement | null {
   if (typeof input.message !== 'object' || input.message === null) {

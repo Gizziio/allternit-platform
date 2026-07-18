@@ -18,8 +18,8 @@ import type {
   ToolUseSummaryMessage,
 } from '@/types/message.js'
 import { createAttachmentMessage } from '../utils/attachments.js'
-import { logForDebugging } from '../utils/debug.js'
-import { errorMessage } from '../utils/errors.js'
+import { logForDebugging } from '../shared/utils/debug.js'
+import { errorMessage } from '../shared/utils/errors.js'
 import type { REPLHookContext } from '../utils/hooks/postSamplingHooks.js'
 import {
   executeStopHooks,
@@ -28,13 +28,13 @@ import {
   getStopHookMessage,
   getTaskCompletedHookMessage,
   getTeammateIdleHookMessage,
-} from '../utils/hooks.js'
+} from '../shared/utils/hooks.js'
 import {
   createStopHookSummaryMessage,
   createSystemMessage,
   createUserInterruptionMessage,
   createUserMessage,
-} from '../utils/messages.js'
+} from '../shared/utils/messages.js'
 import type { SystemPrompt } from '../utils/systemPromptType.js'
 import { getTaskListId, listTasks } from '../utils/tasks.js'
 import { getAgentName, getTeamName, isTeammate } from '../utils/teammate.js'
@@ -52,11 +52,11 @@ const jobClassifierModule = feature('TEMPLATES')
 import type { QuerySource } from '@/constants/querySource.js'
 import { executeAutoDream } from '@/services/autoDream/autoDream.js'
 import { executePromptSuggestion } from '@/services/PromptSuggestion/promptSuggestion.js'
-import { isBareMode, isEnvDefinedFalsy } from '../utils/envUtils.js'
+import { isBareMode, isEnvDefinedFalsy } from '../shared/utils/envUtils.js'
 import {
   createCacheSafeParams,
   saveCacheSafeParams,
-} from '../utils/forkedAgent.js'
+} from '../shared/utils/forkedAgent.js'
 
 type StopHookResult = {
   blockingErrors: Message[]

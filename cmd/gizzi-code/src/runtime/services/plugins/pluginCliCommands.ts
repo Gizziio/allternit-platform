@@ -8,11 +8,11 @@
  * For the core operations (without CLI side effects), see pluginOperations.ts
  */
 import figures from 'figures'
-import { errorMessage } from '../../../utils/errors.js'
-import { gracefulShutdown } from '../../../utils/gracefulShutdown.js'
-import { logError } from '../../../utils/log.js'
+import { errorMessage } from '../../../shared/utils/errors.js'
+import { gracefulShutdown } from '../../../shared/utils/gracefulShutdown.js'
+import { logError } from '../../../shared/utils/log.js'
 import { getManagedPluginNames } from '../../../shared/utils/plugins/managedPlugins.js'
-import { parsePluginIdentifier } from '../../../utils/plugins/pluginIdentifier.js'
+import { parsePluginIdentifier } from '../../../shared/utils/plugins/pluginIdentifier.js'
 import type { PluginScope } from '../../../utils/plugins/schemas.js'
 import { writeToStdout } from '../../../utils/process.js'
 import {

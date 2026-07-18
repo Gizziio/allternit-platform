@@ -4,7 +4,7 @@ import {
   getCurrentProjectConfig,
   saveCurrentProjectConfig,
 } from '../utils/config.js'
-import { logError } from '../utils/log.js'
+import { logError } from '../shared/utils/log.js'
 import {
   getSettingsForSource,
   updateSettingsForSource,

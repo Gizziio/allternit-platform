@@ -22,7 +22,7 @@ import { SandboxManager } from '../../../utils/sandbox/sandbox-adapter.js';
 import { Select } from '../../CustomSelect/select.js';
 import { ShimmerChar } from '../../Spinner/ShimmerChar.js';
 import { useShimmerAnimation } from '../../Spinner/useShimmerAnimation.js';
-import { type UnaryEvent, usePermissionRequestLogging } from '../hooks.js';
+import { type UnaryEvent, usePermissionRequestLogging } from '../../../../../../shared/utils/hooks.js';
 import { PermissionDecisionDebugInfo } from '../PermissionDecisionDebugInfo.js';
 import { PermissionDialog } from '../PermissionDialog.js';
 import { PermissionExplainerContent, usePermissionExplainerUI } from '../PermissionExplanation.js';
@@ -30,7 +30,7 @@ import type { PermissionRequestProps } from '../PermissionRequest.js';
 import { PermissionRuleExplanation } from '../PermissionRuleExplanation.js';
 import { SedEditPermissionRequest } from '../SedEditPermissionRequest/SedEditPermissionRequest.js';
 import { useShellPermissionFeedback } from '../useShellPermissionFeedback.js';
-import { logUnaryPermissionEvent } from '../utils.js';
+import { logUnaryPermissionEvent } from '../../../tools/utils.js';
 import { bashToolUseOptions } from './bashToolUseOptions';
 const CHECKING_TEXT = 'Attempting to auto-approve\u2026';
 

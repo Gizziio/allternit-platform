@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
-import { SandboxSettingsSchema } from '../../entrypoints/sandboxTypes.js'
+import { SandboxSettingsSchema } from '../../../cli/ui/ink-app/entrypoints/sandboxTypes.js'
 import { isEnvTruthy } from '../envUtils.js'
 import { lazySchema } from '../lazySchema.js'
 import {
@@ -13,21 +13,11 @@ import { GIZZI_SETTINGS_SCHEMA_URL } from './constants.js'
 import { PermissionRuleSchema } from './permissionValidation.js'
 
 // Re-export hook schemas and types from centralized location for backward compatibility
-export {
-  type AgentHook,
-  type BashCommandHook,
-  type HookCommand,
-  HookCommandSchema,
-  type HookMatcher,
-  HookMatcherSchema,
-  HooksSchema,
-  type HooksSettings,
-  type HttpHook,
-  type PromptHook,
-} from '../../schemas/hooks.js'
+export { HookCommandSchema, HookMatcherSchema, HooksSchema } from '../../schemas/hooks.js';
+export { type AgentHook, type BashCommandHook, type HookCommand, type HookMatcher, type HooksSettings, type HttpHook, type PromptHook } from '../../../schemas/hooks.js';
 
 // Also import for use within this file
-import { type HookCommand, HooksSchema } from '../../schemas/hooks.js'
+import { type HookCommand, HooksSchema } from '../../../cli/ui/ink-app/schemas/hooks.js'
 import { count } from '../array.js'
 
 /**

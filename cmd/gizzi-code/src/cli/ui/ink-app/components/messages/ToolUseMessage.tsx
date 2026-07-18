@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as React from 'react'
-import { Box, Text } from '../ink'
+import { Box, Text } from '../../ink'
 
 export interface ToolUseMessageProps {
   /** Tool name, or a pre-formatted label such as `Read(src/main.ts)`. */

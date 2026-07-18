@@ -2,19 +2,19 @@
 import { z } from 'zod/v4'
 import type { ValidationResult } from '@/Tool.js'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import { getCwd } from '../../../utils/cwd.js'
+import { getCwd } from '../../../../shared/utils/cwd.js'
 import { isENOENT } from '../../../utils/errors.js'
 import {
   FILE_NOT_FOUND_CWD_NOTE,
   suggestPathUnderCwd,
 } from '../../../utils/file.js'
-import { getFsImplementation } from '../../../utils/fsOperations.js'
-import { glob } from '../../../utils/glob.js'
-import { lazySchema } from '../../../utils/lazySchema.js'
+import { getFsImplementation } from '../../../../shared/utils/fsOperations.js'
+import { glob } from '../../../../shared/utils/glob.js'
+import { lazySchema } from '../../../../shared/utils/lazySchema.js'
 import { expandPath, toRelativePath } from '../../../utils/path.js'
 import { checkReadPermissionForTool } from '../../../utils/permissions/filesystem.js'
-import type { PermissionDecision } from '../../../utils/permissions/PermissionResult.js'
-import { matchWildcardPattern } from '../../../utils/permissions/shellRuleMatching.js'
+import type { PermissionDecision } from '../../../../types/permissions.js'
+import { matchWildcardPattern } from '../../../../shared/utils/permissions/shellRuleMatching.js'
 import { DESCRIPTION, GLOB_TOOL_NAME } from './prompt.js'
 import {
   getToolUseSummary,
@@ -198,8 +198,4 @@ export const GlobTool = buildTool({
   },
 } satisfies ToolDef<InputSchema, Output>)
 
-// Auto-added export
-export const GlobToolParams: any = {}
 
-// Auto-added export
-export const GlobToolResult: any = {}

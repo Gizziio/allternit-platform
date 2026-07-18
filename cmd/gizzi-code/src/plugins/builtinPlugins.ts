@@ -6,7 +6,7 @@
 
 import { readdir, readFile, access, constants } from 'fs/promises'
 import { join, extname } from 'path'
-import { log } from '../utils/log.js'
+import { log } from '../shared/utils/log.js'
 
 export interface Plugin {
   name: string

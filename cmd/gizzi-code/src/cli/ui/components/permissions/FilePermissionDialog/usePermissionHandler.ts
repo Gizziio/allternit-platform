@@ -9,14 +9,14 @@ import {
   CLAUDE_FOLDER_PERMISSION_PATTERN,
   FILE_EDIT_TOOL_NAME,
   GLOBAL_CLAUDE_FOLDER_PERMISSION_PATTERN,
-} from '../../../tools/FileEditTool/constants.js'
-import { env } from '../../../utils/env.js'
-import { generateSuggestions } from '../../../utils/permissions/filesystem.js'
+} from '../../../../../tools/REPLTool/constants.js'
+import { env } from '../../../../../shared/utils/env.js'
+import { generateSuggestions } from '../../../../../runtime/util/filesystem.js'
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
 import {
   type CompletionType,
   logUnaryEvent,
-} from '../../../utils/unaryLogging.js'
+} from '../../../../../shared/utils/unaryLogging.js'
 import type { ToolUseConfirm } from '../PermissionRequest.js'
 import type {
   FileOperationType,

@@ -1,17 +1,17 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useState } from 'react';
-import { type OptionWithDescription, Select } from '../../components/CustomSelect/select.js';
-import { Dialog } from '../../components/design-system/Dialog.js';
+import { type OptionWithDescription, Select } from '../../ui/components/CustomSelect/select.js';
+import { Dialog } from '../../ui/components/design-system/Dialog.js';
 import { Box, Text } from '@/ink.js';
 import { useAppState } from '@/state/AppState.js';
 import { isClaudeAISubscriber } from '../../utils/auth.js';
-import { openBrowser } from '../../utils/browser.js';
+import { openBrowser } from '../../../shared/utils/browser.js';
 import { ALLTERNIT_IN_CHROME_MCP_SERVER_NAME, openInChrome } from '../../utils/allternitInChrome/common.js';
 import { isChromeExtensionInstalled } from '../../utils/allternitInChrome/setup.js';
-import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js';
-import { env } from '../../utils/env.js';
-import { isRunningOnHomespace } from '../../utils/envUtils.js';
+import { getGlobalConfig, saveGlobalConfig } from '../../../shared/utils/config.js';
+import { env } from '../../../shared/utils/env.js';
+import { isRunningOnHomespace } from '../../../shared/utils/envUtils.js';
 const CHROME_EXTENSION_URL = 'https://chromewebstore.google.com/detail/chheieepkpbhkiimdmbdjmnhcooclpok';
 const CHROME_PERMISSIONS_URL = 'chrome://extensions/?id=chheieepkpbhkiimdmbdjmnhcooclpok';
 const CHROME_RECONNECT_URL = 'chrome-extension://chheieepkpbhkiimdmbdjmnhcooclpok/';

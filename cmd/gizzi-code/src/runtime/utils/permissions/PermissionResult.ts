@@ -4,8 +4,6 @@
  */
 export type { PermissionResult, PermissionMode } from '../../shared/utils/permissions/PermissionResult.js'
 
-// Auto-added export
-export const PermissionDecision: any = {}
 
 
 

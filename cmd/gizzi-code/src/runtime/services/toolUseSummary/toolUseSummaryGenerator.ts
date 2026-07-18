@@ -7,9 +7,9 @@
  */
 
 import { E_TOOL_USE_SUMMARY_GENERATION_FAILED } from '@/constants/errorIds.js'
-import { toError } from '../../../utils/errors.js'
-import { logError } from '../../../utils/log.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import { toError } from '../../../shared/utils/errors.js'
+import { logError } from '../../../shared/utils/log.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import { asSystemPrompt } from '../../../utils/systemPromptType.js'
 import { queryHaiku } from '../api/claude.js'
 

@@ -40,6 +40,7 @@ import { getShellViewRegistry } from './ViewRegistry';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
 import { usePanelLayout } from '../hooks/usePanelLayout';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { usePermissionGuide } from '../lib/usePermissionGuide';
 
 import { TooltipProvider } from '../components/ui/tooltip';
@@ -104,6 +105,20 @@ function ShellAppInner(): React.ReactNode {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFindInPageOpen, setIsFindInPageOpen] = useState(false);
   const { railWidth, setRailWidth } = usePanelLayout();
+
+  // Mobile layout (< 768px): the rail renders as a slide-out drawer owned here
+  // so it can be closed on navigation; ShellFrame handles the presentation.
+  const isMobile = useIsMobile();
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isMobile) setIsMobileDrawerOpen(false);
+  }, [isMobile]);
+
+  // Close the mobile rail drawer whenever the active view changes.
+  useEffect(() => {
+    setIsMobileDrawerOpen(false);
+  }, [active.viewType]);
 
   // Temporarily show a condensed rail while hovering a collapsed mode icon or
   // moving from that icon into the rail preview. Hovering the collapse control
@@ -561,6 +576,8 @@ function ShellAppInner(): React.ReactNode {
           onRailWidthChange={setRailWidth}
           onRailHover={setRailHovered}
           peekRail={peekRail}
+          mobileRailOpen={isMobileDrawerOpen}
+          onMobileRailClose={() => setIsMobileDrawerOpen(false)}
           rail={
             <ShellRail
               activeViewType={active.viewType}
@@ -598,7 +615,11 @@ function ShellAppInner(): React.ReactNode {
                 {!isDetachedCodeSession && active.viewType !== 'settings' && <RailControls
                   mode={activeMode}
                   onModeChange={handleModeChange}
-                  onToggleRail={() => setIsRailCollapsed(!isRailCollapsed)}
+                  onToggleRail={() => {
+                    // On mobile the title-bar sidebar toggle opens the rail drawer.
+                    if (isMobile) setIsMobileDrawerOpen((v) => !v);
+                    else setIsRailCollapsed(!isRailCollapsed);
+                  }}
                   railWidth={railWidth}
                   onModeHover={setHoveredModeIcon}
                   onNewChat={() => {

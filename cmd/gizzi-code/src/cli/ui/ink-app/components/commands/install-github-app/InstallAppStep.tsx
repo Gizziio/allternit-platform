@@ -2,8 +2,8 @@
 import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import React from 'react';
-import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app';
-import { Box, Text } from '../../core/ink';
+import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../../../../../constants/github-app';
+import { Box, Text } from '../../../ink';
 import { useKeybinding } from '../../keybindings/useKeybinding';
 interface InstallAppStepProps {
   repoUrl: string;

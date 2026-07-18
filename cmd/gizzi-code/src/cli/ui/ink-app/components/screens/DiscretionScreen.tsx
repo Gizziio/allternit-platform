@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState } from 'react';
-import { Box, Text, useInput } from '../ink';
+import { Box, Text, useInput } from '../../ink';
 import type { DiscretionAction, VMStatus } from '../../types';
 
 interface DiscretionScreenProps {

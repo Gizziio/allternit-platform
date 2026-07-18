@@ -2,7 +2,7 @@
 import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useNotifications } from '../context/notifications';
+import { useNotifications } from '../../../../context/notifications';
 import { useIsModalOverlayActive } from '../context/overlayContext';
 import { useGetVoiceState, useSetVoiceState, useVoiceState } from '../context/voice';
 import { KeyboardEvent } from '../ink/events/keyboard-event';

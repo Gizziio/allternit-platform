@@ -4,7 +4,7 @@ import type {
   TextBlockParam,
   ToolResultBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import { BASH_TOOL_NAME } from '../../runtime/tools/BashTool/toolName.js'
+import { BASH_TOOL_NAME } from '../../cli/ui/ink-app/tools/BashTool/toolName.js'
 import { formatOutput } from '../../runtime/tools/BashTool/utils.js'
 import type {
   NotebookCell,

@@ -8,9 +8,9 @@ import { STATUS_TAG, SUMMARY_TAG, TASK_NOTIFICATION_TAG } from '../../../constan
 import { QueuedMessageProvider } from '../../context/QueuedMessageContext.js';
 import { useCommandQueue } from '../../../hooks/useCommandQueue.js';
 import type { QueuedCommand } from '../../../types/textInputTypes.js';
-import { isQueuedCommandVisible } from '../../utils/messageQueueManager.js';
-import { createUserMessage, EMPTY_LOOKUPS, normalizeMessages } from '../../utils/messages.js';
-import { jsonParse } from '../../utils/slowOperations.js';
+import { isQueuedCommandVisible } from '../../../../../../shared/utils/messageQueueManager.js';
+import { createUserMessage, EMPTY_LOOKUPS, normalizeMessages } from '../../../utils/messages.js';
+import { jsonParse } from '../../../utils/slowOperations.js';
 import { Message } from '../Message.js';
 const EMPTY_SET = new Set<string>();
 

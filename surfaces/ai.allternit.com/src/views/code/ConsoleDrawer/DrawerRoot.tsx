@@ -113,7 +113,7 @@ export function DrawerRoot() {
       case 'terminal':
         return (
           <UnifiedTerminal
-            sessionId={activeCodeSessionId ?? 'allternit-session'}
+            sessionId={`drawer:${activeCodeSessionId ?? 'allternit-session'}`}
             workingDir={activeWorkspace?.root_path}
             terminalContext={{
               repoName: activeWorkspace?.display_name,

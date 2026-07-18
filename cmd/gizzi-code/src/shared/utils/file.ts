@@ -598,23 +598,15 @@ export default {
   pathsEqual,
 }
 
-// Auto-added export
-export const existsSafe: any = {}
 
-// Auto-added export
 export const readText: any = {}
 
-// Auto-added export
 export const write: any = {}
 
-// Auto-added export
 export const mkdir: any = {}
 
-// Auto-added export
 export const readJson: any = {}
 
-// Auto-added export
 export const writeJson: any = {}
 
-// Auto-added export
 export const remove: any = {}

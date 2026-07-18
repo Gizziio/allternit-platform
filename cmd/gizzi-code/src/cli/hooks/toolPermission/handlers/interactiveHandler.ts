@@ -2,9 +2,9 @@
 import { feature } from 'bun:bundle'
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs'
 import { randomUUID } from 'crypto'
-import { logForDebugging } from 'src/utils/debug.js'
+import { logForDebugging } from '../../../../shared/utils/debug.js'
 import { getAllowedChannels } from '@/bootstrap/state.js'
-import type { BridgePermissionCallbacks } from '../../../bridge/bridgePermissionCallbacks.js'
+import type { BridgePermissionCallbacks } from '../../../../runtime/integrations/bridgePermissionCallbacks.js'
 import { getTerminalFocused } from '@/ink/terminal-focus-state.js'
 import {
   CHANNEL_PERMISSION_REQUEST_METHOD,
@@ -17,17 +17,17 @@ import {
   shortRequestId,
   truncateForPreview,
 } from '@/services/mcp/channelPermissions.js'
-import { executeAsyncClassifierCheck } from '../../../tools/BashTool/bashPermissions.js'
-import { BASH_TOOL_NAME } from '../../../tools/BashTool/toolName.js'
+import { executeAsyncClassifierCheck } from '../../../../runtime/tools/builtins/bash/bashPermissions.js'
+import { BASH_TOOL_NAME } from '../../../../runtime/tools/builtins/bash/toolName.js'
 import {
   clearClassifierChecking,
   setClassifierApproval,
   setClassifierChecking,
   setYoloClassifierApproval,
-} from '../../../utils/classifierApprovals.js'
+} from '../../../../shared/utils/classifierApprovals.js'
 import { errorMessage } from '../../../utils/errors.js'
-import type { PermissionDecision } from '../../../utils/permissions/PermissionResult.js'
-import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
+import type { PermissionDecision } from '../../../../types/permissions.js'
+import type { PermissionUpdate } from '../../../../shared/utils/permissions/PermissionUpdateSchema.js'
 import { hasPermissionsToUseTool } from '../../../utils/permissions/permissions.js'
 import type { PermissionContext } from '../PermissionContext.js'
 import { createResolveOnce } from '../PermissionContext.js'

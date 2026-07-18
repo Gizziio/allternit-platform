@@ -8,13 +8,13 @@ import {
   isSuppressible403,
 } from './bridgeApi.js'
 import type { BridgeConfig, BridgeApiClient } from './types.js'
-import { logForDebugging } from '../utils/debug.js'
-import { logForDiagnosticsNoPII } from '../utils/diagLogs.js'
+import { logForDebugging } from '../../shared/utils/debug.js'
+import { logForDiagnosticsNoPII } from '../../shared/utils/diagLogs.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '@/services/analytics/index.js'
-import { registerCleanup } from '../utils/cleanupRegistry.js'
+import { registerCleanup } from '../../shared/utils/cleanupRegistry.js'
 import {
   handleIngressMessage,
   handleServerControlRequest,
@@ -30,16 +30,16 @@ import {
   sameSessionId,
 } from './workSecret.js'
 import { toCompatSessionId, toInfraSessionId } from './sessionIdCompat.js'
-import { updateSessionBridgeId } from '../utils/concurrentSessions.js'
+import { updateSessionBridgeId } from '../../shared/utils/concurrentSessions.js'
 import { getTrustedDeviceToken } from './trustedDevice.js'
-import { HybridTransport } from '../cli/transports/HybridTransport.js'
+import { HybridTransport } from '../../cli/ui/ink-app/cli/transports/HybridTransport.js'
 import {
   type ReplBridgeTransport,
   createV1ReplTransport,
   createV2ReplTransport,
 } from './replBridgeTransport.js'
-import { updateSessionIngressAuthToken } from '../utils/sessionIngressAuth.js'
-import { isEnvTruthy, isInProtectedNamespace } from '../utils/envUtils.js'
+import { updateSessionIngressAuthToken } from '../../shared/utils/sessionIngressAuth.js'
+import { isEnvTruthy, isInProtectedNamespace } from '../../shared/utils/envUtils.js'
 import { validateBridgeId } from './bridgeApi.js'
 import {
   describeAxiosError,
@@ -47,12 +47,12 @@ import {
   logBridgeSkip,
 } from './debugUtils.js'
 import type { Message } from '@/types/message.js'
-import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
-import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
+import type { SDKMessage } from '../../entrypoints/sdk/controlTypes.js'
+import type { PermissionMode } from '../../cli/ui/ink-app/utils/permissions/PermissionMode.js'
 import type {
   SDKControlRequest,
   SDKControlResponse,
-} from '../entrypoints/sdk/controlTypes.js'
+} from '../../entrypoints/sdk/controlTypes.js'
 import { createCapacityWake, type CapacitySignal } from './capacityWake.js'
 import { FlushGate } from './flushGate.js'
 import {
@@ -60,7 +60,7 @@ import {
   type PollIntervalConfig,
 } from './pollConfigDefaults.js'
 import { errorMessage } from '../utils/errors.js'
-import { sleep } from '../utils/sleep.js'
+import { sleep } from '../../shared/utils/sleep.js'
 import {
   wrapApiForFaultInjection,
   registerBridgeDebugHandle,

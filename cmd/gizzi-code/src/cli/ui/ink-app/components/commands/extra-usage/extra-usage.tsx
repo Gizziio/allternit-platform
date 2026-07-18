@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React from 'react';
-import type { LocalJSXCommandContext } from '../../commands';
-import type { LocalJSXCommandOnDone } from '../../types/command';
+import type { LocalJSXCommandContext } from '../../../commands';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
 import { Login } from '../login/login';
 import { runExtraUsage } from './extra-usage-core';
 export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext): Promise<React.ReactNode | null> {

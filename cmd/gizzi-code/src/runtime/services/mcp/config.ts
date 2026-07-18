@@ -4,7 +4,7 @@ import { chmod, open, rename, stat, unlink } from 'fs/promises'
 import mapValues from 'lodash-es/mapValues.js'
 import memoize from 'lodash-es/memoize.js'
 import { dirname, join, parse } from 'path'
-import { getPlatform } from '../../../utils/platform.js'
+import { getPlatform } from '../../../shared/utils/platform.js'
 import type { PluginError } from '@/types/plugin.js'
 import { getPluginErrorMessage } from '@/types/plugin.js'
 import { isAllternitInChromeMCPServer } from '../../../utils/allternitInChrome/common.js'
@@ -14,14 +14,14 @@ import {
   saveCurrentProjectConfig,
   saveGlobalConfig,
 } from '../../../utils/config.js'
-import { getCwd } from '../../../utils/cwd.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { getErrnoCode } from '../../../utils/errors.js'
+import { getCwd } from '../../../shared/utils/cwd.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { getErrnoCode } from '../../../shared/utils/errors.js'
 import { getFsImplementation } from '../../../utils/fsOperations.js'
-import { safeParseJSON } from '../../../utils/json.js'
-import { logError } from '../../../utils/log.js'
-import { getPluginMcpServers } from '../../../utils/plugins/mcpPluginIntegration.js'
-import { loadAllPluginsCacheOnly } from '../../../utils/plugins/pluginLoader.js'
+import { safeParseJSON } from '../../../shared/utils/json.js'
+import { logError } from '../../../shared/utils/log.js'
+import { getPluginMcpServers } from '../../../shared/utils/plugins/mcpPluginIntegration.js'
+import { loadAllPluginsCacheOnly } from '../../../shared/utils/plugins/pluginLoader.js'
 import { isSettingSourceEnabled } from '../../../utils/settings/constants.js'
 import { getManagedFilePath } from '../../../shared/utils/settings/managedPath.js'
 import { isRestrictedToPluginOnly } from '../../../shared/utils/settings/pluginOnlyPolicy.js'
@@ -36,7 +36,7 @@ import {
   type SettingsJson,
 } from '../../../utils/settings/types.js'
 import type { ValidationError } from '../../../shared/utils/settings/validation.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,

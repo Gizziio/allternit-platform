@@ -1,9 +1,9 @@
 // @ts-nocheck
 import * as React from 'react';
-import { Box, Text } from '../../core/ink';
+import { Box, Text } from '../../../ink';
 import type { ToolProgressData } from '../../Tool';
-import type { ProgressMessage } from '../../types/message';
-import type { ThemeName } from '../../utils/theme';
+import type { ProgressMessage } from '../../message';
+import type { ThemeName } from '../../../utils/theme';
 import type { Output } from './EnterWorktreeTool';
 export function renderToolUseMessage(): React.ReactElement | null {
   return <>Creating worktree…</>;

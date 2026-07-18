@@ -11,10 +11,10 @@
 
 import * as React from 'react';
 import { useEffect, useCallback } from 'react';
-import { useNotifications } from '../../vendor/context/notifications';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, logEvent } from '../../vendor/services/analytics/index';
-import { clearPendingHint, getPendingHintSnapshot, markShownThisSession, subscribeToPendingHint } from '../../vendor/utils/claudeCodeHints';
-import { logForDebugging } from '../../vendor/utils/debug';
+import { useNotifications } from '../../../../../context/notifications';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, logEvent } from '../../components/index';
+import { clearPendingHint, getPendingHintSnapshot, markShownThisSession, subscribeToPendingHint } from '../../../../../shared/utils/claudeCodeHints';
+import { logForDebugging } from '../../../../../shared/utils/debug';
 import { disableHintRecommendations, markHintPluginShown, type PluginHintRecommendation, resolvePluginHint } from '../../vendor/utils/plugins/hintRecommendation';
 import { installPluginFromMarketplace } from '../../vendor/utils/plugins/pluginInstallationHelpers';
 import { installPluginAndNotify, usePluginRecommendationBase } from './usePluginRecommendationBase';

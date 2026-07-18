@@ -2,7 +2,7 @@
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
-} from '../../../services/analytics/index.js'
+} from '../../../index.js'
 import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata.js'
 import type { ToolPermissionContext } from '../../../Tool.js'
 import {
@@ -10,13 +10,13 @@ import {
   FILE_EDIT_TOOL_NAME,
   GLOBAL_CLAUDE_FOLDER_PERMISSION_PATTERN,
 } from '../../../tools/FileEditTool/constants.js'
-import { env } from '../../../utils/env.js'
-import { generateSuggestions } from '../../../utils/permissions/filesystem.js'
-import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
+import { env } from '../../../../utils/env.js'
+import { generateSuggestions } from '../../../../../../../runtime/util/filesystem.js'
+import type { PermissionUpdate } from '../../../../utils/permissions/PermissionUpdateSchema.js'
 import {
   type CompletionType,
   logUnaryEvent,
-} from '../../../utils/unaryLogging.js'
+} from '../../../../../../../shared/utils/unaryLogging.js'
 import type { ToolUseConfirm } from '../PermissionRequest.js'
 import type {
   FileOperationType,

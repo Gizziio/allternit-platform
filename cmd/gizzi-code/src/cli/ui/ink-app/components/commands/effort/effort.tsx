@@ -1,11 +1,11 @@
 // @ts-nocheck
 import * as React from 'react';
-import { useMainLoopModel } from '../../hooks/useMainLoopModel';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index';
+import { useMainLoopModel } from '../../../hooks/useMainLoopModel';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../index';
 import { useAppState, useSetAppState } from '../../state/AppState';
-import type { LocalJSXCommandOnDone } from '../../types/command';
-import { type EffortValue, getDisplayedEffortLevel, getEffortEnvOverride, getEffortValueDescription, isEffortLevel, toPersistableEffort } from '../../utils/effort';
-import { updateSettingsForSource } from '../../utils/settings/settings';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
+import { type EffortValue, getDisplayedEffortLevel, getEffortEnvOverride, getEffortValueDescription, isEffortLevel, toPersistableEffort } from '../../../../../../shared/utils/effort';
+import { updateSettingsForSource } from '../../../utils/settings/settings';
 
 const COMMON_HELP_ARGS = ['help', '-h', '--help'];
 

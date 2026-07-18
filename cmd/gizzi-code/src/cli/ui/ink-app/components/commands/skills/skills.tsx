@@ -1,8 +1,8 @@
 // @ts-nocheck
 import * as React from 'react';
-import type { LocalJSXCommandContext } from '../../commands';
-import { SkillsMenu } from '../../components/skills/SkillsMenu';
-import type { LocalJSXCommandOnDone } from '../../types/command';
+import type { LocalJSXCommandContext } from '../../../commands';
+import { SkillsMenu } from '../../../../components/skills/SkillsMenu';
+import type { LocalJSXCommandOnDone } from '../../../types/command';
 export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXCommandContext): Promise<React.ReactNode> {
   return <SkillsMenu onExit={onDone} commands={context.options.commands} />;
 }

@@ -1,16 +1,16 @@
 // @ts-nocheck
 import { relative } from 'path';
 import React, { useMemo } from 'react';
-import { useDiffInIDE } from '../../../hooks/useDiffInIDE.js';
-import { Box, Text } from '../../../ink.js';
+import { useDiffInIDE } from '../../../../hooks/useDiffInIDE.js';
+import { Box, Text } from '../../../../ink.js';
 import type { ToolUseContext } from '../../../Tool.js';
-import { getLanguageName } from '../../../utils/cliHighlight.js';
-import { getCwd } from '../../../utils/cwd.js';
-import { getFsImplementation, safeResolvePath } from '../../../utils/fsOperations.js';
-import { expandPath } from '../../../utils/path.js';
-import type { CompletionType } from '../../../utils/unaryLogging.js';
-import { Select } from '../../CustomSelect/index.js';
-import { ShowInIDEPrompt } from '../../ShowInIDEPrompt.js';
+import { getLanguageName } from '../../../../../../../shared/utils/cliHighlight.js';
+import { getCwd } from '../../../../../../../shared/utils/cwd.js';
+import { getFsImplementation, safeResolvePath } from '../../../../../../../shared/utils/fsOperations.js';
+import { expandPath } from '../../../../../../../shared/utils/path.js';
+import type { CompletionType } from '../../../../../../../shared/utils/unaryLogging.js';
+import { Select } from '../../../index.js';
+import { ShowInIDEPrompt } from '../../../ShowInIDEPrompt.js';
 import { usePermissionRequestLogging } from '../hooks.js';
 import { PermissionDialog } from '../PermissionDialog.js';
 import type { ToolUseConfirm } from '../PermissionRequest.js';

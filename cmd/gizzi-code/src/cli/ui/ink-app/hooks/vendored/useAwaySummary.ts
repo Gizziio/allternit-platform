@@ -6,9 +6,9 @@ import {
   subscribeTerminalFocus,
 } from '../../core/terminal-focus-state'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../vendor/services/analytics/growthbook'
-import { generateAwaySummary } from '../../vendor/services/awaySummary'
-import type { Message } from '../../vendor/types/message'
-import { createAwaySummaryMessage } from '../../vendor/utils/messages'
+import { generateAwaySummary } from '../../../../../runtime/services/awaySummary'
+import type { Message } from '../../components/message'
+import { createAwaySummaryMessage } from '../../../../../shared/utils/messages'
 
 const BLUR_DELAY_MS = 5 * 60_000
 

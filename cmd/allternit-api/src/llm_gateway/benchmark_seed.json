@@ -1,0 +1,99 @@
+[
+  { "model_id": "claude-opus-4.1", "benchmark": "gpqa", "score": 80.9, "source": "published" },
+  { "model_id": "claude-opus-4.1", "benchmark": "aider", "score": 76.9, "source": "published" },
+  { "model_id": "claude-opus-4.1", "benchmark": "arena_elo", "score": 1387, "source": "published" },
+
+  { "model_id": "claude-sonnet-4.5", "benchmark": "gpqa", "score": 83.4, "source": "published" },
+  { "model_id": "claude-sonnet-4.5", "benchmark": "aider", "score": 82.0, "source": "published" },
+  { "model_id": "claude-sonnet-4.5", "benchmark": "arena_elo", "score": 1390, "source": "published" },
+
+  { "model_id": "claude-sonnet-4", "benchmark": "gpqa", "score": 75.4, "source": "published" },
+  { "model_id": "claude-sonnet-4", "benchmark": "aider", "score": 80.2, "source": "published" },
+  { "model_id": "claude-sonnet-4", "benchmark": "arena_elo", "score": 1385, "source": "published" },
+
+  { "model_id": "claude-haiku-4.5", "benchmark": "gpqa", "score": 73.2, "source": "published" },
+  { "model_id": "claude-haiku-4.5", "benchmark": "aider", "score": 77.0, "source": "published" },
+
+  { "model_id": "gpt-4o", "benchmark": "humaneval", "score": 90.2, "source": "published" },
+  { "model_id": "gpt-4o", "benchmark": "mmlu", "score": 88.7, "source": "published" },
+  { "model_id": "gpt-4o", "benchmark": "gpqa", "score": 53.6, "source": "published" },
+  { "model_id": "gpt-4o", "benchmark": "gsm8k", "score": 95.8, "source": "published" },
+  { "model_id": "gpt-4o", "benchmark": "arena_elo", "score": 1287, "source": "published" },
+
+  { "model_id": "gpt-4o-mini", "benchmark": "humaneval", "score": 87.2, "source": "published" },
+  { "model_id": "gpt-4o-mini", "benchmark": "mmlu", "score": 82.0, "source": "published" },
+  { "model_id": "gpt-4o-mini", "benchmark": "gpqa", "score": 40.2, "source": "published" },
+  { "model_id": "gpt-4o-mini", "benchmark": "gsm8k", "score": 94.5, "source": "published" },
+  { "model_id": "gpt-4o-mini", "benchmark": "arena_elo", "score": 1273, "source": "published" },
+
+  { "model_id": "gpt-4.1", "benchmark": "mmlu", "score": 90.2, "source": "published" },
+  { "model_id": "gpt-4.1", "benchmark": "gpqa", "score": 66.3, "source": "published" },
+  { "model_id": "gpt-4.1", "benchmark": "aider", "score": 52.4, "source": "published" },
+  { "model_id": "gpt-4.1", "benchmark": "arena_elo", "score": 1327, "source": "published" },
+
+  { "model_id": "gpt-4.1-mini", "benchmark": "mmlu", "score": 87.5, "source": "published" },
+  { "model_id": "gpt-4.1-mini", "benchmark": "gpqa", "score": 65.0, "source": "published" },
+  { "model_id": "gpt-4.1-mini", "benchmark": "arena_elo", "score": 1307, "source": "published" },
+
+  { "model_id": "gpt-4.1-nano", "benchmark": "mmlu", "score": 80.1, "source": "published" },
+  { "model_id": "gpt-4.1-nano", "benchmark": "gpqa", "score": 50.3, "source": "published" },
+
+  { "model_id": "gpt-5", "benchmark": "gpqa", "score": 85.7, "source": "published" },
+  { "model_id": "gpt-5", "benchmark": "aider", "score": 88.0, "source": "published" },
+  { "model_id": "gpt-5", "benchmark": "arena_elo", "score": 1442, "source": "published" },
+
+  { "model_id": "gpt-5-mini", "benchmark": "gpqa", "score": 82.3, "source": "published" },
+  { "model_id": "gpt-5-mini", "benchmark": "aider", "score": 71.5, "source": "published" },
+  { "model_id": "gpt-5-mini", "benchmark": "arena_elo", "score": 1398, "source": "published" },
+
+  { "model_id": "o3", "benchmark": "gpqa", "score": 83.3, "source": "published" },
+  { "model_id": "o3", "benchmark": "arena_elo", "score": 1415, "source": "published" },
+
+  { "model_id": "o4-mini", "benchmark": "gpqa", "score": 81.4, "source": "published" },
+  { "model_id": "o4-mini", "benchmark": "aider", "score": 72.0, "source": "published" },
+
+  { "model_id": "gemini-2.5-pro", "benchmark": "gpqa", "score": 84.0, "source": "published" },
+  { "model_id": "gemini-2.5-pro", "benchmark": "aider", "score": 82.2, "source": "published" },
+  { "model_id": "gemini-2.5-pro", "benchmark": "arena_elo", "score": 1446, "source": "published" },
+
+  { "model_id": "gemini-2.5-flash", "benchmark": "gpqa", "score": 78.3, "source": "published" },
+  { "model_id": "gemini-2.5-flash", "benchmark": "aider", "score": 71.4, "source": "published" },
+  { "model_id": "gemini-2.5-flash", "benchmark": "arena_elo", "score": 1415, "source": "published" },
+
+  { "model_id": "gemini-2.0-flash", "benchmark": "mmlu", "score": 76.4, "source": "published" },
+  { "model_id": "gemini-2.0-flash", "benchmark": "gpqa", "score": 74.2, "source": "published" },
+  { "model_id": "gemini-2.0-flash", "benchmark": "arena_elo", "score": 1355, "source": "published" },
+
+  { "model_id": "deepseek-v3", "benchmark": "humaneval", "score": 65.2, "source": "published" },
+  { "model_id": "deepseek-v3", "benchmark": "mmlu", "score": 88.5, "source": "published" },
+  { "model_id": "deepseek-v3", "benchmark": "gpqa", "score": 59.1, "source": "published" },
+  { "model_id": "deepseek-v3", "benchmark": "gsm8k", "score": 89.3, "source": "published" },
+  { "model_id": "deepseek-v3", "benchmark": "aider", "score": 48.4, "source": "published" },
+  { "model_id": "deepseek-v3", "benchmark": "arena_elo", "score": 1318, "source": "published" },
+
+  { "model_id": "deepseek-r1", "benchmark": "mmlu", "score": 90.8, "source": "published" },
+  { "model_id": "deepseek-r1", "benchmark": "gpqa", "score": 71.5, "source": "published" },
+  { "model_id": "deepseek-r1", "benchmark": "aider", "score": 56.9, "source": "published" },
+  { "model_id": "deepseek-r1", "benchmark": "arena_elo", "score": 1358, "source": "published" },
+
+  { "model_id": "kimi-k2", "benchmark": "mmlu", "score": 89.5, "source": "published" },
+  { "model_id": "kimi-k2", "benchmark": "gpqa", "score": 75.1, "source": "published" },
+  { "model_id": "kimi-k2", "benchmark": "aider", "score": 71.8, "source": "published" },
+  { "model_id": "kimi-k2", "benchmark": "arena_elo", "score": 1403, "source": "published" },
+
+  { "model_id": "kimi-k1.5", "benchmark": "mmlu", "score": 87.4, "source": "published" },
+
+  { "model_id": "qwen2.5-72b", "benchmark": "humaneval", "score": 86.6, "source": "published" },
+  { "model_id": "qwen2.5-72b", "benchmark": "mmlu", "score": 86.1, "source": "published" },
+  { "model_id": "qwen2.5-72b", "benchmark": "gpqa", "score": 49.0, "source": "published" },
+  { "model_id": "qwen2.5-72b", "benchmark": "gsm8k", "score": 95.2, "source": "published" },
+  { "model_id": "qwen2.5-72b", "benchmark": "arena_elo", "score": 1257, "source": "published" },
+
+  { "model_id": "qwen2.5-coder-32b", "benchmark": "humaneval", "score": 92.1, "source": "published" },
+  { "model_id": "qwen2.5-coder-32b", "benchmark": "mmlu", "score": 83.7, "source": "published" },
+  { "model_id": "qwen2.5-coder-32b", "benchmark": "aider", "score": 31.4, "source": "published" },
+
+  { "model_id": "qwen3-235b-a22b", "benchmark": "gpqa", "score": 71.1, "source": "published" },
+  { "model_id": "qwen3-235b-a22b", "benchmark": "aider", "score": 67.5, "source": "published" },
+  { "model_id": "qwen3-235b-a22b", "benchmark": "arena_elo", "score": 1395, "source": "published" }
+]

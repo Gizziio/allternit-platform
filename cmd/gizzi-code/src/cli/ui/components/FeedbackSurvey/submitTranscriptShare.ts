@@ -1,18 +1,18 @@
 import axios from 'axios'
 import { readFile, stat } from 'fs/promises'
 import type { Message } from '@/types/message.js'
-import { checkAndRefreshOAuthTokenIfNeeded } from '../../utils/auth.js'
-import { logForDebugging } from '../../utils/debug.js'
-import { errorMessage } from '../../utils/errors.js'
-import { getAuthHeaders, getUserAgent } from '../../utils/http.js'
-import { normalizeMessagesForAPI } from '../../utils/messages.js'
+import { checkAndRefreshOAuthTokenIfNeeded } from '../../../../shared/utils/auth.js'
+import { logForDebugging } from '../../../../shared/utils/debug.js'
+import { errorMessage } from '../../../../shared/utils/errors.js'
+import { getAuthHeaders, getUserAgent } from '../../../../shared/utils/http.js'
+import { normalizeMessagesForAPI } from '../../../../shared/utils/messages.js'
 import {
   extractAgentIdsFromMessages,
   getTranscriptPath,
   loadSubagentTranscripts,
   MAX_TRANSCRIPT_READ_BYTES,
-} from '../../utils/sessionStorage.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
+} from '../../../../shared/utils/sessionStorage.js'
+import { jsonStringify } from '../../../../shared/utils/slowOperations.js'
 import { redactSensitiveInfo } from '../Feedback.js'
 
 type TranscriptShareResult = {

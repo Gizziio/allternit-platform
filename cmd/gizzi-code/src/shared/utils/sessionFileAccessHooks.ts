@@ -6,21 +6,21 @@
  */
 import { feature } from 'bun:bundle'
 import { registerHookCallbacks } from '@/bootstrap/state.js'
-import type { HookInput, HookJSONOutput } from '../entrypoints/agentSdkTypes.js'
+import type { HookInput, HookJSONOutput } from '../../entrypoints/sdk/hookTypes.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../../runtime/services/analytics/index.js'
-import { FILE_EDIT_TOOL_NAME } from '../../runtime/tools/FileEditTool/constants.js'
+import { FILE_EDIT_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileEditTool/constants.js'
 import { inputSchema as editInputSchema } from '../../runtime/tools/FileEditTool/types.js'
-import { FileReadTool } from '../../runtime/tools/FileReadTool/FileReadTool.js'
-import { FILE_READ_TOOL_NAME } from '../../runtime/tools/FileReadTool/prompt.js'
-import { FileWriteTool } from '../../runtime/tools/FileWriteTool/FileWriteTool.js'
-import { FILE_WRITE_TOOL_NAME } from '../../runtime/tools/FileWriteTool/prompt.js'
-import { GlobTool } from '../../runtime/tools/GlobTool/GlobTool.js'
-import { GLOB_TOOL_NAME } from '../../runtime/tools/GlobTool/prompt.js'
-import { GrepTool } from '../../runtime/tools/GrepTool/GrepTool.js'
-import { GREP_TOOL_NAME } from '../../runtime/tools/GrepTool/prompt.js'
+import { FileReadTool } from '../../cli/ui/ink-app/tools/FileReadTool/FileReadTool.js'
+import { FILE_READ_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { FileWriteTool } from '../../cli/ui/ink-app/tools/FileWriteTool/FileWriteTool.js'
+import { FILE_WRITE_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
+import { GlobTool } from '../../cli/ui/ink-app/tools/GlobTool/GlobTool.js'
+import { GLOB_TOOL_NAME } from '../../cli/ui/ink-app/tools/GlobTool/prompt.js'
+import { GrepTool } from '../../cli/ui/ink-app/tools/GrepTool/GrepTool.js'
+import { GREP_TOOL_NAME } from '../../cli/ui/ink-app/tools/GrepTool/prompt.js'
 import type { HookCallback } from '@/types/hooks.js'
 import {
   detectSessionFileType,

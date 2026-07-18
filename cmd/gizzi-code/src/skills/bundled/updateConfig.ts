@@ -1,7 +1,7 @@
 import { toJSONSchema } from 'zod/v4'
 // @ts-ignore missing export from utils/settings/types
 import { SettingsSchema } from '../../utils/settings/types.js'
-import { jsonStringify } from '../../utils/slowOperations.js'
+import { jsonStringify } from '../../shared/utils/slowOperations.js'
 import { registerBundledSkill } from '../bundledSkills.js'
 
 /**

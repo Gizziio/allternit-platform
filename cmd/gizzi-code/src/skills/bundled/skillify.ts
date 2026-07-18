@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { getSessionMemoryContent } from '@/services/SessionMemory/sessionMemoryUtils.js'
 import type { Message } from '@/types/message.js'
-import { getMessagesAfterCompactBoundary } from '../../utils/messages.js'
+import { getMessagesAfterCompactBoundary } from '../../shared/utils/messages.js'
 import { registerBundledSkill } from '../bundledSkills.js'
 
 function extractUserMessages(messages: Message[]): string[] {

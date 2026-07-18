@@ -301,7 +301,7 @@ export interface Project {
   title: string
 }
 
-function fetchWithTimeout(url: string, init: RequestInit & { timeout?: number } = {}): Promise<Response> {
+export function fetchWithTimeout(url: string, init: RequestInit & { timeout?: number } = {}): Promise<Response> {
   const { timeout = 8000, ...rest } = init
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), timeout)
@@ -332,7 +332,7 @@ export async function fetchProjects(): Promise<Project[]> {
   return (data.workflows ?? []).map((w) => ({ id: w.id, title: w.name }))
 }
 
-function buildGatewayHeaders(): HeadersInit {
+export function buildGatewayHeaders(): HeadersInit {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }

@@ -13,8 +13,8 @@ import {
   isTerminalTaskStatus,
   type TaskStatus,
   type TaskType,
-} from '../../Task.js'
-import type { TaskState } from '../../tasks/types.js'
+} from '../../../cli/ui/ink-app/Task.js'
+import type { TaskState } from '../../../cli/ui/tasks/types.js'
 import { enqueuePendingNotification } from '../messageQueueManager.js'
 import { enqueueSdkEvent } from '../sdkEventQueue.js'
 import { getTaskOutputDelta, getTaskOutputPath } from './diskOutput.js'

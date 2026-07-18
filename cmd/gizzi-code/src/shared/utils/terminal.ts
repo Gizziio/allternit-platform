@@ -1,5 +1,5 @@
 import chalk from 'chalk'
-import { ctrlOToExpand } from '../components/CtrlOToExpand.js'
+import { ctrlOToExpand } from '../../cli/ui/ink-app/components/CtrlOToExpand.js'
 import { stringWidth } from '../../cli/ui/ink-renderer/stringWidth.js'
 import sliceAnsi from './sliceAnsi.js'
 

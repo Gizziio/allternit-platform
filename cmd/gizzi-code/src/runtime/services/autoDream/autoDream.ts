@@ -15,17 +15,17 @@ import type { REPLHookContext } from '../../../shared/utils/hooks/postSamplingHo
 import {
   createCacheSafeParams,
   runForkedAgent,
-} from '../../../utils/forkedAgent.js'
+} from '../../../shared/utils/forkedAgent.js'
 import {
   createUserMessage,
   createMemorySavedMessage,
-} from '../../../utils/messages.js'
+} from '../../../shared/utils/messages.js'
 import type { Message } from '@/types/message.js'
-import { logForDebugging } from '../../../utils/debug.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
 import type { ToolUseContext } from '../../../runtime/tools/Tool.js'
 import { logEvent } from '../analytics/index.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
-import { isAutoMemoryEnabled, getAutoMemPath } from '../../memdir/paths.js'
+import { isAutoMemoryEnabled, getAutoMemPath } from '../../../cli/ui/ink-app/memdir/paths.js'
 import { isAutoDreamEnabled } from './config.js'
 import { getProjectDir } from '../../../utils/sessionStorage.js'
 import {
@@ -48,9 +48,9 @@ import {
   completeDreamTask,
   failDreamTask,
   isDreamTask,
-} from '../../tasks/DreamTask/DreamTask.js'
+} from '../../../cli/ui/ink-app/tasks/DreamTask/DreamTask.js'
 import { FILE_EDIT_TOOL_NAME } from '../../tools/builtins/notebookedittool/constants.js'
-import { FILE_WRITE_TOOL_NAME } from '../../../tools/FileWriteTool/prompt.js'
+import { FILE_WRITE_TOOL_NAME } from '../../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
 
 // Scan throttle: when time-gate passes but session-gate doesn't, the lock
 // mtime doesn't advance, so the time-gate keeps passing every turn.

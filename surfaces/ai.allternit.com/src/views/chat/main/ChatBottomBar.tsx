@@ -53,12 +53,12 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   if (!(mode === 'cowork' || !isChatEmpty || hideEmptyState)) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 w-full flex flex-col items-center pointer-events-none pb-3 z-40"
+    <div className="absolute bottom-0 left-0 right-0 w-full flex flex-col items-center pointer-events-none pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))] z-40"
       style={{
         background: hideEmptyState || mode === 'cowork' || mode === 'chat' ? 'transparent' : THEME.bgGradient,
       }}
     >
-      <div className="w-full max-w-[760px] pointer-events-auto px-5 box-border">
+      <div className="w-full max-w-[760px] pointer-events-auto px-2 md:px-5 box-border">
         <ChatComposer
           onSend={handleSend}
           onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}

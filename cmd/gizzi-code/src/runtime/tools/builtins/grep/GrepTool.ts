@@ -2,27 +2,27 @@
 import { z } from 'zod/v4'
 import type { ValidationResult } from '@/Tool.js'
 import { buildTool, type ToolDef } from '@/Tool.js'
-import { getCwd } from '../../../utils/cwd.js'
+import { getCwd } from '../../../../shared/utils/cwd.js'
 import { isENOENT } from '../../../utils/errors.js'
 import {
   FILE_NOT_FOUND_CWD_NOTE,
   suggestPathUnderCwd,
 } from '../../../utils/file.js'
-import { getFsImplementation } from '../../../utils/fsOperations.js'
-import { lazySchema } from '../../../utils/lazySchema.js'
+import { getFsImplementation } from '../../../../shared/utils/fsOperations.js'
+import { lazySchema } from '../../../../shared/utils/lazySchema.js'
 import { expandPath, toRelativePath } from '../../../utils/path.js'
 import {
   checkReadPermissionForTool,
   getFileReadIgnorePatterns,
   normalizePatternsToPath,
 } from '../../../utils/permissions/filesystem.js'
-import type { PermissionDecision } from '../../../utils/permissions/PermissionResult.js'
-import { matchWildcardPattern } from '../../../utils/permissions/shellRuleMatching.js'
-import { getGlobExclusionsForPluginCache } from '../../../utils/plugins/orphanedPluginFilter.js'
-import { ripGrep } from '../../../utils/ripgrep.js'
-import { semanticBoolean } from '../../../utils/semanticBoolean.js'
-import { semanticNumber } from '../../../utils/semanticNumber.js'
-import { plural } from '../../../utils/stringUtils.js'
+import type { PermissionDecision } from '../../../../types/permissions.js'
+import { matchWildcardPattern } from '../../../../shared/utils/permissions/shellRuleMatching.js'
+import { getGlobExclusionsForPluginCache } from '../../../../shared/utils/plugins/orphanedPluginFilter.js'
+import { ripGrep } from '../../../../shared/utils/ripgrep.js'
+import { semanticBoolean } from '../../../../shared/utils/semanticBoolean.js'
+import { semanticNumber } from '../../../../shared/utils/semanticNumber.js'
+import { plural } from '../../../../shared/utils/stringUtils.js'
 import { GREP_TOOL_NAME, getDescription } from './prompt.js'
 import {
   getToolUseSummary,
@@ -577,8 +577,4 @@ export const GrepTool = buildTool({
   },
 } satisfies ToolDef<InputSchema, Output>)
 
-// Auto-added export
-export const GrepToolParams: any = {}
 
-// Auto-added export
-export const GrepToolResult: any = {}

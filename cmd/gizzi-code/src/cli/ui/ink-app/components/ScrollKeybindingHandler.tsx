@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { type RefObject, useEffect, useRef } from 'react';
-import { useNotifications } from '../context/notifications';
+import { useNotifications } from '../../../../context/notifications';
 import { useCopyOnSelect, useSelectionBgColor } from '../hooks/useCopyOnSelect';
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox';
 import { useSelection } from '../ink/hooks/use-selection';

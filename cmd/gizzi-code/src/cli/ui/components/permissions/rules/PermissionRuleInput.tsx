@@ -7,10 +7,10 @@ import { useExitOnCtrlCDWithKeybindings } from '@/hooks/useExitOnCtrlCDWithKeybi
 import { useTerminalSize } from '@/hooks/useTerminalSize.js';
 import { Box, Newline, Text } from '@/ink.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
-import { BashTool } from '../../../tools/BashTool/BashTool.js';
-import { WebFetchTool } from '../../../tools/WebFetchTool/WebFetchTool.js';
-import type { PermissionBehavior, PermissionRuleValue } from '../../../utils/permissions/PermissionRule.js';
-import { permissionRuleValueFromString, permissionRuleValueToString } from '../../../utils/permissions/permissionRuleParser.js';
+import { BashTool } from '../../../../../runtime/tools/builtins/bash/BashTool.js';
+import { WebFetchTool } from '../../../../../runtime/tools/builtins/webfetchtool/WebFetchTool.js';
+import type { PermissionBehavior, PermissionRuleValue } from '../../../../../shared/utils/permissions/PermissionRule.js';
+import { permissionRuleValueFromString, permissionRuleValueToString } from '../../../../../shared/utils/permissions/permissionRuleParser.js';
 export type PermissionRuleInputProps = {
   onCancel: () => void;
   onSubmit: (ruleValue: PermissionRuleValue, ruleBehavior: PermissionBehavior) => void;

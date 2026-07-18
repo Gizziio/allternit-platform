@@ -1,17 +1,17 @@
 // @ts-nocheck
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook'
-import { getSubscriptionType } from '../../utils/auth'
-import { hasEmbeddedSearchTools } from '../../utils/embeddedTools'
-import { isEnvDefinedFalsy, isEnvTruthy } from '../../utils/envUtils'
-import { isTeammate } from '../../utils/teammate'
-import { isInProcessTeammate } from '../../utils/teammateContext'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../../../../runtime/services/analytics/growthbook'
+import { getSubscriptionType } from '../../../utils/auth'
+import { hasEmbeddedSearchTools } from '../../../../../../shared/utils/embeddedTools'
+import { isEnvDefinedFalsy, isEnvTruthy } from '../../../utils/envUtils'
+import { isTeammate } from '../../../../../../shared/utils/teammate'
+import { isInProcessTeammate } from '../../../../../../shared/utils/teammateContext'
 import { FILE_READ_TOOL_NAME } from '../FileReadTool/prompt'
 import { FILE_WRITE_TOOL_NAME } from '../FileWriteTool/prompt'
 import { GLOB_TOOL_NAME } from '../GlobTool/prompt'
 import { SEND_MESSAGE_TOOL_NAME } from '../SendMessageTool/constants'
 import { AGENT_TOOL_NAME } from './constants'
 import { isForkSubagentEnabled } from './forkSubagent'
-import type { AgentDefinition } from './loadAgentsDir'
+import type { AgentDefinition } from '../../../tools/AgentTool/loadAgentsDir'
 
 function getToolsDescription(agent: AgentDefinition): string {
   const { tools, disallowedTools } = agent

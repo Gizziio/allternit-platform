@@ -6,7 +6,7 @@ import { FILE_WRITE_TOOL_NAME } from './../../../../tools/FileWriteTool/prompt.t
 import { NOTEBOOK_EDIT_TOOL_NAME } from './../../../../tools/NotebookEditTool/constants.ts'
 import { WEB_FETCH_TOOL_NAME } from './../../../../tools/WebFetchTool/prompt.ts'
 import { AGENT_TOOL_NAME } from '../constants'
-import type { BuiltInAgentDefinition } from '../loadAgentsDir'
+import type { BuiltInAgentDefinition } from '../../../../tools/AgentTool/loadAgentsDir'
 
 const VERIFICATION_SYSTEM_PROMPT = `You are a verification specialist. Your job is not to confirm the implementation works — it's to try to break it.
 You have two documented failure patterns. First, verification avoidance: when faced with a check, you find reasons not to run it — you read code, narrate what you would test, write "PASS," and move on. Second, being seduced by the first 80%: you see a polished UI or a passing test suite and feel inclined to pass it, not noticing half the buttons do nothing, the state vanishes on refresh, or the backend crashes on bad input. The first 80% is the easy part. Your entire value is in finding the last 20%. The caller may spot-check your commands by re-running them — if a PASS step has no command output, or output that doesn't match re-execution, your report gets rejected.

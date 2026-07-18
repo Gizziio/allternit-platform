@@ -39,22 +39,22 @@ import {
   getTeamMemPath,
   PathTraversalError,
   validateTeamMemKey,
-} from '../../memdir/teamMemPaths.js'
+} from '../../../memdir/teamMemPaths.js'
 import { count } from '../../../utils/array.js'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
   getClaudeAIOAuthTokens,
 } from '../../../utils/auth.js'
-import { logForDebugging } from '../../../utils/debug.js'
-import { classifyAxiosError } from '../../../utils/errors.js'
+import { logForDebugging } from '../../../shared/utils/debug.js'
+import { classifyAxiosError } from '../../../shared/utils/errors.js'
 import { getGithubRepo } from '../../../utils/git.js'
 import {
   getAPIProvider,
   isFirstPartyAnthropicBaseUrl,
 } from '../../../utils/model/providers.js'
 import { sleep } from '../../../utils/sleep.js'
-import { jsonStringify } from '../../../utils/slowOperations.js'
-import { getClaudeCodeUserAgent } from '../../../utils/userAgent.js'
+import { jsonStringify } from '../../../shared/utils/slowOperations.js'
+import { getClaudeCodeUserAgent } from '../../../shared/utils/userAgent.js'
 import { logEvent } from '../analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../analytics/metadata.js'
 import { getRetryDelay } from '../api/withRetry.js'
@@ -851,7 +851,7 @@ export async function pullTeamMemory(
 
   const filesWritten = await writeRemoteEntriesToLocal(entries)
   if (filesWritten > 0) {
-    const { clearMemoryFileCaches } = await import('../../utils/claudemd.js')
+    const { clearMemoryFileCaches } = await import('../../../shared/utils/claudemd.js')
     clearMemoryFileCaches()
   }
   logForDebugging(`team-memory-sync: pulled ${filesWritten} files`, {

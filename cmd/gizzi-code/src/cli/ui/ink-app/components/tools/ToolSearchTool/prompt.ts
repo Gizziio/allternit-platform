@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
-import { isReplBridgeActive } from '../../bootstrap/state'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook'
+import { isReplBridgeActive } from '../../../bootstrap/state'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../../../../runtime/services/analytics/growthbook'
 import type { Tool } from '../../Tool'
 import { AGENT_TOOL_NAME } from '../AgentTool/constants'
 

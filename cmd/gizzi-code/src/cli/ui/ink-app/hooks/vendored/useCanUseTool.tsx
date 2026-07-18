@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { useCallback } from 'react';
 import { feature } from '../../vendor/context/featureFlags';
-import { hasPermissionsToUseTool, setYoloClassifierApproval } from '../../vendor/utils/permissions';
-import type { AssistantMessage } from '../../vendor/types/message';
+import { hasPermissionsToUseTool, setYoloClassifierApproval } from '../../types/permissions';
+import type { AssistantMessage } from '../../components/message';
 import type { ToolType } from '../../vendor/constants/toolTypes';
 import type { PermissionDecision } from '../../components/vendored/permissions/PermissionRequest';
-import type { ToolUseContext } from '../../vendor/hooks/useCommandRegistry';
+import type { ToolUseContext } from '../useCommandRegistry';
 import { createPermissionContext, createPermissionQueueOps } from './toolPermission/PermissionContext';
 import { logPermissionDecision } from './toolPermission/permissionLogging';
 

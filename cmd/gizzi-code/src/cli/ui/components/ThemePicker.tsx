@@ -9,9 +9,9 @@ import { useRegisterKeybindingContext } from '@/keybindings/KeybindingContext.js
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
 import { useShortcutDisplay } from '@/keybindings/useShortcutDisplay.js';
 import { useAppState, useSetAppState } from '@/state/AppState.js';
-import { gracefulShutdown } from '../utils/gracefulShutdown.js';
+import { gracefulShutdown } from '../../../shared/utils/gracefulShutdown.js';
 import { updateSettingsForSource } from '../utils/settings/settings.js';
-import type { ThemeSetting } from '../utils/theme.js';
+import type { ThemeSetting } from '../../../shared/utils/theme.js';
 import { Select } from './CustomSelect/index.js';
 import { Byline } from './design-system/Byline.js';
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js';

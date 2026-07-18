@@ -3,7 +3,8 @@ import {
   getRemoteSessionUrl,
 } from '@/constants/product.js'
 import { stringWidth } from '../../cli/ui/ink-renderer/stringWidth.js'
-import { formatDuration, truncateToWidth } from '../../runtime/util/format.js'
+import { formatDuration } from '../../runtime/util/format.js';
+import { truncateToWidth } from '../../shared/utils/format.js';
 import { getGraphemeSegmenter } from '../../shared/utils/intl.js'
 
 /** Bridge status state machine states. */

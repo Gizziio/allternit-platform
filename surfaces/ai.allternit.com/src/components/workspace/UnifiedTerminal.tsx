@@ -29,6 +29,7 @@ import {
 import {
   createTerminalSession,
   closeTerminalSession,
+  probeTerminalSession,
   sendTerminalInput,
   resizeTerminal,
   subscribeTerminalStream,
@@ -87,6 +88,79 @@ interface TerminalSession {
 function generateTabId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Session persistence across remounts
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface PersistedTerminalState {
+  tabs: TerminalSession[];
+  activeTabId: string | null;
+  startupTabId: string | null;
+  startupInjectedFor: string | null;
+}
+
+// Canvas tiles (and the drawer/side pane) unmount on layout changes — and the
+// whole page reloads — while the mux keeps their PTYs alive. State is keyed by
+// logical sessionId and stored in localStorage so both a remount and a reload
+// reattach instead of spawning a fresh shell. Restored ids are probed for
+// liveness before use, so stale entries degrade to a fresh session.
+const TERMINAL_PERSIST_KEY = 'allternit.terminal.sessions.v1';
+
+function readPersistedTerminalStore(): Record<string, PersistedTerminalState> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.localStorage.getItem(TERMINAL_PERSIST_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, PersistedTerminalState>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writePersistedTerminalStore(store: Record<string, PersistedTerminalState>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TERMINAL_PERSIST_KEY, JSON.stringify(store));
+  } catch {
+    // Quota/private mode: persistence is best-effort.
+  }
+}
+
+function getPersistedTerminalState(sessionId: string): PersistedTerminalState | null {
+  return readPersistedTerminalStore()[sessionId] ?? null;
+}
+
+function setPersistedTerminalState(sessionId: string, state: PersistedTerminalState): void {
+  const store = readPersistedTerminalStore();
+  store[sessionId] = state;
+  writePersistedTerminalStore(store);
+}
+
+function deletePersistedTerminalState(sessionId: string): void {
+  const store = readPersistedTerminalStore();
+  if (!(sessionId in store)) return;
+  delete store[sessionId];
+  writePersistedTerminalStore(store);
+}
+
+// Session ids whose surface was destroyed while its terminal was still
+// mounted; the unmount cleanup consumes this to close instead of persist.
+const disposedTerminalIds = new Set<string>();
+
+/**
+ * Close every remote session held for a logical terminal sessionId. Call this
+ * when the owning surface is destroyed for real (e.g. a canvas tile is
+ * deleted), not merely unmounted.
+ */
+export function disposeTerminalSessions(sessionId: string): void {
+  disposedTerminalIds.add(sessionId);
+  const persisted = getPersistedTerminalState(sessionId);
+  if (!persisted) return;
+  deletePersistedTerminalState(sessionId);
+  persisted.tabs.forEach((tab) => {
+    if (tab.remoteSessionId) void closeTerminalSession(tab.remoteSessionId);
+  });
 }
 
 export function terminalThemeFromElement(element: HTMLElement): import('xterm').ITheme {
@@ -370,6 +444,8 @@ export function UnifiedTerminal({
   const [terminalEndpoint, setTerminalEndpoint] = useState(() => getRuntimeGatewayBaseUrlSync());
   const tabsRef = useRef<TerminalSession[]>([]);
   tabsRef.current = tabs;
+  const activeTabIdRef = useRef<string | null>(null);
+  activeTabIdRef.current = activeTabId;
   const startupTabIdRef = useRef<string | null>(null);
   const startupInjectedForRef = useRef<string | null>(null);
   const startupCommandRef = useRef(startupCommand);
@@ -388,6 +464,37 @@ export function UnifiedTerminal({
       setServiceError(null);
       setTabs([]);
       setActiveTabId(null);
+
+      // Reattach to sessions the mux kept alive across a remount or reload.
+      // Probe each persisted id first: after a backend restart the ids are
+      // dead and the tile should get a fresh shell, not an error tab.
+      const persisted = getPersistedTerminalState(sessionId);
+      if (persisted && persisted.tabs.some((tab) => tab.remoteSessionId)) {
+        const liveTabs = (
+          await Promise.all(
+            persisted.tabs.map(async (tab) =>
+              tab.remoteSessionId && (await probeTerminalSession(tab.remoteSessionId))
+                ? { ...tab, status: 'connecting' as const, errorMsg: '' }
+                : null
+            )
+          )
+        ).filter((tab): tab is TerminalSession => tab !== null);
+        if (cancelled) return;
+        if (liveTabs.length > 0) {
+          setTabs(liveTabs);
+          setActiveTabId(
+            persisted.activeTabId && liveTabs.some((t) => t.id === persisted.activeTabId)
+              ? persisted.activeTabId
+              : liveTabs[0].id
+          );
+          startupTabIdRef.current = persisted.startupTabId;
+          startupInjectedForRef.current = persisted.startupInjectedFor;
+          setIsInitializing(false);
+          return;
+        }
+        deletePersistedTerminalState(sessionId);
+      }
+
       try {
         const remoteSessionId = await createTerminalSession({ cwd: workingDir });
         if (cancelled) {
@@ -411,11 +518,44 @@ export function UnifiedTerminal({
 
     return () => {
       cancelled = true;
-      tabsRef.current.forEach((tab) => {
-        if (tab.remoteSessionId) void closeTerminalSession(tab.remoteSessionId);
-      });
+      // Surface destroyed for real (tile deleted while mounted): close now.
+      if (disposedTerminalIds.delete(sessionId)) {
+        deletePersistedTerminalState(sessionId);
+        tabsRef.current.forEach((tab) => {
+          if (tab.remoteSessionId) void closeTerminalSession(tab.remoteSessionId);
+        });
+        return;
+      }
+      // Keep the PTYs alive for reattach; disposeTerminalSessions() closes
+      // them when the surface is actually destroyed.
+      if (tabsRef.current.some((tab) => tab.remoteSessionId)) {
+        setPersistedTerminalState(sessionId, {
+          tabs: tabsRef.current,
+          activeTabId: activeTabIdRef.current,
+          startupTabId: startupTabIdRef.current,
+          startupInjectedFor: startupInjectedForRef.current,
+        });
+      } else {
+        deletePersistedTerminalState(sessionId);
+      }
     };
   }, [sessionId, terminalEndpoint, workingDir]);
+
+  // Write-through while mounted: a page reload never runs effect cleanups, so
+  // localStorage must already hold the latest session ids when it happens.
+  useEffect(() => {
+    if (isInitializing) return;
+    if (tabs.some((tab) => tab.remoteSessionId)) {
+      setPersistedTerminalState(sessionId, {
+        tabs,
+        activeTabId,
+        startupTabId: startupTabIdRef.current,
+        startupInjectedFor: startupInjectedForRef.current,
+      });
+    } else {
+      deletePersistedTerminalState(sessionId);
+    }
+  }, [tabs, activeTabId, sessionId, isInitializing]);
 
   const handleCreateTab = useCallback(async () => {
     setIsLoading(true);

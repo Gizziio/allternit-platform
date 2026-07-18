@@ -9,11 +9,11 @@ import {
 } from '@/constants/product.js'
 import { TERMINAL_OUTPUT_TAGS } from '@/constants/xml.js'
 import type { AppState } from '@/state/AppState.js'
-import { FILE_EDIT_TOOL_NAME } from '../../runtime/tools/FileEditTool/constants.js'
-import { FILE_READ_TOOL_NAME } from '../../runtime/tools/FileReadTool/prompt.js'
-import { FILE_WRITE_TOOL_NAME } from '../../runtime/tools/FileWriteTool/prompt.js'
-import { GLOB_TOOL_NAME } from '../../runtime/tools/GlobTool/prompt.js'
-import { GREP_TOOL_NAME } from '../../runtime/tools/GrepTool/prompt.js'
+import { FILE_EDIT_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileEditTool/constants.js'
+import { FILE_READ_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileReadTool/prompt.js'
+import { FILE_WRITE_TOOL_NAME } from '../../cli/ui/ink-app/tools/FileWriteTool/prompt.js'
+import { GLOB_TOOL_NAME } from '../../cli/ui/ink-app/tools/GlobTool/prompt.js'
+import { GREP_TOOL_NAME } from '../../cli/ui/ink-app/tools/GrepTool/prompt.js'
 import type { Entry } from '@/types/logs.js'
 import {
   type AttributionData,

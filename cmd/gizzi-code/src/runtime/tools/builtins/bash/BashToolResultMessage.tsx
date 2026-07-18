@@ -2,10 +2,10 @@
 import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { removeSandboxViolationTags } from '@/shared/utils/sandbox/sandbox-ui-utils.js';
-import { KeyboardShortcutHint } from '@/cli/components/design-system/KeyboardShortcutHint.js';
-import { MessageResponse } from '@/cli/components/MessageResponse.js';
-import { OutputLine } from '../../components/shell/OutputLine.js';
-import { ShellTimeDisplay } from '@/cli/components/shell/ShellTimeDisplay.js';
+import { KeyboardShortcutHint } from '../../../../cli/ui/components/design-system/KeyboardShortcutHint.js';
+import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
+import { OutputLine } from '../../../../cli/ui/ink-app/components/shell/OutputLine.js';
+import { ShellTimeDisplay } from '../../../../cli/ui/ink-app/components/shell/ShellTimeDisplay.js';
 import { Box, Text } from '@/cli/ink.js';
 import type { Out as BashOut } from './BashTool.js';
 type Props = {

@@ -16,8 +16,8 @@ import {
   type Output as FileReadToolOutput,
   registerFileReadListener,
 } from '../../tools/builtins/file-read/FileReadTool.js'
-import { isFsInaccessible } from '../../../utils/errors.js'
-import { cloneFileStateCache } from '../../../utils/fileStateCache.js'
+import { isFsInaccessible } from '../../../shared/utils/errors.js'
+import { cloneFileStateCache } from '../../../shared/utils/fileStateCache.js'
 import {
   type REPLHookContext,
   registerPostSamplingHook,
@@ -25,8 +25,8 @@ import {
 import {
   createUserMessage,
   hasToolCallsInLastAssistantTurn,
-} from '../../../utils/messages.js'
-import { sequential } from '../../../utils/sequential.js'
+} from '../../../shared/utils/messages.js'
+import { sequential } from '../../../shared/utils/sequential.js'
 import { buildMagicDocsUpdatePrompt } from './prompts.js'
 
 // Magic Doc header pattern: # MAGIC DOC: [title]

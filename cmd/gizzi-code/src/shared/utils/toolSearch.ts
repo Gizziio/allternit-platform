@@ -24,7 +24,7 @@ import {
   formatDeferredToolLine,
   isDeferredTool,
   TOOL_SEARCH_TOOL_NAME,
-} from '../../runtime/tools/ToolSearchTool/prompt.js'
+} from '../../cli/ui/ink-app/tools/ToolSearchTool/prompt.js'
 import type { Message, SystemCompactBoundaryMessage, ToolReferenceContentBlock, UserMessage } from '@/types/message.js'
 import {
   countToolDefinitionTokens,
