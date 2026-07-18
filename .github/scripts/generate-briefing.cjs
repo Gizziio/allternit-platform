@@ -151,6 +151,13 @@ async function main() {
     return;
   }
 
+  // Guard: never publish a reasoning/planning trace as an edition.
+  if (!markdown.includes('# Allternit News')) {
+    console.error('Kimi returned a planning trace, not an edition (missing "# Allternit News" title). Skipping.');
+    console.log('No new items added to discovery-pipeline.json.');
+    return;
+  }
+
   // Step 2: Extract metadata via LLM
   console.log('Extracting metadata...');
   let meta = {};

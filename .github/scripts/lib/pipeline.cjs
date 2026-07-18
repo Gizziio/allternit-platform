@@ -799,7 +799,9 @@ function extractResponse(msg) {
       }
       return lines.slice(startIdx, endIdx).join('\n').trim();
     }
-    return msg.reasoning_content.trim();
+    // No H1 anchor in the reasoning stream — the "answer" would be raw
+    // planning text. Treat as no usable response rather than publishing it.
+    return '';
   }
   return '';
 }
