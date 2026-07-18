@@ -31,6 +31,7 @@ jobs:
         env:
           KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          X_RELAY_TOKEN: ${{ secrets.X_RELAY_TOKEN }}
         run: node .github/scripts/generate-briefing.cjs
 
       - name: Commit and push if changed

@@ -4,25 +4,25 @@
  * of a hand-picked list of high-signal X accounts (AI papers, labs, robotics,
  * security, industry voices). See ../data/x-accounts.json for the list.
  *
- * Mechanism: X's PUBLIC embed/syndication endpoint
- *   https://syndication.twitter.com/srv/timeline-profile/screen-name/{handle}
- * — the same endpoint X's own embedded-timeline widgets use. It requires NO
- * login, NO cookies, and NO paid API, and (unlike x.com's login flow) it is
- * not Cloudflare-gated for datacenter IPs, so it works from GitHub Actions.
+ * Mechanism: our own Cloudflare Worker relay (see ../relay/x-relay-worker.js,
+ * deployed as `allternit-x-relay`). It proxies X's PUBLIC embed/syndication
+ * timeline endpoint and returns slim JSON:
+ *   GET {RELAY_URL}/?user=<handle>&token=<X_RELAY_TOKEN>
+ *   → { "tweets": [{ id, text, created_at, likes, rts, user, permalink }] }
  *
- * The response is HTML with an embedded `<script id="__NEXT_DATA__">` JSON
- * blob; recent timeline entries live at
- *   props.pageProps.timeline.entries[].content.tweet
- * with legacy-shaped fields (full_text, created_at, favorite_count,
- * retweet_count, user.screen_name, id_str).
+ * Why a relay: GitHub Actions' datacenter IPs are HTTP 429 rate-limited at
+ * syndication.twitter.com (and Cloudflare-challenged on x.com login flows),
+ * while Cloudflare edge egress IPs are not. No X login, cookies, or paid API
+ * are needed anywhere in this design.
  *
- * Notes:
- * - Pinned tweets are returned too; the max-age filter (default 14 days)
- *   keeps only fresh posts, which also drops stale pins.
- * - No credentials are read. Courtesy: accounts are fetched sequentially
- *   with a delay between requests.
- * - Any per-account failure warns and continues; any top-level failure
- *   returns [] so a bad feed can never break an edition.
+ * Env: X_RELAY_TOKEN (shared secret matching the Worker's RELAY_TOKEN) and
+ * optional X_RELAY_URL override. Missing token just means an unauthenticated
+ * relay call (the Worker rejects it; the source then warns and returns []).
+ *
+ * Pinned tweets are dropped by the max-age filter (default 14 days).
+ * Accounts are fetched sequentially with a delay; per-account failures warn
+ * and continue; any top-level failure returns [] so the relay can never
+ * break an edition.
  */
 
 const fs = require('fs');
@@ -34,10 +34,10 @@ const DEFAULT_PER_ACCOUNT_LIMIT = 10;
 const DEFAULT_TOTAL_LIMIT = 120;
 const DEFAULT_DELAY_MS = 1500;
 const DEFAULT_MAX_AGE_DAYS = 14;
-const FETCH_TIMEOUT_MS = 10000;
+const FETCH_TIMEOUT_MS = 15000;
 
-const BROWSER_UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36';
+const RELAY_URL = (process.env.X_RELAY_URL || 'https://allternit-x-relay.allternitpbc.workers.dev').replace(/\/$/, '');
+const RELAY_TOKEN = process.env.X_RELAY_TOKEN || '';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,42 +59,23 @@ function loadAccounts(accountsFile) {
   }
 }
 
-function extractNextData(html) {
-  const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-  if (!match) throw new Error('no __NEXT_DATA__ block (endpoint changed?)');
-  return JSON.parse(match[1]);
-}
-
-function timelineTweets(nextData) {
-  const entries = nextData?.props?.pageProps?.timeline?.entries;
-  if (!Array.isArray(entries)) return [];
-  const tweets = [];
-  for (const entry of entries) {
-    const tweet = entry?.content?.tweet;
-    if (tweet && typeof tweet.full_text === 'string' && tweet.full_text.trim()) tweets.push(tweet);
-  }
-  return tweets;
-}
-
 async function fetchAccountTimeline(handle, fetchImpl) {
-  const url = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${encodeURIComponent(handle)}?dnt=true`;
-  // The endpoint rate-limits bursts per IP; back off politely on 429.
-  const backoffs = [8000, 20000];
+  const url = `${RELAY_URL}/?user=${encodeURIComponent(handle)}${RELAY_TOKEN ? `&token=${encodeURIComponent(RELAY_TOKEN)}` : ''}`;
+  const backoffs = [8000, 20000]; // 429s should be rare via the relay; kept as a safety net
   for (let attempt = 0; ; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-      const res = await fetchImpl(url, {
-        headers: { 'User-Agent': BROWSER_UA, Accept: 'text/html' },
-        signal: controller.signal,
-      });
+      const res = await fetchImpl(url, { signal: controller.signal });
       if (res.status === 429 && attempt < backoffs.length) {
         const retryAfter = Number(res.headers.get('retry-after')) * 1000;
         await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : backoffs[attempt]);
         continue;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return timelineTweets(extractNextData(await res.text()));
+      const data = await res.json();
+      if (data.error) throw new Error(`relay: ${data.error}`);
+      return Array.isArray(data.tweets) ? data.tweets : [];
     } finally {
       clearTimeout(timer);
     }
@@ -102,17 +83,17 @@ async function fetchAccountTimeline(handle, fetchImpl) {
 }
 
 function mapTweet(tweet, account) {
-  const text = (tweet.full_text || '').replace(/\s+/g, ' ').trim();
+  const text = (tweet.text || '').replace(/\s+/g, ' ').trim();
   if (!text) return null;
-  const id = tweet.id_str || tweet.id;
+  const id = tweet.id;
   if (!id) return null;
-  const user = tweet.user?.screen_name || account.handle;
-  const engagement = (tweet.favorite_count || 0) + (tweet.retweet_count || 0);
+  const user = tweet.user || account.handle;
+  const engagement = (tweet.likes || 0) + (tweet.rts || 0);
   const created = new Date(tweet.created_at || Date.now());
   return {
     id: `x-${id}`,
     title: text.slice(0, 140) + (text.length > 140 ? '…' : ''),
-    url: tweet.permalink || `https://x.com/${user}/status/${id}`,
+    url: tweet.permalink ? `https://x.com${tweet.permalink}` : `https://x.com/${user}/status/${id}`,
     author: `@${user}`,
     summary: text,
     text, // alias read by scoreRelevance / formatSourcesForPrompt
@@ -125,7 +106,7 @@ function mapTweet(tweet, account) {
 }
 
 /**
- * Fetch recent posts from every account in the curated list.
+ * Fetch recent posts from every account in the curated list via the relay.
  * opts:
  *   perAccountLimit  max posts per account (default 10)
  *   totalLimit       max items returned overall (default 120)
@@ -187,7 +168,5 @@ module.exports = {
   // Exported for tests / tooling only.
   ACCOUNTS_FILE,
   loadAccounts,
-  extractNextData,
-  timelineTweets,
   mapTweet,
 };
