@@ -971,6 +971,13 @@ struct ComposerView: View {
             if CommandLine.arguments.contains("-enable-agent-mode"), !agentOn {
                 agentModeStore.toggleAgent(for: mode)
             }
+            // `-select-website-mode` (DEBUG only): pre-select the Websites tile
+            // and fill the composer so the collapsed agent-mode UX can be
+            // screenshot-verified.
+            if CommandLine.arguments.contains("-select-website-mode") {
+                agentModeStore.selectTile(.website, for: mode)
+                inputText = AgentModeTile.website.taskPrompt
+            }
             #endif
         }
         .onChange(of: agentOn) { _, on in
@@ -1494,6 +1501,61 @@ struct CoworkTopDeck: View {
     }
 }
 
+// MARK: - Agent-mode top deck
+
+/// Context tray tucked behind the composer card's TOP edge when an agent mode
+/// tile is selected. Shows the selected mode's icon, label, and a one-line
+/// description of what the mode will do.
+struct AgentModeTopDeck: View {
+    @EnvironmentObject private var modeStore: AppModeStore
+    @EnvironmentObject private var agentModeStore: AgentModeStore
+
+    private var surface: AppMode { modeStore.mode }
+    private var tile: AgentModeTile { agentModeStore.selectedTile(for: surface) }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: tile.icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(tile.color)
+                Text(tile.label)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color("TextPrimary"))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(tile.color.opacity(0.14))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(tile.color.opacity(0.5), lineWidth: 1)
+            )
+
+            Text(tile.contextDescription)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(Color("TextSecondary"))
+                .lineLimit(2)
+
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12) // tucked portion hidden under the card
+        .frame(height: 56)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color("BgPanel"))
+        .clipShape(
+            UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
+        )
+        .overlay(
+            UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
+                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+        )
+        .padding(.bottom, -12) // the card overlaps the deck's bottom
+    }
+}
+
 // MARK: - Agent-mode bottom deck
 
 /// Agent-on tray tucked behind the composer card's bottom edge
@@ -1879,41 +1941,18 @@ struct TransientErrorBanner: View {
 
 // MARK: - Gizzi mascot
 
-/// Interactive Gizzi mascot that stands on the top edge of the composer bar
-/// when agent mode is active. Tap it to make it walk left and right along
-/// the bar; the feet stay anchored to the top edge so it reads as crawling
-/// on the input bar, not floating inside it.
+/// Static Gizzi mascot that sits on the top edge of the composer bar when
+/// agent mode is active. No erratic movement; it just perches above the input.
 private struct GizziMascotPill: View {
-    /// True while the mascot is walking back and forth along the bar.
-    @State private var isWalking = false
-    /// Current walking step: -1 = left, 1 = right.
-    @State private var walkStep: CGFloat = -1
-
     var body: some View {
         Image("GizziMascot")
             .resizable()
             .scaledToFit()
             .frame(width: 44, height: 44)
             // Feet sit on the top edge of the card (a few points inside so it
-            // looks grounded, not hovering). Horizontal offset animates while
-            // walking to create the left-right crawl.
-            .offset(x: isWalking ? 60 * walkStep : 0, y: -38)
-            .rotationEffect(.degrees(isWalking ? Double(walkStep * 12) : 0))
-            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: isWalking)
-            .onTapGesture {
-                isWalking.toggle()
-            }
-            .onAppear {
-                #if DEBUG
-                // `-walk-gizzi` (DEBUG only): start the mascot walking at
-                // launch so the walking animation can be screenshot-verified.
-                if CommandLine.arguments.contains("-walk-gizzi") {
-                    isWalking = true
-                }
-                #endif
-            }
+            // looks grounded, not hovering).
+            .offset(y: -38)
             .transition(.scale.combined(with: .opacity))
             .accessibilityLabel("Gizzi")
-            .accessibilityHint("Double tap to make Gizzi walk along the input bar")
     }
 }
